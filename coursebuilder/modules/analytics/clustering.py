@@ -29,6 +29,7 @@ from mapreduce import context
 
 from common import schema_fields
 from controllers import utils
+from models import courses
 from models import jobs
 from models import models
 from models import transforms
@@ -41,9 +42,10 @@ from modules.dashboard import dto_editor
 from google.appengine.ext import db
 
 
-DIMENSION_TYPE_UNIT = 'u'
-DIMENSION_TYPE_LESSON = 'l'
-DIMENSION_TYPE_QUESTION = 'q'
+DIM_TYPE_UNIT = 'u'
+DIM_TYPE_LESSON = 'l'
+DIM_TYPE_QUESTION = 'q'
+DIM_TYPE_UNIT_VISIT = 'uv'
 
 # All of the possible fields that can be in a dimension
 DIM_TYPE = 'type'
@@ -72,7 +74,7 @@ class ClusterEntity(BaseEntity):
 
     Example of dimension:
         {
-        clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+        clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
         clustering.DIM_ID: 1,
         clustering.DIM_LOW: 0,
         clustering.DIM_HIGH: 50,
@@ -179,6 +181,60 @@ def _has_left_side(dim):
     return dim.get(DIM_LOW) != None and dim.get(DIM_LOW) != ''
 
 
+def _add_unit_visits(unit, result):
+    new_dim = {
+        DIM_TYPE: DIM_TYPE_UNIT_VISIT,
+        DIM_ID: unit.unit_id,
+        'name': unit.title + ' (visits)'
+    }
+    result.append(new_dim)
+
+def _add_unit_and_content(unit, result):
+    """Adds the score dimensions for units and its lessons and questions."""
+    # The content of an assessment is indicated by a lesson_id of None.
+    # Inside that lesson we can find all the questions added directly
+    # to the assessment.
+    unit_dict = {
+        DIM_TYPE: DIM_TYPE_UNIT,  # Unit or assessment
+        DIM_ID: unit['unit_id'],
+        'name': unit['title']}  # Name won't be saved in ClusterEntity
+    result.append(unit_dict)
+    unit_scored_lessons = 0
+    for item in unit['contents']:
+        lesson_id = item.get('lesson_id')
+        # A unit may have a pre or post assessment, in that case the item
+        # has unit_id, not a lesson_id.
+        included_assessment_id = item.get('unit_id')
+        lesson_title = item.get('title')
+        if lesson_title and lesson_id and item.get('tallied'):
+            result.append({
+                DIM_TYPE: DIM_TYPE_LESSON,
+                DIM_ID: lesson_id,
+                'name': lesson_title})
+            unit_scored_lessons += 1
+        elif included_assessment_id and lesson_title:
+            result.append({
+                DIM_TYPE: DIM_TYPE_UNIT,
+                DIM_ID: included_assessment_id,
+                'name': lesson_title})
+            unit_scored_lessons += 1
+        # If lesson is not tallied (graded) is not considered a dimension
+        for question in item['questions']:
+            if included_assessment_id:
+                question_id = pack_question_dimid(
+                    included_assessment_id, None, question['id'])
+            else:
+                question_id = pack_question_dimid(
+                    unit['unit_id'], lesson_id, question['id'])
+            result.append({
+                DIM_TYPE: DIM_TYPE_QUESTION,
+                DIM_ID: question_id,
+                'name': question['description']})
+    # This should affect the result list as well.
+    unit_dict[DIM_EXTRA_INFO] = json.dumps(
+        {'unit_scored_lessons': unit_scored_lessons})
+
+
 def get_possible_dimensions(app_context):
     """Returns a list of dictionaries with all possible dimensions.
 
@@ -187,6 +243,8 @@ def get_possible_dimensions(app_context):
     be created for each use of the question. However, if the question in used
     twice or more in the same unit and lesson, then only one dimension will
     be created for this question, unit and lesson.
+    Aditionaly, units and assessments have a dimension for the number of
+    visits to the page.
 
     For more details in the structure of dimensions see ClusterEntity
     documentation.
@@ -198,50 +256,15 @@ def get_possible_dimensions(app_context):
     # where assessments are used as pre- or post- items in Units, so
     # we don't have to code for that case here.
     datasource.fill_values(app_context, template_values)
+    units_with_content = {u['unit_id']: u for u in template_values['units']}
     result = []
-    for unit in template_values['units']:
-        unit_scored_lessons = 0
-        unit_dict = {
-            DIM_TYPE: DIMENSION_TYPE_UNIT,  # Unit or assessment
-            DIM_ID: unit['unit_id'],
-            'name': unit['title']}  # Name won't be saved in ClusterEntity
-        result.append(unit_dict)
-        # The content of an assessment is indicated by a lesson_id of None.
-        # Inside that lesson we can find all the questions added directly
-        # to the assessment.
-        for item in unit['contents']:
-            lesson_id = item.get('lesson_id')
-            # A unit may have a pre or post assessment, in that case the item
-            # has unit_id, not a lesson_id.
-            included_assessment_id = item.get('unit_id')
-            lesson_title = item.get('title')
-            if lesson_title and lesson_id and item.get('tallied'):
-                result.append({
-                    DIM_TYPE: DIMENSION_TYPE_LESSON,
-                    DIM_ID: lesson_id,
-                    'name': lesson_title})
-                unit_scored_lessons += 1
-            elif included_assessment_id and lesson_title:
-                result.append({
-                    DIM_TYPE: DIMENSION_TYPE_UNIT,
-                    DIM_ID: included_assessment_id,
-                    'name': lesson_title})
-                unit_scored_lessons += 1
-            # If lesson is not tallied (graded) is not considered a dimension
-            for question in item['questions']:
-                if included_assessment_id:
-                    question_id = pack_question_dimid(
-                        included_assessment_id, None, question['id'])
-                else:
-                    question_id = pack_question_dimid(
-                        unit['unit_id'], lesson_id, question['id'])
-                result.append({
-                    DIM_TYPE: DIMENSION_TYPE_QUESTION,
-                    DIM_ID: question_id,
-                    'name': question['description']})
-        # This should affect the result list as well.
-        unit_dict[DIM_EXTRA_INFO] = json.dumps(
-            {'unit_scored_lessons': unit_scored_lessons})
+    course = courses.Course(None, app_context)
+
+    for unit in course.get_units():
+        _add_unit_visits(unit, result)
+        if unit.unit_id in units_with_content:
+            # Adding the lessons and questions of the unit
+            _add_unit_and_content(units_with_content[unit.unit_id], result)
     return result
 
 
@@ -258,10 +281,16 @@ class ClusterRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     REQUIRED_MODULES = []
 
-    EXTRA_JS_FILES = []
+    EXTRA_JS_FILES = ['cluster_rest.js']
     EXTRA_CSS_FILES = []
     ADDITIONAL_DIRS = [os.path.join(
         appengine_config.BUNDLE_ROOT, 'modules', 'analytics')]
+    TYPES_INFO = {  # The js script file depend on this dictionary.
+        DIM_TYPE_QUESTION: 'question',
+        DIM_TYPE_LESSON: 'lesson',
+        DIM_TYPE_UNIT: 'unit',
+        DIM_TYPE_UNIT_VISIT: 'unit_visit',
+    }
 
     @staticmethod
     def pack_id(dim_id, dim_type):
@@ -290,32 +319,42 @@ class ClusterRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
         dimension = schema_fields.FieldRegistry('Dimension',
             extra_schema_dict_values={'className': 'cluster-dim'})
+
+        to_select = []
+        dim_types = {}
         if app_context:
             dimensions = get_possible_dimensions(app_context)
-            to_select = [(cls.pack_id(dim[DIM_ID], dim[DIM_TYPE]), dim['name'])
-                         for dim in dimensions]
-        else:
-            to_select = []
+            for dim in dimensions:
+                select_id = cls.pack_id(dim[DIM_ID], dim[DIM_TYPE])
+                to_select.append((select_id, dim['name']))
+                dim_types[select_id] = dim[DIM_TYPE]
 
         dimension.add_property(schema_fields.SchemaField(
             DIM_ID, 'Dimension Name', 'string', i18n=False,
-            extra_schema_dict_values={'className': 'cluster-dim-name'},
+            extra_schema_dict_values={'className': 'dim-name'},
             select_data=to_select))
+        # Only description for the first dimension. All the descriptions
+        # are in the cluster_rest.js file.
         dimension.add_property(schema_fields.SchemaField(
-            DIM_LOW, 'Lower Score', 'string', i18n=False,
-            optional=True,
-            extra_schema_dict_values={'className': 'cluster-dim-range'}))
+            DIM_LOW, 'Minimum number of visits to the page', 'string',
+            i18n=False, optional=True,
+            extra_schema_dict_values={'className': 'dim-range-low'}))
         dimension.add_property(schema_fields.SchemaField(
-            DIM_HIGH, 'Higher Score', 'string', i18n=False,
-            optional=True,
-            extra_schema_dict_values={'className': 'cluster-dim-range'}))
+            DIM_HIGH, 'Maximum number of visits to the page', 'string',
+            i18n=False, optional=True,
+            extra_schema_dict_values={'className': 'dim-range-high'}))
 
         dimension_array = schema_fields.FieldArray(
             'vector', '', item_type=dimension,
+            description='Dimensions of the cluster. Add a new dimension '
+                'for each criteria the student has to acomplish to be '
+                'included in the cluster',
             extra_schema_dict_values={
                 'className': 'cluster-dim-container',
                 'listAddLabel': 'Add a dimension',
-                'listRemoveLabel': 'Delete dimension'})
+                'listRemoveLabel': 'Delete dimension',
+                'dim_types': dim_types,
+                'types_info': cls.TYPES_INFO})
 
         cluster_schema.add_property(dimension_array)
         dimension.add_property(schema_fields.SchemaField(
@@ -391,7 +430,7 @@ class StudentVector(BaseEntity):
     StudentVectorGenerator. The information is organized in a dictionary,
     for example:
         {
-            DIM_TYPE: clustering.DIMENSION_TYPE_QUESTION,
+            DIM_TYPE: clustering.DIM_TYPE_QUESTION,
             DIM_ID: 3,
             DIM_VALUE: 60
         }
@@ -463,9 +502,10 @@ class StudentVectorGenerator(jobs.MapReduceJob):
     # To define a new dimension type you must define the function and include
     # it here. That way we avoid changing the map function.
     DIMENSION_FUNCTIONS = {
-        DIMENSION_TYPE_QUESTION: '_get_question_score',
-        DIMENSION_TYPE_LESSON: '_get_lesson_score',
-        DIMENSION_TYPE_UNIT: '_get_unit_score'
+        DIM_TYPE_QUESTION: '_get_question_score',
+        DIM_TYPE_LESSON: '_get_lesson_score',
+        DIM_TYPE_UNIT: '_get_unit_score',
+        DIM_TYPE_UNIT_VISIT: '_get_unit_visits'
     }
 
     @classmethod
@@ -498,14 +538,21 @@ class StudentVectorGenerator(jobs.MapReduceJob):
         """
         mapper_params = context.get().mapreduce_spec.mapper.params
         raw_data = transforms.loads(zlib.decompress(item.data))
-        raw_data = raw_data.get('assessments', [])
-        if not raw_data:
+        raw_assessments = raw_data.get('assessments', [])
+        raw_page_views = raw_data.get('page_views', [])
+        sub_data = StudentVectorGenerator._inverse_submission_data(
+            mapper_params['possible_dimensions'], raw_assessments)
+        view_data = StudentVectorGenerator._inverse_page_view_data(
+            raw_page_views)
+        if not (sub_data or view_data):
             return
-        data = StudentVectorGenerator._inverse_submission_data(
-            mapper_params['possible_dimensions'], raw_data)
         vector = []
         for dim in mapper_params['possible_dimensions']:
-            data_for_dimension = data[dim[DIM_TYPE], str(dim[DIM_ID])]
+            type_ = dim[DIM_TYPE]
+            if type_ == DIM_TYPE_UNIT_VISIT:
+                data_for_dimension = view_data[type_, str(dim[DIM_ID])]
+            else:
+                data_for_dimension = sub_data[type_, str(dim[DIM_ID])]
             value = StudentVectorGenerator.get_function_for_dimension(
                         dim[DIM_TYPE])(data_for_dimension, dim)
             new_dim = {
@@ -539,15 +586,35 @@ class StudentVectorGenerator(jobs.MapReduceJob):
             activity_unit = activity.get('unit_id')
             # This creates aliasing but it's fine beacuse is read only.
             # It only adds a copy of the timestamp for the questions.
-            result[DIMENSION_TYPE_UNIT, activity_unit].append(activity)
-            result[DIMENSION_TYPE_LESSON, activity_lesson].append(activity)
+            result[DIM_TYPE_UNIT, activity_unit].append(activity)
+            result[DIM_TYPE_LESSON, activity_lesson].append(activity)
             for submission in activity.get('submissions', []):
                 for answer in submission.get('answers', []):
                     question_id = answer.get('question_id')
                     answer['timestamp'] = submission['timestamp']
                     dim_id = pack_question_dimid(activity_unit,
                                                  activity_lesson, question_id)
-                    result[DIMENSION_TYPE_QUESTION, dim_id].append(answer)
+                    result[DIM_TYPE_QUESTION, dim_id].append(answer)
+        return result
+
+    @staticmethod
+    def _inverse_page_view_data(raw_data):
+        """Build a dictionary with the information from raw_data by dimension.
+
+        For each dimension builds an entry in the result. The value is a list
+        with all the submissions relevant to that dimension. In the case
+        of DIM_TYPE_UNIT_VISIT the relevant submissions are those
+        with name 'unit' or 'assessment'
+
+        Returns:
+            An instance of defaultdict with default empty list."""
+        result = collections.defaultdict(lambda: [])
+        for page_view in raw_data:
+            name = page_view.get('name')
+            if name not in ['unit', 'assessment']:
+                continue
+            item_id = page_view.get('item_id')
+            result[DIM_TYPE_UNIT_VISIT, item_id].append(page_view)
         return result
 
     @staticmethod
@@ -606,6 +673,17 @@ class StudentVectorGenerator(jobs.MapReduceJob):
                 score += submission['last_score']
         return score/float(scored_lessons)
 
+    @staticmethod
+    def _get_unit_visits(data, dimension):
+        result = 0
+        for page_view in data:
+            activities = page_view.get('activities')
+            if not activities:
+                continue
+            for activity in activities:
+                if activity.get('action') == 'enter-page':
+                    result += 1
+        return result
 
 def hamming_distance(vector, student_vector):
     """Return the hamming distance between a ClusterEntity and a StudentVector.
@@ -718,11 +796,19 @@ class ClusteringGenerator(jobs.MapReduceJob):
 
     @staticmethod
     def combine(key, values, previously_combined_outputs=None):
+        """Combiner function called before the reducer.
+
+        Params:
+            key: the value of the key from the map output.
+            values: the values for that key from the map output.
+            previously_combined_outputs: a list or a RepeatedScalarContainer
+            that holds the combined output for other instances for the
+            same key."""
         if key != 'student_count':
-            if previously_combined_outputs:
-                yield values + previously_combined_outputs
-            else:
-                yield values
+            for value in values:
+                yield value
+            for value in previously_combined_outputs:
+                yield value
         else:
             total = sum([int(value) for value in values])
             if previously_combined_outputs is not None:
@@ -737,8 +823,8 @@ class ClusteringGenerator(jobs.MapReduceJob):
             A number: the values are 2-uples (student_id, distance) and is
             used to calculate a count statistic.
             A list: the item_id holds the IDs of two clusters and the value
-            corresponds to 3-uple (student_id, distance1, distance2). The value
-            is used to calculate an intersection stats.
+            corresponds to 3-uple (student_id, distance1, distance2). The
+            value is used to calculate an intersection stats.
             A string 'student_count': The values is going to be a list of
             partial sums of numbers.
 
@@ -760,21 +846,19 @@ class ClusteringGenerator(jobs.MapReduceJob):
             distances = collections.defaultdict(lambda: 0)
             if isinstance(item_id, list):
                 stat_name = 'intersection'
-                for chunk in values:
-                    for value in chunk:
-                        value = transforms.loads(value)
-                        # Is a student vector has a distance 1 to cluster A
-                        # and distance 3 to cluster B, then it has a
-                        # distance of 3 (the greater) to the intersection
-                        intersection_distance = max(value[1], value[2])
-                        distances[intersection_distance] += 1
+                for value in values:
+                    value = transforms.loads(value)
+                    # If a student vector has a distance 1 to cluster A
+                    # and distance 3 to cluster B, then it has a
+                    # distance of 3 (the greater) to the intersection
+                    intersection_distance = max(value[1], value[2])
+                    distances[intersection_distance] += 1
                 item_id = tuple(item_id)
             else:
                 stat_name = 'count'
-                for chunk in values:
-                    for value in chunk:
-                        value = transforms.loads(value)
-                        distances[value[1]] += 1
+                for value in values:
+                    value = transforms.loads(value)
+                    distances[value[1]] += 1
             distances = dict(distances)
             list_distances = [0] * (max([int(k) for k in distances]) + 1)
             for distance, count in distances.items():

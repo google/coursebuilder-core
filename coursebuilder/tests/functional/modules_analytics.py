@@ -465,7 +465,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         """
         cluster_description = 'This is a good description of the cluster'
         cluster_name = 'strange cluster name'
-        vector = [{clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+        vector = [{clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
                    clustering.DIM_ID: 1,
                    clustering.DIM_LOW: 10,
                    clustering.DIM_HIGH: 50}]
@@ -499,14 +499,14 @@ class ClusterRESTHandlerTest(actions.TestBase):
             dimension_id = clustering.pack_question_dimid(
                 unit_id, lesson_id, question_key)
             dim = self._dim_from_dict(vector, dimension_id,
-                                      clustering.DIMENSION_TYPE_QUESTION)
+                                      clustering.DIM_TYPE_QUESTION)
             self.assertEqual(dim['name'],
                 self.descript_str.format(unit_id, q_index))
 
     def _check_lessons(self, vector):
         for u_index, lesson_key in self.lesson_keys:
             dim = self._dim_from_dict(vector, lesson_key,
-                                      clustering.DIMENSION_TYPE_LESSON)
+                                      clustering.DIM_TYPE_LESSON)
             self.assertEqual(dim['name'],
                              self.lesson_name_str.format(u_index))
 
@@ -515,12 +515,22 @@ class ClusterRESTHandlerTest(actions.TestBase):
         vector = clustering.get_possible_dimensions(self.app_context)
         for u_index, unit_key in self.unit_keys:
             dim = self._dim_from_dict(vector, unit_key,
-                                      clustering.DIMENSION_TYPE_UNIT)
+                                      clustering.DIM_TYPE_UNIT)
             self.assertEqual(dim['name'],
-                self.unit_name_str.format(u_index))
+                             self.unit_name_str.format(u_index))
             self.assertIn(clustering.DIM_EXTRA_INFO, dim)
             extra_info = json.loads(dim[clustering.DIM_EXTRA_INFO])
             self.assertEqual(extra_info['unit_scored_lessons'], 1)
+
+    def test_all_dimensions_unit_visitation(self):
+        """All units must have a visitation dimension."""
+        self._add_unit(self.units_number + 10)
+        self.course.save()
+        u_index, unit_id = self.unit_keys[-1]
+        vector = clustering.get_possible_dimensions(self.app_context)
+        dim = self._dim_from_dict(vector, unit_id,
+                                  clustering.DIM_TYPE_UNIT_VISIT)
+        self.assertNotEqual(dim['name'], self.unit_name_str.format(u_index))
 
     def test_all_dimensions_lessons(self):
         """All lessons are listed as dimensions in default content."""
@@ -547,7 +557,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         dimension_id = clustering.pack_question_dimid(
             unit.unit_id, lesson.lesson_id, question_id)
         self._dim_from_dict(vector, dimension_id,
-                            clustering.DIMENSION_TYPE_QUESTION)
+                            clustering.DIM_TYPE_QUESTION)
 
     def test_all_dimensions_question_group(self):
         """Questions added in a question group are listed as dimensions."""
@@ -560,14 +570,14 @@ class ClusterRESTHandlerTest(actions.TestBase):
             unit.unit_id, lesson.lesson_id, self.questions_keys[-1][-1])
         vector = clustering.get_possible_dimensions(self.app_context)
         self._dim_from_dict(vector, dimension_id,
-                            clustering.DIMENSION_TYPE_QUESTION)
+                            clustering.DIM_TYPE_QUESTION)
 
     def test_all_dimensions_assessments(self):
         """All assessments are listed as dimensions in default content."""
         vector = clustering.get_possible_dimensions(self.app_context)
         for u_index, assessment_key in self.assessment_keys:
             dim = self._dim_from_dict(vector, assessment_key,
-                                      clustering.DIMENSION_TYPE_UNIT)
+                                      clustering.DIM_TYPE_UNIT)
             self.assertEqual(dim['name'],
                              self.assessment_name_str.format(u_index))
 
@@ -583,11 +593,11 @@ class ClusterRESTHandlerTest(actions.TestBase):
         vector = clustering.get_possible_dimensions(self.app_context)
         for dim in vector:
             if (dim[clustering.DIM_ID] == lesson.lesson_id and
-                dim[clustering.DIM_TYPE] == clustering.DIMENSION_TYPE_LESSON):
+                dim[clustering.DIM_TYPE] == clustering.DIM_TYPE_LESSON):
                 self.assertTrue(False,
                                 msg='Not scored lesson listed as dimension')
             if (dim[clustering.DIM_ID] == unit.unit_id and
-                dim[clustering.DIM_TYPE] == clustering.DIMENSION_TYPE_UNIT):
+                dim[clustering.DIM_TYPE] == clustering.DIM_TYPE_UNIT):
                 extra_info = json.loads(dim[clustering.DIM_EXTRA_INFO])
                 self.assertEqual(extra_info['unit_scored_lessons'], 1,
                                  msg='Not scored lesson counted in unit')
@@ -606,14 +616,14 @@ class ClusterRESTHandlerTest(actions.TestBase):
 
         # Check the assessment
         dim = self._dim_from_dict(vector, assessment.unit_id,
-                                  clustering.DIMENSION_TYPE_UNIT)
+                                  clustering.DIM_TYPE_UNIT)
         self.assertIsNotNone(dim)
         # Check the question
         question_id = self.questions_keys[-1][-1]
         question_id = clustering.pack_question_dimid(assessment.unit_id,
                                                      None, question_id)
         dim = self._dim_from_dict(vector, question_id,
-                                  clustering.DIMENSION_TYPE_QUESTION)
+                                  clustering.DIM_TYPE_QUESTION)
         self.assertIsNotNone(dim)
 
     def test_save_name(self):
@@ -674,7 +684,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         transformed_response = transforms.loads(response.body)
         default_cluster = json.loads(transformed_response['payload'])
         vector = [{clustering.DIM_ID: clustering.ClusterRESTHandler.pack_id(
-            '2', clustering.DIMENSION_TYPE_LESSON)}]
+            '2', clustering.DIM_TYPE_LESSON)}]
         cluster_name = 'Name for the cluster number one.'
         default_cluster['name'] = cluster_name
         default_cluster['vector'] = vector
@@ -710,7 +720,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         default_cluster = json.loads(transformed_response['payload'])
         default_cluster['name'] = 'ClusterName'
         dim_id = clustering.ClusterRESTHandler.pack_id(
-            '2', clustering.DIMENSION_TYPE_LESSON)
+            '2', clustering.DIM_TYPE_LESSON)
         vector = [{
             clustering.DIM_ID: dim_id,
             clustering.DIM_LOW: 0,
@@ -738,7 +748,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         default_cluster = json.loads(transformed_response['payload'])
         default_cluster['name'] = 'ClusterName'
         dim_id = clustering.ClusterRESTHandler.pack_id(
-            '2', clustering.DIMENSION_TYPE_LESSON)
+            '2', clustering.DIM_TYPE_LESSON)
         vector = [{clustering.DIM_ID: dim_id, clustering.DIM_HIGH: '0'}]
         default_cluster['vector'] = vector
 
@@ -761,7 +771,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         default_cluster = json.loads(transformed_response['payload'])
         default_cluster['name'] = 'ClusterName'
         dim_id = clustering.ClusterRESTHandler.pack_id(
-            '2', clustering.DIMENSION_TYPE_LESSON)
+            '2', clustering.DIM_TYPE_LESSON)
         vector = [{clustering.DIM_ID: dim_id, clustering.DIM_LOW: '0.55'}]
         default_cluster['vector'] = vector
 
@@ -785,7 +795,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         default_cluster = json.loads(transformed_response['payload'])
         default_cluster['name'] = 'ClusterName'
         dim_id = clustering.ClusterRESTHandler.pack_id(
-            '2', clustering.DIMENSION_TYPE_LESSON)
+            '2', clustering.DIM_TYPE_LESSON)
         vector = [{
             clustering.DIM_ID: dim_id,
             clustering.DIM_HIGH: '0',
@@ -805,7 +815,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         default_cluster = json.loads(transformed_response['payload'])
         default_cluster['name'] = 'ClusterName'
         dim_id = clustering.ClusterRESTHandler.pack_id(
-            '2', clustering.DIMENSION_TYPE_LESSON)
+            '2', clustering.DIM_TYPE_LESSON)
         vector = [{
             clustering.DIM_ID: dim_id,
             clustering.DIM_HIGH: '0',
@@ -825,7 +835,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         default_cluster = json.loads(transformed_response['payload'])
         default_cluster['name'] = 'ClusterName'
         dim_id = clustering.ClusterRESTHandler.pack_id(
-            '2', clustering.DIMENSION_TYPE_LESSON)
+            '2', clustering.DIM_TYPE_LESSON)
         vector = [{
             clustering.DIM_ID: dim_id,
             clustering.DIM_HIGH: 'Non numeric'}]
@@ -940,7 +950,51 @@ class StudentVectorGeneratorTests(actions.TestBase):
         self.app_context = actions.simple_add_course(
             self.COURSE_NAME, self.ADMIN_EMAIL, 'Analytics Test')
         self.course = courses.Course(None, app_context=self.app_context)
-        self._load_initial_data('scoring', 'assessments.json')
+        self._load_initial_data()
+
+        self.dimensions = [  # Data obteined from assessments.json
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
+             clustering.DIM_ID: '4',
+             clustering.DIM_EXTRA_INFO: json.dumps({'unit_scored_lessons': 0}),
+             'expected_value': 187.0},
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
+             clustering.DIM_ID: '1',
+             clustering.DIM_EXTRA_INFO: json.dumps({'unit_scored_lessons': 1}),
+             'expected_value': 8.5},
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_LESSON,
+             clustering.DIM_ID: '3',
+             'expected_value': 8.5},
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_QUESTION,
+             clustering.DIM_ID: clustering.pack_question_dimid('1', '2',
+                                                  '5629499534213120'),
+             'expected_value': 0.5},
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_QUESTION,
+             clustering.DIM_ID: clustering.pack_question_dimid('1', '2',
+                                                  '5066549580791808'),
+             'expected_value': 0.75},  # Last weighted score
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_QUESTION,
+             clustering.DIM_ID: clustering.pack_question_dimid('1', '3',
+                                                  '5629499534213120'),
+             'expected_value': (1.0 + 2.5) / 2},  # Average in submission.
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_QUESTION,
+             clustering.DIM_ID: clustering.pack_question_dimid('1', '3',
+                                                  '5066549580791808'),
+             'expected_value': (3.5 + 1.5) / 2},
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_QUESTION,
+             clustering.DIM_ID: clustering.pack_question_dimid('4', None,
+                                                  '5629499534213120'),
+             'expected_value': (55.0 + 22.0) / 2},
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_QUESTION,
+             clustering.DIM_ID: clustering.pack_question_dimid('4', None,
+                                                  '5066549580791808'),
+             'expected_value': (77.0 + 33.0) / 2},
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT_VISIT,
+             clustering.DIM_ID: '3',
+             'expected_value': 2},
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT_VISIT,
+             clustering.DIM_ID: '6',
+             'expected_value': 2}
+        ]
 
     def tearDown(self):
         # Clean up app_context.
@@ -952,60 +1006,35 @@ class StudentVectorGeneratorTests(actions.TestBase):
                             'functional', 'modules_analytics',
                             'test_courses', path)
 
-    def _load_initial_data(self, path, item):
+    def _load_initial_data(self):
         """Creates several StudentAggregateEntity based on the file item."""
-        data_path = self._get_data_path(path)
-        expected_path = os.path.join(data_path, 'expected', item)
+        self.aggregate_entity = student_aggregate.StudentAggregateEntity()
+        # Upload data from scoring
+        data_path = self._get_data_path('scoring')
+        expected_path = os.path.join(data_path, 'expected',
+                                     'assessments.json')
+        raw_assessment_data = None
         with open(expected_path) as fs:
-            raw_data = transforms.loads(fs.read())
-            self.aggregate_entity = student_aggregate.StudentAggregateEntity()
-            self.aggregate_entity.data = zlib.compress(
-                transforms.dumps({'assessments': raw_data}))
-            self.aggregate_entity.put()
-            self.raw_activities = raw_data
+            raw_assessment_data = transforms.loads(fs.read())
+        raw_views_data = None
+        data_path = self._get_data_path('page_views')
+        expected_path = os.path.join(data_path, 'expected',
+                                     'page_views.json')
+        with open(expected_path) as fs:
+            raw_views_data = transforms.loads(fs.read())
 
-        self.dimensions = [  # Data obteined from assessments.json
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
-             clustering.DIM_ID: '4',
-             clustering.DIM_EXTRA_INFO: json.dumps({'unit_scored_lessons': 0}),
-             'expected_value': 187.0},
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
-             clustering.DIM_ID: '1',
-             clustering.DIM_EXTRA_INFO: json.dumps({'unit_scored_lessons': 1}),
-             'expected_value': 8.5},
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_LESSON,
-             clustering.DIM_ID: '3',
-             'expected_value': 8.5},
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_QUESTION,
-             clustering.DIM_ID: clustering.pack_question_dimid('1', '2',
-                                                  '5629499534213120'),
-             'expected_value': 0.5},
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_QUESTION,
-             clustering.DIM_ID: clustering.pack_question_dimid('1', '2',
-                                                  '5066549580791808'),
-             'expected_value': 0.75},  # Last weighted score
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_QUESTION,
-             clustering.DIM_ID: clustering.pack_question_dimid('1', '3',
-                                                  '5629499534213120'),
-             'expected_value': (1.0 + 2.5) / 2},  # Average in submission.
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_QUESTION,
-             clustering.DIM_ID: clustering.pack_question_dimid('1', '3',
-                                                  '5066549580791808'),
-             'expected_value': (3.5 + 1.5) / 2},
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_QUESTION,
-             clustering.DIM_ID: clustering.pack_question_dimid('4', None,
-                                                  '5629499534213120'),
-             'expected_value': (55.0 + 22.0) / 2},
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_QUESTION,
-             clustering.DIM_ID: clustering.pack_question_dimid('4', None,
-                                                  '5066549580791808'),
-             'expected_value': (77.0 + 33.0) / 2},
-        ]
+        self.aggregate_entity.data = zlib.compress(transforms.dumps({
+                'assessments': raw_assessment_data,
+                'page_views': raw_views_data}))
+
+        self.aggregate_entity.put()
+        self.raw_activities = raw_assessment_data
+        self.raw_views_data = raw_views_data
 
     def test_inverse_submission_data(self):
         """inverse_submission_data returns a dictionary keys by dimension id.
 
-        For every possible dimension the dictionary has a value with the
+        For every dimension of submissions the dictionary has a value with the
         same information as the original submission data. The value will
         be a list with all the submission relevant to that dimension.
         If an assessment is included inside a unit as pre or post assessment,
@@ -1029,23 +1058,40 @@ class StudentVectorGeneratorTests(actions.TestBase):
         for dim in self.dimensions:
             dim_type = dim[clustering.DIM_TYPE]
             dim_id = dim[clustering.DIM_ID]
-            self.assertIn((dim_type, dim_id), result)
             entry = sorted(result[dim_type, dim_id])
-            if dim_type == clustering.DIMENSION_TYPE_UNIT:
+            expected = None
+            if dim_type == clustering.DIM_TYPE_UNIT:
                 expected = [activity for activity in self.raw_activities
                             if activity['unit_id'] == dim_id]
-            elif dim_type == clustering.DIMENSION_TYPE_LESSON:
+            elif dim_type == clustering.DIM_TYPE_LESSON:
                 expected = [activity for activity in self.raw_activities
                             if activity['lesson_id'] == dim_id]
-            elif dim_type == clustering.DIMENSION_TYPE_QUESTION:
+            elif dim_type == clustering.DIM_TYPE_QUESTION:
                 unit_id, lesson_id, q_id = clustering.unpack_question_dimid(
                     dim_id)
                 expected = get_questions(unit_id, lesson_id, q_id)
-            if expected:
-                expected.sort()
+            if not expected:
+                continue
+            expected.sort()
             self.assertEqual(entry, expected,
                              msg='Bad entry {} {}: {}. Expected: {}'.format(
                                 dim_type, dim_id, entry, expected))
+
+    def test_inverse_page_view_data(self):
+        """inverse_page_view_data returns a dictionary keys by dimension id.
+        """
+        result = clustering.StudentVectorGenerator._inverse_page_view_data(
+            self.raw_views_data)
+        for dim in self.dimensions:
+            dim_type = dim[clustering.DIM_TYPE]
+            dim_id = dim[clustering.DIM_ID]
+            entry = sorted(result[dim_type, dim_id])
+            if dim_type == clustering.DIM_TYPE_UNIT_VISIT:
+                expected = [page_view for page_view in self.raw_views_data
+                            if page_view['name'] in ['unit', 'assessment'] and
+                            page_view['item_id'] == dim_id]
+                expected.sort()
+                self.assertEqual(entry, expected)
 
     def run_generator_job(self):
         def mock_mapper_params(unused_self, unused_app_context):
@@ -1086,7 +1132,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             self.dimensions, self.raw_activities)
         for dim in self.dimensions:
-            if dim[clustering.DIM_TYPE] == clustering.DIMENSION_TYPE_UNIT:
+            if dim[clustering.DIM_TYPE] == clustering.DIM_TYPE_UNIT:
                 value = clustering.StudentVectorGenerator._get_unit_score(
                     data[dim[clustering.DIM_TYPE], dim[clustering.DIM_ID]], dim)
                 self.assertEqual(value, dim['expected_value'])
@@ -1100,7 +1146,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             self.dimensions, self.raw_activities)
         for dim in self.dimensions:
-            if dim[clustering.DIM_TYPE] == clustering.DIMENSION_TYPE_LESSON:
+            if dim[clustering.DIM_TYPE] == clustering.DIM_TYPE_LESSON:
                 value = clustering.StudentVectorGenerator._get_lesson_score(
                     data[dim[clustering.DIM_TYPE], dim[clustering.DIM_ID]], dim)
                 self.assertEqual(value, dim['expected_value'])
@@ -1116,15 +1162,27 @@ class StudentVectorGeneratorTests(actions.TestBase):
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             self.dimensions, self.raw_activities)
         for dim in self.dimensions:
-            if dim[clustering.DIM_TYPE] == clustering.DIMENSION_TYPE_QUESTION:
+            if dim[clustering.DIM_TYPE] == clustering.DIM_TYPE_QUESTION:
                 value = clustering.StudentVectorGenerator._get_question_score(
                     data[dim[clustering.DIM_TYPE], dim[clustering.DIM_ID]], dim)
+                self.assertEqual(value, dim['expected_value'])
+
+    def test_get_unit_visits(self):
+        """Count the number of visits for a unit or an assessment.
+        """
+        data = clustering.StudentVectorGenerator._inverse_page_view_data(
+            self.raw_views_data)
+        for dim in self.dimensions:
+            if dim[clustering.DIM_TYPE] == clustering.DIM_TYPE_UNIT_VISIT:
+                value = clustering.StudentVectorGenerator._get_unit_visits(
+                    data[dim[clustering.DIM_TYPE], dim[clustering.DIM_ID]],
+                    dim)
                 self.assertEqual(value, dim['expected_value'])
 
     def test_score_no_submitted_unit(self):
         """If there is no submission of a unit the value is 0."""
         extra_dimension = {
-            clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
             clustering.DIM_ID: '10'}
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             [extra_dimension], self.raw_activities)
@@ -1135,7 +1193,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
     def test_score_no_submitted_lesson(self):
         """If there is no submission of a lesson the value is 0."""
         extra_dimension = {
-            clustering.DIM_TYPE: clustering.DIMENSION_TYPE_LESSON,
+            clustering.DIM_TYPE: clustering.DIM_TYPE_LESSON,
             clustering.DIM_ID: '10'
             }
         data = clustering.StudentVectorGenerator._inverse_submission_data(
@@ -1147,7 +1205,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
     def test_score_no_submitted_question(self):
         """If there is no submission of a question the value is 0."""
         extra_dimension = {
-            clustering.DIM_TYPE: clustering.DIMENSION_TYPE_QUESTION,
+            clustering.DIM_TYPE: clustering.DIM_TYPE_QUESTION,
             clustering.DIM_ID: clustering.pack_question_dimid('1', '3', '00000')
             }
         data = clustering.StudentVectorGenerator._inverse_submission_data(
@@ -1158,13 +1216,13 @@ class StudentVectorGeneratorTests(actions.TestBase):
 
     def test_get_unit_score_multiple_lessons(self):
         """The score of a unit is the average score of its scored lessons."""
-        raw_data = self.raw_activities + [{
+        raw_assessment_data = self.raw_activities + [{
             'last_score':10.5,
             'unit_id':'1',
             'lesson_id':'5',
         }]
         dimension = {
-            clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
             clustering.DIM_ID: '1',
             clustering.DIM_EXTRA_INFO : json.dumps({
                 'unit_scored_lessons': 2
@@ -1172,7 +1230,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
         }
         expected = (10.5 + 8.5) / 2
         value = clustering.StudentVectorGenerator._get_unit_score(
-            raw_data, dimension)
+            raw_assessment_data, dimension)
         self.assertEqual(value, expected,
                          msg='Wrong score for unit with multiple lessons. '
                          'Expected {}. Got {}'.format(expected, value))
@@ -1195,7 +1253,7 @@ class ClusteringGeneratorTests(actions.TestBase):
         self.course = courses.Course(None, app_context=self.app_context)
         self.dim_number = 10
         self.dimensions = [
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_QUESTION,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_QUESTION,
              clustering.DIM_ID: str(i)} for i in range(self.dim_number)]
         self.student_vector_keys = []
 
@@ -1314,23 +1372,23 @@ class ClusteringGeneratorTests(actions.TestBase):
 
     def test_hamming_distance(self):
         cluster_vector = [
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '1',
              clustering.DIM_HIGH: 10,
              clustering.DIM_LOW: None},
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '2',
              clustering.DIM_HIGH: 80,
              clustering.DIM_LOW: 60},
         ]
         student_vector = [
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '1',
              clustering.DIM_VALUE: 7},  # Match
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '2',
              clustering.DIM_VALUE: 100},  # Don't mach
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '3',
              clustering.DIM_VALUE: 4}  # Match
         ]
@@ -1339,13 +1397,13 @@ class ClusteringGeneratorTests(actions.TestBase):
     def test_hamming_equal_left(self):
         """The limit of the dimension range must be considered."""
         cluster_vector = [
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '4',
              clustering.DIM_HIGH: 7,
              clustering.DIM_LOW: 6},
         ]
         student_vector = [
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '1',
              clustering.DIM_VALUE: 7},
         ]
@@ -1354,13 +1412,13 @@ class ClusteringGeneratorTests(actions.TestBase):
     def test_hamming_equal_right(self):
         """The limit of the dimension range must be considered."""
         cluster_vector = [
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '4',
              clustering.DIM_HIGH: 9,
              clustering.DIM_LOW: 7},
         ]
         student_vector = [
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '1',
              clustering.DIM_VALUE: 7},
         ]
@@ -1369,7 +1427,7 @@ class ClusteringGeneratorTests(actions.TestBase):
     def test_hamming_missing_dim_student(self):
         """If a student has no matching dimension assume the value 0."""
         cluster_vector = [
-            {clustering.DIM_TYPE: clustering.DIMENSION_TYPE_UNIT,
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
              clustering.DIM_ID: '4',
              clustering.DIM_HIGH: 7,
              clustering.DIM_LOW: 3},
