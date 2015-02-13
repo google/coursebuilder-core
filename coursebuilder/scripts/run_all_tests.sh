@@ -18,7 +18,7 @@ set -e
 
 . "$(dirname "$0")/common.sh"
 
-PYTHONPATH=\
+export PYTHONPATH=\
 $FANCY_URLLIB_PATH:\
 $JINJA_PATH:\
 $WEBAPP_PATH:\

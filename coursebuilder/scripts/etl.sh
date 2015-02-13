@@ -99,7 +99,7 @@ set -e
 # NOTE: if you have customized Course Builder and put any code in locations not
 # on this path, you will need to add your new paths here. Otherwise, ETL may
 # fail at runtime (if it can't, for example, find some new models you wrote).
-PYTHONPATH=\
+export PYTHONPATH=\
 $FANCY_URLLIB_PATH:\
 $JINJA_PATH:\
 $WEBAPP_PATH:\

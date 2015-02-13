@@ -44,7 +44,7 @@ if [ ! -x "$SOURCE_DIR/scripts/start_in_shell.sh" ]; then
 fi
 
 # Configures the runtime environment.
-PYTHONPATH=$SOURCE_DIR:$GOOGLE_APP_ENGINE_HOME:$RUNTIME_HOME/oauth2client
+export PYTHONPATH=$SOURCE_DIR:$GOOGLE_APP_ENGINE_HOME:$RUNTIME_HOME/oauth2client
 PATH=$RUNTIME_HOME/node/bin:$RUNTIME_HOME/phantomjs/bin:$CHROMEDRIVER_DIR:$PATH
 export YUI_BASE=$RUNTIME_HOME/yui/build
 export KARMA_LIB=$RUNTIME_HOME/karma_lib
