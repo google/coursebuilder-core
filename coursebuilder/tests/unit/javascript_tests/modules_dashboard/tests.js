@@ -164,15 +164,15 @@ describe('draft status toggling', function() {
     cbShowMsgAutoHide = jasmine.createSpy("cbShowMsgAutoHide");
     this.oldPost = $.post;
     $.post = jasmine.createSpy("$.post");
-    this.padlock = $("<div class='icon icon-locked'>");
+    this.padlock = $("<div class='icon md-lock'>");
     onDraftStatusClick.call(this.padlock);
   });
   afterEach(function() {
     $.post = this.oldPost;
   });
   it('optimistically changes the draft status icon', function() {
-    expect(this.padlock.hasClass("icon-unlocked")).toBe(true);
-    expect(this.padlock.hasClass("icon-locked")).toBe(false);
+    expect(this.padlock.hasClass("md-lock-open")).toBe(true);
+    expect(this.padlock.hasClass("md-lock")).toBe(false);
   });
   it('makes a POST request to the server', function() {
     expect($.post).toHaveBeenCalledWith(
@@ -188,21 +188,21 @@ describe('draft status toggling', function() {
   it('verifies the server response and shows a message', function() {
     setDraftStatusCallback(
       '{"status": 200, "payload":"{\\"is_draft\\":false}"}', this.padlock);
-    expect(this.padlock.hasClass("icon-unlocked")).toBe(true);
-    expect(this.padlock.hasClass("icon-locked")).toBe(false);
+    expect(this.padlock.hasClass("md-lock-open")).toBe(true);
+    expect(this.padlock.hasClass("md-lock")).toBe(false);
     expect(cbShowMsgAutoHide).toHaveBeenCalled();
   });
   it('resets the draft status icon when an error is received', function() {
     setDraftStatusCallback('{"status": 401}', this.padlock);
-    expect(this.padlock.hasClass("icon-unlocked")).toBe(false);
-    expect(this.padlock.hasClass("icon-locked")).toBe(true);
+    expect(this.padlock.hasClass("md-lock-open")).toBe(false);
+    expect(this.padlock.hasClass("md-lock")).toBe(true);
     expect(cbShowAlert).toHaveBeenCalled();
   });
   it('adjusts the draft status icon upon a server inconsistency', function() {
     setDraftStatusCallback(
       '{"status": 200, "payload":"{\\"is_draft\\":true}"}', this.padlock);
-    expect(this.padlock.hasClass("icon-unlocked")).toBe(false);
-    expect(this.padlock.hasClass("icon-locked")).toBe(true);
+    expect(this.padlock.hasClass("md-lock-open")).toBe(false);
+    expect(this.padlock.hasClass("md-lock")).toBe(true);
     expect(cbShowAlert).toHaveBeenCalled();
   });
 });

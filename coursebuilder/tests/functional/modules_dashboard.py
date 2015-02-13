@@ -372,10 +372,10 @@ class CourseOutlineTestCase(actions.TestBase):
         }, True)
 
     def _check_list_item(self, li, href, title, ctype, key, lock_class):
-        a = li.find('a')
+        a = li.find('./div/div/div[@class="name"]/a')
         self.assertEquals(a.get('href', ''), href)
         self.assertEquals(a.text, title)
-        padlock = li.find('div')
+        padlock = li.find('./div/div/div[3]')
         self.assertEquals(padlock.get('data-component-type', ''), ctype)
         self.assertEquals(padlock.get('data-key', ''), str(key))
         self.assertIn(lock_class, padlock.get('class', ''))
@@ -396,34 +396,34 @@ class CourseOutlineTestCase(actions.TestBase):
         self.course.save()
 
         dom = self.parse_html_string(self.get(self.URL).body)
-        course_outline = dom.find('.//ul[@id="course-outline"]')
+        course_outline = dom.find('.//div[@class="course-outline editable"]')
         xsrf_token = course_outline.get('data-status-xsrf-token', '')
-        lis = course_outline.findall('li')
+        lis = course_outline.findall('.//ol[@class="course"]/li')
         self.assertEquals(len(lis), 3)
 
         # Test Assessment
         self._check_list_item(
             lis[0], 'assessment?name=%s' % assessment.unit_id,
-            assessment.title, 'unit', assessment.unit_id, 'icon-unlocked'
+            assessment.title, 'unit', assessment.unit_id, 'md-lock-open'
         )
 
         # Test Link
         self._check_list_item(
-            lis[1], '', link.title, 'unit', link.unit_id, 'icon-locked')
+            lis[1], '', link.title, 'unit', link.unit_id, 'md-lock')
 
         # Test Unit
         unit_li = lis[2]
         self._check_list_item(
             unit_li, 'unit?unit=%s' % unit.unit_id,
             'Unit 1 - Test Unit', 'unit',
-            unit.unit_id, 'icon-unlocked'
+            unit.unit_id, 'md-lock-open'
         )
 
         # Test Lesson
         self._check_list_item(
             unit_li.find('ol/li'),
             'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id),
-            lesson.title, 'lesson', lesson.lesson_id, 'icon-locked'
+            '1.1 %s' % lesson.title, 'lesson', lesson.lesson_id, 'md-lock'
         )
 
         # Send POST without xsrf token, should give 403
@@ -447,10 +447,12 @@ class CourseOutlineTestCase(actions.TestBase):
 
         # Refresh page, check results
         lis = self.parse_html_string(
-            self.get(self.URL).body).findall('.//ul[@id="course-outline"]/li')
-        self.assertIn('icon-locked', lis[0].find('div').get('class', ''))
+            self.get(self.URL).body).findall('.//ol[@class="course"]/li')
         self.assertIn(
-            'icon-unlocked', lis[2].find('ol/li/div').get('class', ''))
+            'md-lock', lis[0].find('./div/div/div[3]').get('class', ''))
+        self.assertIn(
+            'md-lock-open',
+            lis[2].find('ol/li/div/div/div[3]').get('class', ''))
 
         # Repeat but set assessment to public and lesson to private
         response = self._set_draft_status(
@@ -460,9 +462,11 @@ class CourseOutlineTestCase(actions.TestBase):
 
         # Refresh page, check results
         lis = self.parse_html_string(
-            self.get(self.URL).body).findall('.//ul[@id="course-outline"]/li')
-        self.assertIn('icon-unlocked', lis[0].find('div').get('class', ''))
-        self.assertIn('icon-locked', lis[2].find('ol/li/div').get('class', ''))
+            self.get(self.URL).body).findall('.//ol[@class="course"]/li')
+        self.assertIn(
+            'md-lock-open', lis[0].find('./div/div/div[3]').get('class', ''))
+        self.assertIn(
+            'md-lock', lis[2].find('ol/li/div/div/div[3]').get('class', ''))
 
 
 class RoleEditorTestCase(actions.TestBase):

@@ -11,15 +11,15 @@ function parseJson(s) {
 
 function setDraftStatus(padlock, isDraft) {
   if (isDraft) {
-    padlock.removeClass("icon-unlocked").addClass("icon-locked");
+    padlock.removeClass("md-lock-open").addClass("md-lock");
   } else {
-    padlock.removeClass("icon-locked").addClass("icon-unlocked");
+    padlock.removeClass("md-lock").addClass("md-lock-open");
   }
 }
 
 function setDraftStatusCallback(data, padlock) {
   var response = parseJson(data);
-  var isDraft = padlock.hasClass("icon-locked")
+  var isDraft = padlock.hasClass("md-lock")
   if (response.status != 200){
     cbShowAlert("Error: " + response.message);
     setDraftStatus(padlock, ! isDraft);
@@ -36,7 +36,7 @@ function setDraftStatusCallback(data, padlock) {
 
 function onDraftStatusClick() {
   var padlock = $(this);
-  var setDraft = $(this).hasClass("icon-unlocked");
+  var setDraft = $(this).hasClass("md-lock-open");
   // Optimistically update icon and revert if server confirmation not received
   setDraftStatus(padlock, setDraft);
   $.post(
@@ -46,7 +46,7 @@ function onDraftStatusClick() {
       key: $(this).data("key"),
       type: $(this).data("component-type"),
       set_draft: setDraft ? 1 : 0,
-      xsrf_token: $(this).parents("#course-outline").data(
+      xsrf_token: $(this).parents(".course-outline").data(
         "status-xsrf-token")
     },
     function(data) {

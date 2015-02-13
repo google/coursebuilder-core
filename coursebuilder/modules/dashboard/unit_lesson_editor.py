@@ -159,37 +159,19 @@ class UnitLessonEditor(ApplicationHandler):
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
-    def get_edit_unit_lesson(self):
-        """Shows editor for the list of unit and lesson titles."""
-
-        key = self.request.get('key')
-
-        exit_url = self.canonicalize_url('/dashboard')
-        rest_url = self.canonicalize_url(UnitLessonTitleRESTHandler.URI)
-        form_html = oeditor.ObjectEditor.get_html_for(
-            self,
-            UnitLessonTitleRESTHandler.SCHEMA_JSON,
-            UnitLessonTitleRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            key, rest_url, exit_url,
-            required_modules=UnitLessonTitleRESTHandler.REQUIRED_MODULES)
-
-        template_values = {}
-        template_values['page_title'] = self.format_title('Edit Course Outline')
-        template_values[
-            'page_description'] = messages.COURSE_OUTLINE_EDITOR_DESCRIPTION
-        template_values['main_content'] = form_html
-        self.render_page(template_values)
-
     def post_add_lesson(self):
         """Adds new lesson to a first unit of the course."""
         course = courses.Course(self)
-        first_unit = None
-        for unit in course.get_units():
-            if unit.type == verify.UNIT_TYPE_UNIT:
-                first_unit = unit
-                break
-        if first_unit:
-            lesson = course.add_lesson(first_unit)
+        target_unit = None
+        if self.request.get('unit_id'):
+            target_unit = course.find_unit_by_id(self.request.get('unit_id'))
+        else:
+            for unit in course.get_units():
+                if unit.type == verify.UNIT_TYPE_UNIT:
+                    target_unit = unit
+                    break
+        if target_unit:
+            lesson = course.add_lesson(target_unit)
             course.save()
             # TODO(psimakov): complete 'edit_lesson' view
             self.redirect(self.get_action_url(
@@ -1066,9 +1048,10 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
 
 
 class UnitLessonTitleRESTHandler(BaseRESTHandler):
-    """Provides REST API to unit and lesson titles."""
+    """Provides REST API to reorder unit and lesson titles."""
 
     URI = '/rest/course/outline'
+    XSRF_TOKEN = 'unit-lesson-reorder'
 
     SCHEMA_JSON = """
         {
@@ -1101,72 +1084,12 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
 
     SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
-    SCHEMA_ANNOTATIONS_DICT = [
-        (['title'], 'Course Outline'),
-        (['_inputex'], {'className': 'organizer'}),
-        (['properties', 'outline', '_inputex'], {
-            'sortable': 'true',
-            'label': ''}),
-        ([
-            'properties', 'outline', 'items',
-            'properties', 'title', '_inputex'], {
-                '_type': 'uneditable',
-                'label': ''}),
-        (['properties', 'outline', 'items', 'properties', 'id', '_inputex'], {
-            '_type': 'hidden'}),
-        (['properties', 'outline', 'items', 'properties', 'lessons',
-          '_inputex'], {
-              'sortable': 'true',
-              'label': '',
-              'listAddLabel': 'Add  a new lesson',
-              'listRemoveLabel': 'Delete'}),
-        (['properties', 'outline', 'items', 'properties', 'lessons', 'items',
-          'properties', 'title', '_inputex'], {
-              '_type': 'uneditable',
-              'label': ''}),
-        (['properties', 'outline', 'items', 'properties', 'lessons', 'items',
-          'properties', 'id', '_inputex'], {
-              '_type': 'hidden'})
-        ]
-
-    REQUIRED_MODULES = [
-        'inputex-hidden', 'inputex-list', 'inputex-string',
-        'inputex-uneditable']
-
-    def get(self):
-        """Handles REST GET verb and returns an object as JSON payload."""
-
-        if not CourseOutlineRights.can_view(self):
-            transforms.send_json_response(self, 401, 'Access denied.', {})
-            return
-
-        course = courses.Course(self)
-        outline_data = []
-        for unit in course.get_units():
-            lesson_data = []
-            for lesson in course.get_lessons(unit.unit_id):
-                lesson_data.append({
-                    'title': lesson.title,
-                    'id': lesson.lesson_id})
-            unit_title = unit.title
-            if verify.UNIT_TYPE_UNIT == unit.type:
-                unit_title = 'Unit: %s' % unit.title
-            outline_data.append({
-                'title': unit_title,
-                'id': unit.unit_id,
-                'lessons': lesson_data})
-        transforms.send_json_response(
-            self, 200, None,
-            payload_dict={'outline': outline_data},
-            xsrf_token=XsrfTokenManager.create_xsrf_token(
-                'unit-lesson-reorder'))
-
     def put(self):
         """Handles REST PUT verb with JSON payload."""
         request = transforms.loads(self.request.get('request'))
 
         if not self.assert_xsrf_token_or_fail(
-                request, 'unit-lesson-reorder', {'key': None}):
+                request, self.XSRF_TOKEN, {'key': None}):
             return
 
         if not CourseOutlineRights.can_edit(self):

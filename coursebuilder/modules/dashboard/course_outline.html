@@ -1,0 +1,83 @@
+<script src ="/modules/dashboard/resources/js/course_outline.js"></script>
+<link href="/modules/dashboard/resources/css/course_outline.css" rel="stylesheet">
+{% macro render_row(item) -%}
+  <div class="row {{ item.class }}">
+    <div class="left-matter">
+      <div class="reorder reveal-on-hover icon md md-view-headline"></div>
+      <div class="name"><a href="{{ item.href }}">{{ item.title }}</a></div>
+      {% for action in item.actions %}
+        {{ action }}
+      {% endfor %}
+    </div>
+    <div class="extras">
+      {% for extra in item.extras %}
+        {{ extra }}
+      {% endfor %}
+    </div>
+  </div>
+{%- endmacro %}
+
+<div class="course-outline {% if course.is_editable %}editable{% else %}read-only{% endif %}"
+    data-status-xsrf-token="{{ status_xsrf_token }}"
+    data-unit-lesson-title-xsrf-token={{ unit_lesson_title_xsrf_token }}>
+  <div class="row">
+    <div class="left-matter header">
+      <div class="name">Course Outline</div>
+    </div>
+    <div class="header">
+      <div class="name">&nbsp;</div>
+    </div>
+  </div>
+  <div class="row course">
+    <div class="left-matter">
+      <div class="name"><a href="course">Course - {{ course.title }}</a></div>
+      <form action="{{ course.availability.url }}" method="POST">
+        <input type="hidden" name="xsrf_token" value="{{ course.availability.xsrf_token }}">
+        <input type="hidden" name="availability" value="{{ course.availability.param }}">
+        <button class="{{ course.availability.class }}" type="submit"></button>
+      </form>
+    </div>
+  </div>
+  <ol class="course">
+    {% for unit in units %}
+      <li data-unit-id="{{ unit.unit_id }}">
+        {{ render_row(unit) }}
+        {% if unit.class == 'unit' %}
+          {% if unit.pre_assessment %}
+            <ol class="unit pre">
+              <li data-unit-id="{{ unit.pre_assessment.unit_id }}">
+                {{ render_row(unit.pre_assessment) }}
+              </li>
+            </ol>
+          {% endif %}
+          <ol class="unit">
+            {% for lesson in unit.lessons %}
+              <li data-lesson-id="{{ lesson.lesson_id }}">
+                {{ render_row(lesson) }}
+              </li>
+            {% endfor %}
+          </ol>
+          <ol class="unit post">
+            {% if unit.post_assessment %}
+              <li data-unit-id="{{ unit.post_assessment.unit_id }}">
+                {{ render_row(unit.post_assessment) }}
+              </li>
+            {% endif %}
+            <li class="add-lesson">
+              <div class="row add-lesson">
+                <div class="left-matter">
+                  <div class="reorder icon"></div>
+                  <form action="dashboard?action=add_lesson" method="POST">
+                    <input type="hidden" name="xsrf_token" value="{{ add_lesson_xsrf_token }}">
+                    <input type="hidden" name="unit_id" value="{{ unit.unit_id }}">
+                    <button class="" type="submit">+ Add Lesson</button>
+                </form>
+                </div>
+              </div>
+            </li>
+          </ol>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</div>

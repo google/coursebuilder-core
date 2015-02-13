@@ -3335,7 +3335,10 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # Add lessons.
         response = self.get('dashboard')
-        compute_form = response.forms['add_lesson']
+        compute_form = None
+        for form in response.forms.values():
+            if form.action == 'dashboard?action=add_lesson':
+                compute_form = form
         response = self.submit(compute_form)
         response = self.get('/rest/course/lesson?key=2')
         assert_equals(response.status_int, 200)

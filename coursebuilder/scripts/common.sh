@@ -226,6 +226,7 @@ DISTRIBUTED_LIBS="\
   mathjax-2.3.0.zip \
   mathjax-fonts-2.3.0.zip \
   codemirror-4.5.0.zip \
+  material-design-iconic-font-1.1.1.zip \
 "
 
 echo Using third party Python packages from $DISTRIBUTED_LIBS_DIR

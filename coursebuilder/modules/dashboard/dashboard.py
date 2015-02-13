@@ -20,10 +20,12 @@ import collections
 import copy
 import datetime
 import HTMLParser
+import jinja2
 import logging
 import os
 import urllib
 
+import appengine_config
 from admin_preferences_editor import AdminPreferencesEditor
 from admin_preferences_editor import AdminPreferencesRESTHandler
 from course_settings import CourseSettingsHandler
@@ -160,6 +162,12 @@ class DashboardHandler(
             (TextAssetRESTHandler.URI, TextAssetRESTHandler),
             (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler),
             (RoleRESTHandler.URI, RoleRESTHandler)]
+
+    # A list of functions which are used to generate extra info about a lesson
+    # or unit in the course outline view. Modules which can provide extra info
+    # should add a function to this list which accepts a course and a lesson or
+    # unit as argument and returns a safe_dom NodeList or Node.
+    COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS = []
 
     # Dictionary that maps external permissions to their descriptions
     _external_permissions = {}
@@ -474,147 +482,193 @@ class DashboardHandler(
 
     def _render_course_outline_to_html(self, course):
         """Renders course outline to HTML."""
-        if not course.get_units():
-            return []
-        lines = safe_dom.Element(
-            'ul', style='list-style: none;', id='course-outline',
-            data_status_xsrf_token=self.create_xsrf_token('set_draft_status')
-        )
+
+        units = []
         for unit in course.get_units():
             if course.get_parent_unit(unit.unit_id):
                 continue  # Will be rendered as part of containing element.
             if unit.type == verify.UNIT_TYPE_ASSESSMENT:
-                lines.add_child(self._render_assessment_li(unit))
+                units.append(self._render_assessment_outline(unit))
             elif unit.type == verify.UNIT_TYPE_LINK:
-                lines.add_child(self._render_link_li(unit))
+                units.append(self._render_link_outline(unit))
             elif unit.type == verify.UNIT_TYPE_UNIT:
-                lines.add_child(self._render_unit_li(course, unit))
+                units.append(self._render_unit_outline(course, unit))
             elif unit.type == verify.UNIT_TYPE_CUSTOM:
-                lines.add_child(self._render_custom_unit_li(unit))
+                units.append(self._render_custom_unit_outline(course, unit))
             else:
                 raise Exception('Unknown unit type: %s.' % unit.type)
-        return lines
 
-    def _render_status_icon(self, dom_element, resource, key, component_type):
+        template_values = {
+            'course': {
+                'title': course.title,
+                'is_editable': self.app_context.is_editable_fs(),
+                'availability': {
+                    'url': self.get_action_url('course_availability'),
+                    'xsrf_token': self.create_xsrf_token('course_availability'),
+                    'param': not self.app_context.now_available,
+                    'class': (
+                        'reveal-on-hover icon md md-lock-open'
+                        if self.app_context.now_available else
+                        'reveal-on-hover icon md md-lock')
+                }
+            },
+            'units': units,
+            'add_lesson_xsrf_token': self.create_xsrf_token('add_lesson'),
+            'status_xsrf_token': self.create_xsrf_token('set_draft_status'),
+            'unit_lesson_title_xsrf_token': self.create_xsrf_token(
+                UnitLessonTitleRESTHandler.XSRF_TOKEN)
+        }
+        return jinja2.Markup(
+            self.get_template(
+                'course_outline.html', []).render(template_values))
+
+    def _render_status_icon(self, resource, key, component_type):
         if not hasattr(resource, 'now_available'):
             return
         icon = safe_dom.Element(
             'div', data_key=str(key), data_component_type=component_type)
-        common_classes = 'icon icon-draft-status'
+        common_classes = 'reveal-on-hover icon icon-draft-status md'
         if not self.app_context.is_editable_fs():
             common_classes += ' inactive'
         if resource.now_available:
             icon.add_attribute(
                 alt=unit_lesson_editor.PUBLISHED_TEXT,
                 title=unit_lesson_editor.PUBLISHED_TEXT,
-                className=common_classes + ' icon-unlocked',
+                className=common_classes + ' md-lock-open',
             )
         else:
             icon.add_attribute(
                 alt=unit_lesson_editor.DRAFT_TEXT,
                 title=unit_lesson_editor.DRAFT_TEXT,
-                className=common_classes + ' icon-locked'
+                className=common_classes + ' md-lock'
             )
-        dom_element.add_child(icon)
+        return icon
 
-    def _render_assessment_li(self, unit):
-        li = safe_dom.Element('li').add_child(
-            safe_dom.Element(
-                'a', href='assessment?name=%s' % unit.unit_id,
-                className='strong'
-            ).add_text(unit.title)
-        )
-        self._render_status_icon(li, unit, unit.unit_id, 'unit')
+    def _render_assessment_outline(self, unit):
+        actions = []
+        unit_data = {
+            'title': unit.title,
+            'class': 'assessment',
+            'href': 'assessment?name=%s' % unit.unit_id,
+            'unit_id': unit.unit_id,
+            'actions': actions
+        }
+
+        actions.append(self._render_status_icon(unit, unit.unit_id, 'unit'))
         if self.app_context.is_editable_fs():
             url = self.canonicalize_url(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_assessment',
                     'key': unit.unit_id})
-            li.add_child(self._create_edit_button(url))
-        return li
+            actions.append(self._create_edit_button_for_course_outline(url))
 
-    def _render_link_li(self, unit):
-        li = safe_dom.Element('li').add_child(
-            safe_dom.Element(
-                'a', href=unit.href, className='strong'
-            ).add_text(unit.title)
-        )
-        self._render_status_icon(li, unit, unit.unit_id, 'unit')
+        return unit_data
+
+    def _render_link_outline(self, unit):
+        actions = []
+        unit_data = {
+            'title': unit.title,
+            'class': 'link',
+            'href': unit.href or '',
+            'unit_id': unit.unit_id,
+            'actions': actions
+        }
+        actions.append(self._render_status_icon(unit, unit.unit_id, 'unit'))
         if self.app_context.is_editable_fs():
             url = self.canonicalize_url(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_link',
                     'key': unit.unit_id})
-            li.add_child(self._create_edit_button(url))
-        return li
+            actions.append(self._create_edit_button_for_course_outline(url))
+        return unit_data
 
-    def _render_custom_unit_li(self, unit):
-        li = safe_dom.Element('li').add_child(
-            safe_dom.Element(
-                'a', href=unit.custom_unit_url, className='strong'
-            ).add_text(unit.title)
-        )
-        self._render_status_icon(li, unit, unit.unit_id, 'unit')
+    def _render_custom_unit_outline(self, unit):
+        actions = []
+        unit_data = {
+            'title': unit.title,
+            'class': 'custom-unit',
+            'href': unit.custom_unit_url,
+            'unit_id': unit.unit_id,
+            'actions': actions
+        }
+        actions.append(self._render_status_icon(unit, unit.unit_id, 'unit'))
         if self.app_context.is_editable_fs():
             url = self.canonicalize_url(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_custom_unit',
                     'key': unit.unit_id,
                     'unit_type': unit.custom_unit_type})
-            li.add_child(self._create_edit_button(url))
-        return li
+            actions.append(self._create_edit_button_for_course_outline(url))
+        return unit_data
 
-    def _render_unit_li(self, course, unit):
+    def _render_unit_outline(self, course, unit):
         is_editable = self.app_context.is_editable_fs()
-        li = safe_dom.Element('li').add_child(
-            safe_dom.Element(
-                'a', href='unit?unit=%s' % unit.unit_id,
-                className='strong').add_text(
-                    utils.display_unit_title(unit))
-        )
-        self._render_status_icon(li, unit, unit.unit_id, 'unit')
+
+        actions = []
+        unit_data = {
+            'title': utils.display_unit_title(unit),
+            'class': 'unit',
+            'href': 'unit?unit=%s' % unit.unit_id,
+            'unit_id': unit.unit_id,
+            'actions': actions
+        }
+
+        actions.append(self._render_status_icon(unit, unit.unit_id, 'unit'))
         if is_editable:
             url = self.canonicalize_url(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_unit',
                     'key': unit.unit_id})
-            li.add_child(self._create_edit_button(url))
+            actions.append(self._create_edit_button_for_course_outline(url))
 
         if unit.pre_assessment:
             assessment = course.find_unit_by_id(unit.pre_assessment)
             if assessment:
-                ul = safe_dom.Element('ul')
-                ul.add_child(self._render_assessment_li(assessment))
-                li.add_child(ul)
-        ol = safe_dom.Element('ol')
-        li_index = 1
+                assessment_outline = self._render_assessment_outline(assessment)
+                assessment_outline['class'] = 'pre-assessment'
+                unit_data['pre_assessment'] = assessment_outline
+
+        lessons = []
         for lesson in course.get_lessons(unit.unit_id):
-            li2 = safe_dom.Element('li').add_child(
-                safe_dom.Element(
-                    'a',
-                    href='unit?unit=%s&lesson=%s' % (
-                        unit.unit_id, lesson.lesson_id),
-                ).add_text(lesson.title)
-            )
             if lesson.auto_index:
-                li2.set_attribute('value', str(li_index))
-                li_index += 1
+                lesson_title = "%s.%s %s" % (
+                    unit.index, lesson.index, lesson.title)
             else:
-                li2.set_attribute('class', 'activity-item')
-            self._render_status_icon(li2, lesson, lesson.lesson_id, 'lesson')
+                lesson_title = lesson.title
+
+            actions = []
+            actions.append(
+                self._render_status_icon(lesson, lesson.lesson_id, 'lesson'))
             if is_editable:
                 url = self.get_action_url(
                     'edit_lesson', key=lesson.lesson_id)
-                li2.add_child(self._create_edit_button(url))
-            ol.add_child(li2)
-        li.add_child(ol)
+                actions.append(self._create_edit_button_for_course_outline(url))
+
+            extras = []
+            for annotator in self.COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS:
+                extra_info = annotator(course, lesson)
+                if extra_info:
+                    extras.append(extra_info)
+
+            lessons.append({
+                'title': lesson_title,
+                'class': 'lesson',
+                'href': 'unit?unit=%s&lesson=%s' % (
+                    unit.unit_id, lesson.lesson_id),
+                'lesson_id': lesson.lesson_id,
+                'actions': actions,
+                'extras': extras})
+
+        unit_data['lessons'] = lessons
+
         if unit.post_assessment:
             assessment = course.find_unit_by_id(unit.post_assessment)
             if assessment:
-                ul = safe_dom.Element('ul')
-                ul.add_child(self._render_assessment_li(assessment))
-                li.add_child(ul)
-        return li
+                assessment_outline = self._render_assessment_outline(assessment)
+                assessment_outline['class'] = 'post-assessment'
+                unit_data['post_assessment'] = assessment_outline
+
+        return unit_data
 
     def get_question_preview(self):
         template_values = {}
@@ -627,7 +681,6 @@ class DashboardHandler(
     def get_outline(self):
         """Renders course outline view."""
 
-        pages_info_actions = []
         # Basic course info.
         course_info = []
         course_actions = [
@@ -635,16 +688,10 @@ class DashboardHandler(
              'caption': 'Add Course',
              'href': 'admin?action=add_course'}]
 
-        course_info.append(
-            'Course Title: %s' % self.app_context.get_environ()['course'][
-                'title'])
-
         if not self.app_context.is_editable_fs():
             course_info.append('The course is read-only.')
         else:
             if self.app_context.now_available:
-                course_availability_caption = 'Make Course Unavailable'
-                course_info.append('The course is publicly available.')
                 if self.app_context.get_environ()['course']['browsable']:
                     browsable = True
                     course_browsability_caption = (
@@ -664,17 +711,6 @@ class DashboardHandler(
                     'xsrf_token': self.create_xsrf_token('course_browsability'),
                     'params': {'browsability': not browsable},
                     })
-            else:
-                course_availability_caption = 'Make Course Available'
-                course_info.append('The course is not available.')
-
-            course_actions.append({
-                'id': 'course_availability',
-                'caption': course_availability_caption,
-                'action': self.get_action_url('course_availability'),
-                'xsrf_token': self.create_xsrf_token('course_availability'),
-                'params': {'availability': not self.app_context.now_available},
-                })
 
         currentCourse = courses.Course(self)
         course_info.append('Schema Version: %s' % currentCourse.version)
@@ -699,17 +735,6 @@ class DashboardHandler(
 
         outline_actions = []
         if self.app_context.is_editable_fs():
-            outline_actions.append({
-                'id': 'edit_unit_lesson',
-                'caption': 'Organize',
-                'href': self.get_action_url('edit_unit_lesson')})
-            all_units = currentCourse.get_units()
-            if any([unit.type == verify.UNIT_TYPE_UNIT for unit in all_units]):
-                outline_actions.append({
-                    'id': 'add_lesson',
-                    'caption': 'Add Lesson',
-                    'action': self.get_action_url('add_lesson'),
-                    'xsrf_token': self.create_xsrf_token('add_lesson')})
             outline_actions.append({
                 'id': 'add_unit',
                 'caption': 'Add Unit',
@@ -750,11 +775,6 @@ class DashboardHandler(
                 'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
                 'actions': course_actions,
                 'children': course_info},
-            {
-                'title': 'Pages',
-                'description': messages.PAGES_DESCRIPTION,
-                'actions': pages_info_actions,
-                'children': pages_info},
             {
                 'title': 'Course Outline',
                 'description': messages.COURSE_OUTLINE_DESCRIPTION,
@@ -1152,6 +1172,15 @@ class DashboardHandler(
         return safe_dom.A(
             href=edit_url,
             className='icon icon-edit',
+            title='Edit',
+            alt='Edit',
+        )
+
+    def _create_edit_button_for_course_outline(self, edit_url):
+        # TODO(jorr): Replace _create_edit_button with this
+        return safe_dom.A(
+            href=edit_url,
+            className='icon md md-mode-edit reveal-on-hover',
             title='Edit',
             alt='Edit',
         )
@@ -1786,10 +1815,13 @@ def register_module():
     tabs.Registry.register('settings', 'admin_prefs', 'Preferences', None)
 
     global_routes = [
-        (os.path.join(dashboard_utils.RESOURCES_PATH, 'js', '.*'),
-         tags.JQueryHandler),
-        (os.path.join(dashboard_utils.RESOURCES_PATH, '.*'),
-         tags.ResourcesHandler)]
+        (
+            dashboard_utils.RESOURCES_PATH +'/material-design-icons/(.*)',
+            sites.make_zip_handler(os.path.join(
+                appengine_config.BUNDLE_ROOT, 'lib',
+                'material-design-iconic-font-1.1.1.zip'))),
+        (dashboard_utils.RESOURCES_PATH +'/js/.*', tags.JQueryHandler),
+        (dashboard_utils.RESOURCES_PATH + '/.*', tags.ResourcesHandler)]
 
     dashboard_handlers = [
         ('/dashboard', DashboardHandler),

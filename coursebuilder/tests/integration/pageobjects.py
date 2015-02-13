@@ -317,12 +317,9 @@ class DashboardPage(PageObject):
         return AddLink(self._tester)
 
     def click_add_lesson(self):
-        self.find_element_by_css_selector('#add_lesson > button').click()
+        self.find_element_by_css_selector(
+            'div.course-outline li.add-lesson button').click()
         return AddLesson(self._tester)
-
-    def click_organize(self):
-        self.find_element_by_css_selector('#edit_unit_lesson').click()
-        return Organize(self._tester)
 
     def click_assets(self):
         self.find_element_by_link_text('Assets').click()
@@ -347,7 +344,8 @@ class DashboardPage(PageObject):
         return AnalyticsPage(self._tester)
 
     def click_course(self):
-        self.find_element_by_link_text('Course').click()
+        self.find_element_by_css_selector(
+            'div.course-outline div.course div.name a').click()
         return RootPage(self._tester)
 
     def click_i18n(self):
@@ -1005,11 +1003,6 @@ class AddLesson(CourseContentElement):
         select.Select(self.find_element_by_name(
             'scored')).select_by_visible_text('Questions only give feedback')
         return self
-
-
-class Organize(DashboardEditor):
-    """Page object to model the dashboard's unit/lesson organizer."""
-    pass
 
 
 class AdminPage(PageObject):

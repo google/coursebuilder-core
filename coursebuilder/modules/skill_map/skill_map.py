@@ -20,6 +20,7 @@ import os
 
 import appengine_config
 from common import crypto
+from common import safe_dom
 from common import schema_fields
 from controllers import utils
 from models import courses
@@ -27,6 +28,7 @@ from models import custom_modules
 from models import transforms
 from models import models
 from models import roles
+from modules.dashboard.dashboard import DashboardHandler
 from modules.dashboard.unit_lesson_editor import LessonRESTHandler
 
 
@@ -294,6 +296,12 @@ class SkillMap(object):
     def get_lessons_for_skill(self, skill_id):
         return self._lessons_by_skill.get(skill_id, [])
 
+    def get_skills_for_lesson(self, lesson_id):
+        # TODO(jorr): Can we stop relying on the unit and just use lesson id?
+        lesson = self._course.find_lesson_by_id(None, lesson_id)
+        skill_list = lesson.properties.get(LESSON_SKILL_LIST_KEY, [])
+        return [self._skill_graph.get(skill_id) for skill_id in skill_list]
+
 
 class SkillListRestHandler(utils.BaseRESTHandler):
     """REST handler to list skills."""
@@ -403,7 +411,22 @@ def lesson_rest_handler_pre_save_hook(lesson, lesson_dict):
             item['skill'] for item in lesson_dict['skills']]
 
 
+def course_outline_extra_info_decorator(course, unit_or_lesson):
+    if isinstance(unit_or_lesson, courses.Lesson13):
+        lesson = unit_or_lesson
+        skill_map = SkillMap.load(course.app_context)
+        # TODO(jorr): Should this list be being created by the JS library?
+        skill_list = safe_dom.Element('ol', className='skill-display-root')
+        for skill in skill_map.get_skills_for_lesson(lesson.lesson_id):
+            skill_list.add_child(
+                safe_dom.Element('li', className='skill').add_text(skill.name))
+        return skill_list
+    return None
+
+
 def notify_module_enabled():
+    DashboardHandler.COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS.append(
+        course_outline_extra_info_decorator)
     LessonRESTHandler.SCHEMA_LOAD_HOOKS.append(
         lesson_rest_handler_schema_load_hook)
     LessonRESTHandler.PRE_LOAD_HOOKS.append(

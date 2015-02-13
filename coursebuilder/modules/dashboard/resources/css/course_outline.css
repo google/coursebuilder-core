@@ -1,0 +1,150 @@
+
+div.course-outline {
+  border: solid #ccc 1px;
+}
+div.course-outline a {
+  text-decoration: none;
+  color: #0000ee;
+}
+div.course-outline div.header {
+  background-color: #aaa;
+  text-align: center;
+  font-weight: bold;
+}
+div.course-outline div.header.left-matter {
+  float:left;
+}
+div.course-outline div.row > div.header {
+  display: block;
+}
+div.course-outline ol.course,
+div.course-outline ol.unit {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+div.course-outline ol.course > li.ui-sortable-helper > ol.unit > li {
+  /* Hide the contents of a unit while it's moving */
+  height: 0;
+  overflow-y: hidden;
+  transition: height 300ms;
+}
+div.course-outline ol.unit > li {
+  height: 28px;
+}
+div.course-outline .placeholder {
+  border: solid #ffffc0 1px;
+  background-color: #f8f8f0;
+  height: 28px;
+  line-height: 1.2em;
+}
+div.course-outline li {
+  margin: 0 !important;
+  padding: 0;
+}
+div.course-outline div.row {
+  transition: background-color 200ms;
+  height: 28px;
+}
+div.course-outline div.row > div > div {
+  vertical-align: top;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  line-height: 24px;
+}
+div.course-outline div.row.even {
+  background-color: #f0f0f0;
+}
+div.course-outline div.row:hover {
+  background-color: #e0e0e0;
+}
+div.course-outline div.left-matter {
+  display: inline-block;
+  width: 420px;
+  border-right: solid #ccc 1px;
+}
+div.course-outline div.row.course > div > div.name {
+  margin-left: 5px;
+}
+div.course-outline div.row.unit > div > div.name {
+  margin-left: 5px;
+}
+div.course-outline div.row.custom-unit > div > div.name {
+  margin-left: 5px;
+  font-weight: bold;
+}
+div.course-outline div.row.lesson > div > div.name,
+div.course-outline div.row.pre-assessment > div > div.name,
+div.course-outline div.row.post-assessment > div > div.name,
+div.course-outline div.row.add-lesson > div > div.name {
+  margin-left: 20px;
+  max-width: 300px;
+  white-space: nowrap;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+}
+div.course-outline.read-only div.row:hover div.reorder,
+div.course-outline div.row.pre-assessment > div > div.reorder,
+div.course-outline div.row.post-assessment > div > div.reorder,
+div.course-outline div.row.add-lesson > div > div.reorder {
+  opacity: 0;
+  cursor: inherit;
+}
+div.course-outline button {
+  background-color: inherit;
+  border: none;
+  line-height: 24px;
+  padding: 0;
+}
+div.course-outline div.row.add-lesson button {
+  font-style: italic;
+  color: #777;
+  margin-left: 20px;
+}
+div.course-outline div.row > div,
+div.course-outline div.row > div > div {
+  display: inline-block;
+}
+div.course-outline .reveal-on-hover {
+  opacity: 0;
+  transition: opacity 200ms;
+}
+div.course-outline div.row:hover .reveal-on-hover,
+div.course-outline .reveal-on-hover.md-lock {
+  opacity: 1;
+}
+div.course-outline .icon {
+  font-size: 16px;
+  margin: 0;
+  height: 24px;
+  width: 20px;
+  padding-left: 4px;
+  color: #555;
+  text-decoration: none;
+}
+div.course-outline div.reorder {
+  margin-left: 6px;
+  cursor: move;
+}
+div.course-outline div.extras {
+  padding-right: 20px;
+}
+/*
+ * TODO(jorr): Ensure styling for skill widgets is always loaded in the header
+ */
+ol.skill-display-root {
+  list-style-type: none;
+  padding: 0px;
+  display: inline-block;
+  vertical-align:top;
+  margin-top: 5px;
+}
+ol.skill-display-root > li.skill {
+  display: inline-block;
+  background-color: #5cb85c;
+  color: white;
+  font-weight: bold;
+  border-radius: 0.2em;
+  padding: 0.1em 0.4em;
+  margin: 0 0.2em !important;
+}

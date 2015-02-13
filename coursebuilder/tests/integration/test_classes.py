@@ -419,11 +419,6 @@ class AdminTests(BaseIntegrationTest):
         ).click_close(
         ).verify_not_publicly_available()  # confirm that we're on the dashboard
 
-        # Test Organize Units and Lessons
-        self.load_dashboard(name).click_organize(
-        ).click_close(
-        ).verify_not_publicly_available()  # confirm that we're on the dashboard
-
         # Test Upload asset
         self.load_dashboard(name).click_assets(
         ).click_sub_tab(
@@ -697,7 +692,7 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_save(
         ).click_close(
         ).click_on_course_outline_components(
-            'Question lesson - UnGraded'
+            '1.2 Question lesson - UnGraded'
         #---------------------------------------------- Verify pre-assessment
         ).set_answer_for_mc_question(
             'A4', 'What is your favorite color?', 'Red'
