@@ -1467,8 +1467,7 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # Tests outline view.
         response = self.get('dashboard')
-        assert_contains('Unit 3 - Advanced techniques', response.body)
-        assert_contains('data/lesson.csv', response.body)
+        assert_contains('Advanced techniques', response.body)
 
         # Check editability.
         if self.supports_editing:
@@ -1662,26 +1661,6 @@ class CourseAuthorAspectTest(actions.TestBase):
 
 
 class CourseAuthorCourseCreationTest(actions.TestBase):
-
-    def test_course_admin_can_create_another_course(self):
-        admin_email = 'admin@foo.com'
-        author_email = 'author@foo.com'
-        actions.login(admin_email, is_admin=True)
-        actions.simple_add_course('course_one', admin_email, 'Course One')
-        actions.update_course_config('course_one', {
-            'course': {'admin_user_emails': author_email}})
-
-        # Login without super-admin authority; visit dashboard of course we
-        # may edit.
-        actions.login(author_email)
-        response = self.get('/course_one/dashboard')
-        response = self.click(response, 'Add Course')
-
-        # Ensure that clicking on add-course link does not result in a 302
-        # to '/', which would happen if we did not have access.
-        self.assertEquals(200, response.status_int)
-        self.assertEquals('http://localhost/course_one/admin?action=add_course',
-                          response.request.url)
 
     def test_course_admin_does_not_see_courses_he_does_not_administer(self):
         admin_email = 'admin@foo.com'
@@ -2969,8 +2948,9 @@ class I18NTest(MultipleCoursesTestBase):
         self.walk_the_course(
             self.course_ru, first_time=False, is_admin=True, logout=False)
 
+        dashboard_url = '/courses/%s/dashboard' % self.course_ru.path
+
         def assert_page_contains(page_name, text_array):
-            dashboard_url = '/courses/%s/dashboard' % self.course_ru.path
             response = self.get('%s?action=%s' % (dashboard_url, page_name))
             for text in text_array:
                 assert_contains(text, response.body)
@@ -2980,9 +2960,10 @@ class I18NTest(MultipleCoursesTestBase):
         assert_page_contains(
             'assets', [self.course_ru.title])
         assert_page_contains(
-            '', [
-                self.course_ru.title,
-                vfs.AbstractFileSystem.normpath(self.course_ru.home)])
+            '', [self.course_ru.title])
+        assert_contains(
+                vfs.AbstractFileSystem.normpath(self.course_ru.home),
+                self.get('%s?action=settings&tab=about' % dashboard_url).body)
 
         # Clean up.
         actions.logout()

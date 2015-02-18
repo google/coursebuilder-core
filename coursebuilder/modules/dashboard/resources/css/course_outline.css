@@ -66,11 +66,7 @@ div.course-outline div.left-matter {
 div.course-outline div.row.course > div > div.name {
   margin-left: 5px;
 }
-div.course-outline div.row.unit > div > div.name {
-  margin-left: 5px;
-}
 div.course-outline div.row.custom-unit > div > div.name {
-  margin-left: 5px;
   font-weight: bold;
 }
 div.course-outline div.row.lesson > div > div.name,

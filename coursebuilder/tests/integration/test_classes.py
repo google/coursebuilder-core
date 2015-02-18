@@ -692,7 +692,7 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_save(
         ).click_close(
         ).click_on_course_outline_components(
-            '1.2 Question lesson - UnGraded'
+            '2. Question lesson - UnGraded'
         #---------------------------------------------- Verify pre-assessment
         ).set_answer_for_mc_question(
             'A4', 'What is your favorite color?', 'Red'

@@ -415,7 +415,7 @@ class CourseOutlineTestCase(actions.TestBase):
         unit_li = lis[2]
         self._check_list_item(
             unit_li, 'unit?unit=%s' % unit.unit_id,
-            'Unit 1 - Test Unit', 'unit',
+            'Test Unit', 'unit',
             unit.unit_id, 'md-lock-open'
         )
 
@@ -423,7 +423,7 @@ class CourseOutlineTestCase(actions.TestBase):
         self._check_list_item(
             unit_li.find('ol/li'),
             'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id),
-            '1.1 %s' % lesson.title, 'lesson', lesson.lesson_id, 'md-lock'
+            lesson.title, 'lesson', lesson.lesson_id, 'md-lock'
         )
 
         # Send POST without xsrf token, should give 403

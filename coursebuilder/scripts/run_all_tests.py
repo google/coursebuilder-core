@@ -175,7 +175,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.AdminAspectTest': 8,
     'tests.functional.test_classes.AssessmentTest': 2,
     'tests.functional.test_classes.CourseAuthorAspectTest': 4,
-    'tests.functional.test_classes.CourseAuthorCourseCreationTest': 2,
+    'tests.functional.test_classes.CourseAuthorCourseCreationTest': 1,
     'tests.functional.test_classes.CourseUrlRewritingTest': 43,
     'tests.functional.test_classes.DatastoreBackedCustomCourseTest': 6,
     'tests.functional.test_classes.DatastoreBackedSampleCourseTest': 43,

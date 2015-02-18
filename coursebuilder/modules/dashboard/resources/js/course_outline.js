@@ -1,6 +1,10 @@
+var COURSE_SORTABLE_SELECTOR = 'div.course-outline.editable ol.course';
+var UNIT_SORTABLE_SELECTOR = 'div.course-outline.editable ol.unit';
 var UNIT_LESSON_TITLE_REST_HANDLER_URL = 'rest/course/outline';
 var UNIT_LESSON_TITLE_XSRF_TOKEN = $('.course-outline')
     .data('unitLessonTitleXsrfToken');
+var UNIT_TITLE_TEMPLATE = $('.course-outline').data('unitTitleTemplate');
+
 
 function parseJson(s) {
   var XSSI_PREFIX = ')]}\'';
@@ -9,6 +13,26 @@ function parseJson(s) {
 function zebraStripeList() {
   $('.course-outline li > div').each(function(i, elt) {
     $(elt).removeClass('even odd').addClass(i % 2 == 0 ? 'even' : 'odd')
+  });
+}
+function addNumbering() {
+  $('.course-outline ol.course > li > div.row.unit').each(function(i) {
+    var unitIndex = i + 1;
+    var titleEl = $(this).find('> div.left-matter > div.name > a');
+    var title = UNIT_TITLE_TEMPLATE
+        .replace('%(index)s', unitIndex)
+        .replace('%(title)s', titleEl.data('title'))
+    titleEl.text(title);
+
+    var lessonIndex = 1;
+    $(this).parent().find('ol.unit:not(.pre, .post) > li').each(function() {
+      if ($(this).data('autoIndex') == 'True') {
+        var titleEl = $(this)
+            .find('> div.row.lesson > div.left-matter > div.name > a');
+        titleEl.text(lessonIndex + '. ' + titleEl.data('title'));
+        ++lessonIndex;
+      }
+    });
   });
 }
 function getCourseOutlineData() {
@@ -47,7 +71,12 @@ function getCourseOutlineData() {
   });
   return courseOrderData;
 }
-function reorderCourse() {
+function onUpdate(event, ui) {
+  // Called when a item has been dragged and dropped
+  redraw();
+  reorderCourse(ui.item);
+}
+function reorderCourse(draggedItem) {
   var courseOutlineData = getCourseOutlineData();
   var request = JSON.stringify({
     xsrf_token: UNIT_LESSON_TITLE_XSRF_TOKEN,
@@ -58,30 +87,52 @@ function reorderCourse() {
     url: UNIT_LESSON_TITLE_REST_HANDLER_URL,
     data: {request: request},
     dataType: 'text',
-    success: onReorderCourse
+    success: function(data) {
+      onReorderAjaxSuccess(data, draggedItem)
+    },
+    error: function() {
+      onReorderAjaxError(draggedItem);
+    },
+    complete: onReorderAjaxComplete
   });
+  // Dsiable further sorting while the update is in progress
+  $(COURSE_SORTABLE_SELECTOR).sortable('disable');
+  $(UNIT_SORTABLE_SELECTOR).sortable('disable');
 }
-function onReorderCourse(data) {
+function onReorderAjaxSuccess(data, draggedItem) {
   data = parseJson(data);
   if (data.status == 200) {
     cbShowMsgAutoHide(data.message)
   } else {
-    cbShowMsg(data.message);
+    showErrorMessageAndRevert(data.message, draggedItem);
   }
 }
-function onUpdate(event, ui) {
-  // Called when a item has been dragged and dropped
+function onReorderAjaxError(draggedItem) {
+  showErrorMessageAndRevert('Cannot save your changes. Please re-try.',
+      draggedItem);
+}
+function onReorderAjaxComplete() {
+  // Re-enabled sorting after the update is complete
+  $(COURSE_SORTABLE_SELECTOR).sortable('enable');
+  $(UNIT_SORTABLE_SELECTOR).sortable('enable');
+}
+function showErrorMessageAndRevert(message, draggedItem) {
+  cbShowMsg(message);
+  draggedItem.closest('ol').sortable('cancel');
+  redraw();
+}
+function redraw() {
   zebraStripeList();
-  reorderCourse();
+  setTimeout(addNumbering, 500);
 }
 function bindSortableBehavior() {
-  $('div.course-outline.editable ol.course').sortable({
+  $(COURSE_SORTABLE_SELECTOR).sortable({
     cancel: '.add-lesson, .pre-assessment, .post-assessment',
     handle: '.reorder',
     placeholder: 'placeholder unit',
     update: onUpdate
   }).disableSelection();
-  $('div.course-outline.editable ol.unit').sortable({
+  $(UNIT_SORTABLE_SELECTOR).sortable({
     cancel: '.add-lesson, .pre-assessment, .post-assessment',
     connectWith: 'ol.unit:not(.pre, .post)',
     handle: '.reorder',
@@ -92,6 +143,7 @@ function bindSortableBehavior() {
 function init() {
   bindSortableBehavior();
   zebraStripeList();
+  addNumbering();
 }
 
 init();

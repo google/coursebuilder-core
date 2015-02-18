@@ -855,6 +855,7 @@ def notify_module_enabled():
 
     dashboard.DashboardHandler.COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS.append(
         course_outline_extra_info_decorator)
+    dashboard.DashboardHandler.COURSE_OUTLINE_EXTRA_INFO_TITLES.append('Skills')
     dashboard.DashboardHandler.add_nav_mapping(
         SkillMapHandler.ACTION, SkillMapHandler.NAV_BAR_TAB)
     dashboard.DashboardHandler.get_actions.append('skill_map')

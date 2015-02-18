@@ -4,7 +4,9 @@
   <div class="row {{ item.class }}">
     <div class="left-matter">
       <div class="reorder reveal-on-hover icon md md-view-headline"></div>
-      <div class="name"><a href="{{ item.href }}">{{ item.title }}</a></div>
+      <div class="name">
+        <a href="{{ item.href }}" data-title="{{ item.title }}">{{ item.title }}</a>
+      </div>
       {% for action in item.actions %}
         {{ action }}
       {% endfor %}
@@ -19,13 +21,14 @@
 
 <div class="course-outline {% if course.is_editable %}editable{% else %}read-only{% endif %}"
     data-status-xsrf-token="{{ status_xsrf_token }}"
-    data-unit-lesson-title-xsrf-token={{ unit_lesson_title_xsrf_token }}>
+    data-unit-lesson-title-xsrf-token={{ unit_lesson_title_xsrf_token }}
+    data-unit-title-template="{{ unit_title_template }}">
   <div class="row">
     <div class="left-matter header">
       <div class="name">Course Outline</div>
     </div>
     <div class="header">
-      <div class="name">&nbsp;</div>
+      <div class="name">{{ extra_info_title or '&nbsp;' }}</div>
     </div>
   </div>
   <div class="row course">
@@ -52,7 +55,8 @@
           {% endif %}
           <ol class="unit">
             {% for lesson in unit.lessons %}
-              <li data-lesson-id="{{ lesson.lesson_id }}">
+              <li data-lesson-id="{{ lesson.lesson_id }}" 
+                  data-auto-index="{{ lesson.auto_index }}">
                 {{ render_row(lesson) }}
               </li>
             {% endfor %}

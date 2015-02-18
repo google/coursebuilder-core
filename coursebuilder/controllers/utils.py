@@ -205,17 +205,22 @@ def _get_course_properties():
     return Course.get_environ(sites.get_course_for_current_request())
 
 
-def display_unit_title(unit, course_properties=None):
+def get_unit_title_template(course_properties=None):
     """Prepare an internationalized display for the unit title."""
     if not course_properties:
         course_properties = _get_course_properties()
     if course_properties['course'].get('display_unit_title_without_index'):
-        return unit.title
+        return '%(title)s'
     else:
         app_context = sites.get_course_for_current_request()
         # I18N: Message displayed as title for unit within a course.
-        unit_title = app_context.gettext('Unit %s - %s')
-        return unit_title % (unit.index, unit.title)
+        return app_context.gettext('Unit %(index)s - %(title)s')
+
+
+def display_unit_title(unit, course_properties=None):
+    """Prepare an internationalized display for the unit title."""
+    template = get_unit_title_template(course_properties)
+    return template % {'index': unit.index, 'title': unit.title}
 
 
 def display_short_unit_title(unit, course_properties=None):

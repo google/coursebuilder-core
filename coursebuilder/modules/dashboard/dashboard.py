@@ -169,6 +169,10 @@ class DashboardHandler(
     # unit as argument and returns a safe_dom NodeList or Node.
     COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS = []
 
+    # Modules adding extra info annotators (above) may also add a string to this
+    # list which will be displayed at a heading in the course outline table.
+    COURSE_OUTLINE_EXTRA_INFO_TITLES = []
+
     # Dictionary that maps external permissions to their descriptions
     _external_permissions = {}
     # Dictionary that maps actions to permissions
@@ -516,7 +520,9 @@ class DashboardHandler(
             'add_lesson_xsrf_token': self.create_xsrf_token('add_lesson'),
             'status_xsrf_token': self.create_xsrf_token('set_draft_status'),
             'unit_lesson_title_xsrf_token': self.create_xsrf_token(
-                UnitLessonTitleRESTHandler.XSRF_TOKEN)
+                UnitLessonTitleRESTHandler.XSRF_TOKEN),
+            'unit_title_template': utils.get_unit_title_template(),
+            'extra_info_title': ', '.join(self.COURSE_OUTLINE_EXTRA_INFO_TITLES)
         }
         return jinja2.Markup(
             self.get_template(
@@ -606,7 +612,7 @@ class DashboardHandler(
 
         actions = []
         unit_data = {
-            'title': utils.display_unit_title(unit),
+            'title': unit.title,
             'class': 'unit',
             'href': 'unit?unit=%s' % unit.unit_id,
             'unit_id': unit.unit_id,
@@ -630,12 +636,6 @@ class DashboardHandler(
 
         lessons = []
         for lesson in course.get_lessons(unit.unit_id):
-            if lesson.auto_index:
-                lesson_title = "%s.%s %s" % (
-                    unit.index, lesson.index, lesson.title)
-            else:
-                lesson_title = lesson.title
-
             actions = []
             actions.append(
                 self._render_status_icon(lesson, lesson.lesson_id, 'lesson'))
@@ -651,12 +651,13 @@ class DashboardHandler(
                     extras.append(extra_info)
 
             lessons.append({
-                'title': lesson_title,
+                'title': lesson.title,
                 'class': 'lesson',
                 'href': 'unit?unit=%s&lesson=%s' % (
                     unit.unit_id, lesson.lesson_id),
                 'lesson_id': lesson.lesson_id,
                 'actions': actions,
+                'auto_index': lesson.auto_index,
                 'extras': extras})
 
         unit_data['lessons'] = lessons
@@ -678,15 +679,11 @@ class DashboardHandler(
         self.response.write(self.get_template(
             'question_preview.html', []).render(template_values))
 
-    def get_outline(self):
-        """Renders course outline view."""
+    def _get_about_course(self, template_values, tab):
 
         # Basic course info.
         course_info = []
-        course_actions = [
-            {'id': 'add_course',
-             'caption': 'Add Course',
-             'href': 'admin?action=add_course'}]
+        course_actions = []
 
         if not self.app_context.is_editable_fs():
             course_info.append('The course is read-only.')
@@ -725,13 +722,28 @@ class DashboardHandler(
             course_info.append(('Home Folder: %s' % sites.abspath(
                 self.app_context.get_home_folder(), '/')))
 
-        pages_info = [
-            safe_dom.Element(
-                'a', href=self.canonicalize_url('/announcements')
-            ).add_text('Announcements'),
-            safe_dom.Element(
-                'a', href=self.canonicalize_url('/course')
-            ).add_text('Course')]
+        data_info = dashboard_utils.list_files(self, '/data/')
+
+        sections = [
+            {
+                'title': 'About the Course',
+                'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
+                'actions': course_actions,
+                'children': course_info},]
+
+        if currentCourse.version == courses.COURSE_MODEL_VERSION_1_2:
+            sections.append({
+                'title': 'Data Files',
+                'description': messages.DATA_FILES_DESCRIPTION,
+                'children': data_info})
+
+        template_values['alerts'] = self._get_alerts()
+        template_values['sections'] = sections
+
+    def get_outline(self):
+        """Renders course outline view."""
+
+        currentCourse = courses.Course(self)
 
         outline_actions = []
         if self.app_context.is_editable_fs():
@@ -767,31 +779,19 @@ class DashboardHandler(
                     'href': self.get_action_url('import_course')
                     })
 
-        data_info = dashboard_utils.list_files(self, '/data/')
-
         sections = [
-            {
-                'title': 'About the Course',
-                'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
-                'actions': course_actions,
-                'children': course_info},
             {
                 'title': 'Course Outline',
                 'description': messages.COURSE_OUTLINE_DESCRIPTION,
                 'actions': outline_actions,
                 'pre': self._render_course_outline_to_html(currentCourse)}]
 
-        if currentCourse.version == courses.COURSE_MODEL_VERSION_1_2:
-            sections.append({
-                'title': 'Data Files',
-                'description': messages.DATA_FILES_DESCRIPTION,
-                'children': data_info})
-
         template_values = {
             'page_title': self.format_title('Outline'),
             'alerts': self._get_alerts(),
             'sections': sections,
             }
+
         self.render_page(template_values)
 
     def custom_get_handler(self):
@@ -839,6 +839,8 @@ class DashboardHandler(
             self.get_settings_admin_prefs(template_values, tab)
         elif tab.name == 'advanced':
             self._get_settings_advanced(template_values, tab)
+        elif tab.name == 'about':
+            self._get_about_course(template_values, tab)
         else:
             self._get_settings_section(template_values, tab)
         self.render_page(template_values)
@@ -1813,6 +1815,7 @@ def register_module():
     tabs.Registry.register('settings', 'i18n', 'I18N', 'i18n')
     tabs.Registry.register('settings', 'advanced', 'Advanced', None)
     tabs.Registry.register('settings', 'admin_prefs', 'Preferences', None)
+    tabs.Registry.register('settings', 'about', 'About', None)
 
     global_routes = [
         (
