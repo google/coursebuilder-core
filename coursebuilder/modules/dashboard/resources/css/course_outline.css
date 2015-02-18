@@ -125,22 +125,3 @@ div.course-outline div.reorder {
 div.course-outline div.extras {
   padding-right: 20px;
 }
-/*
- * TODO(jorr): Ensure styling for skill widgets is always loaded in the header
- */
-ol.skill-display-root {
-  list-style-type: none;
-  padding: 0px;
-  display: inline-block;
-  vertical-align:top;
-  margin-top: 5px;
-}
-ol.skill-display-root > li.skill {
-  display: inline-block;
-  background-color: #5cb85c;
-  color: white;
-  font-weight: bold;
-  border-radius: 0.2em;
-  padding: 0.1em 0.4em;
-  margin: 0 0.2em !important;
-}

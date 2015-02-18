@@ -860,6 +860,8 @@ def notify_module_enabled():
         SkillMapHandler.ACTION, SkillMapHandler.NAV_BAR_TAB)
     dashboard.DashboardHandler.get_actions.append('skill_map')
     setattr(dashboard.DashboardHandler, 'get_skill_map', get_action)
+    dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
+        '/modules/skill_map/resources/css/common.css')
 
     LessonRESTHandler.SCHEMA_LOAD_HOOKS.append(
         lesson_rest_handler_schema_load_hook)

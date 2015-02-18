@@ -1,27 +1,4 @@
 /*
- * Styles for SkillDisplay
- */
-ol.skill-display-root {
-  list-style-type: none;
-  padding: 0px;
-}
-ol.skill-display-root > li.skill {
-  display: inline-block;
-  background-color: #5cb85c;
-  color: white;
-  font-weight: bold;
-  border-radius: 0.2em;
-  padding: 0.1em 0.4em;
-  margin: 0 0.2em !important;
-}
-ol.skill-display-root > li.skill > button.close {
-  background: inherit;
-  color: inherit;
-  border: none;
-}
-
-
-/*
  * Styles for SkillSelector
  */
 div.skill-selector-root {

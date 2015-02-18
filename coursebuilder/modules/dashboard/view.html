@@ -32,6 +32,11 @@
         href="/modules/oeditor/resources/butterbar.css" media="screen" />
     <link rel="stylesheet" type="text/css"
         href="/modules/dashboard/resources/css/view.css"/>
+
+    {% for href in extra_css_href_list %}
+      <link rel="stylesheet" type="text/css" href="{{ href }}">
+    {% endfor %}
+
     {% if alerts %}
       <script>
         $(function() {

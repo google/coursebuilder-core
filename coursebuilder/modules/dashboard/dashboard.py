@@ -169,6 +169,10 @@ class DashboardHandler(
     # unit as argument and returns a safe_dom NodeList or Node.
     COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS = []
 
+    # A list of hrefs for extra CSS files to be included in dashboard pages.
+    # Files listed here by URL will be available on every Dashboard page.
+    EXTRA_CSS_HREF_LIST = []
+
     # Modules adding extra info annotators (above) may also add a string to this
     # list which will be displayed at a heading in the course outline table.
     COURSE_OUTLINE_EXTRA_INFO_TITLES = []
@@ -417,6 +421,7 @@ class DashboardHandler(
         template_values['application_version'] = (
             os.environ['CURRENT_VERSION_ID'])
         template_values['can_highlight_code'] = oeditor.CAN_HIGHLIGHT_CODE.value
+        template_values['extra_css_href_list'] = self.EXTRA_CSS_HREF_LIST
         if not template_values.get('sections'):
             template_values['sections'] = []
 
