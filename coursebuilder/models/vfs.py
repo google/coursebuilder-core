@@ -18,6 +18,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import datetime
 import os
+import re
 import sys
 import threading
 import unittest
@@ -25,6 +26,7 @@ import unittest
 from config import ConfigProperty
 from counters import PerfCounter
 from entities import BaseEntity
+from entities import put as entities_put
 import jinja2
 
 from common import caching
@@ -40,9 +42,8 @@ MAX_GLOBAL_CACHE_SIZE_BYTES = 16 * 1024 * 1024
 # max size of each item; no point in storing images for example
 MAX_GLOBAL_CACHE_ITEM_SIZE_BYTES = 256 * 1024
 
-# The maximum size allowed in a file. The datastore limit of 1Mb with a fudge
-# factor shaved off.
-MAX_FILE_SIZE = 1024 * 1024 - 10 * 1024
+# The maximum number of bytes stored per VFS cache shard.
+_MAX_VFS_CACHE_SHARD_SIZE = 1000 * 1000
 
 # Global memcache controls.
 CAN_USE_VFS_IN_PROCESS_CACHE = ConfigProperty(
@@ -557,10 +558,18 @@ class DatastoreBackedFileSystem(object):
         if not found:
             metadata = FileMetadataEntity.get_by_key_name(filename)
             if metadata:
-                data = FileDataEntity.get_by_key_name(filename)
+                keys = self._generate_file_key_names(filename, metadata.size)
+                data_shards = []
+                for data_entity in FileDataEntity.get_by_key_name(keys):
+                    data_shards.append(data_entity.data)
+                data = ''.join(data_shards)
                 if data:
-                    self.cache.put(filename, metadata, data.data)
-                    return FileStreamWrapped(metadata, data.data)
+                    # TODO: Note that this will ask the cache to accept
+                    # potentially very large items.  The caching strategy both
+                    # for in-memory and Memcache should be revisited to
+                    # determine how best to address chunking strategies.
+                    self.cache.put(filename, metadata, data)
+                    return FileStreamWrapped(metadata, data)
 
             # lets us cache the (None, None) so next time we asked for this key
             # we fall right into the inherited section without trying to load
@@ -583,6 +592,38 @@ class DatastoreBackedFileSystem(object):
         self.non_transactional_put(
             filename, stream, is_draft=is_draft, metadata_only=metadata_only)
 
+    @classmethod
+    def _generate_file_key_names(cls, filename, size):
+        """Generate names for key(s) for DB entities holding file data.
+
+        Files may be larger than 1M, the AppEngine limit.  To work around
+        that, just store more entities.  Names of additional entities beyond
+        the first are of the form "<filename>:shard:<number>".  This naming
+        scheme is "in-band", in the sense that it is possible that a user
+        could try to name a file with this format.  However, that format is
+        unusual enough that prohibiting it in incoming file names is both
+        simple and very unlikely to cause users undue distress.
+
+        Args:
+          filename: The base name of the file.
+          size: The size of the file, in bytes.
+        Returns:
+          A list of database entity keys. Files smaller than
+          _MAX_VFS_CACHE_SHARD_SIZE are stored in one entity named by the
+          'filename' parameter.  If larger, sufficient additional names of the
+          form <filename>/0, <filename>/1, ..... <filename>/N are added.
+        """
+        if re.search(':shard:[0-9]+$', filename):
+            raise ValueError(
+                'Files may not end with ":shard:NNN"; this pattern is '
+                'reserved for internal use.  Filename "%s" violates this. ' %
+                filename)
+
+        key_names = [filename]
+        for segment_id in range(size // _MAX_VFS_CACHE_SHARD_SIZE):
+            key_names.append('%s:shard:%d' % (filename, segment_id))
+        return key_names
+
     def non_transactional_put(
         self, filename, stream, is_draft=False, metadata_only=False):
         """Non-transactional put; use only when transactions are impossible."""
@@ -597,12 +638,19 @@ class DatastoreBackedFileSystem(object):
         if not metadata_only:
             # We operate with raw bytes. The consumer must deal with encoding.
             raw_bytes = stream.read()
-
             metadata.size = len(raw_bytes)
 
-            data = FileDataEntity(key_name=filename)
-            data.data = raw_bytes
-            data.put()
+            # Chunk the data into entites based on max entity size limits
+            # imposed by AppEngine
+            key_names = self._generate_file_key_names(filename, metadata.size)
+            shard_entities = []
+            for index, key_name in enumerate(key_names):
+                data = FileDataEntity(key_name=key_name)
+                start_offset = index * _MAX_VFS_CACHE_SHARD_SIZE
+                end_offset = (index + 1) * _MAX_VFS_CACHE_SHARD_SIZE
+                data.data = raw_bytes[start_offset:end_offset]
+                shard_entities.append(data)
+            entities_put(shard_entities)
 
         metadata.put()
         self.cache.delete(filename)

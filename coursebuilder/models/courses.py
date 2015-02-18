@@ -1162,11 +1162,6 @@ class CourseModel13(object):
         except yaml.YAMLError as e:  # pylint: disable=W0703
             logging.error('Failed to validate course settings: %s.', str(e))
             return False
-        if sys.getsizeof(content) > vfs.MAX_FILE_SIZE:
-            logging.error(
-                'Failed to save too large settings file %s bytes',
-                sys.getsizeof(content))
-            return False
         content_stream = vfs.string_to_stream(unicode(content))
 
         # Store settings.

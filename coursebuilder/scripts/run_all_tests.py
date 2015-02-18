@@ -77,6 +77,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_student_work.ReviewTest': 3,
     'tests.functional.model_student_work.SubmissionTest': 3,
     'tests.functional.model_utils.QueryMapperTest': 4,
+    'tests.functional.model_vfs.VfsLargeFileSupportTest': 4,
     'tests.functional.module_config_test.ManipulateAppYamlFileTest': 8,
     'tests.functional.module_config_test.ModuleIncorporationTest': 8,
     'tests.functional.module_config_test.ModuleManifestTest': 7,
