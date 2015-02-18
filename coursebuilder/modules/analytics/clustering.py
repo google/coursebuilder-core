@@ -32,6 +32,7 @@ from controllers import utils
 from models import courses
 from models import jobs
 from models import models
+from models import progress
 from models import transforms
 from models import data_sources
 from models.entities import BaseEntity
@@ -46,6 +47,8 @@ DIM_TYPE_UNIT = 'u'
 DIM_TYPE_LESSON = 'l'
 DIM_TYPE_QUESTION = 'q'
 DIM_TYPE_UNIT_VISIT = 'uv'
+DIM_TYPE_UNIT_PROGRESS = 'up'
+DIM_TYPE_LESSON_PROGRESS = 'lp'
 
 # All of the possible fields that can be in a dimension
 DIM_TYPE = 'type'
@@ -231,8 +234,28 @@ def _add_unit_and_content(unit, result):
                 DIM_ID: question_id,
                 'name': question['description']})
     # This should affect the result list as well.
-    unit_dict[DIM_EXTRA_INFO] = json.dumps(
+    unit_dict[DIM_EXTRA_INFO] = transforms.dumps(
         {'unit_scored_lessons': unit_scored_lessons})
+
+
+def _add_unit_and_lesson_progress(unit, course, result):
+    """Adds the dimensions for the progress of units and lessons.
+
+    The progress is obtained from the StudentPropertyEntity."""
+    result.append({
+        DIM_TYPE: DIM_TYPE_UNIT_PROGRESS,
+        DIM_ID: unit.unit_id,
+        'name': unit.title + ' (progress)'
+    })
+    # TODO(milit): Add better order or indications of the structure of
+    # content.
+    for lesson in course.get_lessons(unit.unit_id):
+        result.append({
+            DIM_TYPE: DIM_TYPE_LESSON_PROGRESS,
+            DIM_ID: lesson.lesson_id,
+            'name': lesson.title + ' (progress)',
+            DIM_EXTRA_INFO: transforms.dumps({'unit_id': unit.unit_id})
+        })
 
 
 def get_possible_dimensions(app_context):
@@ -262,6 +285,8 @@ def get_possible_dimensions(app_context):
 
     for unit in course.get_units():
         _add_unit_visits(unit, result)
+        if not unit.is_assessment():
+            _add_unit_and_lesson_progress(unit, course, result)
         if unit.unit_id in units_with_content:
             # Adding the lessons and questions of the unit
             _add_unit_and_content(units_with_content[unit.unit_id], result)
@@ -285,11 +310,14 @@ class ClusterRESTHandler(dto_editor.BaseDatastoreRestHandler):
     EXTRA_CSS_FILES = []
     ADDITIONAL_DIRS = [os.path.join(
         appengine_config.BUNDLE_ROOT, 'modules', 'analytics')]
+
     TYPES_INFO = {  # The js script file depend on this dictionary.
         DIM_TYPE_QUESTION: 'question',
         DIM_TYPE_LESSON: 'lesson',
         DIM_TYPE_UNIT: 'unit',
         DIM_TYPE_UNIT_VISIT: 'unit_visit',
+        DIM_TYPE_UNIT_PROGRESS: 'unit_progress',
+        DIM_TYPE_LESSON_PROGRESS: 'lesson_progress',
     }
 
     @staticmethod
@@ -357,9 +385,6 @@ class ClusterRESTHandler(dto_editor.BaseDatastoreRestHandler):
                 'types_info': cls.TYPES_INFO})
 
         cluster_schema.add_property(dimension_array)
-        dimension.add_property(schema_fields.SchemaField(
-            DIM_EXTRA_INFO, '', 'string', i18n=False, hidden=True,
-            optional=True))
 
         return cluster_schema
 
@@ -479,16 +504,22 @@ class StudentClusters(BaseEntity):
 
 
 class StudentVectorGenerator(jobs.MapReduceJob):
-    """A map reduce job to create StudentVector based on StudentAggregateEntity.
+    """A map reduce job to create StudentVector.
 
+    The data cames from StudentAggregateEntity and StudentPropertyEntity.
     This job updates the vector field in the associated StudentVector, or
     creates a new one if there is none. This vector has a value for each
-    dimension type, calculated as follows:
+    score dimension type, calculated from the submissions field of
+    StudentAggregateEntity as follows:
         Questions: The last weighted score of the question.
         Lessons: The last weighted score of the lesson.
         Units or Assessments: The average of all the scored lessons in
             the unit or assessment. If no lessons, then the unit has a score
             by itself.
+    The unit visit dimension is the number of 'enter-page' events registered
+    for the unit in the page_views fiels of StudentAggregateEntity.
+    The unit and lesson progress dimensions are the same as the student
+    progress in StudentPropertyEntity.
 
     NOTE: StudentAggregateEntity is created by the job
     StudentAggregateGenerator, so they have to run one after the other.
@@ -505,7 +536,9 @@ class StudentVectorGenerator(jobs.MapReduceJob):
         DIM_TYPE_QUESTION: '_get_question_score',
         DIM_TYPE_LESSON: '_get_lesson_score',
         DIM_TYPE_UNIT: '_get_unit_score',
-        DIM_TYPE_UNIT_VISIT: '_get_unit_visits'
+        DIM_TYPE_UNIT_VISIT: '_get_unit_visits',
+        DIM_TYPE_UNIT_PROGRESS: '_get_unit_progress',
+        DIM_TYPE_LESSON_PROGRESS: '_get_lesson_progress',
     }
 
     @classmethod
@@ -538,19 +571,34 @@ class StudentVectorGenerator(jobs.MapReduceJob):
         """
         mapper_params = context.get().mapreduce_spec.mapper.params
         raw_data = transforms.loads(zlib.decompress(item.data))
+
         raw_assessments = raw_data.get('assessments', [])
-        raw_page_views = raw_data.get('page_views', [])
         sub_data = StudentVectorGenerator._inverse_submission_data(
             mapper_params['possible_dimensions'], raw_assessments)
+
+        raw_page_views = raw_data.get('page_views', [])
         view_data = StudentVectorGenerator._inverse_page_view_data(
             raw_page_views)
-        if not (sub_data or view_data):
+
+        progress_data = None
+        user_id = item.key().name()
+        student = models.Student.get_student_by_user_id(user_id)
+        if student:
+            raw_data = models.StudentPropertyEntity.get(
+                student, progress.UnitLessonCompletionTracker.PROPERTY_KEY)
+            if hasattr(raw_data, 'value') and raw_data.value:
+                progress_data = transforms.loads(raw_data.value)
+
+        if not (sub_data or view_data or progress_data):
             return
+
         vector = []
         for dim in mapper_params['possible_dimensions']:
             type_ = dim[DIM_TYPE]
             if type_ == DIM_TYPE_UNIT_VISIT:
                 data_for_dimension = view_data[type_, str(dim[DIM_ID])]
+            elif type_ in [DIM_TYPE_UNIT_PROGRESS, DIM_TYPE_LESSON_PROGRESS]:
+                data_for_dimension = progress_data
             else:
                 data_for_dimension = sub_data[type_, str(dim[DIM_ID])]
             value = StudentVectorGenerator.get_function_for_dimension(
@@ -628,6 +676,8 @@ class StudentVectorGenerator(jobs.MapReduceJob):
         Args:
             data: a list of dictionaries.
         """
+        if not data:
+            return 0
         last_scores = []
         last_timestamp = 0
         for answer in data:
@@ -645,6 +695,8 @@ class StudentVectorGenerator(jobs.MapReduceJob):
     @staticmethod
     def _get_lesson_score(data, dimension):
         """The score of a lesson is its last score."""
+        if not data:
+            return 0
         for submission in data:
             if ('lesson_id' in submission and 'last_score' in submission
                 and submission['lesson_id'] == str(dimension[DIM_ID])):
@@ -658,6 +710,8 @@ class StudentVectorGenerator(jobs.MapReduceJob):
         If the unit has no lessons (assessment), the unit will have its
         own score.
         """
+        if not data:
+            return 0
         if not DIM_EXTRA_INFO in dimension:
             scored_lessons = 1
         else:
@@ -675,6 +729,8 @@ class StudentVectorGenerator(jobs.MapReduceJob):
 
     @staticmethod
     def _get_unit_visits(data, dimension):
+        if not data:
+            return 0
         result = 0
         for page_view in data:
             activities = page_view.get('activities')
@@ -684,6 +740,35 @@ class StudentVectorGenerator(jobs.MapReduceJob):
                 if activity.get('action') == 'enter-page':
                     result += 1
         return result
+
+    @staticmethod
+    def _get_unit_progress(data, dimension):
+        """Reads the progress from the value of StudentPropertyEntity."""
+        # This value is obtained directly from the JSON dictionary
+        # in value because we can't pass the UnitLessonCompletionTracker
+        # object as a parameter of the map reduce to use the proper accessors.
+        if not data:
+            return 0
+        return data.get('u.{}'.format(dimension[DIM_ID]), 0)
+
+    @staticmethod
+    def _get_lesson_progress(data, dimension):
+        """Reads the progress from the value of StudentPropertyEntity.
+
+        The dimension has to have a field DIM_EXTRA_INFO with the unit id."""
+        if not data:
+            return 0
+        extra_info = dimension.get(DIM_EXTRA_INFO)
+        if not extra_info:
+            return 0
+        extra_info = transforms.loads(extra_info)
+        if not extra_info:
+            return 0
+        unit_id = extra_info.get('unit_id')
+        if unit_id:
+            return data.get('u.{}.l.{}'.format(unit_id, dimension[DIM_ID]), 0)
+        return 0
+
 
 def hamming_distance(vector, student_vector):
     """Return the hamming distance between a ClusterEntity and a StudentVector.

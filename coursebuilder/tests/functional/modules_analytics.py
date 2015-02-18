@@ -29,6 +29,7 @@ from models import courses
 from models import jobs
 from models import models
 from models import transforms
+from models.progress import UnitLessonCompletionTracker
 from modules.analytics import clustering
 from modules.analytics import student_aggregate
 from tests.functional import actions
@@ -504,13 +505,13 @@ class ClusterRESTHandlerTest(actions.TestBase):
                 self.descript_str.format(unit_id, q_index))
 
     def _check_lessons(self, vector):
-        for u_index, lesson_key in self.lesson_keys:
+        for l_index, lesson_key in self.lesson_keys:
             dim = self._dim_from_dict(vector, lesson_key,
                                       clustering.DIM_TYPE_LESSON)
             self.assertEqual(dim['name'],
-                             self.lesson_name_str.format(u_index))
+                             self.lesson_name_str.format(l_index))
 
-    def test_all_dimensions_units(self):
+    def test_all_dimensions_units_scores(self):
         """All units are listed as dimensions in default content."""
         vector = clustering.get_possible_dimensions(self.app_context)
         for u_index, unit_key in self.unit_keys:
@@ -522,8 +523,8 @@ class ClusterRESTHandlerTest(actions.TestBase):
             extra_info = json.loads(dim[clustering.DIM_EXTRA_INFO])
             self.assertEqual(extra_info['unit_scored_lessons'], 1)
 
-    def test_all_dimensions_unit_visitation(self):
-        """All units must have a visitation dimension."""
+    def test_all_dimensions_unit_visits(self):
+        """All units must have a visits dimension."""
         self._add_unit(self.units_number + 10)
         self.course.save()
         u_index, unit_id = self.unit_keys[-1]
@@ -531,11 +532,44 @@ class ClusterRESTHandlerTest(actions.TestBase):
         dim = self._dim_from_dict(vector, unit_id,
                                   clustering.DIM_TYPE_UNIT_VISIT)
         self.assertNotEqual(dim['name'], self.unit_name_str.format(u_index))
+        self.assertIn('visits', dim['name'])
+
+    def test_all_dimensions_unit_progress(self):
+        """All units must have a progress dimension.
+
+        This new unit will no be obtained using OrderedQuestionsDataSource.
+        """
+        self._add_unit(self.units_number + 10)
+        self.course.save()
+        u_index, unit_id = self.unit_keys[-1]
+        vector = clustering.get_possible_dimensions(self.app_context)
+        dim = self._dim_from_dict(vector, unit_id,
+                                  clustering.DIM_TYPE_UNIT_PROGRESS)
+        self.assertNotEqual(dim['name'], self.unit_name_str.format(u_index))
+        self.assertIn('progress', dim['name'])
 
     def test_all_dimensions_lessons(self):
         """All lessons are listed as dimensions in default content."""
         vector = clustering.get_possible_dimensions(self.app_context)
         self._check_lessons(vector)
+
+    def test_all_dimensions_lessons_progress(self):
+        """All lessons must have a progress dimension.
+
+        This new lesson will no be obtained using OrderedQuestionsDataSource.
+        """
+        unit = self._add_unit(self.units_number + 10)
+        self._add_lesson(self.units_number + 12, unit)
+        l_index, lesson_id = self.lesson_keys[-1]
+        self.course.save()
+        vector = clustering.get_possible_dimensions(self.app_context)
+        dim = self._dim_from_dict(vector, lesson_id,
+                                  clustering.DIM_TYPE_LESSON_PROGRESS)
+        self.assertNotEqual(dim['name'], self.lesson_name_str.format(l_index))
+        self.assertIn('progress', dim['name'])
+        self.assertIn(clustering.DIM_EXTRA_INFO, dim)
+        self.assertEqual(dim[clustering.DIM_EXTRA_INFO],
+                         transforms.dumps({'unit_id': unit.unit_id}))
 
     def test_all_dimensions_questions(self):
         """All questions are listed as dimensions in default content."""
@@ -1234,6 +1268,92 @@ class StudentVectorGeneratorTests(actions.TestBase):
         self.assertEqual(value, expected,
                          msg='Wrong score for unit with multiple lessons. '
                          'Expected {}. Got {}'.format(expected, value))
+
+
+class StudentVectorGeneratorProgressTests(actions.TestBase):
+    """Tests the calculation of the progress dimensions."""
+
+    COURSE_NAME = 'test_course'
+    ADMIN_EMAIL = 'admin@foo.com'
+
+    def setUp(self):
+        super(StudentVectorGeneratorProgressTests, self).setUp()
+
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Analytics Test')
+        self.course = courses.Course(None, app_context=self.app_context)
+        self._create_entities()
+
+    def tearDown(self):
+        # Clean up app_context.
+        namespace_manager.set_namespace(self.old_namespace)
+        super(StudentVectorGeneratorProgressTests, self).tearDown()
+
+    def _create_entities(self):
+        # Add course content
+        unit = self.course.add_unit()
+        unit.title = 'Unit number 1'
+        unit.now_available = True
+        lesson = self.course.add_lesson(unit)
+        lesson.title = 'Lesson'
+        lesson.now_available = True
+        self.course.save()
+
+        self.student_id = '1'
+        self.student = models.Student(user_id=self.student_id)
+        self.student.put()
+        self.aggregate_entity = student_aggregate.StudentAggregateEntity(
+            key_name=self.student_id,
+            data=zlib.compress(transforms.dumps({})))
+        self.aggregate_entity.put()
+        self.progress = UnitLessonCompletionTracker.get_or_create_progress(
+            self.student)
+        self.progress.value = transforms.dumps(
+            {"u.{}.l.{}".format(unit.unit_id, lesson.lesson_id): 2,
+             "u.{}".format(unit.unit_id): 1})
+        self.progress.put()
+
+        self.dimensions = [
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT_PROGRESS,
+             clustering.DIM_ID: unit.unit_id,
+             'expected_value': 1},
+            {clustering.DIM_TYPE: clustering.DIM_TYPE_LESSON_PROGRESS,
+             clustering.DIM_ID: lesson.lesson_id,
+             'expected_value': 2,
+             clustering.DIM_EXTRA_INFO: transforms.dumps({'unit_id': 1})}
+        ]
+
+    def run_generator_job(self):
+        def mock_mapper_params(unused_self, unused_app_context):
+            return {'possible_dimensions': self.dimensions}
+        mock_generator = clustering.StudentVectorGenerator
+        mock_generator.build_additional_mapper_params = mock_mapper_params
+        job = mock_generator(self.app_context)
+        job.submit()
+        self.execute_all_deferred_tasks()
+
+    def test_map_reduce(self):
+        """The generator is producing the expected output vector."""
+        self.run_generator_job()
+        self.assertEqual(clustering.StudentVector.all().count(), 1)
+        student_vector = clustering.StudentVector.get_by_key_name(
+            str(self.aggregate_entity.key().name()))
+        for expected_dim in self.dimensions:
+            obtained_value = clustering.StudentVector.get_dimension_value(
+                transforms.loads(student_vector.vector),
+                expected_dim[clustering.DIM_ID],
+                expected_dim[clustering.DIM_TYPE])
+            self.assertEqual(expected_dim['expected_value'], obtained_value)
+
+    def test_map_reduce_no_progress(self):
+        """The student has no progress."""
+        self.progress.value = None
+        self.progress.put()
+        self.run_generator_job()
+        self.assertEqual(clustering.StudentVector.all().count(), 0)
 
 
 class ClusteringGeneratorTests(actions.TestBase):
