@@ -170,7 +170,7 @@ class StudentAggregateTest(AbstractModulesAnalyticsTest):
         # - Full /unit?unit=X&lesson=Y ; correct unit/lesson logged.
         # - Page enter but not exit
         # - Page exit but not enter
-        # - Youtube events
+        # - YouTube events
         # - Events are present (and reported on in output) for unit, lesson,
         #   and assessment that have been deleted after events were recorded.
         expected = self.load_expected_data('page_views', 'page_views.json')
@@ -271,6 +271,23 @@ class StudentAggregateTest(AbstractModulesAnalyticsTest):
         actual['assessments'].sort(key=lambda x: (x['unit_id'], x['lesson_id']))
         self.assertEqual(expected, actual['assessments'])
         self.assertTrue(actual['earned_certificate'])
+
+    def test_youtube_events(self):
+        self.load_course('simple_questions')
+        self.load_datastore('youtube_events')
+        self.run_aggregator_job()
+        actual = self.get_aggregated_data_by_email('foo@bar.com')
+
+        # This verifies the following items:
+        # - Play video XJk8ijAUCiI from start to finish.
+        # - Play video Kdg2drcUjYI for a couple of seconds, then pause.
+        # - Rewind that video to 0 seconds, and re-start (makes new entry)
+        # - Play video XJk8ijAUCiI for a few seconds, and pause.
+        # - While other is paused, play Kdg2drcUjYI start-to-end
+        # - Resume video XJk8ijAUCiI and play to end.
+        expected = self.load_expected_data('youtube_events', 'youtube.json')
+        # No sorting - items should be presented in order by time, video, etc.
+        self.assertEqual(expected, actual['youtube'])
 
 
 class ClusteringTabTests(actions.TestBase):

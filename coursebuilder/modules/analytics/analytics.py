@@ -25,6 +25,7 @@ from modules.analytics import location_aggregator
 from modules.analytics import page_event_aggregator
 from modules.analytics import student_aggregate
 from modules.analytics import user_agent_aggregator
+from modules.analytics import youtube_event_aggregator
 from modules.dashboard import tabs
 from modules.dashboard.dashboard import DashboardHandler
 
@@ -90,6 +91,8 @@ def register_module():
             answers_aggregator.AnswersAggregator)
         student_aggregate.StudentAggregateComponentRegistry.register_component(
             page_event_aggregator.PageEventAggregator)
+        student_aggregate.StudentAggregateComponentRegistry.register_component(
+            youtube_event_aggregator.YouTubeEventAggregator)
         data_sources.Registry.register(
             student_aggregate.StudentAggregateComponentRegistry)
         data_sources.Registry.register(clustering.ClusterDataSource)
