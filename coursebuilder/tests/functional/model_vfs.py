@@ -64,7 +64,7 @@ class VfsLargeFileSupportTest(actions.TestBase):
 
     def test_course_larger_than_datastore_max_size_is_sharded(self):
         unit = self.course.add_unit()
-        num_lessons = vfs._MAX_VFS_CACHE_SHARD_SIZE / len(LOREM_IPSUM)
+        num_lessons = vfs._MAX_VFS_SHARD_SIZE / len(LOREM_IPSUM)
         for unused in range(num_lessons):
             lesson = self.course.add_lesson(unit)
             lesson.objectives = LOREM_IPSUM
@@ -74,7 +74,7 @@ class VfsLargeFileSupportTest(actions.TestBase):
             lessons=self.course._model.lessons)
         serialized_length = len(serializer.serialize())
         self.assertGreater(
-            serialized_length, vfs._MAX_VFS_CACHE_SHARD_SIZE,
+            serialized_length, vfs._MAX_VFS_SHARD_SIZE,
             'Verify that serialized course is larger than the max entity size')
 
         self.course.save()
@@ -95,7 +95,7 @@ class VfsLargeFileSupportTest(actions.TestBase):
             'Verify attempting to store a too-large file makes multiple shards')
         with common_utils.Namespace(self.NAMESPACE):
             shard_0 = vfs.FileDataEntity.get_by_key_name(file_key_names[0])
-            self.assertEquals(vfs._MAX_VFS_CACHE_SHARD_SIZE, len(shard_0.data))
+            self.assertEquals(vfs._MAX_VFS_SHARD_SIZE, len(shard_0.data))
 
             shard_1 = vfs.FileDataEntity.get_by_key_name(file_key_names[1])
             self.assertGreater(len(shard_1.data), 0)
@@ -103,7 +103,7 @@ class VfsLargeFileSupportTest(actions.TestBase):
 
     def test_course_larger_than_datastore_max_can_be_exported_and_loaded(self):
         unit = self.course.add_unit()
-        num_lessons = vfs._MAX_VFS_CACHE_SHARD_SIZE / len(LOREM_IPSUM)
+        num_lessons = vfs._MAX_VFS_SHARD_SIZE / len(LOREM_IPSUM)
         for unused in range(num_lessons):
             lesson = self.course.add_lesson(unit)
             lesson.objectives = LOREM_IPSUM
@@ -141,7 +141,7 @@ class VfsLargeFileSupportTest(actions.TestBase):
         r.seed(0)
         orig_data = ''.join(
             [chr(r.randrange(256))
-             for x in xrange(int(vfs._MAX_VFS_CACHE_SHARD_SIZE + 1))])
+             for x in xrange(int(vfs._MAX_VFS_SHARD_SIZE + 1))])
         namespace = 'ns_foo'
         fs = vfs.DatastoreBackedFileSystem(namespace, '/')
         filename = '/foo'
@@ -157,14 +157,14 @@ class VfsLargeFileSupportTest(actions.TestBase):
 
         # Verify that sharded items exist with appropriate sizes.
         file_key_names = vfs.DatastoreBackedFileSystem._generate_file_key_names(
-            filename, vfs._MAX_VFS_CACHE_SHARD_SIZE + 1)
+            filename, vfs._MAX_VFS_SHARD_SIZE + 1)
         self.assertEquals(
             2, len(file_key_names),
             'Verify attempting to store a too-large file makes multiple shards')
 
         with common_utils.Namespace(namespace):
             shard_0 = vfs.FileDataEntity.get_by_key_name(file_key_names[0])
-            self.assertEquals(vfs._MAX_VFS_CACHE_SHARD_SIZE, len(shard_0.data))
+            self.assertEquals(vfs._MAX_VFS_SHARD_SIZE, len(shard_0.data))
 
             shard_1 = vfs.FileDataEntity.get_by_key_name(file_key_names[1])
             self.assertEquals(1, len(shard_1.data))
@@ -174,3 +174,28 @@ class VfsLargeFileSupportTest(actions.TestBase):
         fs = vfs.DatastoreBackedFileSystem(namespace, '/')
         with self.assertRaises(ValueError):
             fs.put('/name:shard:123', StringIO.StringIO('file contents'))
+
+    def test_too_large_file_is_rejected(self):
+        unit = self.course.add_unit()
+        num_lessons = (
+            (vfs._MAX_VFS_NUM_SHARDS * vfs._MAX_VFS_SHARD_SIZE) /
+            len(LOREM_IPSUM))
+        for unused in range(num_lessons):
+            lesson = self.course.add_lesson(unit)
+            lesson.objectives = LOREM_IPSUM
+        with self.assertRaises(ValueError):
+            self.course.save()
+
+    def test_large_but_not_too_large_file_is_not_rejected(self):
+        unit = self.course.add_unit()
+        num_lessons = (
+            ((vfs._MAX_VFS_NUM_SHARDS - 1) * vfs._MAX_VFS_SHARD_SIZE) /
+            len(LOREM_IPSUM))
+        for unused in range(num_lessons):
+            lesson = self.course.add_lesson(unit)
+            lesson.objectives = LOREM_IPSUM
+
+        # Here, call.  Expect no ValueError from VFS, and no complaint
+        # from AppEngine about cross-group transaction having too many
+        # entities involved.
+        self.course.save()

@@ -49,8 +49,8 @@ NO_OBJECT = {}
 DEFAULT_CACHE_TTL_SECS = 60 * 5
 
 # https://developers.google.com/appengine/docs/python/memcache/#Python_Limits
-MEMCACHE_MAX = (1024 * 1024 - 96 - 250)
-MEMCACHE_MULTI_MAX = 32 * 1024 * 1024
+MEMCACHE_MAX = (1000 * 1000 - 96 - 250)
+MEMCACHE_MULTI_MAX = 32 * 1000 * 1000
 
 # Global memcache controls.
 CAN_USE_MEMCACHE = ConfigProperty(

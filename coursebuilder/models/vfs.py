@@ -43,7 +43,10 @@ MAX_GLOBAL_CACHE_SIZE_BYTES = 16 * 1024 * 1024
 MAX_GLOBAL_CACHE_ITEM_SIZE_BYTES = 256 * 1024
 
 # The maximum number of bytes stored per VFS cache shard.
-_MAX_VFS_CACHE_SHARD_SIZE = 1000 * 1000
+_MAX_VFS_SHARD_SIZE = 1000 * 1000
+
+# Max number of shards for a single VFS cached file.
+_MAX_VFS_NUM_SHARDS = 4
 
 # Global memcache controls.
 CAN_USE_VFS_IN_PROCESS_CACHE = ConfigProperty(
@@ -609,7 +612,7 @@ class DatastoreBackedFileSystem(object):
           size: The size of the file, in bytes.
         Returns:
           A list of database entity keys. Files smaller than
-          _MAX_VFS_CACHE_SHARD_SIZE are stored in one entity named by the
+          _MAX_VFS_SHARD_SIZE are stored in one entity named by the
           'filename' parameter.  If larger, sufficient additional names of the
           form <filename>/0, <filename>/1, ..... <filename>/N are added.
         """
@@ -618,10 +621,16 @@ class DatastoreBackedFileSystem(object):
                 'Files may not end with ":shard:NNN"; this pattern is '
                 'reserved for internal use.  Filename "%s" violates this. ' %
                 filename)
+        if size > _MAX_VFS_SHARD_SIZE * _MAX_VFS_NUM_SHARDS:
+            raise ValueError(
+                'Cannot store file "%s"; its size of %d bytes is larger than '
+                'the maximum supported size of %d.' % (
+                    filename, size, _MAX_VFS_SHARD_SIZE * _MAX_VFS_NUM_SHARDS))
 
         key_names = [filename]
-        for segment_id in range(size // _MAX_VFS_CACHE_SHARD_SIZE):
+        for segment_id in range(size // _MAX_VFS_SHARD_SIZE):
             key_names.append('%s:shard:%d' % (filename, segment_id))
+
         return key_names
 
     def non_transactional_put(
@@ -646,8 +655,8 @@ class DatastoreBackedFileSystem(object):
             shard_entities = []
             for index, key_name in enumerate(key_names):
                 data = FileDataEntity(key_name=key_name)
-                start_offset = index * _MAX_VFS_CACHE_SHARD_SIZE
-                end_offset = (index + 1) * _MAX_VFS_CACHE_SHARD_SIZE
+                start_offset = index * _MAX_VFS_SHARD_SIZE
+                end_offset = (index + 1) * _MAX_VFS_SHARD_SIZE
                 data.data = raw_bytes[start_offset:end_offset]
                 shard_entities.append(data)
             entities_put(shard_entities)

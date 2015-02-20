@@ -314,14 +314,28 @@ class AbstractCachedObject(object):
     """Abstract serializable versioned object that can stored in memcache."""
 
     @classmethod
-    def _make_key(cls):
+    def _max_size(cls):
+        # By default, max out at one cache record.
+        return models.MEMCACHE_MAX
+
+    @classmethod
+    def _make_keys(cls):
         # The course content files may change between deployment. To avoid
         # reading old cached values by the new version of the application we
         # add deployment version to the key. Now each version of the
         # application can put/get its own version of the course and the
         # deployment.
-        return 'course:model:pickle:%s:%s' % (
-            cls.VERSION, os.environ.get('CURRENT_VERSION_ID'))
+
+        # Generate the maximum number of cache shard keys indicated by the max
+        # allowed size of the derived type.  Not all of these will necessarily
+        # be used, but the number of shards is typically very small (max of 4)
+        # so pre-generating these is not a big burden.
+        num_shards = (
+            (cls._max_size() + models.MEMCACHE_MAX - 1) // models.MEMCACHE_MAX)
+        return [
+            'course:model:pickle:%s:%s:%d' % (
+                cls.VERSION, os.environ.get('CURRENT_VERSION_ID'), shard)
+            for shard in xrange(num_shards)]
 
     @classmethod
     def new_memento(cls):
@@ -341,33 +355,66 @@ class AbstractCachedObject(object):
     @classmethod
     def load(cls, app_context):
         """Loads instance from memcache; does not fail on errors."""
+        shard_keys = cls._make_keys()
+        shard_contents = {}
         try:
-            binary_data = MemcacheManager.get(
-                cls._make_key(),
-                namespace=app_context.get_namespace_name())
-            if binary_data:
-                memento = cls.new_memento()
-                memento.deserialize(binary_data)
-                return cls.instance_from_memento(app_context, memento)
+            shard_0 = MemcacheManager.get(
+                shard_keys[0], namespace=app_context.get_namespace_name())
+            if not shard_0:
+                return None
+
+            num_shards = ord(shard_0[0])
+            shard_contents[shard_keys[0]] = shard_0[1:]
+            if num_shards > 1:
+                shard_contents.update(MemcacheManager.get_multi(
+                    shard_keys[1:], namespace=app_context.get_namespace_name()))
+            if len(shard_contents) != num_shards:
+                return None
+
+            data = []
+            for shard_key in sorted(shard_contents.keys()):
+                data.append(shard_contents[shard_key])
+            memento = cls.new_memento()
+            memento.deserialize(''.join(data))
+            return cls.instance_from_memento(app_context, memento)
+
         except Exception as e:  # pylint: disable=broad-except
             logging.error(
-                'Failed to load object \'%s\' from memcache. %s',
-                cls._make_key(), e)
+                'Failed to load object \'%s\' from memcache. %s', shard_keys, e)
         return None
 
     @classmethod
     def save(cls, app_context, instance):
         """Saves instance to memcache."""
-        MemcacheManager.set(
-            cls._make_key(),
-            cls.memento_from_instance(instance).serialize(),
-            namespace=app_context.get_namespace_name())
+
+        # If item to cache is too large, clear the old cached value for this
+        # item, and don't send the new, too-large item to cache.
+        data_bytes = cls.memento_from_instance(instance).serialize()
+        num_shards_required = (len(data_bytes) // models.MEMCACHE_MAX) + 1
+        data_bytes = chr(num_shards_required) + data_bytes
+        if len(data_bytes) > cls._max_size():
+            logging.warning(
+                'Not sending %d bytes for %s to Memcache; this is more '
+                'than the maximum limit of %d bytes.',
+                len(data_bytes), cls.__name__, cls._max_size())
+            cls.delete(app_context)
+            return
+
+        mapping = {}
+        shard_keys = cls._make_keys()
+        i = 0
+        while i < num_shards_required:
+            mapping[shard_keys[i]] = data_bytes[i * models.MEMCACHE_MAX:
+                                                (i + 1) * models.MEMCACHE_MAX]
+            i += 1
+        MemcacheManager.set_multi(
+            mapping, namespace=app_context.get_namespace_name())
 
     @classmethod
     def delete(cls, app_context):
         """Deletes instance from memcache."""
-        MemcacheManager.delete(
-            cls._make_key(),
+        MemcacheManager.delete_multi(
+            cls._make_keys(),
             namespace=app_context.get_namespace_name())
 
     def serialize(self):
@@ -969,6 +1016,12 @@ class CachedCourse13(AbstractCachedObject):
         # is no need to persist these indexes in durable storage, but it is
         # nice to have them in memcache.
         self.unit_id_to_lesson_ids = unit_id_to_lesson_ids
+
+    @classmethod
+    def _max_size(cls):
+        # Cap at approximately 4M to avoid 1M single-cache-element limit,
+        # which is too small for larger courses.
+        return models.MEMCACHE_MAX * 4
 
     @classmethod
     def new_memento(cls):
