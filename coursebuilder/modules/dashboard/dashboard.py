@@ -1741,9 +1741,11 @@ def register_module():
     tabs.Registry.register('analytics', 'students', 'Students',
                            [labels_on_students,
                             student_progress,
-                            enrollment_assessment])
+                            enrollment_assessment],
+                           placement=tabs.Placement.BEGINNING)
     tabs.Registry.register('analytics', 'questions', 'Questions',
-                           [multiple_choice_question, question_answers])
+                           [multiple_choice_question, question_answers],
+                           placement=tabs.Placement.BEGINNING)
     tabs.Registry.register('analytics', 'assessments', 'Assessments',
                            [assessment_difficulty])
     tabs.Registry.register('analytics', 'gradebook', 'Gradebook',

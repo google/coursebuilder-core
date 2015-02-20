@@ -16,7 +16,31 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import collections
 import re
+
+
+class Placement(object):
+    # If needed, can add "FIRST_HALF" and "LAST_HALF" to further subdivide.
+    BEGINNING = 'beginning'
+    MIDDLE = 'middle'
+    END = 'end'
+
+    _ORDERED_PLACEMENTS = [
+        BEGINNING,
+        MIDDLE,
+        END,
+    ]
+
+    @staticmethod
+    def cmp(a, b):
+        # pylint: disable=protected-access
+        return cmp(Placement._ORDERED_PLACEMENTS.index(a._placement),
+                   Placement._ORDERED_PLACEMENTS.index(b._placement))
+
+    def __init__(self, *args, **kwargs):
+        # Not really a class; just a namespace.
+        raise NotImplementedError()
 
 
 class Registry(object):
@@ -24,7 +48,8 @@ class Registry(object):
     class _Tab(object):
 
         def __init__(
-                self, group, name, title, contents, href=None, target=None):
+                self, group, name, title, contents, href=None, target=None,
+                placement=None):
             if not re.match('^[a-z0-9_]+$', name):
                 raise ValueError('Sub-tabs under Dashboard must '
                                  'have names consisting only of lowercase '
@@ -35,6 +60,7 @@ class Registry(object):
             self._contents = contents
             self._href = href
             self._target = target
+            self._placement = placement or Placement.MIDDLE
 
         @property
         def group(self):
@@ -52,6 +78,10 @@ class Registry(object):
         def contents(self):
             return self._contents
 
+        @contents.setter
+        def contents(self, contents):
+            self._contents = contents
+
         @property
         def href(self):
             return self._href
@@ -60,18 +90,24 @@ class Registry(object):
         def target(self):
             return self._target
 
-    _tabs_by_group = {}
+        @property
+        def placement(self):
+            return self._placement
+
+    _tabs_by_group = collections.defaultdict(list)
 
     @classmethod
     def register(
             cls, group_name, tab_name, tab_title, contents=None, href=None,
-            target=None):
+            target=None, placement=None):
         if cls.get_tab(group_name, tab_name):
             raise ValueError(
                 'There is already a sub-tab named "%s" ' % tab_name +
                 'registered in group %s.' % group_name)
-        tab = cls._Tab(group_name, tab_name, tab_title, contents, href, target)
-        cls._tabs_by_group.setdefault(group_name, []).append(tab)
+        cls._tabs_by_group[group_name].append(
+            Registry._Tab(group_name, tab_name, tab_title, contents, href,
+                          target, placement))
+        cls._tabs_by_group[group_name].sort(cmp=Placement.cmp)
 
     @classmethod
     def unregister_group(cls, group_name):
