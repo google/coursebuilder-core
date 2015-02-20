@@ -1558,7 +1558,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains(
             'test-assessment: completed 5, average score 2.0', response.body)
 
-    def test_trigger_sample_announcements(self):
+    def test_no_announcements(self):
         """Test course author can trigger adding sample announcements."""
         email = 'test_announcements@google.com'
         name = 'Test Announcements'
@@ -1567,9 +1567,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         actions.register(self, name)
 
         response = actions.view_announcements(self)
-        assert_contains('Example Announcement', response.body)
-        assert_contains('Welcome to the final class!', response.body)
-        assert_does_not_contain('No announcements yet.', response.body)
+        assert_contains('Currently, there are no announcements.', response.body)
 
     def test_manage_announcements(self):
         """Test course author can manage announcements."""
@@ -1596,7 +1594,7 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # delete draft
         response = actions.view_announcements(self)
-        delete_form = response.forms['gcb-delete-announcement-1']
+        delete_form = response.forms['gcb-delete-announcement-0']
         response = self.submit(delete_form)
         assert_equals(response.status_int, 302)
 
@@ -1705,21 +1703,42 @@ class StudentAspectTest(actions.TestBase):
         response = actions.view_announcements(self)
         assert_does_not_contain('Example Announcement', response.body)
         assert_does_not_contain('Welcome to the final class!', response.body)
-        assert_contains('No announcements yet.', response.body)
+        assert_contains('Currently, there are no announcements.', response.body)
         actions.logout()
 
         # Login as admin and add announcements.
         actions.login('admin@sample.com', is_admin=True)
         actions.register(self, 'admin')
         response = actions.view_announcements(self)
+        add_form = response.forms['gcb-add-announcement']
+        response = self.submit(add_form).follow()
+        match = re.search(r'\'([^\']+rest/announcements/item\?key=([^\']+))',
+                          response.body)
+        url = match.group(1)
+        key = match.group(2)
+        response = self.get(url)
+        json_dict = transforms.loads(response.body)
+        payload_dict = transforms.loads(json_dict['payload'])
+        payload_dict['title'] = u'My Test Title'
+        payload_dict['date'] = '2015/02/03'
+        payload_dict['is_draft'] = False
+        payload_dict['send_email'] = False
+        request = {}
+        request['key'] = key
+        request['payload'] = transforms.dumps(payload_dict)
+        request['xsrf_token'] = json_dict['xsrf_token']
+        response = self.put('rest/announcements/item?%s' % urllib.urlencode(
+            {'request': transforms.dumps(request)}), {})
+        assert_equals(response.status_int, 200)
         actions.logout()
 
         # Check we can see non-draft announcements.
         actions.login(email)
         response = actions.view_announcements(self)
-        assert_contains('Example Announcement', response.body)
+        assert_contains('My Test Title', response.body)
         assert_does_not_contain('Welcome to the final class!', response.body)
-        assert_does_not_contain('No announcements yet.', response.body)
+        assert_does_not_contain('Currently, there are no announcements.',
+                                response.body)
 
         # Check no access to access to draft announcements via REST handler.
         items = AnnouncementEntity.all().fetch(1000)

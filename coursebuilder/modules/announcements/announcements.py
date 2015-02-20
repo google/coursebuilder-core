@@ -37,7 +37,6 @@ from models import roles
 from models import transforms
 from models.models import MemcacheManager
 from models.models import Student
-import modules.announcements.samples as samples
 from modules.dashboard.label_editor import LabelGroupsHelper
 from modules.oeditor import oeditor
 
@@ -123,16 +122,6 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
         return output
 
-    def put_sample_announcements(self):
-        """Loads sample data into a database."""
-        items = []
-        for item in samples.SAMPLE_ANNOUNCEMENTS:
-            entity = AnnouncementEntity()
-            transforms.dict_to_entity(entity, item)
-            entity.put()
-            items.append(entity)
-        return items
-
     def _render(self):
         self.template_value['navbar'] = {'announcements': True}
         self.render('announcements.html')
@@ -151,9 +140,6 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         self.template_value['transient_student'] = transient_student
 
         items = AnnouncementEntity.get_announcements()
-        if not items and AnnouncementsRights.can_edit(self):
-            items = self.put_sample_announcements()
-
         items = AnnouncementsRights.apply_rights(self, items)
         if not roles.Roles.is_course_admin(self.get_course().app_context):
             items = models.LabelDAO.apply_course_track_labels_to_student_labels(

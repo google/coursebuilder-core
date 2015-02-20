@@ -19,6 +19,7 @@ __author__ = 'Ellis Michael (emichael@google.com)'
 import datetime
 import logging
 import re
+import urllib
 
 import actions
 from common import utils as common_utils
@@ -26,6 +27,7 @@ from controllers import sites
 from models import courses
 from models import custom_modules
 from models import models
+from models import transforms
 from modules.announcements import announcements
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDAO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDTO
@@ -257,11 +259,43 @@ class SearchTest(search_unit_test.SearchTestBase):
         finally:
             namespace_manager.set_namespace(default_namespace)
 
+    def _add_announcement(self, form_settings):
+        response = actions.view_announcements(self)
+        add_form = response.forms['gcb-add-announcement']
+        response = self.submit(add_form).follow()
+        match = re.search(r'\'([^\']+rest/announcements/item\?key=([^\']+))',
+                          response.body)
+        url = match.group(1)
+        key = match.group(2)
+        response = self.get(url)
+        json_dict = transforms.loads(response.body)
+        payload_dict = transforms.loads(json_dict['payload'])
+        payload_dict.update(form_settings)
+        request = {}
+        request['key'] = key
+        request['payload'] = transforms.dumps(payload_dict)
+        request['xsrf_token'] = json_dict['xsrf_token']
+        response = self.put('rest/announcements/item?%s' % urllib.urlencode(
+            {'request': transforms.dumps(request)}), {})
+
     def test_announcements(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
 
-        self.get('announcements')
+        self._add_announcement({
+            'title': 'My Test Title',
+            'date': '2015/02/03',
+            'is_draft': False,
+            'send_email': False,
+            'html': 'Four score and seven years ago, our founding fathers'
+            })
+        self._add_announcement({
+            'title': 'My Test Title',
+            'date': '2015/02/03',
+            'is_draft': True,
+            'send_email': False,
+            'html': 'Standing beneath this serene sky, overlooking these',
+            })
 
         response = self.get('dashboard?action=search')
         index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
@@ -271,12 +305,12 @@ class SearchTest(search_unit_test.SearchTestBase):
 
         # This matches an announcement in the Power Searching course
         response = self.get(
-            'search?query=Certificates%20qualifying%20participants')
+            'search?query=Four%20score%20seven%20years')
         self.assertIn('gcb-search-result', response.body)
         self.assertIn('announcements#', response.body)
 
         # The draft announcement in Power Searching should not be indexed
-        response = self.get('search?query=Welcome%20to%20the%20final%20class')
+        response = self.get('search?query=Standing%20beneath%20serene')
         self.assertNotIn('gcb-search-result', response.body)
         self.assertNotIn('announcements#', response.body)
 
