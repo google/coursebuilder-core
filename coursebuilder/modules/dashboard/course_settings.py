@@ -17,8 +17,10 @@
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
 import cgi
+import HTMLParser
 import urllib
 
+from common import safe_dom
 from common import schema_fields
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
@@ -30,6 +32,60 @@ from models import transforms
 from modules.dashboard import filer
 from modules.dashboard import messages
 from modules.oeditor import oeditor
+
+
+class CourseSettingsDisplayHelper(object):
+    """Utility functions to show uneditable settings."""
+    html_parser = HTMLParser.HTMLParser()
+
+    @classmethod
+    def get_environ_value(cls, environ, name):
+        for part in name.split(':'):
+            environ = environ.get(part)
+            if not environ:
+                return ''
+        return environ or ''
+
+    @classmethod
+    def build_single_settings_property(cls, setting_dict, env_value):
+        section = safe_dom.Element('div', className='settings-property')
+        label = safe_dom.Element('div', className='settings-property-label')
+        box = safe_dom.Element('div', className='settings-property-box')
+        value = safe_dom.Element('div', className='settings-property-value')
+        descr = safe_dom.Element('div', className='settings-property-descr')
+        clear = safe_dom.Element('div', className='settings-property-clear')
+        section.add_child(label)
+        section.add_child(box)
+        box.add_child(value)
+        box.add_child(descr)
+        section.add_child(clear)
+        label.add_text(setting_dict['label'])
+        value.add_text(env_value)
+        description = setting_dict['description']
+        if description:
+            description = cls.html_parser.unescape(description)
+            descr.add_text(description)
+        return section
+
+    @classmethod
+    def build_settings_property(cls, setting_dict, environ):
+        prop_value = cls.get_environ_value(environ, setting_dict['name'])
+        return cls.build_single_settings_property(setting_dict, prop_value)
+
+    @classmethod
+    def build_settings_section(cls, display_dict, environ):
+        section = safe_dom.Element('div', className='settings-section')
+        title = safe_dom.Element('div', className='settings-section-title')
+        title.add_text(display_dict['title'])
+        content = safe_dom.Element('div',
+                                   className='settings-section-content')
+        section.add_child(title)
+        section.add_child(content)
+        for registry in display_dict['registries']:
+            content.add_child(cls.build_settings_section(registry, environ))
+        for prop in display_dict['properties']:
+            content.add_child(cls.build_settings_property(prop, environ))
+        return section
 
 
 class CourseSettingsRights(object):

@@ -69,6 +69,7 @@ class Property(object):
         return {
             'name': self._name,
             'label': self._label,
+            'repeated': False,
             'description': self._description,
             }
 
@@ -292,6 +293,12 @@ class FieldArray(SchemaField):
         dict_list += self._item_type._get_schema_dict(prefix_key + ['items'])
         # pylint: enable=protected-access
         return dict_list
+
+    def get_display_dict(self):
+        display_dict = super(FieldArray, self).get_display_dict()
+        display_dict['repeated'] = True
+        display_dict['item_type'] = self.item_type.get_display_dict()
+        return display_dict
 
 
 class FieldRegistry(Registry):

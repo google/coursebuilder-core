@@ -19,7 +19,6 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import collections
 import copy
 import datetime
-import HTMLParser
 import jinja2
 import logging
 import os
@@ -28,6 +27,7 @@ import urllib
 import appengine_config
 from admin_preferences_editor import AdminPreferencesEditor
 from admin_preferences_editor import AdminPreferencesRESTHandler
+from course_settings import CourseSettingsDisplayHelper
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
 from course_settings import HtmlHookHandler
@@ -851,48 +851,6 @@ class DashboardHandler(
         self.render_page(template_values)
 
     def _get_settings_section(self, template_values, tab):
-        html_parser = HTMLParser.HTMLParser()
-
-        def get_environ_value(environ, name):
-            for part in name.split(':'):
-                environ = environ.get(part)
-                if not environ:
-                    return ''
-            return environ or ''
-
-        def build_settings_property(setting_dict, environ):
-            section = safe_dom.Element('div', className='settings-property')
-            label = safe_dom.Element('div', className='settings-property-label')
-            box = safe_dom.Element('div', className='settings-property-box')
-            value = safe_dom.Element('div', className='settings-property-value')
-            descr = safe_dom.Element('div', className='settings-property-descr')
-            clear = safe_dom.Element('div', className='settings-property-clear')
-            section.add_child(label)
-            section.add_child(box)
-            box.add_child(value)
-            box.add_child(descr)
-            section.add_child(clear)
-            label.add_text(setting_dict['label'])
-            value.add_text(get_environ_value(environ, setting_dict['name']))
-            description = setting_dict['description']
-            if description:
-                description = html_parser.unescape(description)
-                descr.add_text(description)
-            return section
-
-        def build_settings_section(display_dict, environ):
-            section = safe_dom.Element('div', className='settings-section')
-            title = safe_dom.Element('div', className='settings-section-title')
-            title.add_text(display_dict['title'])
-            content = safe_dom.Element('div',
-                                       className='settings-section-content')
-            section.add_child(title)
-            section.add_child(content)
-            for registry in display_dict['registries']:
-                content.add_child(build_settings_section(registry, environ))
-            for prop in display_dict['properties']:
-                content.add_child(build_settings_property(prop, environ))
-            return section
 
         actions = []
         if self.app_context.is_editable_fs():
@@ -922,7 +880,9 @@ class DashboardHandler(
                         .get_display_dict())
         main_content = safe_dom.NodeList()
         for registry in display_dict['registries']:
-            main_content.append(build_settings_section(registry, environ))
+            main_content.append(
+                    CourseSettingsDisplayHelper.build_settings_section(
+                        registry, environ))
         template_values['main_content'] = main_content
 
     def get_settings_admin_prefs(self, template_values, tab):
