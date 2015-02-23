@@ -50,7 +50,10 @@ function bindSkillListOverflowTooltip() {
 }
 
 function init() {
-  bindSkillListOverflowTooltip();
+  if ($('div.course-outline').length > 0) {
+    // Only initialize if the page contains the  course outline
+    bindSkillListOverflowTooltip();
+  }
 }
 
 init();
