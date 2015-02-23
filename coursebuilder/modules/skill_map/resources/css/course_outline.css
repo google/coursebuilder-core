@@ -1,0 +1,12 @@
+/* Specific styles for the layout of skills within the Dashboard's course
+ * outline table.
+ */
+div.course-outline ol.skill-display-root > li.skill {
+  vertical-align: top;
+  margin-top: 5px !important;
+}
+.skill-list-tooltip .ui-tooltip-content li.skill {
+  margin-top: 5px !important;
+  font-family: arial, sans-serif;
+  font-size: 13px;
+}

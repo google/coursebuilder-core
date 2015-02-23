@@ -862,6 +862,10 @@ def notify_module_enabled():
     setattr(dashboard.DashboardHandler, 'get_skill_map', get_action)
     dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
         '/modules/skill_map/resources/css/common.css')
+    dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
+        '/modules/skill_map/resources/css/course_outline.css')
+    dashboard.DashboardHandler.EXTRA_JS_HREF_LIST.append(
+        '/modules/skill_map/resources/js/course_outline.js')
 
     LessonRESTHandler.SCHEMA_LOAD_HOOKS.append(
         lesson_rest_handler_schema_load_hook)

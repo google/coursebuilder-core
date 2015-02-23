@@ -45,6 +45,9 @@ div.course-outline li {
 div.course-outline div.row {
   transition: background-color 200ms;
   height: 28px;
+  white-space: nowrap;
+  overflow-x: hidden;
+  position: relative;
 }
 div.course-outline div.row > div > div {
   vertical-align: top;
@@ -110,11 +113,14 @@ div.course-outline .reveal-on-hover.md-lock {
   opacity: 1;
 }
 div.course-outline .icon {
+  display: inline-block;
+  vertical-align: top;
   font-size: 16px;
   margin: 0;
   height: 24px;
   width: 20px;
-  padding-left: 4px;
+  line-height: 24px;
+  padding: 2px 4px 2px 0;
   color: #555;
   text-decoration: none;
 }

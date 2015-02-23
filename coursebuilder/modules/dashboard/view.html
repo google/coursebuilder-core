@@ -37,6 +37,10 @@
       <link rel="stylesheet" type="text/css" href="{{ href }}">
     {% endfor %}
 
+    {% for href in extra_js_href_list %}
+      <script src="{{ href }}"></script>
+    {% endfor %}
+
     {% if alerts %}
       <script>
         $(function() {
