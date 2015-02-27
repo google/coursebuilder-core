@@ -1,0 +1,109 @@
+<!--  import jQueryUI -->
+<link rel="stylesheet" type="text/css"
+    href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
+
+<link rel="stylesheet" type="text/css"
+    href="/modules/skill_map/resources/css/lesson_header.css">
+<script src="/modules/skill_map/resources/js/lesson_header.js"></script>
+
+<link rel="stylesheet" type="text/css"
+    href="/modules/dashboard/resources/material-design-icons/css/material-design-iconic-font.min.css">
+<link rel="stylesheet" type="text/css"
+    href="/modules/skill_map/resources/css/common.css">
+
+{% macro render_skill_card(skill) -%}
+  <li class="skill-card" data-skill-id="{{ skill.id }}">
+    <div class="name">{{ skill.name }}</div>
+    <div class="description">
+      <div class="content">
+        {{ skill.description }}
+      </div>
+      <div class="fade"></div>
+    </div>
+    <div class="locations">
+      <div class="title">
+        {# I18N: Header for list of links to lessons #}
+        {{ gettext('Lessons') }}
+      </div>
+      <ol class="locations">
+        {% for location in skill.locations %}
+          <li>
+            <a href="{{ location.href }}">
+              {{ location.unit.index }}.{{ location.lesson.index }}
+            </a>
+          </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </li>
+{%- endmacro %}
+
+<div class="skill-panel" data-dependency-map="{{ dependency_map }}">
+  <div class="margins lesson-title">
+    {{ lesson.title }}
+    {% if not lesson.now_available and can_see_drafts %}
+      <span id="lesson-title-private">
+        (Private)
+      </span>
+    {% endif %}
+  </div>
+  {% if skill_list %}
+    <div class="margins skills-in-this-lesson">
+      {# I18N: Header describing the skills for this lesson #}
+      {{ gettext('Skills in this lesson:') }}
+      <ol class="skill-display-root">
+        {% for skill in skill_list %}
+          <li class="skill"
+              data-skill-id="{{ skill.id }}"
+              data-skill-description="{{ skill.description }}">
+            {{ skill.name }}
+          </li>
+        {% endfor %}
+      </ol>
+    </div>
+    <div class="skill-details">
+      <div class="margins">
+        <div>
+          {# I18N: Header describing list of skills this lesson depends on #}
+          {{ gettext('Depends on:') }}
+          {% if not depends_on_skills %}
+            <span class="empty-skill-list-message">
+              {# I18N: Describe an empty set of prerequisite skills #}
+              {{ gettext('This lesson doesn\'t depend on any other skills.') }}
+            </span>
+          {% endif %}
+        </div>
+        {% if depends_on_skills %}
+          <ol class="depends-on skill-display-root">
+            {% for skill in depends_on_skills %}
+              {{ render_skill_card(skill) }}
+            {% endfor %}
+          </ol>
+        {% endif %}
+      </div>
+      <div class="margins">
+        <div>
+          {# I18N: Header describing list of skills this lesson leads to #}
+          {{ gettext('Leads to:') }}
+          {% if not leads_to_skills %}
+            <span class="empty-skill-list-message">
+              {# I18N: Describe an empty set of follow-on skills #}
+              {{ gettext('This lesson isn\'t a prerequisite for any other skills.') }}
+            </span>
+          {% endif %}
+        </div>
+        {% if leads_to_skills %}
+          <ol class="leads-to skill-display-root">
+            {% for skill in leads_to_skills %}
+              {{ render_skill_card(skill) }}
+            {% endfor %}
+          </ol>
+        {% endif %}
+      </div>
+    </div>
+    <div class="open-control">
+      <button class="md"></button>
+    </div>
+  {% endif %}
+</div>

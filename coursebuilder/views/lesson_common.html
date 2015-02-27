@@ -1,3 +1,4 @@
+{{ title }}
 {% if is_read_write_course and is_course_admin %}
   <a id="gcb-edit-lesson-button"
       href="dashboard?action=edit_lesson&key={{ lesson.lesson_id }}"
@@ -5,18 +6,8 @@
 {% endif %}
 {% if lesson.now_available or can_see_drafts %}
   <div {% if lesson.notes %}class="gcb-cols"{% endif %}>
-    <div id="lesson-title" {% if lesson.notes %}class="gcb-col-7"{% endif %}>
-      <h1 class="gcb-lesson-title">
-        {{ title }}
-        {% if not lesson.now_available and can_see_drafts %}
-          <span id="lesson-title-private">
-            (Private)
-          </span>
-        {% endif %}
-      </h1>
-    </div>
     {% if lesson.notes %}
-    <div id="get-text-button" class="gcb-col-3">
+    <div id="get-text-button">
       <p style="float:right; margin-top: 0px;">
         <a role="button" class="gcb-button" id="lessonNotesLink"
            href="{{ lesson.notes }}" target="_blank">
@@ -35,10 +26,6 @@
   {% endif %}
 
 {% else %}
-  <h1 class="gcb-lesson-title">
-    {{ lesson.title }}
-  </h1>
-  <br><br>
   <div>
     {# I18N: Text shown for a lesson that has not been made public. #}
     {{ gettext('This lesson is not available.')}}

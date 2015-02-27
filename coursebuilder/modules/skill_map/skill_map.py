@@ -26,6 +26,7 @@ from common import crypto
 from common import safe_dom
 from common import schema_fields
 from common import tags
+from controllers import lessons
 from controllers import sites
 from controllers import utils
 from models import courses
@@ -34,10 +35,10 @@ from models import transforms
 from models import models
 from models import roles
 from modules.admin.admin import WelcomeHandler
+from modules import courses as courses_module
 from modules.dashboard import dashboard
 from modules.dashboard import tabs
 from modules.dashboard.unit_lesson_editor import LessonRESTHandler
-
 
 from google.appengine.ext import db
 from google.appengine.api import namespace_manager
@@ -467,10 +468,31 @@ class SkillMap(object):
         return self._lessons_by_skill.get(skill.id, [])
 
     def get_skills_for_lesson(self, lesson_id):
+        """Get the skills assigned to the given lesson.
+
+        Args:
+            lesson_id. The id of the lesson.
+
+        Returns:
+            A list of SkillInfo objects.
+        """
         # TODO(jorr): Can we stop relying on the unit and just use lesson id?
         lesson = self._course.find_lesson_by_id(None, lesson_id)
         skill_list = lesson.properties.get(LESSON_SKILL_LIST_KEY, [])
-        return [self._skill_graph.get(skill_id) for skill_id in skill_list]
+        return [self._skill_infos[skill_id] for skill_id in skill_list]
+
+    def successors(self, skill_info):
+        """Get the successors to the given skill.
+
+        Args:
+            skill_info. A SkillInfo object.
+
+        Returns:
+            A list of SkillInfo objects.
+        """
+        return {
+            self._skill_infos[s.id]
+            for s in self._skill_graph.successors(skill_info.id)}
 
     def skills(self, sort_by='name'):
         if sort_by == 'name':
@@ -800,6 +822,45 @@ def welcome_handler_import_skills_callback(app_ctx, unused_errors):
         namespace_manager.set_namespace(old_namespace)
 
 
+def lesson_title_provider(handler, app_context, unit, lesson):
+    if not isinstance(lesson, courses.Lesson13):
+        return None
+
+    skill_map = SkillMap.load(handler.get_course())
+    skill_list = skill_map.get_skills_for_lesson(lesson.lesson_id)
+
+    def not_only_this_lesson(skill_list):
+        return [
+            skill for skill in skill_list
+            if [loc.lesson for loc in skill.locations] != [lesson]]
+
+    depends_on_skills = set()
+    leads_to_skills = set()
+    dependency_map = {}
+    for skill in skill_list:
+        prerequisites = not_only_this_lesson(skill.prerequisites)
+        successors = not_only_this_lesson(skill_map.successors(skill))
+        depends_on_skills.update(prerequisites)
+        leads_to_skills.update(successors)
+        dependency_map[skill.id] = {
+          'depends_on': [s.id for s in prerequisites],
+          'leads_to': [s.id for s in successors]
+        }
+
+    template_values = {
+      'lesson': lesson,
+      'unit': unit,
+      'can_see_drafts': courses_module.courses.can_see_drafts(app_context),
+      'skill_list': skill_list,
+      'depends_on_skills': depends_on_skills,
+      'leads_to_skills': leads_to_skills,
+      'dependency_map': transforms.dumps(dependency_map)
+    }
+    return jinja2.Markup(
+        handler.get_template('lesson_header.html', [TEMPLATES_DIR]
+    ).render(template_values))
+
+
 def import_skill_map(app_ctx):
     fn = os.path.join(
         appengine_config.BUNDLE_ROOT, 'data', 'skills.txt')
@@ -868,6 +929,8 @@ def notify_module_enabled():
         '/modules/skill_map/resources/css/course_outline.css')
     dashboard.DashboardHandler.EXTRA_JS_HREF_LIST.append(
         '/modules/skill_map/resources/js/course_outline.js')
+
+    lessons.UnitHandler.set_lesson_title_provider(lesson_title_provider)
 
     LessonRESTHandler.SCHEMA_LOAD_HOOKS.append(
         lesson_rest_handler_schema_load_hook)

@@ -43,4 +43,6 @@ class AllJavaScriptTests(unittest.TestCase):
         self.karma_test('modules_questionnaire')
 
     def test_skill_map(self):
-        self.karma_test('modules_skill_map')
+        self.karma_test(os.path.join('modules_skill_map', 'lesson_editor'))
+        self.karma_test(
+            os.path.join('modules_skill_map', 'student_skill_widget'))

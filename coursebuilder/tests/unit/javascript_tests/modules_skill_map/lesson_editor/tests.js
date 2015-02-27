@@ -7,7 +7,8 @@ describe('The skill tagging library', function() {
     showMsgAutoHide = jasmine.createSpy('showMsgAutoHide');
 
     jasmine.getFixtures().fixturesPath = 'base/';
-    loadFixtures('tests/unit/javascript_tests/modules_skill_map/fixture.html');
+    loadFixtures('tests/unit/javascript_tests/modules_skill_map/' +
+        'lesson_editor/fixture.html');
   });
 
   afterEach(function() {

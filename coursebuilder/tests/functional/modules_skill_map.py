@@ -17,6 +17,7 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 from networkx import DiGraph
+from xml.etree import cElementTree
 
 from common import crypto
 from controllers import sites
@@ -640,6 +641,136 @@ class SkillMapHandlerTests(actions.TestBase):
 
         dom = self.parse_html_string(response.body)
         assert dom.find('.//div[@class="graph"]')
+
+
+class StudentSkillViewWidgetTests(BaseSkillMapTests):
+
+    def setUp(self):
+        super(StudentSkillViewWidgetTests, self).setUp()
+        actions.login(ADMIN_EMAIL)
+
+        self.unit = self.course.add_unit()
+        self.unit.title = 'Test Unit'
+        self.lesson = self.course.add_lesson(self.unit)
+        self.lesson.title = 'Test Lesson'
+        self.course.save()
+
+    def _getWidget(self):
+        url = 'unit?unit=%(unit)s&lesson=%(lesson)s' % {
+            'unit': self.unit.unit_id, 'lesson': self.lesson.lesson_id}
+        dom = self.parse_html_string(self.get(url).body)
+        return dom.find('.//div[@class="skill-panel"]')
+
+    def test_no_skills_in_lesson(self):
+        # Expect the title is the only content
+        widget = self._getWidget()
+        all_children = widget.findall('./*')
+        self.assertEqual(1, len(all_children))
+        child = all_children[0]
+        self.assertEqual('div', child.tag)
+        actions.assert_contains('lesson-title', child.attrib['class'])
+        actions.assert_contains('Test Lesson', child.text)
+
+    def test_skills_with_no_prerequisites_or_successors(self):
+        # Expect skills shown and friendly messages for prerequ and successors
+        skill_graph = SkillGraph.load()
+        sa = skill_graph.add(Skill.build('a', 'describe a'))
+        sb = skill_graph.add(Skill.build('b', 'describe b'))
+        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sa.id, sb.id]
+        self.course.save()
+
+        widget = self._getWidget()
+        title_div, skills_div, details_div, control_div = widget.findall('./*')
+
+        actions.assert_contains('Test Lesson', title_div.text)
+
+        actions.assert_contains('Skills in this lesson', skills_div.text)
+
+        li_list = skills_div.findall('.//li[@class="skill"]')
+        self.assertEqual(2, len(li_list))
+        actions.assert_contains('a', li_list[0].text)
+        actions.assert_contains(
+            'describe a', li_list[0].attrib['data-skill-description'])
+        actions.assert_contains('b', li_list[1].text)
+        actions.assert_contains(
+            'describe b', li_list[1].attrib['data-skill-description'])
+
+        details_xml = cElementTree.tostring(details_div)
+        actions.assert_contains('doesn\'t depend on', details_xml)
+        actions.assert_contains('isn\'t a prerequisite', details_xml)
+
+    def test_skills_with_prerequisites_and_successors(self):
+        # Set up lesson with two skills, B and C, where A is a prerequisite of B
+        # and D is a successor of B. Expect to see A and D listed in the
+        # 'depends on' and 'leads to' sections respectively
+        skill_graph = SkillGraph.load()
+        sa = skill_graph.add(Skill.build('a', 'describe a'))
+        sb = skill_graph.add(Skill.build('b', 'describe b'))
+        sc = skill_graph.add(Skill.build('c', 'describe c'))
+        sd = skill_graph.add(Skill.build('d', 'describe d'))
+
+        skill_graph.add_prerequisite(sb.id, sa.id)
+        skill_graph.add_prerequisite(sd.id, sc.id)
+
+        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sb.id, sc.id]
+        self.course.save()
+
+        widget = self._getWidget()
+
+        # Check B and C are listed as skills in this lesson
+        skills_in_lesson = widget.findall('./div[2]//li[@class="skill"]')
+        self.assertEqual(2, len(skills_in_lesson))
+        actions.assert_contains('b', skills_in_lesson[0].text)
+        actions.assert_contains('c', skills_in_lesson[1].text)
+
+        # Skill A is listed in the "depends on" section
+        depends_on = widget.findall('./div[3]/div[1]/ol/li')
+        self.assertEqual(1, len(depends_on))
+        self.assertEqual(str(sa.id), depends_on[0].attrib['data-skill-id'])
+
+        # Skill D is listed in the "leads to" section
+        leads_to = widget.findall('./div[3]/div[2]/ol/li')
+        self.assertEqual(1, len(leads_to))
+        self.assertEqual(str(sd.id), leads_to[0].attrib['data-skill-id'])
+
+        # But if Skill A is also taught in this lesson, don't list it
+        self.lesson.properties[LESSON_SKILL_LIST_KEY].append(sa.id)
+        self.course.save()
+        widget = self._getWidget()
+        depends_on = widget.findall('./div[3]/div[1]/ol/li')
+        self.assertEqual(0, len(depends_on))
+
+    def test_skills_cards_have_title_description_and_lesson_links(self):
+        # The lesson contains Skill A which has Skill B as a follow-on. Skill B
+        # is found in Lesson 2. Check that the skill card shown for Skill B in
+        # Lesson 1 has correct information
+        skill_graph = SkillGraph.load()
+        sa = skill_graph.add(Skill.build('a', 'describe a'))
+        sb = skill_graph.add(Skill.build('b', 'describe b'))
+        skill_graph.add_prerequisite(sb.id, sa.id)
+
+        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sa.id]
+        lesson2 = self.course.add_lesson(self.unit)
+        lesson2.title = 'Test Lesson 2'
+        lesson2.properties[LESSON_SKILL_LIST_KEY] = [sb.id]
+        self.course.save()
+
+        widget = self._getWidget()
+        leads_to = widget.findall('./div[3]/div[2]/ol/li')
+        self.assertEqual(1, len(leads_to))
+        card = leads_to[0]
+        name = card.find('.//div[@class="name"]').text
+        description = card.find(
+            './/div[@class="description"]/div[@class="content"]').text
+        locations = card.findall('.//ol[@class="locations"]/li/a')
+        self.assertEqual('b', name.strip())
+        self.assertEqual('describe b', description.strip())
+        self.assertEqual(1, len(locations))
+        self.assertEqual('1.2', locations[0].text.strip())
+        self.assertEqual(
+            'unit?unit=%(unit)s&lesson=%(lesson)s' % {
+                'unit': self.unit.unit_id, 'lesson': lesson2.lesson_id},
+            locations[0].attrib['href'])
 
 
 class SkillMapMetricTests(BaseSkillMapTests):

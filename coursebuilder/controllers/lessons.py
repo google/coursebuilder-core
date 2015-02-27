@@ -31,6 +31,7 @@ from utils import TRANSIENT_STUDENT
 from utils import XsrfTokenManager
 
 from common import jinja_utils
+from common import safe_dom
 from models import courses
 from models import models
 from models import student_work
@@ -337,6 +338,11 @@ class UnitHandler(BaseHandler):
     # as its single arg, and should return a string or None.
     EXTRA_CONTENT = []
 
+    # The lesson title provider should be a function which receives the
+    # app_context, the unit, and the lesson, and returns a jinja2.Markup or a
+    # safe_dom object. If it returns None, the default title is used instead.
+    _LESSON_TITLE_PROVIDER = None
+
     class UnitLeftNavElements(object):
 
         def __init__(self, course, unit):
@@ -374,6 +380,23 @@ class UnitHandler(BaseHandler):
                 return self._urls[index]
             else:
                 return None
+
+    @classmethod
+    def set_lesson_title_provider(cls, lesson_title_provider):
+        if cls._LESSON_TITLE_PROVIDER:
+            raise Exception('Lesson title provider already set by a module')
+        cls._LESSON_TITLE_PROVIDER = lesson_title_provider
+
+    def _default_lesson_title_provider(self, app_context, unit, lesson):
+        title_h1 = safe_dom.Element(
+            'h1', className='gcb-lesson-title').add_text(lesson.title)
+        can_see_drafts = courses_module.courses.can_see_drafts(self.app_context)
+        if not lesson.now_available and can_see_drafts:
+            title_h1.add_text(' ').add_child(
+                safe_dom.Element('span', id='lesson-title-private').add_text(
+                    '(Private)'))
+        return safe_dom.Element('div', className='lesson-title').add_child(
+            title_h1)
 
     def get(self):
         """Handles GET requests."""
@@ -660,6 +683,15 @@ class UnitHandler(BaseHandler):
             self.get_course().get_progress_tracker().put_activity_accessed(
                 student, unit.unit_id, lesson.lesson_id)
 
+    def _get_lesson_title(self, unit, lesson):
+        title = None
+        if self._LESSON_TITLE_PROVIDER:
+            title = self._LESSON_TITLE_PROVIDER(self.app_context, unit, lesson)
+        if title is None:
+            title = self._default_lesson_title_provider(
+                self.app_context, unit, lesson)
+        return title
+
     def set_lesson_content(self, student, unit, lesson, left_nav_elements,
                            template_values):
         template_values['page_type'] = UNIT_PAGE_TYPE
@@ -670,7 +702,7 @@ class UnitHandler(BaseHandler):
         template_values['next_button_url'] = left_nav_elements.get_url_by(
             'lesson', lesson.lesson_id, 1)
         template_values['page_type'] = 'unit'
-        template_values['title'] = lesson.title
+        template_values['title'] = self._get_lesson_title(unit, lesson)
 
         if not lesson.manual_progress and is_progress_recorded(self, student):
             # Mark this page as accessed. This is done after setting the
