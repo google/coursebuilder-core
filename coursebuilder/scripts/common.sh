@@ -229,6 +229,7 @@ DISTRIBUTED_LIBS="\
   material-design-iconic-font-1.1.1.zip \
   underscore-1.7.0.zip \
   networkx-1.9.1.zip \
+  decorator-3.4.0.zip \
 "
 
 echo Using third party Python packages from $DISTRIBUTED_LIBS_DIR

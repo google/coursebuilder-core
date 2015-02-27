@@ -79,7 +79,8 @@ THIRD_PARTY_LIBS = [
     _Library('python-gflags-2.0.zip', relative_path='python-gflags-2.0'),
     _Library('oauth-1.0.1.zip', relative_path='oauth'),
     _Library('pyparsing-1.5.7.zip'),
-    _Library('networkx-1.9.1.zip'),
+    _Library('networkx-1.9.1.zip', relative_path='networkx-1.9.1'),
+    _Library('decorator-3.4.0.zip', relative_path='src'),
 ]
 
 
