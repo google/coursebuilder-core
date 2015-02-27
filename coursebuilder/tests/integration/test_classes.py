@@ -37,7 +37,7 @@ from models import transforms
 from tests import suite
 from tests.integration import fake_visualizations
 
-BROWSER_WIDTH = 1000
+BROWSER_WIDTH = 1600
 BROWSER_HEIGHT = 1000
 
 

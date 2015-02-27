@@ -529,6 +529,73 @@ function setUpCoursePicker(){
   });
 }
 
+function onNavbarResize() {
+  var level1 = $('table.gcb-nav-bar tr.gcb-nav-bar-level-1');
+
+  // Restore navvar to original state
+  level1.find('td.gcb-nav-bar-links > a').show();
+  level1.find('td.gcb-nav-bar-links > button.gcb-nav-bar-more').remove();
+
+  // Measure the length of the nav items in the "extras" cells (course chooser
+  // and logout link)
+  var extrasWidth = 0;
+  level1.find('.gcb-nav-bar-extras').each(function() {
+    extrasWidth += this.offsetWidth;
+  });
+
+  // The available width for the links is the width of the window minus the
+  // width of the extras. Find the index of the last link item that fits
+  // in the available width, and flag if this means we have an overflow.
+  var availableWidth = document.body.offsetWidth - extrasWidth;
+  var totalWidth = 0;
+  var lastIndex = 0;
+  var isOverflow = false;
+  level1.find('td.gcb-nav-bar-links > a').each(function(index) {
+    totalWidth += this.offsetWidth;
+    if (totalWidth < availableWidth) {
+      lastIndex = index;
+    } else {
+      isOverflow = true;
+    }
+  });
+
+  // If there's no overflow, there's nothing to be done
+  if (! isOverflow) {
+    return;
+  }
+  // Adjust down by 1 to make room for the reveal button
+  lastIndex -= 1;
+  // Don't let the first two links get hidden
+  lastIndex = lastIndex > 1 ? lastIndex : 1;
+
+  var overflowedLinks = level1
+      .find('td.gcb-nav-bar-links > a:gt(' + lastIndex + ')');
+  var moreLinks = overflowedLinks.clone().css('display', 'block');
+  overflowedLinks.hide();
+
+  var moreButton = $(
+      '<button class="gcb-nav-bar-more gcb-button">More...</button>');
+  var moreButton2 = moreButton.clone();
+  var moreContentDiv = $('<div class="gcb-nav-bar-more-content"></div>');
+
+  moreContentDiv.append(moreButton2).append(moreLinks).hide();
+
+  if (moreContentDiv.find('.selected').length > 0) {
+    moreButton.addClass('selected');
+  }
+
+  moreButton.append(moreContentDiv).click(function() {
+    moreContentDiv.toggle();
+  });
+
+  level1.find('td.gcb-nav-bar-links').append(moreButton);
+}
+
+function setupNavbarResize() {
+  $(window).resize(onNavbarResize);
+  onNavbarResize();
+}
+
 function init() {
   setUpDraftStatus();
   setUpCloneQuestion();
@@ -539,7 +606,7 @@ function init() {
   setUpTableSorting();
   setUpFiltering();
   setUpCoursePicker();
+  setupNavbarResize();
 };
-
 
 init();

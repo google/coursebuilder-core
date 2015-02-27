@@ -68,7 +68,7 @@ td.gcb-nav-bar-links {
 table.gcb-nav-bar td.gcb-nav-bar-extras {
   padding: 0 10px;
 }
-td.gcb-nav-bar-links > a {
+td.gcb-nav-bar-links a {
   display: inline-block;
   padding: 10px 16px;
 }
@@ -80,6 +80,32 @@ td.gcb-nav-bar-links > a {
   color: #222;
   background-color: #FFAB40;
 }
+
+/* Start styles for the navbar overflow dropdown */
+td.gcb-nav-bar-links button.gcb-nav-bar-more {
+  background-color: #607d8b;
+  position: relative;
+}
+td.gcb-nav-bar-links button.gcb-nav-bar-more.selected {
+  color: #222;
+  background-color: #FFAB40;
+}
+td.gcb-nav-bar-links .gcb-nav-bar-more-content {
+  position: absolute;
+  z-index: 5;
+  top: -6px;
+  right: -14px;
+  padding-top: 5px;
+  background-color: #455A64;
+  color: #ffffff;
+  border: solid #404040 1px;
+  border-radius: 3px;
+}
+td.gcb-nav-bar-links .gcb-nav-bar-more-content button.gcb-button {
+  margin-bottom: 5px;
+}
+/* end styles for the navbar overflow dropdown */
+
 div#gcb-main-area {
   background-color: #FFFFFF;
   text-align: center;
