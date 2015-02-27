@@ -16,6 +16,8 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+from networkx import DiGraph
+
 from common import crypto
 from controllers import sites
 from models import courses
@@ -24,6 +26,7 @@ from modules.skill_map.skill_map import LESSON_SKILL_LIST_KEY
 from modules.skill_map.skill_map import Skill
 from modules.skill_map.skill_map import SkillGraph
 from modules.skill_map.skill_map import SkillMap
+from modules.skill_map.skill_map_metrics import SkillMapMetrics
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
@@ -58,6 +61,27 @@ class BaseSkillMapTests(actions.TestBase):
         del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         namespace_manager.set_namespace(self.old_namespace)
         super(BaseSkillMapTests, self).tearDown()
+
+    def _build_sample_graph(self):
+        # a
+        #  \
+        #   d
+        #  /
+        # b
+        # c--e--f
+        self.skill_graph = SkillGraph.load()
+        self.sa = self.skill_graph.add(Skill.build('a', ''))
+        self.sb = self.skill_graph.add(Skill.build('b', ''))
+        self.sd = self.skill_graph.add(Skill.build('d', ''))
+        self.skill_graph.add_prerequisite(self.sd.id, self.sa.id)
+        self.skill_graph.add_prerequisite(self.sd.id, self.sb.id)
+
+        self.sc = self.skill_graph.add(Skill.build('c', ''))
+        self.se = self.skill_graph.add(Skill.build('e', ''))
+        self.skill_graph.add_prerequisite(self.se.id, self.sc.id)
+
+        self.sf = self.skill_graph.add(Skill.build('f', ''))
+        self.skill_graph.add_prerequisite(self.sf.id, self.se.id)
 
 
 class SkillGraphTests(BaseSkillMapTests):
@@ -242,34 +266,14 @@ class SkillMapTests(BaseSkillMapTests):
         super(SkillMapTests, self).tearDown()
 
     def test_topo_sort(self):
-        # a
-        #  \
-        #   d
-        #  /  \
-        # b    f
-        #     /
-        # c--e
-        skill_graph = SkillGraph.load()
-        sa = skill_graph.add(Skill.build('a', ''))
-        sb = skill_graph.add(Skill.build('b', ''))
-        sd = skill_graph.add(Skill.build('d', ''))
-        skill_graph.add_prerequisite(sd.id, sa.id)
-        skill_graph.add_prerequisite(sd.id, sb.id)
-
-        sc = skill_graph.add(Skill.build('c', ''))
-        se = skill_graph.add(Skill.build('e', ''))
-        skill_graph.add_prerequisite(se.id, sc.id)
-
-        sf = skill_graph.add(Skill.build('f', ''))
-        skill_graph.add_prerequisite(sf.id, se.id)
+        self._build_sample_graph()
         skill_map = SkillMap.load(self.course)
         self.assertEqual(6, len(skill_map.skills()))
-
         # verify topological co-sets
         expected = {
-            0: set([sa.id, sb.id, sc.id]),
-            1: set([se.id, sd.id]),
-            2: set([sf.id])}
+            0: set([self.sa.id, self.sb.id, self.sc.id]),
+            1: set([self.se.id, self.sd.id]),
+            2: set([self.sf.id])}
         for ind, co_set in enumerate(skill_map._topo_sort()):
             self.assertEqual(expected[ind], co_set)
 
@@ -287,7 +291,8 @@ class SkillMapTests(BaseSkillMapTests):
 
         # verify sorting skills by prerequisites
         expected = ['a', 'b', 'c', 'd', 'e', 'f']
-        actual = [s.name for s in skill_map.skills(sort_by='prerequisites')]
+        actual = [s.name
+                  for s in skill_map.skills(sort_by='prerequisites')]
         self.assertEqual(expected, actual)
 
     def test_get_lessons_for_skill(self):
@@ -636,3 +641,83 @@ class SkillMapHandlerTests(actions.TestBase):
         dom = self.parse_html_string(response.body)
         assert dom.find('.//div[@class="graph"]')
 
+
+class SkillMapMetricTests(BaseSkillMapTests):
+    """Tests for the functions in file skill_map_metrics"""
+
+    def test_nxgraph(self):
+        """The graph of SkillMapMetrics and the skill_map are equivalent."""
+        self._build_sample_graph()
+        skill_map = SkillMap.load(self.course)
+        nxgraph = SkillMapMetrics(skill_map).nxgraph
+        self.assertIsInstance(nxgraph, DiGraph)
+        successors = skill_map.build_successors()
+        # Check nodes
+        self.assertEqual(len(nxgraph), len(successors))
+        for skill in successors:
+            self.assertIn(skill, nxgraph.nodes(),
+                          msg='Node {} not found in nx graph.'.format(skill))
+        # Check edges
+        original_edges = sum(len(dst) for dst in successors.values())
+        self.assertEqual(len(nxgraph.edges()), original_edges)
+        for src, dst in nxgraph.edges_iter():
+            self.assertIn(src, successors)
+            self.assertIn(dst, successors[src],
+                          msg='Extra {},{} edge in nx graph.'.format(src, dst))
+
+    def test_find_cycles_no_cycle(self):
+        """The input is a directed graph with no cycles. Expected []."""
+        self._build_sample_graph()
+        skill_map = SkillMap.load(self.course)
+        self.assertEqual(SkillMapMetrics(skill_map).simple_cycles(), [])
+
+    def test_find_cycles_one_cycle(self):
+        """The input is a directed graph with only 1 cycle."""
+        self._build_sample_graph()
+        # Adding cycle a -> d -> a
+        self.skill_graph.add_prerequisite(self.sa.id, self.sd.id)
+        skill_map = SkillMap.load(self.course)
+        self.assertEqual(6, len(skill_map.skills()))
+        successors = skill_map.build_successors()
+        self.assertEqual(
+            sorted(SkillMapMetrics(skill_map).simple_cycles()[0]),
+            [self.sa.id, self.sd.id])
+
+    def test_find_cycles_multiple_cycles(self):
+        """The input is a directed graph with two cycles."""
+        self._build_sample_graph()
+        # Adding cycle a -> d -> a
+        self.skill_graph.add_prerequisite(self.sa.id, self.sd.id)
+        # Adding cycle g -> h -> g
+        sg = self.skill_graph.add(Skill.build('g', ''))
+        sh = self.skill_graph.add(Skill.build('h', ''))
+        self.skill_graph.add_prerequisite(sg.id, sh.id)
+        self.skill_graph.add_prerequisite(sh.id, sg.id)
+
+        expected = [[self.sa.id, self.sd.id], [sg.id, sh.id]]
+        skill_map = SkillMap.load(self.course)
+        successors = skill_map.build_successors()
+        result = SkillMapMetrics(skill_map).simple_cycles()
+        self.assertEqual(len(result), len(expected))
+        for cycle in result:
+            self.assertIn(sorted(cycle), expected)
+
+    def test_find_cycles_not_conected(self):
+        """The input is a directed graph whith an isolated scc."""
+        self._build_sample_graph()
+        # Adding cycle g -> h -> g
+        sg = self.skill_graph.add(Skill.build('g', ''))
+        sh = self.skill_graph.add(Skill.build('h', ''))
+        self.skill_graph.add_prerequisite(sg.id, sh.id)
+        self.skill_graph.add_prerequisite(sh.id, sg.id)
+        skill_map = SkillMap.load(self.course)
+        expected0 = [sg.id, sh.id]
+        successors = skill_map.build_successors()
+        result = SkillMapMetrics(skill_map).simple_cycles()
+        self.assertEqual(sorted(result[0]), expected0)
+
+    def test_find_cycles_empty(self):
+        """The input is an empty graph."""
+        skill_map = SkillMap.load(self.course)
+        self.assertEqual(
+            SkillMapMetrics(skill_map).simple_cycles(), [])

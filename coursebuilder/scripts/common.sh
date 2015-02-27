@@ -228,6 +228,7 @@ DISTRIBUTED_LIBS="\
   codemirror-4.5.0.zip \
   material-design-iconic-font-1.1.1.zip \
   underscore-1.7.0.zip \
+  networkx-1.9.1.zip \
 "
 
 echo Using third party Python packages from $DISTRIBUTED_LIBS_DIR

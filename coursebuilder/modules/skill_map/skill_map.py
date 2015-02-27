@@ -147,9 +147,9 @@ class SkillGraph(object):
         self._rebuild()
 
     def _rebuild(self):
-        self._build_successors()
+        self.build_successors()
 
-    def _build_successors(self):
+    def build_successors(self):
         self._successors = {}
         for other in self._skills.values():
             for pid in other.prerequisite_ids:
@@ -417,7 +417,10 @@ class SkillMap(object):
                 prerequisites.append(self._skill_infos[pid])
             self._skill_infos[skill.id].prerequisites = prerequisites
 
-    def _build_successors(self):
+    def build_successors(self):
+        """Returns a dictionary keyed by skills' ids.
+
+        The values are sets of successors' ids."""
         successors = {}
         for si in self._skill_infos.values():
             for p in si.prerequisites:
@@ -428,12 +431,11 @@ class SkillMap(object):
 
     def _topo_sort(self):
         """Returns topologically sorted co-sets."""
-
-        successors = self._build_successors()
+        successors = self.build_successors()
         ret = []
         co_set = set(
             successors.keys()) - reduce(
-            set.union, successors.values())
+            set.union, successors.values())  # Skills with no prerequisites.
         while True:
             if not co_set:
                 break
@@ -444,7 +446,7 @@ class SkillMap(object):
                 successors[src] = dst - co_set
             co_set = set(successors.keys()) - reduce(
                 set.union, successors.values(), set())
-        if successors:
+        if successors:  # There is unvisited nodes -> there is a cycle.
             return None
         else:
             return ret
@@ -503,7 +505,7 @@ class SkillListRestHandler(utils.BaseRESTHandler):
                     'description': skill.description
                 } for skill in SkillGraph.load().skills
             ]
-         }
+        }
         transforms.send_json_response(
             self, 200, '', payload_dict,
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
