@@ -1003,8 +1003,10 @@ def register_module():
         appengine_config.BUNDLE_ROOT, 'lib', 'underscore-1.7.0.zip'))
 
     global_routes = [
-        (os.path.join(RESOURCES_URI, 'css', '.*'), tags.ResourcesHandler),
-        (os.path.join(RESOURCES_URI, 'js', '.*'), tags.ResourcesHandler),
+        (RESOURCES_URI + '/css/.*', tags.ResourcesHandler),
+        (RESOURCES_URI + '/js/course_outline.js', tags.JQueryHandler),
+        (RESOURCES_URI + '/js/lesson_header.js', tags.JQueryHandler),
+        (RESOURCES_URI + '/js/.*', tags.ResourcesHandler),
         ('/static/underscore-1.7.0/(underscore.js)', underscore_js_handler),
         ('/static/underscore-1.7.0/(underscore.min.js)', underscore_js_handler)
     ]
