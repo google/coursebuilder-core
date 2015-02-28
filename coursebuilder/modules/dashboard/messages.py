@@ -19,74 +19,55 @@ __author__ = 'John Orr (jorr@google.com)'
 from common import safe_dom
 
 
-def assemble_sanitized_message(text, link):
-    node_list = safe_dom.NodeList()
-    if text:
-        node_list.append(safe_dom.Text(text))
-        node_list.append(safe_dom.Entity('&nbsp;'))
-    if link:
-        node_list.append(safe_dom.Element(
-            'a', href=link, target='_blank').add_text('Learn more...'))
-    return node_list
-
-
-ABOUT_THE_COURSE_DESCRIPTION = assemble_sanitized_message("""
+ABOUT_THE_COURSE_DESCRIPTION = safe_dom.assemble_text_message("""
 This information is configured by an administrator from the Admin pages.
 """, None)
 
-ADMIN_PREFERENCES_DESCRIPTION = assemble_sanitized_message("""
+ADMIN_PREFERENCES_DESCRIPTION = safe_dom.assemble_text_message("""
 Preferences settings for individual course admins.
 """, None)
 
-ADMINISTERED_COURSES_DESCRIPTION = assemble_sanitized_message("""
+ADMINISTERED_COURSES_DESCRIPTION = safe_dom.assemble_text_message("""
 Courses for which you have administrator privileges
 """, None)
 
-ASSESSMENT_CONTENT_DESCRIPTION = assemble_sanitized_message("""
-Assessment questions and answers (JavaScript format).
-""", 'https://code.google.com/p/course-builder/wiki/CreateAssessments')
-
-ASSESSMENT_DETAILS_DESCRIPTION = assemble_sanitized_message("""
-Properties and restrictions of your assessment.
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
-ASSESSMENT_EDITOR_DESCRIPTION = assemble_sanitized_message(
+ASSESSMENT_EDITOR_DESCRIPTION = safe_dom.assemble_text_message(
     None, 'https://code.google.com/p/course-builder/wiki/CreateAssessments')
 
-ASSETS_DESCRIPTION = assemble_sanitized_message("""
+ASSETS_DESCRIPTION = safe_dom.assemble_text_message("""
 These are all the assets for your course. You can upload new images and
 documents here, after which you can use them in your lessons and activities.
 You may create, edit, and delete activities and assessments from the Outline
 page. All other assets must be edited by an administrator.
 """, None)
 
-ASSIGNMENTS_MENU_DESCRIPTION = assemble_sanitized_message("""
+ASSIGNMENTS_MENU_DESCRIPTION = safe_dom.assemble_text_message("""
 Select a peer-reviewed assignment and enter a student's email address to view
 their assignment submission and any associated reviews.
 """, None)
 
-CONTENTS_OF_THE_COURSE_DESCRIPTION = assemble_sanitized_message("""
+CONTENTS_OF_THE_COURSE_DESCRIPTION = safe_dom.assemble_text_message("""
 The course.yaml file contains all course-level settings.  It can be
 modified from other settings sub-tabs, or directly edited in its
 raw form here.
 """, 'https://code.google.com/p/course-builder/wiki/CourseSettings')
 
-COURSE_ADMIN_DESCRIPTION = assemble_sanitized_message("""
+COURSE_ADMIN_DESCRIPTION = safe_dom.assemble_text_message("""
 Admin settings for users who are course authors but not
 site administrators.
 """, None)
 
-COURSE_OUTLINE_DESCRIPTION = assemble_sanitized_message(
+COURSE_OUTLINE_DESCRIPTION = safe_dom.assemble_text_message(
     'Build, organize and preview your course here.',
     'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
 
-COURSE_OUTLINE_EDITOR_DESCRIPTION = assemble_sanitized_message("""
+COURSE_OUTLINE_EDITOR_DESCRIPTION = safe_dom.assemble_text_message("""
 Click up/down arrows to re-order units, or lessons within units.  To move a
 lesson between units, edit that lesson from the outline page and change its
 parent unit.
 """, None)
 
-COURSE_TEMPLATE_DESCRIPTION = assemble_sanitized_message("""
+COURSE_TEMPLATE_DESCRIPTION = safe_dom.assemble_text_message("""
 The course_template.yaml file provides default values for course settings.
 These values are not dynamically editable, but you can override them
 by editing your course.yaml file directly, or by changing settings in
@@ -98,7 +79,7 @@ AppEngine.  Changing the defaults in the file will not erase or
 override any course-specific settings you may have made.
 """, None)
 
-DATA_FILES_DESCRIPTION = assemble_sanitized_message("""
+DATA_FILES_DESCRIPTION = safe_dom.assemble_text_message("""
 The lesson.csv file contains the contents of your lesson. The unit.csv file
 contains the course related content shown on the homepage. These files are
 located in your Course Builder installation. Edit them directly with an editor
@@ -106,94 +87,27 @@ like Notepad++. Be careful, some editors will add extra characters, which may
 prevent the uploading of these files.
 """, 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
 
-EDIT_SETTINGS_DESCRIPTION = assemble_sanitized_message("""
+EDIT_SETTINGS_DESCRIPTION = safe_dom.assemble_text_message("""
 The course.yaml file contains many course settings.
 """, 'https://code.google.com/p/course-builder/wiki/CourseSettings')
 
-EDIT_HTML_HOOK_DESCRIPTION = assemble_sanitized_message("""
+EDIT_HTML_HOOK_DESCRIPTION = safe_dom.assemble_text_message("""
 HTML hooks are snippets of HTML code that are inserted at different points on
 the pages of a course.  Editing these snippets here permits you to make
 global changes to these items.
 """, 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
 
-IMPORT_COURSE_DESCRIPTION = assemble_sanitized_message("""
+IMPORT_COURSE_DESCRIPTION = safe_dom.assemble_text_message("""
 Import the contents of another course into this course. Both courses must be on
 the same Google App Engine instance.
 """, None)
 
-INCORRECT_ANSWER_FEEDBACK = """
-Shown when the student response does not match any of the possible answers.
-"""
-
-INPUT_FIELD_HEIGHT_DESCRIPTION = """
-Height of the input field, measured in rows.
-"""
-
-INPUT_FIELD_WIDTH_DESCRIPTION = """
-Width of the input field, measured in columns.
-"""
-
-LESSON_ACTIVITY_DESCRIPTION = assemble_sanitized_message("""
-Note: Activities defined in the "Activity" area are deprecated, please use the
-"Lesson Body" area instead. Old-style activities are automatically
-converted during "Import Course".
-""", ('https://code.google.com/p/course-builder/wiki/CreateActivities'
-      '#Writing_activities'))
-
-LESSON_AUTO_INDEX_DESCRIPTION = """
-Assign a sequential number to this lesson automatically.
-"""
-
-LESSON_ACTIVITY_LISTED_DESCRIPTION = """
-Whether the activity should be viewable as a stand-alone item in the unit index.
-"""
-
-LESSON_ACTIVITY_TITLE_DESCRIPTION = """
-This appears above your activity.
-"""
-
-LESSON_MANUAL_PROGRESS_DESCRIPTION = """
-When set, the manual progress REST API permits
-users to manually mark a unit or lesson as complete,
-overriding the automatic progress tracking.
-"""
-
-LESSON_OBJECTIVES_DESCRIPTION = """
-The lesson body is displayed to students above the video in the default
-template.
-"""
-
-LESSON_SCORED_DESCRIPTION = """
-Whether questions in this lesson will be scored (summative) or only
-provide textual feedback (formative).
-"""
-
-LESSON_VIDEO_ID_DESCRIPTION = """
-Provide a YouTube video ID to embed a video.
-"""
-
-LESSON_NOTES_DESCRIPTION = """
-Provide a URL that points to the notes for this lesson (if applicable). These
-notes can be accessed by clicking on the 'Text Version' button on the lesson
-page.
-"""
-
-LINK_EDITOR_DESCRIPTION = assemble_sanitized_message("""
+LINK_EDITOR_DESCRIPTION = safe_dom.assemble_text_message("""
 Links will appear in your outline and will take students directly to the URL.
 """, None)
 
-LINK_EDITOR_URL_DESCRIPTION = """
-Links to external sites must start with 'http' or https'.
-"""
-
-PAGES_DESCRIPTION = assemble_sanitized_message(
+PAGES_DESCRIPTION = safe_dom.assemble_text_message(
     None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
-
-QUESTION_DESCRIPTION = 'Shown when selecting questions for quizzes, etc.'
-
-REVIEWER_FEEDBACK_FORM_DESCRIPTION = assemble_sanitized_message("""
-Review form questions and answers (JavaScript format).
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
 ROLES_DESCRIPTION = """
 Manage the different roles associated with your course.
@@ -201,34 +115,14 @@ A role binds a set of permissions to a set of users. The role editor allows you
 to assign any of the permissions currently registered by the enabled modules.
 """
 
-SETTINGS_DESCRIPTION = assemble_sanitized_message(
+SETTINGS_DESCRIPTION = safe_dom.assemble_text_message(
     None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Settings')
 
-UNIT_EDITOR_DESCRIPTION = assemble_sanitized_message("""
+UNIT_EDITOR_DESCRIPTION = safe_dom.assemble_text_message("""
 Units contain lessons and acitivities.
 """, 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
 
-UPLOAD_ASSET_DESCRIPTION = assemble_sanitized_message("""
+UPLOAD_ASSET_DESCRIPTION = safe_dom.assemble_text_message("""
 Choose a file to upload to this Google App Engine instance. Learn more about
 file storage and hosting.
 """, 'https://code.google.com/p/course-builder/wiki/Dashboard#Assets')
-
-DUE_DATE_FORMAT_DESCRIPTION = assemble_sanitized_message("""
-Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
-in the UTC timezone.""", None)
-
-REVIEW_DUE_DATE_FORMAT_DESCRIPTION = assemble_sanitized_message("""
-Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
-in the UTC timezone.
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
-REVIEW_TIMEOUT_IN_MINUTES = assemble_sanitized_message("""
-This value should be specified in minutes.
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
-REVIEW_MIN_COUNT_DESCRIPTION = assemble_sanitized_message(
-    None, 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
-AUTO_GRADER_NAME = 'Automatic Grading'
-
-HUMAN_GRADER_NAME = 'Peer Review'

@@ -1,0 +1,228 @@
+# Copyright 2015 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Unified method of referring to to heterogenous resources in courses"""
+
+__author__ = 'Mike Gainer (mgainer@google.com)'
+
+
+class AbstractResourceHandler(object):
+    """Unified accessor for heterogenous resources within CourseBuilder.
+
+    CourseBuilder contains a number of different resources, such as
+    questions, units, lessons, course settings, etc.  There are a number
+    of features that are concerned with acting on some or all of these
+    types, and would like to do so polymorphically.  (E.g., I18N,
+    skill mapping, and other 3rd-party modules).
+    """
+
+    # Derived classes must set TYPE to a short, globally-unique string.  This
+    # string may only contain lowercase letters, numbers, and underscores.
+    TYPE = None
+
+    @classmethod
+    def get_resource(cls, course, key):
+        """Returns an instance of the resource type.
+
+        Args:
+          course: A courses.Course instance
+          key: A small fact (string or integer, typically) representing
+              the primary key for the desired instance.
+        Returns:
+          A loaded instance of the type appropriate for the Handler subtype.
+          Note that this can be very broadly interpreted.  For example,
+          since it is so common to need the Unit corresponding to a Lesson,
+          this function in ResourceLesson returns a 2-tuple of the unit
+          and lesson, rather than just the lesson.
+        """
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
+    def get_resource_title(cls, course, resource, key):
+        """Get a title for the resource.
+
+        Note that in theory, the set of arguments provided is overspecified.
+        In practice, the course may be used to get the app_context, and that
+        used to get course configuration, and that used to affect the display
+        of the item.
+
+        Args:
+          course: A courses.Course instance.
+          resource: Whatever is reterned from get_resource() (q.v.)
+          key: A small fact (string or integer, typically) representing
+              the primary key for the desired instance.
+        Returns:
+          A short human-friendly string for titling the resource.
+        """
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
+    def get_schema(cls, course, key):
+        """Return a schema describing the value returned from get_data_dict().
+
+        Again, note that in theory, the specific identity of the item in
+        question should not be required to get what should be a generic
+        schema.  The difference between theory and practice....
+
+        Args:
+          course: A courses.Course instance.
+          key: A small fact (string or integer, typically) representing
+              the primary key for the desired instance.
+        Returns:
+          A schema_fields.FieldRegistry instance.
+        """
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
+    def get_data_dict(cls, course, key):
+        """Return a simple dict expression of the object's data.
+
+        This is typically used in REST editors and other similar import/
+        export related scenarios.
+
+        Args:
+          course: A courses.Course instance.
+          key: A small fact (string or integer, typically) representing
+              the primary key for the desired instance.
+        Returns:
+          A dict corresponding to the schema from get_schema().
+        """
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
+    def get_view_url(cls, course, resource, key):
+        """Return a URL that will show a student view of the item.
+
+        Not all classes need to return a reasonable value here.  For
+        example, Labels and Skills may just not have a simple student-visible
+        representation.  It is fine in those cases to return None; the
+        caller must deal with this situation appropriately.
+
+          course: A courses.Course instance.
+          resource: Whatever is reterned from get_resource() (q.v.)
+          key: A small fact (string or integer, typically) representing
+              the primary key for the desired instance.
+        Returns:
+          A *relative* URL.  E.g., dashboard?action=foo&tab=bar Such a
+          URL can be placed unmmodified on a page which has been set
+          up with the default URL prefix pointing to the namespace for
+          the current course.
+        """
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
+    def get_edit_url(cls, course, key):
+        """Return a dashboard URL for editing the resource.
+
+        All classes should implement this function.  If it is hard to
+        implement this, then you may have made a poor selection as to
+        the noun that you're trying to represent.
+
+        Args:
+          course: A courses.Course instance.
+          key: A small fact (string or integer, typically) representing
+              the primary key for the desired instance.
+        Returns:
+          A *relative* URL.  E.g., dashboard?action=foo&tab=bar Such a
+          URL can be placed unmmodified on a page which has been set
+          up with the default URL prefix pointing to the namespace for
+          the current course.
+        """
+        raise NotImplementedError('Derived classes must implement this.')
+
+
+class Registry(object):
+
+    _RESOURCE_HANDLERS = {}
+
+    @classmethod
+    def register(cls, resource_handler):
+        """Object types wishing to be generically handled register here.
+
+        Args:
+          resource_handler: A class that inherits from AbstractResourceHandler,
+          above.
+        """
+
+        type_name = resource_handler.TYPE
+        if type_name in cls._RESOURCE_HANDLERS:
+            raise ValueError(
+                'The type name "%s" is already registered as a resource.' %
+                type_name)
+        cls._RESOURCE_HANDLERS[type_name] = resource_handler
+
+    @classmethod
+    def get(cls, name):
+        if not cls.is_valid_name(name):
+            raise ValueError('Unknown resource type: %s' % name)
+        return cls._RESOURCE_HANDLERS[name]
+
+    @classmethod
+    def is_valid_name(cls, name):
+        return name in cls._RESOURCE_HANDLERS
+
+
+class Key(object):
+    """Manages key for Course Builder resource.
+
+    Every Course Builder resource can be identified by a type name and a
+    type-contextual key. This class holds data related to this keying, and
+    manages serialization/deserialization as strings.
+    """
+
+    def __init__(self, type_str, key, course=None):
+        self._type = type_str
+        self._key = key
+        self._course = course
+        assert Registry.is_valid_name(self._type), (
+            'Unknown resource type: %s' % type_str)
+
+    def __str__(self):
+        return '%s:%s' % (self._type, self._key)
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def key(self):
+        return self._key
+
+    @classmethod
+    def fromstring(cls, key_str):
+        index = key_str.index(':')
+        return Key(key_str[:index], key_str[index + 1:])
+
+    def get_title(self, course=None):
+        resource = self.get_resource(course)
+        title = self.get_resource_title(resource, course)
+        return title
+
+    def get_resource(self, course):
+        course = course or self._course
+        return Registry.get(self._type).get_resource(course, self._key)
+
+    def get_resource_title(self, resource, course=None):
+        if not resource:
+            return None
+        course = course or self._course
+        resource_type = Registry.get(self._type)
+        title = resource_type.get_resource_title(course, resource, self._key)
+        return title
+
+    def get_schema(self, course):
+        return Registry.get(self._type).get_schema(course, self._key)
+
+    def get_data_dict(self, course):
+        return Registry.get(self._type).get_data_dict(course, self._key)

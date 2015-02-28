@@ -40,6 +40,7 @@ import appengine_config
 from common import caching
 from common import crypto
 from common import locales as common_locales
+from common import resource
 from common import safe_dom
 from common import schema_fields
 from common import tags
@@ -48,6 +49,7 @@ from common import xcontent
 from controllers import sites
 from controllers import utils
 from models import courses
+from models import resources_display
 from models import custom_modules
 from models import custom_units
 from models import jobs
@@ -57,10 +59,7 @@ from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from modules.dashboard import dashboard
-from modules.dashboard import question_editor
-from modules.dashboard import question_group_editor
 from modules.dashboard import unit_lesson_editor
-from modules.dashboard import utils as dashboard_utils
 from modules.oeditor import oeditor
 from tools import verify
 
@@ -99,187 +98,7 @@ TRANSLATABLE_FIELDS_FILTER = schema_fields.FieldFilter(
 # a target language for courses hosted in CB in the next few years.
 PSEUDO_LANGUAGE = 'ln'
 
-
 custom_module = None
-
-
-class ResourceKey(object):
-    """Manages key for Course Builder resource.
-
-    Every Course Builder resource can be identified by a type name and a
-    type-contextual key. This class holds data related to this keying, and
-    manages serialization/deserialization as strings.
-    """
-
-    ASSESSMENT_TYPE = 'assessment'
-    ASSET_IMG_TYPE = 'asset_img'
-    COURSE_SETTINGS_TYPE = 'course_settings'
-    LESSON_TYPE = 'lesson'
-    LINK_TYPE = 'link'
-    QUESTION_GROUP_TYPE = 'question_group'
-    QUESTION_MC_TYPE = 'question_mc'
-    QUESTION_SA_TYPE = 'question_sa'
-    UNIT_TYPE = 'unit'
-
-    RESOURCE_TYPES = [
-        ASSESSMENT_TYPE, ASSET_IMG_TYPE, COURSE_SETTINGS_TYPE, LESSON_TYPE,
-        LINK_TYPE, QUESTION_GROUP_TYPE, QUESTION_MC_TYPE, QUESTION_SA_TYPE,
-        UNIT_TYPE]
-
-    def __init__(self, type_str, key, course=None):
-        self._type = type_str
-        self._key = key
-        self._course = course
-        assert type_str in self.RESOURCE_TYPES, (
-            'Unknown resource type: %s' % type_str)
-
-    def __str__(self):
-        return '%s:%s' % (self._type, self._key)
-
-    @property
-    def type(self):
-        return self._type
-
-    @property
-    def key(self):
-        return self._key
-
-    @classmethod
-    def fromstring(cls, key_str):
-        index = key_str.index(':')
-        return ResourceKey(key_str[:index], key_str[index + 1:])
-
-    @classmethod
-    def for_unit(cls, unit):
-        if unit.type == verify.UNIT_TYPE_ASSESSMENT:
-            unit_type = ResourceKey.ASSESSMENT_TYPE
-        elif unit.type == verify.UNIT_TYPE_LINK:
-            unit_type = ResourceKey.LINK_TYPE
-        elif unit.type == verify.UNIT_TYPE_UNIT:
-            unit_type = ResourceKey.UNIT_TYPE
-        else:
-            raise ValueError('Unknown unit type: %s' % unit.type)
-
-        return ResourceKey(unit_type, unit.unit_id)
-
-    def _get_course(self, app_context):
-        # TODO(course): make this class work off context, no app_context
-        course = self._course
-        if not course or course.app_context != app_context:
-            course = courses.Course.get(app_context)
-        return course
-
-    def get_title(self, app_context):
-        resource = self.get_resource(app_context)
-        return self.get_resource_title(resource)
-
-    def get_resource(self, app_context):
-        course = self._get_course(app_context)
-        if self._type == ResourceKey.UNIT_TYPE:
-            return course.find_unit_by_id(self._key)
-        elif self._type == ResourceKey.LESSON_TYPE:
-            lesson = course.find_lesson_by_id(None, self._key)
-            unit = course.get_unit_for_lesson(lesson)
-            return (unit, lesson)
-        elif self._type in [ResourceKey.ASSESSMENT_TYPE, ResourceKey.LINK_TYPE]:
-            return course.find_unit_by_id(self._key)
-        elif self._type == ResourceKey.ASSET_IMG_TYPE:
-            return self._key
-        elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
-            return course.create_settings_schema()
-        elif self._type in [
-                ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE]:
-            return I18nQuestionManager.get(self._key)
-        elif self._type in ResourceKey.QUESTION_GROUP_TYPE:
-            qgp = models.QuestionGroupDAO.load(self._key)
-            return qgp
-        else:
-            return None
-
-    def get_resource_title(self, resource):
-        if not resource:
-            return None
-
-        if self._type == ResourceKey.UNIT_TYPE:
-            return utils.display_unit_title(resource)
-        elif self._type == ResourceKey.LESSON_TYPE:
-            return utils.display_lesson_title(resource[0], resource[1])
-        elif self._type in (ResourceKey.ASSESSMENT_TYPE, ResourceKey.LINK_TYPE):
-            return resource.title
-        elif self._type == ResourceKey.ASSET_IMG_TYPE:
-            return resource
-        elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
-            return resource.sub_registries[self._key].title
-        elif self._type in (ResourceKey.QUESTION_MC_TYPE,
-                            ResourceKey.QUESTION_SA_TYPE,
-                            ResourceKey.QUESTION_GROUP_TYPE):
-            return resource.description
-        else:
-            return None
-
-    def get_schema(self, course):
-        if self.type == ResourceKey.ASSESSMENT_TYPE:
-            return unit_lesson_editor.AssessmentRESTHandler.SCHEMA
-        elif self.type == ResourceKey.LINK_TYPE:
-            return unit_lesson_editor.LinkRESTHandler.SCHEMA
-        elif self.type == ResourceKey.UNIT_TYPE:
-            return unit_lesson_editor.UnitRESTHandler.SCHEMA
-        elif self.type == ResourceKey.QUESTION_MC_TYPE:
-            return question_editor.McQuestionRESTHandler.get_schema()
-        elif self.type == ResourceKey.QUESTION_SA_TYPE:
-            return question_editor.SaQuestionRESTHandler.get_schema()
-        elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
-            return question_group_editor.QuestionGroupRESTHandler.get_schema()
-        elif self.type == ResourceKey.LESSON_TYPE:
-            units = course.get_units()
-            return unit_lesson_editor.LessonRESTHandler.get_schema(units)
-        elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
-            return course.create_settings_schema().clone_only_items_named(
-                [self.key])
-        else:
-            raise ValueError('Unknown content type: %s' % self.type)
-
-    def get_data_dict(self, course):
-        if self.type == ResourceKey.ASSESSMENT_TYPE:
-            unit = course.find_unit_by_id(self.key)
-            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
-            return unit_dict
-        elif self.type == ResourceKey.LINK_TYPE:
-            unit = course.find_unit_by_id(self.key)
-            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
-            return unit_dict
-        elif self.type == ResourceKey.UNIT_TYPE:
-            unit = course.find_unit_by_id(self.key)
-            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
-            return unit_dict
-        elif self.type == ResourceKey.LESSON_TYPE:
-            lesson = course.find_lesson_by_id(None, self.key)
-            return unit_lesson_editor.LessonRESTHandler.get_lesson_dict_for(
-                course, lesson)
-        elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
-            schema = course.create_settings_schema().clone_only_items_named(
-                [self.key])
-            json_entity = {}
-            schema.convert_entity_to_json_entity(
-                course.get_environ(course.app_context), json_entity)
-            return json_entity[self.key]
-        elif self.type in [
-                ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE]:
-            return models.QuestionDAO.load(int(self.key)).dict
-        elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
-            return models.QuestionGroupDAO.load(int(self.key)).dict
-        else:
-            raise ValueError('Unknown content type: %s' % self.type)
-
-    @classmethod
-    def get_question_type(cls, qu):
-        """Utility to convert between question type codes."""
-        if qu.type == models.QuestionDTO.MULTIPLE_CHOICE:
-            return ResourceKey.QUESTION_MC_TYPE
-        elif qu.type == models.QuestionDTO.SHORT_ANSWER:
-            return ResourceKey.QUESTION_SA_TYPE
-        else:
-            raise ValueError('Unknown question type: %s' % qu.type)
 
 
 class ResourceBundleKey(object):
@@ -299,7 +118,7 @@ class ResourceBundleKey(object):
 
     @property
     def resource_key(self):
-        return ResourceKey(self._type, self._key)
+        return resource.Key(self._type, self._key)
 
     @classmethod
     def fromstring(cls, key_str):
@@ -483,10 +302,10 @@ class ResourceRow(TableRow):
     NOT_TRANSLATABLE_CLASS = 'not-translatable'
 
     def __init__(
-            self, course, resource, type_str, key,
+            self, course, rsrc, type_str, key,
             i18n_progress_dto=None, resource_key=None):
         self._course = course
-        self._resource = resource
+        self._resource = rsrc
         self._type = type_str
         self._key = key
         if i18n_progress_dto is None:
@@ -497,9 +316,10 @@ class ResourceRow(TableRow):
 
     @property
     def name(self):
-        return ResourceKey(
-            self._type, self._key,
-            course=self._course).get_title(self._course.app_context)
+        title = resource.Key(
+            self._type, self._key, course=self._course
+            ).get_title()
+        return title
 
     @property
     def class_name(self):
@@ -510,7 +330,7 @@ class ResourceRow(TableRow):
 
     @property
     def resource_key(self):
-        return ResourceKey(self._type, self._key, course=self._course)
+        return resource.Key(self._type, self._key, course=self._course)
 
     @property
     def is_translatable(self):
@@ -535,24 +355,12 @@ class ResourceRow(TableRow):
             return self.DONE_CLASS
 
     def view_url(self, locale):
-        if self._type == ResourceKey.UNIT_TYPE:
-            url = 'unit?unit=%s' % self._key
-        elif self._type == ResourceKey.LESSON_TYPE:
-            url = 'unit?unit=%s&lesson=%s' % (
-                self._resource.unit_id, self._key)
-        elif self._type == ResourceKey.ASSESSMENT_TYPE:
-            url = 'assessment?name=%s' % self._key
-        elif self._type in [
-                ResourceKey.COURSE_SETTINGS_TYPE, ResourceKey.LINK_TYPE,
-                ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE,
-                ResourceKey.QUESTION_GROUP_TYPE]:
-            return None
-        else:
-            raise ValueError('Unknown type %s' % self._type)
-
-        if locale:
-            url += '&hl=%s' % locale
-        return url
+        resource_handler = resource.Registry.get(self._type)
+        rsrc = resource_handler.get_resource(self._course, self._key)
+        view_url = resource_handler.get_view_url(self._course, rsrc, self._key)
+        if view_url:
+            view_url += '&hl=%s' % locale
+        return view_url
 
     def edit_url(self, locale):
         return TranslationConsole.get_edit_url(
@@ -564,23 +372,8 @@ class ResourceRow(TableRow):
 
     @property
     def base_edit_url(self):
-        if self._type == ResourceKey.UNIT_TYPE:
-            return 'dashboard?action=edit_unit&key=%s' % self._key
-        elif self._type == ResourceKey.LESSON_TYPE:
-            return 'dashboard?action=edit_lesson&key=%s' % self._key
-        elif self._type == ResourceKey.ASSESSMENT_TYPE:
-            return 'dashboard?action=edit_assessment&key=%s' % self._key
-        elif self._type in [
-                ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE]:
-            return 'dashboard?action=edit_question&key=%s' % self._key
-        elif self._type == ResourceKey.QUESTION_GROUP_TYPE:
-            return 'dashboard?action=edit_question_group&key=%s' % self._key
-        elif self._type == ResourceKey.LINK_TYPE:
-            return 'dashboard?action=edit_link&key=%s' % self._key
-        elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
-            return None
-
-        raise ValueError('Unknown type %s' % self._type)
+        return resource.Registry.get(self._type).get_edit_url(
+            self._course, self._key)
 
 
 class SectionRow(TableRow):
@@ -975,7 +768,8 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
             lambda: collections.defaultdict(TranslationsAndLocations))
         transformer = xcontent.ContentTransformer(
             config=I18nTranslationContext.get(app_context))
-        resource_key_map = _get_language_resource_keys(course)
+        resource_key_map = TranslatableResourceRegistry.get_resources_and_keys(
+            course)
 
         # Preload all I18N progress DTOs; we'll need all of them.
         i18n_progress_dtos = I18nProgressDAO.get_all()
@@ -984,9 +778,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
             # Preload all resource bundles for this locale; we need all of them.
             resource_bundle_dtos = ResourceBundleDAO.get_all_for_locale(locale)
             bundle_by_key = {b.id: b for b in resource_bundle_dtos}
-            for resource, resource_key in resource_key_map:
-                if resource_key.type == ResourceKey.ASSET_IMG_TYPE:
-                    continue
+            for rsrc, resource_key in resource_key_map:
                 key = ResourceBundleKey(
                     resource_key.type, resource_key.key, locale)
 
@@ -1019,7 +811,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
 
                 TranslationDownloadRestHandler._collect_section_translations(
                     translations, sections, binding, export_what, locale, key,
-                    resource_key, resource)
+                    resource_key, rsrc)
 
             ResourceBundleDAO.save_all(resource_bundle_dtos)
         I18nProgressDAO.save_all(i18n_progress_dtos)
@@ -1028,7 +820,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
     @staticmethod
     def _collect_section_translations(translations, sections, binding,
                                       export_what, locale, key, resource_key,
-                                      resource):
+                                      rsrc):
         # For each section in the translation, make a record of that
         # in an internal data store which is used to generate .po
         # files.
@@ -1062,7 +854,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
                 t_and_l.add_comment(description)
 
                 try:
-                    title = resource_key.get_resource_title(resource)
+                    title = resource_key.get_resource_title(rsrc)
                     if title:
                         t_and_l.add_comment(title)
                 except AttributeError:
@@ -1325,7 +1117,8 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
             config=I18nTranslationContext.get(app_context))
         i18n_progress_dtos = I18nProgressDAO.get_all()
         progress_by_key = {p.id: p for p in i18n_progress_dtos}
-        resource_key_map = _get_language_resource_keys(course)
+        resource_key_map = TranslatableResourceRegistry.get_resources_and_keys(
+            course)
 
         for locale, resource_translations in translations.iteritems():
             used_resource_translations = set()
@@ -1504,42 +1297,21 @@ class I18nProgressManager(caching.RequestScopedSingleton):
     def _preload(self):
         self._key_to_progress = {}
         for row in I18nProgressDAO.get_all_iter():
-            self._key_to_progress[str(ResourceKey.fromstring(row.id))] = row
+            self._key_to_progress[str(resource.Key.fromstring(row.id))] = row
 
-    def _get(self, resource, type_str, key):
+    def _get(self, rsrc, type_str, key):
         if self._key_to_progress is None:
             self._preload()
-        resource_key = ResourceKey(type_str, key)
+        resource_key = resource.Key(type_str, key)
         return ResourceRow(
-            self._course, resource, type_str, key,
+            self._course, rsrc, type_str, key,
             i18n_progress_dto=self._key_to_progress.get(str(resource_key)),
             resource_key=resource_key)
 
     @classmethod
-    def get(cls, course, resource, type_str, key):
+    def get(cls, course, rsrc, type_str, key):
         # pylint: disable=protected-access
-        return cls.instance(course)._get(resource, type_str, key)
-
-
-class I18nQuestionManager(caching.RequestScopedSingleton):
-
-    def __init__(self):
-        self._key_to_question = None
-
-    def _preload(self):
-        self._key_to_question = {}
-        for row in models.QuestionDAO.get_all_iter():
-            self._key_to_question[row.id] = row
-
-    def _get(self, key):
-        if self._key_to_question is None:
-            self._preload()
-        return self._key_to_question.get(key)
-
-    @classmethod
-    def get(cls, key):
-        # pylint: disable=protected-access
-        return cls.instance()._get(key)
+        return cls.instance(course)._get(rsrc, type_str, key)
 
 
 # all caches must have limits
@@ -1868,77 +1640,164 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
             self.handler.get_action_url(I18nDashboardHandler.ACTION))
 
 
-def _get_course_resource_keys(course):
-    ret = []
-    schema = course.create_settings_schema()
-    for section_name in sorted(courses.Course.get_schema_sections()):
-        ret.append(
-            (schema,
-             ResourceKey(ResourceKey.COURSE_SETTINGS_TYPE, section_name)))
-    return ret
+class AbstractTranslatableResourceType(object):
+
+    @classmethod
+    def get_ordering(cls):
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
+    def get_title(cls):
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        # TODO(mgainer): Remark that this is denormalized.
+        raise NotImplementedError('Derived classes must implement this.')
 
 
-def _get_course_component_keys(course):
-    ret = []
-    for unit in course.get_units():
-        if course.get_parent_unit(unit):
-            continue
-        if unit.is_custom_unit():
-            key = custom_units.UnitTypeRegistry.i18n_resource_key(course, unit)
-            if key:
-                ret.append((unit, key))
-        else:
-            ret.append((unit, ResourceKey.for_unit(unit)))
-            if unit.type == verify.UNIT_TYPE_UNIT:
-                if unit.pre_assessment:
-                    assessment = course.find_unit_by_id(unit.pre_assessment)
-                    ret.append(
-                        (assessment,
-                         ResourceKey(
-                             ResourceKey.ASSESSMENT_TYPE, unit.pre_assessment)))
-                for lesson in course.get_lessons(unit.unit_id):
-                    ret.append(((unit, lesson),
-                                ResourceKey(
-                                    ResourceKey.LESSON_TYPE, lesson.lesson_id)))
-                if unit.post_assessment:
-                    assessment = course.find_unit_by_id(unit.pre_assessment)
-                    ret.append(
-                        (assessment,
-                         ResourceKey(
-                             ResourceKey.ASSESSMENT_TYPE,
-                             unit.post_assessment)))
-    return ret
+class TranslatableResourceRegistry(object):
+
+    ORDERING_FIRST = 0
+    ORDERING_EARLY = 3
+    ORDERING_MIDDLE = 5
+    ORDERING_LATE = 8
+    ORDERING_LAST = 10
+
+    _RESOURCE_TYPES = []
+    _RESOURCE_TITLES = set()
+
+    @classmethod
+    def register(cls, translatable_resource):
+        title = translatable_resource.get_title()
+        if title in cls._RESOURCE_TITLES:
+            raise ValueError(
+                'Title "%s" is already registered as a translatable resource.' %
+                title)
+        cls._RESOURCE_TITLES.add(title)
+        cls._RESOURCE_TYPES.append(translatable_resource)
+
+    @classmethod
+    def get_all(cls):
+        return [x for x in sorted(cls._RESOURCE_TYPES,
+                                  key=lambda x: x.get_ordering())]
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        ret = []
+        for resource_type in cls.get_all():
+            ret += resource_type.get_resources_and_keys(course)
+        return ret
 
 
-def _get_asset_keys(handler):
-    ret = []
-    for path in dashboard_utils.list_files(handler, '/assets/img',
-                                           merge_local_files=True):
-        ret.append((None, ResourceKey(ResourceKey.ASSET_IMG_TYPE, path)))
-    return ret
+class TranslatableResourceCourseSettings(AbstractTranslatableResourceType):
+
+    @classmethod
+    def get_ordering(cls):
+        return TranslatableResourceRegistry.ORDERING_FIRST
+
+    @classmethod
+    def get_title(cls):
+        return 'Course Settings'
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        ret = []
+        schema = course.create_settings_schema()
+        for section_name in sorted(courses.Course.get_schema_sections()):
+            ret.append(
+                (schema,
+                 resource.Key(resources_display.ResourceCourseSettings.TYPE,
+                              section_name, course)
+                ))
+        return ret
 
 
-def _get_question_keys():
-    ret = []
-    for qu in models.QuestionDAO.get_all():
-        ret.append((qu, ResourceKey(ResourceKey.get_question_type(qu), qu.id)))
-    return ret
+class TranslatableResourceCourseComponents(AbstractTranslatableResourceType):
+
+    @classmethod
+    def get_ordering(cls):
+        return TranslatableResourceRegistry.ORDERING_MIDDLE
+
+    @classmethod
+    def get_title(cls):
+        return 'Course Outline'
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        ret = []
+        for unit in course.get_units():
+            if course.get_parent_unit(unit):
+                continue
+            if unit.is_custom_unit():
+                key = custom_units.UnitTypeRegistry.i18n_resource_key(
+                    course, unit)
+                if key:
+                    ret.append((unit, key))
+            else:
+                ret.append(
+                    (unit, resources_display.ResourceUnitBase.key_for_unit(
+                        unit, course)))
+                if unit.type == verify.UNIT_TYPE_UNIT:
+                    if unit.pre_assessment:
+                        assessment = course.find_unit_by_id(unit.pre_assessment)
+                        ret.append(
+                            (assessment,
+                             resource.Key(
+                                 resources_display.ResourceAssessment.TYPE,
+                                 unit.pre_assessment, course)))
+                    for lesson in course.get_lessons(unit.unit_id):
+                        ret.append(((unit, lesson),
+                                    resource.Key(
+                                        resources_display.ResourceLesson.TYPE,
+                                        lesson.lesson_id, course)))
+                    if unit.post_assessment:
+                        assessment = course.find_unit_by_id(unit.pre_assessment)
+                        ret.append(
+                            (assessment,
+                             resource.Key(
+                                 resources_display.ResourceAssessment.TYPE,
+                                 unit.post_assessment, course)))
+        return ret
 
 
-def _get_question_group_keys():
-    ret = []
-    for qg in models.QuestionGroupDAO.get_all():
-        ret.append((qg, ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, qg.id)))
-    return ret
+class TranslatableResourceQuestions(AbstractTranslatableResourceType):
+
+    @classmethod
+    def get_ordering(cls):
+        return TranslatableResourceRegistry.ORDERING_LATE
+
+    @classmethod
+    def get_title(cls):
+        return 'Questions'
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        ret = []
+        for qu in models.QuestionDAO.get_all():
+            ret.append((qu, resource.Key(
+                resources_display.ResourceQuestionBase.get_question_key_type(
+                    qu), qu.id, course)))
+        return ret
 
 
-def _get_language_resource_keys(course):
-    return (
-        _get_course_resource_keys(course) +
-        _get_course_component_keys(course) +
-        _get_question_keys() +
-        _get_question_group_keys()
-        )
+class TranslatableResourceQuestionGroups(AbstractTranslatableResourceType):
+
+    @classmethod
+    def get_ordering(cls):
+        return TranslatableResourceRegistry.ORDERING_LATE
+
+    @classmethod
+    def get_title(cls):
+        return 'Question Groups'
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        ret = []
+        for qg in models.QuestionGroupDAO.get_all():
+            ret.append((qg, resource.Key(
+                resources_display.ResourceQuestionGroup.TYPE, qg.id, course)))
+        return ret
 
 
 class I18nDashboardHandler(BaseDashboardExtension):
@@ -1966,36 +1825,20 @@ class I18nDashboardHandler(BaseDashboardExtension):
     def render(self):
         rows = []
 
-        # Course settings
-        data_rows = []
-        for resource, key in _get_course_resource_keys(self.course):
-            data_rows.append(I18nProgressManager.get(
-                self.course, resource, key.type, key.key))
-        rows += self._make_table_section(data_rows, 'Course Settings')
+        for resource_handler in TranslatableResourceRegistry.get_all():
+            data_rows = []
+            for rsrc, key in resource_handler.get_resources_and_keys(
+                self.course):
 
-        # Run over units and lessons
-        data_rows = []
-        for resource, key in _get_course_component_keys(self.course):
-            if key.type == ResourceKey.LESSON_TYPE:
+                # Lesson resources are a 2-tuple of (unit, lesson).  Here, we
+                # just need lesson, so manually change the resource as needed.
+                if key.type == resources_display.ResourceLesson.TYPE:
+                    rsrc = rsrc[1]
+
                 data_rows.append(I18nProgressManager.get(
-                    self.course, resource[1], key.type, key.key))
-            else:  # Unit, Assessment or Link
-                data_rows.append(I18nProgressManager.get(
-                    self.course, resource, key.type, key.key))
-        rows += self._make_table_section(data_rows, 'Course Outline')
-
-        # Run over questions and question groups
-        data_rows = []
-        for resource, key in _get_question_keys():
-            data_rows.append(I18nProgressManager.get(
-                self.course, resource, key.type, key.key))
-        rows += self._make_table_section(data_rows, 'Questions')
-
-        data_rows = []
-        for resource, key in _get_question_group_keys():
-            data_rows.append(I18nProgressManager.get(
-                self.course, resource, key.type, key.key))
-        rows += self._make_table_section(data_rows, 'Question Groups')
+                    self.course, rsrc, key.type, key.key))
+            rows += self._make_table_section(
+                data_rows, resource_handler.get_title())
 
         if not [row for row in rows if type(row) is ResourceRow]:
             rows = [EmptyRow(name='No course content')]
@@ -2225,11 +2068,12 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
             self.app_context, str(key))
         transformer = xcontent.ContentTransformer(
             config=I18nTranslationContext.get(self.app_context))
+        course = self.get_course()
         binding, sections = self.build_sections_for_key(
-            key, self.get_course(), resource_bundle_dto, transformer)
+            key, course, resource_bundle_dto, transformer)
         payload_dict = {
             'key': str(key),
-            'title': unicode(key.resource_key.get_title(self.app_context)),
+            'title': unicode(key.resource_key.get_title(course)),
             'source_locale': self.app_context.default_locale,
             'target_locale': key.locale,
             'sections': sorted(sections, cmp=cmp_sections)
@@ -2275,7 +2119,9 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
             I18nProgressDAO.save(i18n_progress_dto)
             ResourceBundleDAO.save(resource_bundle_dto)
 
-            if key.resource_key.type == ResourceKey.COURSE_SETTINGS_TYPE:
+            if (key.resource_key.type ==
+                resources_display.ResourceCourseSettings.TYPE):
+
                 self.get_course().invalidate_cached_course_settings()
 
             transforms.send_json_response(self, 200, 'Saved.')
@@ -2517,14 +2363,15 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
     def on_lesson_changed(lesson):
         if not I18nProgressDeferredUpdater._is_translatable_course():
             return
-        key = ResourceKey(ResourceKey.LESSON_TYPE, lesson.lesson_id)
+        key = resource.Key(
+            resources_display.ResourceLesson.TYPE, lesson.lesson_id)
         I18nProgressDeferredUpdater.update_resource(key)
 
     @staticmethod
     def on_unit_changed(unit):
         if not I18nProgressDeferredUpdater._is_translatable_course():
             return
-        key = ResourceKey.for_unit(unit)
+        key = resources_display.ResourceUnitBase.key_for_unit(unit)
         I18nProgressDeferredUpdater.update_resource(key)
 
     @staticmethod
@@ -2532,8 +2379,10 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
         if not I18nProgressDeferredUpdater._is_translatable_course():
             return
         key_list = [
-            ResourceKey(
-                ResourceKey.get_question_type(question_dto), question_dto.id)
+            resource.Key(
+                resources_display.ResourceQuestionBase.get_question_key_type(
+                    question_dto),
+                question_dto.id)
             for question_dto in question_dto_list]
         I18nProgressDeferredUpdater.update_resource_list(key_list)
 
@@ -2542,7 +2391,8 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
         if not I18nProgressDeferredUpdater._is_translatable_course():
             return
         key_list = [
-            ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, question_group_dto.id)
+            resource.Key(resources_display.ResourceQuestionGroup.TYPE,
+                         question_group_dto.id)
             for question_group_dto in question_group_dto_list]
         I18nProgressDeferredUpdater.update_resource_list(key_list)
 
@@ -2552,8 +2402,10 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
             return
         app_context = sites.get_course_for_current_request()
         course = courses.Course.get(app_context)
+        resources_and_keys = (
+            TranslatableResourceCourseSettings.get_resources_and_keys(course))
         I18nProgressDeferredUpdater.update_resource_list([
-            key for _, key in _get_course_resource_keys(course)])
+            key for _, key in resources_and_keys])
 
     @classmethod
     def update_resource(cls, resource_key):
@@ -2775,7 +2627,7 @@ def translate_lessons(course, locale):
     lesson_list = course.get_lessons_for_all_units()
     key_list = [
         str(ResourceBundleKey(
-            ResourceKey.LESSON_TYPE, lesson.lesson_id, locale))
+            resources_display.ResourceLesson.TYPE, lesson.lesson_id, locale))
         for lesson in lesson_list]
     bundle_list = I18nResourceBundleManager.get_multi(
         course.app_context, key_list)
@@ -2791,11 +2643,11 @@ def translate_units(course, locale):
     unit_list = course.get_units()
     key_list = []
     for unit in unit_list:
-        key = ResourceKey.for_unit(unit)
+        key = resources_display.ResourceUnitBase.key_for_unit(unit, course)
         key_list.append(ResourceBundleKey(key.type, key.key, locale))
     bundle_list = I18nResourceBundleManager.get_multi(
         course.app_context, key_list)
-    unit_tools = unit_lesson_editor.UnitTools(course)
+    unit_tools = resources_display.UnitTools(course)
 
     for key, unit, bundle in zip(key_list, unit_list, bundle_list):
         if bundle is None:
@@ -2834,7 +2686,8 @@ def translate_course_env(env):
     app_context = sites.get_course_for_current_request()
     locale = app_context.get_current_locale()
     key_list = [
-        ResourceBundleKey(ResourceKey.COURSE_SETTINGS_TYPE, key, locale)
+        ResourceBundleKey(
+            resources_display.ResourceCourseSettings.TYPE, key, locale)
         for key in courses.Course.get_schema_sections()]
     bundle_list = I18nResourceBundleManager.get_multi(app_context, key_list)
 
@@ -2885,8 +2738,9 @@ def translate_question_dto(dto_list):
     app_context = sites.get_course_for_current_request()
     course = courses.Course.get(app_context)
     for dto in dto_list:
-        qu_type = ResourceKey.get_question_type(dto)
-        key_list.append(ResourceKey(qu_type, dto.id))
+        qu_type = resources_display.ResourceQuestionBase.get_question_key_type(
+            dto)
+        key_list.append(resource.Key(qu_type, dto.id))
     translate_dto_list(course, dto_list, key_list)
 
 
@@ -2897,7 +2751,7 @@ def translate_question_group_dto(dto_list):
     app_context = sites.get_course_for_current_request()
     course = courses.Course.get(app_context)
     key_list = [
-        ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, dto.id)
+        resource.Key(resources_display.ResourceQuestionGroup.TYPE, dto.id)
         for dto in dto_list]
     translate_dto_list(course, dto_list, key_list)
 
@@ -2944,6 +2798,11 @@ def denormalize(s):
 
 
 def notify_module_enabled():
+    TranslatableResourceRegistry.register(TranslatableResourceCourseSettings)
+    TranslatableResourceRegistry.register(TranslatableResourceCourseComponents)
+    TranslatableResourceRegistry.register(TranslatableResourceQuestions)
+    TranslatableResourceRegistry.register(TranslatableResourceQuestionGroups)
+
     dashboard.DashboardHandler.add_nav_mapping(
         I18nDashboardHandler.ACTION, 'I18N')
     dashboard.DashboardHandler.add_external_permission(
@@ -2981,39 +2840,6 @@ def notify_module_enabled():
     pofile.denormalize = denormalize
 
 
-def notify_module_disabled():
-    dashboard.DashboardHandler.remove_nav_mapping(
-        I18nDashboardHandler.ACTION, 'I18N')
-    dashboard.DashboardHandler.remove_external_permission(ACCESS_PERMISSION)
-    roles.Roles.unregister_permissions(custom_module)
-
-    courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.pop(ResourceBundleEntity)
-    courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.pop(I18nProgressEntity)
-
-    I18nDashboardHandler.unregister()
-    I18nDeletionHandler.unregister()
-    I18nDownloadHandler.unregister()
-    I18nUploadHandler.unregister()
-    I18nReverseCaseHandler.unregister()
-    TranslationConsole.unregister()
-    courses.Course.POST_LOAD_HOOKS.remove(translate_course)
-    courses.Course.COURSE_ENV_POST_LOAD_HOOKS.remove(translate_course_env)
-    models.QuestionDAO.POST_LOAD_HOOKS.remove(translate_question_dto)
-    models.QuestionGroupDAO.POST_LOAD_HOOKS.remove(translate_question_group_dto)
-    transforms.CUSTOM_JSON_ENCODERS.append(LazyTranslator.json_encode)
-    utils.ApplicationHandler.EXTRA_GLOBAL_CSS_URLS.remove(GLOBAL_CSS)
-    unit_lesson_editor.LessonRESTHandler.POST_SAVE_HOOKS.remove(
-        I18nProgressDeferredUpdater.on_lesson_changed)
-    unit_lesson_editor.CommonUnitRESTHandler.POST_SAVE_HOOKS.remove(
-        I18nProgressDeferredUpdater.on_unit_changed)
-    models.QuestionDAO.POST_SAVE_HOOKS.remove(
-        I18nProgressDeferredUpdater.on_questions_changed)
-    models.QuestionGroupDAO.POST_SAVE_HOOKS.remove(
-        I18nProgressDeferredUpdater.on_question_groups_changed)
-    courses.Course.COURSE_ENV_POST_SAVE_HOOKS.append(
-        I18nProgressDeferredUpdater.on_course_settings_changed)
-
-
 def register_module():
     """Registers this module in the registry."""
 
@@ -3032,7 +2858,6 @@ def register_module():
         'I18N Dashboard Module',
         'A module provide i18n workflow.',
         global_routes, namespaced_routes,
-        notify_module_enabled=notify_module_enabled,
-        notify_module_disabled=notify_module_disabled)
+        notify_module_enabled=notify_module_enabled)
 
     return custom_module

@@ -34,6 +34,7 @@ from common import tags
 from common import utils as common_utils
 from common.crypto import XsrfTokenManager
 from models import courses
+from models import resources_display
 from models import models
 from models import transforms
 from models.config import ConfigProperty
@@ -199,67 +200,6 @@ class ReflectiveRequestHandler(object):
             return
 
         return handler()
-
-
-def _get_course_properties():
-    return Course.get_environ(sites.get_course_for_current_request())
-
-
-def get_unit_title_template(course_properties=None):
-    """Prepare an internationalized display for the unit title."""
-    if not course_properties:
-        course_properties = _get_course_properties()
-    if course_properties['course'].get('display_unit_title_without_index'):
-        return '%(title)s'
-    else:
-        app_context = sites.get_course_for_current_request()
-        # I18N: Message displayed as title for unit within a course.
-        return app_context.gettext('Unit %(index)s - %(title)s')
-
-
-def display_unit_title(unit, course_properties=None):
-    """Prepare an internationalized display for the unit title."""
-    template = get_unit_title_template(course_properties)
-    return template % {'index': unit.index, 'title': unit.title}
-
-
-def display_short_unit_title(unit, course_properties=None):
-    """Prepare a short unit title."""
-    if not course_properties:
-        course_properties = _get_course_properties()
-    if course_properties['course'].get('display_unit_title_without_index'):
-        return unit.title
-    if unit.type != 'U':
-        return unit.title
-    app_context = sites.get_course_for_current_request()
-    # I18N: Message displayed as title for unit within a course.
-    unit_title = app_context.gettext('Unit %s')
-    return unit_title % unit.index
-
-
-def display_lesson_title(unit, lesson, course_properties=None):
-    """Prepare an internationalized display for the unit title."""
-    if not course_properties:
-        course_properties = _get_course_properties()
-
-    content = safe_dom.NodeList()
-    span = safe_dom.Element('span')
-    content.append(span)
-
-    if lesson.auto_index:
-        prefix = ''
-        if course_properties['course'].get('display_unit_title_without_index'):
-            prefix = '%s ' % lesson.index
-        else:
-            prefix = '%s.%s ' % (unit.index, lesson.index)
-        span.add_text(prefix)
-        _class = ''
-    else:
-        _class = 'no-index'
-
-    span.add_text(lesson.title)
-    span.set_attribute('className', _class)
-    return content
 
 
 class HtmlHooks(object):
@@ -607,11 +547,14 @@ class CourseHandler(ApplicationHandler):
             'gcb_tags'] = jinja_utils.get_gcb_tags_filter(self)
         template_environ.globals.update({
             'display_unit_title': (
-                lambda unit: display_unit_title(unit, _p)),
+                lambda unit: resources_display.display_unit_title(
+                    unit, self.app_context)),
             'display_short_unit_title': (
-                lambda unit: display_short_unit_title(unit, _p)),
+                lambda unit: resources_display.display_short_unit_title(
+                    unit, self.app_context)),
             'display_lesson_title': (
-                lambda unit, lesson: display_lesson_title(unit, lesson, _p))})
+                lambda unit, lesson: resources_display.display_lesson_title(
+                    unit, lesson, self.app_context))})
 
         return template_environ.get_template(template_file)
 

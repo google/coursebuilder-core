@@ -27,12 +27,14 @@ import zipfile
 from babel.messages import pofile
 
 from common import crypto
+from common import resource
 from common import tags
 from common import utils
 from common.utils import Namespace
 from controllers import sites
 from models import config
 from models import courses
+from models import resources_display
 from models import models
 from models import roles
 from models import transforms
@@ -45,7 +47,6 @@ from modules.i18n_dashboard.i18n_dashboard import LazyTranslator
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDAO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDTO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleKey
-from modules.i18n_dashboard.i18n_dashboard import ResourceKey
 from modules.i18n_dashboard.i18n_dashboard import ResourceRow
 from modules.i18n_dashboard.i18n_dashboard import TranslationConsoleRestHandler
 from modules.i18n_dashboard.i18n_dashboard import TranslationUploadRestHandler
@@ -54,7 +55,6 @@ from modules.i18n_dashboard.i18n_dashboard import VERB_CURRENT
 from modules.i18n_dashboard.i18n_dashboard import VERB_NEW
 from modules.notifications import notifications
 from tests.functional import actions
-from tools import verify
 
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
@@ -62,47 +62,22 @@ from google.appengine.api import users
 from google.appengine.datastore import datastore_rpc
 
 
-class ResourceKeyTests(unittest.TestCase):
-
-    def test_roundtrip_data(self):
-        key1 = ResourceKey(ResourceKey.ASSESSMENT_TYPE, '23')
-        key2 = ResourceKey.fromstring(str(key1))
-        self.assertEquals(key1.type, key2.type)
-        self.assertEquals(key1.key, key2.key)
-
-    def test_reject_bad_type(self):
-        with self.assertRaises(AssertionError):
-            ResourceKey('BAD_TYPE', '23')
-        with self.assertRaises(AssertionError):
-            ResourceKey.fromstring('BAD_TYPE:23')
-
-    def test_for_unit(self):
-        type_table = [
-            (verify.UNIT_TYPE_ASSESSMENT, ResourceKey.ASSESSMENT_TYPE),
-            (verify.UNIT_TYPE_LINK, ResourceKey.LINK_TYPE),
-            (verify.UNIT_TYPE_UNIT, ResourceKey.UNIT_TYPE)]
-        for unit_type, key_type in type_table:
-            unit = courses.Unit13()
-            unit.type = unit_type
-            unit.unit_id = 5
-            key = ResourceKey.for_unit(unit)
-            self.assertEquals(key_type, key.type)
-            self.assertEquals(5, key.key)
-
-
 class ResourceBundleKeyTests(unittest.TestCase):
 
     def test_roundtrip_data(self):
-        key1 = ResourceBundleKey(ResourceKey.ASSESSMENT_TYPE, '23', 'el')
+        key1 = ResourceBundleKey(
+            resources_display.ResourceAssessment.TYPE, '23', 'el')
         key2 = ResourceBundleKey.fromstring(str(key1))
         self.assertEquals(key1.locale, key2.locale)
         self.assertEquals(key1.resource_key.type, key2.resource_key.type)
         self.assertEquals(key1.resource_key.key, key2.resource_key.key)
 
     def test_from_resource_key(self):
-        resource_key = ResourceKey(ResourceKey.ASSESSMENT_TYPE, '23')
+        resource_key = resource.Key(
+            resources_display.ResourceAssessment.TYPE, '23')
         key = ResourceBundleKey.from_resource_key(resource_key, 'el')
-        self.assertEquals(ResourceKey.ASSESSMENT_TYPE, key.resource_key.type)
+        self.assertEquals(resources_display.ResourceAssessment.TYPE,
+                          key.resource_key.type)
         self.assertEquals('23', key.resource_key.key)
         self.assertEquals('el', key.locale)
 
@@ -112,12 +87,12 @@ class ResourceRowTests(unittest.TestCase):
     def setUp(self):
         super(ResourceRowTests, self).setUp()
         course = object()
-        resource = object()
-        self.type_str = ResourceKey.ASSESSMENT_TYPE
+        rsrc = object()
+        self.type_str = resources_display.ResourceAssessment.TYPE
         self.key = '23'
         self.i18n_progress_dto = I18nProgressDTO(None, {})
         self.resource_row = ResourceRow(
-            course, resource, self.type_str, self.key,
+            course, rsrc, self.type_str, self.key,
             i18n_progress_dto=self.i18n_progress_dto)
 
     def test_class_name(self):
@@ -256,7 +231,8 @@ class I18nDashboardHandlerTests(actions.TestBase):
         super(I18nDashboardHandlerTests, self).tearDown()
 
     def test_page_data(self):
-        dom = self.parse_html_string(self.get(self.URL).body)
+        response = self.get(self.URL)
+        dom = self.parse_html_string(response.body)
         table = dom.find('.//table[@class="i18n-progress-table"]')
         rows = table.findall('./tbody/tr')
 
@@ -313,7 +289,8 @@ class I18nDashboardHandlerTests(actions.TestBase):
         rows = table.findall('./tbody/tr[@class="not-translatable"]')
         self.assertEquals(0, len(rows))
 
-        dto_key = ResourceKey(ResourceKey.LESSON_TYPE, self.lesson.lesson_id)
+        dto_key = resource.Key(resources_display.ResourceLesson.TYPE,
+                               self.lesson.lesson_id)
         dto = I18nProgressDTO(str(dto_key), {})
         dto.is_translatable = False
         I18nProgressDAO.save(dto)
@@ -344,8 +321,8 @@ class I18nDashboardHandlerTests(actions.TestBase):
             assert_progress('not-started', lesson_row, 2)
             assert_progress('not-started', lesson_row, 3)
 
-            dto_key = ResourceKey(
-                ResourceKey.LESSON_TYPE, self.lesson.lesson_id)
+            dto_key = resource.Key(
+                resources_display.ResourceLesson.TYPE, self.lesson.lesson_id)
             dto = I18nProgressDTO(str(dto_key), {})
             dto.set_progress('el', I18nProgressDTO.DONE)
             dto.set_progress('ru', I18nProgressDTO.IN_PROGRESS)
@@ -400,12 +377,14 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
 
     def test_get_requires_admin_role(self):
         actions.logout()
-        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, self.unit.unit_id, 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceUnit.TYPE, self.unit.unit_id, 'el')
         response = self._get_by_key(key)
         self.assertEquals(401, response['status'])
 
     def test_get_unit_content_with_no_existing_values(self):
-        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, self.unit.unit_id, 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceUnit.TYPE, self.unit.unit_id, 'el')
         response = self._get_by_key(key)
         self.assertEquals(200, response['status'])
 
@@ -446,7 +425,8 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals('b', header_data[1]['source_value'])
 
     def test_get_unit_content_with_existing_values(self):
-        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, self.unit.unit_id, 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceUnit.TYPE, self.unit.unit_id, 'el')
         resource_bundle_dict = {
             'title': {
                 'type': 'string',
@@ -490,7 +470,8 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals(VERB_NEW, header_section['data'][1]['verb'])
 
     def test_get_unit_content_with_changed_values(self):
-        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, self.unit.unit_id, 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceUnit.TYPE, self.unit.unit_id, 'el')
         resource_bundle_dict = {
             'title': {
                 'type': 'string',
@@ -549,7 +530,8 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
             '</gcb-youtube>')
         self.course.save()
 
-        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceUnit.TYPE, unit.unit_id, 'el')
         response = self._get_by_key(key)
         payload = transforms.loads(response['payload'])
         data = payload['sections'][1]['data']
@@ -564,7 +546,8 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         unit.unit_header = '<gcb-markdown>*hello*</gcb-markdown>'
         self.course.save()
 
-        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceUnit.TYPE, unit.unit_id, 'el')
         response = self._get_by_key(key)
         payload = transforms.loads(response['payload'])
         data = payload['sections'][1]['data']
@@ -579,7 +562,8 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         unit.title = 'Registration'
         self.course.save()
 
-        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceUnit.TYPE, unit.unit_id, 'el')
         response = self._get_by_key(key)
         payload = transforms.loads(response['payload'])
         data = payload['sections'][0]['data']
@@ -613,7 +597,7 @@ class TranslationConsoleValidationTests(actions.TestBase):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
 
         self.key = ResourceBundleKey(
-            ResourceKey.UNIT_TYPE, self.unit.unit_id, 'el')
+            resources_display.ResourceUnit.TYPE, self.unit.unit_id, 'el')
         self.validation_payload = {
             'key': str(self.key),
             'title': 'Unit 1 - Test Unit',
@@ -861,8 +845,8 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
             }
         }
 
-        lesson_key = ResourceKey(
-            ResourceKey.LESSON_TYPE, lesson.lesson_id)
+        lesson_key = resource.Key(
+            resources_display.ResourceLesson.TYPE, lesson.lesson_id)
 
         lesson_key_el = ResourceBundleKey.from_resource_key(lesson_key, 'el')
         ResourceBundleDAO.save(
@@ -919,8 +903,8 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
             }
         }
 
-        unit_key = ResourceKey(
-            ResourceKey.UNIT_TYPE, unit.unit_id)
+        unit_key = resource.Key(
+            resources_display.ResourceUnit.TYPE, unit.unit_id)
 
         unit_key_el = ResourceBundleKey.from_resource_key(unit_key, 'el')
         ResourceBundleDAO.save(
@@ -978,7 +962,7 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
         response = self._put_payload(
             'rest/question/sa', 'sa-question-edit', '', qu_payload)
         key = transforms.loads(response['payload'])['key']
-        qu_key = ResourceKey(ResourceKey.QUESTION_SA_TYPE, key)
+        qu_key = resource.Key(resources_display.ResourceSAQuestion.TYPE, key)
 
         qu_bundle = {
             'question': {
@@ -1034,7 +1018,8 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
         response = self._put_payload(
             'rest/question_group', 'question-group-edit', '', qgp_payload)
         key = transforms.loads(response['payload'])['key']
-        qgp_key = ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, key)
+        qgp_key = resource.Key(
+            resources_display.ResourceQuestionGroup.TYPE, key)
 
         qgp_bundle = {
             'description': {
@@ -1117,8 +1102,8 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
                     'target_value': 'PRIVACY_POLICY'}]
             }
         }
-        homepage_key = ResourceKey(
-            ResourceKey.COURSE_SETTINGS_TYPE, 'homepage')
+        homepage_key = resource.Key(
+            resources_display.ResourceCourseSettings.TYPE, 'homepage')
         homepage_key_el = ResourceBundleKey.from_resource_key(
             homepage_key, 'el')
         ResourceBundleDAO.save(
@@ -1162,7 +1147,8 @@ class LazyTranslatorTests(actions.TestBase):
             'type': 'string',
             'data': [
                 {'source_value': 'hello', 'target_value': 'HELLO'}]}
-        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceLesson.TYPE, '23', 'el')
         lazy_translator = LazyTranslator(
             self.app_context, key, source_value, translation_dict)
         self.assertEquals(
@@ -1174,7 +1160,8 @@ class LazyTranslatorTests(actions.TestBase):
             'type': 'string',
             'data': [
                 {'source_value': 'hello, ', 'target_value': 'HELLO, '}]}
-        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceLesson.TYPE, '23', 'el')
         lazy_translator = LazyTranslator(
             self.app_context, key, source_value, translation_dict)
         self.assertEquals('HELLO, world', lazy_translator + 'world')
@@ -1185,7 +1172,8 @@ class LazyTranslatorTests(actions.TestBase):
             'type': 'string',
             'data': [
                 {'source_value': 'hello, %s', 'target_value': 'HELLO, %s'}]}
-        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceLesson.TYPE, '23', 'el')
         lazy_translator = LazyTranslator(
             self.app_context, key, source_value, translation_dict)
         self.assertEquals('HELLO, world', lazy_translator % 'world')
@@ -1196,7 +1184,8 @@ class LazyTranslatorTests(actions.TestBase):
             'type': 'string',
             'data': [
                 {'source_value': 'Hello', 'target_value': 'Bonjour'}]}
-        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceLesson.TYPE, '23', 'el')
         lazy_translator = LazyTranslator(
             self.app_context, key, source_value, translation_dict)
         self.assertEquals('BONJOUR', lazy_translator.upper())
@@ -1209,7 +1198,8 @@ class LazyTranslatorTests(actions.TestBase):
             'source_value': 'hello',
             'data': [
                 {'source_value': 'hello', 'target_value': 'HELLO'}]}
-        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
+        key = ResourceBundleKey(
+            resources_display.ResourceLesson.TYPE, '23', 'el')
 
         lazy_translator = LazyTranslator(
             self.app_context, key, source_value, translation_dict)
@@ -1300,9 +1290,9 @@ class CourseContentTranslationTests(actions.TestBase):
         }
 
         self.unit_key_el = ResourceBundleKey(
-            ResourceKey.UNIT_TYPE, self.unit.unit_id, 'el')
+            resources_display.ResourceUnit.TYPE, self.unit.unit_id, 'el')
         self.lesson_key_el = ResourceBundleKey(
-            ResourceKey.LESSON_TYPE, self.lesson.lesson_id, 'el')
+            resources_display.ResourceLesson.TYPE, self.lesson.lesson_id, 'el')
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         prefs = models.StudentPreferencesDAO.load_or_create()
@@ -1363,7 +1353,7 @@ class CourseContentTranslationTests(actions.TestBase):
             }
         }
         link_key = ResourceBundleKey(
-            ResourceKey.LINK_TYPE, link.unit_id, 'el')
+            resources_display.ResourceLink.TYPE, link.unit_id, 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(link_key), link_bundle))
 
@@ -1396,7 +1386,7 @@ class CourseContentTranslationTests(actions.TestBase):
             }
         }
         assessment_key = ResourceBundleKey(
-            ResourceKey.ASSESSMENT_TYPE, assessment.unit_id, 'el')
+            resources_display.ResourceAssessment.TYPE, assessment.unit_id, 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(assessment_key), assessment_bundle))
 
@@ -1548,7 +1538,7 @@ class CourseContentTranslationTests(actions.TestBase):
             }
         }
         unit_key_el = ResourceBundleKey(
-            ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+            resources_display.ResourceUnit.TYPE, unit.unit_id, 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(unit_key_el), unit_bundle))
 
@@ -1586,7 +1576,7 @@ class CourseContentTranslationTests(actions.TestBase):
             }
         }
         unit_key_el = ResourceBundleKey(
-            ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+            resources_display.ResourceUnit.TYPE, unit.unit_id, 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(unit_key_el), unit_bundle))
 
@@ -1653,7 +1643,7 @@ class CourseContentTranslationTests(actions.TestBase):
                 ]
             }}
         key_el = ResourceBundleKey(
-            ResourceKey.QUESTION_MC_TYPE, qu_id, 'el')
+            resources_display.ResourceMCQuestion.TYPE, qu_id, 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(key_el), qu_bundle))
 
@@ -1709,7 +1699,7 @@ class CourseContentTranslationTests(actions.TestBase):
             }
         }
         key_el = ResourceBundleKey(
-            ResourceKey.QUESTION_MC_TYPE, qu_id, 'el')
+            resources_display.ResourceMCQuestion.TYPE, qu_id, 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(key_el), qu_bundle))
 
@@ -1764,7 +1754,7 @@ class CourseContentTranslationTests(actions.TestBase):
                 ]
             }}
         key_el = ResourceBundleKey(
-            ResourceKey.QUESTION_GROUP_TYPE, qgp_id, 'el')
+            resources_display.ResourceQuestionGroup.TYPE, qgp_id, 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(key_el), qgp_bundle))
 
@@ -1796,7 +1786,7 @@ class CourseContentTranslationTests(actions.TestBase):
                     }]
             }}
         key_el = ResourceBundleKey(
-            ResourceKey.COURSE_SETTINGS_TYPE, 'homepage', 'el')
+            resources_display.ResourceCourseSettings.TYPE, 'homepage', 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(key_el), course_bundle))
 
@@ -1848,7 +1838,7 @@ class CourseContentTranslationTests(actions.TestBase):
                     'source_value': 'Email from {{sender_name}}',
                     'target_value': 'EMAIL_FROM {{sender_name}}'}]}}
         key_el = ResourceBundleKey(
-            ResourceKey.COURSE_SETTINGS_TYPE, 'invitation', 'el')
+            resources_display.ResourceCourseSettings.TYPE, 'invitation', 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(key_el), invitation_bundle))
 
@@ -2463,11 +2453,11 @@ class TranslationImportExportTests(actions.TestBase):
     def _make_current_and_stale_translation(self):
         # Provide translations for lesson title and assessment title.
         self._translated_value_swapcase(
-            ResourceBundleKey(ResourceKey.LESSON_TYPE,
+            ResourceBundleKey(resources_display.ResourceLesson.TYPE,
                               self.lesson.lesson_id, 'de'),
             'title')
         self._translated_value_swapcase(
-            ResourceBundleKey(ResourceKey.ASSESSMENT_TYPE,
+            ResourceBundleKey(resources_display.ResourceAssessment.TYPE,
                               self.assessment.unit_id, 'de'),
             'assessment:title')
 
@@ -3535,7 +3525,8 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
             }}
         with Namespace('ns_first'):
             key_el = ResourceBundleKey(
-                ResourceKey.COURSE_SETTINGS_TYPE, 'homepage', 'es_ES')
+                resources_display.ResourceCourseSettings.TYPE, 'homepage',
+                'es_ES')
             ResourceBundleDAO.save(
                 ResourceBundleDTO(str(key_el), course_bundle))
 

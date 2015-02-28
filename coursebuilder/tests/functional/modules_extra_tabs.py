@@ -18,11 +18,11 @@ __author__ = 'John Orr (jorr@google.com)'
 
 from controllers import sites
 from models import courses
+from models import resources_display
 from models import models
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDAO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDTO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleKey
-from modules.i18n_dashboard.i18n_dashboard import ResourceKey
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
@@ -129,7 +129,7 @@ class ExtraTabsTests(actions.TestBase):
                     'source_value': 'Frequently asked questions',
                     'target_value': 'fREQUENTLY aSKED qUESTIONS'}]}}
         key_el = ResourceBundleKey(
-            ResourceKey.COURSE_SETTINGS_TYPE, 'homepage', 'el')
+            resources_display.ResourceCourseSettings.TYPE, 'homepage', 'el')
         ResourceBundleDAO.save(ResourceBundleDTO(str(key_el), bundle))
 
         dom = self.parse_html_string(self.get('course').body)

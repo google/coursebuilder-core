@@ -16,10 +16,12 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+from common import resource
 from controllers import assessments
 from controllers import lessons
 from controllers import utils
 from models import content
+from models import resources_display
 from models import custom_modules
 from models import roles
 from tools import verify
@@ -49,11 +51,12 @@ def register_module():
     """Registers this module in the registry."""
 
     def on_module_enabled():
-        roles.Roles.register_permissions(
-            custom_module, permissions_callback)
-
-    def on_module_disabled():
-        roles.Roles.unregister_permissions(custom_module)
+        roles.Roles.register_permissions(custom_module, permissions_callback)
+        resource.Registry.register(resources_display.ResourceCourseSettings)
+        resource.Registry.register(resources_display.ResourceUnit)
+        resource.Registry.register(resources_display.ResourceAssessment)
+        resource.Registry.register(resources_display.ResourceLink)
+        resource.Registry.register(resources_display.ResourceLesson)
 
     def permissions_callback(unused_app_context):
         return [
@@ -88,6 +91,5 @@ def register_module():
         'Course',
         'A set of pages for delivering an online course.',
         [], courses_routes,
-        notify_module_enabled=on_module_enabled,
-        notify_module_disabled=on_module_disabled)
+        notify_module_enabled=on_module_enabled)
     return custom_module

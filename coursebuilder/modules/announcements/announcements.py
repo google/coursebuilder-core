@@ -29,15 +29,16 @@ from controllers.utils import BaseHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import ReflectiveRequestHandler
 from controllers.utils import XsrfTokenManager
+from models.resources_display import LabelGroupsHelper
 from models import custom_modules
 from models import entities
 from models import models
 from models import notify
+from models import resources_display
 from models import roles
 from models import transforms
 from models.models import MemcacheManager
 from models.models import Student
-from modules.dashboard.label_editor import LabelGroupsHelper
 from modules.oeditor import oeditor
 
 from google.appengine.ext import db
@@ -202,10 +203,6 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         self.redirect(self.get_action_url('edit', key=entity.key()))
 
 
-DRAFT_TEXT = 'Private'
-PUBLISHED_TEXT = 'Public'
-
-
 class AnnouncementsItemRESTHandler(BaseRESTHandler):
     """Provides REST API for an announcement."""
 
@@ -245,7 +242,9 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
                         announcement_email)}))
         schema.add_property(SchemaField(
             'is_draft', 'Status', 'boolean',
-            select_data=[(True, DRAFT_TEXT), (False, PUBLISHED_TEXT)],
+            select_data=[
+                (True, resources_display.DRAFT_TEXT),
+                (False, resources_display.PUBLISHED_TEXT)],
             extra_schema_dict_values={'className': 'split-from-main-group'}))
         return schema
 

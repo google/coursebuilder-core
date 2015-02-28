@@ -18,24 +18,15 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import copy
 
-import messages
-
 from common import schema_fields
-from common import tags
 from models import roles
 from models import transforms
-from models.models import CollisionError
-from models.models import QuestionDAO
-from models.models import QuestionDTO
-from models.models import QuestionGroupDAO
-from models.models import SaQuestionConstants
+from models import models
+from models import resources_display
 from modules.assessment_tags import gift
 from modules.dashboard import dto_editor
 from modules.dashboard import utils as dashboard_utils
 
-
-TAGS_EXCLUDED_FROM_QUESTIONS = set(
-    ['question', 'question-group', 'gcb-questionnaire', 'text-file-upload-tag'])
 
 class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
     """An editor for editing and managing questions."""
@@ -67,16 +58,16 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
 
     def get_edit_question(self):
         key = self.request.get('key')
-        question = QuestionDAO.load(key)
+        question = models.QuestionDAO.load(key)
 
         if not question:
             raise Exception('No question found')
 
-        if question.type == QuestionDTO.MULTIPLE_CHOICE:
+        if question.type == models.QuestionDTO.MULTIPLE_CHOICE:
             self.render_page(
                 self.qmae_prepare_template(McQuestionRESTHandler, key=key),
                 'assets', 'questions')
-        elif question.type == QuestionDTO.SHORT_ANSWER:
+        elif question.type == models.QuestionDTO.SHORT_ANSWER:
             self.render_page(
                 self.qmae_prepare_template(SaQuestionRESTHandler, key=key),
                 'assets', 'questions')
@@ -84,10 +75,10 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
             raise Exception('Unknown question type: %s' % question.type)
 
     def post_clone_question(self):
-        original_question = QuestionDAO.load(self.request.get('key'))
-        cloned_question = QuestionDAO.clone(original_question)
+        original_question = models.QuestionDAO.load(self.request.get('key'))
+        cloned_question = models.QuestionDAO.clone(original_question)
         cloned_question.description += ' (clone)'
-        QuestionDAO.save(cloned_question)
+        models.QuestionDAO.save(cloned_question)
 
 
 class BaseQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
@@ -98,7 +89,7 @@ class BaseQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     def is_deletion_allowed(self, question):
 
-        used_by = QuestionDAO.used_by(question.id)
+        used_by = models.QuestionDAO.used_by(question.id)
         if used_by:
             group_names = sorted(['"%s"' % x.description for x in used_by])
             transforms.send_json_response(
@@ -111,7 +102,7 @@ class BaseQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
             return True
 
     def validate_no_description_collision(self, description, key, errors):
-        descriptions = {q.description for q in QuestionDAO.get_all()
+        descriptions = {q.description for q in models.QuestionDAO.get_all()
                         if not key or q.id != long(key)}
         if description in descriptions:
             errors.append(
@@ -132,71 +123,15 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
 
     SCHEMA_VERSIONS = ['1.5']
 
-    DAO = QuestionDAO
+    DAO = models.QuestionDAO
 
     @classmethod
     def get_schema(cls):
-        """Get the InputEx schema for the multiple choice question editor."""
-        mc_question = schema_fields.FieldRegistry(
-            'Multiple Choice Question',
-            description='multiple choice question',
-            extra_schema_dict_values={'className': 'mc-container'})
-
-        mc_question.add_property(schema_fields.SchemaField(
-            'version', '', 'string', optional=True, hidden=True))
-        mc_question.add_property(schema_fields.SchemaField(
-            'question', 'Question', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'mc-question'}))
-        mc_question.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True,
-            extra_schema_dict_values={'className': 'mc-description'},
-            description=messages.QUESTION_DESCRIPTION))
-        mc_question.add_property(schema_fields.SchemaField(
-            'multiple_selections', 'Selection', 'boolean',
-            optional=True,
-            select_data=[
-                ('false', 'Allow only one selection'),
-                ('true', 'Allow multiple selections')],
-            extra_schema_dict_values={
-                '_type': 'radio',
-                'className': 'mc-selection'}))
-
-        choice_type = schema_fields.FieldRegistry(
-            'Choice',
-            extra_schema_dict_values={'className': 'mc-choice'})
-        choice_type.add_property(schema_fields.SchemaField(
-            'score', 'Score', 'string', optional=True, i18n=False,
-            extra_schema_dict_values={
-                'className': 'mc-choice-score', 'value': '0'}))
-        choice_type.add_property(schema_fields.SchemaField(
-            'text', 'Text', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'mc-choice-text'}))
-        choice_type.add_property(schema_fields.SchemaField(
-            'feedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'mc-choice-feedback'}))
-
-        choices_array = schema_fields.FieldArray(
-            'choices', '', item_type=choice_type,
-            extra_schema_dict_values={
-                'className': 'mc-choice-container',
-                'listAddLabel': 'Add a choice',
-                'listRemoveLabel': 'Delete choice'})
-
-        mc_question.add_property(choices_array)
-
-        return mc_question
+        return resources_display.ResourceMCQuestion.get_schema(
+            course=None, key=None)
 
     def pre_save_hook(self, question):
-        question.type = QuestionDTO.MULTIPLE_CHOICE
+        question.type = models.QuestionDTO.MULTIPLE_CHOICE
 
     def transform_for_editor_hook(self, q_dict):
         p_dict = copy.deepcopy(q_dict)
@@ -261,94 +196,17 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
 
     XSRF_TOKEN = 'sa-question-edit'
 
-    GRADER_TYPES = [
-        ('case_insensitive', 'Case insensitive string match'),
-        ('regex', 'Regular expression'),
-        ('numeric', 'Numeric')]
-
     SCHEMA_VERSIONS = ['1.5']
 
-    DAO = QuestionDAO
+    DAO = models.QuestionDAO
 
     @classmethod
     def get_schema(cls):
-        """Get the InputEx schema for the short answer question editor."""
-        sa_question = schema_fields.FieldRegistry(
-            'Short Answer Question',
-            description='short answer question',
-            extra_schema_dict_values={'className': 'sa-container'})
-
-        sa_question.add_property(schema_fields.SchemaField(
-            'version', '', 'string', optional=True, hidden=True))
-        sa_question.add_property(schema_fields.SchemaField(
-            'question', 'Question', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'sa-question'}))
-        sa_question.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True,
-            extra_schema_dict_values={'className': 'sa-description'},
-            description=messages.QUESTION_DESCRIPTION))
-        sa_question.add_property(schema_fields.SchemaField(
-            'hint', 'Hint', 'html', optional=True,
-            extra_schema_dict_values={'className': 'sa-hint'}))
-        sa_question.add_property(schema_fields.SchemaField(
-            'defaultFeedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'sa-feedback'},
-            description=messages.INCORRECT_ANSWER_FEEDBACK))
-
-        sa_question.add_property(schema_fields.SchemaField(
-            'rows', 'Rows', 'string', optional=True, i18n=False,
-            extra_schema_dict_values={
-                'className': 'sa-rows',
-                'value': SaQuestionConstants.DEFAULT_HEIGHT_ROWS
-            },
-            description=messages.INPUT_FIELD_HEIGHT_DESCRIPTION))
-        sa_question.add_property(schema_fields.SchemaField(
-            'columns', 'Columns', 'string', optional=True, i18n=False,
-            extra_schema_dict_values={
-                'className': 'sa-columns',
-                'value': SaQuestionConstants.DEFAULT_WIDTH_COLUMNS
-            },
-            description=messages.INPUT_FIELD_WIDTH_DESCRIPTION))
-
-        grader_type = schema_fields.FieldRegistry(
-            'Answer',
-            extra_schema_dict_values={'className': 'sa-grader'})
-        grader_type.add_property(schema_fields.SchemaField(
-            'score', 'Score', 'string', optional=True, i18n=False,
-            extra_schema_dict_values={'className': 'sa-grader-score'}))
-        grader_type.add_property(schema_fields.SchemaField(
-            'matcher', 'Grading', 'string', optional=True, i18n=False,
-            select_data=cls.GRADER_TYPES,
-            extra_schema_dict_values={'className': 'sa-grader-score'}))
-        grader_type.add_property(schema_fields.SchemaField(
-            'response', 'Response', 'string', optional=True,
-            extra_schema_dict_values={'className': 'sa-grader-text'}))
-        grader_type.add_property(schema_fields.SchemaField(
-            'feedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'sa-grader-feedback'}))
-
-        graders_array = schema_fields.FieldArray(
-            'graders', '', item_type=grader_type,
-            extra_schema_dict_values={
-                'className': 'sa-grader-container',
-                'listAddLabel': 'Add an answer',
-                'listRemoveLabel': 'Delete this answer'})
-
-        sa_question.add_property(graders_array)
-
-        return sa_question
+        return resources_display.ResourceSAQuestion.get_schema(
+            course=None, key=None)
 
     def pre_save_hook(self, question):
-        question.type = QuestionDTO.SHORT_ANSWER
+        question.type = models.QuestionDTO.SHORT_ANSWER
 
     def get_default_content(self):
         return {
@@ -399,7 +257,8 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
         for index in range(0, len(graders)):
             grader = graders[index]
             assert grader['matcher'] in [
-                matcher for (matcher, unused_text) in self.GRADER_TYPES]
+                matcher for (matcher, unused_text)
+                in resources_display.ResourceSAQuestion.GRADER_TYPES]
             if not grader['response'].strip():
                 errors.append('Answer %s has no response text.' % (index + 1))
             try:
@@ -444,7 +303,7 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
         return gift_questions
 
     def validate_question_descriptions(self, questions, errors):
-        descriptions = [q.description for q in QuestionDAO.get_all()]
+        descriptions = [q.description for q in models.QuestionDAO.get_all()]
         for question in questions:
             if question['description'] in descriptions:
                 errors.append(
@@ -452,7 +311,8 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
                      'from existing questions.'))
 
     def validate_group_description(self, group_description, errors):
-        descriptions = [gr.description for gr in QuestionGroupDAO.get_all()]
+        descriptions = [gr.description
+                        for gr in models.QuestionGroupDAO.get_all()]
         if group_description in descriptions:
             errors.append('Non-unique group description.')
 
@@ -464,24 +324,24 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
     def convert_to_dtos(self, questions):
         dtos = []
         for question in questions:
-            question['version'] = QuestionDAO.VERSION
-            dto = QuestionDTO(None, question)
+            question['version'] = models.QuestionDAO.VERSION
+            dto = models.QuestionDTO(None, question)
             if dto.type == 'multi_choice':
-                dto.type = QuestionDTO.MULTIPLE_CHOICE
+                dto.type = models.QuestionDTO.MULTIPLE_CHOICE
             else:
-                dto.type = QuestionDTO.SHORT_ANSWER
+                dto.type = models.QuestionDTO.SHORT_ANSWER
             dtos.append(dto)
         return dtos
 
     def create_group(self, description, question_ids):
         group = {
-            'version': QuestionDAO.VERSION,
+            'version': models.QuestionDAO.VERSION,
             'description': description,
             'introduction': '',
             'items': [{
                 'question': str(x),
                 'weight': 1.0} for x in question_ids]}
-        return QuestionGroupDAO.create_question_group(group)
+        return models.QuestionGroupDAO.create_question_group(group)
 
     def put(self):
         """Store a QuestionGroupDTO and QuestionDTO in the datastore."""
@@ -509,13 +369,13 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
                 python_dict['description'], errors)
             if not errors:
                 dtos = self.convert_to_dtos(questions)
-                question_ids = QuestionDAO.save_all(dtos)
+                question_ids = models.QuestionDAO.save_all(dtos)
                 self.create_group(python_dict['description'], question_ids)
         except ValueError as e:
             errors.append(str(e))
         except gift.ParseError as e:
             errors.append(str(e))
-        except CollisionError as e:
+        except models.CollisionError as e:
             errors.append(str(e))
         if errors:
             self.validation_error('\n'.join(errors))

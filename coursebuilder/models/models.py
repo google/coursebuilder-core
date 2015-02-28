@@ -1741,11 +1741,6 @@ class QuestionImporter(object):
         return question_dtos
 
 
-class SaQuestionConstants(object):
-    DEFAULT_WIDTH_COLUMNS = 100
-    DEFAULT_HEIGHT_ROWS = 1
-
-
 class QuestionGroupEntity(BaseEntity):
     """An object representing a question group in the datastore."""
     data = db.TextProperty(indexed=False)

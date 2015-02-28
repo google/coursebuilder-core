@@ -117,7 +117,6 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard'
         '.I18nProgressDeferredUpdaterTests': 5,
     'tests.functional.modules_i18n_dashboard.LazyTranslatorTests': 5,
-    'tests.functional.modules_i18n_dashboard.ResourceKeyTests': 3,
     'tests.functional.modules_i18n_dashboard.ResourceBundleKeyTests': 2,
     'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
     'tests.functional.modules_i18n_dashboard'
@@ -211,6 +210,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.common_catch_and_log.CatchAndLogTests': 6,
     'tests.unit.common_locales.LocalesTests': 2,
     'tests.unit.common_locales.ParseAcceptLanguageTests': 3,
+    'tests.unit.common_resource.ResourceKeyTests': 3,
     'tests.unit.common_schema_fields.SchemaFieldTests': 4,
     'tests.unit.common_schema_fields.FieldArrayTests': 3,
     'tests.unit.common_schema_fields.FieldRegistryTests': 7,

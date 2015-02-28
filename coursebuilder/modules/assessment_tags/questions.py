@@ -27,6 +27,7 @@ from common import schema_fields
 from common import tags
 from models import custom_modules
 from models import models as m_models
+from models import resources_display
 from models import transforms
 
 RESOURCES_PATH = '/modules/assessment_tags/resources'
@@ -99,9 +100,11 @@ def render_question(
         # The following two lines are included for backwards compatibility with
         # v1.5 questions that do not have the row and column properties set.
         template_values['rows'] = template_values.get(
-            'rows', m_models.SaQuestionConstants.DEFAULT_HEIGHT_ROWS)
+            'rows',
+            resources_display.SaQuestionConstants.DEFAULT_HEIGHT_ROWS)
         template_values['columns'] = template_values.get(
-            'columns', m_models.SaQuestionConstants.DEFAULT_WIDTH_COLUMNS)
+            'columns',
+            resources_display.SaQuestionConstants.DEFAULT_WIDTH_COLUMNS)
     else:
         return '[Unsupported question type]'
 

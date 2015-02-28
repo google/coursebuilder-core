@@ -303,3 +303,14 @@ class Entity(Node):
     def sanitized(self):
         assert Entity.ENTITY_PATTERN.match(self._entity)
         return self._entity
+
+
+def assemble_text_message(text, link):
+    node_list = NodeList()
+    if text:
+        node_list.append(Text(text))
+        node_list.append(Entity('&nbsp;'))
+    if link:
+        node_list.append(Element(
+            'a', href=link, target='_blank').add_text('Learn more...'))
+    return node_list

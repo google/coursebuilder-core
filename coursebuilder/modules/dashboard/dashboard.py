@@ -49,7 +49,6 @@ from question_group_editor import QuestionGroupRESTHandler
 from role_editor import RoleManagerAndEditor
 from role_editor import RoleRESTHandler
 import student_answers_analytics
-import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
 from unit_lesson_editor import LessonRESTHandler
@@ -66,13 +65,13 @@ from common import safe_dom
 from common import tags
 from common.utils import Namespace
 from controllers import sites
-from controllers import utils
 from controllers.utils import ApplicationHandler
 from controllers.utils import CourseHandler
 from controllers.utils import ReflectiveRequestHandler
 from models import analytics
 from models import config
 from models import courses
+from models import resources_display
 from models import custom_modules
 from models import custom_units
 from models import data_sources
@@ -531,7 +530,8 @@ class DashboardHandler(
             'status_xsrf_token': self.create_xsrf_token('set_draft_status'),
             'unit_lesson_title_xsrf_token': self.create_xsrf_token(
                 UnitLessonTitleRESTHandler.XSRF_TOKEN),
-            'unit_title_template': utils.get_unit_title_template(),
+            'unit_title_template': resources_display.get_unit_title_template(
+                course.app_context),
             'extra_info_title': ', '.join(self.COURSE_OUTLINE_EXTRA_INFO_TITLES)
         }
         return jinja2.Markup(
@@ -548,14 +548,14 @@ class DashboardHandler(
             common_classes += ' inactive'
         if resource.now_available:
             icon.add_attribute(
-                alt=unit_lesson_editor.PUBLISHED_TEXT,
-                title=unit_lesson_editor.PUBLISHED_TEXT,
+                alt=resources_display.PUBLISHED_TEXT,
+                title=resources_display.PUBLISHED_TEXT,
                 className=common_classes + ' md-lock-open',
             )
         else:
             icon.add_attribute(
-                alt=unit_lesson_editor.DRAFT_TEXT,
-                title=unit_lesson_editor.DRAFT_TEXT,
+                alt=resources_display.DRAFT_TEXT,
+                title=resources_display.DRAFT_TEXT,
                 className=common_classes + ' md-lock'
             )
         return icon

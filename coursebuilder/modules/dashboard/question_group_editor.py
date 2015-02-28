@@ -16,10 +16,9 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
-from common import schema_fields
 from models import transforms
-from models.models import QuestionDAO
-from models.models import QuestionGroupDAO
+from models import models
+from models import resources_display
 from modules.dashboard import dto_editor
 from modules.dashboard import utils as dashboard_utils
 
@@ -45,7 +44,7 @@ class QuestionGroupManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
     def post_add_to_question_group(self):
         try:
             question_id = long(self.request.get('question_id'))
-            question_dto = QuestionDAO.load(question_id)
+            question_dto = models.QuestionDAO.load(question_id)
             if question_dto is None:
                 raise ValueError()
         except ValueError:
@@ -57,7 +56,7 @@ class QuestionGroupManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
 
         try:
             group_id = long(self.request.get('group_id'))
-            group_dto = QuestionGroupDAO.load(group_id)
+            group_dto = models.QuestionGroupDAO.load(group_id)
             if group_dto is None:
                 raise ValueError()
         except ValueError:
@@ -77,7 +76,7 @@ class QuestionGroupManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
             return
 
         group_dto.add_question(question_id, weight)
-        QuestionGroupDAO.save(group_dto)
+        models.QuestionGroupDAO.save(group_dto)
 
         transforms.send_json_response(
             self,
@@ -107,47 +106,12 @@ class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     SCHEMA_VERSIONS = ['1.5']
 
-    DAO = QuestionGroupDAO
+    DAO = models.QuestionGroupDAO
 
     @classmethod
     def get_schema(cls):
-        """Return the InputEx schema for the question group editor."""
-        question_group = schema_fields.FieldRegistry(
-            'Question Group', description='question_group')
-
-        question_group.add_property(schema_fields.SchemaField(
-            'version', '', 'string', optional=True, hidden=True))
-        question_group.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True))
-        question_group.add_property(schema_fields.SchemaField(
-            'introduction', 'Introduction', 'html', optional=True))
-
-        item_type = schema_fields.FieldRegistry(
-            'Item',
-            extra_schema_dict_values={'className': 'question-group-item'})
-        item_type.add_property(schema_fields.SchemaField(
-            'weight', 'Weight', 'string', optional=True, i18n=False,
-            extra_schema_dict_values={'className': 'question-group-weight'}))
-
-        question_select_data = [(q.id, q.description) for q in sorted(
-            QuestionDAO.get_all(), key=lambda x: x.description)]
-
-        item_type.add_property(schema_fields.SchemaField(
-            'question', 'Question', 'string', optional=True, i18n=False,
-            select_data=question_select_data,
-            extra_schema_dict_values={'className': 'question-group-question'}))
-
-        item_array = schema_fields.FieldArray(
-            'items', '', item_type=item_type,
-            extra_schema_dict_values={
-                'className': 'question-group-items',
-                'sortable': 'true',
-                'listAddLabel': 'Add a question',
-                'listRemoveLabel': 'Remove'})
-
-        question_group.add_property(item_array)
-
-        return question_group
+        return resources_display.ResourceQuestionGroup.get_schema(
+            course=None, key=None)
 
     def get_default_content(self):
         return {'version': self.SCHEMA_VERSIONS[0]}
@@ -159,7 +123,7 @@ class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):
             errors.append('The question group must have a description.')
 
         descriptions = {question_group.description for question_group
-                        in QuestionGroupDAO.get_all()
+                        in models.QuestionGroupDAO.get_all()
                         if not key or question_group.id != long(key)}
         if question_group_dict['description'] in descriptions:
             errors.append('The description must be different '

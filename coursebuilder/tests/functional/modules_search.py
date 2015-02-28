@@ -25,6 +25,7 @@ import actions
 from common import utils as common_utils
 from controllers import sites
 from models import courses
+from models import resources_display
 from models import custom_modules
 from models import models
 from models import transforms
@@ -32,7 +33,6 @@ from modules.announcements import announcements
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDAO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDTO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleKey
-from modules.i18n_dashboard.i18n_dashboard import ResourceKey
 from modules.search import search
 from tests.unit import modules_search as search_unit_test
 
@@ -457,7 +457,7 @@ class SearchTest(search_unit_test.SearchTestBase):
             }
         }
         lesson_key_fr = ResourceBundleKey(
-            ResourceKey.LESSON_TYPE, lesson.lesson_id, 'fr')
+            resources_display.ResourceLesson.TYPE, lesson.lesson_id, 'fr')
         with common_utils.Namespace('ns_test'):
             ResourceBundleDAO.save(
                 ResourceBundleDTO(str(lesson_key_fr), lesson_bundle))
