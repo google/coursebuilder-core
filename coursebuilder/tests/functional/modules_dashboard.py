@@ -766,3 +766,64 @@ class DashboardCustomNavTestCase(actions.TestBase):
         selected_tab_path = ('.//*[@class="gcb-nav-bar-level-2"]'
                              '//a[@class="selected"]')
         self.assertEquals('Students', dom.find(selected_tab_path).text)
+
+
+class CourseSettingsTests(actions.TestBase):
+    COURSE_NAME = 'custom_dashboard'
+    ADMIN_EMAIL = 'admin@foo.com'
+
+    def setUp(self):
+        super(CourseSettingsTests, self).setUp()
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.base = '/' + self.COURSE_NAME
+        context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Custom Dashboard')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.course = courses.Course(None, context)
+
+    def tearDown(self):
+        namespace_manager.set_namespace(self.old_namespace)
+        super(CourseSettingsTests, self).tearDown()
+
+    def _get_tab(self, tab=None):
+        url = 'dashboard?action=settings'
+        if tab:
+            url += '&tab=%s' % tab
+        return self.parse_html_string(self.get(url).body)
+
+    def assert_availability(self, index, label, value):
+        dom = self._get_tab()
+        prop = dom.findall('.//div[@class="settings-property"]')[index]
+        self.assertEqual(label, prop.find(
+            './/div[@class="settings-property-label"]').text)
+        self.assertEqual(value, prop.find(
+            './/div[@class="settings-property-value"]').text)
+
+    def test_boolean_values_shown_correctly(self):
+        env = {'course': {'now_available': False}}
+        with actions.OverriddenEnvironment(env):
+            self.assert_availability(0, 'Availability', 'False')
+
+        env = {'course': {'now_available': True}}
+        with actions.OverriddenEnvironment(env):
+            self.assert_availability(0, 'Availability', 'True')
+
+        env = {'course': {'now_available': None}}
+        with actions.OverriddenEnvironment(env):
+            self.assert_availability(0, 'Availability', '<Unset>')
+
+    def test_list_values_shown_correctly(self):
+        env = {'course': {'admin_user_emails': []}}
+        with actions.OverriddenEnvironment(env):
+            self.assert_availability(2, 'Course Admin Emails', '[]')
+
+        env = {'course': {'admin_user_emails': ['foo@f.c']}}
+        with actions.OverriddenEnvironment(env):
+            self.assert_availability(2, 'Course Admin Emails', '[\'foo@f.c\']')
+
+        env = {'course': {'admin_user_emails': None}}
+        with actions.OverriddenEnvironment(env):
+            self.assert_availability(2, 'Course Admin Emails', '<Unset>')

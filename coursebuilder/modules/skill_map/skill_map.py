@@ -846,6 +846,10 @@ def lesson_title_provider(handler, app_context, unit, lesson):
     if not isinstance(lesson, courses.Lesson13):
         return None
 
+    env = courses.Course.get_environ(app_context)
+    if env['course'].get('display_skill_widget') is False:
+        return None
+
     skill_map = SkillMap.load(handler.get_course())
     skill_list = skill_map.get_skills_for_lesson(lesson.lesson_id)
 
@@ -879,6 +883,13 @@ def lesson_title_provider(handler, app_context, unit, lesson):
     return jinja2.Markup(
         handler.get_template('lesson_header.html', [TEMPLATES_DIR]
     ).render(template_values))
+
+
+def widget_display_flag_schema_provider(unused_course):
+    return schema_fields.SchemaField(
+        'course:display_skill_widget', 'Student Skill Widget',
+        'boolean', optional=True, description='Display the skills taught in '
+        'each lesson.')
 
 
 def import_skill_map(app_ctx):
@@ -977,6 +988,10 @@ def notify_module_enabled():
     WelcomeHandler.COPY_SAMPLE_COURSE_HOOKS.append(
         welcome_handler_import_skills_callback)
     courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.add(_SkillEntity)
+
+    courses.Course.OPTIONS_SCHEMA_PROVIDERS.setdefault(
+        courses.Course.SCHEMA_SECTION_COURSE, []).append(
+            widget_display_flag_schema_provider)
 
     register_tabs()
 

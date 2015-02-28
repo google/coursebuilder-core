@@ -42,9 +42,9 @@ class CourseSettingsDisplayHelper(object):
     def get_environ_value(cls, environ, name):
         for part in name.split(':'):
             environ = environ.get(part)
-            if not environ:
-                return ''
-        return environ or ''
+            if environ is None:
+                return '<Unset>'
+        return environ
 
     @classmethod
     def build_single_settings_property(cls, setting_dict, env_value):

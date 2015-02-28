@@ -754,6 +754,20 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         dom = self.parse_html_string(self.get(url).body)
         return dom.find('.//div[@class="skill-panel"]')
 
+    def test_skills_widget_supressed_by_course_settings(self):
+        # Skill widget is not shown if supressed by course setting
+        env = {'course': {'display_skill_widget': False}}
+        with actions.OverriddenEnvironment(env):
+            self.assertIsNone(self._getWidget())
+
+        # But the skill widget *is* shown if the course setting is True or is
+        # unset
+        self.assertIsNotNone(self._getWidget())
+
+        env = {'course': {'display_skill_widget': True}}
+        with actions.OverriddenEnvironment(env):
+            self.assertIsNotNone(self._getWidget())
+
     def test_no_skills_in_lesson(self):
         # Expect the title is the only content
         widget = self._getWidget()
