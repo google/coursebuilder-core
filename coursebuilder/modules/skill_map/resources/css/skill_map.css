@@ -68,6 +68,6 @@ table.skill-map-table tr td span.prerequisite {
 table.skill-map-table a {
   text-decoration: none;
 }
-table.skill-map-table th span.skill_count {
+table.skill-map-table th span.skill-count {
   font-size: smaller;
 }

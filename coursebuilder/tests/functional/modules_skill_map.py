@@ -16,6 +16,9 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import cgi
+import urllib
+
 from networkx import DiGraph
 from xml.etree import cElementTree
 
@@ -376,15 +379,18 @@ class SkillListRestHandlerTests(BaseSkillMapTests):
             {
                 'id': skill_1.id,
                 'name': skill_1.name,
-                'description': skill_1.description},
+                'description': skill_1.description,
+                'prerequisite_ids': []},
             {
                 'id': skill_2.id,
                 'name': skill_2.name,
-                'description': skill_2.description},
+                'description': skill_2.description,
+                'prerequisite_ids': []},
             {
                 'id': skill_3.id,
                 'name': skill_3.name,
-                'description': skill_3.description}]
+                'description': skill_3.description,
+                'prerequisite_ids': []}]
         self.assertEqual(expected_skill_list, skill_list)
 
 
@@ -471,27 +477,36 @@ class SkillRestHandlerTests(BaseSkillMapTests):
 
         self.assertEqual(200, response['status'])
         self.assertEqual('Saved.', response['message'])
-
         payload = transforms.loads(response['payload'])
-        tgt_key = payload['key']
 
+        tgt_key = payload['key']
         skill_graph = SkillGraph.load()
         self.assertEqual(2, len(skill_graph.skills))
         prerequisites = skill_graph.prerequisites(tgt_key)
         self.assertEqual(1, len(prerequisites))
         self.assertEqual(src_skill.id, prerequisites[0].id)
 
-    def test_add_prerequisites(self):
+        tgt_skill = payload['skill']
+        self.assertEqual(SKILL_NAME_2, tgt_skill['name'])
+        self.assertEqual(tgt_skill['description'], SKILL_DESC_2)
+        self.assertEqual([], tgt_skill['locations'])
+        self.assertEqual(1, len(tgt_skill['prerequisites']))
+
+        skills_list = payload['skills']
+        self.assertEqual(2, len(skills_list))
+
+    def test_update_prerequisites(self):
         skill_graph = SkillGraph.load()
 
         src_skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
         tgt_skill = skill_graph.add(Skill.build(SKILL_NAME_2, SKILL_DESC_2))
 
-        # add a prerequisite
+        # update prerequisites
         actions.login(ADMIN_EMAIL)
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
         response = self._put(
-            version='1', name=SKILL_NAME_3,
+            version='1',
+            name=SKILL_NAME_3,
             description=SKILL_DESC_3,
             prerequisite_ids=[src_skill.id],
             xsrf_token=xsrf_token,
@@ -512,6 +527,130 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(src_skill.id, prerequisites[0].id)
         self.assertEqual(tgt_skill.name, SKILL_NAME_3)
         self.assertEqual(tgt_skill.description, SKILL_DESC_3)
+
+    def test_reject_update_with_duplicate_prerequisites(self):
+        skill_graph = SkillGraph.load()
+
+        src_skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        tgt_skill = skill_graph.add(Skill.build(SKILL_NAME_2, SKILL_DESC_2))
+
+        actions.login(ADMIN_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        response = self._put(
+            version='1',
+            name=SKILL_NAME_3,
+            description=SKILL_DESC_3,
+            prerequisite_ids=[src_skill.id, src_skill.id],
+            xsrf_token=xsrf_token,
+            key=tgt_skill.id)
+
+        self.assertEqual(412, response['status'])
+        self.assertEqual('Prerequisites must be unique', response['message'])
+
+    def test_reject_update_prerequisites_with_self_loop(self):
+        skill_graph = SkillGraph.load()
+        skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        actions.login(ADMIN_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        response = self._put(
+            version='1',
+            name=skill.name,
+            description=skill.description,
+            prerequisite_ids=[skill.id],
+            xsrf_token=xsrf_token,
+            key=skill.id)
+
+        self.assertEqual(412, response['status'])
+        self.assertEqual(
+            'A skill cannot be its own prerequisite', response['message'])
+        skill_graph = SkillGraph.load()
+        skill = skill_graph.get(skill.id)
+        self.assertEqual(set(), skill.prerequisite_ids)
+
+    def test_get_skills(self):
+        skill_graph = SkillGraph.load()
+
+        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        skill_2 = skill_graph.add(Skill.build(SKILL_NAME_2, SKILL_DESC_2))
+        skill_3 = skill_graph.add(Skill.build(SKILL_NAME_3, SKILL_DESC_3))
+        skills = [skill_1, skill_2, skill_3]
+
+        actions.login(ADMIN_EMAIL)
+        response = transforms.loads(self.get(self.URL).body)
+
+        self.assertEqual(200, response['status'])
+
+        skill_list = transforms.loads(response['payload'])['skill_list']
+        self.assertEqual(3, len(skill_list))
+        for expected_skill in skills:
+            skill = next(
+                (x for x in skill_list if x['id'] == expected_skill.id), None)
+            assert skill
+            self.assertEqual(expected_skill.name, skill['name'])
+            self.assertEqual(expected_skill.description, skill['description'])
+
+    def test_get_skill(self):
+        skill_graph = SkillGraph.load()
+        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        actions.login(ADMIN_EMAIL)
+        get_url = '%s?%s' % (self.URL, urllib.urlencode({'key': skill_1.id}))
+        response = transforms.loads(self.get(get_url).body)
+        self.assertEqual(200, response['status'])
+        skill = transforms.loads(response['payload'])['skill']
+        self.assertEqual(skill_1.id, skill['id'])
+        self.assertEqual(skill_1.name, skill['name'])
+        self.assertEqual(skill_1.description, skill['description'])
+
+    def test_delete_skill(self):
+        skill_graph = SkillGraph.load()
+        skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+
+        actions.login(ADMIN_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        delete_url = '%s?%s' % (
+            self.URL,
+            urllib.urlencode({
+                'key': skill.id,
+                'xsrf_token': cgi.escape(xsrf_token)
+            }))
+        response = self.delete(delete_url)
+        self.assertEquals(200, response.status_int)
+
+    def test_delete_skill_with_lesson(self):
+        # add a unit and a lesson to the course
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit'
+        lesson = self.course.add_lesson(unit)
+        lesson.title = 'Test Lesson'
+        self.course.save()
+
+        # add one skill to the lesson
+        skill_graph = SkillGraph.load()
+        skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        lesson.properties[LESSON_SKILL_LIST_KEY] = [skill.id]
+        self.course.update_lesson(lesson)
+        self.course.save()
+
+        skill_map = SkillMap.load(self.course)
+        lessons = skill_map.get_lessons_for_skill(skill)
+        self.assertEqual(1, len(lessons))
+        self.assertEqual('Test Lesson', lessons[0].title)
+
+        actions.login(ADMIN_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        delete_url = '%s?%s' % (
+            self.URL,
+            urllib.urlencode({
+                'key': skill.id,
+                'xsrf_token': cgi.escape(xsrf_token)
+            }))
+        response = self.delete(delete_url)
+
+        self.assertEquals(200, response.status_int)
+        course = courses.Course(None, self.course.app_context)
+        skill_map = SkillMap.load(course)
+        lessons = skill_map.get_lessons_for_skill(skill)
+        self.assertEqual([], lessons)
 
     def test_delete_prerequisites(self):
         skill_graph = SkillGraph.load()
@@ -585,55 +724,9 @@ class SkillMapHandlerTests(actions.TestBase):
         response = self.get(self.SKILL_MAP_URL)
         self.assertEqual(200, response.status_int)
         dom = self.parse_html_string(response.body)
-        table = dom.find('.//table[@class="skill-map-table"]')
-        rows = table.findall('./tbody/tr')
-        self.assertEqual(1, len(rows))
-        expected_row_data = ['Empty section', '', '', '']
-        for ind, td in enumerate(rows[0].findall('td')):
-            td_text = (''.join(td.itertext())).strip()
-            self.assertEqual(expected_row_data[ind], td_text)
-
-    def test_skills_table(self):
-        skill_graph = SkillGraph.load()
-        skill = skill_graph.add(
-            Skill.build(name=SKILL_NAME, description=SKILL_DESC))
-        response = self.get(self.SKILL_MAP_URL)
-        self.assertEqual(200, response.status_int)
-
-        dom = self.parse_html_string(response.body)
-        table = dom.find('.//table[@class="skill-map-table"]')
-        rows = table.findall('./tbody/tr')
-        self.assertEqual(1, len(rows))
-        expected_row_data = [skill.name, skill.description, '', '']
-        for ind, td in enumerate(rows[0].findall('td')):
-            td_text = (''.join(td.itertext())).strip()
-            self.assertEqual(expected_row_data[ind], td_text)
-        skill_count = table.find('.//span[@class="skill_count"]')
-        self.assertEqual('(1)', ''.join(skill_count.itertext()).strip())
-
-    def test_skills_table_with_prerequisites(self):
-        skill_graph = SkillGraph.load()
-
-        src_skill = skill_graph.add(
-            Skill.build(name=SKILL_NAME, description=SKILL_DESC))
-        tgt_skill = skill_graph.add(
-            Skill.build(name=SKILL_NAME_2, description=SKILL_DESC_2))
-        skill_graph.add_prerequisite(tgt_skill.id, src_skill.id)
-
-        response = self.get(self.SKILL_MAP_URL)
-        self.assertEqual(200, response.status_int)
-
-        dom = self.parse_html_string(response.body)
-        table = dom.find('.//table[@class="skill-map-table"]')
-        rows = table.findall('./tbody/tr')
-        self.assertEqual(2, len(rows))
-        expected_row_data = [
-            [tgt_skill.name, tgt_skill.description, src_skill.name, ''],
-            [src_skill.name, src_skill.description, '', '']]
-        for i, row in enumerate(rows):
-            for j, td in enumerate(row.findall('td')):
-                td_text = (''.join(td.itertext())).strip()
-                self.assertEqual(expected_row_data[i][j], td_text)
+        section_title = dom.find('.//div[@id="gcb-section"]/h3')
+        self.assertEqual(
+            'Skills Table', (''.join(section_title.itertext())).strip())
 
     def test_dependency_graph_tab(self):
         response = self.get(self.GRAPH_URL)

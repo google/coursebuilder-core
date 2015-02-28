@@ -49,8 +49,10 @@ skill_mapping_module = None
 TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'skill_map', 'templates')
 
-# Folder where css, js, amd img assets are stored.
-RESOURCES_PATH = '/modules/skill_map/resources'
+# URI for skill map css, js, amd img assets.
+RESOURCES_URI = '/modules/skill_map/resources'
+RESOURCES_DIR = os.path.join(
+    appengine_config.BUNDLE_ROOT, 'modules', 'skill_map', 'resources')
 
 # Key for storing list of skill id's in the properties table of a Lesson
 LESSON_SKILL_LIST_KEY = 'modules.skill_map.skill_list'
@@ -182,10 +184,7 @@ class SkillGraph(object):
                 prerequisite_id in self._skills,
                 'Skill has non-existent prerequisite', errors)
 
-        for other_skill in self.skills:
-            _assert(
-                skill.name != other_skill.name,
-                'Name must be unique', errors)
+        self._validate_unique_skill_name(skill.id, skill.name, errors)
 
         skill_id = _SkillDao.save(skill)
         new_skill = Skill(skill_id, skill.dict)
@@ -198,17 +197,20 @@ class SkillGraph(object):
         _assert(self.get(sid), 'Skill does not exist', errors)
 
         # pylint: disable=protected-access
-        for pid in [x['id'] for x in attributes.get('prerequisites', [])]:
-            _assert(
-                pid in self._skills, 'Skill has non-existent prerequisite',
-                errors)
+        prerequisite_ids = [
+            x['id'] for x in attributes.get('prerequisites', [])]
+        for pid in prerequisite_ids:
+            self._validate_prerequisite(sid, pid, errors)
 
-        name = attributes.get('name')
-        for other_skill in self.skills:
-            if other_skill.id == sid:
-                continue
-            _assert(
-                name != other_skill.name, 'Name must be unique', errors)
+        # No duplicate prerequisites
+        _assert(
+            len(set(prerequisite_ids)) == len(prerequisite_ids),
+            'Prerequisites must be unique', errors)
+
+        self._validate_unique_skill_name(sid, attributes.get('name'), errors)
+
+        if errors:
+            return sid
 
         skill_id = _SkillDao.save(Skill(sid, attributes))
         self._skills[skill_id] = Skill(skill_id, attributes)
@@ -249,17 +251,27 @@ class SkillGraph(object):
             self._skills[prerequisite_id]
             for prerequisite_id in skill.prerequisite_ids]
 
-    def add_prerequisite(self, skill_id, prerequisite_skill_id, errors=None):
+    def _validate_prerequisite(self, sid, pid, errors=None):
         _assert(
-            skill_id in self._skills, 'Skill does not exist', errors)
+            sid in self._skills, 'Skill does not exist', errors)
         _assert(
-            prerequisite_skill_id in self._skills,
+            pid in self._skills,
             'Prerequisite does not exist', errors)
 
         # No length-1 cycles (ie skill which is its own prerequisite)  allowed
         _assert(
-            skill_id != prerequisite_skill_id,
+            sid != pid,
             'A skill cannot be its own prerequisite', errors)
+
+    def _validate_unique_skill_name(self, skill_id, name, errors):
+        for other_skill in self.skills:
+            if other_skill.id == skill_id:
+                continue
+            _assert(
+                name != other_skill.name, 'Name must be unique', errors)
+
+    def add_prerequisite(self, skill_id, prerequisite_skill_id, errors=None):
+        self._validate_prerequisite(skill_id, prerequisite_skill_id, errors)
 
         skill = self._skills.get(skill_id)
         prerequisite_skills = skill.prerequisite_ids
@@ -337,6 +349,19 @@ class LocationInfo(object):
     def sort_key(self):
         return self._unit.unit_id, self._lesson.lesson_id
 
+    @classmethod
+    def json_encoder(cls, obj):
+        if isinstance(obj, cls):
+            return {
+                'label': obj.label,
+                'href': obj.href,
+                'edit_href': obj.edit_href,
+                'lesson': obj.lesson.title,
+                'unit': obj.unit.title,
+                'sort_key': obj.sort_key
+            }
+        return None
+
 
 class SkillInfo(object):
     """Skill info object for skills with lesson and unit ids."""
@@ -384,6 +409,20 @@ class SkillInfo(object):
 
     def topo_sort_key(self):
         return self.sort_key() + (self._topo_sort_index, )
+
+    @classmethod
+    def json_encoder(cls, obj):
+        if isinstance(obj, cls):
+            return {
+                'id': obj.id,
+                'name': obj.name,
+                'description': obj.description,
+                'prerequisites': obj.prerequisites,
+                'locations': obj.locations,
+                'sort_key': obj.sort_key(),
+                'topo_sort_key': obj.topo_sort_key()
+            }
+        return None
 
 
 class SkillMapError(Exception):
@@ -507,6 +546,16 @@ class SkillMap(object):
         else:
             raise ValueError('Invalid sort option.')
 
+    def get_skill(self, skill_id):
+        return self._skill_infos[skill_id]
+
+    def delete_skill_from_lessons(self, skill):
+        #TODO(broussev): check, and if need be, refactor pre-save lesson hooks
+        for lesson in self.get_lessons_for_skill(skill):
+            lesson.properties[LESSON_SKILL_LIST_KEY].remove(skill.id)
+            assert self._course.update_lesson(lesson)
+        self._course.save()
+
 
 class SkillListRestHandler(utils.BaseRESTHandler):
     """REST handler to list skills."""
@@ -524,7 +573,8 @@ class SkillListRestHandler(utils.BaseRESTHandler):
                 {
                     'id': skill.id,
                     'name': skill.name,
-                    'description': skill.description
+                    'description': skill.description,
+                    'prerequisite_ids': skill.prerequisite_ids
                 } for skill in SkillGraph.load().skills
             ]
         }
@@ -569,6 +619,56 @@ class SkillRestHandler(utils.BaseRESTHandler):
 
         return schema
 
+    def get(self):
+        """Get a skill or the list of all skills, if key is not present."""
+
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
+
+        key = self.request.get('key')
+
+        skill_map = SkillMap.load(self.get_course())
+
+        if key:
+            skill = skill_map.get_skill(int(key))
+            payload_dict = {'skill': skill}
+        else:
+            skills = skill_map.skills() or []
+            payload_dict = {'skill_list': skills}
+        transforms.send_json_response(
+            self, 200, '', payload_dict=payload_dict,
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
+                self.XSRF_TOKEN))
+
+    def delete(self):
+        """Deletes a skill."""
+
+        key = int(self.request.get('key'))
+
+        if not self.assert_xsrf_token_or_fail(
+                self.request, self.XSRF_TOKEN, {'key': key}):
+            return
+
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        errors = []
+
+        skill_map = SkillMap.load(self.get_course())
+        skill = skill_map.get_skill(key)
+        skill_map.delete_skill_from_lessons(skill)
+
+        SkillGraph.load().delete(key, errors)
+
+        if errors:
+            self.validation_error('\n'.join(errors), key=key)
+            return
+
+        transforms.send_json_response(self, 200, 'Skill deleted.')
+
     def put(self):
         request = transforms.loads(self.request.get('request'))
         key = request.get('key')
@@ -607,83 +707,15 @@ class SkillRestHandler(utils.BaseRESTHandler):
             self.validation_error('\n'.join(errors), key=key)
             return
 
+        self.course = courses.Course(self)
+        skill_map = SkillMap.load(self.course)
+        skill = skill_map.get_skill(key_after_save)
+
         transforms.send_json_response(
-            self, 200, 'Saved.', payload_dict={'key': key_after_save})
-
-
-class TableRow(object):
-    """Class to represent a row in the skills table."""
-
-    @property
-    def name(self):
-        raise NotImplementedError()
-
-    @property
-    def class_name(self):
-        return ''
-
-    @property
-    def spans_all_columns(self):
-        return False
-
-
-class SectionRow(TableRow):
-    """A row in the table which serves as a section heading."""
-
-    def __init__(self, name):
-        self._name = name
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def class_name(self):
-        return 'section-row'
-
-    @property
-    def spans_all_columns(self):
-        return True
-
-
-class EmptyRow(SectionRow):
-    """A multi-column row in the table which indicates an empty section."""
-
-    def __init__(self, name='Empty section', class_name='empty_section'):
-        super(EmptyRow, self).__init__(name)
-        self._class_name = class_name
-
-    @property
-    def class_name(self):
-        return self._class_name
-
-
-class SkillRow(TableRow):
-    """A row in the skills table showing a skill."""
-
-    CLASS = 'skill'
-
-    def __init__(self, skill_info):
-        self._skill_info = skill_info
-
-    @property
-    def description(self):
-        return self._skill_info.description
-
-    @property
-    def name(self):
-        return self._skill_info.name
-
-    @property
-    def prerequisites(self):
-        pre = []
-        for x in self._skill_info.prerequisites:
-            pre.append(x.name)
-        return pre
-
-    @property
-    def class_name(self):
-        return ''
+            self, 200, 'Saved.', payload_dict={
+                'key': key_after_save,
+                'skill': skill,
+                'skills': SkillMap.load(self.course).skills()})
 
 
 class SkillMapHandler(dashboard.DashboardHandler):
@@ -693,14 +725,6 @@ class SkillMapHandler(dashboard.DashboardHandler):
     URL = '/modules/skill_map'
 
     NAV_BAR_TAB = 'Skill Map'
-
-    def _make_table_section(self, data_rows):
-        rows = []
-        if data_rows:
-            rows += data_rows
-        else:
-            rows.append(EmptyRow())
-        return rows
 
     def get_skill_map(self):
         self.course = courses.Course(self)
@@ -722,12 +746,8 @@ class SkillMapHandler(dashboard.DashboardHandler):
     def get_skills_table(self):
         skill_map = SkillMap.load(self.course)
         skills = skill_map.skills() or []
-        rows = self._make_table_section(skills)
 
         template_values = {
-            'nodes_count': len([]),
-            'rows': rows,
-            'skill_count': len(rows),
             'skills_autocomplete': json.dumps(
                 [{'id': s.id, 'label': s.name} for s in skills])}
 
@@ -940,10 +960,19 @@ def notify_module_enabled():
         lesson_rest_handler_pre_save_hook)
     LessonRESTHandler.REQUIRED_MODULES.append('inputex-list')
     LessonRESTHandler.REQUIRED_MODULES.append('inputex-number')
-    LessonRESTHandler.ADDITIONAL_DIRS.append(TEMPLATES_DIR)
+
+    # TODO(jorr): Use HTTP GET rather than including them as templates
+    LessonRESTHandler.ADDITIONAL_DIRS.append(
+        os.path.join(RESOURCES_DIR, 'js'))
     LessonRESTHandler.EXTRA_JS_FILES.append('skill_tagging_lib.js')
     LessonRESTHandler.EXTRA_JS_FILES.append('skill_tagging.js')
+
+    LessonRESTHandler.ADDITIONAL_DIRS.append(
+        os.path.join(RESOURCES_DIR, 'css'))
     LessonRESTHandler.EXTRA_CSS_FILES.append('skill_tagging.css')
+
+    transforms.CUSTOM_JSON_ENCODERS.append(LocationInfo.json_encoder)
+    transforms.CUSTOM_JSON_ENCODERS.append(SkillInfo.json_encoder)
 
     WelcomeHandler.COPY_SAMPLE_COURSE_HOOKS.append(
         welcome_handler_import_skills_callback)
@@ -959,8 +988,8 @@ def register_module():
         appengine_config.BUNDLE_ROOT, 'lib', 'underscore-1.7.0.zip'))
 
     global_routes = [
-        (os.path.join(RESOURCES_PATH, 'css', '.*'), tags.ResourcesHandler),
-        (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),
+        (os.path.join(RESOURCES_URI, 'css', '.*'), tags.ResourcesHandler),
+        (os.path.join(RESOURCES_URI, 'js', '.*'), tags.ResourcesHandler),
         ('/static/underscore-1.7.0/(underscore.js)', underscore_js_handler),
         ('/static/underscore-1.7.0/(underscore.min.js)', underscore_js_handler)
     ]
@@ -980,4 +1009,3 @@ def register_module():
         notify_module_enabled=notify_module_enabled)
 
     return skill_mapping_module
-
