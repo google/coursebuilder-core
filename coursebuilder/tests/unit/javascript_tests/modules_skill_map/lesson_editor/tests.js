@@ -27,11 +27,21 @@ describe('The skill tagging library', function() {
       xsrf_token: 'valid_xsrf_token',
       payload: JSON.stringify({
         skill_list: [
-          {id: 's111', name: 'rock climing', description: 'can climb rocks'},
-          {id: 's222', name: 'ice skating', description: 'can skate on ice'}
+          {
+            id: 's111',
+            name: 'rock climing',
+            description: 'can climb rocks',
+            prerequisite_ids: []
+          },
+          {
+            id: 's222',
+            name: 'ice skating',
+            description: 'can skate on ice',
+            prerequisite_ids: []
+          }
         ]
       })
-    }
+    };
 
     beforeEach(function() {
       this.skillList = new SkillList();
@@ -59,15 +69,18 @@ describe('The skill tagging library', function() {
         $.ajax.calls[0].args[0].success(JSON.stringify(SKILL_LIST_REST_RESPONSE));
         expect(this.callback).toHaveBeenCalled();
         expect(this.skillList.getSkillById('s111')).toEqual({
-          id: 's111', name: 'rock climing', description: 'can climb rocks'});
+          id: 's111', name: 'rock climing', description: 'can climb rocks',
+          prerequisite_ids: []});
         expect(this.skillList.getSkillById('s222')).toEqual({
-          id: 's222', name: 'ice skating', description: 'can skate on ice'});
+          id: 's222', name: 'ice skating', description: 'can skate on ice',
+          prerequisite_ids: []});
       });
     });
 
     describe('adding to the skill map', function() {
       it('PUTs to the skill REST service', function() {
-        this.skillList.createSkill(this.callback, 'ice skating', 'can skate');
+        this.skillList.createOrUpdateSkill(
+            this.callback, 'ice skating', 'can skate');
         expect($.ajax).toHaveBeenCalled();
         var arg = $.ajax.calls[0].args[0];
         expect(arg.type).toEqual('PUT');
@@ -77,35 +90,45 @@ describe('The skill tagging library', function() {
         expect(payload).toEqual({
           version: '1',
           name: 'ice skating',
-          description: 'can skate'
+          description: 'can skate',
+          prerequisites: []
         });
       });
     });
     it('displays an error if the status is not 200', function() {
-      this.skillList.createSkill(this.callback, 'ice skating', 'can skate');
+      this.skillList.createOrUpdateSkill(
+          this.callback, 'ice skating', 'can skate');
       $.ajax.calls[0].args[0].success(JSON.stringify(
           {status: 400, message: 'Server error'}));
       expect(showMsg).toHaveBeenCalled();
       expect(showMsg.calls[0].args[0]).toEqual('Server error');
     });
     it('inserts the skill with key, and issues callback after save', function() {
-      this.skillList.createSkill(this.callback, 'ice skating', 'can skate');
-      $.ajax.calls[0].args[0].success(JSON.stringify({
+      this.skillList.createOrUpdateSkill(
+          this.callback, 'ice skating', 'can skate');
+      var payload = {
         status: 200,
         message: 'OK',
         payload: JSON.stringify({
           key: 'skill001',
-          name: 'ice skating',
-          description: 'can skate'
+          skill: {
+            id: 'skill001',
+            name: 'ice skating',
+            description: 'can skate',
+            prerequisite_ids: []
+          },
+          skills: []
         })
-      }));
+      };
+      $.ajax.calls[0].args[0].success(JSON.stringify(payload));
       expect(this.callback).toHaveBeenCalled();
-      expect(this.callback.calls[0].args[0]).toEqual({
+      expect(this.callback.calls[0].args[1]).toEqual({
         id: 'skill001',
         name: 'ice skating',
-        description: 'can skate'
+        description: 'can skate',
+        prerequisite_ids: []
       });
-      expect(this.callback.calls[0].args[1]).toEqual('OK');
+      expect(this.callback.calls[0].args[2]).toEqual('OK');
     });
   });
 

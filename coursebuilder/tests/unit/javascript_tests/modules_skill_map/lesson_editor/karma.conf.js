@@ -20,7 +20,7 @@ files = [
   },
 
   // Files to test
-  'modules/skill_map/templates/skill_tagging_lib.js'
+  'modules/skill_map/resources/js/skill_tagging_lib.js'
 ];
 
 exclude = [
