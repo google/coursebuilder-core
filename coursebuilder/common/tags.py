@@ -266,6 +266,15 @@ class JQueryHandler(ResourcesHandler):
         return '$(function() {%s});' % resource_str
 
 
+class IifeHandler(ResourcesHandler):
+    """A content handler which serves JavaScript wrapped in an immediately
+    invoked function expression (IIFE).
+    """
+
+    def transform_resource(self, resource_str):
+        return '(function() {%s})();' % resource_str
+
+
 class EditorBlacklists(object):
     """Lists tags which should not be supported by various editors."""
 

@@ -51,8 +51,6 @@ TEMPLATES_DIR = os.path.join(
 
 # URI for skill map css, js, amd img assets.
 RESOURCES_URI = '/modules/skill_map/resources'
-RESOURCES_DIR = os.path.join(
-    appengine_config.BUNDLE_ROOT, 'modules', 'skill_map', 'resources')
 
 # Key for storing list of skill id's in the properties table of a Lesson
 LESSON_SKILL_LIST_KEY = 'modules.skill_map.skill_list'
@@ -958,8 +956,12 @@ def notify_module_enabled():
         '/modules/skill_map/resources/css/common.css')
     dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
         '/modules/skill_map/resources/css/course_outline.css')
+    dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
+        '/modules/skill_map/resources/css/skill_tagging.css')
     dashboard.DashboardHandler.EXTRA_JS_HREF_LIST.append(
         '/modules/skill_map/resources/js/course_outline.js')
+    dashboard.DashboardHandler.EXTRA_JS_HREF_LIST.append(
+        '/modules/skill_map/resources/js/skill_tagging_lib.js')
 
     lessons.UnitHandler.set_lesson_title_provider(lesson_title_provider)
 
@@ -973,14 +975,8 @@ def notify_module_enabled():
     LessonRESTHandler.REQUIRED_MODULES.append('inputex-number')
 
     # TODO(jorr): Use HTTP GET rather than including them as templates
-    LessonRESTHandler.ADDITIONAL_DIRS.append(
-        os.path.join(RESOURCES_DIR, 'js'))
-    LessonRESTHandler.EXTRA_JS_FILES.append('skill_tagging_lib.js')
+    LessonRESTHandler.ADDITIONAL_DIRS.append(os.path.join(TEMPLATES_DIR))
     LessonRESTHandler.EXTRA_JS_FILES.append('skill_tagging.js')
-
-    LessonRESTHandler.ADDITIONAL_DIRS.append(
-        os.path.join(RESOURCES_DIR, 'css'))
-    LessonRESTHandler.EXTRA_CSS_FILES.append('skill_tagging.css')
 
     transforms.CUSTOM_JSON_ENCODERS.append(LocationInfo.json_encoder)
     transforms.CUSTOM_JSON_ENCODERS.append(SkillInfo.json_encoder)
@@ -1006,7 +1002,7 @@ def register_module():
         (RESOURCES_URI + '/css/.*', tags.ResourcesHandler),
         (RESOURCES_URI + '/js/course_outline.js', tags.JQueryHandler),
         (RESOURCES_URI + '/js/lesson_header.js', tags.JQueryHandler),
-        (RESOURCES_URI + '/js/.*', tags.ResourcesHandler),
+        (RESOURCES_URI + '/js/skill_tagging_lib.js', tags.IifeHandler),
         ('/static/underscore-1.7.0/(underscore.js)', underscore_js_handler),
         ('/static/underscore-1.7.0/(underscore.min.js)', underscore_js_handler)
     ]

@@ -1,8 +1,9 @@
+// Variables required in global scope
+var cbShowMsg, cbShowMsgAutoHide;
+
 describe('The skill tagging library', function() {
 
   beforeEach(function() {
-    SKILL_API_VERSION = '1';
-    parseAjaxResponse = JSON.parse;
     showMsg = jasmine.createSpy('showMsg');
     showMsgAutoHide = jasmine.createSpy('showMsgAutoHide');
 

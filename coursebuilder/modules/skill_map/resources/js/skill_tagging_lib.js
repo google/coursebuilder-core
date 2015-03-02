@@ -1,16 +1,22 @@
 /**
  * This file contains the classes to manage Skill Mapping widgets.
- *
- * The following variables must be set in scope for correct operation:
- *
- *     SKILL_API_VERSION: '1';
- *     parseAjaxResponse: a function ro strip XSSI prefix and parse JSON
- *     showMsg: a butterbar display function
- *     showMsgAutoHide: transient butterbar display function
  */
 
-
+var SKILL_API_VERSION = '1';
 var ESC_KEY = 27;
+
+/*********************** Start Dependencies ***********************************/
+// The following symols are required to be defined in the global scope:
+//   cbShowMsg, cbShowMsgAutoHide
+var showMsg = cbShowMsg;
+var showMsgAutoHide = cbShowMsgAutoHide;
+/************************ End Dependencies ************************************/
+
+function parseAjaxResponse(s) {
+  // XSSI prefix. Must be kept in sync with models/transforms.py.
+  var xssiPrefix = ")]}'";
+  return JSON.parse(s.replace(xssiPrefix, ''));
+}
 
 /**
  * InputEx adds a JSON prettifier to Array and Object. This works fine for
@@ -978,3 +984,9 @@ SkillEditorForOeditor.prototype = {
   }
 };
 
+/**
+ * Export the classes which will be used in global scope.
+ */
+window.SkillEditorForOeditor = SkillEditorForOeditor;
+window.SkillList = SkillList;
+window.SkillTable = SkillTable;
