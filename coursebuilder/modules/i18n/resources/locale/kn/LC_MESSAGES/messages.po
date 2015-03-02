@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-02-09 08:30-0800\n"
+"POT-Creation-Date: 2015-03-02 09:08-0800\n"
 "PO-Revision-Date: 2015-02-09 08:30-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: kn <LL@li.org>\n"
@@ -17,18 +17,6 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.6\n"
-
-#. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:217
-#, python-format
-msgid "Unit %s - %s"
-msgstr "ಯೂನಿಟ್ %s - %s"
-
-#. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:231
-#, python-format
-msgid "Unit %s"
-msgstr "ಯೂನಿಟ್‌ %s"
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -398,7 +386,7 @@ msgstr "ವಿಷಯ:"
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/questionnaire/questionnaire.py:193
-#: experimental/coursebuilder/modules/rating/rating.py:93
+#: experimental/coursebuilder/modules/rating/rating.py:96
 msgid "Access denied."
 msgstr "ಪ್ರವೇಶವನ್ನು ನಿರಾಕರಿಸಲಾಗಿದೆ."
 
@@ -414,7 +402,7 @@ msgid "Submit answers"
 msgstr "ಉತ್ತರಗಳನ್ನು ಸಲ್ಲಿಸಿ"
 
 #. Message displayed when user submits written comments
-#: experimental/coursebuilder/modules/rating/rating.py:153
+#: experimental/coursebuilder/modules/rating/rating.py:156
 msgid "Thank you for your feedback."
 msgstr "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಗೆ ಧನ್ಯವಾದಗಳು."
 
@@ -514,6 +502,36 @@ msgstr "\"%(query)s\" ಗಾಗಿ ಯಾವುದೇ ಫಲಿತಾಂಶಗ�
 msgid "Search is currently unavailable."
 msgstr "ಹುಡುಕಾಟ ಪ್ರಸ್ತುತ ಲಭ್ಯವಿಲ್ಲ."
 
+#. Header for list of links to lessons
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:27
+msgid "Lessons"
+msgstr ""
+
+#. Header describing the skills for this lesson
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
+msgid "Skills in this lesson:"
+msgstr ""
+
+#. Header describing list of skills this lesson depends on
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:69
+msgid "Depends on:"
+msgstr ""
+
+#. Describe an empty set of prerequisite skills
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
+msgid "This lesson doesn't depend on any other skills."
+msgstr ""
+
+#. Header describing list of skills this lesson leads to
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:88
+msgid "Leads to:"
+msgstr ""
+
+#. Describe an empty set of follow-on skills
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:92
+msgid "This lesson isn't a prerequisite for any other skills."
+msgstr ""
+
 #. Notification indicating that the user has subscribed to email notifications
 #. from an instructional course.
 #: experimental/coursebuilder/modules/unsubscribe/templates/resubscribe.html:17
@@ -592,8 +610,8 @@ msgstr "ಪ್ರಕಟಣೆಗಳು"
 
 #. Shown if the list of announcements is empty.
 #: experimental/coursebuilder/views/announcements.html:25
-msgid "No announcements yet."
-msgstr "ಇದುವರೆಗೂ ಯಾವುದೇ ಪ್ರಕಟಣೆಗಳಿಲ್ಲ."
+msgid "Currently, there are no announcements."
+msgstr ""
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
@@ -909,12 +927,12 @@ msgid "YouTube Video Player"
 msgstr "YouTube ವೀಡಿಯೊ ಪ್ಲೇಯರ್"
 
 #. Link to a text version of a lesson video.
-#: experimental/coursebuilder/views/lesson_common.html:24
+#: experimental/coursebuilder/views/lesson_common.html:15
 msgid "Text Version"
 msgstr "ಪಠ್ಯ ಆವೃತ್ತಿ"
 
 #. Text shown for a lesson that has not been made public.
-#: experimental/coursebuilder/views/lesson_common.html:44
+#: experimental/coursebuilder/views/lesson_common.html:31
 msgid "This lesson is not available."
 msgstr "ಈ ಪಾಠ ಲಭ್ಯವಿಲ್ಲ."
 
@@ -1304,4 +1322,7 @@ msgstr "ಮುಂದಿನ ಪುಟ"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "ಅಂತ್ಯ"
+
+
+
 

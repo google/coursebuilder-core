@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-02-09 08:30-0800\n"
+"POT-Creation-Date: 2015-03-02 09:08-0800\n"
 "PO-Revision-Date: 2015-02-09 08:30-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ar <LL@li.org>\n"
@@ -18,18 +18,6 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.6\n"
-
-#. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:217
-#, python-format
-msgid "Unit %s - %s"
-msgstr "الوحدة %s - %s"
-
-#. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:231
-#, python-format
-msgid "Unit %s"
-msgstr "الوحدة %s"
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -397,7 +385,7 @@ msgstr "الموضوع:"
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/questionnaire/questionnaire.py:193
-#: experimental/coursebuilder/modules/rating/rating.py:93
+#: experimental/coursebuilder/modules/rating/rating.py:96
 msgid "Access denied."
 msgstr "تم رفض الدخول."
 
@@ -413,7 +401,7 @@ msgid "Submit answers"
 msgstr "إرسال الإجابات"
 
 #. Message displayed when user submits written comments
-#: experimental/coursebuilder/modules/rating/rating.py:153
+#: experimental/coursebuilder/modules/rating/rating.py:156
 msgid "Thank you for your feedback."
 msgstr "شكرًا جزيلاً على تعليقاتك."
 
@@ -513,6 +501,36 @@ msgstr "لا تتوفر نتائج للبحث عن \"%(query)s\""
 msgid "Search is currently unavailable."
 msgstr "لا يتوفر البحث حاليًا"
 
+#. Header for list of links to lessons
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:27
+msgid "Lessons"
+msgstr ""
+
+#. Header describing the skills for this lesson
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
+msgid "Skills in this lesson:"
+msgstr ""
+
+#. Header describing list of skills this lesson depends on
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:69
+msgid "Depends on:"
+msgstr ""
+
+#. Describe an empty set of prerequisite skills
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
+msgid "This lesson doesn't depend on any other skills."
+msgstr ""
+
+#. Header describing list of skills this lesson leads to
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:88
+msgid "Leads to:"
+msgstr ""
+
+#. Describe an empty set of follow-on skills
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:92
+msgid "This lesson isn't a prerequisite for any other skills."
+msgstr ""
+
 #. Notification indicating that the user has subscribed to email notifications
 #. from an instructional course.
 #: experimental/coursebuilder/modules/unsubscribe/templates/resubscribe.html:17
@@ -587,8 +605,8 @@ msgstr "الإعلانات"
 
 #. Shown if the list of announcements is empty.
 #: experimental/coursebuilder/views/announcements.html:25
-msgid "No announcements yet."
-msgstr "ليست هناك أية إعلانات حتى الآن."
+msgid "Currently, there are no announcements."
+msgstr ""
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
@@ -888,12 +906,12 @@ msgid "YouTube Video Player"
 msgstr "مشغّل فيديو YouTube"
 
 #. Link to a text version of a lesson video.
-#: experimental/coursebuilder/views/lesson_common.html:24
+#: experimental/coursebuilder/views/lesson_common.html:15
 msgid "Text Version"
 msgstr "الإصدار النصي"
 
 #. Text shown for a lesson that has not been made public.
-#: experimental/coursebuilder/views/lesson_common.html:44
+#: experimental/coursebuilder/views/lesson_common.html:31
 msgid "This lesson is not available."
 msgstr "هذا الدرس غير متوفر."
 
@@ -1276,4 +1294,7 @@ msgstr "الصفحة التالية"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "النهاية"
+
+
+
 
