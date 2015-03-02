@@ -301,7 +301,9 @@ function mainYuiFunction(Y) {
   if (saveButton) {
     inputExDefinition.buttons.push(saveButton);
   }
-  inputExDefinition.buttons.push(closeButton);
+  if (closeButton) {
+    inputExDefinition.buttons.push(closeButton);
+  }
   if (deleteButton) {
     inputExDefinition.buttons.push(deleteButton);
   }
@@ -481,6 +483,9 @@ TopLevelEditorControls.prototype = {
   },
 
   getCloseButton: function() {
+    if (this._env.exit_url == '') {
+      return null;
+    }
     return {
       type: 'link', value: this._env.exit_button_caption,
       className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',

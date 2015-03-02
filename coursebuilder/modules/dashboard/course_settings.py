@@ -17,10 +17,8 @@
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
 import cgi
-import HTMLParser
 import urllib
 
-from common import safe_dom
 from common import schema_fields
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
@@ -32,60 +30,6 @@ from models import transforms
 from modules.dashboard import filer
 from modules.dashboard import messages
 from modules.oeditor import oeditor
-
-
-class CourseSettingsDisplayHelper(object):
-    """Utility functions to show uneditable settings."""
-    html_parser = HTMLParser.HTMLParser()
-
-    @classmethod
-    def get_environ_value(cls, environ, name):
-        for part in name.split(':'):
-            environ = environ.get(part)
-            if environ is None:
-                return '<Unset>'
-        return environ
-
-    @classmethod
-    def build_single_settings_property(cls, setting_dict, env_value):
-        section = safe_dom.Element('div', className='settings-property')
-        label = safe_dom.Element('div', className='settings-property-label')
-        box = safe_dom.Element('div', className='settings-property-box')
-        value = safe_dom.Element('div', className='settings-property-value')
-        descr = safe_dom.Element('div', className='settings-property-descr')
-        clear = safe_dom.Element('div', className='settings-property-clear')
-        section.add_child(label)
-        section.add_child(box)
-        box.add_child(value)
-        box.add_child(descr)
-        section.add_child(clear)
-        label.add_text(setting_dict['label'])
-        value.add_text(env_value)
-        description = setting_dict['description']
-        if description:
-            description = cls.html_parser.unescape(description)
-            descr.add_text(description)
-        return section
-
-    @classmethod
-    def build_settings_property(cls, setting_dict, environ):
-        prop_value = cls.get_environ_value(environ, setting_dict['name'])
-        return cls.build_single_settings_property(setting_dict, prop_value)
-
-    @classmethod
-    def build_settings_section(cls, display_dict, environ):
-        section = safe_dom.Element('div', className='settings-section')
-        title = safe_dom.Element('div', className='settings-section-title')
-        title.add_text(display_dict['title'])
-        content = safe_dom.Element('div',
-                                   className='settings-section-content')
-        section.add_child(title)
-        section.add_child(content)
-        for registry in display_dict['registries']:
-            content.add_child(cls.build_settings_section(registry, environ))
-        for prop in display_dict['properties']:
-            content.add_child(cls.build_settings_property(prop, environ))
-        return section
 
 
 class CourseSettingsRights(object):
@@ -146,6 +90,19 @@ class CourseSettingsHandler(ApplicationHandler):
         """Shows editor for course.yaml."""
 
         key = self.request.get('key')
+        tab = self.request.get('tab')
+        tab_title = self.request.get('tab_title')
+        section_names = urllib.unquote(self.request.get('section_names'))
+        exit_url = (
+            self.request.get('exit_url') or
+            self.canonicalize_url('/dashboard?action=settings&tab=%s' % tab))
+        template_values = {}
+        self._show_edit_settings_section(
+            template_values, key, tab, tab_title, section_names, exit_url)
+        self.render_page(template_values, in_action='settings')
+
+    def _show_edit_settings_section(self, template_values, key, tab, tab_title,
+                                    section_names=None, exit_url=''):
 
         # The editor for all course settings is getting rather large.  Here,
         # prune out all sections except the one named.  Names can name either
@@ -153,15 +110,9 @@ class CourseSettingsHandler(ApplicationHandler):
         # items under the 'course' sub-registry, while
         # "base:before_head_tag_ends" selects just that one field.
         registry = self.get_course().create_settings_schema()
-
-        section_names = urllib.unquote(self.request.get('section_names'))
         if section_names:
             registry = registry.clone_only_items_named(section_names.split(','))
 
-        tab = self.request.get('tab')
-        exit_url = (
-            self.request.get('exit_url') or
-            self.canonicalize_url('/dashboard?action=settings&tab=%s' % tab))
         rest_url = self.canonicalize_url(CourseSettingsRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
             self, registry.get_json_schema(), registry.get_schema_dict(),
@@ -169,14 +120,13 @@ class CourseSettingsHandler(ApplicationHandler):
             extra_js_files=self.EXTRA_JS_FILES,
             additional_dirs=self.ADDITIONAL_DIRS,
             required_modules=CourseSettingsRESTHandler.REQUIRED_MODULES)
-        template_values = {
+        template_values.update({
             'page_title': self.format_title(
                 'Settings > %s' %
-                urllib.unquote(self.request.get('tab_title'))),
+                urllib.unquote(tab_title)),
             'page_description': messages.EDIT_SETTINGS_DESCRIPTION,
             'main_content': form_html,
-            }
-        self.render_page(template_values, in_action='settings')
+            })
 
 
 class CourseYamlRESTHandler(BaseRESTHandler):

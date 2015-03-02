@@ -37,7 +37,8 @@ class BaseDatastoreAssetEditor(utils.ApplicationHandler):
             auto_return=False, app_context=None):
         """Build the Jinja template for the editor form."""
         rest_url = self.canonicalize_url(rest_handler.URI)
-        exit_url = self.canonicalize_url(exit_url)
+        if exit_url:
+            exit_url = self.canonicalize_url(exit_url)
         if key and deletable:
             delete_url = '%s?%s' % (
                 self.canonicalize_url(rest_handler.URI),
@@ -53,7 +54,6 @@ class BaseDatastoreAssetEditor(utils.ApplicationHandler):
             schema = rest_handler.get_schema(app_context)
         else:
             schema = rest_handler.get_schema()
-
         return oeditor.ObjectEditor.get_html_for(
             self,
             schema.get_json_schema(),

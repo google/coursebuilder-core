@@ -35,18 +35,23 @@ class AdminPreferencesEditor(dto_editor.BaseDatastoreAssetEditor):
     """
 
     def post_edit_admin_preferences(self):
+        template_values = {}
+        self._edit_admin_preferences(
+            template_values,
+            '/dashboard?action=settings&tab=admin_prefs')
+        self.render_page(template_values, 'settings')
+
+    def _edit_admin_preferences(self, template_values, exit_url):
         if not roles.Roles.is_course_admin(self.app_context):
             self.error(401)
             return
-        template_values = {
+        template_values.update({
             'page_title': self.format_title('Edit Preferences'),
             'main_content': self.get_form(
                 AdminPreferencesRESTHandler,
                 users.get_current_user().user_id(),
-                '/dashboard?action=settings&tab=admin_prefs',
-                deletable=False)
-        }
-        self.render_page(template_values, 'settings')
+                exit_url, deletable=False)
+        })
 
 
 class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):

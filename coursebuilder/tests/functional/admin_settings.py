@@ -56,17 +56,6 @@ class AdminSettingsTests(actions.TestBase):
         prefs = models.StudentPreferencesDAO.load_or_create()
         self.assertEquals(False, prefs.show_hooks)
 
-    def test_settings_page(self):
-        response = self.get(SETTINGS_URL)
-        self.assertIn('Show hook edit buttons: False', response.body)
-
-        with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
-            prefs.show_hooks = True
-            models.StudentPreferencesDAO.save(prefs)
-        response = self.get(SETTINGS_URL)
-        self.assertIn('Show hook edit buttons: True', response.body)
-
 
 class WelcomePageTests(actions.TestBase):
 
@@ -453,7 +442,6 @@ class ExitUrlTest(actions.TestBase):
                 'action': 'analytics',
                 'tab': 'data_pump'})})
         response = self.get(url)
-        response = response.forms['edit_course_settings'].submit().follow()
         self.assertIn(
             'cb_global.exit_url = \'dashboard?action=analytics&tab=data_pump\'',
             response.body)

@@ -33,7 +33,7 @@ import yaml
 
 # all test classes with a total count of tests in each
 ALL_TEST_CLASSES = {
-    'tests.functional.admin_settings.AdminSettingsTests': 2,
+    'tests.functional.admin_settings.AdminSettingsTests': 1,
     'tests.functional.admin_settings.ExitUrlTest': 1,
     'tests.functional.admin_settings.HtmlHookTest': 11,
     'tests.functional.admin_settings.JinjaContextTest': 2,
@@ -99,7 +99,6 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_core_tags.TagsMarkdown': 1,
     'tests.functional.modules_courses.AccessDraftsTestCase': 2,
     'tests.functional.modules_dashboard.CourseOutlineTestCase': 1,
-    'tests.functional.modules_dashboard.CourseSettingsTests': 2,
     'tests.functional.modules_dashboard.DashboardAccessTestCase': 3,
     'tests.functional.modules_dashboard.QuestionDashboardTestCase': 9,
     'tests.functional.modules_dashboard.RoleEditorTestCase': 3,

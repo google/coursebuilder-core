@@ -27,7 +27,6 @@ import urllib
 import appengine_config
 from admin_preferences_editor import AdminPreferencesEditor
 from admin_preferences_editor import AdminPreferencesRESTHandler
-from course_settings import CourseSettingsDisplayHelper
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
 from course_settings import HtmlHookHandler
@@ -845,79 +844,18 @@ class DashboardHandler(
             'page_title': self.format_title('Settings > %s' % tab.title),
             'page_description': messages.SETTINGS_DESCRIPTION,
         }
+        exit_url = self.request.get('exit_url')
         if tab.name == 'admin_prefs':
-            self.get_settings_admin_prefs(template_values, tab)
+            self._edit_admin_preferences(template_values, '')
         elif tab.name == 'advanced':
             self._get_settings_advanced(template_values, tab)
         elif tab.name == 'about':
             self._get_about_course(template_values, tab)
         else:
-            self._get_settings_section(template_values, tab)
+            self._show_edit_settings_section(
+                template_values, '/course.yaml', tab.name, tab.title,
+                tab.contents, exit_url)
         self.render_page(template_values)
-
-    def _get_settings_section(self, template_values, tab):
-
-        actions = []
-        if self.app_context.is_editable_fs():
-            actions.append({
-                'id': 'edit_course_settings',
-                'caption': 'Edit Settings',
-                'action': self.get_action_url(
-                    'edit_course_settings',
-                    extra_args={
-                        'section_names': tab.contents,
-                        'tab': tab.name,
-                        'tab_title': tab.title,
-                        'exit_url': self.request.get('exit_url'),
-                        }),
-                'xsrf_token': self.create_xsrf_token('edit_course_settings')})
-        template_values['sections'] = [{
-            'title': 'Course Settings',
-            'actions': actions,
-            'pre': ' ',
-            }]
-
-        course = self.get_course()
-        environ = course.get_environ(self.app_context)
-        display_dict = (course
-                        .create_settings_schema()
-                        .clone_only_items_named(tab.contents.split(','))
-                        .get_display_dict())
-        main_content = safe_dom.NodeList()
-        for registry in display_dict['registries']:
-            main_content.append(
-                    CourseSettingsDisplayHelper.build_settings_section(
-                        registry, environ))
-        template_values['main_content'] = main_content
-
-    def get_settings_admin_prefs(self, template_values, tab):
-        actions = []
-        # Admin prefs setup.
-        if self.app_context.is_editable_fs():
-            actions.append({
-                'id': 'edit_admin_prefs',
-                'caption': 'Edit Prefs',
-                'action': self.get_action_url(
-                    'edit_admin_preferences',
-                    extra_args={
-                        'tab': tab.name,
-                        'tab_title': tab.title,
-                        }),
-                'xsrf_token': self.create_xsrf_token('edit_admin_preferences')})
-        admin_prefs_info = []
-        admin_prefs = models.StudentPreferencesDAO.load_or_create()
-        admin_prefs_info.append('Show hook edit buttons: %s' %
-                                admin_prefs.show_hooks)
-        admin_prefs_info.append('Show jinja context: %s' %
-                                admin_prefs.show_jinja_context)
-
-        template_values['sections'] = [
-            {
-                'title': 'Preferences',
-                'description': messages.ADMIN_PREFERENCES_DESCRIPTION,
-                'actions': actions,
-                'children': admin_prefs_info},
-            ]
 
     def text_file_to_safe_dom(self, reader, content_if_empty):
         """Load text file and convert it to safe_dom tree for display."""
@@ -1777,7 +1715,9 @@ def register_module():
     tabs.Registry.register('assets', 'contrib', 'Extensions',
                            DashboardHandler.get_assets_contrib)
 
-    tabs.Registry.register('settings', 'course', 'Course', 'course')
+    # Default item in tab group should be dead first in list for good UX.
+    tabs.Registry.register('settings', 'course', 'Course', 'course',
+                           placement=tabs.Placement.BEGINNING)
     tabs.Registry.register('settings', 'homepage', 'Homepage', 'homepage')
     # TODO(jorr): Remove the dependency on the invitations module in this line
     tabs.Registry.register('settings', 'registration', 'Registration',
@@ -1785,9 +1725,13 @@ def register_module():
     tabs.Registry.register('settings', 'units', 'Units and Lessons',
                            'unit,assessment')
     tabs.Registry.register('settings', 'i18n', 'I18N', 'i18n')
-    tabs.Registry.register('settings', 'advanced', 'Advanced', None)
-    tabs.Registry.register('settings', 'admin_prefs', 'Preferences', None)
-    tabs.Registry.register('settings', 'about', 'About', None)
+    # Keep [Admin] Preferences, About, Advanced at very end of list.
+    tabs.Registry.register('settings', 'admin_prefs', 'Preferences',
+                           placement=tabs.Placement.END)
+    tabs.Registry.register('settings', 'about', 'About',
+                           placement=tabs.Placement.END)
+    tabs.Registry.register('settings', 'advanced', 'Advanced',
+                           placement=tabs.Placement.END)
 
     global_routes = [
         (
