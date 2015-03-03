@@ -366,9 +366,9 @@ class SkillListRestHandlerTests(BaseSkillMapTests):
     def test_get_skill_list(self):
         skill_graph = SkillGraph.load()
 
-        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
-        skill_2 = skill_graph.add(Skill.build(SKILL_NAME_2, SKILL_DESC_2))
-        skill_3 = skill_graph.add(Skill.build(SKILL_NAME_3, SKILL_DESC_3))
+        assert skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        assert skill_graph.add(Skill.build(SKILL_NAME_2, SKILL_DESC_2))
+        assert skill_graph.add(Skill.build(SKILL_NAME_3, SKILL_DESC_3))
 
         actions.login(ADMIN_EMAIL)
         response = transforms.loads(self.get(self.URL).body)
@@ -379,23 +379,40 @@ class SkillListRestHandlerTests(BaseSkillMapTests):
         skill_list = transforms.loads(response['payload'])['skill_list']
         self.assertEqual(3, len(skill_list))
 
-        expected_skill_list = [
-            {
-                'id': skill_1.id,
-                'name': skill_1.name,
-                'description': skill_1.description,
-                'prerequisite_ids': []},
-            {
-                'id': skill_2.id,
-                'name': skill_2.name,
-                'description': skill_2.description,
-                'prerequisite_ids': []},
-            {
-                'id': skill_3.id,
-                'name': skill_3.name,
-                'description': skill_3.description,
-                'prerequisite_ids': []}]
-        self.assertEqual(expected_skill_list, skill_list)
+        # check that every skill has the following properties
+        keys = ['id', 'name', 'description', 'prerequisites', 'locations',
+                'sort_key', 'topo_sort_key']
+        for skill in skill_list:
+            self.assertItemsEqual(keys, skill.keys())
+
+        # check that skills are sorted in lexicographic order
+        skill_names = sorted([SKILL_NAME, SKILL_NAME_2, SKILL_NAME_3])
+        self.assertEqual(skill_names, [x['name'] for x in skill_list])
+
+    def test_get_skills_multiple_locations(self):
+        """The skills are mapped to more than one lesson."""
+        skill_graph = SkillGraph.load()
+
+        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit'
+        lesson1 = self.course.add_lesson(unit)
+        lesson1.title = 'Test Lesson 1'
+        lesson2 = self.course.add_lesson(unit)
+        lesson2.title = 'Test Lesson 2'
+        self.course.save()
+        lesson1.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
+        lesson2.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
+        self.course.save()
+
+        actions.login(ADMIN_EMAIL)
+        response = transforms.loads(self.get(self.URL).body)
+        self.assertEqual(200, response['status'])
+
+        skill_list = transforms.loads(response['payload'])['skill_list']
+        self.assertEqual(1, len(skill_list))
+        # All locations listed
+        self.assertEqual(2, len(skill_list[0]['locations']))
 
 
 class SkillRestHandlerTests(BaseSkillMapTests):
@@ -570,53 +587,6 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         skill_graph = SkillGraph.load()
         skill = skill_graph.get(skill.id)
         self.assertEqual(set(), skill.prerequisite_ids)
-
-    def test_get_skills(self):
-        skill_graph = SkillGraph.load()
-
-        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
-        skill_2 = skill_graph.add(Skill.build(SKILL_NAME_2, SKILL_DESC_2))
-        skill_3 = skill_graph.add(Skill.build(SKILL_NAME_3, SKILL_DESC_3))
-        skills = [skill_1, skill_2, skill_3]
-
-        actions.login(ADMIN_EMAIL)
-        response = transforms.loads(self.get(self.URL).body)
-
-        self.assertEqual(200, response['status'])
-
-        skill_list = transforms.loads(response['payload'])['skill_list']
-        self.assertEqual(3, len(skill_list))
-        for expected_skill in skills:
-            skill = next(
-                (x for x in skill_list if x['id'] == expected_skill.id), None)
-            assert skill
-            self.assertEqual(expected_skill.name, skill['name'])
-            self.assertEqual(expected_skill.description, skill['description'])
-
-    def test_get_skills_multiple_locations(self):
-        """The skills are mapped to more than one lesson."""
-        skill_graph = SkillGraph.load()
-
-        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
-        unit = self.course.add_unit()
-        unit.title = 'Test Unit'
-        lesson1 = self.course.add_lesson(unit)
-        lesson1.title = 'Test Lesson 1'
-        lesson2 = self.course.add_lesson(unit)
-        lesson2.title = 'Test Lesson 2'
-        self.course.save()
-        lesson1.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
-        lesson2.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
-        self.course.save()
-
-        actions.login(ADMIN_EMAIL)
-        response = transforms.loads(self.get(self.URL).body)
-        self.assertEqual(200, response['status'])
-
-        skill_list = transforms.loads(response['payload'])['skill_list']
-        self.assertEqual(1, len(skill_list))
-        # All locations listed
-        self.assertEqual(2, len(skill_list[0]['locations']))
 
     def test_get_skill(self):
         skill_graph = SkillGraph.load()

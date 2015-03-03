@@ -208,13 +208,12 @@ SkillList.prototype = {
    * @param callback {function} A zero-args callback which is called when the
    *     skill list has been loaded.
    */
-  load: function(callback, loadSkillInfos) {
+  load: function(callback) {
     var that = this;
     this._onLoadCallback = callback;
-    var handler = (loadSkillInfos) ? 'skill' : 'skill_list';
     $.ajax({
       type: 'GET',
-      url: 'rest/modules/skill_map/' + handler,
+      url: 'rest/modules/skill_map/skill_list',
       dataType: 'text',
       success: function(data) {
         that._onLoad(data);

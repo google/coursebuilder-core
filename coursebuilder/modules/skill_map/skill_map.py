@@ -511,8 +511,11 @@ class SkillMap(object):
                 chain.index(skill.id))
 
     @classmethod
-    def load(cls, course):
-        return cls(SkillGraph.load(), course)
+    def load(cls, course, skill_graph=None):
+        if skill_graph:
+            return cls(skill_graph, course)
+        else:
+            return cls(SkillGraph.load(), course)
 
     def get_lessons_for_skill(self, skill):
         return self._lessons_by_skill.get(skill.id, [])
@@ -579,16 +582,7 @@ class SkillListRestHandler(utils.BaseRESTHandler):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 
-        payload_dict = {
-            'skill_list': [
-                {
-                    'id': skill.id,
-                    'name': skill.name,
-                    'description': skill.description,
-                    'prerequisite_ids': skill.prerequisite_ids
-                } for skill in SkillGraph.load().skills
-            ]
-        }
+        payload_dict = {'skill_list': SkillMap.load(self.get_course()).skills()}
         transforms.send_json_response(
             self, 200, '', payload_dict,
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
@@ -631,7 +625,7 @@ class SkillRestHandler(utils.BaseRESTHandler):
         return schema
 
     def get(self):
-        """Get a skill or the list of all skills, if key is not present."""
+        """Get a skill."""
 
         if not roles.Roles.is_course_admin(self.app_context):
             transforms.send_json_response(self, 401, 'Access denied.', {})
@@ -640,13 +634,9 @@ class SkillRestHandler(utils.BaseRESTHandler):
         key = self.request.get('key')
 
         skill_map = SkillMap.load(self.get_course())
+        skill = skill_map.get_skill(int(key))
+        payload_dict = {'skill': skill}
 
-        if key:
-            skill = skill_map.get_skill(int(key))
-            payload_dict = {'skill': skill}
-        else:
-            skills = skill_map.skills() or []
-            payload_dict = {'skill_list': skills}
         transforms.send_json_response(
             self, 200, '', payload_dict=payload_dict,
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
@@ -706,27 +696,28 @@ class SkillRestHandler(utils.BaseRESTHandler):
 
         errors = []
 
+        skill_graph = SkillGraph.load()
         if key:
-            key_after_save = SkillGraph.load().update(key, python_dict, errors)
+            key_after_save = skill_graph.update(key, python_dict, errors)
         else:
             skill = Skill.build(
                 python_dict.get('name'), python_dict.get('description'),
                 python_dict.get('prerequisites'))
-            key_after_save = SkillGraph.load().add(skill, errors=errors).id
+            key_after_save = skill_graph.add(skill, errors=errors).id
 
         if errors:
             self.validation_error('\n'.join(errors), key=key)
             return
 
         self.course = courses.Course(self)
-        skill_map = SkillMap.load(self.course)
+        skill_map = SkillMap.load(self.course, skill_graph=skill_graph)
         skill = skill_map.get_skill(key_after_save)
 
         transforms.send_json_response(
             self, 200, 'Saved.', payload_dict={
                 'key': key_after_save,
                 'skill': skill,
-                'skills': SkillMap.load(self.course).skills()})
+                'skills': skill_map.skills()})
 
 
 class SkillMapHandler(dashboard.DashboardHandler):
