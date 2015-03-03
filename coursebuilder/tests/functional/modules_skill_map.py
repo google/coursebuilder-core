@@ -25,11 +25,15 @@ from xml.etree import cElementTree
 from common import crypto
 from controllers import sites
 from models import courses
+from models import jobs
+from models import models
 from models import transforms
+from models.progress import UnitLessonCompletionTracker
 from modules.skill_map.skill_map import LESSON_SKILL_LIST_KEY
 from modules.skill_map.skill_map import Skill
 from modules.skill_map.skill_map import SkillGraph
 from modules.skill_map.skill_map import SkillMap
+from modules.skill_map.skill_map import CountSkillCompletion
 from modules.skill_map.skill_map_metrics import SkillMapMetrics
 from tests.functional import actions
 
@@ -54,12 +58,12 @@ class BaseSkillMapTests(actions.TestBase):
         super(BaseSkillMapTests, self).setUp()
 
         self.base = '/' + COURSE_NAME
-        context = actions.simple_add_course(
+        self.app_context = actions.simple_add_course(
             COURSE_NAME, ADMIN_EMAIL, 'Skills Map Course')
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace('ns_%s' % COURSE_NAME)
 
-        self.course = courses.Course(None, context)
+        self.course = courses.Course(None, self.app_context)
 
     def tearDown(self):
         del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
@@ -878,6 +882,122 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
             'unit?unit=%(unit)s&lesson=%(lesson)s' % {
                 'unit': self.unit.unit_id, 'lesson': lesson2.lesson_id},
             locations[0].attrib['href'])
+
+
+class SkillMapAnalyticsTabTests(BaseSkillMapTests):
+    """Tests the handlers for the tab Analytics > Skill Map"""
+    TAB_URL = ('/{}/dashboard?action=analytics&tab=skill_map'.format(
+        COURSE_NAME))
+    NON_ADMIN_EMAIL = 'noadmin@example.tests'
+
+    def test_get_tab(self):
+        """Performs a get call to the tab."""
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        response = self.get(self.TAB_URL)
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_tab_no_admin(self):
+        """Non admin users should not have access."""
+        actions.login(self.NON_ADMIN_EMAIL, is_admin=False)
+        response = self.get(self.TAB_URL, expect_errors=True)
+        self.assertEquals(302, response.status_int)
+
+
+class CountSkillCompletionsTests(BaseSkillMapTests):
+    """Tests the output of the map reduce job CountSkillCompletions."""
+
+    def setUp(self):
+        super(CountSkillCompletionsTests, self).setUp()
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        self._create_lessons()
+        self._create_skills()
+        self._create_students()
+
+    def _create_students(self):
+        """Creates 4 StudentPropertyEntities with partial progress."""
+        uid = self.unit.unit_id
+        # progress string for students
+        students_progress = [
+            {'u.{}.l.{}'.format(uid, self.lesson1.lesson_id): 2,
+             'u.{}.l.{}'.format(uid, self.lesson2.lesson_id): 2},
+            {'u.{}.l.{}'.format(uid, self.lesson1.lesson_id): 2,
+             'u.{}.l.{}'.format(uid, self.lesson2.lesson_id): 1},
+            {'u.{}.l.{}'.format(uid, self.lesson1.lesson_id): 2},
+            {'u.{}.l.{}'.format(uid, self.lesson1.lesson_id): 2,
+             'u.{}.l.{}'.format(uid, self.lesson3.lesson_id): 2}
+        ]
+        for index, progress in enumerate(students_progress):
+            student = models.Student(user_id=str(index))
+            student.put()
+            comp = UnitLessonCompletionTracker.get_or_create_progress(
+                student)
+            comp.value = transforms.dumps(progress)
+            comp.put()
+
+    def _create_lessons(self):
+        """Creates 3 lessons for unit 1."""
+        self.unit = self.course.add_unit()
+        self.unit.title = 'Test Unit'
+        self.lesson1 = self.course.add_lesson(self.unit)
+        self.lesson1.title = 'Test Lesson 1'
+        self.lesson2 = self.course.add_lesson(self.unit)
+        self.lesson2.title = 'Test Lesson 2'
+        self.lesson3 = self.course.add_lesson(self.unit)
+        self.lesson3.title = 'Test Lesson 3'
+
+    def _create_skills(self):
+        """Creates 2 skills. Skill1 -> Lesson 1 and 2, Skill2 -> Lesson 3."""
+        skill_graph = SkillGraph.load()
+        self.skill1 = skill_graph.add(Skill.build('a', ''))
+        self.skill2 = skill_graph.add(Skill.build('b', ''))
+        self.lesson1.properties[LESSON_SKILL_LIST_KEY] = [self.skill1.id]
+        self.lesson2.properties[LESSON_SKILL_LIST_KEY] = [self.skill1.id]
+        self.lesson3.properties[LESSON_SKILL_LIST_KEY] = [self.skill2.id]
+        self.course.save()
+
+    def run_generator_job(self):
+        job = CountSkillCompletion(self.app_context)
+        job.submit()
+        self.execute_all_deferred_tasks()
+
+    def test_job(self):
+        """Number of students that completed and are in progress for each skill.
+
+        A skill is completed if the students completed all the lessons
+        associated with the skill.
+        """
+        self.run_generator_job()
+        job = CountSkillCompletion(self.app_context).load()
+        output = jobs.MapReduceJob.get_results(job)
+        expected = [[str(self.skill1.id), self.skill1.name, 1, 3],
+                    [str(self.skill2.id), self.skill2.name, 1, 0]]
+        self.assertEqual(output, expected)
+
+    def test_job_skills_no_lesson(self):
+        """The result of the job must include skills not completed."""
+        skill_graph = SkillGraph.load()
+        skill3 = skill_graph.add(Skill.build('c', ''))
+        self.run_generator_job()
+        job = CountSkillCompletion(self.app_context).load()
+        output = jobs.MapReduceJob.get_results(job)
+        expected = [str(skill3.id), skill3.name, 0, 0]
+        self.assertIn(expected, output)
+
+    def test_build_additional_mapper_params(self):
+        """The additional param in a dictionary mapping from skills to lessons.
+        """
+        job = CountSkillCompletion(self.app_context)
+        result = job.build_additional_mapper_params(self.app_context)
+        id1 = CountSkillCompletion.pack_name(
+            self.skill1.id, self.skill1.name)
+        id2 = CountSkillCompletion.pack_name(
+            self.skill2.id, self.skill2.name)
+        expected = {
+            id1: [(self.unit.unit_id, self.lesson1.lesson_id),
+                  (self.unit.unit_id, self.lesson2.lesson_id)],
+            id2: [(self.unit.unit_id, self.lesson3.lesson_id)],
+        }
+        self.assertEqual(result, {'skills_to_lessons': expected})
 
 
 class SkillMapMetricTests(BaseSkillMapTests):

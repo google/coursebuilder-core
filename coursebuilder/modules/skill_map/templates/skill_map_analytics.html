@@ -1,0 +1,62 @@
+<style type="text/css">
+  .chart-container {
+    position: center;
+    margin-top: 25px;
+  }
+</style>
+
+<div id="barchart-div" class="chart-container" data-counts="{{ counts }}"></div>
+
+<script type="text/javascript" src="//www.google.com/jsapi"></script>
+<script>
+  google.load('visualization', '1', {packages: ['corechart']});
+  google.setOnLoadCallback(drawBarChart);
+
+  function readData() {
+    return JSON.parse(document.getElementById('barchart-div')
+        .getAttribute('data-counts'));
+  }
+
+  /**
+   * Draws a stacked BarChart visualization with the result of readData.
+   */
+  function drawBarChart() {
+    var countsData = readData();
+
+    var table = new google.visualization.DataTable();
+    table.addColumn('string', 'Skill');
+    table.addColumn('number', 'Completed');
+    table.addColumn('number', 'In progress');
+    table.addRows(countsData);
+
+    var view = new google.visualization.DataView(table);
+    var annotation1 = {
+      calc: 'stringify',
+      sourceColumn: 1,
+      type: 'string',
+      role: 'annotation'
+    };
+    var annotation2 = {
+      calc: 'stringify',
+      sourceColumn: 2,
+      type: 'string',
+      role: 'annotation'
+    }
+    view.setColumns([0, 1, annotation1, 2, annotation2]);
+
+    var options = {
+      title: 'Progress of students',
+      height: 30 * countsData.length,  // Dynamic size.
+      chartArea: {height: '95%'},
+      isStacked: true,
+      legend: {position: 'top'},
+      bar: {groupWidth: '90%'},
+      fontSize: 14,
+      hAxis: {textPosition: 'out'}
+    };
+
+    var chart = new google.visualization.BarChart(document.getElementById('barchart-div'));
+    chart.draw(view, options);
+  }
+
+</script>

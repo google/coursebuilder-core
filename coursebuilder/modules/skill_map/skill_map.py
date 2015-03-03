@@ -29,11 +29,16 @@ from common import tags
 from controllers import lessons
 from controllers import sites
 from controllers import utils
+from mapreduce import context
+from models import analytics
 from models import courses
 from models import custom_modules
-from models import transforms
+from models import data_sources
+from models import jobs
 from models import models
+from models import progress
 from models import roles
+from models import transforms
 from modules.admin.admin import WelcomeHandler
 from modules import courses as courses_module
 from modules.dashboard import dashboard
@@ -55,6 +60,14 @@ RESOURCES_URI = '/modules/skill_map/resources'
 # Key for storing list of skill id's in the properties table of a Lesson
 LESSON_SKILL_LIST_KEY = 'modules.skill_map.skill_list'
 
+# The progress of a StudentProperty can have several values.
+# If it is a composite entity (unit, lesson), then the value is
+#   - 0 if none of its sub-entities has been completed
+#   - 1 if some, but not all, of its sub-entities have been completed
+#   - 2 if all its sub-entities have been completed.
+COMPLETE = progress.UnitLessonCompletionTracker.COMPLETED_STATE
+IN_PROGRESS = progress.UnitLessonCompletionTracker.IN_PROGRESS_STATE
+NOT_ATTEMPTED = progress.UnitLessonCompletionTracker.NOT_STARTED_STATE
 
 def _assert(condition, message, errors):
     """Assert a condition and either log exceptions or raise AssertionError."""
@@ -785,6 +798,118 @@ class SkillMapHandler(dashboard.DashboardHandler):
         })
 
 
+class CountSkillCompletion(jobs.MapReduceJob):
+    """Aggregates the progress of students for each skill."""
+
+    @classmethod
+    def entity_class(cls):
+        return models.StudentPropertyEntity
+
+    @staticmethod
+    def get_description():
+        return 'counting students that completed or attempted a skill'
+
+    def build_additional_mapper_params(self, app_context):
+        """Creates a map from skill ids to [(unit id, lesson id), ...]."""
+        self.app_context = app_context
+        course = courses.Course.get(app_context)
+        skill_map = SkillMap.load(course)
+        result = {}
+        for skill in skill_map.skills():
+            packed_name = CountSkillCompletion.pack_name(
+                    skill.id, skill.name)
+            if not packed_name:
+                logging.warning('Skill not processed: the id can\'t be packed.'
+                                ' Id %s', skill.id)
+                continue
+            result[packed_name] = [(loc.unit.unit_id, loc.lesson.lesson_id)
+                                   for loc in skill.locations]
+        return {'skills_to_lessons': result}
+
+    @staticmethod
+    def pack_name(skill_id, skill_name):
+        join_str = '--'
+        if join_str not in str(skill_id):
+            return '{}{}{}'.format(skill_id, join_str, skill_name)
+
+    @staticmethod
+    def unpack_name(packed_name):
+        return packed_name.split('--', 1)
+
+    @staticmethod
+    def map(item):
+        """Calculates the level of completion of each skill.
+
+        A skill is considered complete if all the lessons related to the skill
+        are completed, in progress if at least one of its lessons is in
+        progress or completed, and not attempted otherwise.
+
+        Yields:
+            A tuple. The first element is the packed id of the skill (item)
+            and the second is the progress of the skill. The progress can be
+            COMPLETE, IN_PROGRESS and NOT_ATTEMPTED.
+        """
+        def build_progress_id(unit_id, lesson_id):
+            return 'u.{}.l.{}'.format(unit_id, lesson_id)
+
+        mapper_params = context.get().mapreduce_spec.mapper.params
+        student_progress = transforms.loads(item.value)
+        skills = mapper_params.get('skills_to_lessons', {})
+        for skill_id, locations in skills.iteritems():
+            skill_progress = {COMPLETE: 0, IN_PROGRESS: 0, NOT_ATTEMPTED: 0}
+
+            for unit_id, lesson_id in locations:
+                location_id = build_progress_id(unit_id, lesson_id)
+                if location_id in student_progress:
+                    skill_progress[student_progress[location_id]] += 1
+
+            if skill_progress[COMPLETE] == len(locations) and len(locations):
+                yield skill_id, COMPLETE  # all lessons completed
+            elif skill_progress[IN_PROGRESS] or skill_progress[COMPLETE]:
+                yield skill_id, IN_PROGRESS  # at least one lesson attempted
+            else:  # All the skills are present in the result.
+                yield skill_id, NOT_ATTEMPTED
+
+    @staticmethod
+    def reduce(item_id, values):
+        """Aggregates the number of students that completed or are in progress.
+
+        Yields:
+            A 4-uple with the following schema:
+                id, name, complete_count, in_progress_count
+        """
+        yield (CountSkillCompletion.unpack_name(item_id) +
+               [values.count(str(COMPLETE)),
+               values.count(str(IN_PROGRESS))])
+
+
+class SkillMapDataSource(data_sources.SynchronousQuery):
+
+    @staticmethod
+    def required_generators():
+        return [CountSkillCompletion]
+
+    @classmethod
+    def get_name(cls):
+        return 'skill_map_analytics'
+
+    @staticmethod
+    def fill_values(app_context, template_values, counts_generator):
+        """Fills template_values with counts from CountSkillCompletion output.
+
+        Works with the skill_map_analytics.html jinja template.
+
+        Stores in the key 'counts' of template_values a table with the
+        following format:
+            skill name, count of completions, counts of 'in progress'
+        Adds a row for each skill in the output of CountSkillCompletion job.
+        """
+        result = jobs.MapReduceJob.get_results(counts_generator)
+        # remove the id of the skill
+        result = [i[1:] for i in result]
+        template_values['counts'] = transforms.dumps(sorted(result))
+
+
 def register_tabs():
     tabs.Registry.register(
         'skill_map', 'skills_table', 'Skills Table',
@@ -792,6 +917,14 @@ def register_tabs():
     tabs.Registry.register(
         'skill_map', 'dependency_graph', 'Skills Graph',
         href='modules/skill_map?action=skill_map&tab=dependency_graph')
+
+    skill_map_visualization = analytics.Visualization(
+        'skill_map',
+        'Skill Map Analytics',
+        'templates/skill_map_analytics.html',
+        data_source_classes=[SkillMapDataSource])
+    tabs.Registry.register('analytics', 'skill_map', 'Skill Map',
+                           [skill_map_visualization])
 
 
 def lesson_rest_handler_schema_load_hook(lesson_field_registry):
@@ -989,6 +1122,8 @@ def notify_module_enabled():
         courses.Course.SCHEMA_SECTION_COURSE, []).append(
             widget_display_flag_schema_provider)
 
+    data_sources.Registry.register(SkillMapDataSource)
+
     register_tabs()
 
 
@@ -1022,3 +1157,4 @@ def register_module():
         notify_module_enabled=notify_module_enabled)
 
     return skill_mapping_module
+
