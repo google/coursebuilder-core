@@ -414,7 +414,7 @@ class SkillInfo(object):
 
     def sort_key(self):
         if self._locations:
-            loc = min(sorted(self._locations, lambda x: x.sort_key))
+            loc = min(sorted(self._locations, key=lambda x: x.sort_key))
             return loc.unit.unit_id, loc.lesson.lesson_id
         return None, None
 

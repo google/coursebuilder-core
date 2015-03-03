@@ -593,6 +593,31 @@ class SkillRestHandlerTests(BaseSkillMapTests):
             self.assertEqual(expected_skill.name, skill['name'])
             self.assertEqual(expected_skill.description, skill['description'])
 
+    def test_get_skills_multiple_locations(self):
+        """The skills are mapped to more than one lesson."""
+        skill_graph = SkillGraph.load()
+
+        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit'
+        lesson1 = self.course.add_lesson(unit)
+        lesson1.title = 'Test Lesson 1'
+        lesson2 = self.course.add_lesson(unit)
+        lesson2.title = 'Test Lesson 2'
+        self.course.save()
+        lesson1.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
+        lesson2.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
+        self.course.save()
+
+        actions.login(ADMIN_EMAIL)
+        response = transforms.loads(self.get(self.URL).body)
+        self.assertEqual(200, response['status'])
+
+        skill_list = transforms.loads(response['payload'])['skill_list']
+        self.assertEqual(1, len(skill_list))
+        # All locations listed
+        self.assertEqual(2, len(skill_list[0]['locations']))
+
     def test_get_skill(self):
         skill_graph = SkillGraph.load()
         skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
