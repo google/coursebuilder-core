@@ -157,7 +157,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_skill_map.SkillI18nTests': 5,
     'tests.functional.modules_skill_map.SkillMapAnalyticsTabTests': 2,
     'tests.functional.modules_skill_map.SkillMapHandlerTests': 4,
-    'tests.functional.modules_skill_map.SkillMapMetricTests': 6,
+    'tests.functional.modules_skill_map.SkillMapMetricTests': 10,
     'tests.functional.modules_skill_map.SkillMapTests': 3,
     'tests.functional.modules_skill_map.SkillListRestHandlerTests': 3,
     'tests.functional.modules_skill_map.SkillRestHandlerTests': 10,

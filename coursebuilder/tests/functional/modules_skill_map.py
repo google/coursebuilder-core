@@ -44,6 +44,7 @@ from modules.skill_map.skill_map import SkillMap
 from modules.skill_map.skill_map import SkillRestHandler
 from modules.skill_map.skill_map import _SkillDao
 from modules.skill_map.skill_map_metrics import SkillMapMetrics
+from modules.skill_map.skill_map_metrics import CHAINS_MIN_LENGTH
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
@@ -1010,6 +1011,8 @@ class SkillMapMetricTests(BaseSkillMapTests):
     def test_nxgraph(self):
         """The graph of SkillMapMetrics and the skill_map are equivalent."""
         self._build_sample_graph()
+        # Adding singleton
+        sg = self.skill_graph.add(Skill.build('g', ''))
         skill_map = SkillMap.load(self.course)
         nxgraph = SkillMapMetrics(skill_map).nxgraph
         self.assertIsInstance(nxgraph, DiGraph)
@@ -1078,11 +1081,89 @@ class SkillMapMetricTests(BaseSkillMapTests):
         result = SkillMapMetrics(skill_map).simple_cycles()
         self.assertEqual(sorted(result[0]), expected0)
 
-    def test_find_cycles_empty(self):
+    def test_metrics_empty(self):
         """The input is an empty graph."""
         skill_map = SkillMap.load(self.course)
-        self.assertEqual(
-            SkillMapMetrics(skill_map).simple_cycles(), [])
+        sm_metrics = SkillMapMetrics(skill_map)
+        self.assertEqual(sm_metrics.simple_cycles(), [])
+        self.assertEqual(sm_metrics.singletons(), [])
+        self.assertEqual(sm_metrics.long_chains(), [])
+        expected = {'cycles': [], 'singletons': [], 'long_chains': []}
+        self.assertEqual(sm_metrics.diagnose(), expected)
+
+    def test_find_singletons(self):
+        """Singletons are components with only one node."""
+        self._build_sample_graph()
+        # Adding singletons
+        sg = self.skill_graph.add(Skill.build('g', ''))
+        sh = self.skill_graph.add(Skill.build('h', ''))
+        skill_map = SkillMap.load(self.course)
+        result = SkillMapMetrics(skill_map).singletons()
+        expected = [sg.id, sh.id]
+        self.assertEqual(sorted(expected), sorted(result))
+
+    def test_find_long_chains(self):
+        """Find all simple paths longer than a constant."""
+        # a --> d --> j      g     h --> i
+        # b _/                     c --> e --> f
+        self._build_sample_graph()
+        # Adding singleton
+        sg = self.skill_graph.add(Skill.build('g', ''))
+        # Adding short path
+        sh = self.skill_graph.add(Skill.build('h', ''))
+        si = self.skill_graph.add(Skill.build('i', ''))
+        self.skill_graph.add_prerequisite(si.id, sh.id)
+        # Making path longer
+        sj = self.skill_graph.add(Skill.build('j', ''))
+        self.skill_graph.add_prerequisite(sj.id, self.sd.id)
+        skill_map = SkillMap.load(self.course)
+        result = SkillMapMetrics(skill_map).long_chains(2)
+        expected = [
+            [self.sa.id, self.sd.id, sj.id],
+            [self.sb.id, self.sd.id, sj.id],
+            [self.sc.id, self.se.id, self.sf.id]
+        ]
+        self.assertEqual(sorted(expected), sorted(result))
+
+    def test_find_long_chains_multiple(self):
+        """Finds longest path when there is more than one path from A to B.
+        """
+        # a -> b -> c -> ... x
+        #  \________________/
+        self.skill_graph = SkillGraph.load()
+        old_skill = self.skill_graph.add(Skill.build('o', ''))
+        last_skill = self.skill_graph.add(Skill.build('l', ''))
+        self.skill_graph.add_prerequisite(last_skill.id, old_skill.id)
+        chain_ids = [old_skill.id]
+        for index in range(CHAINS_MIN_LENGTH):
+            new_skill = self.skill_graph.add(Skill.build(str(index), ''))
+            chain_ids.append(new_skill.id)
+            self.skill_graph.add_prerequisite(new_skill.id, old_skill.id)
+            old_skill = new_skill
+        self.skill_graph.add_prerequisite(old_skill.id, last_skill.id)
+        skill_map = SkillMap.load(self.course)
+        result = SkillMapMetrics(skill_map).long_chains()
+        self.assertEqual([chain_ids], result)
+
+    def test_get_diagnose(self):
+        """Checks the diagnose contains the required metrics.
+
+        The function returns a dictionary with the simple cycles, singletons
+        and long_chains.
+        """
+        self._build_sample_graph()
+        # Adding cycle a -> d -> a
+        self.skill_graph.add_prerequisite(self.sa.id, self.sd.id)
+        # Adding singleton
+        sg = self.skill_graph.add(Skill.build('g', ''))
+        skill_map = SkillMap.load(self.course)
+        result = SkillMapMetrics(skill_map).diagnose()
+        expected = {
+            'cycles': [[self.sd.id, self.sa.id]],
+            'singletons': [sg.id],
+            'long_chains': []
+        }
+        self.assertEqual(result, expected)
 
 
 class SkillI18nTests(actions.TestBase):
@@ -1426,3 +1507,4 @@ class SkillI18nTests(actions.TestBase):
         bundle = i18n_dashboard.ResourceBundleDAO.load(str(bundle_key))
         self.assertEquals(bundle.dict['description']['data'][0]['target_value'],
                           SKILL_DESC[::-1])
+
