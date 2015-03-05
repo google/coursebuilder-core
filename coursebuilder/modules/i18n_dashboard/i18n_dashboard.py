@@ -290,6 +290,18 @@ class TableRow(object):
         return False
 
 
+def _build_resource_title(app_context, rsrc_type, rsrc):
+    if rsrc_type == resources_display.ResourceUnit.TYPE:
+        title = resources_display.display_unit_title(rsrc, app_context)
+    elif rsrc_type == resources_display.ResourceLesson.TYPE:
+        title = resources_display.display_lesson_title(
+            rsrc[0], rsrc[1], app_context)
+    else:
+        resource_handler = resource.Registry.get(rsrc_type)
+        title = resource_handler.get_resource_title(rsrc)
+    return title
+
+
 class ResourceRow(TableRow):
     """A row in the dashboard table which displays status of a CB resource."""
 
@@ -316,10 +328,8 @@ class ResourceRow(TableRow):
 
     @property
     def name(self):
-        title = resource.Key(
-            self._type, self._key, course=self._course
-            ).get_title()
-        return title
+        return _build_resource_title(
+            self._course.app_context, self._type, self._resource)
 
     @property
     def class_name(self):
@@ -356,8 +366,7 @@ class ResourceRow(TableRow):
 
     def view_url(self, locale):
         resource_handler = resource.Registry.get(self._type)
-        rsrc = resource_handler.get_resource(self._course, self._key)
-        view_url = resource_handler.get_view_url(self._course, rsrc, self._key)
+        view_url = resource_handler.get_view_url(self._resource)
         if view_url:
             view_url += '&hl=%s' % locale
         return view_url
@@ -372,8 +381,7 @@ class ResourceRow(TableRow):
 
     @property
     def base_edit_url(self):
-        return resource.Registry.get(self._type).get_edit_url(
-            self._course, self._key)
+        return resource.Registry.get(self._type).get_edit_url(self._key)
 
 
 class SectionRow(TableRow):
@@ -854,7 +862,8 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
                 t_and_l.add_comment(description)
 
                 try:
-                    title = resource_key.get_resource_title(rsrc)
+                    resource_handler = resource.Registry.get(resource_key.type)
+                    title = resource_handler.get_resource_title(rsrc)
                     if title:
                         t_and_l.add_comment(title)
                 except AttributeError:
@@ -1652,7 +1661,6 @@ class AbstractTranslatableResourceType(object):
 
     @classmethod
     def get_resources_and_keys(cls, course):
-        # TODO(mgainer): Remark that this is denormalized.
         raise NotImplementedError('Derived classes must implement this.')
 
 
@@ -1703,12 +1711,12 @@ class TranslatableResourceCourseSettings(AbstractTranslatableResourceType):
     @classmethod
     def get_resources_and_keys(cls, course):
         ret = []
-        schema = course.create_settings_schema()
         for section_name in sorted(courses.Course.get_schema_sections()):
-            ret.append(
-                (schema,
-                 resource.Key(resources_display.ResourceCourseSettings.TYPE,
-                              section_name, course)
+            ret.append((
+                resources_display.ResourceCourseSettings.get_resource(
+                    course, section_name),
+                resource.Key(resources_display.ResourceCourseSettings.TYPE,
+                    section_name, course),
                 ))
         return ret
 
@@ -1829,12 +1837,6 @@ class I18nDashboardHandler(BaseDashboardExtension):
             data_rows = []
             for rsrc, key in resource_handler.get_resources_and_keys(
                 self.course):
-
-                # Lesson resources are a 2-tuple of (unit, lesson).  Here, we
-                # just need lesson, so manually change the resource as needed.
-                if key.type == resources_display.ResourceLesson.TYPE:
-                    rsrc = rsrc[1]
-
                 data_rows.append(I18nProgressManager.get(
                     self.course, rsrc, key.type, key.key))
             rows += self._make_table_section(
@@ -2071,9 +2073,13 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         course = self.get_course()
         binding, sections = self.build_sections_for_key(
             key, course, resource_bundle_dto, transformer)
+        resource_key = key.resource_key
+        resource_handler = resource.Registry.get(resource_key.type)
+        rsrc = resource_handler.get_resource(course, resource_key.key)
+        title = _build_resource_title(self.app_context, resource_key.type, rsrc)
         payload_dict = {
             'key': str(key),
-            'title': unicode(key.resource_key.get_title(course)),
+            'title': unicode(title),
             'source_locale': self.app_context.default_locale,
             'target_locale': key.locale,
             'sections': sorted(sections, cmp=cmp_sections)

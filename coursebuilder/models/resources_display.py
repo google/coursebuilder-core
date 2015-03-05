@@ -23,7 +23,6 @@ import models
 import courses
 import messages
 
-from common import caching
 from common import resource
 from common import safe_dom
 from common import schema_fields
@@ -55,28 +54,6 @@ class SaQuestionConstants(object):
     DEFAULT_HEIGHT_ROWS = 1
 
 
-class _QuestionCache(caching.RequestScopedSingleton):
-
-    def __init__(self):
-        self._key_to_question = None
-
-    def _preload(self):
-        self._key_to_question = {}
-        for row in models.QuestionDAO.get_all_iter():
-            self._key_to_question[row.id] = row
-
-    def _get(self, key):
-        key = int(key)
-        if self._key_to_question is None:
-            self._preload()
-        return self._key_to_question.get(key)
-
-    @classmethod
-    def get(cls, key):
-        # pylint: disable=protected-access
-        return cls.instance()._get(key)
-
-
 class ResourceQuestionBase(resource.AbstractResourceHandler):
 
     TYPE_MC_QUESTION = 'question_mc'
@@ -94,22 +71,22 @@ class ResourceQuestionBase(resource.AbstractResourceHandler):
 
     @classmethod
     def get_resource(cls, course, key):
-        return _QuestionCache.get(key)
+        return models.QuestionDAO.load(key)
 
     @classmethod
-    def get_resource_title(cls, course, rsrc, key):
+    def get_resource_title(cls, rsrc):
         return rsrc.description
 
     @classmethod
     def get_data_dict(cls, course, key):
-        return _QuestionCache.get(key).dict
+        return cls.get_resource(course, key).dict
 
     @classmethod
-    def get_view_url(cls, course, rsrc, key):
+    def get_view_url(cls, rsrc):
         return None
 
     @classmethod
-    def get_edit_url(cls, course, key):
+    def get_edit_url(cls, key):
         return 'dashboard?action=edit_question&key=%s' % key
 
 
@@ -275,7 +252,7 @@ class ResourceQuestionGroup(resource.AbstractResourceHandler):
         return models.QuestionGroupDAO.load(key)
 
     @classmethod
-    def get_resource_title(cls, course, rsrc, key):
+    def get_resource_title(cls, rsrc):
         return rsrc.description
 
     @classmethod
@@ -323,11 +300,11 @@ class ResourceQuestionGroup(resource.AbstractResourceHandler):
         return models.QuestionGroupDAO.load(int(key)).dict
 
     @classmethod
-    def get_view_url(cls, course, rsrc, key):
+    def get_view_url(cls, rsrc):
         return None
 
     @classmethod
-    def get_edit_url(cls, course, key):
+    def get_edit_url(cls, key):
         return 'dashboard?action=edit_question_group&key=%s' % key
 
 
@@ -337,15 +314,16 @@ class ResourceCourseSettings(resource.AbstractResourceHandler):
 
     @classmethod
     def get_resource(cls, course, key):
-        return course.create_settings_schema()
+        entire_schema = course.create_settings_schema()
+        return entire_schema.clone_only_items_named([key])
 
     @classmethod
-    def get_resource_title(cls, course, rsrc, key):
-        return rsrc.sub_registries[key].title
+    def get_resource_title(cls, rsrc):
+        return ' '.join([sr.title for sr in rsrc.sub_registries.itervalues()])
 
     @classmethod
     def get_schema(cls, course, key):
-        return course.create_settings_schema().clone_only_items_named([key])
+        return cls.get_resource(course, key)
 
     @classmethod
     def get_data_dict(cls, course, key):
@@ -356,11 +334,11 @@ class ResourceCourseSettings(resource.AbstractResourceHandler):
         return json_entity[key]
 
     @classmethod
-    def get_view_url(cls, course, rsrc, key):
+    def get_view_url(cls, rsrc):
         return None
 
     @classmethod
-    def get_edit_url(cls, course, key):
+    def get_edit_url(cls, key):
         return 'dashboard?action=settings&tab=%s' % key
 
 
@@ -747,7 +725,7 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
         return course.find_unit_by_id(key)
 
     @classmethod
-    def get_resource_title(cls, course, rsrc, key):
+    def get_resource_title(cls, rsrc):
         return rsrc.title
 
     @classmethod
@@ -787,10 +765,6 @@ class ResourceUnit(ResourceUnitBase):
     TYPE = ResourceUnitBase.UNIT_TYPE
 
     @classmethod
-    def get_resource_title(cls, course, rsrc, key):
-        return display_unit_title(rsrc, course.app_context)
-
-    @classmethod
     def get_schema(cls, course, key):
         schema = cls._generate_common_schema('Unit')
         schema.add_property(schema_fields.SchemaField(
@@ -823,11 +797,11 @@ class ResourceUnit(ResourceUnitBase):
         return schema
 
     @classmethod
-    def get_view_url(cls, course, rsrc, key):
-        return 'unit?unit=%s' % key
+    def get_view_url(cls, rsrc):
+        return 'unit?unit=%s' % rsrc.unit_id
 
     @classmethod
-    def get_edit_url(cls, course, key):
+    def get_edit_url(cls, key):
         return 'dashboard?action=edit_unit&key=%s' % key
 
 class ResourceAssessment(ResourceUnitBase):
@@ -907,11 +881,11 @@ class ResourceAssessment(ResourceUnitBase):
 
 
     @classmethod
-    def get_view_url(cls, course, rsrc, key):
-        return 'assessment?name=%s' % key
+    def get_view_url(cls, rsrc):
+        return 'assessment?name=%s' % rsrc.unit_id
 
     @classmethod
-    def get_edit_url(cls, course, key):
+    def get_edit_url(cls, key):
         return 'dashboard?action=edit_assessment&key=%s' % key
 
 
@@ -928,11 +902,11 @@ class ResourceLink(ResourceUnitBase):
         return schema
 
     @classmethod
-    def get_view_url(cls, course, rsrc, key):
+    def get_view_url(cls, rsrc):
         return rsrc.href
 
     @classmethod
-    def get_edit_url(cls, course, key):
+    def get_edit_url(cls, key):
         return 'dashboard?action=edit_link&key=%s' % key
 
 
@@ -947,8 +921,8 @@ class ResourceLesson(resource.AbstractResourceHandler):
         return (unit, lesson)
 
     @classmethod
-    def get_resource_title(cls, course, rsrc, key):
-        return display_lesson_title(rsrc[0], rsrc[1], course.app_context)
+    def get_resource_title(cls, rsrc):
+        return rsrc[1].title
 
     @classmethod
     def get_schema(cls, course, key):
@@ -1044,12 +1018,11 @@ class ResourceLesson(resource.AbstractResourceHandler):
         return lesson_dict
 
     @classmethod
-    def get_view_url(cls, course, rsrc, key):
-        return 'unit?unit=%s&lesson=%s' % (rsrc[0].unit_id,
-                                           rsrc[1].lesson_id)
+    def get_view_url(cls, rsrc):
+        return 'unit?unit=%s&lesson=%s' % (rsrc[0].unit_id, rsrc[1].lesson_id)
 
     @classmethod
-    def get_edit_url(cls, course, key):
+    def get_edit_url(cls, key):
         return 'dashboard?action=edit_lesson&key=%s' % key
 
 

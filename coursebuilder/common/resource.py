@@ -49,21 +49,18 @@ class AbstractResourceHandler(object):
         raise NotImplementedError('Derived classes must implement this.')
 
     @classmethod
-    def get_resource_title(cls, course, resource, key):
+    def get_resource_title(cls, resource):
         """Get a title for the resource.
 
-        Note that in theory, the set of arguments provided is overspecified.
-        In practice, the course may be used to get the app_context, and that
-        used to get course configuration, and that used to affect the display
-        of the item.
-
         Args:
-          course: A courses.Course instance.
-          resource: Whatever is reterned from get_resource() (q.v.)
-          key: A small fact (string or integer, typically) representing
-              the primary key for the desired instance.
+          resource: Whatever is returned from get_resource() (q.v.)
         Returns:
           A short human-friendly string for titling the resource.
+          NOTE: This string is not I18N'd - it is the actual string
+          from the resource, before translation.  This string is
+          suitable for display in dashboard contexts, where it is
+          OK to presume a reasonable working knowledge of English,
+          but not on student-facing pages.
         """
         raise NotImplementedError('Derived classes must implement this.')
 
@@ -101,7 +98,7 @@ class AbstractResourceHandler(object):
         raise NotImplementedError('Derived classes must implement this.')
 
     @classmethod
-    def get_view_url(cls, course, resource, key):
+    def get_view_url(cls, resource):
         """Return a URL that will show a student view of the item.
 
         Not all classes need to return a reasonable value here.  For
@@ -109,10 +106,7 @@ class AbstractResourceHandler(object):
         representation.  It is fine in those cases to return None; the
         caller must deal with this situation appropriately.
 
-          course: A courses.Course instance.
-          resource: Whatever is reterned from get_resource() (q.v.)
-          key: A small fact (string or integer, typically) representing
-              the primary key for the desired instance.
+          resource: Whatever is returned from get_resource() (q.v.)
         Returns:
           A *relative* URL.  E.g., dashboard?action=foo&tab=bar Such a
           URL can be placed unmmodified on a page which has been set
@@ -122,7 +116,7 @@ class AbstractResourceHandler(object):
         raise NotImplementedError('Derived classes must implement this.')
 
     @classmethod
-    def get_edit_url(cls, course, key):
+    def get_edit_url(cls, key):
         """Return a dashboard URL for editing the resource.
 
         All classes should implement this function.  If it is hard to
@@ -130,7 +124,6 @@ class AbstractResourceHandler(object):
         the noun that you're trying to represent.
 
         Args:
-          course: A courses.Course instance.
           key: A small fact (string or integer, typically) representing
               the primary key for the desired instance.
         Returns:
@@ -204,22 +197,9 @@ class Key(object):
         index = key_str.index(':')
         return Key(key_str[:index], key_str[index + 1:])
 
-    def get_title(self, course=None):
-        resource = self.get_resource(course)
-        title = self.get_resource_title(resource, course)
-        return title
-
     def get_resource(self, course):
         course = course or self._course
         return Registry.get(self._type).get_resource(course, self._key)
-
-    def get_resource_title(self, resource, course=None):
-        if not resource:
-            return None
-        course = course or self._course
-        resource_type = Registry.get(self._type)
-        title = resource_type.get_resource_title(course, resource, self._key)
-        return title
 
     def get_schema(self, course):
         return Registry.get(self._type).get_schema(course, self._key)
