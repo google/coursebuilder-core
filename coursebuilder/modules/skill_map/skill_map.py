@@ -23,6 +23,7 @@ import os
 
 import appengine_config
 from common import crypto
+from common import resource
 from common import safe_dom
 from common import schema_fields
 from common import tags
@@ -44,6 +45,7 @@ from modules import courses as courses_module
 from modules.dashboard import dashboard
 from modules.dashboard import tabs
 from modules.dashboard.unit_lesson_editor import LessonRESTHandler
+from modules.i18n_dashboard import i18n_dashboard
 
 from google.appengine.ext import db
 from google.appengine.api import namespace_manager
@@ -144,10 +146,101 @@ class Skill(object):
             {'id': prerequisite_id} for prerequisite_id in prerequisite_ids]
 
 
+def _on_skills_changed(skills):
+    if not i18n_dashboard.I18nProgressDeferredUpdater.is_translatable_course():
+        return
+    key_list = [resource.Key(ResourceSkill.TYPE, skill.id) for skill in skills]
+    i18n_dashboard.I18nProgressDeferredUpdater.update_resource_list(key_list)
+
+
+def _translate_skill(skills_generator):
+    if not i18n_dashboard.is_translation_required():
+        return
+    app_context = sites.get_course_for_current_request()
+    course = courses.Course.get(app_context)
+    skills = []
+    key_list = []
+    for skill in skills_generator:
+        skills.append(skill)
+        key_list.append(resource.Key(ResourceSkill.TYPE, skill.id))
+    i18n_dashboard.translate_dto_list(course, skills, key_list)
+
+
 class _SkillDao(models.LastModfiedJsonDao):
     DTO = Skill
     ENTITY = _SkillEntity
     ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeId
+    # Using hooks that are in the same file looks awkward, but it's cleaner
+    # than overriding all the load/store methods, and is also proof against
+    # future changes that extend the DAO API.
+    POST_LOAD_HOOKS = [_translate_skill]
+    POST_SAVE_HOOKS = [_on_skills_changed]
+
+
+class ResourceSkill(resource.AbstractResourceHandler):
+
+    TYPE = 'skill'
+
+    @classmethod
+    def get_resource(cls, course, key):
+        return _SkillDao.load(key)
+
+    @classmethod
+    def get_resource_title(cls, rsrc):
+        return rsrc.name
+
+    @classmethod
+    def get_schema(cls, course, key):
+        prerequisite_type = schema_fields.FieldRegistry('Prerequisite')
+        prerequisite_type.add_property(schema_fields.SchemaField(
+            'id', '', 'integer', optional=True, i18n=False))
+
+        schema = schema_fields.FieldRegistry(
+            'Skill', description='skill')
+        schema.add_property(schema_fields.SchemaField(
+            'version', '', 'string', optional=True, hidden=True))
+        schema.add_property(schema_fields.SchemaField(
+            'name', 'Name', 'string', optional=True))
+        schema.add_property(schema_fields.SchemaField(
+            'description', 'Description', 'text', optional=True))
+        schema.add_property(schema_fields.FieldArray(
+            'prerequisites', 'Prerequisites', item_type=prerequisite_type,
+            optional=True))
+        return schema
+
+    @classmethod
+    def get_data_dict(cls, course, key):
+        return cls.get_resource(course, key).dict
+
+    @classmethod
+    def get_view_url(cls, rsrc):
+        return None
+
+    @classmethod
+    def get_edit_url(cls, key):
+        return None
+
+
+class TranslatableResourceSkill(
+    i18n_dashboard.AbstractTranslatableResourceType):
+
+    @classmethod
+    def get_ordering(cls):
+        return i18n_dashboard.TranslatableResourceRegistry.ORDERING_LATE
+
+    @classmethod
+    def get_title(cls):
+        return 'Skills'
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        ret = []
+        for skill in _SkillDao.get_all():
+            ret.append(
+                (skill,
+                 resource.Key(ResourceSkill.TYPE, skill.id, course)))
+        ret.sort(key=lambda x: x[0].name)
+        return ret
 
 
 class SkillGraph(object):
@@ -600,29 +693,7 @@ class SkillRestHandler(utils.BaseRESTHandler):
     @classmethod
     def get_schema(cls):
         """Return the schema for the skill editor."""
-
-        schema = schema_fields.FieldRegistry(
-            'Skill', description='skill')
-
-        schema.add_property(schema_fields.SchemaField(
-            'version', '', 'string', optional=True, hidden=True))
-        schema.add_property(schema_fields.SchemaField(
-            'name', 'Name', 'string', optional=True))
-        schema.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'text', optional=True))
-
-        prerequisite_type = schema_fields.FieldRegistry('Prerequisite')
-
-        prerequisite_type.add_property(schema_fields.SchemaField(
-            'id', '', 'integer', optional=True, i18n=False))
-
-        prerequisites = schema_fields.FieldArray(
-            'prerequisites', 'Prerequisites', item_type=prerequisite_type,
-            optional=True)
-
-        schema.add_property(prerequisites)
-
-        return schema
+        return ResourceSkill.get_schema(course=None, key=None)
 
     def get(self):
         """Get a skill."""
@@ -1115,6 +1186,10 @@ def notify_module_enabled():
 
     data_sources.Registry.register(SkillMapDataSource)
 
+    resource.Registry.register(ResourceSkill)
+    i18n_dashboard.TranslatableResourceRegistry.register(
+        TranslatableResourceSkill)
+
     register_tabs()
 
 
@@ -1148,4 +1223,3 @@ def register_module():
         notify_module_enabled=notify_module_enabled)
 
     return skill_mapping_module
-

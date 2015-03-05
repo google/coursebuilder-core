@@ -1215,6 +1215,7 @@ class BaseJsonDao(object):
         # try to get from memcache
         entities = MemcacheManager.get(cls._memcache_all_key())
         if entities is not None and entities != NO_OBJECT:
+            cls._maybe_apply_post_load_hooks(entities.itervalues())
             return entities
 
         # get from datastore
@@ -1226,6 +1227,7 @@ class BaseJsonDao(object):
             result_to_cache = result
         MemcacheManager.set(cls._memcache_all_key(), result_to_cache)
 
+        cls._maybe_apply_post_load_hooks(result.itervalues())
         return result
 
     @classmethod

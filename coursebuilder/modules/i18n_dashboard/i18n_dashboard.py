@@ -2358,7 +2358,7 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
     """Deferred job to update progress state."""
 
     @staticmethod
-    def _is_translatable_course():
+    def is_translatable_course():
         app_context = sites.get_course_for_current_request()
         if not app_context:
             return False
@@ -2367,7 +2367,7 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
 
     @staticmethod
     def on_lesson_changed(lesson):
-        if not I18nProgressDeferredUpdater._is_translatable_course():
+        if not I18nProgressDeferredUpdater.is_translatable_course():
             return
         key = resource.Key(
             resources_display.ResourceLesson.TYPE, lesson.lesson_id)
@@ -2375,14 +2375,14 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
 
     @staticmethod
     def on_unit_changed(unit):
-        if not I18nProgressDeferredUpdater._is_translatable_course():
+        if not I18nProgressDeferredUpdater.is_translatable_course():
             return
         key = resources_display.ResourceUnitBase.key_for_unit(unit)
         I18nProgressDeferredUpdater.update_resource(key)
 
     @staticmethod
     def on_questions_changed(question_dto_list):
-        if not I18nProgressDeferredUpdater._is_translatable_course():
+        if not I18nProgressDeferredUpdater.is_translatable_course():
             return
         key_list = [
             resource.Key(
@@ -2394,7 +2394,7 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
 
     @staticmethod
     def on_question_groups_changed(question_group_dto_list):
-        if not I18nProgressDeferredUpdater._is_translatable_course():
+        if not I18nProgressDeferredUpdater.is_translatable_course():
             return
         key_list = [
             resource.Key(resources_display.ResourceQuestionGroup.TYPE,
@@ -2404,7 +2404,7 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
 
     @staticmethod
     def on_course_settings_changed(course_settings):
-        if not I18nProgressDeferredUpdater._is_translatable_course():
+        if not I18nProgressDeferredUpdater.is_translatable_course():
             return
         app_context = sites.get_course_for_current_request()
         course = courses.Course.get(app_context)

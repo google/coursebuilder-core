@@ -17,23 +17,32 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 import cgi
+import cStringIO
+import StringIO
 import urllib
+import zipfile
 
+from babel.messages import pofile
 from networkx import DiGraph
 from xml.etree import cElementTree
 
 from common import crypto
+from common import resource
 from controllers import sites
 from models import courses
 from models import jobs
 from models import models
 from models import transforms
 from models.progress import UnitLessonCompletionTracker
+from modules.i18n_dashboard import i18n_dashboard
+from modules.skill_map.skill_map import CountSkillCompletion
 from modules.skill_map.skill_map import LESSON_SKILL_LIST_KEY
+from modules.skill_map.skill_map import ResourceSkill
 from modules.skill_map.skill_map import Skill
 from modules.skill_map.skill_map import SkillGraph
 from modules.skill_map.skill_map import SkillMap
-from modules.skill_map.skill_map import CountSkillCompletion
+from modules.skill_map.skill_map import SkillRestHandler
+from modules.skill_map.skill_map import _SkillDao
 from modules.skill_map.skill_map_metrics import SkillMapMetrics
 from tests.functional import actions
 
@@ -1074,3 +1083,346 @@ class SkillMapMetricTests(BaseSkillMapTests):
         skill_map = SkillMap.load(self.course)
         self.assertEqual(
             SkillMapMetrics(skill_map).simple_cycles(), [])
+
+
+class SkillI18nTests(actions.TestBase):
+    ADMIN_EMAIL = 'admin@foo.com'
+    COURSE_NAME = 'skill_map_course'
+    DASHBOARD_SKILL_MAP_URL = 'dashboard?action=skill_map'
+    SKILL_MAP_URL = 'modules/skill_map?action=skill_map&tab=skills_table'
+
+    def setUp(self):
+        super(SkillI18nTests, self).setUp()
+
+        self.base = '/' + self.COURSE_NAME
+        context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Skill Map Course')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.course = courses.Course(None, context)
+        self.unit = self.course.add_unit()
+        self.unit.title = 'Unit 1'
+        self.lesson = self.course.add_lesson(self.unit)
+        self.lesson.title = 'Lesson 1'
+        self.course.save()
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        actions.update_course_config(self.COURSE_NAME, {
+            'extra_locales': [
+                {'locale': 'el', 'availability': 'available'},
+                {'locale': 'ru', 'availability': 'available'}]
+            })
+
+    def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        namespace_manager.set_namespace(self.old_namespace)
+        courses.Course.ENVIRON_TEST_OVERRIDES.clear()
+        super(SkillI18nTests, self).tearDown()
+
+    def _put_payload(self, url, xsrf_name, key, payload):
+        request_dict = {
+            'key': key,
+            'xsrf_token': (
+                crypto.XsrfTokenManager.create_xsrf_token(xsrf_name)),
+            'payload': transforms.dumps(payload)
+        }
+        response = transforms.loads(self.put(
+            url, {'request': transforms.dumps(request_dict)}).body)
+        self.assertEquals(200, response['status'])
+        self.assertEquals('Saved.', response['message'])
+        return response
+
+    def _assert_progress(self, key, el_progress=None, ru_progress=None):
+        progress_dto = i18n_dashboard.I18nProgressDAO.load(str(key))
+        self.assertIsNotNone(progress_dto)
+        self.assertEquals(el_progress, progress_dto.get_progress('el'))
+        self.assertEquals(ru_progress, progress_dto.get_progress('ru'))
+
+    def test_on_skill_changed(self):
+        # Make a skill with a weird name and weird description.
+        skill = Skill(None, {
+            'name': 'x',
+            'description': 'y'
+            })
+        skill_key = _SkillDao.save(skill)
+        key = resource.Key(ResourceSkill.TYPE, skill_key)
+
+        # Make a resource bundle corresponding to the skill, but with a
+        # translation of the skill's description not matching the name
+        # or description.
+        bundle_key = i18n_dashboard.ResourceBundleKey.from_resource_key(
+            key, 'el')
+        bundle = i18n_dashboard.ResourceBundleDTO(str(bundle_key), {
+            'name': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': SKILL_NAME,
+                    'target_value': SKILL_NAME.upper(),
+                    }]
+                },
+            'description': {
+                'type': 'text',
+                'source_value': '',
+                'data': [{
+                    'source_value': SKILL_DESC,
+                    'target_value': SKILL_DESC.upper(),
+                    }]
+                },
+            })
+        i18n_dashboard.ResourceBundleDAO.save(bundle)
+
+        # Now, call the REST url to update the skill's name and description
+        # to be something matching the current translated version.  We should
+        # now believe that the translation is current and up-to date.
+        self._put_payload(
+            'rest/modules/skill_map/skill',
+            SkillRestHandler.XSRF_TOKEN,
+            skill_key,
+            {
+                'version': SkillRestHandler.SCHEMA_VERSIONS[0],
+                'name': SKILL_NAME,
+                'description': SKILL_DESC,
+            })
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            key,
+            el_progress=i18n_dashboard.I18nProgressDTO.DONE,
+            ru_progress=i18n_dashboard.I18nProgressDTO.NOT_STARTED)
+
+        # Again using the REST interface, change the native-language
+        # description to something else.  The translation should show as
+        # being in-progress (we have something), but not up-to-date.
+        self._put_payload(
+            'rest/modules/skill_map/skill',
+            SkillRestHandler.XSRF_TOKEN,
+            skill_key,
+            {
+                'version': SkillRestHandler.SCHEMA_VERSIONS[0],
+                'name': SKILL_NAME,
+                'description': SKILL_DESC_2,
+            })
+
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            key,
+            el_progress=i18n_dashboard.I18nProgressDTO.IN_PROGRESS,
+            ru_progress=i18n_dashboard.I18nProgressDTO.NOT_STARTED)
+
+    def test_skills_are_translated(self):
+        skill = Skill(None, {
+            'name': SKILL_NAME,
+            'description': SKILL_DESC
+            })
+        skill_key = _SkillDao.save(skill)
+        key = resource.Key(ResourceSkill.TYPE, skill_key)
+        bundle_key = i18n_dashboard.ResourceBundleKey.from_resource_key(
+            key, 'el')
+        bundle = i18n_dashboard.ResourceBundleDTO(str(bundle_key), {
+            'name': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': SKILL_NAME,
+                    'target_value': SKILL_NAME.upper(),
+                    }]
+                },
+            'description': {
+                'type': 'text',
+                'source_value': '',
+                'data': [{
+                    'source_value': SKILL_DESC,
+                    'target_value': SKILL_DESC.upper(),
+                    }]
+                },
+            })
+        i18n_dashboard.ResourceBundleDAO.save(bundle)
+        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [skill_key]
+        self.course.save()
+
+        # Verify that we get the untranslated (lowercased) version when we
+        # do not want to see the translated language.
+        response = self.get('unit?unit=%s&lesson=%s' %
+                 (self.unit.unit_id, self.lesson.lesson_id))
+        dom = self.parse_html_string(response.body)
+        skill_li = dom.find('.//li[@data-skill-description="%s"]' %
+                            skill.description)
+        skill_text = (''.join(skill_li.itertext())).strip()
+        self.assertEqual(skill.name, skill_text)
+
+        # Set pref to see translated version
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs.locale = 'el'
+        models.StudentPreferencesDAO.save(prefs)
+
+        # And verify that we do get the translated (uppercase) version.
+        response = self.get('unit?unit=%s&lesson=%s' %
+                 (self.unit.unit_id, self.lesson.lesson_id))
+        dom = self.parse_html_string(response.body)
+        skill_li = dom.find('.//li[@data-skill-description="%s"]' %
+                            skill.description.upper())
+        skill_text = (''.join(skill_li.itertext())).strip()
+        self.assertEqual(skill.name.upper(), skill_text)
+
+    def test_skills_appear_on_i18n_dashboard(self):
+        skill = Skill(None, {
+            'name': SKILL_NAME,
+            'description': SKILL_DESC
+            })
+        _SkillDao.save(skill)
+        skill = Skill(None, {
+            'name': SKILL_NAME_2,
+            'description': SKILL_DESC_2
+            })
+        _SkillDao.save(skill)
+        response = self.get('dashboard?action=i18n_dashboard')
+        dom = self.parse_html_string(response.body)
+        table = dom.find('.//table[@class="i18n-progress-table"]')
+        rows = table.findall('./tbody/tr')
+
+        skills_row_index = -1
+        for index, row in enumerate(rows):
+            td_text = (''.join(row.find('td').itertext())).strip()
+            if td_text == 'Skills':
+                skills_row_index = index
+                break
+
+        self.assertNotEqual(-1, skills_row_index, 'Must have a Skills section')
+        self.assertEqual(
+            SKILL_NAME_2,
+            ''.join(rows[skills_row_index + 1].find('td').itertext()).strip(),
+            'Skill name 2 added second appears first due to sorting')
+        self.assertEqual(
+            SKILL_NAME,
+            ''.join(rows[skills_row_index + 2].find('td').itertext()).strip(),
+            'Skill name added first appears second due to sorting')
+
+    def _do_upload(self, contents):
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            i18n_dashboard.TranslationUploadRestHandler.XSRF_TOKEN_NAME)
+        response = self.post(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationUploadRestHandler.URL),
+            {'request': transforms.dumps({'xsrf_token': xsrf_token})},
+            upload_files=[('file', 'doesntmatter', contents)])
+        return response
+
+    def _do_download(self, payload):
+        request = {
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                i18n_dashboard.TranslationDownloadRestHandler.XSRF_TOKEN_NAME),
+            'payload': transforms.dumps(payload),
+            }
+        response = self.post(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationDownloadRestHandler.URL),
+            {'request': transforms.dumps(request)})
+        return response
+
+    def _parse_zip_response(self, response):
+        download_zf = zipfile.ZipFile(cStringIO.StringIO(response.body), 'r')
+        out_stream = StringIO.StringIO()
+        out_stream.fp = out_stream
+        for item in download_zf.infolist():
+            file_data = download_zf.read(item)
+            catalog = pofile.read_po(cStringIO.StringIO(file_data))
+            yield catalog
+
+    def test_export_skills(self):
+        skill = Skill(None, {
+            'name': SKILL_NAME,
+            'description': SKILL_DESC
+            })
+        skill_key = _SkillDao.save(skill)
+        key = resource.Key(ResourceSkill.TYPE, skill_key)
+        bundle_key = i18n_dashboard.ResourceBundleKey.from_resource_key(
+            key, 'el')
+        bundle = i18n_dashboard.ResourceBundleDTO(str(bundle_key), {
+            'name': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': SKILL_NAME,
+                    'target_value': SKILL_NAME.upper(),
+                    }]
+                },
+            'description': {
+                'type': 'text',
+                'source_value': '',
+                'data': [{
+                    'source_value': SKILL_DESC,
+                    'target_value': SKILL_DESC.upper(),
+                    }]
+                },
+            })
+        i18n_dashboard.ResourceBundleDAO.save(bundle)
+
+        response = self._do_download({
+            'locales': [{'locale': 'el', 'checked': True}],
+            'export_what': 'all',
+            })
+
+        found_skill_name = False
+        found_skill_desc = False
+        for catalog in self._parse_zip_response(response):
+            for msg in catalog:
+                if msg.id == SKILL_NAME:
+                    self.assertEquals(SKILL_NAME.upper(), msg.string)
+                    found_skill_name = True
+                if msg.id == SKILL_DESC:
+                    self.assertEquals(SKILL_DESC.upper(), msg.string)
+                    found_skill_desc = True
+        self.assertTrue(found_skill_name)
+        self.assertTrue(found_skill_desc)
+
+    def test_import_skills(self):
+        skill = Skill(None, {
+            'name': SKILL_NAME,
+            'description': SKILL_DESC
+            })
+        skill_key = _SkillDao.save(skill)
+        key = resource.Key(ResourceSkill.TYPE, skill_key)
+        bundle_key = i18n_dashboard.ResourceBundleKey.from_resource_key(
+            key, 'el')
+        bundle = i18n_dashboard.ResourceBundleDTO(str(bundle_key), {
+            'name': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': SKILL_NAME,
+                    'target_value': SKILL_NAME.upper(),
+                    }]
+                },
+            'description': {
+                'type': 'text',
+                'source_value': '',
+                'data': [{
+                    'source_value': SKILL_DESC,
+                    'target_value': SKILL_DESC.upper(),
+                    }]
+                },
+            })
+        i18n_dashboard.ResourceBundleDAO.save(bundle)
+
+        # Do download to force creation of progress entities.
+        self._do_download({
+            'locales': [{'locale': 'el', 'checked': True}],
+            'export_what': 'all',
+            })
+
+        response = self._do_upload(
+            '# <span class="">%s</span>\n' % SKILL_DESC +
+            '#: GCB-1|name|string|skill:1:el:0\n'
+            '#| msgid ""\n' +
+            'msgid "%s"\n' % SKILL_DESC +
+            'msgstr "%s"\n' % SKILL_DESC[::-1])
+        self.assertIn(
+            '<response><status>200</status><message>Success.</message>',
+            response.body)
+
+        # Fetch the translation bundle and verify that the description has
+        # been changed to the reversed-order string
+        bundle = i18n_dashboard.ResourceBundleDAO.load(str(bundle_key))
+        self.assertEquals(bundle.dict['description']['data'][0]['target_value'],
+                          SKILL_DESC[::-1])

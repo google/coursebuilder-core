@@ -18,8 +18,10 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 import cgi
+import collections
 import cStringIO
 import StringIO
+import traceback
 import unittest
 import urllib
 import zipfile
@@ -257,6 +259,10 @@ class I18nDashboardHandlerTests(actions.TestBase):
             '',
             'Question Groups',
             'Empty section'
+            '',
+            '',
+            'Skills',
+            'Empty section',
         ]
         self.assertEquals(len(expected_row_data), len(rows))
         for index, expected in enumerate(expected_row_data):
@@ -3708,23 +3714,26 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                 """
 
                 counters = [0, 0]
+                memcache_stacks = collections.defaultdict(int)
+                db_stacks = collections.defaultdict(int)
 
                 def reset():
                     counters[0] = 0
                     counters[1] = 0
 
                 def _memcache_make_async_call(*args, **kwds):
+                    memcache_stacks[tuple(traceback.extract_stack())] += 1
                     counters[0] += 1
                     return old_memcache_make_async_call(*args, **kwds)
 
                 def _db_make_rpc_call(*args, **kwds):
+                    db_stacks[tuple(traceback.extract_stack())] += 1
                     counters[1] += 1
                     return old_db_make_rpc_call(*args, **kwds)
 
-                def _assert_quota(quota, actual):
+                def _assert_quota(quota, actual, lines):
                     memcache_quota, db_quota = quota
                     memcache_actual, db_actual = actual
-
                     respects_quota = True
                     if memcache_quota is not None and (
                         memcache_quota < memcache_actual):
@@ -3738,6 +3747,14 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                             'Request metrics %s exceed RPC quota '
                             '[memcache:%s, db:%s]: %s (%s)' % (
                                 actual, memcache_quota, db_quota, hint, url))
+                        for stacktrace, count in memcache_stacks.iteritems():
+                            lines.append('Memcache: %d calls to:' % count)
+                            lines += [l.rstrip() for l in
+                                      traceback.format_list(stacktrace)]
+                        for stacktrace, count in db_stacks.iteritems():
+                            lines.append('DB: %d calls to:' % count)
+                            lines += [l.rstrip() for l in
+                                      traceback.format_list(stacktrace)]
 
                 counters_list = []
                 memcache._CLIENT._make_async_call = _memcache_make_async_call
@@ -3758,7 +3775,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                         actual = [] + counters
                         counters_list.append((actual))
                         if quota is not None and attempt == 1:
-                            _assert_quota(quota, actual)
+                            _assert_quota(quota, actual, lines)
 
                 stats = ' '.join([
                     '[% 4d|% 4d]' % (_memcache, _db)
