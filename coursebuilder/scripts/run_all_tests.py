@@ -153,6 +153,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_rating.RatingHandlerTests': 15,
     'tests.functional.modules_search.SearchTest': 12,
     'tests.functional.modules_skill_map.CountSkillCompletionsTests': 3,
+    'tests.functional.modules_skill_map.LocationListRestHandlerTests': 2,
     'tests.functional.modules_skill_map.SkillGraphTests': 11,
     'tests.functional.modules_skill_map.SkillI18nTests': 5,
     'tests.functional.modules_skill_map.SkillMapAnalyticsTabTests': 2,

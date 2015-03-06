@@ -1483,10 +1483,17 @@ class CourseModel13(object):
             return False
         existing_lesson.title = lesson.title
         existing_lesson.unit_id = lesson.unit_id
+        existing_lesson.scored = lesson.scored
         existing_lesson.objectives = lesson.objectives
         existing_lesson.video = lesson.video
         existing_lesson.notes = lesson.notes
+        existing_lesson.duration = lesson.duration
+        existing_lesson.now_available = lesson.now_available
+        existing_lesson.has_actvity = lesson.has_activity
         existing_lesson.activity_title = lesson.activity_title
+        existing_lesson.activity_listed = lesson.activity_listed
+        existing_lesson.properties = lesson.properties
+        existing_lesson.auto_index = lesson.auto_index
         existing_lesson.manual_progress = lesson.manual_progress
 
         self._index()

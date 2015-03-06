@@ -38,6 +38,7 @@ from models import data_sources
 from models import jobs
 from models import models
 from models import progress
+from models import resources_display
 from models import roles
 from models import transforms
 from modules.admin.admin import WelcomeHandler
@@ -195,6 +196,10 @@ class ResourceSkill(resource.AbstractResourceHandler):
         prerequisite_type.add_property(schema_fields.SchemaField(
             'id', '', 'integer', optional=True, i18n=False))
 
+        location_type = schema_fields.FieldRegistry('Location')
+        location_type.add_property(schema_fields.SchemaField(
+            'key', '', 'string', optional=True, i18n=False))
+
         schema = schema_fields.FieldRegistry(
             'Skill', description='skill')
         schema.add_property(schema_fields.SchemaField(
@@ -205,6 +210,9 @@ class ResourceSkill(resource.AbstractResourceHandler):
             'description', 'Description', 'text', optional=True))
         schema.add_property(schema_fields.FieldArray(
             'prerequisites', 'Prerequisites', item_type=prerequisite_type,
+            optional=True))
+        schema.add_property(schema_fields.FieldArray(
+            'locations', 'Locations', item_type=location_type,
             optional=True))
         return schema
 
@@ -429,7 +437,13 @@ class LocationInfo(object):
         self._lesson = lesson
 
     @property
+    def key(self):
+        return resources_display.ResourceLesson.get_key(self._lesson)
+
+    @property
     def label(self):
+        if self._lesson.index is None:
+            return '%s.' % self._unit.index
         return '%s.%s' % (self._unit.index, self._lesson.index)
 
     @property
@@ -457,6 +471,7 @@ class LocationInfo(object):
     def json_encoder(cls, obj):
         if isinstance(obj, cls):
             return {
+                'key': str(obj.key),
                 'label': obj.label,
                 'href': obj.href,
                 'edit_href': obj.edit_href,
@@ -521,7 +536,7 @@ class SkillInfo(object):
                 'id': obj.id,
                 'name': obj.name,
                 'description': obj.description,
-                'prerequisites': obj.prerequisites,
+                'prerequisite_ids': [s.id for s in obj.prerequisites],
                 'locations': obj.locations,
                 'sort_key': obj.sort_key(),
                 'topo_sort_key': obj.topo_sort_key()
@@ -656,12 +671,35 @@ class SkillMap(object):
     def get_skill(self, skill_id):
         return self._skill_infos[skill_id]
 
+    def add_skill_to_lessons(self, skill, locations):
+        """Add the skill to the given lessons.
+
+        Args:
+            skill: SkillInfo. The skill to be added
+            locations: Iterable of LocationInfo. The locations to add the skill.
+        """        # Add back references to the skill from the request payload
+        for loc in locations:
+            unit, lesson = resource.Key.fromstring(loc['key']).get_resource(
+                self._course)
+            lesson.properties.setdefault(LESSON_SKILL_LIST_KEY, []).append(
+                skill.id)
+            assert self._course.update_lesson(lesson)
+            # pylint: disable=protected-access
+            skill._locations.append(LocationInfo(unit, lesson))
+        self._course.save()
+        self._lessons_by_skill.setdefault(skill.id, []).extend(locations)
+
     def delete_skill_from_lessons(self, skill):
         #TODO(broussev): check, and if need be, refactor pre-save lesson hooks
-        for lesson in self.get_lessons_for_skill(skill):
+        if not self._lessons_by_skill.get(skill.id):
+            return
+        for lesson in self._lessons_by_skill[skill.id]:
             lesson.properties[LESSON_SKILL_LIST_KEY].remove(skill.id)
             assert self._course.update_lesson(lesson)
         self._course.save()
+        del self._lessons_by_skill[skill.id]
+        # pylint: disable=protected-access
+        skill._locations = []
 
 
 class SkillListRestHandler(utils.BaseRESTHandler):
@@ -680,6 +718,25 @@ class SkillListRestHandler(utils.BaseRESTHandler):
             self, 200, '', payload_dict,
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
                 self.XSRF_TOKEN))
+
+
+class LocationListRestHandler(utils.BaseRESTHandler):
+    """REST handler to list all locations."""
+
+    URL = '/rest/modules/skill_map/location_list'
+
+    def get(self):
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
+
+        location_list = []
+        for lesson in self.get_course().get_lessons_for_all_units():
+            unit = self.get_course().find_unit_by_id(lesson.unit_id)
+            location_list.append(LocationInfo(unit, lesson))
+
+        payload_dict = {'location_list': location_list}
+        transforms.send_json_response(self, 200, '', payload_dict)
 
 
 class SkillRestHandler(utils.BaseRESTHandler):
@@ -767,7 +824,9 @@ class SkillRestHandler(utils.BaseRESTHandler):
 
         errors = []
 
+        course = self.get_course()
         skill_graph = SkillGraph.load()
+
         if key:
             key_after_save = skill_graph.update(key, python_dict, errors)
         else:
@@ -776,19 +835,21 @@ class SkillRestHandler(utils.BaseRESTHandler):
                 python_dict.get('prerequisites'))
             key_after_save = skill_graph.add(skill, errors=errors).id
 
+        skill_map = SkillMap.load(course, skill_graph=skill_graph)
+        skill = skill_map.get_skill(key_after_save)
+
+        locations = python_dict.get('locations', [])
+        skill_map.delete_skill_from_lessons(skill)
+        skill_map.add_skill_to_lessons(skill, locations)
+
         if errors:
             self.validation_error('\n'.join(errors), key=key)
             return
 
-        self.course = courses.Course(self)
-        skill_map = SkillMap.load(self.course, skill_graph=skill_graph)
-        skill = skill_map.get_skill(key_after_save)
-
         transforms.send_json_response(
             self, 200, 'Saved.', payload_dict={
                 'key': key_after_save,
-                'skill': skill,
-                'skills': skill_map.skills()})
+                'skill': skill})
 
 
 class SkillMapHandler(dashboard.DashboardHandler):
@@ -829,11 +890,10 @@ class SkillMapHandler(dashboard.DashboardHandler):
 
         self.render_page({
             'page_title': self.format_title('Skills Table'),
-            'main_content': jinja2.utils.Markup(main_content),
             'sections': [{
                 'title': 'Skills Table',
                 'actions': [],
-                'pre': ' '}]})
+                'pre': jinja2.utils.Markup(main_content)}]})
 
     def get_dependency_graph(self):
         skill_map = SkillMap.load(self.course)
@@ -1210,6 +1270,7 @@ def register_module():
 
     namespaced_routes = [
         (SkillListRestHandler.URL, SkillListRestHandler),
+        (LocationListRestHandler.URL, LocationListRestHandler),
         (SkillRestHandler.URL, SkillRestHandler),
         (SkillMapHandler.URL, SkillMapHandler)
     ]

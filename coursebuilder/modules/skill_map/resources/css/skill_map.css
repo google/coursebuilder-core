@@ -1,10 +1,16 @@
+#skills-container .controls {
+  margin: 10px 0;
+  text-align: right;
+}
 table.skill-map-table {
+  table-layout: fixed;
   border: 1px #ccc solid;
   margin: 0 auto;
-  font-color: #333333
+  font-color: #333333;
 }
-table.skill-map-table thead tr {
+table.skill-map-table thead tr th {
   border-bottom: 1px #ccc solid;
+  background-color: #aaa;
 }
 table.skill-map-table th {
   padding-top: 12px;
@@ -12,17 +18,25 @@ table.skill-map-table th {
   border: none;
   background: #fff;
 }
-table.skill-map-table tbody tr:nth-child(odd) {
-  background-color:#f9f9f9;
+table.skill-map-table th.skill {
+  width: 20%;
 }
-table.skill-map-table tr:nth-child(even) {
-  background-color:#fff;
+table.skill-map-table th.lessons {
+  width: 5em;
+}
+table.skill-map-table tr {
+  transition: background-color 200ms;
+}
+table.skill-map-table tr.even {
+  background-color:#f0f0f0;
 }
 table.skill-map-table tr:hover {
-  background-color:#e6e6e6;
+  background-color:#e0e0e0;
 }
 table.skill-map-table td {
   border: none;
+  white-space: nowrap;
+  overflow-x: hidden;
 }
 table.skill-map-table td.lesson {
   width: 10em;
@@ -70,4 +84,40 @@ table.skill-map-table a {
 }
 table.skill-map-table th span.skill-count {
   font-size: smaller;
+}
+table.skill-map-table .icon {
+  vertical-align: top;
+  font-size: 16px;
+  margin: 0;
+  padding: 2px 4px 2px 0;
+  color: #555;
+  text-decoration: none;
+  border: none;
+  background-color: inherit;
+}
+table.skill-map-table button:focus {
+  outline: none;
+}
+table.skill-map-table .reveal-on-hover {
+  opacity: 0;
+  transition: opacity 200ms;
+}
+table.skill-map-table tr.row:hover .reveal-on-hover {
+  opacity: 1;
+}
+table.skill-map-table button.add-new-skill {
+}
+table.skill-map-table ol.comma-list {
+  padding: 0;
+  margin: 0;
+  list-style-type: none;
+}
+table.skill-map-table ol.comma-list li {
+  display: inline-block;
+}
+table.skill-map-table ol.comma-list li:after {
+  content: ', ';
+}
+table.skill-map-table ol.comma-list li:last-child:after {
+  content: '';
 }

@@ -32,6 +32,17 @@ class AbstractResourceHandler(object):
     TYPE = None
 
     @classmethod
+    def get_key(cls, instance):
+        """Returns a key for the given instance.
+
+        Args:
+          instance: And instance of a Course Builder resource.
+        Returns:
+          A Key for that instance.
+        """
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
     def get_resource(cls, course, key):
         """Returns an instance of the resource type.
 

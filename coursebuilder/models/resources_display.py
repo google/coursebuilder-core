@@ -915,6 +915,10 @@ class ResourceLesson(resource.AbstractResourceHandler):
     TYPE = 'lesson'
 
     @classmethod
+    def get_key(cls, lesson):
+        return resource.Key(cls.TYPE, lesson.lesson_id)
+
+    @classmethod
     def get_resource(cls, course, key):
         lesson = course.find_lesson_by_id(None, key)
         unit = course.get_unit_for_lesson(lesson)

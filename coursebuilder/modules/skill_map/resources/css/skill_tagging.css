@@ -1,27 +1,20 @@
 /*
- * Styles for SkillSelector
+ * Styles for ItemSelector
  */
-div.skill-selector-root {
+div.item-selector-root {
   position: relative;
 }
-div.skill-selector-root button.add {
-  background-color: #F44336;
-  color: #fff;
+div.inputEx-Field div.new-skill button.add,
+div.item-selector-root button.add {
+  background-color: inherit;
+  color: #06998b;
+  font-size: 120%;
   border: none;
   outline: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  font-size: 22px;
-  box-shadow: 0 0 4px rgba(0,0,0,.14),0 4px 8px rgba(0,0,0,.28);
-  cursor: pointer;
 }
-div.skill-selector-root button.add:after {
-  content: '+';
-}
-div.skill-selector-root div.selector {
+div.item-selector-root div.selector {
   position: absolute;
-  top: 34px;
+  top: 22px;
   left: 0;
   width: 20em;
   background-color: #fff;
@@ -29,7 +22,7 @@ div.skill-selector-root div.selector {
   border-radius: 0.2em;
   z-index: 20;
 }
-div.skill-selector-root ol.skill-list {
+div.item-selector-root ol.item-list {
   max-height: 15em;
   overflow-y: scroll;
   list-style-type: none;
@@ -38,30 +31,35 @@ div.skill-selector-root ol.skill-list {
   border-bottom: solid 1px #ccc;
   margin: 0;
 }
-div.skill-selector-root input {
+div.item-selector-root input {
   width: inherit !important;
 }
-div.skill-selector-root input.search {
+div.item-selector-root input.search {
   width: 18em !important;
   margin: 1em;
+  padding: 7px 8px;
+  border: solid 1px #ccc;
+  border-radius: 3px;
+  font-size: 12px;
 }
-div.skill-selector-root a.create {
+
+div.item-selector-root a.create {
   display: inline-block;
   margin: 0 0 10px 5px;
   text-decoration: none;
   color: #00f;
 }
-div.skill-selector-root a.create:hover {
+div.item-selector-root a.create:hover {
   text-decoration: underline;
 }
-div.skill-selector-root button.action,
-div.skill-selector-root button[disabled].action:hover {
+div.item-selector-root button.action,
+div.item-selector-root button[disabled].action:hover {
   background: none;
   border: none;
   width: 100%;
   height: 2em;
 }
-div.skill-selector-root button.action:hover {
+div.item-selector-root button.action:hover {
   background: #f0f0f0;
 }
 
@@ -86,29 +84,67 @@ div.lightbox > div.content {
   left: 50%;
   z-index: 1001;
   background-color: #fff;
-  border-radius: 10px;
-  padding: 20px;
+  border-radius: 3px;
+  padding: 28px;
 }
 
 
 /*
- * Styles for LessonEditorSkillPopup
+ * Style for the EditSkillPopup.
  */
-div.lightbox > div.content h2 {
-  margin-left: 0;
+div.edit-skill-popup h2 {
+  font-size: 1.5em;
+  font-weight: normal;
+  margin: 0 0 20px;
 }
-div.lightbox > div.content div.form-row {
-  margin: 10px 0;
+div.edit-skill-popup div.form-row {
+  margin: 12px 0;
 }
-div.lightbox > div.content div.form-row > label {
+div.edit-skill-popup div.form-row > label {
+  display: block;
+  font-weight: normal;
+  margin: 0 0 6px 0;
+}
+div.edit-skill-popup div.form-row > label.strong {
   font-weight: bold;
-  display: inline-block;
-  width: 90px;
-  vertical-align: top;
 }
-div.lightbox > div.content div.form-row > input, div.form-row > textarea {
-  width: 350px;
+div.edit-skill-popup div.form-row > input,
+div.edit-skill-popup div.form-row > textarea {
+  width: 300px;
+  padding: 10px;
+  border: solid 1px #ccc;
+  border-radius: 3px;
+  font-family: arial, sans-serif;
+  font-size: 13px;
 }
-div.lightbox > div.content div.form-row > textarea {
+div.edit-skill-popup div.form-row > textarea {
   height: 5em;
+}
+div.inputEx-Field ol.skill-display-root li.skill,
+div.edit-skill-popup ol.skill-display-root li.skill {
+  margin-bottom: 10px !important;
+}
+div.edit-skill-popup ol.location-display-root {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+div.edit-skill-popup ol.location-display-root li {
+  height: 25px;
+}
+div.edit-skill-popup ol.location-display-root button.close {
+  background: none;
+  border: none;
+  float: right;
+  color: #aaa;
+}
+div.edit-skill-popup div.controls {
+  text-align: right;
+}
+
+/*
+ * Styles for the skill widget in the lesson editor.
+ */
+div.inputEx-Field div.new-skill {
+  margin-top: 10px;
 }

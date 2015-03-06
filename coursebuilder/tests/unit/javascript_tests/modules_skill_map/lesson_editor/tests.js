@@ -92,7 +92,8 @@ describe('The skill tagging library', function() {
           version: '1',
           name: 'ice skating',
           description: 'can skate',
-          prerequisites: []
+          prerequisites: [],
+          locations: []
         });
       });
     });
@@ -123,13 +124,13 @@ describe('The skill tagging library', function() {
       };
       $.ajax.calls[0].args[0].success(JSON.stringify(payload));
       expect(this.callback).toHaveBeenCalled();
-      expect(this.callback.calls[0].args[1]).toEqual({
+      expect(this.callback.calls[0].args[0]).toEqual({
         id: 'skill001',
         name: 'ice skating',
         description: 'can skate',
         prerequisite_ids: []
       });
-      expect(this.callback.calls[0].args[2]).toEqual('OK');
+      expect(this.callback.calls[0].args[1]).toEqual('OK');
     });
   });
 
@@ -157,38 +158,15 @@ describe('The skill tagging library', function() {
     });
   });
 
-  describe('SkillSelector', function() {
-    var SKILL_LIST_DATA = {
-      s1: {
-        id: 's1',
-        name: 'ice skating',
-        description: 'can skate on ice'
-      },
-      s2: {
-        id: 's2',
-        name: 'rock climbing',
-        description: 'can climb rocks'
-      }
-    };
-    var MOCK_SKILL_LIST = {
-      eachSkill: function(callback) {
-        for (var key in SKILL_LIST_DATA) {
-          if (SKILL_LIST_DATA.hasOwnProperty(key)) {
-            callback(SKILL_LIST_DATA[key]);
-          }
-        }
-      },
-      getSkillById: function(skillId) {
-        return SKILL_LIST_DATA[skillId];
-      }
-    };
+  describe('ItemSelector', function() {
 
     beforeEach(function() {
       this.root = $('#root');
       this.callback = jasmine.createSpy('callback');
-      this.selector = new SkillSelector(this.callback);
+      this.selector = new ItemSelector(this.callback);
       this.root.append(this.selector.element());
-      this.selector.populate(MOCK_SKILL_LIST);
+      this.selector.add('s1', 'ice skating');
+      this.selector.add('s2', 'rock climbing');
     });
 
     it('is closed initially', function() {
@@ -200,51 +178,37 @@ describe('The skill tagging library', function() {
       expect($('div.selector')).toBeVisible();
     });
 
-    it('lists the skills in the selector', function() {
-      expect($('ol.skill-list li span').length).toBe(2);
-      expect($('ol.skill-list li span').eq(0).text()).toBe('ice skating');
-      expect($('ol.skill-list li span').eq(1).text()).toBe('rock climbing');
+    it('lists the items in the selector', function() {
+      expect($('ol.item-list li span').length).toBe(2);
+      expect($('ol.item-list li span').eq(0).text()).toBe('ice skating');
+      expect($('ol.item-list li span').eq(1).text()).toBe('rock climbing');
     });
 
-    it('filters the skills list when text is entered', function() {
+    it('filters the list when text is entered', function() {
       $('button.add').click();
       $('input.search').val('ice').keyup();
-      expect($('ol.skill-list li:visible').length).toBe(1);
-      expect($('ol.skill-list li:visible').text()).toBe('ice skating');
+      expect($('ol.item-list li:visible').length).toBe(1);
+      expect($('ol.item-list li:visible').text()).toBe('ice skating');
     });
 
-    it('disables the OK button when no skills are selected', function() {
+    it('disables the OK button when no items are selected', function() {
       $('button.add').click();
       expect($('button.select')).toBeDisabled();
     });
 
-    it('enables the OK button when skills are selected', function() {
+    it('enables the OK button when items are selected', function() {
       $('button.add').click();
       $('input[type=checkbox]:first').click();
       expect($('button.select')).not.toBeDisabled();
     });
 
-    it('opens a new skill popup when create link is clicked', function() {
-      $('button.add').click();
-      expect($('div.lightbox')).not.toBeVisible();
-      $('a.create').click();
-      expect($('div.lightbox')).toBeVisible();
-    });
-
-    it('uses the enetered text as the name for a new skill', function() {
-      $('button.add').click();
-      $('input.search').val('skiing');
-      $('a.create').click();
-      expect($('input.skill-name').val()).toBe('skiing');
-    });
-
-    it('retuns the selected skills to the callback', function() {
+    it('returns the selected item ids to the callback', function() {
       $('button.add').click();
       $('input[type=checkbox]:first').click();
       $('button.select').click();
       expect(this.callback).toHaveBeenCalled();
       expect(this.callback.calls[0].args[0].length).toBe(1);
-      expect(this.callback.calls[0].args[0][0]).toBe(SKILL_LIST_DATA.s1);
+      expect(this.callback.calls[0].args[0][0]).toBe('s1');
     });
   });
 });

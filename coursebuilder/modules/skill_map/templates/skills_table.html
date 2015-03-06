@@ -1,13 +1,20 @@
-<link rel="stylesheet" type="text/css" href="/modules/skill_map/resources/css/skill_tagging.css">
+<link rel="stylesheet" type="text/css" href="/modules/skill_map/resources/css/skill_map.css">
 <script>
   $(function() {
     var skillList = new SkillList();
-    skillList.load(function() {
-      var skillTable = new SkillTable(skillList);
-      $('#skills-container').append(skillTable.buildTable());
+    var locationList = new LocationList();
+
+    var skillListLoaded = $.Deferred(function(def) {
+      skillList.load(function() {def.resolve()});
+    });
+    var locationListLoaded = $.Deferred(function(def) {
+      locationList.load(function() {def.resolve()});
+    });
+    $.when(skillListLoaded, locationListLoaded).then(function() {
+      var skillTable = new SkillTable(skillList, locationList);
+      skillTable.buildTable().appendTo('#skills-container');
     });
   });
 </script>
 
-<div id="skills-container">
-</div>
+<div id="skills-container"></div>

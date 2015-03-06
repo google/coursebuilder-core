@@ -390,7 +390,7 @@ class SkillListRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(3, len(skill_list))
 
         # check that every skill has the following properties
-        keys = ['id', 'name', 'description', 'prerequisites', 'locations',
+        keys = ['id', 'name', 'description', 'prerequisite_ids', 'locations',
                 'sort_key', 'topo_sort_key']
         for skill in skill_list:
             self.assertItemsEqual(keys, skill.keys())
@@ -423,6 +423,56 @@ class SkillListRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(1, len(skill_list))
         # All locations listed
         self.assertEqual(2, len(skill_list[0]['locations']))
+
+
+class LocationListRestHandlerTests(BaseSkillMapTests):
+    URL = 'rest/modules/skill_map/location_list'
+
+    def test_refuses_list_to_non_admin(self):
+        response = self.get(self.URL)
+        self.assertEqual(200, response.status_int)
+        body = transforms.loads(response.body)
+        self.assertEqual(401, body['status'])
+        self.assertEqual('Access denied.', body['message'])
+
+    def test_deleivers_list_of_all_locations(self):
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit'
+        lesson1 = self.course.add_lesson(unit)
+        lesson1.title = 'Test Lesson 1'
+        lesson2 = self.course.add_lesson(unit)
+        lesson2.title = 'Test Lesson 2'
+        self.course.save()
+
+        actions.login(ADMIN_EMAIL)
+
+        response = self.get(self.URL)
+        self.assertEqual(200, response.status_int)
+        body = transforms.loads(response.body)
+        self.assertEqual(200, body['status'])
+        payload = transforms.loads(body['payload'])
+        location_list = payload['location_list']
+
+        expected_location_list = [
+            {
+                'edit_href': 'dashboard?action=edit_lesson&key=2',
+                'sort_key': [1, 2],
+                'label': '1.1',
+                'href': 'unit?unit=1&lesson=2',
+                'key': 'lesson:2',
+                'lesson': 'Test Lesson 1',
+                'unit': 'Test Unit'
+            },
+            {
+                'edit_href': 'dashboard?action=edit_lesson&key=3',
+                'sort_key': [1, 3],
+                'label': '1.2',
+                'href': 'unit?unit=1&lesson=3',
+                'key': 'lesson:3',
+                'lesson': 'Test Lesson 2',
+                'unit': 'Test Unit'}]
+
+        self.assertEqual(expected_location_list, location_list)
 
 
 class SkillRestHandlerTests(BaseSkillMapTests):
@@ -521,10 +571,7 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(SKILL_NAME_2, tgt_skill['name'])
         self.assertEqual(tgt_skill['description'], SKILL_DESC_2)
         self.assertEqual([], tgt_skill['locations'])
-        self.assertEqual(1, len(tgt_skill['prerequisites']))
-
-        skills_list = payload['skills']
-        self.assertEqual(2, len(skills_list))
+        self.assertEqual(1, len(tgt_skill['prerequisite_ids']))
 
     def test_update_prerequisites(self):
         skill_graph = SkillGraph.load()
