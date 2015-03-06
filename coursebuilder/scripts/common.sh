@@ -227,9 +227,11 @@ DISTRIBUTED_LIBS="\
   mathjax-fonts-2.3.0.zip \
   codemirror-4.5.0.zip \
   material-design-iconic-font-1.1.1.zip \
-  underscore-1.7.0.zip \
+  underscore-1.4.3.zip \
   networkx-1.9.1.zip \
   decorator-3.4.0.zip \
+  dependo-0.1.4.zip \
+  d3-3.0.1.zip \
 "
 
 echo Using third party Python packages from $DISTRIBUTED_LIBS_DIR

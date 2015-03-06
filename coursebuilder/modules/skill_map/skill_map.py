@@ -1257,15 +1257,23 @@ def register_module():
     """Registers this module in the registry."""
 
     underscore_js_handler = sites.make_zip_handler(os.path.join(
-        appengine_config.BUNDLE_ROOT, 'lib', 'underscore-1.7.0.zip'))
+        appengine_config.BUNDLE_ROOT, 'lib', 'underscore-1.4.3.zip'))
+
+    d3_js_handler = sites.make_zip_handler(os.path.join(
+        appengine_config.BUNDLE_ROOT, 'lib', 'd3-3.0.1.zip'))
+
+    dep_graph_handler = sites.make_zip_handler(os.path.join(
+        appengine_config.BUNDLE_ROOT, 'lib', 'dependo-0.1.4.zip'))
 
     global_routes = [
         (RESOURCES_URI + '/css/.*', tags.ResourcesHandler),
         (RESOURCES_URI + '/js/course_outline.js', tags.JQueryHandler),
         (RESOURCES_URI + '/js/lesson_header.js', tags.JQueryHandler),
         (RESOURCES_URI + '/js/skill_tagging_lib.js', tags.IifeHandler),
-        ('/static/underscore-1.7.0/(underscore.js)', underscore_js_handler),
-        ('/static/underscore-1.7.0/(underscore.min.js)', underscore_js_handler)
+        (RESOURCES_URI + '/d3-3.0.1/(d3.min.js)', d3_js_handler),
+        (RESOURCES_URI + '/underscore-1.4.3/(underscore.min.js)',
+         underscore_js_handler),
+        (RESOURCES_URI + '/dependo-0.1.4/(.*)', dep_graph_handler)
     ]
 
     namespaced_routes = [
