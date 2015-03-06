@@ -367,77 +367,6 @@ class SkillMapTests(BaseSkillMapTests):
         self.assertEqual(0, len(lessons))
 
 
-class SkillListRestHandlerTests(BaseSkillMapTests):
-    URL = 'rest/modules/skill_map/skill_list'
-
-    def test_rejected_if_not_authorized(self):
-        # Not logged in
-        response = transforms.loads(self.get(self.URL).body)
-        self.assertEqual(401, response['status'])
-
-        # logged in but not admin
-        actions.login('user.foo.com')
-        response = transforms.loads(self.get(self.URL).body)
-        self.assertEqual(401, response['status'])
-
-        # logged in as admin
-        actions.logout()
-        actions.login(ADMIN_EMAIL)
-        response = transforms.loads(self.get(self.URL).body)
-        self.assertEqual(200, response['status'])
-
-    def test_get_skill_list(self):
-        skill_graph = SkillGraph.load()
-
-        assert skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
-        assert skill_graph.add(Skill.build(SKILL_NAME_2, SKILL_DESC_2))
-        assert skill_graph.add(Skill.build(SKILL_NAME_3, SKILL_DESC_3))
-
-        actions.login(ADMIN_EMAIL)
-        response = transforms.loads(self.get(self.URL).body)
-
-        self.assertEqual(200, response['status'])
-        self.assertIn('xsrf_token', response)
-
-        skill_list = transforms.loads(response['payload'])['skill_list']
-        self.assertEqual(3, len(skill_list))
-
-        # check that every skill has the following properties
-        keys = ['id', 'name', 'description', 'prerequisite_ids', 'locations',
-                'sort_key', 'topo_sort_key']
-        for skill in skill_list:
-            self.assertItemsEqual(keys, skill.keys())
-
-        # check that skills are sorted in lexicographic order
-        skill_names = sorted([SKILL_NAME, SKILL_NAME_2, SKILL_NAME_3])
-        self.assertEqual(skill_names, [x['name'] for x in skill_list])
-
-    def test_get_skills_multiple_locations(self):
-        """The skills are mapped to more than one lesson."""
-        skill_graph = SkillGraph.load()
-
-        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
-        unit = self.course.add_unit()
-        unit.title = 'Test Unit'
-        lesson1 = self.course.add_lesson(unit)
-        lesson1.title = 'Test Lesson 1'
-        lesson2 = self.course.add_lesson(unit)
-        lesson2.title = 'Test Lesson 2'
-        self.course.save()
-        lesson1.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
-        lesson2.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
-        self.course.save()
-
-        actions.login(ADMIN_EMAIL)
-        response = transforms.loads(self.get(self.URL).body)
-        self.assertEqual(200, response['status'])
-
-        skill_list = transforms.loads(response['payload'])['skill_list']
-        self.assertEqual(1, len(skill_list))
-        # All locations listed
-        self.assertEqual(2, len(skill_list[0]['locations']))
-
-
 class LocationListRestHandlerTests(BaseSkillMapTests):
     URL = 'rest/modules/skill_map/location_list'
 
@@ -670,6 +599,57 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(skill_1.name, skill['name'])
         self.assertEqual(skill_1.description, skill['description'])
 
+    def test_get_skill_list(self):
+        skill_graph = SkillGraph.load()
+
+        assert skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        assert skill_graph.add(Skill.build(SKILL_NAME_2, SKILL_DESC_2))
+        assert skill_graph.add(Skill.build(SKILL_NAME_3, SKILL_DESC_3))
+
+        actions.login(ADMIN_EMAIL)
+        response = transforms.loads(self.get(self.URL).body)
+
+        self.assertEqual(200, response['status'])
+        self.assertIn('xsrf_token', response)
+
+        skill_list = transforms.loads(response['payload'])['skill_list']
+        self.assertEqual(3, len(skill_list))
+
+        # check that every skill has the following properties
+        keys = ['id', 'name', 'description', 'prerequisite_ids', 'locations',
+                'sort_key', 'topo_sort_key']
+        for skill in skill_list:
+            self.assertItemsEqual(keys, skill.keys())
+
+        # check that skills are sorted in lexicographic order
+        skill_names = sorted([SKILL_NAME, SKILL_NAME_2, SKILL_NAME_3])
+        self.assertEqual(skill_names, [x['name'] for x in skill_list])
+
+    def test_get_skills_multiple_locations(self):
+        """The skills are mapped to more than one lesson."""
+        skill_graph = SkillGraph.load()
+
+        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit'
+        lesson1 = self.course.add_lesson(unit)
+        lesson1.title = 'Test Lesson 1'
+        lesson2 = self.course.add_lesson(unit)
+        lesson2.title = 'Test Lesson 2'
+        self.course.save()
+        lesson1.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
+        lesson2.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
+        self.course.save()
+
+        actions.login(ADMIN_EMAIL)
+        response = transforms.loads(self.get(self.URL).body)
+        self.assertEqual(200, response['status'])
+
+        skill_list = transforms.loads(response['payload'])['skill_list']
+        self.assertEqual(1, len(skill_list))
+        # All locations listed
+        self.assertEqual(2, len(skill_list[0]['locations']))
+
     def test_delete_skill(self):
         skill_graph = SkillGraph.load()
         skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
@@ -788,14 +768,6 @@ class SkillMapHandlerTests(actions.TestBase):
         actions.login('student@foo.com')
         response = self.get(self.SKILL_MAP_URL)
         self.assertEqual(302, response.status_int)
-
-    def test_empty_skills_table(self):
-        response = self.get(self.SKILL_MAP_URL)
-        self.assertEqual(200, response.status_int)
-        dom = self.parse_html_string(response.body)
-        section_title = dom.find('.//div[@id="gcb-section"]/h3')
-        self.assertEqual(
-            'Skills Table', (''.join(section_title.itertext())).strip())
 
     def test_dependency_graph_tab(self):
         response = self.get(self.GRAPH_URL)

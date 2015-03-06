@@ -50,6 +50,7 @@ from modules.dashboard import dashboard
 from modules.dashboard import tabs
 from modules.dashboard.unit_lesson_editor import LessonRESTHandler
 from modules.i18n_dashboard import i18n_dashboard
+from modules.skill_map import skill_map_metrics
 
 from google.appengine.ext import db
 from google.appengine.api import namespace_manager
@@ -705,24 +706,6 @@ class SkillMap(object):
         skill._locations = []
 
 
-class SkillListRestHandler(utils.BaseRESTHandler):
-    """REST handler to list skills."""
-
-    URL = '/rest/modules/skill_map/skill_list'
-    XSRF_TOKEN = 'skill-handler'
-
-    def get(self):
-        if not roles.Roles.is_course_admin(self.app_context):
-            transforms.send_json_response(self, 401, 'Access denied.', {})
-            return
-
-        payload_dict = {'skill_list': SkillMap.load(self.get_course()).skills()}
-        transforms.send_json_response(
-            self, 200, '', payload_dict,
-            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
-                self.XSRF_TOKEN))
-
-
 class LocationListRestHandler(utils.BaseRESTHandler):
     """REST handler to list all locations."""
 
@@ -745,7 +728,7 @@ class LocationListRestHandler(utils.BaseRESTHandler):
 class SkillRestHandler(utils.BaseRESTHandler):
     """REST handler to manage skills."""
 
-    XSRF_TOKEN = SkillListRestHandler.XSRF_TOKEN
+    XSRF_TOKEN = 'skill-handler'
     SCHEMA_VERSIONS = ['1']
 
     URL = '/rest/modules/skill_map/skill'
@@ -765,8 +748,13 @@ class SkillRestHandler(utils.BaseRESTHandler):
         key = self.request.get('key')
 
         skill_map = SkillMap.load(self.get_course())
-        skill = skill_map.get_skill(int(key))
-        payload_dict = {'skill': skill}
+        payload_dict = {
+            'skill_list': skill_map.skills(),
+            'diagnosis': skill_map_metrics.SkillMapMetrics(skill_map).diagnose()
+        }
+
+        if key:
+            payload_dict['skill'] = skill_map.get_skill(int(key))
 
         transforms.send_json_response(
             self, 200, '', payload_dict=payload_dict,
@@ -789,17 +777,28 @@ class SkillRestHandler(utils.BaseRESTHandler):
 
         errors = []
 
-        skill_map = SkillMap.load(self.get_course())
-        skill = skill_map.get_skill(key)
-        skill_map.delete_skill_from_lessons(skill)
+        skill_graph = SkillGraph.load()
 
-        SkillGraph.load().delete(key, errors)
+        skill_map = SkillMap.load(self.get_course(), skill_graph=skill_graph)
+        skill = skill_map.get_skill(key)
+
+        # Note, first delete from lessons and then from the skill graph
+        skill_map.delete_skill_from_lessons(skill)
+        skill_graph.delete(key, errors)
+
+        skill_map = SkillMap.load(self.get_course(), skill_graph=skill_graph)
 
         if errors:
             self.validation_error('\n'.join(errors), key=key)
             return
 
-        transforms.send_json_response(self, 200, 'Skill deleted.')
+        payload_dict = {
+            'skill_list': skill_map.skills(),
+            'diagnosis': skill_map_metrics.SkillMapMetrics(skill_map).diagnose()
+        }
+
+        transforms.send_json_response(self, 200, 'Skill deleted.',
+            payload_dict=payload_dict)
 
     def put(self):
         request = transforms.loads(self.request.get('request'))
@@ -849,10 +848,15 @@ class SkillRestHandler(utils.BaseRESTHandler):
             self.validation_error('\n'.join(errors), key=key)
             return
 
+        payload_dict = {
+            'key': key_after_save,
+            'skill': skill,
+            'skill_list': skill_map.skills(),
+            'diagnosis': skill_map_metrics.SkillMapMetrics(skill_map).diagnose()
+        }
+
         transforms.send_json_response(
-            self, 200, 'Saved.', payload_dict={
-                'key': key_after_save,
-                'skill': skill})
+            self, 200, 'Saved.', payload_dict=payload_dict)
 
 
 class SkillMapHandler(dashboard.DashboardHandler):
@@ -893,10 +897,7 @@ class SkillMapHandler(dashboard.DashboardHandler):
 
         self.render_page({
             'page_title': self.format_title('Skills Table'),
-            'sections': [{
-                'title': 'Skills Table',
-                'actions': [],
-                'pre': jinja2.utils.Markup(main_content)}]})
+            'main_content': jinja2.utils.Markup(main_content)})
 
     def get_dependency_graph(self):
         skill_map = SkillMap.load(self.course)
@@ -1490,7 +1491,6 @@ def register_module():
     ]
 
     namespaced_routes = [
-        (SkillListRestHandler.URL, SkillListRestHandler),
         (LocationListRestHandler.URL, LocationListRestHandler),
         (SkillRestHandler.URL, SkillRestHandler),
         (SkillMapHandler.URL, SkillMapHandler)

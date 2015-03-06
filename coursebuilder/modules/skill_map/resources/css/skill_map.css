@@ -1,11 +1,13 @@
 #skills-container .controls {
-  margin: 10px 0;
   text-align: right;
+}
+#skills-container .controls label.show-warnings {
+  margin-right: 20px;
 }
 table.skill-map-table {
   table-layout: fixed;
   border: 1px #ccc solid;
-  margin: 0 auto;
+  margin: 20px auto;
   font-color: #333333;
 }
 table.skill-map-table thead tr th {
@@ -37,6 +39,23 @@ table.skill-map-table td {
   border: none;
   white-space: nowrap;
   overflow-x: hidden;
+}
+table.skill-map-table td .diagnosis.icon {
+  font-size: 15px;
+  opacity: 0;
+  transition: opacity 400ms;
+  cursor: inherit;
+}
+table.skill-map-table td .diagnosis.icon.md-error {
+  color: #c00;
+  cursor: pointer;
+}
+table.skill-map-table td .diagnosis.icon.md-warning {
+  color: #ccb800;
+  cursor: pointer;
+}
+table.skill-map-table td .diagnosis.icon.active {
+  opacity: 1;
 }
 table.skill-map-table td.lesson {
   width: 10em;
@@ -120,4 +139,17 @@ table.skill-map-table ol.comma-list li:after {
 }
 table.skill-map-table ol.comma-list li:last-child:after {
   content: '';
+}
+.skill-map-diagnosis-report .hidden {
+  display: none;
+}
+.skill-map-diagnosis-report .elem-list .elem:after {
+  content: '" \27f6 "'; /* long right arrow */
+}
+.skill-map-diagnosis-report > div.diagnosis {
+  margin: 10px 0;
+}
+.skill-map-diagnosis-report .elem-list .elem:first-child:before,
+.skill-map-diagnosis-report .elem-list .elem:last-child:after {
+  content: '"';
 }

@@ -62,12 +62,21 @@ SkillTable.prototype = {
     // add skill name
     var td = $(
         '<td>' +
+        '  <div class="diagnosis icon md"></div>' +
         '  <span class="skill-name"></span> ' +
         '  <button class="icon md md-mode-edit reveal-on-hover edit-skill"></button> ' +
         '  <button class="icon md md-delete reveal-on-hover delete-skill"></button> ' +
         '</td>'
     );
-    td.find('.edit-skill, .delete-skill').data('id', skill.id);
+    td.find('.diagnosis.icon, button').data('id', skill.id);
+
+    var diagnosis = this._skillList.diagnosis(skill.id);
+    if (diagnosis.status == SkillList.WARNING) {
+      td.find('.diagnosis.icon').addClass('md-warning');
+    } else if (diagnosis.status == SkillList.ERROR) {
+      td.find('.diagnosis.icon').addClass('md-error');
+    }
+
     td.find('.skill-name').text(skill.name);
     tr.append(td);
 
@@ -129,32 +138,11 @@ SkillTable.prototype = {
     return thead;
   },
 
-  buildTable: function() {
-
-    function refresh() {
-      content.replaceWith(that.buildTable());
-    }
-
+  _buildBody: function() {
     var that = this;
-    var i = 0;
-
-    content = $(
-      '<div class="controls">' +
-      '  <button class="gcb-button add-new-skill">+ Create New Skill</button>' +
-      '</div>' +
-      '<table class="skill-map-table"></table>');
-
-    var table = content.filter('table.skill-map-table');
-    table.append(that._buildHeader());
-
-    var addSkillButton = content.find('.add-new-skill');
-    addSkillButton.on("click", function(e) {
-      skillPopUp = new EditSkillPopup(that._skillList, that._locationList);
-      skillPopUp.open(refresh);
-    });
-
     var tbody = $('<tbody></tbody>');
 
+    var i = 0;
     that._skillList.eachSkill(function(skill) {
       var row = that._buildRow(skill);
       row.addClass( i++ % 2 == 0 ? 'even' : 'odd');
@@ -170,6 +158,16 @@ SkillTable.prototype = {
       }
     }
 
+    tbody.tooltip({
+      items: '.diagnosis.active',
+      content: function() {
+        var skillId = $(this).data('id');
+        var diagnosis = that._skillList.diagnosis(skillId);
+        var skill = that._skillList.getSkillById(skillId);
+        return that._diagnosisReport(skill, diagnosis);
+      }
+    });
+
     tbody.find('.delete-skill').on('click', function(e) {
       if (! confirm('Are you sure you want to delete the skill?')) {
         return false;
@@ -180,12 +178,128 @@ SkillTable.prototype = {
 
     tbody.find('.edit-skill').on('click', function(e){
       var skillId = $(this).data('id');
-      skillPopUp = new EditSkillPopup(that._skillList, that._locationList, skillId);
-      skillPopUp.open(refresh);
+      var skillPopUp = new EditSkillPopup(that._skillList, that._locationList,
+          skillId);
+      skillPopUp.open(function() {
+        that._refresh();
+      });
     });
 
-    table.append(tbody);
-    return content;
+    return tbody;
+  },
+
+  _showHideDiagnosis: function() {
+    if (this._content.find('.health-checkbox').is(':checked')) {
+      this._content.find('.diagnosis.icon').addClass('active');
+    } else {
+      this._content.find('.diagnosis.icon').removeClass('active');
+    }
+  },
+
+  _refresh: function() {
+    this._table.find('tbody').remove();
+    this._table.append(this._buildBody());
+    this._showHideDiagnosis();
+  },
+
+  buildTable: function() {
+    var that = this;
+
+    this._content = $(
+      '<div class="controls">' +
+      '  <label class="show-warnings">' +
+      '    <input type="checkbox" class="health-checkbox">' +
+      '    Show warnings' +
+      '  </label>' +
+      '  <button class="gcb-button add-new-skill">+ Create New Skill</button>' +
+      '</div>' +
+      '<h3>Skills Table</h3>' +
+      '<table class="skill-map-table"></table>');
+
+    this._table = this._content.filter('table.skill-map-table');
+    this._table.append(that._buildHeader());
+
+    this._content.find('.health-checkbox').on("change", function() {
+      that._showHideDiagnosis();
+    });
+
+    this._content.find('.add-new-skill').on("click", function() {
+      var skillPopUp = new EditSkillPopup(that._skillList, that._locationList);
+      skillPopUp.open(function() {
+        that._refresh();
+      });
+    });
+
+    this._refresh();
+
+    return this._content;
+  },
+
+  _diagnosisReport: function(skill, diagnosis) {
+    var that = this;
+    if (diagnosis.status == SkillList.HEALTHY) {
+      return null;
+    }
+    var panel = $(
+        '<div class="skill-map-diagnosis-report">' +
+        '  <div>' +
+        '    The skill "<span class="skill-name"></span>":' +
+        '  </div>' +
+        '  <div class="diagnosis singleton">' +
+        '    Does not lead to or from any other skills.' +
+        '  </div>' +
+        '  <div class="diagnosis cycles">' +
+        '    Is part of a circular dependency:' +
+        '    <ul class="elem-list"></ul>' +
+        '  </div>' +
+        '  <div` class="diagnosis long-chains">' +
+        '    Is part of a long chain of dependencies:' +
+        '    <ul class="elem-list"></ul>' +
+        '  </div>' +
+        '</div>');
+
+    panel.find('.diagnosis').addClass('hidden');
+
+    panel.find('.skill-name').text(skill.name);
+
+    if (diagnosis.singleton) {
+      panel.find('.singleton').removeClass('hidden');
+    }
+
+    if (diagnosis.cycles.length > 0) {
+      panel.find('.diagnosis.cycles').removeClass('hidden');
+      $.each(diagnosis.cycles, function(i, cycle) {
+        // Each cycle goes in an li
+        var li = $('<li></li>');
+        $.each(cycle, function(j, cycleSkillId) {
+          // Put all the elements of the cycle one after the other (CSS will)
+          // interpolate a '-->' between entries
+          var cycleSkill = that._skillList.getSkillById(cycleSkillId);
+          li.append($('<span class="elem"></span>').text(cycleSkill.name));
+        });
+        // Put the first element of the cycle at the end of the cycle too
+        var firstSkill = that._skillList.getSkillById(cycle[0]);
+        li.append($('<span class="elem"></span>').text(firstSkill.name));
+        panel.find('.diagnosis.cycles .elem-list').append(li);
+      });
+    }
+
+    if (diagnosis.long_chains.length > 0) {
+      panel.find('.diagnosis.long-chains').removeClass('hidden');
+      $.each(diagnosis.long_chains, function(i, chain) {
+        // Each chain goes in an li
+        var li = $('<li></li>');
+        $.each(chain, function(j, chainSkillId) {
+          // Put all the elements of the chain one after the other (CSS will)
+          // interpolate a '-->' between entries
+          var chainSkill = that._skillList.getSkillById(chainSkillId);
+          li.append($('<span class="elem"></span>').text(chainSkill.name));
+        });
+        panel.find('.diagnosis.long-chains .elem-list').append(li);
+      });
+    }
+
+    return panel;
   }
 };
 
@@ -198,9 +312,17 @@ SkillTable.prototype = {
 function SkillList() {
   // TODO(broussev): Add jasmine tests.
   this._skillLookupByIdTable = {};
+  this._diagnosisData = null;
   this._onLoadCallback = null;
   this._xsrfToken = null;
 }
+/**
+ * Values for the graph diagnostics status.
+ */
+SkillList.HEALTHY = 1;
+SkillList.WARNING = 2;
+SkillList.ERROR = 3;
+
 
 SkillList.prototype = {
   /**
@@ -215,7 +337,7 @@ SkillList.prototype = {
     this._onLoadCallback = callback;
     $.ajax({
       type: 'GET',
-      url: 'rest/modules/skill_map/skill_list',
+      url: 'rest/modules/skill_map/skill',
       dataType: 'text',
       success: function(data) {
         that._onLoad(data);
@@ -244,7 +366,7 @@ SkillList.prototype = {
         type: 'DELETE',
         dataType: 'text',
         success: function (data) {
-          that._onDeleteSkill(callback, data, skillId);
+          that._onDeleteSkill(callback, data);
         },
         error: function () {
           callback('error');
@@ -253,23 +375,14 @@ SkillList.prototype = {
     });
   },
 
-  _onDeleteSkill: function(callback, data, skillId) {
+  _onDeleteSkill: function(callback, data) {
     data = parseAjaxResponse(data);
     if (data.status != 200) {
       showMsg(data.message);
       return;
     }
-
-    delete this._skillLookupByIdTable[skillId];
-
-    this.eachSkill(function(skill) {
-      for (var i = 0; i < skill.prerequisite_ids.length; i++) {
-        if (skill.prerequisite_ids[i] === skillId) {
-          skill.prerequisite_ids.splice(i, 1);
-          break;
-        }
-      }
-    });
+    var payload = JSON.parse(data['payload']);
+    this._updateFromPayload(payload);
     callback('success', data.message);
   },
 
@@ -368,8 +481,57 @@ SkillList.prototype = {
     });
   },
 
+  /**
+   * @method
+   * @param skillId {Number} The id of the skill to be diagnosed.
+   * @return {object} with the following structure:
+   *     {
+   *       status {Number}: one of HEALTHY, WARNING, ERROR
+   *       cycles: list of lists of cycles containing the skill
+   *       long_chains: list of list of long chains containing the skill,
+   *       singleton: boolean
+   *     }
+   */
+  diagnosis: function(skillId) {
+    var retval = {
+      status: SkillList.HEALTHY,
+      cycles: [],
+      long_chains: [],
+      singleton: false
+    };
+
+    var error = false;
+    var warning = false;
+
+    $.each(this._diagnosisData.cycles, function() {
+      if (this.indexOf(skillId) >= 0) {
+        error = true;
+        retval.cycles.push(this);
+      }
+    });
+
+    $.each(this._diagnosisData.long_chains, function() {
+      if (this.indexOf(skillId) >= 0) {
+        warning = true;
+        retval.long_chains.push(this);
+      }
+    });
+
+    if (this._diagnosisData.singletons.indexOf(skillId) >= 0) {
+      warning = true;
+      retval.singleton = true;
+    }
+
+    if (error) {
+      retval.status = SkillList.ERROR;
+    } else if (warning) {
+      retval.status = SkillList.WARNING;
+    }
+
+    return retval;
+  },
+
   _onLoad: function(data) {
-    var that = this;
     data = parseAjaxResponse(data);
     if (data.status != 200) {
       showMsg('Unable to load skill map. Reload page and try again.');
@@ -377,11 +539,18 @@ SkillList.prototype = {
     }
     this._xsrfToken = data['xsrf_token'];
     var payload = JSON.parse(data['payload']);
+    this._updateFromPayload(payload);
+  },
+
+  _updateFromPayload: function(payload) {
+    var that = this;
     var skillList = payload['skill_list'];
 
     $.each(skillList, function() {
       that._skillLookupByIdTable[this.id] = this;
     });
+
+    this._diagnosisData = payload['diagnosis'];
 
     if (this._onLoadCallback) {
       this._onLoadCallback();
@@ -395,7 +564,7 @@ SkillList.prototype = {
       return;
     }
     var payload = JSON.parse(data.payload);
-    this._skillLookupByIdTable[payload.skill.id] = payload.skill;
+    this._updateFromPayload(payload);
     callback(payload.skill, data.message);
   }
 };

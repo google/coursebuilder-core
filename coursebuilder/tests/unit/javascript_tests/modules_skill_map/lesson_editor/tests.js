@@ -56,7 +56,7 @@ describe('The skill tagging library', function() {
         expect($.ajax).toHaveBeenCalled();
         var arg = $.ajax.calls[0].args[0];
         expect(arg.type).toEqual('GET');
-        expect(arg.url).toEqual('rest/modules/skill_map/skill_list');
+        expect(arg.url).toEqual('rest/modules/skill_map/skill');
         expect(arg.dataType).toEqual('text');
       });
       it('displays an error if the status is not 200', function() {
@@ -119,7 +119,8 @@ describe('The skill tagging library', function() {
             description: 'can skate',
             prerequisite_ids: []
           },
-          skills: []
+          skill_list: [],
+          diagnosis: []
         })
       };
       $.ajax.calls[0].args[0].success(JSON.stringify(payload));
