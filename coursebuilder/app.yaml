@@ -42,6 +42,7 @@ env_variables:
     modules.oauth2.oauth2=disabled
 
 
+
 includes:
 - custom.yaml
 
@@ -78,3 +79,13 @@ handlers:
 - url: /.*
   script: main.app
   secure: always
+
+skip_files:
+# GAE default patterns.
+- ^(.*/)?#.*#$
+- ^(.*/)?.*~$
+- ^(.*/)?.*\.py[co]$
+- ^(.*/)?.*/RCS/.*$
+- ^(.*/)?\..*$
+# CB-specific patterns.
+- ^internal/.*$
