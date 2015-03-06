@@ -23,6 +23,7 @@ import os
 import courses
 import transforms
 
+from common import utils
 from models import QuestionDAO
 from models import QuestionGroupDAO
 from models import StudentPropertyEntity
@@ -98,6 +99,8 @@ class UnitLessonCompletionTracker(object):
         EVENT_CODE_MAPPING['html'],
         EVENT_CODE_MAPPING['custom_unit']
     ]
+
+    POST_UPDATE_PROGRESS_HOOK = []
 
     def __init__(self, course):
         self._course = course
@@ -859,6 +862,9 @@ class UnitLessonCompletionTracker(object):
             # in derived events (Unit, typically).
             self._update_course(progress, student)
 
+        utils.run_hooks(self.POST_UPDATE_PROGRESS_HOOK, self._get_course(),
+                        student, event_entity, event_key)
+
     def get_course_status(self, progress):
         return self._get_entity_value(progress, self._get_course_key())
 
@@ -1062,6 +1068,36 @@ class UnitLessonCompletionTracker(object):
 
         progress_dict[key] += value
         student_property.value = transforms.dumps(progress_dict)
+
+    @classmethod
+    def get_elements_from_key(cls, key):
+        """Decomposes the key into a dictionary with its values.
+
+        Args:
+            key: a string, the key of an element of the progress. For
+            example, u.1.l.5.h.0
+
+        Returns:
+            A dictionary mapping each element in the key to its value. For
+            the key u.1.l.5.h.0 the result is:
+            {
+                'unit': 1,
+                'lesson': 5,
+                'html': 0
+            }
+        """
+        reversed_event_mapping = {
+            v: k for k, v in cls.EVENT_CODE_MAPPING.iteritems()}
+        key_elements = key.split('.')
+        assert len(key_elements) % 2 == 0
+        result = {}
+        for index in range(0, len(key_elements), 2):
+            element_type = key_elements[index]
+            element_value = key_elements[index + 1]
+            full_element_type = reversed_event_mapping.get(element_type)
+            if full_element_type:
+                result[full_element_type] = element_value
+        return result
 
 
 class ProgressStats(object):

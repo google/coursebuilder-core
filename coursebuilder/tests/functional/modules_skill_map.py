@@ -19,6 +19,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import cgi
 import cStringIO
 import StringIO
+import time
 import urllib
 import zipfile
 
@@ -43,6 +44,7 @@ from modules.skill_map.skill_map import SkillGraph
 from modules.skill_map.skill_map import SkillMap
 from modules.skill_map.skill_map import SkillRestHandler
 from modules.skill_map.skill_map import _SkillDao
+from modules.skill_map.skill_map import SkillCompletionTracker
 from modules.skill_map.skill_map_metrics import SkillMapMetrics
 from modules.skill_map.skill_map_metrics import CHAINS_MIN_LENGTH
 from tests.functional import actions
@@ -100,6 +102,17 @@ class BaseSkillMapTests(actions.TestBase):
 
         self.sf = self.skill_graph.add(Skill.build('f', ''))
         self.skill_graph.add_prerequisite(self.sf.id, self.se.id)
+
+    def _create_lessons(self):
+        """Creates 3 lessons for unit 1."""
+        self.unit = self.course.add_unit()
+        self.unit.title = 'Test Unit'
+        self.lesson1 = self.course.add_lesson(self.unit)
+        self.lesson1.title = 'Test Lesson 1'
+        self.lesson2 = self.course.add_lesson(self.unit)
+        self.lesson2.title = 'Test Lesson 2'
+        self.lesson3 = self.course.add_lesson(self.unit)
+        self.lesson3.title = 'Test Lesson 3'
 
 
 class SkillGraphTests(BaseSkillMapTests):
@@ -986,17 +999,6 @@ class CountSkillCompletionsTests(BaseSkillMapTests):
             comp.value = transforms.dumps(progress)
             comp.put()
 
-    def _create_lessons(self):
-        """Creates 3 lessons for unit 1."""
-        self.unit = self.course.add_unit()
-        self.unit.title = 'Test Unit'
-        self.lesson1 = self.course.add_lesson(self.unit)
-        self.lesson1.title = 'Test Lesson 1'
-        self.lesson2 = self.course.add_lesson(self.unit)
-        self.lesson2.title = 'Test Lesson 2'
-        self.lesson3 = self.course.add_lesson(self.unit)
-        self.lesson3.title = 'Test Lesson 3'
-
     def _create_skills(self):
         """Creates 2 skills. Skill1 -> Lesson 1 and 2, Skill2 -> Lesson 3."""
         skill_graph = SkillGraph.load()
@@ -1554,4 +1556,144 @@ class SkillI18nTests(actions.TestBase):
         bundle = i18n_dashboard.ResourceBundleDAO.load(str(bundle_key))
         self.assertEquals(bundle.dict['description']['data'][0]['target_value'],
                           SKILL_DESC[::-1])
+
+
+class SkillCompletionTrackerTests(BaseSkillMapTests):
+    """Hanldes the access and modification of the skill progress."""
+
+    def _add_student_and_progress(self):
+        # progress string for students
+        student_progress = {
+            self.sa.id: {
+                SkillCompletionTracker.COMPLETED: time.time() - 100,
+                SkillCompletionTracker.IN_PROGRESS: time.time() - 200
+            },
+            self.sb.id: {
+                SkillCompletionTracker.IN_PROGRESS: time.time()
+            },
+        }
+        self.student = models.Student(user_id='1')
+        self.student.put()
+        self.progress = models.StudentPropertyEntity.create(
+            student=self.student,
+            property_name=SkillCompletionTracker.PROPERTY_KEY)
+        self.progress.value = transforms.dumps(student_progress)
+        self.progress.put()
+
+    def _create_linear_progress(self):
+        uid = self.unit.unit_id
+        # progress string for students
+        student_progress = {
+            'u.{}.l.{}'.format(uid, self.lesson1.lesson_id): 2,
+            'u.{}.l.{}'.format(uid, self.lesson2.lesson_id): 2
+        }
+
+        student = models.Student(user_id='1')
+        student.put()
+        comp = UnitLessonCompletionTracker.get_or_create_progress(
+            student)
+        comp.value = transforms.dumps(student_progress)
+        comp.put()
+
+    def test_get_skill_progress(self):
+        """Looks in the db for the progress of the skill."""
+        self._build_sample_graph()
+        self._add_student_and_progress()
+        tracker = SkillCompletionTracker()
+        result = tracker.get_skills_progress(
+            self.student, [self.sa.id, self.sb.id, self.sc.id])
+        self.assertEqual(SkillCompletionTracker.COMPLETED,
+                         result[self.sa.id][0])
+        self.assertEqual(SkillCompletionTracker.IN_PROGRESS,
+                         result[self.sb.id][0])
+        self.assertEqual(SkillCompletionTracker.NOT_ATTEMPTED,
+                         result[self.sc.id][0])
+
+    def test_get_non_existent_skill_progress(self):
+        """Asks for the progress of a non existing StudentPropertyEntity."""
+        self._build_sample_graph()
+        student = models.Student(user_id='1')
+        tracker = SkillCompletionTracker()
+        result = tracker.get_skills_progress(student, [self.sc.id])
+        self.assertEqual(SkillCompletionTracker.NOT_ATTEMPTED,
+                         result[self.sc.id][0])
+
+    def test_update_skill_progress(self):
+        progress_value = {}
+        skill = 1
+        start_time = time.time()
+        completed = SkillCompletionTracker.COMPLETED
+        SkillCompletionTracker.update_skill_progress(progress_value, skill,
+                                                  completed)
+        end_time = time.time()
+        # Repeat, the timestamp should not be affected.
+        SkillCompletionTracker.update_skill_progress(progress_value, skill,
+                                                  completed)
+        skill = str(skill)
+        self.assertIn(skill, progress_value)
+        self.assertIn(completed, progress_value[skill])
+        self.assertLessEqual(start_time, progress_value[skill][completed])
+        self.assertLessEqual(progress_value[skill][completed], end_time)
+
+    def test_recalculate_progress(self):
+        """Calculates the skill progress from the lessons."""
+        self._build_sample_graph()
+        self._create_lessons()  # 3 lessons in unit 1
+        self.student = models.Student(user_id='1')
+        self._create_linear_progress()  # Lesson 1 and 2 completed
+        self.lesson1.properties[LESSON_SKILL_LIST_KEY] = [self.sa.id]
+        self.lesson2.properties[LESSON_SKILL_LIST_KEY] = [self.sb.id]
+        self.lesson3.properties[LESSON_SKILL_LIST_KEY] = [self.sa.id,
+                                                          self.sc.id]
+        self.course.save()
+
+        tracker = SkillCompletionTracker(self.course)
+        lprogress_tracker = UnitLessonCompletionTracker(self.course)
+        lprogress = lprogress_tracker.get_or_create_progress(self.student)
+        expected = {
+            self.sa: tracker.IN_PROGRESS,
+            self.sb: tracker.COMPLETED,
+            self.sc: tracker.NOT_ATTEMPTED
+        }
+        for skill, expected_progress in expected.iteritems():
+            self.assertEqual(expected_progress,
+                tracker.recalculate_progress(lprogress_tracker,
+                                             lprogress, skill))
+
+    def test_update_skills_to_completed(self):
+        """Calculates the state from the linear progress."""
+        self._build_sample_graph()
+        self._create_lessons()  # 3 lessons in unit 1
+        self._add_student_and_progress()  # sa completed, sb in progress
+        self._create_linear_progress()  # Lesson 1 and 2 completed
+        self.lesson1.properties[LESSON_SKILL_LIST_KEY] = [self.sa.id,
+                                                          self.sb.id]
+        self.course.save()
+
+        start_time = time.time()
+        tracker = SkillCompletionTracker(self.course)
+        tracker.update_skills(self.student, self.lesson1.lesson_id)
+        # Nothing changes with sa
+        sprogress = models.StudentPropertyEntity.get(
+            self.student, SkillCompletionTracker.PROPERTY_KEY)
+        progress_value = transforms.loads(sprogress.value)
+        self.assertIn(tracker.COMPLETED, progress_value[str(self.sa.id)])
+        self.assertLessEqual(
+            progress_value[str(self.sa.id)][tracker.COMPLETED], start_time)
+
+        # Update in sb
+        self.assertIn(tracker.COMPLETED, progress_value[str(self.sb.id)])
+        self.assertGreaterEqual(
+            progress_value[str(self.sb.id)][tracker.COMPLETED], start_time)
+
+    def test_update_recalculate_no_skill_map(self):
+        self._build_sample_graph()
+        self._create_lessons()  # 3 lessons in unit 1
+        self._add_student_and_progress()  # sa completed, sb in progress
+        lprogress_tracker = UnitLessonCompletionTracker(self.course)
+        lprogress = lprogress_tracker.get_or_create_progress(self.student)
+        tracker = SkillCompletionTracker()
+        # Just does not raise any error
+        tracker.update_skills(self.student, self.lesson1.lesson_id)
+        tracker.recalculate_progress(lprogress_tracker, lprogress, self.sa)
 

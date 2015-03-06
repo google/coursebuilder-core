@@ -20,6 +20,9 @@ import json
 import jinja2
 import logging
 import os
+import time
+
+from collections import defaultdict
 
 import appengine_config
 from common import crypto
@@ -1032,6 +1035,213 @@ class SkillMapDataSource(data_sources.SynchronousQuery):
         template_values['counts'] = transforms.dumps(sorted(result))
 
 
+class SkillCompletionTracker(object):
+    """Interface for the student completion the skills.
+
+    This class performs the same functions as the class
+    models.progress.UnitLessonCompletionTracker. It saves the progress of
+    each skill into a models.models.StudentPropertyEntity instance with key
+    STUDENT_ID-SkillCompletionTracker.PROPERTY_KEY.
+
+    The value attibute on the StudentPropertyEntity is a json string with
+    the following schema:
+    {
+        skill_id: {skill_progress: timestamp, ... }
+    }
+
+    The progress of the skill can have three values, similar to the state of
+    a lesson:
+        NOT_ATTEMPTED: any of the lessons mapped with the skill are
+            UnitLessonCompletionTracker.IN_PROGRESS_STATE
+        IN_PROGRESS: at least one of the lessons mapped with the skill is not
+            in UnitLessonCompletionTracker.NOT_ATTEMPTED_STATE.
+        COMPLETED: all the lessons mapped with the skill are in
+            UnitLessonCompletionTracker.COMPLETED_STATE.
+
+    The timestamp is and integer that registers the last change in the state
+    of that skill progress.
+    """
+    # TODO(milit): add manual progress of the skills
+
+    PROPERTY_KEY = 'skill-completion'
+
+    COMPLETED = '2'
+    IN_PROGRESS = '1'
+    NOT_ATTEMPTED = '0'
+
+    # Elements of the course which progress affects the progress of skills
+    PROGRESS_DEPENDENCIES = set(['lesson'])
+
+    def __init__(self, course=None):
+        """Creates an instance of SkillCompletionTracker.
+
+        Args:
+            course: the course to load. If the course is None, the
+            only actions that can be performed are get_or_create_progress,
+            get_skill_progress and update_skill_progress.
+        """
+        # The course as an optional parameter allows access to the progress
+        # without loading the SkillMap. (Like in a map reduce job)
+        self.course = course
+        self._skill_map = None
+        if course:
+            self._skill_map = SkillMap.load(course)
+
+    def _get_or_create_progress(self, student):
+        sprogress = models.StudentPropertyEntity.get(
+            student, self.PROPERTY_KEY)
+        if not sprogress:
+            sprogress = models.StudentPropertyEntity.create(
+                student=student, property_name=self.PROPERTY_KEY)
+        return sprogress
+
+    def get_skills_progress(self, student, skill_bunch):
+        """Returns the more advanced state of the skill for the student.
+
+        This function retrieves the recorded progress of the skill, does not
+        calculate it again from the linear progress of the course.
+
+        Args:
+            student: an instance of models.models.StudentEntity class.
+            skill_bunch: an iterable of skill ids.
+
+        Returns:
+            A dictionary mapping the skill ids in skill_bunch with tuples
+            (progress, timestamp). For the state NOT_ATTEMPTED the timestamp
+            is always 0.
+        """
+        sprogress = self._get_or_create_progress(student)
+        if not sprogress.value:
+            return {id: (self.NOT_ATTEMPTED, 0) for id in skill_bunch}
+        sprogress = transforms.loads(sprogress.value)
+        result = {}
+        for skill_id in skill_bunch:
+            skill_progress = sprogress.get(str(skill_id))  # After transforms
+            # the keys of the progress are str, not int.
+            if not skill_progress:
+                result[skill_id] = (self.NOT_ATTEMPTED, 0)
+            elif self.COMPLETED in skill_progress:
+                result[skill_id] = (self.COMPLETED,
+                                    skill_progress[self.COMPLETED])
+            else:
+                result[skill_id] = (self.IN_PROGRESS,
+                                    skill_progress[self.IN_PROGRESS])
+        return result
+
+    @staticmethod
+    def update_skill_progress(progress_value, skill_id, state):
+        """Assigns state to the skill in the student progress.
+
+        If there is a change on the state of the skill, saves the current
+        time (seconds since epoch).
+
+        Args:
+            progress_value: an dictiory. Corresponds to the value of an
+            models.models.StudentPropertyEntity instance that tracks the
+            skill progress.
+            skill_id: the id of the skill to modify.
+            state: a valid progress state for the skill.
+        """
+        skill_progress = progress_value.get(str(skill_id))
+        if not skill_progress:
+            progress_value[str(skill_id)] = {state: time.time()}
+        elif not state in skill_progress:
+            progress_value[str(skill_id)][state] = time.time()
+
+    def recalculate_progress(self, lprogress_tracker, lprogress, skill):
+        """Calculates the progress of the skill from the linear progress.
+
+        Args:
+            lprogress_tracker: an instance of UnitLessonCompletionTracker.
+            lprogress: an instance of StudentPropertyEntity that holds
+            the linear progress of the student in the course.
+            skill: an instance of SkillInfo or Skill.
+
+        Returns:
+            The calculated progress of the skill. If self does not have
+            a valid skill_map instance (was initialized with no arguments)
+            then this method returns None.
+        """
+        # It's horrible to pass redundant arguments but we avoid
+        # obtaining the lprogress from the db multiple times.
+        if not self._skill_map:
+            return
+        skill_lessons = self._skill_map.get_lessons_for_skill(skill)
+        state_counts = defaultdict(lambda: 0)
+        for lesson in skill_lessons:
+            status = lprogress_tracker.get_lesson_status(
+                lprogress, lesson.unit_id, lesson.lesson_id)
+            state_counts[status] += 1
+
+        if (state_counts[lprogress_tracker.COMPLETED_STATE] ==
+            len(skill_lessons)):
+            return self.COMPLETED
+        if (state_counts[lprogress_tracker.IN_PROGRESS_STATE] +
+            state_counts[lprogress_tracker.COMPLETED_STATE]):
+            # At leat one lesson in progress or completed
+            return self.IN_PROGRESS
+        return self.NOT_ATTEMPTED
+
+    def update_skills(self, student, lesson_id):
+        """Recalculates and saves the progress of all skills mapped to lesson.
+
+        If self does not have a valid skill_map instance (was initialized
+        with no arguments) then this method does not perform any action.
+
+        Args:
+            student: an instance of StudentEntity.
+            lesson_id: the id of the lesson.
+        """
+        # TODO(milit): Add process for lesson None.
+        if not self._skill_map:
+            return
+        lprogress_tracker = progress.UnitLessonCompletionTracker(self.course)
+        lprogress = lprogress_tracker.get_or_create_progress(student)
+
+        sprogress = self._get_or_create_progress(student)
+        progress_value = {}
+        if sprogress.value:
+            progress_value = transforms.loads(sprogress.value)
+
+        skills = self._skill_map.get_skills_for_lesson(lesson_id)
+        for skill in skills:
+            new_progress = self.recalculate_progress(
+                lprogress_tracker, lprogress, skill)
+            self.update_skill_progress(progress_value, skill.id, new_progress)
+
+        sprogress.value = transforms.dumps(progress_value)
+        sprogress.put()
+
+
+def post_update_progress(course, student, event_entity, event_key):
+    """Updates the skill progress after the update of the linear progress.
+
+    Args:
+        course: the current course.
+        student: an instance of StudentEntity.
+        event_entity: a string. The kind of event or progress that was
+        trigered. Only events in SkillCompletionTracker.PROGRESS_DEPENDENCIES
+        will be processed, others will be ignored.
+        event_key: the element that triggered the update of the linear
+        progress. This key is the same used in the linear progress and
+        must be compatible with the method
+        progress.UnitLessonCompletionTracker.get_elements_from_key. If,
+        for example, event_entity is 'lesson', the event key could be
+        the key of the lesson or the key of any subentities of the lesson.
+    """
+    if event_entity not in SkillCompletionTracker.PROGRESS_DEPENDENCIES:
+        return
+
+    key_elements = progress.UnitLessonCompletionTracker.get_elements_from_key(
+        event_key)
+    lesson_id = key_elements.get('lesson')
+    unit_id = key_elements.get('unit')
+    if not (lesson_id and unit_id and isinstance(
+        course.find_lesson_by_id(unit_id, lesson_id), courses.Lesson13)):
+        return
+    SkillCompletionTracker(course).update_skills(student, lesson_id)
+
+
 def register_tabs():
     tabs.Registry.register(
         'skill_map', 'skills_table', 'Skills Table',
@@ -1243,6 +1453,9 @@ def notify_module_enabled():
     courses.Course.OPTIONS_SCHEMA_PROVIDERS.setdefault(
         courses.Course.SCHEMA_SECTION_COURSE, []).append(
             widget_display_flag_schema_provider)
+
+    progress.UnitLessonCompletionTracker.POST_UPDATE_PROGRESS_HOOK.append(
+        post_update_progress)
 
     data_sources.Registry.register(SkillMapDataSource)
 
