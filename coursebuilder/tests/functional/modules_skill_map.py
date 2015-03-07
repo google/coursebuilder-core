@@ -40,9 +40,11 @@ from modules.skill_map.skill_map import CountSkillCompletion
 from modules.skill_map.skill_map import LESSON_SKILL_LIST_KEY
 from modules.skill_map.skill_map import ResourceSkill
 from modules.skill_map.skill_map import Skill
+from modules.skill_map.skill_map import SkillAggregateRestHandler
 from modules.skill_map.skill_map import SkillGraph
 from modules.skill_map.skill_map import SkillMap
 from modules.skill_map.skill_map import SkillRestHandler
+from modules.skill_map.skill_map import SkillCompletionAggregate
 from modules.skill_map.skill_map import _SkillDao
 from modules.skill_map.skill_map import SkillCompletionTracker
 from modules.skill_map.skill_map_metrics import SkillMapMetrics
@@ -941,44 +943,49 @@ class SkillMapAnalyticsTabTests(BaseSkillMapTests):
 
 
 class CountSkillCompletionsTests(BaseSkillMapTests):
-    """Tests the output of the map reduce job CountSkillCompletions."""
+    """Tests the result of the map reduce job CountSkillCompletions."""
 
     def setUp(self):
         super(CountSkillCompletionsTests, self).setUp()
         actions.login(ADMIN_EMAIL, is_admin=True)
-        self._create_lessons()
         self._create_skills()
         self._create_students()
 
     def _create_students(self):
         """Creates 4 StudentPropertyEntities with partial progress."""
-        uid = self.unit.unit_id
+        def mktime(str_date):
+            return time.mktime(time.strptime(
+                str_date, CountSkillCompletion.DATE_FORMAT))
+        self.day1 = '2015-01-01'
+        self.day2 = '2015-01-02'
+        self.day3 = '2015-01-03'
+        self.day4 = '2015-01-04'
+        c = SkillCompletionTracker.COMPLETED
+        p = SkillCompletionTracker.IN_PROGRESS
         # progress string for students
         students_progress = [
-            {'u.{}.l.{}'.format(uid, self.lesson1.lesson_id): 2,
-             'u.{}.l.{}'.format(uid, self.lesson2.lesson_id): 2},
-            {'u.{}.l.{}'.format(uid, self.lesson1.lesson_id): 2,
-             'u.{}.l.{}'.format(uid, self.lesson2.lesson_id): 1},
-            {'u.{}.l.{}'.format(uid, self.lesson1.lesson_id): 2},
-            {'u.{}.l.{}'.format(uid, self.lesson1.lesson_id): 2,
-             'u.{}.l.{}'.format(uid, self.lesson3.lesson_id): 2}
+            {self.skill1.id : {c: mktime(self.day2), p: mktime(self.day1)},
+             self.skill2.id : {c: mktime(self.day4), p: mktime(self.day1)}},
+            {self.skill1.id : {c: mktime(self.day2), p: mktime(self.day2)},
+             self.skill2.id : {p: mktime(self.day1)}},
+            {self.skill1.id : {c: mktime(self.day1)}},
+            {}  # No progress
         ]
         for index, progress in enumerate(students_progress):
             student = models.Student(user_id=str(index))
             student.put()
-            comp = UnitLessonCompletionTracker.get_or_create_progress(
-                student)
+            comp = models.StudentPropertyEntity.create(
+                student=student,
+                property_name=SkillCompletionTracker.PROPERTY_KEY)
             comp.value = transforms.dumps(progress)
             comp.put()
 
     def _create_skills(self):
-        """Creates 2 skills. Skill1 -> Lesson 1 and 2, Skill2 -> Lesson 3."""
+        """Creates 2 skills."""
         skill_graph = SkillGraph.load()
         self.skill1 = skill_graph.add(Skill.build('a', ''))
         self.skill2 = skill_graph.add(Skill.build('b', ''))
-        self.lesson1.properties[LESSON_SKILL_LIST_KEY] = [self.skill1.id]
-        self.lesson2.properties[LESSON_SKILL_LIST_KEY] = [self.skill1.id]
-        self.lesson3.properties[LESSON_SKILL_LIST_KEY] = [self.skill2.id]
+        self.skill3 = skill_graph.add(Skill.build('c', ''))
         self.course.save()
 
     def run_generator_job(self):
@@ -986,44 +993,151 @@ class CountSkillCompletionsTests(BaseSkillMapTests):
         job.submit()
         self.execute_all_deferred_tasks()
 
-    def test_job(self):
-        """Number of students that completed and are in progress for each skill.
+    def test_job_aggregate_entities(self):
+        """Tests the SkillCompletionAggregate entities created by the job."""
+        # This is testing:
+        #   - Skills completed without in progress state
+        #   - Days with no progress
+        #   - Skills with no progress
+        #   - Students with no progress
+        self.run_generator_job()
+        job = CountSkillCompletion(self.app_context).load()
+        expected = {
+            str(self.skill1.id): {self.day1: 1, self.day2: 2},
+            str(self.skill2.id): {self.day4: 1},
+            str(self.skill3.id): {}
+        }
+        # Check entities
+        result = list(SkillCompletionAggregate.all().run())
+        self.assertEqual(3, len(result))  # One per skill
+        for aggregate in result:
+            skill_id = aggregate.key().name()
+            self.assertEqual(expected[skill_id],
+                             transforms.loads(aggregate.aggregate))
 
-        A skill is completed if the students completed all the lessons
-        associated with the skill.
-        """
+    def test_job_output(self):
+        """Tests the output of the job for the SkillMapDataSource."""
         self.run_generator_job()
         job = CountSkillCompletion(self.app_context).load()
         output = jobs.MapReduceJob.get_results(job)
-        expected = [[str(self.skill1.id), self.skill1.name, 1, 3],
-                    [str(self.skill2.id), self.skill2.name, 1, 0]]
-        self.assertEqual(output, expected)
-
-    def test_job_skills_no_lesson(self):
-        """The result of the job must include skills not completed."""
-        skill_graph = SkillGraph.load()
-        skill3 = skill_graph.add(Skill.build('c', ''))
-        self.run_generator_job()
-        job = CountSkillCompletion(self.app_context).load()
-        output = jobs.MapReduceJob.get_results(job)
-        expected = [str(skill3.id), skill3.name, 0, 0]
-        self.assertIn(expected, output)
+        expected = [[str(self.skill1.id), self.skill1.name, 3, 0],
+                    [str(self.skill2.id), self.skill2.name, 1, 1],
+                    [str(self.skill3.id), self.skill3.name, 0, 0]]
+        self.assertEqual(sorted(expected), sorted(output))
 
     def test_build_additional_mapper_params(self):
         """The additional param in a dictionary mapping from skills to lessons.
         """
         job = CountSkillCompletion(self.app_context)
         result = job.build_additional_mapper_params(self.app_context)
-        id1 = CountSkillCompletion.pack_name(
-            self.skill1.id, self.skill1.name)
-        id2 = CountSkillCompletion.pack_name(
-            self.skill2.id, self.skill2.name)
         expected = {
-            id1: [(self.unit.unit_id, self.lesson1.lesson_id),
-                  (self.unit.unit_id, self.lesson2.lesson_id)],
-            id2: [(self.unit.unit_id, self.lesson3.lesson_id)],
+            self.skill1.id: job.pack_name(self.skill1.id, self.skill1.name),
+            self.skill2.id: job.pack_name(self.skill2.id, self.skill2.name),
+            self.skill3.id: job.pack_name(self.skill3.id, self.skill3.name)
+            }
+        self.assertEqual({'skills': expected}, result)
+
+
+class SkillAggregateRestHandlerTests(BaseSkillMapTests):
+    """Tests for the class SkillAggregateRestHandler."""
+
+    URL = 'rest/modules/skill_map/skill_aggregate_count'
+    XSRF_TOKEN = 'skill_aggregate'
+
+    def _add_aggregates(self):
+        self.day1 = '2015-01-01'
+        self.day2 = '2015-01-02'
+        self.day3 = '2015-01-03'
+        self.day4 = '2015-01-04'
+        self.skill_ids = range(1, 4)
+        self.aggregates = {
+            self.skill_ids[0]: {self.day1: 1, self.day2: 2},
+            self.skill_ids[1]: {self.day4: 1},
+            self.skill_ids[2]: {},
         }
-        self.assertEqual(result, {'skills_to_lessons': expected})
+        for skill_id, aggregate in self.aggregates.iteritems():
+            SkillCompletionAggregate(
+                key_name=str(skill_id),
+                aggregate=transforms.dumps(aggregate)).put()
+
+    def test_rejected_if_not_authorized(self):
+        # Not logged in
+        response = transforms.loads(self.get(self.URL).body)
+        self.assertEqual(401, response['status'])
+
+        # logged in but not admin
+        actions.login('user.foo.com')
+        response = transforms.loads(self.get(self.URL).body)
+        self.assertEqual(401, response['status'])
+
+        # logged in as admin
+        actions.logout()
+        actions.login(ADMIN_EMAIL)
+        response = transforms.loads(self.get(self.URL).body)
+        self.assertEqual(200, response['status'])
+
+    def test_single_skill_request(self):
+        """Asks for one skill information."""
+        self._add_aggregates()
+        actions.login(ADMIN_EMAIL)
+        get_url = '%s?%s' % (self.URL, urllib.urlencode({
+            'ids': [self.skill_ids[0]]}, True))
+
+        response = self.get(get_url)
+        self.assertEqual(200, response.status_int)
+        payload = transforms.loads(response.body)['payload']
+
+        expected_header = ['Date', str(self.skill_ids[0])]
+        expected_data = [[self.day1, 1], [self.day2, 2]]
+        result = transforms.loads(payload)
+        self.assertEqual(expected_header, result['column_headers'])
+        self.assertEqual(len(expected_data), len(result['data']))
+        for row in expected_data:
+            self.assertIn(row, result['data'])
+
+    def test_multiple_skill_request(self):
+        """Asks for more than one skill information."""
+        self._add_aggregates()
+        actions.login(ADMIN_EMAIL)
+        get_url = '%s?%s' % (self.URL, urllib.urlencode({
+            'ids': self.skill_ids}, True))
+
+        response = self.get(get_url)
+        self.assertEqual(200, response.status_int)
+        payload = transforms.loads(response.body)['payload']
+        result = transforms.loads(payload)
+
+        expected_header = ['Date'] + [str(skill_id)
+                                      for skill_id in self.skill_ids]
+        expected_data = [
+            [self.day1, 1, 0, 0], [self.day2, 2, 0, 0], [self.day4, 0, 1, 0]
+        ]
+        self.assertEqual(expected_header, result['column_headers'])
+        self.assertEqual(len(expected_data), len(result['data']))
+        for row in expected_data:
+            self.assertIn(row, result['data'])
+
+    def test_no_skill_request(self):
+        """Sends a request with no skills."""
+        actions.login(ADMIN_EMAIL)
+
+        response = self.get(self.URL)
+        self.assertEqual(200, response.status_int)
+        payload = transforms.loads(response.body)['payload']
+        result = transforms.loads(payload)
+
+        self.assertEqual(['Date'], result['column_headers'])
+        self.assertEqual([], result['data'])
+
+    def test_exceed_limit_request(self):
+        """Exceeds the limit in the number of skills requested."""
+        actions.login(ADMIN_EMAIL)
+        ids_list = list(range(SkillAggregateRestHandler.MAX_REQUEST_SIZE))
+        get_url = '%s?%s' % (self.URL, urllib.urlencode({
+            'ids': ids_list}, True))
+
+        response = transforms.loads(self.get(get_url).body)
+        self.assertEqual(412, response['status'])
 
 
 class SkillMapMetricTests(BaseSkillMapTests):
@@ -1668,4 +1782,3 @@ class SkillCompletionTrackerTests(BaseSkillMapTests):
         # Just does not raise any error
         tracker.update_skills(self.student, self.lesson1.lesson_id)
         tracker.recalculate_progress(lprogress_tracker, lprogress, self.sa)
-

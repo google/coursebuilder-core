@@ -67,14 +67,6 @@ RESOURCES_URI = '/modules/skill_map/resources'
 # Key for storing list of skill id's in the properties table of a Lesson
 LESSON_SKILL_LIST_KEY = 'modules.skill_map.skill_list'
 
-# The progress of a StudentProperty can have several values.
-# If it is a composite entity (unit, lesson), then the value is
-#   - 0 if none of its sub-entities has been completed
-#   - 1 if some, but not all, of its sub-entities have been completed
-#   - 2 if all its sub-entities have been completed.
-COMPLETE = progress.UnitLessonCompletionTracker.COMPLETED_STATE
-IN_PROGRESS = progress.UnitLessonCompletionTracker.IN_PROGRESS_STATE
-NOT_ATTEMPTED = progress.UnitLessonCompletionTracker.NOT_STARTED_STATE
 
 def _assert(condition, message, errors):
     """Assert a condition and either log exceptions or raise AssertionError."""
@@ -924,39 +916,54 @@ class SkillMapHandler(dashboard.DashboardHandler):
         })
 
 
+class SkillCompletionAggregate(models.BaseEntity):
+    """Representation for the count of skill completions during time.
+
+    Each entity of this class must be created using the skill_id as a
+    key name.
+
+    The aggregate field is a json string representing a dictionary. It
+    maps dates in skill_map.skill_map.CountSkillCompletion.DATE_FORMAT
+    with the number of students that completed that skill on the given
+    date.
+    """
+    name = db.StringProperty()
+    aggregate = db.TextProperty(indexed=False)
+
+
 class CountSkillCompletion(jobs.MapReduceJob):
     """Aggregates the progress of students for each skill."""
 
+    DATE_FORMAT = '%Y-%m-%d'
+
     @classmethod
     def entity_class(cls):
-        return models.StudentPropertyEntity
+        return models.Student
 
     @staticmethod
     def get_description():
         return 'counting students that completed or attempted a skill'
 
     def build_additional_mapper_params(self, app_context):
-        """Creates a map from skill ids to [(unit id, lesson id), ...]."""
-        self.app_context = app_context
+        """Creates a map from skill ids to skill names."""
         course = courses.Course.get(app_context)
         skill_map = SkillMap.load(course)
         result = {}
         for skill in skill_map.skills():
-            packed_name = CountSkillCompletion.pack_name(
-                    skill.id, skill.name)
+            packed_name = self.pack_name(skill.id, skill.name)
             if not packed_name:
                 logging.warning('Skill not processed: the id can\'t be packed.'
                                 ' Id %s', skill.id)
                 continue
-            result[packed_name] = [(loc.unit.unit_id, loc.lesson.lesson_id)
-                                   for loc in skill.locations]
-        return {'skills_to_lessons': result}
+            result[skill.id] = packed_name
+        return {'skills': result}
 
     @staticmethod
     def pack_name(skill_id, skill_name):
         join_str = '--'
         if join_str not in str(skill_id):
             return '{}{}{}'.format(skill_id, join_str, skill_name)
+        return None
 
     @staticmethod
     def unpack_name(packed_name):
@@ -964,49 +971,115 @@ class CountSkillCompletion(jobs.MapReduceJob):
 
     @staticmethod
     def map(item):
-        """Calculates the level of completion of each skill.
-
-        A skill is considered complete if all the lessons related to the skill
-        are completed, in progress if at least one of its lessons is in
-        progress or completed, and not attempted otherwise.
+        """Extracts the skill progress of the student.
 
         Yields:
             A tuple. The first element is the packed id of the skill (item)
-            and the second is the progress of the skill. The progress can be
-            COMPLETE, IN_PROGRESS and NOT_ATTEMPTED.
+            and the second is a json tuple (state, date_str). If the skill
+            is not completed, then the date is None.
         """
-        def build_progress_id(unit_id, lesson_id):
-            return 'u.{}.l.{}'.format(unit_id, lesson_id)
-
         mapper_params = context.get().mapreduce_spec.mapper.params
-        student_progress = transforms.loads(item.value)
-        skills = mapper_params.get('skills_to_lessons', {})
-        for skill_id, locations in skills.iteritems():
-            skill_progress = {COMPLETE: 0, IN_PROGRESS: 0, NOT_ATTEMPTED: 0}
+        skills = mapper_params.get('skills', {})
+        sprogress = SkillCompletionTracker().get_skills_progress(
+            item, skills.keys())
 
-            for unit_id, lesson_id in locations:
-                location_id = build_progress_id(unit_id, lesson_id)
-                if location_id in student_progress:
-                    skill_progress[student_progress[location_id]] += 1
-
-            if skill_progress[COMPLETE] == len(locations) and len(locations):
-                yield skill_id, COMPLETE  # all lessons completed
-            elif skill_progress[IN_PROGRESS] or skill_progress[COMPLETE]:
-                yield skill_id, IN_PROGRESS  # at least one lesson attempted
-            else:  # All the skills are present in the result.
-                yield skill_id, NOT_ATTEMPTED
+        for skill_id, skill_progress in sprogress.iteritems():
+            state, timestamp = skill_progress
+            date_str = time.strftime(CountSkillCompletion.DATE_FORMAT,
+                                     time.gmtime(timestamp))
+            packed_name = skills[skill_id]
+            if state == SkillCompletionTracker.COMPLETED:
+                yield packed_name, transforms.dumps((state, date_str))
+            else:
+                yield packed_name, transforms.dumps((state, None))
 
     @staticmethod
     def reduce(item_id, values):
         """Aggregates the number of students that completed or are in progress.
 
+        Saves the dates of completion in a SkillCompletionAggregate entity.
+        The name of the key of this entity is the skill id.
+
+        Args:
+            item_id: the packed_name of the skill
+            values: a list of json tuples (state, date_str). If the skill
+            is not completed, then the date is None.
+
         Yields:
             A 4-uple with the following schema:
                 id, name, complete_count, in_progress_count
         """
-        yield (CountSkillCompletion.unpack_name(item_id) +
-               [values.count(str(COMPLETE)),
-               values.count(str(IN_PROGRESS))])
+        skill_id, name = CountSkillCompletion.unpack_name(item_id)
+        in_progress_count = 0
+        aggregate = defaultdict(lambda: 0)
+        completed_count = 0
+        for value in values:  # Aggregate the value per date
+            state, date = tuple(transforms.loads(value))
+            if date:
+                aggregate[date] += 1
+                completed_count += 1
+            elif state == SkillCompletionTracker.IN_PROGRESS:
+                in_progress_count += 1
+
+        # Store the entity
+        SkillCompletionAggregate(key_name=str(skill_id), name=name,
+                                 aggregate=transforms.dumps(aggregate)).put()
+        yield (skill_id, name, completed_count, in_progress_count)
+
+
+class SkillAggregateRestHandler(utils.BaseRESTHandler):
+    """REST handler to manage the aggregate count of skill completions."""
+
+    SCHEMA_VERSIONS = ['1']
+
+    URL = '/rest/modules/skill_map/skill_aggregate_count'
+    MAX_REQUEST_SIZE = 10
+
+    def get(self):
+        """Get a the aggregate information for a set of skills.
+
+        In the request, expects a field ids with a json list of skill ids. If
+        more than SkillAggregateRestHandler.MAX_REQUEST_SIZE are sent
+        an error response will be returned.
+
+        In the field 'payload' of the response returns a json dictionary:
+            {'column_headers': ['Date', 'id1', 'id2', ... ]
+             'data': [
+                ['date', 'count skill with id1', 'count skill with id2', ...]
+            }
+        The dates returned are in format CountSkillCompletion.DATE_FORMAT
+        """
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
+
+        ids = self.request.get_all('ids')
+        data = {}
+        headers = ['Date']
+        if ids:
+            if len(ids) >= self.MAX_REQUEST_SIZE:
+                # Given the number of possible skills in a course, this
+                # method can take a while finish if we don't limit the
+                # size of the request.
+                self.validation_error('Request with more than'
+                    ' {} skills'.format(self.MAX_REQUEST_SIZE))
+                return
+            data = defaultdict(lambda: [0] * len(ids))
+            for index, skill_id in enumerate(ids):
+                headers.append(str(skill_id))
+                aggregate = SkillCompletionAggregate.get_by_key_name(str(
+                    skill_id))
+                aggregate = transforms.loads(aggregate.aggregate)
+                for completion_date, count in aggregate.iteritems():
+                    data[completion_date][index] = count
+
+        payload_dict = {
+            'column_headers': headers,
+            'data': [[date] + count for date, count in data.iteritems()]
+        }
+
+        transforms.send_json_response(
+            self, 200, '', payload_dict=payload_dict)
 
 
 class SkillMapDataSource(data_sources.SynchronousQuery):
@@ -1066,9 +1139,10 @@ class SkillCompletionTracker(object):
 
     PROPERTY_KEY = 'skill-completion'
 
-    COMPLETED = '2'
-    IN_PROGRESS = '1'
-    NOT_ATTEMPTED = '0'
+    COMPLETED = str(progress.UnitLessonCompletionTracker.COMPLETED_STATE)
+    IN_PROGRESS = str(progress.UnitLessonCompletionTracker.IN_PROGRESS_STATE)
+    NOT_ATTEMPTED = str(
+        progress.UnitLessonCompletionTracker.NOT_STARTED_STATE)
 
     # Elements of the course which progress affects the progress of skills
     PROGRESS_DEPENDENCIES = set(['lesson'])
@@ -1493,7 +1567,8 @@ def register_module():
     namespaced_routes = [
         (LocationListRestHandler.URL, LocationListRestHandler),
         (SkillRestHandler.URL, SkillRestHandler),
-        (SkillMapHandler.URL, SkillMapHandler)
+        (SkillMapHandler.URL, SkillMapHandler),
+        (SkillAggregateRestHandler.URL, SkillAggregateRestHandler)
     ]
 
     global skill_mapping_module  # pylint: disable=global-statement
