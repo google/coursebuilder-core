@@ -151,7 +151,7 @@ SkillTable.prototype = {
 
     function _onAjaxDeleteCallback(status, message) {
       if (status == 'success') {
-        content.replaceWith(that.buildTable());
+        that._refresh();
         showMsg(message);
       } else {
         showMsg('Can\'t delete skill.');
@@ -546,6 +546,7 @@ SkillList.prototype = {
     var that = this;
     var skillList = payload['skill_list'];
 
+    this._skillLookupByIdTable = [];
     $.each(skillList, function() {
       that._skillLookupByIdTable[this.id] = this;
     });
