@@ -1,15 +1,24 @@
-<style type="text/css">
-  .chart-container {
-    position: center;
-    margin-top: 25px;
-  }
-</style>
+<link rel="stylesheet" type="text/css" href="/modules/skill_map/resources/css/skill_map.css">
+
+<script type="text/javascript" src="/modules/skill_map/resources/js/skill_tagging_lib.js"></script>
+<script type="text/javascript" src="//www.google.com/jsapi"></script>
+
+<div class="skills-container"></div>
+
+<div id="dashboard-div">
+  <div class="dashboard-container">
+    <div id="advanced-div" class="chart-container"></div>
+    <div id="selector-div"></div>
+  </div>
+  <div class="skill-selector-container">
+    <div id="skill-selector-div"></div>
+  </div>
+</div>
 
 <div id="barchart-div" class="chart-container" data-counts="{{ counts }}"></div>
 
-<script type="text/javascript" src="//www.google.com/jsapi"></script>
 <script>
-  google.load('visualization', '1', {packages: ['corechart']});
+  google.load('visualization', '1.1', {packages: ['corechart', 'controls']});
   google.setOnLoadCallback(drawBarChart);
 
   function readData() {
@@ -41,7 +50,7 @@
       sourceColumn: 2,
       type: 'string',
       role: 'annotation'
-    }
+    };
     view.setColumns([0, 1, annotation1, 2, annotation2]);
 
     var options = {
@@ -55,8 +64,63 @@
       hAxis: {textPosition: 'out'}
     };
 
-    var chart = new google.visualization.BarChart(document.getElementById('barchart-div'));
+    var chart = new google.visualization.BarChart(
+        document.getElementById('barchart-div'));
     chart.draw(view, options);
   }
 
+  function toDate(dataTable, rowNum) {
+    return new Date(dataTable.getValue(rowNum, 0));
+  }
+</script>
+
+<script>
+  $(function() {
+    function drawAreaChart(skillIds, data, requestedSkillIds) {
+      var table = new google.visualization.DataTable();
+      var columns = [];
+      table.addColumn('string', '');
+
+      for (var i = 0; i < skillIds.length; i++) {
+        table.addColumn('number', skillList.getSkillById(skillIds[i]).name);
+        columns.push(i + 1);
+      }
+      table.addRows(data);
+
+      var view = new google.visualization.DataView(table);
+      var args = [{calc: toDate, type: 'date', label: 'Date'}].concat(columns);
+      view.setColumns(args);
+
+      var dashboard = new google.visualization.Dashboard(
+          document.getElementById('dashboard-div'));
+
+      var options = {
+        title: 'Completion rate over time',
+        hAxis: {title: 'Date', titleTextStyle: {color: '#333'}},
+        vAxis: {minValue: 0},
+        isStacked: true
+      };
+
+      var dateSelector = new google.visualization.ControlWrapper({
+        controlType: 'ChartRangeFilter',
+        containerId: 'selector-div',
+        options: {filterColumnLabel: 'Date'}
+      });
+
+      var chart = new google.visualization.ChartWrapper({
+        chartType: 'AreaChart',
+        containerId: 'advanced-div',
+        options: options
+      });
+
+      dashboard.bind(dateSelector, chart);
+      dashboard.draw(view);
+    }
+
+    var skillList = new SkillList();
+    skillList.load(function() {
+      var skillSelector = new SkillSelectorForAnalytics(skillList);
+      skillSelector.build(drawAreaChart).appendTo('.skills-container');
+    });
+  });
 </script>

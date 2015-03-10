@@ -4,6 +4,7 @@
 
 var SKILL_API_VERSION = '1';
 var ESC_KEY = 27;
+var MAX_SKILL_REQUEST_SIZE = 10;
 
 /*********************** Start Dependencies ***********************************/
 // The following symols are required to be defined in the global scope:
@@ -935,16 +936,19 @@ ListDisplay.prototype = {
  * @class
  * @param onItemsSelectedCallback {function} Callback called with a list of
  *     item ids whenever a selection is performed.
+ * @param addLabel {string} Optional label for ADD button.
  */
-function ItemSelector(onItemsSelectedCallback) {
+function ItemSelector(onItemsSelectedCallback, addLabel) {
   this._documentBody = $(document.body);
   this._onItemsSelectedCallback = onItemsSelectedCallback;
 
+  var label = addLabel || '+ ADD';
+
   this._rootDiv = $(
     '<div class="item-selector-root">' +
-    '  <button class="add">+ ADD</button>' +
+    '  <button class="add">' + label + '</button>' +
     '  <div class="selector">' +
-    '    <div><input class="search" type="text" placeholder="Item..."></div>' +
+    '    <div><input class="search" type="text" placeholder="Skill..."></div>' +
     '    <ol class="item-list"></ol>' +
     '    <div><button class="select action">OK</button></div>' +
     '  </div>' +
@@ -1061,7 +1065,7 @@ function SkillEditorForOeditor(env) {
   this._env = env;
   this._skillList = new SkillList();
 
-  this._prereqDisplay = new ListDisplay('skill-display-root', 'skill', 
+  this._prereqDisplay = new ListDisplay('skill-display-root', 'skill',
         function(skillId) {
           that._onRemoveCallback(skillId);
         });
@@ -1085,6 +1089,7 @@ function SkillEditorForOeditor(env) {
   this._skillWidgetDiv.append(this._prereqSelector.element());
   this._skillWidgetDiv.append(newSkillDiv);
 }
+
 SkillEditorForOeditor.prototype = {
   element: function() {
     return this._skillWidgetDiv;
@@ -1151,9 +1156,113 @@ SkillEditorForOeditor.prototype = {
 };
 
 /**
+ * A skill selector data provider builder for analytics.
+ *
+ * @class
+ */
+function SkillSelectorForAnalytics(skillList) {
+  var that = this;
+  this._skillList = skillList;
+//  this._cachedSkillData = {};
+
+  this._skillsDiv = $(
+      '<div class="edit-skill-popup">' +
+      '  <div class="form-row">' +
+      '    <label class="strong">Selected Skills</label>' +
+      '    <div class="skill-prerequisites"></div>' +
+      '  </div>' +
+      '</div>');
+
+  this._initSelectedSkillsDisplay();
+}
+
+SkillSelectorForAnalytics.prototype = {
+  _initSelectedSkillsDisplay: function() {
+    // Set up a display and a chooser for skills.
+    var that = this;
+
+    this._selectedSkillsDisplay = new ListDisplay(
+        'skill-display-root', 'skill',
+        function(skillId) {
+          that._onDropSkill(skillId);
+        });
+
+    this._skillsSelector = new ItemSelector(function(selectedSkillIds) {
+      $.each(selectedSkillIds, function() {
+        var skill = that._skillList.getSkillById(this);
+        that._selectedSkillsDisplay.add(skill.id, skill.name);
+      });
+      var skillIds = that._selectedSkillsDisplay.items();
+      if (skillIds.length > 0) {
+        that._loadData(skillIds);
+      }
+    }, '+ SELECT SKILL');
+
+    this._skillList.eachSkill(function(skill) {
+      that._skillsSelector.add(skill.id, skill.name);
+    });
+
+    this._skillsDiv.find('.skill-prerequisites')
+        .append(this._selectedSkillsDisplay.element())
+        .append(this._skillsSelector.element());
+  },
+
+  _deleteChart: function() {
+    $('#advanced-div').empty();
+    $('#selector-div').empty();
+  },
+
+  _onDropSkill: function(skillId) {
+    if (this._selectedSkillsDisplay.items().length == 0) {
+      this._deleteChart();
+    }
+    else {
+      this._loadData(this._selectedSkillsDisplay.items());
+    }
+  },
+
+  build: function(visualizationCallback) {
+    this._visualizationCallback = visualizationCallback;
+    return this._skillsDiv;
+  },
+
+  _loadData: function(skillIds) {
+    var that = this;
+    var encodedIds = $.param({ids: skillIds}, true);
+    $.ajax({
+      type: 'GET',
+      url: 'rest/modules/skill_map/skill_aggregate_count?' + encodedIds,
+      dataType: 'text',
+      success: function(response) {
+        that._onLoadData(skillIds, response);
+      },
+      error: function() {
+        showMsg('Unable to load skill data. Reload page and try again.');
+      }
+    });
+  },
+
+  _onLoadData: function(requestedSkillIds, response) {
+    response = parseAjaxResponse(response);
+    if (response.status != 200) {
+      showMsg('Unable to load skill data. Please reload page and try again.');
+      return;
+    }
+    var payload = JSON.parse(response['payload']);
+    var header = payload['column_headers'];
+    var skillIds = header.slice(1, header.length).map(function(x){
+      return parseInt(x);
+    });
+    var data = payload['data'];
+    this._visualizationCallback(skillIds, data, requestedSkillIds);
+  }
+};
+
+/**
  * Export the classes which will be used in global scope.
  */
 window.LocationList = LocationList;
 window.SkillEditorForOeditor = SkillEditorForOeditor;
 window.SkillList = SkillList;
 window.SkillTable = SkillTable;
+window.SkillSelectorForAnalytics = SkillSelectorForAnalytics;

@@ -153,3 +153,25 @@ table.skill-map-table ol.comma-list li:last-child:after {
 .skill-map-diagnosis-report .elem-list .elem:last-child:after {
   content: '"';
 }
+
+#dashboard-div {
+  height: 250px;
+}
+
+#selector-div {
+  height: 30px;
+}
+
+div.dashboard-container {
+  width: 70%;
+  float: left;
+}
+
+div.skill-selector-container {
+  width:30%;
+  float: left;
+}
+
+.chart-container {
+  margin-top: 25px;
+}
