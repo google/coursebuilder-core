@@ -157,9 +157,11 @@ def _translate_skill(skills_generator):
     course = courses.Course.get(app_context)
     skills = []
     key_list = []
+    first = True
     for skill in skills_generator:
-        skills.append(skill)
-        key_list.append(resource.Key(ResourceSkill.TYPE, skill.id))
+        if skill.name and isinstance(skill.name, basestring):
+            skills.append(skill)
+            key_list.append(resource.Key(ResourceSkill.TYPE, skill.id))
     i18n_dashboard.translate_dto_list(course, skills, key_list)
 
 
@@ -924,7 +926,7 @@ class SkillCompletionAggregate(models.BaseEntity):
 
     The aggregate field is a json string representing a dictionary. It
     maps dates in skill_map.skill_map.CountSkillCompletion.DATE_FORMAT
-    with the number of students that completed that skill on the given
+    with the number of students that completed that skill before the given
     date.
     """
     name = db.StringProperty()
@@ -1021,6 +1023,11 @@ class CountSkillCompletion(jobs.MapReduceJob):
             elif state == SkillCompletionTracker.IN_PROGRESS:
                 in_progress_count += 1
 
+        # Make partial sums
+        partial_sum = 0
+        for date in sorted(aggregate.keys()):
+            partial_sum += aggregate[date]
+            aggregate[date] = partial_sum
         # Store the entity
         SkillCompletionAggregate(key_name=str(skill_id), name=name,
                                  aggregate=transforms.dumps(aggregate)).put()
@@ -1054,7 +1061,7 @@ class SkillAggregateRestHandler(utils.BaseRESTHandler):
             return
 
         ids = self.request.get_all('ids')
-        data = {}
+        data = []
         headers = ['Date']
         if ids:
             if len(ids) >= self.MAX_REQUEST_SIZE:
@@ -1064,20 +1071,27 @@ class SkillAggregateRestHandler(utils.BaseRESTHandler):
                 self.validation_error('Request with more than'
                     ' {} skills'.format(self.MAX_REQUEST_SIZE))
                 return
-            data = defaultdict(lambda: [0] * len(ids))
-            for index, skill_id in enumerate(ids):
-                headers.append(str(skill_id))
-                aggregate = SkillCompletionAggregate.get_by_key_name(str(
-                    skill_id))
-                aggregate = transforms.loads(aggregate.aggregate)
-                for completion_date, count in aggregate.iteritems():
-                    data[completion_date][index] = count
+            aggregates = []
+            dates = set()
+            # The complexity of the following cycles is
+            # O(len(dates)*log(len(date))). Expect len(dates) < 1000 (3 years)
+            for skill_id in ids:
+                aggregate = SkillCompletionAggregate.get_by_key_name(
+                    str(skill_id))
+                if aggregate:
+                    headers.append(skill_id)
+                    aggregate = transforms.loads(aggregate.aggregate)
+                    aggregates.append(aggregate)
+                    dates.update(aggregate.keys())
+            dates = sorted(list(dates))
+            last_row = [0] * len(ids)
+            for date in dates:
+                for index, count in enumerate(last_row):
+                    last_row[index] = max(last_row[index],
+                                          aggregates[index].get(date, 0))
+                data.append([date] + last_row)  # no aliasing
 
-        payload_dict = {
-            'column_headers': headers,
-            'data': [[date] + count for date, count in data.iteritems()]
-        }
-
+        payload_dict = {'column_headers': headers, 'data': data}
         transforms.send_json_response(
             self, 200, '', payload_dict=payload_dict)
 
@@ -1198,7 +1212,7 @@ class SkillCompletionTracker(object):
             elif self.COMPLETED in skill_progress:
                 result[skill_id] = (self.COMPLETED,
                                     skill_progress[self.COMPLETED])
-            else:
+            elif self.IN_PROGRESS in skill_progress:
                 result[skill_id] = (self.IN_PROGRESS,
                                     skill_progress[self.IN_PROGRESS])
         return result
@@ -1257,7 +1271,7 @@ class SkillCompletionTracker(object):
             return self.IN_PROGRESS
         return self.NOT_ATTEMPTED
 
-    def update_skills(self, student, lesson_id):
+    def update_skills(self, student, lprogress, lesson_id):
         """Recalculates and saves the progress of all skills mapped to lesson.
 
         If self does not have a valid skill_map instance (was initialized
@@ -1265,19 +1279,19 @@ class SkillCompletionTracker(object):
 
         Args:
             student: an instance of StudentEntity.
+            lprogress: an instance of StudentPropertyEntity with the linear
+            progress of student.
             lesson_id: the id of the lesson.
         """
         # TODO(milit): Add process for lesson None.
         if not self._skill_map:
             return
         lprogress_tracker = progress.UnitLessonCompletionTracker(self.course)
-        lprogress = lprogress_tracker.get_or_create_progress(student)
 
         sprogress = self._get_or_create_progress(student)
         progress_value = {}
         if sprogress.value:
             progress_value = transforms.loads(sprogress.value)
-
         skills = self._skill_map.get_skills_for_lesson(lesson_id)
         for skill in skills:
             new_progress = self.recalculate_progress(
@@ -1288,12 +1302,15 @@ class SkillCompletionTracker(object):
         sprogress.put()
 
 
-def post_update_progress(course, student, event_entity, event_key):
+def post_update_progress(course, student, lprogress, event_entity, event_key):
     """Updates the skill progress after the update of the linear progress.
 
     Args:
         course: the current course.
         student: an instance of StudentEntity.
+        lprogress: an instance of StudentPropertyEntity with the linear
+        progress. This function is called before the put() to the database,
+        this instance must have the latest changes.
         event_entity: a string. The kind of event or progress that was
         trigered. Only events in SkillCompletionTracker.PROGRESS_DEPENDENCIES
         will be processed, others will be ignored.
@@ -1311,10 +1328,14 @@ def post_update_progress(course, student, event_entity, event_key):
         event_key)
     lesson_id = key_elements.get('lesson')
     unit_id = key_elements.get('unit')
-    if not (lesson_id and unit_id and isinstance(
-        course.find_lesson_by_id(unit_id, lesson_id), courses.Lesson13)):
+    if not (lesson_id and unit_id and
+            course.version == courses.CourseModel13.VERSION):
         return
-    SkillCompletionTracker(course).update_skills(student, lesson_id)
+    if not isinstance(course.find_lesson_by_id(unit_id, lesson_id),
+                      courses.Lesson13):
+        return
+    SkillCompletionTracker(course).update_skills(
+        student, lprogress, lesson_id)
 
 
 def register_tabs():

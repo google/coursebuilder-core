@@ -19,6 +19,7 @@ __author__ = 'Sean Lip (sll@google.com)'
 import datetime
 import logging
 import os
+from collections import defaultdict
 
 import courses
 import transforms
@@ -861,9 +862,8 @@ class UnitLessonCompletionTracker(object):
             # Or only update course status when we are doing something not
             # in derived events (Unit, typically).
             self._update_course(progress, student)
-
         utils.run_hooks(self.POST_UPDATE_PROGRESS_HOOK, self._get_course(),
-                        student, event_entity, event_key)
+                        student, progress, event_entity, event_key)
 
     def get_course_status(self, progress):
         return self._get_entity_value(progress, self._get_course_key())
@@ -1083,19 +1083,22 @@ class UnitLessonCompletionTracker(object):
             {
                 'unit': 1,
                 'lesson': 5,
-                'html': 0
+                'html': 0,
+                'unit_forced': 1
             }
         """
-        reversed_event_mapping = {
-            v: k for k, v in cls.EVENT_CODE_MAPPING.iteritems()}
+        reversed_event_mapping = defaultdict(lambda: [])
+        for full_type, value in cls.EVENT_CODE_MAPPING.iteritems():
+            reversed_event_mapping[value].append(full_type)
+
         key_elements = key.split('.')
         assert len(key_elements) % 2 == 0
         result = {}
         for index in range(0, len(key_elements), 2):
             element_type = key_elements[index]
             element_value = key_elements[index + 1]
-            full_element_type = reversed_event_mapping.get(element_type)
-            if full_element_type:
+            full_element_types = reversed_event_mapping.get(element_type)
+            for full_element_type in full_element_types:
                 result[full_element_type] = element_value
         return result
 

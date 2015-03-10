@@ -1003,7 +1003,7 @@ class CountSkillCompletionsTests(BaseSkillMapTests):
         self.run_generator_job()
         job = CountSkillCompletion(self.app_context).load()
         expected = {
-            str(self.skill1.id): {self.day1: 1, self.day2: 2},
+            str(self.skill1.id): {self.day1: 1, self.day2: 3},
             str(self.skill2.id): {self.day4: 1},
             str(self.skill3.id): {}
         }
@@ -1110,7 +1110,7 @@ class SkillAggregateRestHandlerTests(BaseSkillMapTests):
         expected_header = ['Date'] + [str(skill_id)
                                       for skill_id in self.skill_ids]
         expected_data = [
-            [self.day1, 1, 0, 0], [self.day2, 2, 0, 0], [self.day4, 0, 1, 0]
+            [self.day1, 1, 0, 0], [self.day2, 2, 0, 0], [self.day4, 2, 1, 0]
         ]
         self.assertEqual(expected_header, result['column_headers'])
         self.assertEqual(len(expected_data), len(result['data']))
@@ -1122,6 +1122,20 @@ class SkillAggregateRestHandlerTests(BaseSkillMapTests):
         actions.login(ADMIN_EMAIL)
 
         response = self.get(self.URL)
+        self.assertEqual(200, response.status_int)
+        payload = transforms.loads(response.body)['payload']
+        result = transforms.loads(payload)
+
+        self.assertEqual(['Date'], result['column_headers'])
+        self.assertEqual([], result['data'])
+
+    def test_no_skill_aggregate(self):
+        """Sends a request with a skill that does not have an object in db."""
+        actions.login(ADMIN_EMAIL)
+
+        get_url = '%s?%s' % (self.URL, urllib.urlencode({
+            'ids': [1]}, True))
+        response = self.get(get_url)
         self.assertEqual(200, response.status_int)
         payload = transforms.loads(response.body)['payload']
         result = transforms.loads(payload)
@@ -1758,7 +1772,9 @@ class SkillCompletionTrackerTests(BaseSkillMapTests):
 
         start_time = time.time()
         tracker = SkillCompletionTracker(self.course)
-        tracker.update_skills(self.student, self.lesson1.lesson_id)
+        lprogress_tracker = UnitLessonCompletionTracker(self.course)
+        lprogress = lprogress_tracker.get_or_create_progress(self.student)
+        tracker.update_skills(self.student, lprogress, self.lesson1.lesson_id)
         # Nothing changes with sa
         sprogress = models.StudentPropertyEntity.get(
             self.student, SkillCompletionTracker.PROPERTY_KEY)
@@ -1780,5 +1796,5 @@ class SkillCompletionTrackerTests(BaseSkillMapTests):
         lprogress = lprogress_tracker.get_or_create_progress(self.student)
         tracker = SkillCompletionTracker()
         # Just does not raise any error
-        tracker.update_skills(self.student, self.lesson1.lesson_id)
+        tracker.update_skills(self.student, lprogress, self.lesson1.lesson_id)
         tracker.recalculate_progress(lprogress_tracker, lprogress, self.sa)
