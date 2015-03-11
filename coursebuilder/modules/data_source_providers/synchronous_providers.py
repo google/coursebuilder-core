@@ -134,7 +134,9 @@ class StudentProgressStatsGenerator(jobs.DurableJob):
             self._tracker = progress.UnitLessonCompletionTracker(course)
 
         def visit(self, student_property):
-            if student_property.value:
+            if (student_property.value and
+                student_property.name ==
+                progress.UnitLessonCompletionTracker.PROPERTY_KEY):
                 entity_scores = transforms.loads(student_property.value)
                 for entity in entity_scores:
                     entity_score = self.progress_data.get(
