@@ -1177,7 +1177,7 @@ def _put(context, content, path, is_draft, force_overwrite, verbose):
 
     if do_put:
         context.fs.impl.non_transactional_put(
-            os.path.join(appengine_config.BUNDLE_ROOT, path), content,
+            os.path.join(appengine_config.BUNDLE_ROOT, path), content.read(),
             is_draft=is_draft)
 
 

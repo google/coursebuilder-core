@@ -580,6 +580,7 @@ class DatastoreBackedFileSystem(object):
             # key is added in the datastore, we will see it in the update list
             VfsCacheConnection.CACHE_NO_METADATA.inc()
             self.cache.put(filename, None, None)
+
         result = None
         if self._inherits_from and self._can_inherit(filename):
             result = self._inherits_from.get(afilename)
@@ -589,9 +590,17 @@ class DatastoreBackedFileSystem(object):
         VfsCacheConnection.CACHE_NOT_FOUND.inc()
         return None
 
-    @db.transactional(xg=True)
     def put(self, filename, stream, is_draft=False, metadata_only=False):
         """Puts a file stream to a database. Raw bytes stream, no encodings."""
+        if stream:  # Must be outside the transactional operation
+            content = stream.read()
+        else:
+            content = stream
+        self._transactional_put(filename, content, is_draft, metadata_only)
+
+    @db.transactional(xg=True)
+    def _transactional_put(
+        self, filename, stream, is_draft=False, metadata_only=False):
         self.non_transactional_put(
             filename, stream, is_draft=is_draft, metadata_only=metadata_only)
 
@@ -634,7 +643,7 @@ class DatastoreBackedFileSystem(object):
         return key_names
 
     def non_transactional_put(
-        self, filename, stream, is_draft=False, metadata_only=False):
+        self, filename, content, is_draft=False, metadata_only=False):
         """Non-transactional put; use only when transactions are impossible."""
         filename = self._logical_to_physical(filename)
 
@@ -646,8 +655,7 @@ class DatastoreBackedFileSystem(object):
 
         if not metadata_only:
             # We operate with raw bytes. The consumer must deal with encoding.
-            raw_bytes = stream.read()
-            metadata.size = len(raw_bytes)
+            metadata.size = len(content)
 
             # Chunk the data into entites based on max entity size limits
             # imposed by AppEngine
@@ -657,8 +665,9 @@ class DatastoreBackedFileSystem(object):
                 data = FileDataEntity(key_name=key_name)
                 start_offset = index * _MAX_VFS_SHARD_SIZE
                 end_offset = (index + 1) * _MAX_VFS_SHARD_SIZE
-                data.data = raw_bytes[start_offset:end_offset]
+                data.data = content[start_offset:end_offset]
                 shard_entities.append(data)
+
             entities_put(shard_entities)
 
         metadata.put()
