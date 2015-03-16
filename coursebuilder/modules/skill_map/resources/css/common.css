@@ -22,7 +22,7 @@ ol.skill-display-root > li.skill > button.close {
 }
 .skill-card {
   display: inline-block;
-  width: 100px;
+  width: 160px;
   border: solid 1px #ccc;
   border-radius: 3px;
   background-color: #fafafa;
@@ -64,6 +64,11 @@ li.skill-card {
   list-style-type: none;
   margin: 0px;
 }
+.skill-card > div.locations > ol li {
+  white-space: nowrap;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+ }
 .skill-card > div.locations > ol a {
   color: #15c;
 }

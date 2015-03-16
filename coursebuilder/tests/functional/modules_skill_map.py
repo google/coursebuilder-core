@@ -916,7 +916,8 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.assertEqual('b', name.strip())
         self.assertEqual('describe b', description.strip())
         self.assertEqual(1, len(locations))
-        self.assertEqual('1.2', locations[0].text.strip())
+        self.assertEqual(
+            '1.2 Test Lesson 2', ' '.join(locations[0].text.strip().split()))
         self.assertEqual(
             'unit?unit=%(unit)s&lesson=%(lesson)s' % {
                 'unit': self.unit.unit_id, 'lesson': lesson2.lesson_id},

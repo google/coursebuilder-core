@@ -47,6 +47,7 @@ div.skill-panel .skills-in-this-lesson ol.skill-display-root > li.skill {
 div.skill-panel .skill-card {
   opacity: 1.0;
   transition: opacity 400ms;
+  vertical-align: top;
 }
 div.skill-panel .skill-card.highlighted {
   box-shadow: 0px 0px 11px 3px #e0c289;
