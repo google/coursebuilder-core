@@ -988,7 +988,7 @@ class CountSkillCompletion(jobs.MapReduceJob):
         for skill_id, skill_progress in sprogress.iteritems():
             state, timestamp = skill_progress
             date_str = time.strftime(CountSkillCompletion.DATE_FORMAT,
-                                     time.gmtime(timestamp))
+                                     time.localtime(timestamp))
             packed_name = skills[skill_id]
             if state == SkillCompletionTracker.COMPLETED:
                 yield packed_name, transforms.dumps((state, date_str))
