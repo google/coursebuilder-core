@@ -13,7 +13,7 @@
   padding: 10px;
 }
 
-.selected {
+.selectedDistanceButton {
   background-color: #ccc !important;
 }
 
@@ -107,7 +107,7 @@ function createDistanceButtons(maxDistance, call_back) {
     buttonsDiv.appendChild(button);
   };
   // Check first one by default
-  $('#distance-button-0').addClass('selected')
+  $('#distance-button-0').addClass('selectedDistanceButton')
 }
 
 
@@ -143,7 +143,7 @@ function createContentButtons(call_back) {
     buttonsDiv.appendChild(button);
   }
   // Check counts by default
-  $('#content-button-count').addClass('selected')
+  $('#content-button-count').addClass('selectedDistanceButton')
   $('#content-description').text(contents['count'])
 }
 
@@ -164,7 +164,7 @@ function createDisplayButtons(call_back) {
   button.onclick = function () {call_back(this.name)};
   button.appendChild(document.createTextNode('Color'));
   buttonsDiv.appendChild(button);
-  $('#display-button-color').addClass('selected')
+  $('#display-button-color').addClass('selectedDistanceButton')
 }
 
 
@@ -182,12 +182,25 @@ function drawCountVisualization(countData, maxDistance) {
     table.addColumn('number', 'Students at distance ' + i);
   }
   table.addRows(countData);
+  console.log(countData)
+
+  var options = {
+    title: "Students count per cluster",
+    width: 1000,
+    height: 400,
+    hAxis: {title: "Students"},
+    vAxis: {title: "Clusters"},
+    isStacked: true,
+    colors: getGVColorPallet(),
+    dataOpacity: 0.85,
+    chartArea:{left: 140, width:'70%', height:'70%'},
+    legend: {position: 'top'},
+    vAxis: {textPosition: 'in', textStyle: {auraColor: 'none'}},
+  }
 
   new google.visualization.BarChart(
     document.getElementById('visualization2')).
-  draw(table, {title: "Students count per cluster", width: 800, height: 400,
-               hAxis: {title: "Students"}, vAxis: {title: "Clusters"},
-               isStacked: true});
+  draw(table, options);
 }
 
 
@@ -199,7 +212,8 @@ function drawTableWithOptions(data, options, max) {
   var formatters = []
   if ('color' in options.display && options.display.color) {
     var formatter = new google.visualization.ColorFormat();
-    formatter.addGradientRange(0, max + 1, 'black', 'white', '#6baed6');
+    formatter.addGradientRange(0, max + 1, 'black', 'white',
+      [getGVColorPallet()[0]]);
     formatters.push(formatter);
     cssClassNames = {hoverTableRow: 'no-backgroud',
                      selectedTableRow: 'no-backgroud'};
@@ -318,7 +332,7 @@ function drawBubbleChart(intersectionData, nameMapping, options) {
             maxValue: nameMapping.length + 1},
     vAxis: {ticks: yticks, minValue: 0, gridlines: {color: '#f5f5f5'},
             maxValue: nameMapping.length + 1},
-    colors: ['#6baed6'],
+    colors: [getGVColorPallet()[0]],
     sizeAxis: {maxSize: 20},
     height: '500',
     legend: {position: 'none'},
@@ -366,18 +380,18 @@ function clustering_stats(data) {
   // change the userOptions and redraw the charts.
   function changeDistance(distance) {
     // Remove selection
-    $('#distance-buttons-div div').toggleClass('selected', false)
+    $('#distance-buttons-div div').toggleClass('selectedDistanceButton', false)
     // Select the current button
-    $('#distance-button-' + distance).addClass('selected')
+    $('#distance-button-' + distance).addClass('selectedDistanceButton')
     userOptions.distance = distance;
     drawAdvancedCharts();
   }
 
   function changeContent(contentOption, contentDescription) {
     // Remove selection
-    $('#content-buttons-div div').toggleClass('selected', false);
+    $('#content-buttons-div div').toggleClass('selectedDistanceButton', false);
     // Select the current button
-    $('#content-button-' + contentOption).addClass('selected');
+    $('#content-button-' + contentOption).addClass('selectedDistanceButton');
     // Add the description
     $('#content-description').text(contentDescription);
     userOptions.content = contentOption;
@@ -385,7 +399,7 @@ function clustering_stats(data) {
   }
 
   function changeDisplay(displayOption) {
-    $('#display-button-' + displayOption).toggleClass('selected');
+    $('#display-button-' + displayOption).toggleClass('selectedDistanceButton');
     userOptions.display[displayOption] = !userOptions.display[displayOption]
     drawAdvancedCharts();
   }

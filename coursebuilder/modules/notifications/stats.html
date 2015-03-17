@@ -26,6 +26,7 @@
       var options = {
         sliceVisibilityThreshold: 0,
         title: 'Last ' + data.name + ' (' + data.total + ' ' + kind + ')',
+        colors: getGVColorPallet(),
       };
       chart.draw(chartData, options);
     }
