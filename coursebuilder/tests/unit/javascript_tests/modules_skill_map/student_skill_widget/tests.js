@@ -51,17 +51,21 @@ describe('The student skill widget', function() {
         [true, {type: 'open', isOpened: false}, 'skill-panel', true]);
   });
 
-  it('highlights dependencies when a skill is hovered', function() {
+  it('highlights dependencies when open and a skill is clicked', function() {
     function cardNames(selector) {
       return $(selector).map(function() {
         return $(this).text();
       }).get();
     }
 
+    // Click once to open
+    this.button.click();
+    jasmine.Clock.tick(500);
+
     expect($('div.skill-panel .skill-card.highlighted').length).toBe(0);
     expect($('div.skill-panel .skill-card.shaded').length).toBe(0);
 
-    this.filterLi.mouseover();
+    this.filterLi.click();
 
     expect(cardNames('.depends-on .skill-card.highlighted div.name')).toEqual(
       ['Search results', 'Query']
@@ -74,48 +78,53 @@ describe('The student skill widget', function() {
     expect(cardNames('.leads-to .skill-card.shaded div.name').length).toBe(5);
   });
 
+  it('does nothing when closed and a skill is clicked', function() {
+    this.filterLi.click();
 
-  it('removes highlights when a skill is left', function() {
-    expect($('div.skill-panel .skill-card.highlighted').length).toBe(0);
-    expect($('div.skill-panel .skill-card.shaded').length).toBe(0);
-
-    // After mouseover everything is either highlighted or shaded
-    this.filterLi.mouseover();
-    expect($('.skill-card.highlighted').length).toBe(5);
-    expect($('.skill-card.shaded').length).toBe(8);
-
-    // After mouseout nothing is highlighted or shaded
-    this.filterLi.mouseout();
     expect($('div.skill-panel .skill-card.highlighted').length).toBe(0);
     expect($('div.skill-panel .skill-card.shaded').length).toBe(0);
   });
 
-  it('fires an event when a skill is hovered for long', function() {
+
+  it('removes highlights when something else is clicked', function() {
+    // Click once to open
+    this.button.click();
+    jasmine.Clock.tick(500);
+
+    expect($('div.skill-panel .skill-card.highlighted').length).toBe(0);
+    expect($('div.skill-panel .skill-card.shaded').length).toBe(0);
+
+    // After click everything is either highlighted or shaded
+    this.filterLi.click();
+    expect($('.skill-card.highlighted').length).toBe(5);
+    expect($('.skill-card.shaded').length).toBe(8);
+
+    // After mouseout nothing is highlighted or shaded
+    $('div.lesson-title').click();
+    expect($('div.skill-panel .skill-card.highlighted').length).toBe(0);
+    expect($('div.skill-panel .skill-card.shaded').length).toBe(0);
+  });
+
+  it('fires an event when a skill is clicked', function() {
+    // Expect nothing happens if the widget is closed
+    expect(gcbAudit.calls.length).toBe(0);
+    this.filterLi.click();
+    expect(gcbAudit.calls.length).toBe(0);
+
+    // Click once to open
+    this.button.click();
+    jasmine.Clock.tick(500);
+
     var skillId = 6350779162034176;
     expect(this.filterLi).toHaveData('skillId', skillId);
 
-    this.currentTimeMs = 0;
-    expect(gcbAudit).not.toHaveBeenCalled();
+    // Expect one event from opening the widget
+    expect(gcbAudit.calls.length).toBe(1);
 
-    // A hover of less than 1000ms does not trigger event
-    this.filterLi.mouseover();
-    this.currentTimeMs += 900;
-    this.filterLi.mouseout();
-    expect(gcbAudit).not.toHaveBeenCalled();
-
-    // Even if multiple hovers total over 1000ms, still not event
-    this.filterLi.mouseover();
-    this.currentTimeMs += 900;
-    this.filterLi.mouseout();
-    expect(gcbAudit).not.toHaveBeenCalled();
-
-    // But if a single hover is over 1000ms, then event
-    this.filterLi.mouseover();
-    this.currentTimeMs += 1100;
-    this.filterLi.mouseout();
-    expect(gcbAudit).toHaveBeenCalled();
-
-    expect(gcbAudit.calls[0].args).toEqual(
+    this.filterLi.click();
+    // Now expect a second event
+    expect(gcbAudit.calls.length).toBe(2);
+    expect(gcbAudit.calls[1].args).toEqual(
         [
           true,
           {type: 'skill-hover', skillId: skillId},

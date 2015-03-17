@@ -8,9 +8,9 @@ ol.skill-display-root {
 }
 ol.skill-display-root > li.skill {
   display: inline-block;
-  background-color: #5cb85c;
+  background-color: #697792;
   color: white;
-  font-weight: bold;
+  font-weight: normal;
   border-radius: 0.2em;
   padding: 0.1em 0.4em;
   margin: 0 0.2em !important;
@@ -33,9 +33,10 @@ li.skill-card {
   margin: 5px 2px;
 }
 .skill-card > div.name {
-  background-color: #5cb85c;
+  background-color: #697792;
   color: white;
-  font-weight: bold;
+  font-weight: normal;
+  text-align: center;
   border-radius: 0.2em;
   padding: 0.1em 0.4em;
   margin: 0 0.2em !important;
@@ -47,7 +48,7 @@ li.skill-card {
   line-height: 16px;
   height: 60px;
   overflow-y: hidden;
-  margin: 3px 0;
+  margin: 12px 0 3px 0;
   position: relative;
 }
 .skill-card > div.description > div.fade {

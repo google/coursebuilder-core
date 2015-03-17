@@ -834,7 +834,9 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
 
         actions.assert_contains('Test Lesson', title_div.text)
 
-        actions.assert_contains('Skills in this lesson', skills_div.text)
+        actions.assert_contains(
+            'Taught in this lesson',
+            skills_div.find('./span[@class="section-title"]').text)
 
         li_list = skills_div.findall('.//li[@class="skill"]')
         self.assertEqual(2, len(li_list))
@@ -846,7 +848,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
             'describe b', li_list[1].attrib['data-skill-description'])
 
         details_xml = cElementTree.tostring(details_div)
-        actions.assert_contains('doesn\'t depend on', details_xml)
+        actions.assert_contains('doesn\'t have any prerequisites', details_xml)
         actions.assert_contains('isn\'t a prerequisite', details_xml)
 
     def test_skills_with_prerequisites_and_successors(self):

@@ -48,11 +48,9 @@ table.skill-map-table td .diagnosis.icon {
 }
 table.skill-map-table td .diagnosis.icon.md-error {
   color: #c00;
-  cursor: pointer;
 }
 table.skill-map-table td .diagnosis.icon.md-warning {
   color: #ccb800;
-  cursor: pointer;
 }
 table.skill-map-table td .diagnosis.icon.active {
   opacity: 1;

@@ -35,6 +35,10 @@
             </a>
           </li>
         {% endfor %}
+        {% if not skill.locations %}
+          {# I18N: Text for empty list of lessons #}
+          <li>{{ gettext('Not taught') }}</li>
+        {% endif %}
       </ol>
     </div>
   </li>
@@ -52,7 +56,7 @@
   {% if skill_list %}
     <div class="margins skills-in-this-lesson">
       {# I18N: Header describing the skills for this lesson #}
-      {{ gettext('Skills in this lesson:') }}
+      <span class="section-title">{{ gettext('Taught in this lesson:') }}</span>
       <ol class="skill-display-root">
         {% for skill in skill_list %}
           <li class="skill"
@@ -67,11 +71,11 @@
       <div class="margins">
         <div>
           {# I18N: Header describing list of skills this lesson depends on #}
-          {{ gettext('Depends on:') }}
+          <span class="section-title">{{ gettext('Depends on:') }}</span>
           {% if not depends_on_skills %}
             <span class="empty-skill-list-message">
               {# I18N: Describe an empty set of prerequisite skills #}
-              {{ gettext('This lesson doesn\'t depend on any other skills.') }}
+              {{ gettext('This lesson doesn\'t have any prerequisites.') }}
             </span>
           {% endif %}
         </div>
@@ -86,7 +90,7 @@
       <div class="margins">
         <div>
           {# I18N: Header describing list of skills this lesson leads to #}
-          {{ gettext('Leads to:') }}
+          <span class="section-title">{{ gettext('Leads to:') }}</span>
           {% if not leads_to_skills %}
             <span class="empty-skill-list-message">
               {# I18N: Describe an empty set of follow-on skills #}

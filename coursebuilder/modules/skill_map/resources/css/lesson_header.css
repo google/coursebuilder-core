@@ -7,6 +7,9 @@ div.skill-panel {
 div.skill-panel .margins {
   padding: 5px 20px;
 }
+div.skill-panel .skill-details .margins {
+  padding-top: 15px;
+}
 .skill-panel-tooltip .ui-tooltip-content {
   font-family: arial, sans-serif;
   font-size: 13px;
@@ -15,14 +18,14 @@ div.skill-panel div.lesson-title {
   font-size: 24px;
   font-weight: bold;
 }
+div.skill-panel .section-title {
+  font-weight: bold;
+}
 div.skill-panel .empty-skill-list-message {
   font-style: italic;
 }
 div.skill-panel div.skills-in-this-lesson ol.skill-display-root {
   display: inline-block;
-}
-div.skill-panel div.skills-in-this-lesson ol.skill-display-root > li.skill:hover {
-  box-shadow: 0px 0px 11px 3px #e0c289;
 }
 div.skill-panel div.open-control {
   margin-top: 10px;
@@ -44,14 +47,19 @@ div.skill-panel div.open-control button:hover {
 div.skill-panel .skills-in-this-lesson ol.skill-display-root > li.skill {
   margin-top: 7px !important;
 }
+div.skill-panel .skills-in-this-lesson ol.skill-display-root > li.skill.clickable {
+  cursor: pointer;
+}
 div.skill-panel .skill-card {
   opacity: 1.0;
   transition: opacity 400ms;
   vertical-align: top;
 }
+div.skill-panel .skill.highlighted,
 div.skill-panel .skill-card.highlighted {
   box-shadow: 0px 0px 11px 3px #e0c289;
 }
+div.skill-panel .skill.shaded,
 div.skill-panel .skill-card.shaded {
   opacity: 0.5;
   box-shadow: none;
