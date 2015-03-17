@@ -181,8 +181,8 @@ function drawCountVisualization(countData, maxDistance) {
   for (var i = 0; i <= maxDistance; i++) {
     table.addColumn('number', 'Students at distance ' + i);
   }
+  table.addColumn('number', 'Non relevant')
   table.addRows(countData);
-  console.log(countData)
 
   var options = {
     title: "Students count per cluster",
@@ -191,7 +191,7 @@ function drawCountVisualization(countData, maxDistance) {
     hAxis: {title: "Students"},
     vAxis: {title: "Clusters"},
     isStacked: true,
-    colors: getGVColorPallet(),
+    colors: getGVColorPallet().slice(0, maxDistance + 1).concat(['#f5f5f5']),
     dataOpacity: 0.85,
     chartArea:{left: 140, width:'70%', height:'70%'},
     legend: {position: 'top'},

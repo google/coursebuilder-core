@@ -1435,7 +1435,11 @@ class ClusteringGeneratorTests(actions.TestBase):
         # Add StudentVectors
         for index in range(self.sv_number):
             values = range(index + 1, index + self.dim_number + 1)
-            self._add_student_vector(str(index), values)
+            student = models.Student(user_id=str(index))
+            student.put()
+            self._add_student_vector(student.user_id, values)
+        # Add extra student with no student vector
+        models.Student(user_id=str(self.sv_number)).put()
         # Add cluster
         cluster_values = [(i, i*2) for i in range(1, self.dim_number+1)]
         cluster1_key = self._add_cluster(cluster_values)
@@ -1494,14 +1498,14 @@ class ClusteringGeneratorTests(actions.TestBase):
         self.run_generator_job()
         job = clustering.ClusteringGenerator(self.app_context).load()
         result = jobs.MapReduceJob.get_results(job)
-        self.assertEqual(len(result), 4, msg='Wrong response number')
+        self.assertEqual(4, len(result), msg='Wrong response number')
 
         # All tuples are converted to lists after map reduce.
         self.assertIn(['count', [cluster1_key, [2, 1, 1]]], result)
         self.assertIn(['count', [cluster2_key, [2]]], result)
         self.assertIn(['intersection', [[cluster1_key, cluster2_key], [2]]],
                       result)
-        self.assertIn(['student_count', self.sv_number], result)
+        self.assertIn(['student_count', self.sv_number + 1], result)
 
     def _check_hamming(self, cluster_vector, student_vector, value):
         self.assertEqual(clustering.hamming_distance(
@@ -1577,10 +1581,11 @@ class TestClusterStatisticsDataSource(actions.TestBase):
     def _add_clusters(self):
         self.clusters_map = {}
         n_clusters = 4
-        for i in range(n_clusters):
-            name = 'Cluster {}'.format(i)
+        dimension = {"type": "lp", "low": 1.0, "high": 1.0, "id": "8"}
+        for index in range(n_clusters):
+            name = 'Cluster {}'.format(index)
             new_cluster = clustering.ClusterDTO(None,
-                {'name': name, 'vector': []})
+                {'name': name, 'vector': [dimension] * (index + 1)})
             key = clustering.ClusterDAO.save(new_cluster)
             self.clusters_map[key] = name
 
@@ -1594,19 +1599,20 @@ class TestClusterStatisticsDataSource(actions.TestBase):
         self._add_clusters()
         keys = self.clusters_map.keys()
         job_result = [
-            ('count', (keys[0], [1, 1, 2])),
+            ('count', (keys[0], [1, 1])),
             ('count', (keys[1], [0])),
-            ('count', (keys[2], [0, 1]))
+            ('count', (keys[2], [1, 1, 2])),
+            ('student_count', 6)
         ]
         expected_result = [
-            [self.clusters_map[keys[0]], 1, 1, 2],
-            [self.clusters_map[keys[1]], 0, 0, 0],
-            [self.clusters_map[keys[2]], 0, 1, 0],
-            [self.clusters_map[keys[3]], 0, 0, 0],
+            [self.clusters_map[keys[0]], 1, 0, 0, 5],  # one dimension
+            [self.clusters_map[keys[1]], 0, 0, 0, 6],  # two dimensions
+            [self.clusters_map[keys[2]], 1, 1, 2, 2],  # three dimensions
+            [self.clusters_map[keys[3]], 0, 0, 0, 6],
         ]
         result = clustering.ClusterStatisticsDataSource._process_job_result(
             job_result)
-        self.assertEqual(result[0], expected_result)
+        self.assertEqual(expected_result, result[0])
 
     def test_fetch_values_intersection(self):
         """Tests the result of the count statistics"""

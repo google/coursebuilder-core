@@ -830,7 +830,7 @@ class ClusteringGenerator(jobs.MapReduceJob):
 
     @classmethod
     def entity_class(cls):
-        return StudentVector
+        return models.Student
 
     def build_additional_mapper_params(self, app_context):
         clusters = [{'id': cluster.id, 'vector': cluster.vector}
@@ -860,23 +860,25 @@ class ClusteringGenerator(jobs.MapReduceJob):
             ids. If (cluster1_id, cluster2_id) is yielded, then
             (cluster2_id, cluster1_id) won't be yielded.
         """
-        mapper_params = context.get().mapreduce_spec.mapper.params
-        max_distance = mapper_params['max_distance']
-        clusters = {}
-        item_vector = transforms.loads(item.vector)
-        for cluster in mapper_params['clusters']:
-            distance = hamming_distance(cluster['vector'], item_vector)
-            if distance > max_distance:
-                continue
-            for cluster2_id, distance2 in clusters.items():
-                key = transforms.dumps((cluster2_id, cluster['id']))
-                value = (item.key().name(), distance, distance2)
-                yield (key, transforms.dumps(value))
-            clusters[cluster['id']] = distance
-            to_yield = (item.key().name(), distance)
-            yield(cluster['id'], transforms.dumps(to_yield))
-        clusters = transforms.dumps(clusters)
-        StudentClusters(key_name=item.key().name(), clusters=clusters).put()
+        student = StudentVector.get_by_key_name(item.user_id)
+        if student:
+            mapper_params = context.get().mapreduce_spec.mapper.params
+            max_distance = mapper_params['max_distance']
+            clusters = {}
+            item_vector = transforms.loads(student.vector)
+            for cluster in mapper_params['clusters']:
+                distance = hamming_distance(cluster['vector'], item_vector)
+                if distance > max_distance:
+                    continue
+                for cluster2_id, distance2 in clusters.items():
+                    key = transforms.dumps((cluster2_id, cluster['id']))
+                    value = (item.user_id, distance, distance2)
+                    yield (key, transforms.dumps(value))
+                clusters[cluster['id']] = distance
+                to_yield = (item.user_id, distance)
+                yield(cluster['id'], transforms.dumps(to_yield))
+            clusters = transforms.dumps(clusters)
+            StudentClusters(key_name=item.user_id, clusters=clusters).put()
         yield ('student_count', 1)
 
     @staticmethod
@@ -1021,33 +1023,10 @@ class ClusterStatisticsDataSource(data_sources.AbstractSmallRestDataSource):
                 return
             count[value[0]][1:] = add_zeros(value[1], max_distance + 1)
 
-        max_distance = ClusteringGenerator.MAX_DISTANCE
-        student_count = 1
-        count = {cluster.id: [cluster.name] + [0] * (max_distance + 1)
-                 for cluster in ClusterDAO.get_all()}
-        id_mapping = count.keys()
-        name_mapping = [count[cid][0] for cid in id_mapping]
-
-        l = lambda: collections.defaultdict(l)
-        inter = [{'count': l(), 'percentage': l(), 'probability': l()}
-                 for _ in range(max_distance + 1)]
-
-        # Process all counts first
-        for result in results:
-            stat, value = result
-            if stat == 'count':
-                process_count(value, count)
-            elif stat == 'student_count':
-                student_count = value
-
-        # Once counting is complete, process the intersections
-        for result in results:
-            stat, value = result
-            if stat != 'intersection':
-                continue
+        def process_intersection(value, count, inter):
             cluster1, cluster2 = value[0]
             if not (cluster2 in count and cluster1 in count):
-                continue
+                return
             map1 = id_mapping.index(cluster1)
             map2 = id_mapping.index(cluster2)
             for dist in range(max_distance + 1):  # Include the last one
@@ -1071,6 +1050,45 @@ class ClusterStatisticsDataSource(data_sources.AbstractSmallRestDataSource):
                 if c2_count:
                     probability = round(int_count/float(c2_count), 2)
                 inter[dist]['probability'][map2][map1] = probability
+
+        max_distance = ClusteringGenerator.MAX_DISTANCE
+        student_count = 1
+        count = {}
+        dimension_count = {}
+        for cluster in ClusterDAO.get_all():
+            count[cluster.id] = [cluster.name] + [0] * (max_distance + 1)
+            dimension_count[cluster.id] = len(cluster.vector)
+
+        id_mapping = count.keys()
+        name_mapping = [count[cid][0] for cid in id_mapping]
+
+        l = lambda: collections.defaultdict(l)
+        inter = [{'count': l(), 'percentage': l(), 'probability': l()}
+                 for _ in range(max_distance + 1)]
+
+        # Process all counts first
+        for result in results:
+            stat, value = result
+            if stat == 'count':
+                process_count(value, count)
+            elif stat == 'student_count':
+                student_count = value
+
+        # Once counting is complete, process the intersections
+        for result in results:
+            stat, value = result
+            if stat != 'intersection':
+                continue
+            process_intersection(value, count, inter)
+
+        # Reprocess counts to eliminate non relevant information
+        for cluster_id in count:
+            dimension = dimension_count[cluster_id]
+            if dimension <= max_distance:
+                count[cluster_id] = add_zeros(
+                    count[cluster_id][:dimension + 1], max_distance + 2)
+            other = student_count - sum(count[cluster_id][1:])
+            count[cluster_id].append(other)
 
         extra_info = {'max_distance': max_distance}
         return [count.values(), inter, name_mapping, extra_info]
