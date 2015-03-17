@@ -3,16 +3,11 @@
 <script type="text/javascript" src="/modules/skill_map/resources/js/skill_tagging_lib.js"></script>
 <script type="text/javascript" src="//www.google.com/jsapi"></script>
 
-<div class="skills-container"></div>
 
-<div id="dashboard-div">
-  <div class="dashboard-container">
-    <div id="advanced-div" class="chart-container"></div>
-    <div id="selector-div"></div>
-  </div>
-  <div class="skill-selector-container">
-    <div id="skill-selector-div"></div>
-  </div>
+<div class="chart-container">
+  <div class="skills-container"></div>
+  <div id="advanced-div"></div>
+  <div id="selector-div"></div>
 </div>
 
 <div id="barchart-div" class="chart-container" data-counts="{{ counts }}"></div>
@@ -59,9 +54,11 @@
       chartArea: {height: '95%'},
       isStacked: true,
       legend: {position: 'top'},
-      bar: {groupWidth: '90%'},
+      bar: {groupWidth: '80%'},
       fontSize: 14,
-      hAxis: {textPosition: 'out'}
+      hAxis: {textPosition: 'out'},
+      colors: getGVColorPallet(),
+      dataOpacity: 0.85
     };
 
     var chart = new google.visualization.BarChart(
@@ -76,7 +73,7 @@
 
 <script>
   $(function() {
-    function drawAreaChart(skillIds, data, requestedSkillIds) {
+    function drawLineChart(skillIds, data, requestedSkillIds) {
       var table = new google.visualization.DataTable();
       var columns = [];
       table.addColumn('string', '');
@@ -90,25 +87,35 @@
       var view = new google.visualization.DataView(table);
       var args = [{calc: toDate, type: 'date', label: 'Date'}].concat(columns);
       view.setColumns(args);
-
       var dashboard = new google.visualization.Dashboard(
           document.getElementById('dashboard-div'));
-
-      var options = {
-        title: 'Completion rate over time',
-        hAxis: {title: 'Date', titleTextStyle: {color: '#333'}},
-        vAxis: {minValue: 0},
-        isStacked: true
-      };
 
       var dateSelector = new google.visualization.ControlWrapper({
         controlType: 'ChartRangeFilter',
         containerId: 'selector-div',
-        options: {filterColumnLabel: 'Date'}
+        options: {
+          filterColumnLabel: 'Date',
+          ui: {
+            chartOptions: {
+                chartArea: {left: 80, width:'70%', height: '65%'},
+                hAxis: {title: 'Date range', textPosition: 'in'},
+                height: 70,
+                colors: getGVColorPallet()
+              },
+          },
+        }
       });
 
+      var options = {
+        vAxis: {minValue: 0, title: 'Student Sum'},
+        height: 350,
+        chartArea:{left: 80, width:'70%', height:'70%'},
+        colors: getGVColorPallet(),
+        fontSize: 14,
+      };
+
       var chart = new google.visualization.ChartWrapper({
-        chartType: 'AreaChart',
+        chartType: 'LineChart',
         containerId: 'advanced-div',
         options: options
       });
@@ -119,8 +126,9 @@
 
     var skillList = new SkillList();
     skillList.load(function() {
-      var skillSelector = new SkillSelectorForAnalytics(skillList);
-      skillSelector.build(drawAreaChart).appendTo('.skills-container');
+      var skillSelector = new SkillSelectorForAnalytics(
+        skillList, 'Skill completion in time');
+      skillSelector.build(drawLineChart).appendTo('.skills-container');
     });
   });
 </script>

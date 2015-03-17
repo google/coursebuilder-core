@@ -596,6 +596,18 @@ function setupNavbarResize() {
   onNavbarResize();
 }
 
+/**
+ * Returns a list with 10 different colors. To be used with Google
+ * Visualizations graphs.
+ * The colors have been taken from the dc library charts, see examples in
+ * Analytics > Questions tab.
+ */
+getGVColorPallet = function () {
+  return ['#6baed6', '#fd8d3c', '#74c476', '#9e9ac8',
+          '#3182bd', '#e6550d', '#31a354', '#756bb1',
+          '#929292', '#636363',]
+}
+
 function init() {
   setUpDraftStatus();
   setUpCloneQuestion();

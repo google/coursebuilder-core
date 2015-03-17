@@ -1160,19 +1160,19 @@ SkillEditorForOeditor.prototype = {
  *
  * @class
  */
-function SkillSelectorForAnalytics(skillList) {
+function SkillSelectorForAnalytics(skillList, selectorTitle) {
   var that = this;
   this._skillList = skillList;
-//  this._cachedSkillData = {};
+  var title = selectorTitle || 'Selected Skills';
 
   this._skillsDiv = $(
       '<div class="edit-skill-popup">' +
       '  <div class="form-row">' +
-      '    <label class="strong">Selected Skills</label>' +
+      '    <label class="strong"></label>' +
       '    <div class="skill-prerequisites"></div>' +
       '  </div>' +
       '</div>');
-
+  this._skillsDiv.find('.form-row > label').text(title);
   this._initSelectedSkillsDisplay();
 }
 
