@@ -427,6 +427,45 @@ class AdminTests(BaseIntegrationTest):
         ).click_close(
         ).verify_selected_tab('Assets')
 
+    def test_leave_page_with_changes_triggers_alert(self):
+        """Opens an editor page, make changes and tries to leave.
+
+        Expects an alert for confirmation.
+        """
+        name = self.create_new_course()[0]
+        confirm_message = ('You have unsaved changes that will be lost if'
+                           ' you leave.')
+        # Test back arrow
+        browser = self.load_dashboard(name).click_add_unit(
+        ).set_contents_on_one_page(True).go_back()
+        alert = browser.switch_to_alert()
+        self.assertEqual(confirm_message, alert.text)
+        alert.accept()
+        self.assertEqual(browser.where_am_i(), 'dashboard')
+
+        # Test click close button
+        browser = self.load_dashboard(name).click_add_unit(
+        ).set_contents_on_one_page(True).click_close()
+        alert = browser.switch_to_alert()
+        self.assertEqual(confirm_message, alert.text)
+        alert.accept()
+        self.assertEqual(browser.where_am_i(), 'dashboard')
+
+        # Test click navigation bar button
+        dashboard = self.load_dashboard(name)
+        dashboard.click_add_unit().set_contents_on_one_page(True)
+        dashboard.click_assets()
+        alert = browser.switch_to_alert()
+        self.assertEqual(confirm_message, alert.text)
+        alert.accept()
+        self.assertEqual(browser.where_am_i(), 'dashboard?action=assets')
+
+        # Test cancel the alert
+        browser = self.load_dashboard(name).click_add_unit(
+        ).set_contents_on_one_page(True).go_back()
+        browser.switch_to_alert().dismiss()
+        self.assertNotEqual(browser.where_am_i(), 'dashboard')
+
     def test_upload_and_delete_image(self):
         """Admin should be able to upload an image and then delete it."""
         image_file = os.path.join(

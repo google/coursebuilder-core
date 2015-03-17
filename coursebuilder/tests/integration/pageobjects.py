@@ -93,6 +93,21 @@ class PageObject(object):
                 (by.By.ID, 'gcb-butterbar-message')))
         return self
 
+    def go_back(self):
+        self._tester.driver.back()
+        return self
+
+    def switch_to_alert(self):
+        """Waits for an alert and switches the focus to it"""
+        self.wait().until(ec.alert_is_present(), 'Time out waiting')
+        return self._tester.driver.switch_to_alert()
+
+    def where_am_i(self):
+        """Returns the last part of the current url, after /."""
+        if '/' in self._tester.driver.current_url:
+            return self._tester.driver.current_url.split('/')[-1]
+        return None
+
 
 class EditorPageObject(PageObject):
     """Page object for pages which wait for the editor to finish loading."""

@@ -186,7 +186,6 @@ function onPageLoad(env) {
     '3.1.0',
     {requires: ['inputex-field', 'yui2-editor', 'yui2-resize']}
   );
-
   YUI(getYuiConfig(env.bundle_lib_files)).use(
     env.required_modules,
     mainYuiFunction);
@@ -261,6 +260,18 @@ function getYuiConfig(bundle_lib_files) {
   }
 }
 
+/**
+ * Returns a message if there are unsaved changes in the form. Returns null
+ * otherwise.
+ */
+function alertIfNotSavedChanges(cb_global) {
+  if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue())) {
+    return null;
+  } else {
+    return "You have unsaved changes that will be lost if you leave.";
+  }
+}
+
 // here is the main method
 function mainYuiFunction(Y) {
 
@@ -331,6 +342,13 @@ function mainYuiFunction(Y) {
   editorControls.populateForm(Y);
 
   moveMarkedFormElementsOutOfFieldset(Y);
+
+  // Show a confirmation box if there are unsaved changes.
+  if (! isFramed()) {
+    window.onbeforeunload = function () {
+      return alertIfNotSavedChanges(cb_global);
+    };
+  }
 }
 
 function isFramed() {
@@ -502,14 +520,7 @@ TopLevelEditorControls.prototype = {
     if (this._env.onCloseClick && this._env.onCloseClick() === false) {
       return false;
     }
-
-    disableAllControlButtons(this._env.form);
-    if (deepEquals(this._env.lastSavedFormValue, this._env.form.getValue()) ||
-        confirm("Abandon all changes?")) {
-      window.location = this._env.exit_url;
-    } else {
-      enableAllControlButtons(this._env.form);
-    }
+    window.location = cb_global.exit_url;
   },
 
   getDeleteButton: function() {
