@@ -21,12 +21,10 @@
         {% else %}
           <td>
             {% if row.base_view_url %}
-              <a href="{{ row.base_view_url }}" target="_blank">
-                <img src="/modules/i18n_dashboard/resources/images/eye.png"></a>
+              <a href="{{ row.base_view_url }}" target="_blank" class="icon md md-visibility"></a>
             {% endif %}
             {% if row.base_edit_url %}
-              <a href="{{ row.base_edit_url }}">
-                <img src="/modules/i18n_dashboard/resources/images/pencil.png"></a>
+              <a href="{{ row.base_edit_url }}" class="icon md md-mode-edit"></a>
             {% endif %}
             {{ row.name }}
           </td>
@@ -41,12 +39,10 @@
           {% for locale in extra_locales %}
             <td class="resource-locale-entry {{row.status_class(locale)}}">
               {% if row.view_url(locale): %}
-                <a href="{{ row.view_url(locale) }}" target="_blank">
-                  <img src="/modules/i18n_dashboard/resources/images/eye.png"></a>
+                <a href="{{ row.view_url(locale) }}" target="_blank" class="icon md md-visibility"></a>
               {% endif %}
               {% if not is_readonly %}
-                <a href="{{ row.edit_url(locale) }}">
-                  <img src="/modules/i18n_dashboard/resources/images/pencil.png"></a>
+                <a href="{{ row.edit_url(locale) }}" class="icon md md-mode-edit"></a>
               {% endif %}
               {{ row.status(locale) }}
             </td>

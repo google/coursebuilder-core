@@ -227,7 +227,7 @@ function setUpDraftStatus() {
 }
 
 function setUpCloneQuestion() {
-  $(".icon-clone").on("click", onCloneQuestionClick);
+  $(".md-content-copy").on("click", onCloneQuestionClick);
 }
 
 /**
@@ -255,7 +255,7 @@ function setUpModalWindow() {
 
 function setUpQuestionPreview() {
   // Bind preview button to show question preview
-  $(".icon-preview").on("click", function(e) {
+  $("table.assets-table .md-visibility").on("click", function(e) {
     openModal();
     var params = {
         action: "question_preview",
@@ -269,7 +269,7 @@ function setUpQuestionPreview() {
 function setUpAddToGroup() {
 
   function addBindings() {
-    $(".icon-add").on("click", function(e) {
+    $(".md-add-circle").on("click", function(e) {
       openModal();
       var popup = $("#add-to-group");
       var row = $(this).closest("tr");

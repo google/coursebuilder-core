@@ -1081,7 +1081,7 @@ class DashboardHandler(
     def _create_edit_button(self, edit_url):
         return safe_dom.A(
             href=edit_url,
-            className='icon icon-edit',
+            className='icon md-mode-edit',
             title='Edit',
             alt='Edit',
         )
@@ -1098,7 +1098,7 @@ class DashboardHandler(
     def _create_add_to_group_button(self):
         return safe_dom.Element(
             'div',
-            className='icon icon-add gcb-pull-right',
+            className='icon md md-add-circle gcb-pull-right',
             title='Add to question group',
             alt='Add to question group'
         )
@@ -1106,7 +1106,7 @@ class DashboardHandler(
     def _create_preview_button(self):
         return safe_dom.Element(
             'div',
-            className='icon icon-preview',
+            className='icon md md-visibility',
             title='Preview',
             alt='Preview'
         )
@@ -1114,7 +1114,7 @@ class DashboardHandler(
     def _create_clone_button(self, question_id):
         return safe_dom.A(
             href='#',
-            className='icon icon-clone',
+            className='icon md md-content-copy',
             title='Clone',
             alt='Clone',
             data_key=str(question_id)
@@ -1144,7 +1144,11 @@ class DashboardHandler(
         ths = safe_dom.NodeList()
         for (title, width) in columns:
             ths.append(safe_dom.Element(
-                'th', style=('width: %s%%' % width)).add_text(title))
+                'th', style=('width: %s%%' % width)).add_text(title).add_child(
+                    safe_dom.Element(
+                        'span', className='md md-arrow-drop-up')).add_child(
+                    safe_dom.Element(
+                        'span', className='md md-arrow-drop-down')))
         tr.add_children(ths)
         return table
 
@@ -1223,7 +1227,7 @@ class DashboardHandler(
         table = self._add_assets_table(
             output, 'question-table', [
             ('Description', 25), ('Question Groups', 25),
-            ('Course Locations', 25), ('Last Modified', 20), ('Type', 5)]
+            ('Course Locations', 25), ('Last Modified', 16), ('Type', 9)]
         )
         self._attach_filter_data(table)
         table.add_attribute(

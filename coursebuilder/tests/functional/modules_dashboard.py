@@ -261,7 +261,7 @@ class QuestionDashboardTestCase(actions.TestBase):
         # On the assets -> questions page, clone the question.
         response = self.get(self.URL)
         dom = self.parse_html_string(self.get(self.URL).body)
-        clone_link = dom.find('.//a[@class="icon icon-clone"]')
+        clone_link = dom.find('.//a[@class="icon md md-content-copy"]')
         question_key = clone_link.get('data-key')
         xsrf_token = dom.find('.//table[@id="question-table"]'
                               ).get('data-clone-question-token')

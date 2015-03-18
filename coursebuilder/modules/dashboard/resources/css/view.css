@@ -256,35 +256,20 @@ div#formContainer div.settings-list-item fieldset legend span {
   font-weight: normal;
 }
 .icon {
-  height: 16px;
-  width: 16px;
-  margin: 0px 0px 0px 5px;
-  background-repeat: no-repeat;
   display: inline-block;
-  vertical-align: bottom;
+  vertical-align: top;
+  font-size: 16px;
+  margin: 0;
+  height: 24px;
+  width: 20px;
+  line-height: 24px;
+  padding: 2px 4px 2px 0px;
+  color: #555;
+  text-decoration: none;
   cursor: pointer;
-}
-.icon-edit {
-  background-image: url('/modules/dashboard/resources/images/pencil.png');
-}
-.icon-preview {
-  background-image: url('/modules/dashboard/resources/images/eye.png');
-}
-.icon-add {
-  background-image: url('/modules/dashboard/resources/images/add.png');
-}
-.icon-clone {
-  background-image: url('/modules/dashboard/resources/images/page_copy.png');
 }
 .icon.inactive {
   cursor: auto;
-}
-.icon-locked, .icon-unlocked {
-  background-image: url('/modules/dashboard/resources/images/lock.png');
-  background-repeat: no-repeat;
-}
-.icon-unlocked {
-  background-position: -16px 0;
 }
 .assets-table-container {
   max-height: 400px;
@@ -297,9 +282,16 @@ div#formContainer div.settings-list-item fieldset legend span {
   border-style: hidden;
   border-right-style: solid;
 }
+.assets-table td .icon {
+  vertical-align: inherit;
+  height: inherit;
+  width: inherit;
+  line-height: inherit;
+  padding: 0 4px;
+}
 .assets-table td {
-  padding: 5px 10px;
-  vertical-align: top
+  padding: 4px 10px;
+  vertical-align: top;
 }
 .assets-table th {
   padding: 5px 15px;
@@ -309,19 +301,15 @@ div#formContainer div.settings-list-item fieldset legend span {
 .assets-table li {
   margin: 0px;
 }
-.assets-table td:first-child .icon {
-  margin: 0px 5px 0px 0px;
+.assets-table .md-arrow-drop-up,
+.assets-table .md-arrow-drop-down {
+  display: none;
 }
-.assets-table .sort-desc, .assets-table .sort-asc {
-  background-color: #e5e5e5;
-}
-.assets-table .sort-asc {
-  background-image: url('/modules/dashboard/resources/images/bullet_arrow_up.png');
-  background-position: 100% 20%;
-}
-.assets-table .sort-desc {
-  background-image: url('/modules/dashboard/resources/images/bullet_arrow_down.png');
-  background-position: 100% 80%;
+.assets-table .sort-asc .md-arrow-drop-up,
+.assets-table .sort-desc .md-arrow-drop-down {
+  display: inline;
+  font-size: 18px;
+  vertical-align: middle;
 }
 .assets-table ul {
   margin: 0px;
