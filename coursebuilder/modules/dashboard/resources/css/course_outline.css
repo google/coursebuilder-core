@@ -63,7 +63,7 @@ div.course-outline div.row:hover {
 }
 div.course-outline div.left-matter {
   display: inline-block;
-  width: 420px;
+  width: 580px;
   border-right: solid #ccc 1px;
 }
 div.course-outline div.row.course > div > div.name {

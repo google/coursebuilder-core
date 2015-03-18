@@ -21,7 +21,7 @@ table.skill-map-table th {
   background: #fff;
 }
 table.skill-map-table th.skill {
-  width: 20%;
+  width: 250px;
 }
 table.skill-map-table th.lessons {
   width: 5em;
@@ -46,6 +46,13 @@ table.skill-map-table td .diagnosis.icon {
   transition: opacity 400ms;
   cursor: inherit;
 }
+table.skill-map-table td.skill span.skill-name {
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 185px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 table.skill-map-table td .diagnosis.icon.md-error {
   color: #c00;
 }
@@ -55,37 +62,9 @@ table.skill-map-table td .diagnosis.icon.md-warning {
 table.skill-map-table td .diagnosis.icon.active {
   opacity: 1;
 }
-table.skill-map-table td.lesson {
-  width: 10em;
-}
-table.skill-map-table span.description {
-  color: #777;
-}
-table.skill-map-table th.lesson {
-  width: 10em;
-}
-table.skill-map-table tr.section-row td {
-  background-color: #f5f5f5;
-  font-style: italic;
-}
-table.skill-map-table tr.empty-section td{
-  text-align: center;
-  font-style: italic;
-}
-table.skill-map-table tr.blank-row td {
-  border-left: none;
-  border-right: none;
-}
-table.skill-map-table tr td span.skill {
-  font-weight: bold;
-}
-table.skill-map-table tr td span.hellip {
-  font-weight: bold;
-  font-size: larger;
-}
-
-table.skill-map-table tr td span.description {
-  color: #666666;
+table.skill-map-table td.description {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 table.skill-map-table tr td span.prerequisite {
   background: #5cb85c;

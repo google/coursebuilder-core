@@ -62,11 +62,11 @@ SkillTable.prototype = {
 
     // add skill name
     var td = $(
-        '<td>' +
+        '<td class="skill">' +
         '  <div class="diagnosis icon md"></div>' +
         '  <span class="skill-name"></span> ' +
-        '  <button class="icon md md-mode-edit reveal-on-hover edit-skill"></button> ' +
         '  <button class="icon md md-delete reveal-on-hover delete-skill"></button> ' +
+        '  <button class="icon md md-mode-edit reveal-on-hover edit-skill"></button> ' +
         '</td>'
     );
     td.find('.diagnosis.icon, button').data('id', skill.id);
@@ -83,7 +83,7 @@ SkillTable.prototype = {
 
     // add skill description
     var td = $(
-        '<td>' +
+        '<td class="description">' +
           '<span class="skill-description"></span>' +
         '</td>'
     );
@@ -209,7 +209,7 @@ SkillTable.prototype = {
     this._content = $(
       '<div class="controls">' +
       '  <label class="show-warnings">' +
-      '    <input type="checkbox" class="health-checkbox">' +
+      '    <input type="checkbox" class="health-checkbox" checked>' +
       '    Show warnings' +
       '  </label>' +
       '  <button class="gcb-button add-new-skill">+ Create New Skill</button>' +
@@ -799,7 +799,7 @@ EditSkillPopup.prototype = {
         var skill = that._skillList.getSkillById(this);
         that._prereqDisplay.add(skill.id, skill.name);
       });
-    });
+    }, '+ Add Skill');
     this._skillList.eachSkill(function(skill) {
       that._prereqSelector.add(skill.id, skill.name);
     });
@@ -819,7 +819,7 @@ EditSkillPopup.prototype = {
         var location = that._locationList.getByKey(this);
         that._locationDisplay.add(this, location.label + ' ' + location.lesson);
       });
-    });
+    }, '+ Add Lesson', 'Lesson...');
     this._locationList.each(function(location) {
       that._locationSelector.add(location.key,
           location.label + ' ' + location.lesson);
@@ -938,21 +938,24 @@ ListDisplay.prototype = {
  *     item ids whenever a selection is performed.
  * @param addLabel {string} Optional label for ADD button.
  */
-function ItemSelector(onItemsSelectedCallback, addLabel) {
+function ItemSelector(onItemsSelectedCallback, label, placeholder) {
   this._documentBody = $(document.body);
   this._onItemsSelectedCallback = onItemsSelectedCallback;
 
-  var label = addLabel || '+ ADD';
+  label = label || '+ Add';
+  placeholder = placeholder || 'Skill...';
 
   this._rootDiv = $(
     '<div class="item-selector-root">' +
-    '  <button class="add">' + label + '</button>' +
+    '  <button class="add"></button>' +
     '  <div class="selector">' +
-    '    <div><input class="search" type="text" placeholder="Skill..."></div>' +
+    '    <div><input class="search" type="text"></div>' +
     '    <ol class="item-list"></ol>' +
     '    <div><button class="select action">OK</button></div>' +
     '  </div>' +
     '</div>');
+  this._rootDiv.find('button.add').text(label);
+  this._rootDiv.find('input.search').attr('placeholder', placeholder);
 
   this._addItemButton = this._rootDiv.find('button.add');
   this._addItemWidgetDiv = this._rootDiv.find('div.selector');
@@ -1011,6 +1014,7 @@ ItemSelector.prototype = {
 
     this._addItemButton.click(function() {
       that._addItemWidgetDiv.show();
+      that._positionAddItemWidgetDiv();
       return false;
     });
 
@@ -1029,6 +1033,23 @@ ItemSelector.prototype = {
       that._close();
       return false;
     });
+  },
+  /**
+   * Choose an optimal position for the addItemWidgetDiv.
+   */
+  _positionAddItemWidgetDiv: function() {
+    // PADDING = (margin used in CSS styling) - (extra padding)
+    PADDING = 22 - 10;
+
+    // Remove any previous styling
+    this._addItemWidgetDiv.css('top', null);
+
+    var bounds = this._addItemWidgetDiv[0].getBoundingClientRect();
+    var overflow = bounds.bottom - $(window).height();
+    var top = PADDING - overflow;
+    if (overflow > 0 && top + bounds.top >= 0) {
+      this._addItemWidgetDiv.css('top', top);
+    }
   },
   _close: function() {
     this._addItemWidgetDiv.hide();
@@ -1071,10 +1092,10 @@ function SkillEditorForOeditor(env) {
         });
   this._prereqSelector = new ItemSelector(function(selectedSkillIds) {
     that._onSkillsSelectedCallback(selectedSkillIds);
-  });
+  }, '+ Add Skill');
 
   var newSkillDiv = $('<div class="new-skill"></div>');
-  var newSkillButton = $('<button class="add">+ CREATE NEW SKILL</button>');
+  var newSkillButton = $('<button class="add">+ Create New Skill</button>');
   newSkillButton.click(function() {
     new EditSkillPopup(that._skillList, null, null).open(function(skill) {
       that._onSkillsSelectedCallback([skill.id]);
@@ -1086,8 +1107,11 @@ function SkillEditorForOeditor(env) {
 
   this._skillWidgetDiv = $('<div class="inputEx-Field"></div>');
   this._skillWidgetDiv.append(this._prereqDisplay.element());
-  this._skillWidgetDiv.append(this._prereqSelector.element());
-  this._skillWidgetDiv.append(newSkillDiv);
+
+  var buttonDiv = $('<div class="skill-map-buttons"></div>');
+  this._skillWidgetDiv.append(buttonDiv);
+  buttonDiv.append(this._prereqSelector.element());
+  buttonDiv.append(newSkillDiv);
 }
 
 SkillEditorForOeditor.prototype = {
@@ -1196,7 +1220,7 @@ SkillSelectorForAnalytics.prototype = {
       if (skillIds.length > 0) {
         that._loadData(skillIds);
       }
-    }, '+ SELECT SKILL');
+    }, '+ Select Skill');
 
     this._skillList.eachSkill(function(skill) {
       that._skillsSelector.add(skill.id, skill.name);
