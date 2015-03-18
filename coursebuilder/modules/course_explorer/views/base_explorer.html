@@ -15,7 +15,7 @@
 
   <script src="/modules/oeditor/resources/butterbar.js"></script>
   <link rel="stylesheet" type="text/css"
-      href="/modules/oeditor/resources/butterbar.css" media="screen" />    
+      href="/modules/oeditor/resources/butterbar.css" media="screen" />
 {% endblock %}
 
 {% block navbar %}
@@ -38,6 +38,11 @@
               <a href="/explorer/profile">{{ gettext('Profile') }}</a>
             </li>
           {% endif %}
+        {% endif %}
+        {% if is_super_admin %}
+          <li class="gcb-pull-right">
+            <a href="/admin/global">Admin Site</a>
+          </li>
         {% endif %}
       </ul>
     </div>
