@@ -548,30 +548,6 @@ class InfrastructureTest(actions.TestBase):
             unit.unit_id)
         assert lesson_c.lesson_id == 6
 
-        # Reorder lessons.
-        new_order = [
-            {'id': link.unit_id},
-            {
-                'id': unit.unit_id,
-                'lessons': [
-                    {'id': lesson_b.lesson_id},
-                    {'id': lesson_a.lesson_id},
-                    {'id': lesson_c.lesson_id}]},
-            {'id': assessment.unit_id}]
-        course.reorder_units(new_order)
-        course.save()
-        assert [lesson_b, lesson_a, lesson_c] == course.get_lessons(
-            unit.unit_id)
-
-        # Move lesson to another unit.
-        another_unit = course.add_unit()
-        course.move_lesson_to(lesson_b, another_unit)
-        course.save()
-        assert [lesson_a, lesson_c] == course.get_lessons(unit.unit_id)
-        assert [lesson_b] == course.get_lessons(another_unit.unit_id)
-        course.delete_unit(another_unit)
-        course.save()
-
         # Make the course available.
         with actions.OverriddenEnvironment({'course': {'now_available': True}}):
             # Test public/private assessment.
@@ -634,6 +610,56 @@ class InfrastructureTest(actions.TestBase):
 
         # Clean up.
         sites.reset_courses()
+
+    def test_reorder_units(self):
+        """Reorders the units and lessons of the course."""
+        # Setup courses.
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+
+        # Add unit.
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+        unit = course.add_unit()
+        unit.title = 'Unit Title'
+
+        # Test adding lessons.
+        lesson_a = course.add_lesson(unit)
+        lesson_b = course.add_lesson(unit)
+        lesson_c = course.add_lesson(unit)
+        course.save()
+        assert [lesson_a, lesson_b, lesson_c] == course.get_lessons(
+            unit.unit_id)
+
+        # Reorder lessons.
+        new_order = [{
+            'id': unit.unit_id,
+            'lessons': [
+                {'id': lesson_b.lesson_id},
+                {'id': lesson_a.lesson_id},
+                {'id': lesson_c.lesson_id}]}]
+        course.reorder_units(new_order)
+        course.save()
+        assert [lesson_b, lesson_a, lesson_c] == course.get_lessons(
+            unit.unit_id)
+
+        # Move lesson to another unit using function move_lesson_to.
+        another_unit = course.add_unit()
+        course.move_lesson_to(lesson_b, another_unit)
+        course.save()
+        assert [lesson_a, lesson_c] == course.get_lessons(unit.unit_id)
+        assert [lesson_b] == course.get_lessons(another_unit.unit_id)
+
+        # Move lesson to another unit using function reorder_units.
+        new_order = [
+            {'id': unit.unit_id, 'lessons': [{'id': lesson_a.lesson_id}]},
+            {'id': another_unit.unit_id, 'lessons': [
+                {'id': lesson_b.lesson_id}, {'id': lesson_c.lesson_id}
+            ]}
+        ]
+        course.reorder_units(new_order)
+        course.save()
+        assert [lesson_a] == course.get_lessons(unit.unit_id)
+        assert [lesson_b, lesson_c] == course.get_lessons(
+            another_unit.unit_id)
 
     # pylint: disable=too-many-statements
     def test_unit_lesson_not_available(self):

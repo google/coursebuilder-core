@@ -1535,8 +1535,9 @@ class CourseModel13(object):
                 continue
             for lesson_data in unit_data['lessons']:
                 lesson_id = lesson_data['id']
-                reordered_lessons.append(
-                    self.find_lesson_by_id(None, lesson_id))
+                lesson = self.find_lesson_by_id(None, lesson_id)
+                lesson.unit_id = unit_id
+                reordered_lessons.append(lesson)
                 lesson_ids.add((unit_id, lesson_id))
         assert len(lesson_ids) == len(self._lessons)
         self._lessons = reordered_lessons
