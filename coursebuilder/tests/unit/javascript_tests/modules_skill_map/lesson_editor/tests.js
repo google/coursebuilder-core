@@ -211,5 +211,16 @@ describe('The skill tagging library', function() {
       expect(this.callback.calls[0].args[0].length).toBe(1);
       expect(this.callback.calls[0].args[0][0]).toBe('s1');
     });
+
+    it('is disabled when empty', function() {
+      this.root = $('#root').empty();
+      this.callback = jasmine.createSpy('callback');
+      this.selector = new ItemSelector(this.callback);
+      this.root.append(this.selector.element());
+
+      expect($('button.add').prop('disabled')).toBe(true);
+      this.selector.add('s1', 'ice skating');
+      expect($('button.add').prop('disabled')).toBe(false);
+    });
   });
 });

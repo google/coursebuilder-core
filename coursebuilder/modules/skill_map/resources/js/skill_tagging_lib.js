@@ -963,6 +963,7 @@ function ItemSelector(onItemsSelectedCallback, label, placeholder) {
   this._selectNewItemButton = this._rootDiv.find('button.select');
   this._selectItemListOl = this._rootDiv.find('ol.item-list');
 
+  this._addItemButton.prop('disabled', true);
   this._selectNewItemButton.prop('disabled', true);
 
   this._bind();
@@ -1005,6 +1006,8 @@ ItemSelector.prototype = {
 
     itemLi.append(label);
     this._selectItemListOl.append(itemLi);
+
+    this._addItemButton.prop('disabled', false);
   },
   clear: function() {
     this._selectItemListOl.empty();

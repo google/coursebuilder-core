@@ -12,6 +12,9 @@ div.item-selector-root button.add {
   border: none;
   outline: none;
 }
+div.item-selector-root button.add[disabled] {
+  color: #acacac;
+}
 div.item-selector-root div.selector {
   position: absolute;
   top: 22px;
