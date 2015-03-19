@@ -58,7 +58,10 @@ div.inputEx-StringField-wrapper input {
   text-align: left;
   border: solid 1px #999999;
 }
-div.inputEx-Field input {
+div.inputEx-Field div.inputEx-StringField-wrapper > input {
+  /* Ensure the selector is narrow enough that it does not hit the inputs in the
+   * popup panels with class yui-editor-container.
+   */
   width: 100%;
   border-left: 6px solid #999999;
 }
@@ -618,8 +621,11 @@ div.new-form-layout div.inputEx-Field.inputEx-CheckBox > div.inputEx-description
 div.new-form-layout div.inputEx-Field input[type=checkbox] {
   vertical-align: top;
 }
-div.new-form-layout div.inputEx-Field input[type=text],
+div.new-form-layout div.inputEx-StringField-wrapper > input[type=text],
 div.new-form-layout div.inputEx-Field textarea {
+  /* Ensure the selector is narrow enough that it does not hit the inputs in the
+   * popup panels with class yui-editor-container.
+   */
   width: 500px;
   padding: 7px 8px;
   border: solid 1px #999;
@@ -651,4 +657,5 @@ div.new-form-layout div.CodeMirror {
 }
 div.new-form-layout div.inputEx-Field > div.yui-editor-container {
   width: inherit;
+  z-index: 15; /* higher than the RTE switch button */
 }
