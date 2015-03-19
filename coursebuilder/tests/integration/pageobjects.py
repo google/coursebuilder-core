@@ -804,16 +804,16 @@ class CourseContentElement(DashboardEditor):
     def click_rich_text(self, index=0):
         self.wait_until_status_message_hidden()
         el = self.find_element_by_css_selector('div.rte-control', index)
-        self._tester.assertEqual('Rich Text', el.text)
-        el.click()
+        self._tester.assertIn('showing-html', el.get_attribute('class'))
+        el.find_element_by_class_name('rich-text').click()
         self.wait().until(ec.element_to_be_clickable(
             (by.By.ID, CourseContentElement.RTE_EDITOR_FORMAT % index)))
         return self
 
     def click_plain_text(self, index=None):
         el = self.find_element_by_css_selector('div.rte-control', index)
-        self._tester.assertEqual('<HTML>', el.text)
-        el.click()
+        self._tester.assertIn('showing-rte', el.get_attribute('class'))
+        el.find_element_by_class_name('html').click()
         return self
 
     def click_rte_add_custom_tag(self, index=0):

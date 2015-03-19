@@ -37,38 +37,38 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       this.isInRteMode = false;
 
       this._replaceTextAreaWithCodeMirror();
+      this.divEl.appendChild(this._getModeToggle());
 
-      // Make a button to toggle between plain text and rich text
-      var showRteText = "Rich Text";
-      var hideRteText = "<HTML>";
-      var showRteFlag = false;
-      var toggle = document.createElement("div");
-      var toggleText = document.createTextNode(showRteText);
-      toggle.appendChild(toggleText);
-      toggle.className = "rte-control inputEx-Button";
+      if (! env.can_highlight_code) {
+        this._monitorResizeOfTextArea();
+      }
+    },
 
+    _getModeToggle: function() {
       var that = this;
-      toggle.onclick = function() {
-        showRteFlag = ! showRteFlag;
-        if (showRteFlag) {
+      var controls = document.createElement("div");
+      controls.className = "rte-control showing-html";
+      controls.innerHTML =
+          '<div class="html">HTML</div>' +
+          '<div class="rich-text">Rich Text</div>';
+      var htmlButton = controls.querySelector('.html');
+      var rteButton = controls.querySelector('.rich-text');
+
+      htmlButton.onclick = function() {
+        that.hideRte();
+        controls.className = "rte-control showing-html";
+        that.isInRteMode = false;
+      };
+      rteButton.onclick = function() {
           if (that.editor) {
             that.showExistingRte();
           } else {
             that.showNewRte();
           }
-          toggleText.nodeValue = hideRteText;
+          controls.className = "rte-control showing-rte";
           that.isInRteMode = true;
-        } else {
-          that.hideRte();
-          toggleText.nodeValue = showRteText;
-          that.isInRteMode = false;
-        }
       };
-      this.divEl.appendChild(toggle);
-
-      if (! env.can_highlight_code) {
-        this._monitorResizeOfTextArea();
-      }
+      return controls;
     },
 
     _monitorResizeOfTextArea: function() {

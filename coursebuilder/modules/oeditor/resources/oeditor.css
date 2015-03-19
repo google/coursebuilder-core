@@ -190,20 +190,20 @@ img.framed {
  * CSS for the GCB Rich Text Editor.
  */
 
-div.rte-control.inputEx-Button {
-  position: absolute;
-  right: 10px;
-  width: 55px;
+div.rte-control > div {
+  display: inline-block;
+  padding: 4px 0;
+  width: 7em;
   text-align: center;
-  padding: 3px 0;
-  background-color: #f2f2f2;
-  border: solid #808080 1px;
-  color: #000;
-  font-weight: bold;
-  font-size: 10px;
-  text-decoration: none;
+  background-color: #dcdcdc;
+  border: solid #666 1px;
+  margin-left: -1px;
   cursor: pointer;
-  z-index: 10;
+}
+div.rte-control.showing-html > div.html,
+div.rte-control.showing-rte > div.rich-text {
+  font-weight: bold;
+  background-color: #ccc;
 }
 div.inputEx-Field > div.yui-editor-container {
   width: 510px;
@@ -253,7 +253,11 @@ div.set-scores-toggle {
 }
 form.mc-container > fieldset > legend + div + div > div.rte-control {
   /* The control for the question statement. */
-  left: 640px;
+  margin-left: 88px;
+  margin-bottom: 5px;
+}
+form.mc-container > fieldset > legend + div + div > div.rte-control > div {
+  padding: 0;
 }
 div.mc-description input {
   width: 546px;  /* allow for 2px padding */
@@ -292,7 +296,11 @@ div.mc-choice > fieldset > legend + div + div + div {
   margin-left: 50px;
 }
 div.mc-choice div.rte-control {
-  left: 554px;
+  margin-left: 1px;
+  margin-bottom: 5px;
+}
+div.mc-choice div.rte-control > div {
+  padding: 0;
 }
 div.mc-choice > div.toggle-feedback {
   /* The show-feedback button. */
@@ -327,11 +335,18 @@ div.mc-choice-container > div.inputEx-ListField-childContainer {
 /*
  * CSS for short answer question creation.
  */
-div.sa-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
-  width: 80px;
+
+div.sa-container fieldset > div.inputEx-fieldWrapper {
+  margin-top: 14px;
 }
 div.sa-container a:hover {
   text-decoration: none;
+}
+div.sa-container div.rte-control {
+  margin-left: 88px;
+}
+div.sa-container div.rte-control > div {
+  padding: 0;
 }
 div.sa-container textarea,
 div.sa-container div.CodeMirror {
@@ -348,7 +363,7 @@ div.sa-hint,
 div.sa-feedback,
 div.sa-grader-text,
 div.sa-grader-feedback {
-  margin-top: 30px;
+  margin-top: 5px;
 }
 div.sa-question,
 div.sa-hint,
@@ -376,7 +391,7 @@ div.sa-grader > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
   width:60px;
 }
 div.sa-grader div.rte-control {
-  left: 580px;
+  margin-left: 68px;
 }
 div.sa-grader + a { /* The delete choice button */
   float: right;
@@ -642,14 +657,11 @@ div.new-form-layout div.inputEx-Form-buttonBar {
   max-width: 500px;
   margin: 20px 0 0 0;
 }
-div.new-form-layout div.rte-control.inputEx-Button {
-  left: 146px;
-}
 div.new-form-layout div.rte-control + div.inputEx-Field {
-  margin-top: 25px;
+  margin-top: 5px;
   width: inherit;
   float: none;
-  margin-left: 129px;
+  margin-left: 139px;
 }
 div.new-form-layout textarea.gcb-rte-textarea,
 div.new-form-layout div.CodeMirror {

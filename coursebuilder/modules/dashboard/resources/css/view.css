@@ -221,12 +221,6 @@ div.settings-list-item + a {
 div.new-form-layout div.settings-list-item > fieldset > div.inputEx-fieldWrapper {
   padding: 15px 0 0 0;
 }
-div.new-form-layout div.settings-list-item div.rte-control.inputEx-Button {
- left: 137px;
-}
-div.new-form-layout div.settings-list-item div.rte-control + div.inputEx-Field {
-  margin-left: 140px;
-}
 div.settings-list-item > fieldset > div > div.inputEx-Field {
   width: auto;
   min-width: 325px;
