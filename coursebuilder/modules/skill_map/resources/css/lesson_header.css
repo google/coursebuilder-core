@@ -1,7 +1,7 @@
 div.skill-panel {
-  background-color: #fff;
-  border: solid 1px #ccc;
+  border: solid 1px #ddd;
   text-align: left;
+  margin-top: 6px;
   margin-bottom: 15px;
 }
 div.skill-panel .margins {
@@ -14,10 +14,6 @@ div.skill-panel .skill-details .margins {
   font-family: arial, sans-serif;
   font-size: 13px;
 }
-div.skill-panel div.lesson-title {
-  font-size: 24px;
-  font-weight: bold;
-}
 div.skill-panel .section-title {
   font-weight: bold;
 }
@@ -28,15 +24,15 @@ div.skill-panel div.skills-in-this-lesson ol.skill-display-root {
   display: inline-block;
 }
 div.skill-panel div.open-control {
-  margin-top: 10px;
+  margin-top: 3px;
 }
 div.skill-panel div.open-control button {
   width: 100%;
   border: none;
   border-top: solid 1px #ccc;
   background-color: #f0f0f0;
-  line-height: 12px;
-  font-size: 20px;
+  line-height: 8px;
+  font-size: 16px;
 }
 div.skill-panel div.open-control button:focus {
   outline: none;

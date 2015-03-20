@@ -44,16 +44,16 @@
   </li>
 {%- endmacro %}
 
-<div class="skill-panel" data-dependency-map="{{ dependency_map }}">
-  <div class="margins lesson-title">
-    {{ lesson.title }}
-    {% if not lesson.now_available and can_see_drafts %}
-      <span id="lesson-title-private">
-        (Private)
-      </span>
-    {% endif %}
-  </div>
-  {% if skill_list %}
+<h1 class="gcb-lesson-title">
+  {{ lesson.title }}
+  {% if not lesson.now_available and can_see_drafts %}
+    <span id="lesson-title-private">
+      (Private)
+    </span>
+  {% endif %}
+</h1>
+{% if skill_list %}
+  <div class="skill-panel" data-dependency-map="{{ dependency_map }}">
     <div class="margins skills-in-this-lesson">
       {# I18N: Header describing the skills for this lesson #}
       <span class="section-title">{{ gettext('Taught in this lesson:') }}</span>
@@ -110,5 +110,5 @@
     <div class="open-control">
       <button class="md"></button>
     </div>
-  {% endif %}
-</div>
+  </div>
+{% endif %}

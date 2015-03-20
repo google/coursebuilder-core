@@ -795,9 +795,18 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         url = 'unit?unit=%(unit)s&lesson=%(lesson)s' % {
             'unit': self.unit.unit_id, 'lesson': self.lesson.lesson_id}
         dom = self.parse_html_string(self.get(url).body)
+        self.assertEqual(
+            'Test Lesson',
+            dom.find('.//h1[@class="gcb-lesson-title"]').text.strip())
         return dom.find('.//div[@class="skill-panel"]')
 
     def test_skills_widget_supressed_by_course_settings(self):
+        skill_graph = SkillGraph.load()
+        sa = skill_graph.add(Skill.build('a', 'describe a'))
+        sb = skill_graph.add(Skill.build('b', 'describe b'))
+        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sa.id, sb.id]
+        self.course.save()
+
         # Skill widget is not shown if supressed by course setting
         env = {'course': {'display_skill_widget': False}}
         with actions.OverriddenEnvironment(env):
@@ -812,14 +821,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
             self.assertIsNotNone(self._getWidget())
 
     def test_no_skills_in_lesson(self):
-        # Expect the title is the only content
-        widget = self._getWidget()
-        all_children = widget.findall('./*')
-        self.assertEqual(1, len(all_children))
-        child = all_children[0]
-        self.assertEqual('div', child.tag)
-        actions.assert_contains('lesson-title', child.attrib['class'])
-        actions.assert_contains('Test Lesson', child.text)
+        self.assertIsNone(self._getWidget())
 
     def test_skills_with_no_prerequisites_or_successors(self):
         # Expect skills shown and friendly messages for prerequ and successors
@@ -830,9 +832,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.course.save()
 
         widget = self._getWidget()
-        title_div, skills_div, details_div, control_div = widget.findall('./*')
-
-        actions.assert_contains('Test Lesson', title_div.text)
+        skills_div, details_div, control_div = widget.findall('./*')
 
         actions.assert_contains(
             'Taught in this lesson',
@@ -870,18 +870,18 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         widget = self._getWidget()
 
         # Check B and C are listed as skills in this lesson
-        skills_in_lesson = widget.findall('./div[2]//li[@class="skill"]')
+        skills_in_lesson = widget.findall('./div[1]//li[@class="skill"]')
         self.assertEqual(2, len(skills_in_lesson))
         actions.assert_contains('b', skills_in_lesson[0].text)
         actions.assert_contains('c', skills_in_lesson[1].text)
 
         # Skill A is listed in the "depends on" section
-        depends_on = widget.findall('./div[3]/div[1]/ol/li')
+        depends_on = widget.findall('./div[2]/div[1]/ol/li')
         self.assertEqual(1, len(depends_on))
         self.assertEqual(str(sa.id), depends_on[0].attrib['data-skill-id'])
 
         # Skill D is listed in the "leads to" section
-        leads_to = widget.findall('./div[3]/div[2]/ol/li')
+        leads_to = widget.findall('./div[2]/div[2]/ol/li')
         self.assertEqual(1, len(leads_to))
         self.assertEqual(str(sd.id), leads_to[0].attrib['data-skill-id'])
 
@@ -889,7 +889,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.lesson.properties[LESSON_SKILL_LIST_KEY].append(sa.id)
         self.course.save()
         widget = self._getWidget()
-        depends_on = widget.findall('./div[3]/div[1]/ol/li')
+        depends_on = widget.findall('./div[2]/div[1]/ol/li')
         self.assertEqual(0, len(depends_on))
 
     def test_skills_cards_have_title_description_and_lesson_links(self):
@@ -908,7 +908,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.course.save()
 
         widget = self._getWidget()
-        leads_to = widget.findall('./div[3]/div[2]/ol/li')
+        leads_to = widget.findall('./div[2]/div[2]/ol/li')
         self.assertEqual(1, len(leads_to))
         card = leads_to[0]
         name = card.find('.//div[@class="name"]').text
