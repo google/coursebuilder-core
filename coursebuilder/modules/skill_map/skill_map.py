@@ -905,7 +905,7 @@ class SkillMapHandler(dashboard.DashboardHandler):
         links = []
         for tgt in skill_map.skills():
             for src in tgt.prerequisites:
-                links.append({'source': n2i[tgt.name], 'target': n2i[src.name]})
+                links.append({'source': n2i[src.name], 'target': n2i[tgt.name]})
 
         template_values = {
             'nodes': json.dumps(nodes), 'links': json.dumps(links)}

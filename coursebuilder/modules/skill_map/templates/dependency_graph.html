@@ -1,7 +1,7 @@
 <link rel="stylesheet" type="text/css"
       href="/modules/skill_map/resources/dependo-0.1.4/cb/dependency_graph.css">
 
-<div class="graph">
+<div class="graph" data-nodes="{{ nodes }}" data-links="{{ links }}">
 <div class="control-zoom">
   <a class="control-zoom-in" href="#" title="Zoom in"></a>
   <a class="control-zoom-out" href="#" title="Zoom out"></a>
@@ -17,8 +17,8 @@
       'directed': true,
       'multigraph': false,
       'graph': [],
-      'nodes': {{ nodes|safe }},
-      'links': {{ links|safe }}
+      'nodes': $('div.graph').data('nodes'),
+      'links': $('div.graph').data('links')
     };
   };
 

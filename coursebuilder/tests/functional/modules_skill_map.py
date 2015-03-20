@@ -17,6 +17,7 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 import cgi
+import json
 import cStringIO
 import StringIO
 import time
@@ -777,6 +778,37 @@ class SkillMapHandlerTests(actions.TestBase):
 
         dom = self.parse_html_string(response.body)
         assert dom.find('.//div[@class="graph"]')
+
+    def test_dependency_graph(self):
+        skill_graph = SkillGraph.load()
+        src_skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        tgt_skill = skill_graph.add(Skill.build(
+            SKILL_NAME_2, SKILL_DESC_2,
+            prerequisite_ids=[{'id': src_skill.id}]))
+
+        response = self.get(self.GRAPH_URL)
+
+        self.assertEqual(200, response.status_int)
+        dom = self.parse_html_string(response.body)
+        graph_div = dom.find('.//div[@class="graph"]')
+        assert graph_div
+
+        nodes = json.loads(graph_div.get('data-nodes'))
+        self.assertEqual(2, len(nodes))
+        links = json.loads(graph_div.get('data-links'))
+        self.assertEqual(1, len(links))
+        link = links[0]
+        # The link points from the node to its prerequisite
+        # because d3 dependo library follows the discrete math convention
+        # for arrow direction
+        if nodes[0]['id'] == tgt_skill.name:
+            self.assertEqual(1, link['source'])
+            self.assertEqual(0, link['target'])
+        elif nodes[0]['id'] == src_skill.name:
+            self.assertEqual(0, link['source'])
+            self.assertEqual(1, link['target'])
+        else:
+            raise Exception('Unexpected skill name.')
 
 
 class StudentSkillViewWidgetTests(BaseSkillMapTests):
