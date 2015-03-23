@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-02 09:08-0800\n"
-"PO-Revision-Date: 2015-02-09 08:30-0800\n"
+"POT-Creation-Date: 2015-03-23 07:52-0700\n"
+"PO-Revision-Date: 2015-03-16 15:45-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ko <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -498,32 +498,37 @@ msgstr "현재 검색을 사용할 수 없습니다."
 #. Header for list of links to lessons
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:27
 msgid "Lessons"
+msgstr "강의"
+
+#. Text for empty list of lessons
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:40
+msgid "Not taught"
 msgstr ""
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
-msgid "Skills in this lesson:"
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:59
+msgid "Taught in this lesson:"
 msgstr ""
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:69
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:74
 msgid "Depends on:"
-msgstr ""
+msgstr "시작에 앞서 요구되는 기술:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
-msgid "This lesson doesn't depend on any other skills."
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:78
+msgid "This lesson doesn't have any prerequisites."
 msgstr ""
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:88
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:93
 msgid "Leads to:"
-msgstr ""
+msgstr "습득하게 될 기술:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:92
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:97
 msgid "This lesson isn't a prerequisite for any other skills."
-msgstr ""
+msgstr "이 강의는 다른 기술에 필요한 선수 강의가 아닙니다."
 
 #. Notification indicating that the user has subscribed to email notifications
 #. from an instructional course.
@@ -596,7 +601,7 @@ msgstr "공지사항"
 #. Shown if the list of announcements is empty.
 #: experimental/coursebuilder/views/announcements.html:25
 msgid "Currently, there are no announcements."
-msgstr ""
+msgstr "현재 공지사항이 없습니다."
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
@@ -1266,7 +1271,6 @@ msgstr "다음 페이지"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "종료"
-
 
 
 

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-02 09:08-0800\n"
-"PO-Revision-Date: 2015-02-09 08:30-0800\n"
+"POT-Creation-Date: 2015-03-23 07:52-0700\n"
+"PO-Revision-Date: 2015-03-16 15:45-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ar <LL@li.org>\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n>=3 "
@@ -504,32 +504,37 @@ msgstr "لا يتوفر البحث حاليًا"
 #. Header for list of links to lessons
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:27
 msgid "Lessons"
+msgstr "الدروس"
+
+#. Text for empty list of lessons
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:40
+msgid "Not taught"
 msgstr ""
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
-msgid "Skills in this lesson:"
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:59
+msgid "Taught in this lesson:"
 msgstr ""
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:69
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:74
 msgid "Depends on:"
-msgstr ""
+msgstr "يعتمد على:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
-msgid "This lesson doesn't depend on any other skills."
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:78
+msgid "This lesson doesn't have any prerequisites."
 msgstr ""
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:88
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:93
 msgid "Leads to:"
-msgstr ""
+msgstr "يؤدي إلى:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:92
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:97
 msgid "This lesson isn't a prerequisite for any other skills."
-msgstr ""
+msgstr "ليست هناك أية مهارات أخرى يشترط هذا الدرس توفرها."
 
 #. Notification indicating that the user has subscribed to email notifications
 #. from an instructional course.
@@ -606,7 +611,7 @@ msgstr "الإعلانات"
 #. Shown if the list of announcements is empty.
 #: experimental/coursebuilder/views/announcements.html:25
 msgid "Currently, there are no announcements."
-msgstr ""
+msgstr "في الوقت الحالي، ليس هناك أي إعلانات."
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
@@ -1294,7 +1299,6 @@ msgstr "الصفحة التالية"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "النهاية"
-
 
 
 

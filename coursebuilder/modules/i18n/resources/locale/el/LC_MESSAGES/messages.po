@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-02 09:08-0800\n"
-"PO-Revision-Date: 2015-02-09 08:30-0800\n"
+"POT-Creation-Date: 2015-03-23 07:52-0700\n"
+"PO-Revision-Date: 2015-03-16 15:45-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: el <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -512,32 +512,37 @@ msgstr "Προς το παρόν η αναζήτηση δεν είναι δια�
 #. Header for list of links to lessons
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:27
 msgid "Lessons"
+msgstr "Μαθήματα"
+
+#. Text for empty list of lessons
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:40
+msgid "Not taught"
 msgstr ""
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
-msgid "Skills in this lesson:"
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:59
+msgid "Taught in this lesson:"
 msgstr ""
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:69
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:74
 msgid "Depends on:"
-msgstr ""
+msgstr "Απαιτεί:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
-msgid "This lesson doesn't depend on any other skills."
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:78
+msgid "This lesson doesn't have any prerequisites."
 msgstr ""
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:88
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:93
 msgid "Leads to:"
-msgstr ""
+msgstr "Οδηγεί σε:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:92
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:97
 msgid "This lesson isn't a prerequisite for any other skills."
-msgstr ""
+msgstr "Αυτό το μάθημα δεν προϋποθέτει τυχόν άλλες δεξιότητες."
 
 #. Notification indicating that the user has subscribed to email notifications
 #. from an instructional course.
@@ -618,7 +623,7 @@ msgstr "Ανακοινώσεις"
 #. Shown if the list of announcements is empty.
 #: experimental/coursebuilder/views/announcements.html:25
 msgid "Currently, there are no announcements."
-msgstr ""
+msgstr "Προς το παρόν, δεν υπάρχουν ανακοινώσεις."
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
@@ -1335,7 +1340,6 @@ msgstr "Επόμενη σελίδα"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Λήξη"
-
 
 
 

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-02 09:08-0800\n"
-"PO-Revision-Date: 2015-02-09 08:30-0800\n"
+"POT-Creation-Date: 2015-03-23 07:52-0700\n"
+"PO-Revision-Date: 2015-03-16 15:45-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: eu <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -395,7 +395,7 @@ msgstr "Sarbidea ukatuta."
 #. questionnaire
 #: experimental/coursebuilder/modules/questionnaire/questionnaire.py:197
 msgid "Response submitted."
-msgstr "Erantzuna bidali da."
+msgstr "Bidali da erantzuna."
 
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
@@ -506,32 +506,37 @@ msgstr "Une honetan Bilaketa ez dago erabilgarri."
 #. Header for list of links to lessons
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:27
 msgid "Lessons"
+msgstr "Ikasgaiak"
+
+#. Text for empty list of lessons
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:40
+msgid "Not taught"
 msgstr ""
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
-msgid "Skills in this lesson:"
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:59
+msgid "Taught in this lesson:"
 msgstr ""
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:69
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:74
 msgid "Depends on:"
-msgstr ""
+msgstr "Gaitasunen hauek behar dira:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
-msgid "This lesson doesn't depend on any other skills."
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:78
+msgid "This lesson doesn't have any prerequisites."
 msgstr ""
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:88
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:93
 msgid "Leads to:"
-msgstr ""
+msgstr "Ikasgaiaren helburuak:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:92
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:97
 msgid "This lesson isn't a prerequisite for any other skills."
-msgstr ""
+msgstr "Ikasgai hau ez da derrigorrezkoa inongo gaitasunik lortzeko."
 
 #. Notification indicating that the user has subscribed to email notifications
 #. from an instructional course.
@@ -606,7 +611,7 @@ msgstr "Jakinarazpenak"
 #. Shown if the list of announcements is empty.
 #: experimental/coursebuilder/views/announcements.html:25
 msgid "Currently, there are no announcements."
-msgstr ""
+msgstr "Ez dago jakinarazpenik."
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
@@ -1291,7 +1296,6 @@ msgstr "Hurrengo orria"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Amaiera"
-
 
 
 
