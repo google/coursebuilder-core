@@ -94,7 +94,7 @@
   {% endif %}
 
   <div id="gcb-main-article" class="gcb-article tab-content" role="main">
-    {{course_info.unit.after_content_begins | safe}}
+    {{html_hooks.insert('unit.after_content_begins') | safe}}
 
     {% if not display_content %}
       <div class="gcb-aside gcb-button-box">
@@ -135,7 +135,7 @@
         {% endif %}
       </div>
     {% endif %}
-    {{course_info.unit.before_content_ends | safe}}
+    {{html_hooks.insert('unit.before_content_ends') | safe}}
   </div>
 </div>
 

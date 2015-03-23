@@ -23,11 +23,13 @@ import urllib
 from common import crypto
 from common import utils as common_utils
 from controllers import sites
+from controllers import utils
 from models import courses
 from models import models
 from models import transforms
 from modules.dashboard import course_settings
 from modules.dashboard import filer
+from modules.i18n_dashboard import i18n_dashboard
 from tests.functional import actions
 from tests.functional.actions import assert_contains
 from tests.functional.actions import assert_does_not_contain
@@ -137,12 +139,19 @@ class HtmlHookTest(actions.TestBase):
     def setUp(self):
         super(HtmlHookTest, self).setUp()
 
-        context = actions.simple_add_course(COURSE_NAME, ADMIN_EMAIL,
+        self.app_context = actions.simple_add_course(COURSE_NAME, ADMIN_EMAIL,
                                             COURSE_TITLE)
-        self.course = courses.Course(None, context)
+        self.course = courses.Course(None, self.app_context)
         actions.login(ADMIN_EMAIL, is_admin=True)
         self.xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
             course_settings.HtmlHookRESTHandler.XSRF_ACTION)
+
+    def tearDown(self):
+        settings = self.course.get_environ(self.app_context)
+        settings.pop('foo', None)
+        settings['html_hooks'].pop('foo', None)
+        self.course.save_settings(settings)
+        super(HtmlHookTest, self).tearDown()
 
     def test_hook_edit_button_presence(self):
 
@@ -241,7 +250,7 @@ class HtmlHookTest(actions.TestBase):
 
     def test_get_defaulted_hook_content(self):
         url = '%s?key=%s' % (
-            ADMIN_SETTINGS_URL, cgi.escape('base:after_body_tag_begins'))
+            ADMIN_SETTINGS_URL, cgi.escape('base.after_body_tag_begins'))
         response = transforms.loads(self.get(url).body)
         self.assertEquals(200, response['status'])
         self.assertEquals('Success.', response['message'])
@@ -258,7 +267,7 @@ class HtmlHookTest(actions.TestBase):
 
         response = self.put(ADMIN_SETTINGS_URL, {'request': transforms.dumps({
                 'xsrf_token': cgi.escape(self.xsrf_token),
-                'key': 'base:after_body_tag_begins',
+                'key': 'base.after_body_tag_begins',
                 'payload': transforms.dumps(
                     {'hook_content': html_text})})})
         self.assertEquals(200, response.status_int)
@@ -277,7 +286,7 @@ class HtmlHookTest(actions.TestBase):
         self.assertIn('<!-- base.after_body_tag_begins -->', response.body)
 
         url = '%s?key=%s&xsrf_token=%s' % (
-            ADMIN_SETTINGS_URL, cgi.escape('base:after_body_tag_begins'),
+            ADMIN_SETTINGS_URL, cgi.escape('base.after_body_tag_begins'),
             cgi.escape(self.xsrf_token))
         response = transforms.loads(self.delete(url).body)
         self.assertEquals(200, response['status'])
@@ -288,7 +297,7 @@ class HtmlHookTest(actions.TestBase):
 
     def test_manipulate_non_default_item(self):
         html_text = '<table><tbody><tr><th>;&lt;&gt;</th></tr></tbody></table>'
-        new_hook_name = 'html:some_new_hook'
+        new_hook_name = 'html.some_new_hook'
 
         # Verify that content prior to setting is blank.
         url = '%s?key=%s&xsrf_token=%s' % (
@@ -331,7 +340,7 @@ class HtmlHookTest(actions.TestBase):
         self.assertIsNone(payload['hook_content'])
 
     def test_add_new_hook_to_page(self):
-        hook_name = 'html:my_new_hook'
+        hook_name = 'html.my_new_hook'
         html_text = '<table><tbody><tr><th>;&lt;&gt;</th></tr></tbody></table>'
         key = 'views/base.html'
         url = '%s?key=%s' % (
@@ -385,6 +394,113 @@ class HtmlHookTest(actions.TestBase):
             models.StudentPreferencesDAO.save(prefs)
         response = self.get(BASE_URL)
         self.assertIn('gcb-html-hook-edit', response.body)
+
+    def test_hook_i18n(self):
+        actions.update_course_config(
+            COURSE_NAME,
+            {
+                'html_hooks': {'base': {'after_body_tag_begins': 'foozle'}},
+                'extra_locales': [
+                    {'locale': 'de', 'availability': 'available'},
+                ]
+            })
+
+        hook_bundle = {
+            'content': {
+                'type': 'html',
+                'source_value': '',
+                'data': [{
+                    'source_value': 'foozle',
+                    'target_value': 'FUZEL',
+                }],
+            }
+        }
+        hook_key = i18n_dashboard.ResourceBundleKey(
+            utils.ResourceHtmlHook.TYPE, 'base.after_body_tag_begins', 'de')
+        with common_utils.Namespace(NAMESPACE):
+            i18n_dashboard.ResourceBundleDAO.save(
+                i18n_dashboard.ResourceBundleDTO(str(hook_key), hook_bundle))
+
+        # Verify non-translated version.
+        response = self.get(BASE_URL)
+        dom = self.parse_html_string(response.body)
+        html_hook = dom.find('.//div[@id="base-after-body-tag-begins"]')
+        self.assertEquals('foozle', html_hook.text)
+
+        # Set preference to translated language, and check that that's there.
+        with common_utils.Namespace(NAMESPACE):
+            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs.locale = 'de'
+            models.StudentPreferencesDAO.save(prefs)
+
+        response = self.get(BASE_URL)
+        dom = self.parse_html_string(response.body)
+        html_hook = dom.find('.//div[@id="base-after-body-tag-begins"]')
+        self.assertEquals('FUZEL', html_hook.text)
+
+        # With no translation present, but preference set to foreign language,
+        # verify that we fall back to the original language.
+
+        # Remove translation bundle, and clear cache.
+        with common_utils.Namespace(NAMESPACE):
+            i18n_dashboard.ResourceBundleDAO.delete(
+                i18n_dashboard.ResourceBundleDTO(str(hook_key), hook_bundle))
+        i18n_dashboard.ProcessScopedResourceBundleCache.instance().clear()
+
+        response = self.get(BASE_URL)
+        dom = self.parse_html_string(response.body)
+        html_hook = dom.find('.//div[@id="base-after-body-tag-begins"]')
+        self.assertEquals('foozle', html_hook.text)
+
+    def test_hook_content_found_in_old_location(self):
+        actions.update_course_config(COURSE_NAME, {'foo': {'bar': 'baz'}})
+        self.assertEquals(
+            'baz', utils.HtmlHooks.get_content(self.course, 'foo.bar'))
+
+    def test_insert_on_page_and_hook_content_found_using_old_separator(self):
+        settings = self.course.get_environ(self.app_context)
+        settings['html_hooks']['foo'] = {'bar': 'baz'}
+        self.course.save_settings(settings)
+        hooks = utils.HtmlHooks(self.course)
+        content = hooks.insert('foo:bar')
+        self.assertEquals('<div class="gcb-html-hook" id="foo-bar">baz</div>',
+                          str(content))
+
+    def test_hook_content_new_location_overrides_old_location(self):
+        actions.update_course_config(COURSE_NAME,
+                                     {'html_hooks': {'foo': {'bar': 'zab'}}})
+        actions.update_course_config(COURSE_NAME,
+                                     {'foo': {'bar': 'baz'}})
+        self.assertEquals(
+            'zab', utils.HtmlHooks.get_content(self.course, 'foo.bar'))
+
+    def test_hook_rest_edit_removes_from_old_location(self):
+        actions.update_course_config(COURSE_NAME,
+                                     {'html_hooks': {'foo': {'bar': 'zab'}}})
+        actions.update_course_config(COURSE_NAME,
+                                     {'foo': {'bar': 'baz'}})
+        response = self.put(ADMIN_SETTINGS_URL, {'request': transforms.dumps({
+                'xsrf_token': cgi.escape(self.xsrf_token),
+                'key': 'foo.bar',
+                'payload': transforms.dumps({'hook_content': 'BAZ'})})})
+        env = self.course.get_environ(self.app_context)
+        self.assertNotIn('bar', env['foo'])
+        self.assertEquals('BAZ', env['html_hooks']['foo']['bar'])
+
+
+    def test_hook_rest_delete_removes_from_old_and_new_location(self):
+        actions.update_course_config(COURSE_NAME,
+                                     {'html_hooks': {'foo': {'bar': 'zab'}}})
+        actions.update_course_config(COURSE_NAME,
+                                     {'foo': {'bar': 'baz'}})
+        url = '%s?key=%s&xsrf_token=%s' % (
+            ADMIN_SETTINGS_URL, cgi.escape('foo.bar'),
+            cgi.escape(self.xsrf_token))
+        self.delete(url)
+
+        env = self.course.get_environ(self.app_context)
+        self.assertNotIn('bar', env['foo'])
+        self.assertNotIn('bar', env['html_hooks']['foo'])
 
 
 class JinjaContextTest(actions.TestBase):

@@ -1,7 +1,7 @@
 {% import 'macros.html' as macros %}
 <div class="gcb-nav left-menu" id="gcb-nav-y" role="navigation">
   <ul>
-    {{course_info.unit.after_leftnav_begins | safe}}
+    {{html_hooks.insert('unit.after_leftnav_begins') | safe}}
 
     {% if not course_info.unit.show_unit_links_in_leftnav %}
         {% for unit, lessons, lesson_progress, pre_assessment, post_assessment in course_outline %}
@@ -77,6 +77,6 @@
         </script>
     {% endif %}
 
-    {{course_info.unit.before_leftnav_ends | safe}}
+    {{html_hooks.insert('unit.before_leftnav_ends') | safe}}
   </ul>
 </div>

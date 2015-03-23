@@ -146,6 +146,7 @@ DEFAULT_COURSE_YAML_DICT = {
         'main_image': {},
         'browsable': True,
         'now_available': False},
+    'html_hooks': {},
     'preview': {},
     'unit': {},
     'reg_form': {

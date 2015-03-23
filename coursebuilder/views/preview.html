@@ -16,7 +16,7 @@
       {% include 'registration_module.html' %}
     </div>
   </div>
-  {{course_info.preview.after_top_content_ends | safe}}
+  {{html_hooks.insert('preview.after_top_content_ends') | safe}}
 {% endblock %}
 
 {% block main_content %}
@@ -51,5 +51,5 @@
 
     </div>
   </div>
-  {{course_info.preview.after_main_content_ends | safe}}
+  {{html_hooks.insert('preview.after_main_content_ends') | safe}}
 {% endblock %}

@@ -1808,6 +1808,24 @@ class TranslatableResourceQuestionGroups(AbstractTranslatableResourceType):
         return ret
 
 
+class TranslatableResourceHtmlHooks(AbstractTranslatableResourceType):
+
+    @classmethod
+    def get_ordering(cls):
+        return TranslatableResourceRegistry.ORDERING_LAST
+
+    @classmethod
+    def get_title(cls):
+        return 'HTML Hooks'
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        ret = [(v, k)
+               for k, v in utils.ResourceHtmlHook.get_all(course).iteritems()]
+        ret.sort(key=lambda row: row[0][utils.ResourceHtmlHook.NAME])
+        return ret
+
+
 class I18nDashboardHandler(BaseDashboardExtension):
     """Provides the logic for rendering the i18n workflow dashboard."""
 
@@ -2673,6 +2691,34 @@ def translate_units(course, locale):
         unit_tools.apply_updates(unit, data_dict, errors)
 
 
+@appengine_config.timeandlog('translate_html_hooks', duration_only=True)
+def translate_html_hooks(html_hooks_dict):
+    if not is_translation_required():
+        return
+
+    app_context = sites.get_course_for_current_request()
+    course = courses.Course(None, app_context=app_context)
+    locale = app_context.get_current_locale()
+
+    key_list = [
+        ResourceBundleKey(utils.ResourceHtmlHook.TYPE, name, locale) for
+        name in html_hooks_dict.iterkeys()]
+    bundle_list = I18nResourceBundleManager.get_multi(app_context, key_list)
+    for key, bundle in zip(key_list, bundle_list):
+        if bundle is None:
+            continue
+        schema = utils.ResourceHtmlHook.get_schema(None, None)
+        hook_name = key.resource_key.key
+        values = utils.ResourceHtmlHook.to_data_dict(
+            hook_name, html_hooks_dict[hook_name])
+        binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
+            values, schema)
+        for name, translation_dict in bundle.dict.items():
+            source_value = binding.name_to_value[name].value
+            binding.name_to_value[name].value = LazyTranslator(
+                app_context, key, source_value, translation_dict)
+        html_hooks_dict[hook_name] = values[utils.ResourceHtmlHook.CONTENT]
+
 @appengine_config.timeandlog('translate_course', duration_only=True)
 def translate_course(course):
     if not is_translation_required():
@@ -2808,6 +2854,7 @@ def notify_module_enabled():
     TranslatableResourceRegistry.register(TranslatableResourceCourseComponents)
     TranslatableResourceRegistry.register(TranslatableResourceQuestions)
     TranslatableResourceRegistry.register(TranslatableResourceQuestionGroups)
+    TranslatableResourceRegistry.register(TranslatableResourceHtmlHooks)
 
     dashboard.DashboardHandler.add_nav_mapping(
         I18nDashboardHandler.ACTION, 'I18N')
@@ -2831,6 +2878,7 @@ def notify_module_enabled():
     models.QuestionGroupDAO.POST_LOAD_HOOKS.append(translate_question_group_dto)
     transforms.CUSTOM_JSON_ENCODERS.append(LazyTranslator.json_encode)
     utils.ApplicationHandler.EXTRA_GLOBAL_CSS_URLS.append(GLOBAL_CSS)
+    utils.HtmlHooks.POST_LOAD_CALLBACKS.append(translate_html_hooks)
     unit_lesson_editor.LessonRESTHandler.POST_SAVE_HOOKS.append(
         I18nProgressDeferredUpdater.on_lesson_changed)
     unit_lesson_editor.CommonUnitRESTHandler.POST_SAVE_HOOKS.append(

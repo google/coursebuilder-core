@@ -92,13 +92,14 @@ class I18NCourseSettingsTests(actions.TestBase):
             self.course_yaml, self.schema)
 
         expected_unmapped = [
-            'preview:after_main_content_ends',
-            'preview:after_top_content_ends',
+            'html_hooks:preview:after_main_content_ends',
+            'html_hooks:preview:after_top_content_ends',
+            'html_hooks:unit:after_content_begins',
+            'html_hooks:unit:after_leftnav_begins',
+            'html_hooks:unit:before_content_ends',
+            'html_hooks:unit:before_leftnav_ends',
             'reg_form:whitelist',
-            'unit:after_content_begins',
-            'unit:after_leftnav_begins',
-            'unit:before_content_ends',
-            'unit:before_leftnav_ends']
+          ]
         self.assertEqual(expected_unmapped, sorted(binding.unmapped_names))
         self.assertEqual(len(binding.name_to_field), len(binding.name_to_value))
 

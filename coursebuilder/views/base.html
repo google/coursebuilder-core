@@ -160,12 +160,12 @@
     {{ ga.render_google_analytics_script(
            course_info.course.google_analytics_id) }}
 
-    {{ course_info.base.before_head_tag_ends | safe}}
+    {{ html_hooks.insert('base.before_head_tag_ends') | safe}}
   </head>
 
   <body data-gcb-page-locale="{{ page_locale }}">
 
-    {{ html_hooks.insert('base:after_body_tag_begins') }}
+    {{ html_hooks.insert('base.after_body_tag_begins') }}
 
     <script>
       // Course-Builder specific setup for Google Tag Manager.  Iff
@@ -254,11 +254,11 @@
     <div class="is-wrapper">
       <div class="gcb-aux">
         {% block top_content %}{% endblock %}
-        {{ html_hooks.insert('base:after_top_content_ends') }}
+        {{ html_hooks.insert('base.after_top_content_ends') }}
 
         <!-- main section -->
         {% block main_content %}{% endblock %}
-        {{ html_hooks.insert('base:after_main_content_ends') }}
+        {{ html_hooks.insert('base.after_main_content_ends') }}
       </div>
     </div>
 
@@ -299,7 +299,7 @@
         </div>
       </div>
     </div>
-    {{ html_hooks.insert('base:before_body_tag_ends') }}
+    {{ html_hooks.insert('base.before_body_tag_ends') }}
 
     {% if context %}
       <div class="gcb-jinja-context">

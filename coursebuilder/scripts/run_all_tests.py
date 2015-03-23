@@ -35,7 +35,7 @@ import yaml
 ALL_TEST_CLASSES = {
     'tests.functional.admin_settings.AdminSettingsTests': 1,
     'tests.functional.admin_settings.ExitUrlTest': 1,
-    'tests.functional.admin_settings.HtmlHookTest': 11,
+    'tests.functional.admin_settings.HtmlHookTest': 17,
     'tests.functional.admin_settings.JinjaContextTest': 2,
     'tests.functional.admin_settings.WelcomePageTests': 5,
     'tests.functional.assets_rest.AssetsRestTest': 13,

@@ -57,6 +57,7 @@ def register_module():
         resource.Registry.register(resources_display.ResourceAssessment)
         resource.Registry.register(resources_display.ResourceLink)
         resource.Registry.register(resources_display.ResourceLesson)
+        resource.Registry.register(utils.ResourceHtmlHook)
 
     def permissions_callback(unused_app_context):
         return [

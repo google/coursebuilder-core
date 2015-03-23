@@ -20,6 +20,7 @@ import datetime
 import HTMLParser
 import os
 import re
+import urllib
 import urlparse
 
 import jinja2
@@ -29,7 +30,9 @@ import webapp2
 import appengine_config
 from common import jinja_utils
 from common import locales
+from common import resource
 from common import safe_dom
+from common import schema_fields
 from common import tags
 from common import utils as common_utils
 from common.crypto import XsrfTokenManager
@@ -204,13 +207,81 @@ class ReflectiveRequestHandler(object):
 
 class HtmlHooks(object):
 
-    def __init__(self, course, prefs=None):
-        self.course = course
-        self.prefs = prefs
-        if self.prefs is None:
-            self.prefs = models.StudentPreferencesDAO.load_or_create()
+    # As of Q1, 2015, hook points moved from "where-ever in the course
+    # settings is convenient" to "Anywhere under the top-level 'html_hooks'
+    # item".  Older courses may have these items still referenced from the
+    # root of the settings hierarchy, rather than under "html_hooks".  Rather
+    # than modifying the course settings, we simply also look for these legacy
+    # items in the old locations.
+    BACKWARD_COMPATIBILITY_ITEMS = [
+        'base.before_head_tag_ends',
+        'base.after_body_tag_begins',
+        'base.after_navbar_begins',
+        'base.before_navbar_ends',
+        'base.after_top_content_ends',
+        'base.after_main_content_ends',
+        'base.before_body_tag_ends',
+        'unit.after_leftnav_begins',
+        'unit.before_leftnav_ends',
+        'unit.after_content_begins',
+        'unit.before_content_ends',
+        'preview.after_top_content_ends',
+        'preview.after_main_content_ends',
+        ]
 
-    def _has_visible_content(self, html_text):
+    # We used to use colons to separate path components in hook names.  Now
+    # that I18N is using colons to delimit key components, we need to pick
+    # a different separator.  There may be old Jinja templates using the old
+    # naming style, so continue to permit it.
+    BACKWARD_COMPATIBILITY_SEPARATOR = ':'
+
+    # Name for the top-level course settings section now holding the hooks,
+    # all of the hooks, and nothing but the hooks.
+    HTML_HOOKS = 'html_hooks'
+
+    # Extension modules may be called back from HtmlHooks.__init__.  In
+    # particular, I18N's mode of operation is to hook load functionality to
+    # replace strings with translated versions.
+    POST_LOAD_CALLBACKS = []
+
+    # Path component separator.  Allows sub-structure within the html_hooks
+    # top-level dict.
+    SEPARATOR = '.'
+
+    def __init__(self, course, prefs=None):
+        if prefs is None:
+            prefs = models.StudentPreferencesDAO.load_or_create()
+
+        # Fetch all the hooks.  Since these are coming from the course
+        # settings, getting them all is not too inefficient.
+        self.content = self.get_all(course)
+
+        # Call callbacks to let extension modules know we have text loaded,
+        # in case they need to modify, replace, or extend anything.
+        for callback in self.POST_LOAD_CALLBACKS:
+            callback(self.content)
+
+        # When the course admin sees hooks, we may need to add nonblank
+        # text so the admin can have a place to click to edit them.
+        self.show_admin_content = False
+        if (prefs and prefs.show_hooks and
+            Roles.is_course_admin(course.app_context)):
+            self.show_admin_content = True
+        if course.version == courses.CourseModel12.VERSION:
+            self.show_admin_content = False
+        if self.show_admin_content:
+            self.update_for_admin()
+
+    def update_for_admin(self):
+        """Show HTML hooks with non-blank text if admin has edit pref set.
+
+        If we are displaying to a course admin, and the admin has enabled
+        a preference, we want to ensure that each HTML hook point has some
+        non-blank text in it.  (Hooks often carry only scripts, or other
+        non-displaying tags).  Having some actual text in the tag forces
+        browsers to give it a visible component on the page.  Clicking on
+        this component permits the admin to edit the item.
+        """
 
         class VisibleHtmlParser(HTMLParser.HTMLParser):
 
@@ -238,32 +309,76 @@ class HtmlHooks(object):
             def has_visible_content(self):
                 return self._has_visible_content
 
+            def reset(self):
+                HTMLParser.HTMLParser.reset(self)
+                self._has_visible_content = False
+
         parser = VisibleHtmlParser()
-        parser.feed(html_text)
-        parser.close()
-        return parser.has_visible_content()
 
-    def insert(self, name):
-        # Do we want page markup to permit course admins to edit hooks?
-        show_admin_content = False
-        if (self.prefs and self.prefs.show_hooks and
-            Roles.is_course_admin(self.course.app_context)):
-            show_admin_content = True
-        if self.course.version == courses.CourseModel12.VERSION:
-            show_admin_content = False
+        for key, value in self.content.iteritems():
+            parser.reset()
+            parser.feed(value)
+            parser.close()
+            if not parser.has_visible_content():
+                self.content[key] += key
 
+    @classmethod
+    def _get_content_from(cls, name, environ):
         # Look up desired content chunk in course.yaml dict/sub-dict.
-        content = ''
-        environ = self.course.app_context.get_environ()
-        for part in name.split(':'):
+        content = None
+        for part in name.split(cls.SEPARATOR):
             if part in environ:
                 item = environ[part]
-                if type(item) == str:
+                if isinstance(item, basestring):
                     content = item
                 else:
                     environ = item
-        if show_admin_content and not self._has_visible_content(content):
-            content += name
+        return content
+
+    @classmethod
+    def get_content(cls, course, name):
+        environ = course.app_context.get_environ()
+
+        # Prefer getting hook content from html_hooks sub-dict within
+        # course settings.
+        content = cls._get_content_from(name, environ.get(cls.HTML_HOOKS, {}))
+
+        # For backward compatibility, fall back to looking in top level.
+        if content is None:
+            content = cls._get_content_from(name, environ)
+        return content
+
+    @classmethod
+    def get_all(cls, course):
+        """Get all hook names and associated content."""
+        ret = {}
+        # Look through the backward-compatibility items.  These may not all
+        # exist, but pick up whatever does already exist.
+        environ = course.app_context.get_environ()
+        for backward_compatibility_item in cls.BACKWARD_COMPATIBILITY_ITEMS:
+            value = cls._get_content_from(backward_compatibility_item, environ)
+            if value:
+                ret[backward_compatibility_item] = value
+
+        # Pick up hook values from the official location under 'html_hooks'
+        # within course settings.  These can override backward-compatible
+        # versions when both are present.
+        def find_leaves(environ, parent_names, ret):
+            for name, value in environ.iteritems():
+                if isinstance(value, basestring):
+                    full_name = cls.SEPARATOR.join(parent_names + [name])
+                    ret[full_name] = value
+                elif isinstance(value, dict):
+                    find_leaves(value, parent_names + [name], ret)
+
+        find_leaves(environ[cls.HTML_HOOKS], [], ret)
+        return ret
+
+
+    def insert(self, name):
+        name = name.replace(self.BACKWARD_COMPATIBILITY_SEPARATOR,
+                            self.SEPARATOR)
+        content = self.content.get(name, '')
 
         # Add the content to the page in response to the hook call.
         hook_div = safe_dom.Element('div', className='gcb-html-hook',
@@ -271,10 +386,77 @@ class HtmlHooks(object):
         hook_div.add_child(tags.html_to_safe_dom(content, self))
 
         # Mark up content to enable edit controls
-        if show_admin_content:
+        if self.show_admin_content:
             hook_div.add_attribute(onclick='gcb_edit_hook_point("%s")' % name)
             hook_div.add_attribute(className='gcb-html-hook-edit')
         return jinja2.Markup(hook_div.sanitized)
+
+
+class ResourceHtmlHook(resource.AbstractResourceHandler):
+    """Provide a class to allow treating this resource type polymorphically."""
+
+    TYPE = 'html_hook'
+    NAME = 'name'
+    CONTENT = 'content'
+
+    @classmethod
+    def get_resource(cls, course, key):
+        return cls.get_data_dict(course, key)
+
+    @classmethod
+    def get_resource_title(cls, rsrc):
+        return rsrc[cls.NAME]
+
+    @classmethod
+    def get_schema(cls, unused_course, unused_key):
+        ret = schema_fields.FieldRegistry(
+            'HTML Hooks',
+            description='HTML fragments that can be inserted at arbitrary '
+            'points in student-visible pages using the syntax: '
+            ' {{ html_hooks.insert(\'name_of_hook_section\') }} ')
+        ret.add_property(schema_fields.SchemaField(
+            cls.NAME, 'Name', 'string', i18n=False))
+        ret.add_property(schema_fields.SchemaField(
+            cls.CONTENT, 'Content', 'html', editable=True,
+            description='HTML content injected into page where hook '
+            'is referenced.'))
+        return ret
+
+    @classmethod
+    def to_data_dict(cls, key, content):
+        return {
+            cls.NAME: key,
+            cls.CONTENT: content,
+        }
+
+    @classmethod
+    def get_data_dict(cls, course, key):
+        return cls.to_data_dict(key, HtmlHooks.get_content(course, key))
+
+    @classmethod
+    def get_view_url(cls, rsrc):
+        return None
+
+    @classmethod
+    def get_edit_url(cls, key):
+        return 'dashboard?%s' % urllib.urlencode({
+            'action': 'edit_html_hook',
+            'key': key
+            })
+
+    @classmethod
+    def get_all(cls, course):
+        """Returns key/value pairs of resource.Key -> <html-hook resource>"""
+
+        ret = {}
+        for name, content in HtmlHooks.get_all(course).iteritems():
+            key = resource.Key(cls.TYPE, name, course)
+            value = {
+                cls.NAME: name,
+                cls.CONTENT: content
+                }
+            ret[key] = value
+        return ret
 
 
 class ApplicationHandler(webapp2.RequestHandler):

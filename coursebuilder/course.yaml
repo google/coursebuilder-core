@@ -109,16 +109,6 @@ course:
   google_tag_manager_id: ''
 
 
-########################
-# Course preview page
-########################
-
-preview:
-  # HTML to be included in the course preview page.
-  after_top_content_ends: '<!-- preview.after_top_content_ends -->'
-  after_main_content_ends: '<!-- preview.after_main_content_ends -->'
-
-
 ##########################
 # Course registration form
 ##########################
@@ -169,12 +159,6 @@ assessment_confirmations:
 ########################
 
 unit:
-  # HTML to be included in the course unit/lesson pages.
-  after_leftnav_begins: '<!-- unit.after_leftnav_begins -->'
-  before_leftnav_ends: '<!-- unit.before_leftnav_ends -->'
-  after_content_begins: '<!-- unit.after_content_begins -->'
-  before_content_ends: '<!-- unit.before_content_ends -->'
-
   # Whether or not to hide the 'Previous Page' and 'Next Page' lesson
   # navigation buttons at the bottom of lesson and activity pages.
   hide_lesson_navigation_buttons: False
@@ -185,3 +169,30 @@ unit:
 
   # Whether to show the unit links in the side bar.
   show_unit_links_in_leftnav: True
+
+########################
+# HTML Hooks
+########################
+
+# HTML text that is inserted onto pages using the syntax:
+# {{ html_hooks.insert('container.container.container.item') }}
+# where "container" is, e.g., 'unit' or whatever other word
+# you'd like.  The final "item" gives a name to a fragment of
+# HTML.  This is a way of inserting small text fragments into
+# a page without having to make a separate Jinja template 
+# or macro file.
+
+html_hooks:
+  unit:
+    # HTML to be included in the course unit/lesson pages.
+    after_leftnav_begins: '<!-- unit.after_leftnav_begins -->'
+    before_leftnav_ends: '<!-- unit.before_leftnav_ends -->'
+    after_content_begins: '<!-- unit.after_content_begins -->'
+    before_content_ends: '<!-- unit.before_content_ends -->'
+  preview:
+    # HTML to be included in the course preview page.
+    after_top_content_ends: '<!-- preview.after_top_content_ends -->'
+    after_main_content_ends: '<!-- preview.after_main_content_ends -->'
+
+
+

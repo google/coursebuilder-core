@@ -19,10 +19,9 @@ __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 import cgi
 import urllib
 
+from common import crypto
 from common import schema_fields
-from controllers.utils import ApplicationHandler
-from controllers.utils import BaseRESTHandler
-from controllers.utils import XsrfTokenManager
+from controllers import utils as controllers_utils
 from models import courses
 from models import models
 from models import roles
@@ -52,7 +51,7 @@ class CourseSettingsRights(object):
         return cls.can_edit(handler)
 
 
-class CourseSettingsHandler(ApplicationHandler):
+class CourseSettingsHandler(controllers_utils.ApplicationHandler):
     """Course settings handler."""
 
     EXTRA_CSS_FILES = []
@@ -108,7 +107,7 @@ class CourseSettingsHandler(ApplicationHandler):
         # prune out all sections except the one named.  Names can name either
         # entire sub-registries, or a single item.  E.g., "course" selects all
         # items under the 'course' sub-registry, while
-        # "base:before_head_tag_ends" selects just that one field.
+        # "base.before_head_tag_ends" selects just that one field.
         registry = self.get_course().create_settings_schema()
         if section_names:
             registry = registry.clone_only_items_named(section_names.split(','))
@@ -129,7 +128,7 @@ class CourseSettingsHandler(ApplicationHandler):
             })
 
 
-class CourseYamlRESTHandler(BaseRESTHandler):
+class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
     """Common base for REST handlers in this file."""
 
     def get_course_dict(self):
@@ -163,7 +162,8 @@ class CourseYamlRESTHandler(BaseRESTHandler):
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,
-            xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_ACTION))
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
+                self.XSRF_ACTION))
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
@@ -208,9 +208,14 @@ class CourseYamlRESTHandler(BaseRESTHandler):
         if request_data:
             course_settings = courses.deep_dict_merge(
                 request_data, self.get_course_dict())
+            self.postprocess_put(course_settings, request)
+
             if not self.get_course().save_settings(course_settings):
                 transforms.send_json_response(self, 412, 'Validation error.')
             transforms.send_json_response(self, 200, 'Saved.')
+
+    def postprocess_put(self, course_settings, request):
+        pass
 
     def delete(self):
         """Handles REST DELETE verb with JSON payload."""
@@ -328,7 +333,7 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
         return False
 
 
-class HtmlHookHandler(ApplicationHandler):
+class HtmlHookHandler(controllers_utils.ApplicationHandler):
     """Set up for OEditor manipulation of HTML hook contents.
 
     A separate handler and REST handler is required for hook contents,
@@ -388,13 +393,9 @@ class HtmlHookRESTHandler(CourseYamlRESTHandler):
     XSRF_ACTION = 'html-hook-put'
 
     def process_get(self):
-        course_dict = self.get_course_dict()
         html_hook = self.request.get('key')
-        path = html_hook.split(':')
-        for element in path:
-            item = course_dict.get(element)
-            if type(item) == dict:
-                course_dict = item
+        item = controllers_utils.HtmlHooks.get_content(
+            self.get_course(), html_hook)
         return {'hook_content': item}
 
     def process_put(self, request, payload):
@@ -405,23 +406,51 @@ class HtmlHookRESTHandler(CourseYamlRESTHandler):
             transforms.send_json_response(
                 self, 400, 'Payload missing "hook_content" parameter.')
             return None
+        key = request.get('key')
+        if not key:
+            transforms.send_json_response(
+                self, 400, 'Blank or missing "key" parameter.')
+            return None
 
         # Walk from bottom to top of hook element name building up
         # dict-in-dict until we are at outermost level, which is
         # the course_dict we will return.
         course_dict = request_data['hook_content']
-        for element in reversed(request['key'].split(':')):
+        for element in reversed(
+            key.split(controllers_utils.HtmlHooks.SEPARATOR)):
+
             course_dict = {element: course_dict}
-        return course_dict
+        return {controllers_utils.HtmlHooks.HTML_HOOKS: course_dict}
+
+    def postprocess_put(self, course_settings, request):
+        # We may have HTML hooks that appear starting from the root of the
+        # course config dict hierarchy, rather than within the 'html_hooks'
+        # top-level dict.  If so, remove the old version so it does not
+        # hang around being confusing.  (Note that we only do this as a
+        # post-step after process_put(), so we will only delete old items
+        # as they are updated by the admin)
+        key = request.get('key')
+        if key:
+            self._process_delete_internal(course_settings, key)
 
     def is_deletion_allowed(self):
         return True
 
     def process_delete(self):
-        html_hook = self.request.get('key')
+        key = self.request.get('key')
         course_dict = self.get_course_dict()
+
+        # Remove from html_hooks sub-dict
+        self._process_delete_internal(
+            course_dict.get(controllers_utils.HtmlHooks.HTML_HOOKS, {}), key)
+
+        # Also remove from top-level, just in case we have an old course.
+        self._process_delete_internal(course_dict, key)
+        return course_dict
+
+    def _process_delete_internal(self, course_dict, key):
         pruned_dict = course_dict
-        for element in html_hook.split(':'):
+        for element in key.split(controllers_utils.HtmlHooks.SEPARATOR):
             if element in pruned_dict:
                 if type(pruned_dict[element]) == dict:
                     pruned_dict = pruned_dict[element]

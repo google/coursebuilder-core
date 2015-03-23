@@ -258,11 +258,19 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Empty section',
             '',
             'Question Groups',
-            'Empty section'
-            '',
+            'Empty section',
             '',
             'Skills',
             'Empty section',
+            '',
+            'HTML Hooks',
+            'base.after_body_tag_begins',
+            'base.after_main_content_ends',
+            'base.after_navbar_begins',
+            'base.after_top_content_ends',
+            'base.before_body_tag_ends',
+            'base.before_head_tag_ends',
+            'base.before_navbar_ends',
         ]
         self.assertEquals(len(expected_row_data), len(rows))
         for index, expected in enumerate(expected_row_data):
@@ -1550,7 +1558,7 @@ class CourseContentTranslationTests(actions.TestBase):
 
         page_html = self.get('unit?unit=%s' % unit.unit_id).body
         dom = self.parse_html_string(page_html)
-        main = dom.find('.//div[@id="gcb-main-article"]/div[1]')
+        main = dom.find('.//div[@id="gcb-main-article"]/div[2]')
         self.assertEquals('TEXT', main.text.strip())
         self.assertEquals('div', main[0].tag)
         self.assertEquals('gcb-video-container', main[0].attrib['class'])
@@ -1588,7 +1596,7 @@ class CourseContentTranslationTests(actions.TestBase):
 
         page_html = self.get('unit?unit=%s' % unit.unit_id).body
         dom = self.parse_html_string(page_html)
-        main = dom.find('.//div[@id="gcb-main-article"]/div[1]')
+        main = dom.find('.//div[@id="gcb-main-article"]/div[2]')
         markdown = main.find('.//div[@class="gcb-markdown"]/p')
         self.assertEquals('HELLO', markdown.find('./em').text)
 
@@ -2350,7 +2358,7 @@ class TranslationImportExportTests(actions.TestBase):
             'msgstr ""\n')
         messages = self._parse_messages(response)
         self.assertIn(
-            'For Deutsch (de), made 0 total replacements in 15 resources.  '
+            'For Deutsch (de), made 0 total replacements in 22 resources.  '
             '1 items in the uploaded file did not have translations.', messages)
 
     def test_download_ui_no_request(self):
@@ -2665,7 +2673,7 @@ class TranslationImportExportTests(actions.TestBase):
                     num_translations += 1
                     self.assertNotEquals(msg.id, msg.string)
                     self.assertEquals(msg.id.upper() * 2, msg.string)
-            self.assertEquals(30, num_translations)
+            self.assertEquals(31, num_translations)
 
         # And verify the presence of the translated versions on actual
         # course pages.
