@@ -350,7 +350,8 @@ class ProfileViewInvitationTests(BaseInvitationTests):
         dom = self.parse_html_string(self.get(self.URL).body)
         subscribe_row = self._find_row(dom, 'Subscribe/Unsubscribe')
         td = subscribe_row.find('td')
-        self.assertEquals('You can currently receive invitations. ', td.text)
+        self.assertEquals(
+            'You are currently receiving course-related emails. ', td.text)
         link = td[0]
         self.assertEquals(
             'Click here to unsubscribe.', link.text)
@@ -370,7 +371,8 @@ class ProfileViewInvitationTests(BaseInvitationTests):
         subscribe_row = self._find_row(dom, 'Subscribe/Unsubscribe')
         td = subscribe_row.find('td')
         self.assertEquals(
-            'You are currently unsubscribed from invitations.', td.text)
+            'You are currently unsubscribed from course-related emails.',
+            td.text)
         link = td[0]
         self.assertEquals(
             'Click here to re-subscribe.', link.text)

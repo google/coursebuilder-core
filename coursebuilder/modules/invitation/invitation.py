@@ -406,7 +406,7 @@ def get_student_profile_sub_unsub_link(handler, student, unused_course):
         sub_unsub_message.append(safe_dom.Text(
             # I18N: Message - user has unsubscribed from email invitations.
             handler.gettext(
-                'You are currently unsubscribed from invitations.')))
+                'You are currently unsubscribed from course-related emails.')))
         sub_unsub_message.append(safe_dom.A(resubscribe_url).add_text(
             # I18N: Control allowing user to re-subscribe to email invitations.
             handler.gettext('Click here to re-subscribe.')))
@@ -414,7 +414,8 @@ def get_student_profile_sub_unsub_link(handler, student, unused_course):
         unsubscribe_url = unsubscribe.get_unsubscribe_url(handler, email)
         sub_unsub_message.append(safe_dom.Text(
             # I18N: Text indicating user has opted in to email invitations.
-            handler.gettext('You can currently receive invitations. ')))
+            handler.gettext(
+                'You are currently receiving course-related emails. ')))
         sub_unsub_message.append(safe_dom.A(unsubscribe_url).add_text(
             # I18N: Control allowing user to unsubscribe from email invitations.
             handler.gettext('Click here to unsubscribe.')))
