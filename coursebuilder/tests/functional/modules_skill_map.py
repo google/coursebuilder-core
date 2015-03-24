@@ -369,6 +369,20 @@ class SkillMapTests(BaseSkillMapTests):
         self.assertIsNotNone(lessons)
         self.assertEqual(0, len(lessons))
 
+    def test_skill_map_request_cache_invalidation(self):
+        # verify that skill graph updates invalidate the cached skill map
+        skill_graph = SkillGraph.load()
+        skill_map_1 = SkillMap.load(self.course)
+        skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        skill_map_2 = SkillMap.load(self.course)
+        self.assertEqual(1, len(skill_map_2.skills()))
+        self.assertNotEqual(skill_map_1, skill_map_2)
+
+        # verify that the cached skill map is served
+        # when there are no skill graph updates
+        skill_map_3 = SkillMap.load(self.course)
+        self.assertEqual(skill_map_2, skill_map_3)
+
 
 class LocationListRestHandlerTests(BaseSkillMapTests):
     URL = 'rest/modules/skill_map/location_list'
@@ -518,7 +532,7 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         self.assertEqual([], tgt_skill['locations'])
         self.assertEqual(1, len(tgt_skill['prerequisite_ids']))
 
-    def test_update_prerequisites(self):
+    def test_(self):
         skill_graph = SkillGraph.load()
 
         src_skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))

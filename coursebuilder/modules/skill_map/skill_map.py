@@ -25,6 +25,7 @@ import time
 from collections import defaultdict
 
 import appengine_config
+from common import caching
 from common import crypto
 from common import resource
 from common import safe_dom
@@ -249,18 +250,19 @@ class TranslatableResourceSkill(
         return ret
 
 
-class SkillGraph(object):
+class SkillGraph(caching.RequestScopedSingleton):
     """Facade to handle the CRUD lifecycle of the skill dependency graph."""
 
-    def __init__(self, id_to_skill_dict):
+    def __init__(self):
         # dict mapping skill id to skill
-        self._skills = id_to_skill_dict
+        self._skills = _SkillDao.get_all_mapped()
         # dict mapping skill id to list of successor SkillDTO's
         self._successors = None
         self._rebuild()
 
     def _rebuild(self):
         self.build_successors()
+        SkillMap.clear_all()
 
     def build_successors(self):
         self._successors = {}
@@ -270,7 +272,7 @@ class SkillGraph(object):
 
     @classmethod
     def load(cls):
-        return cls(_SkillDao.get_all_mapped())
+        return cls.instance()
 
     @property
     def skills(self):
@@ -546,10 +548,13 @@ class SkillMapError(Exception):
     pass
 
 
-class SkillMap(object):
+class SkillMap(caching.RequestScopedSingleton):
     """Provides API to access the course skill map."""
 
     def __init__(self, skill_graph, course):
+        self._rebuild(skill_graph, course)
+
+    def _rebuild(self, skill_graph, course):
         self._skill_graph = skill_graph
         self._course = course
 
@@ -617,11 +622,9 @@ class SkillMap(object):
                 chain.index(skill.id))
 
     @classmethod
-    def load(cls, course, skill_graph=None):
-        if skill_graph:
-            return cls(skill_graph, course)
-        else:
-            return cls(SkillGraph.load(), course)
+    def load(cls, course):
+        skill_graph = SkillGraph.load()
+        return cls.instance(skill_graph, course)
 
     def get_lessons_for_skill(self, skill):
         return self._lessons_by_skill.get(skill.id, [])
@@ -773,14 +776,14 @@ class SkillRestHandler(utils.BaseRESTHandler):
 
         skill_graph = SkillGraph.load()
 
-        skill_map = SkillMap.load(self.get_course(), skill_graph=skill_graph)
+        skill_map = SkillMap.load(self.get_course())
         skill = skill_map.get_skill(key)
 
         # Note, first delete from lessons and then from the skill graph
         skill_map.delete_skill_from_lessons(skill)
         skill_graph.delete(key, errors)
 
-        skill_map = SkillMap.load(self.get_course(), skill_graph=skill_graph)
+        skill_map = SkillMap.load(self.get_course())
 
         if errors:
             self.validation_error('\n'.join(errors), key=key)
@@ -831,7 +834,7 @@ class SkillRestHandler(utils.BaseRESTHandler):
                 python_dict.get('prerequisites'))
             key_after_save = skill_graph.add(skill, errors=errors).id
 
-        skill_map = SkillMap.load(course, skill_graph=skill_graph)
+        skill_map = SkillMap.load(course)
         skill = skill_map.get_skill(key_after_save)
 
         locations = python_dict.get('locations', [])
