@@ -8,7 +8,8 @@
 {% endif %}
 
 <h4>Student's Assignment</h4>
-<div class="border-box">
+<div class="border-box"
+    data-question-batch-id="dashboard-assignment-review" data-scored="False">
   {{ readonly_assessment.display(readonly_student_assessment) }}
 </div>
 
@@ -59,7 +60,9 @@
 
         {% if review_step.state == REVIEW_STATE_COMPLETED %}
           <br><br>
-          <div class="border-box {% if review_step.removed %}translucent{% endif %}">
+          <div class="border-box {% if review_step.removed %}translucent{% endif %}"
+              data-question-batch-id="dashboard-review-report-{{ loop.index0 }}"
+              data-scored="False">
             {{ readonly_assessment.display(reviews_params[loop.index0]) }}
           </div>
         {% endif %}
