@@ -833,8 +833,10 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
 
         self.unit = self.course.add_unit()
         self.unit.title = 'Test Unit'
+        self.unit.now_available = True
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.title = 'Test Lesson'
+        self.lesson.now_available = True
         self.course.save()
 
     def _getWidget(self):
@@ -950,6 +952,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sa.id]
         lesson2 = self.course.add_lesson(self.unit)
         lesson2.title = 'Test Lesson 2'
+        lesson2.now_available = True
         lesson2.properties[LESSON_SKILL_LIST_KEY] = [sb.id]
         self.course.save()
 
@@ -970,6 +973,18 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
             'unit?unit=%(unit)s&lesson=%(lesson)s' % {
                 'unit': self.unit.unit_id, 'lesson': lesson2.lesson_id},
             locations[0].attrib['href'])
+
+        # Next, make the lesson unavailable
+        lesson2.now_available = False
+        self.course.save()
+
+        # Except the subsequent skill does not show its lesson
+        widget = self._getWidget()
+        leads_to = widget.findall('./div[2]/div[2]/ol/li')
+        card = leads_to[0]
+        locations = card.findall('.//ol[@class="locations"]/li')
+        self.assertEqual(1, len(locations))
+        self.assertEqual('Not taught', locations[0].text)
 
 
 class SkillMapAnalyticsTabTests(BaseSkillMapTests):

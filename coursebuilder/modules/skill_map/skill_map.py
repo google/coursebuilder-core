@@ -1404,7 +1404,7 @@ def welcome_handler_import_skills_callback(app_ctx, unused_errors):
         namespace_manager.set_namespace(old_namespace)
 
 
-def lesson_title_provider(handler, app_context, unit, lesson):
+def lesson_title_provider(handler, app_context, unit, lesson, student):
     if not isinstance(lesson, courses.Lesson13):
         return None
 
@@ -1415,15 +1415,35 @@ def lesson_title_provider(handler, app_context, unit, lesson):
     skill_map = SkillMap.load(handler.get_course())
     skill_list = skill_map.get_skills_for_lesson(lesson.lesson_id)
 
+    def filter_visible_locations(skill):
+        locations = []
+        for location in skill.locations:
+            if not (
+                location.unit.now_available
+                and location.unit in handler.get_track_matching_student(student)
+                and location.lesson.now_available
+            ):
+                continue
+            locations.append(location)
+
+        # pylint: disable=protected-access
+        clone = SkillInfo(skill._skill, locations=locations,
+            topo_sort_index=skill._topo_sort_index)
+        clone._prerequisites = skill._prerequisites
+        # pylint: enable=protected-access
+
+        return clone
+
     def not_only_this_lesson(skill_list):
         return [
-            skill for skill in skill_list
+            filter_visible_locations(skill) for skill in skill_list
             if [loc.lesson for loc in skill.locations] != [lesson]]
 
     depends_on_skills = set()
     leads_to_skills = set()
     dependency_map = {}
     for skill in skill_list:
+        skill = filter_visible_locations(skill)
         prerequisites = not_only_this_lesson(skill.prerequisites)
         successors = not_only_this_lesson(skill_map.successors(skill))
         depends_on_skills.update(prerequisites)

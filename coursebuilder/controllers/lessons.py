@@ -387,7 +387,8 @@ class UnitHandler(BaseHandler):
             raise Exception('Lesson title provider already set by a module')
         cls._LESSON_TITLE_PROVIDER = lesson_title_provider
 
-    def _default_lesson_title_provider(self, app_context, unit, lesson):
+    def _default_lesson_title_provider(
+            self, app_context, unit, lesson, unused_student):
         title_h1 = safe_dom.Element(
             'h1', className='gcb-lesson-title').add_text(lesson.title)
         can_see_drafts = courses_module.courses.can_see_drafts(self.app_context)
@@ -683,13 +684,14 @@ class UnitHandler(BaseHandler):
             self.get_course().get_progress_tracker().put_activity_accessed(
                 student, unit.unit_id, lesson.lesson_id)
 
-    def _get_lesson_title(self, unit, lesson):
+    def _get_lesson_title(self, unit, lesson, student):
         title = None
         if self._LESSON_TITLE_PROVIDER:
-            title = self._LESSON_TITLE_PROVIDER(self.app_context, unit, lesson)
+            title = self._LESSON_TITLE_PROVIDER(
+                self.app_context, unit, lesson, student)
         if title is None:
             title = self._default_lesson_title_provider(
-                self.app_context, unit, lesson)
+                self.app_context, unit, lesson, student)
         return title
 
     def set_lesson_content(self, student, unit, lesson, left_nav_elements,
@@ -702,7 +704,7 @@ class UnitHandler(BaseHandler):
         template_values['next_button_url'] = left_nav_elements.get_url_by(
             'lesson', lesson.lesson_id, 1)
         template_values['page_type'] = 'unit'
-        template_values['title'] = self._get_lesson_title(unit, lesson)
+        template_values['title'] = self._get_lesson_title(unit, lesson, student)
 
         if not lesson.manual_progress and is_progress_recorded(self, student):
             # Mark this page as accessed. This is done after setting the
