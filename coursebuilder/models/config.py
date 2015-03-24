@@ -75,6 +75,11 @@ class ConfigProperty(object):
             raise Exception('Default value is invalid: %s.' % errors)
 
         Registry.registered[name] = self
+        if name in Registry.db_items:
+            item = Registry.db_items[name]
+            del Registry.db_items[name]
+            # pylint: disable=protected-access
+            Registry._config_property_entity_changed(item)
 
     @property
     def validator(self):
@@ -163,6 +168,7 @@ class Registry(object):
     """Holds all registered properties and their various overrides."""
     registered = {}
     test_overrides = {}
+    db_items = {}
     db_overrides = {}
     names_with_draft = {}
     last_update_time = 0
@@ -213,10 +219,13 @@ class Registry(object):
     @classmethod
     def _load_from_db(cls):
         """Loads dynamic properties from db."""
+        items = {}
         overrides = {}
         drafts = set()
         for item in ConfigPropertyEntity.all().fetch(1000):
+            items[item.key().name()] = item
             cls._set_value(item, overrides, drafts)
+        cls.db_items = items
         cls.db_overrides = overrides
         cls.names_with_draft = drafts
 
@@ -229,7 +238,7 @@ class Registry(object):
         name = item.key().name()
         target = cls.registered.get(name, None)
         if not target:
-            logging.error(
+            logging.warning(
                 'Property is not registered (skipped): %s', name)
             return
 

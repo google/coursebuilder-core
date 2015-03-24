@@ -1085,6 +1085,18 @@ class InfrastructureTest(actions.TestBase):
         self.assert_queriable(models.StudentAnswersEntity, 'updated_on')
         self.assert_queriable(jobs.DurableJobEntity, 'updated_on')
 
+    def test_db_overrides_apply_after_prop_registration(self):
+        prop = config.ConfigPropertyEntity(key_name='prop1')
+        prop.value = 'foo'
+        prop.is_draft = False
+        prop.put()
+
+        config.Registry.get_overrides(force_update=True)
+
+        prop = config.ConfigProperty(
+            'prop1', config.TYPE_STR, '', default_value='bar')
+        self.assertEqual(prop.value, 'foo')
+
     def test_config_visible_from_any_namespace(self):
         """Test that ConfigProperty is visible from any namespace."""
 
