@@ -1212,11 +1212,22 @@ class BaseJsonDao(object):
 
     @classmethod
     def get_all_mapped(cls):
+        def maybe_clone_and_apply_hooks(mapped):
+            if not appengine_config.PRODUCTION_MODE:
+                # dev_appserver may return the identical object from Memcache
+                # which was inserted into it, causing the post_load_hooks to
+                # modify the Memcache'd object. In dev mode, clone the object
+                # before applying hooks to avoid this.
+                mapped = {
+                    dto_id: cls.DTO(dto_id, copy.deepcopy(dto.dict))
+                    for dto_id, dto in mapped.iteritems()}
+            cls._maybe_apply_post_load_hooks(mapped.itervalues())
+            return mapped
+
         # try to get from memcache
         entities = MemcacheManager.get(cls._memcache_all_key())
         if entities is not None and entities != NO_OBJECT:
-            cls._maybe_apply_post_load_hooks(entities.itervalues())
-            return entities
+            return maybe_clone_and_apply_hooks(entities)
 
         # get from datastore
         result = {dto.id: dto for dto in cls.get_all_iter()}
@@ -1227,8 +1238,7 @@ class BaseJsonDao(object):
             result_to_cache = result
         MemcacheManager.set(cls._memcache_all_key(), result_to_cache)
 
-        cls._maybe_apply_post_load_hooks(result.itervalues())
-        return result
+        return maybe_clone_and_apply_hooks(result)
 
     @classmethod
     def get_all(cls):

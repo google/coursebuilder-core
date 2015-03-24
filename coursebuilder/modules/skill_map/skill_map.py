@@ -160,9 +160,8 @@ def _translate_skill(skills_generator):
     key_list = []
     first = True
     for skill in skills_generator:
-        if skill.name and isinstance(skill.name, basestring):
-            skills.append(skill)
-            key_list.append(resource.Key(ResourceSkill.TYPE, skill.id))
+        skills.append(skill)
+        key_list.append(resource.Key(ResourceSkill.TYPE, skill.id))
     i18n_dashboard.translate_dto_list(course, skills, key_list)
 
 
