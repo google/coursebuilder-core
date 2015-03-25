@@ -667,7 +667,7 @@ div.new-form-layout textarea.gcb-rte-textarea,
 div.new-form-layout div.CodeMirror {
   height: 400px;
 }
-div.new-form-layout div.inputEx-Field > div.yui-editor-container {
+div.yui-editor-container {
   width: inherit;
   z-index: 15; /* higher than the RTE switch button */
 }
