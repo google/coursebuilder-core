@@ -221,6 +221,9 @@ class I18nDashboardHandlerTests(actions.TestBase):
         self.course = courses.Course(None, context)
         self.unit = self.course.add_unit()
         self.unit.title = 'Test Unit'
+        self.assessment = self.course.add_assessment()
+        self.assessment.title = 'Post Assessment'
+        self.unit.post_assessment = self.assessment.unit_id
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.title = 'Test Lesson'
         self.course.save()
@@ -253,6 +256,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Course Outline',
             'Unit 1 - Test Unit',
             '1.1 Test Lesson',
+            'Post Assessment',
             '',
             'Questions',
             'Empty section',

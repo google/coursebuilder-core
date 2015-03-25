@@ -1735,7 +1735,7 @@ class TranslatableResourceCourseComponents(AbstractTranslatableResourceType):
     def get_resources_and_keys(cls, course):
         ret = []
         for unit in course.get_units():
-            if course.get_parent_unit(unit):
+            if course.get_parent_unit(unit.unit_id):
                 continue
             if unit.is_custom_unit():
                 key = custom_units.UnitTypeRegistry.i18n_resource_key(
@@ -1760,7 +1760,8 @@ class TranslatableResourceCourseComponents(AbstractTranslatableResourceType):
                                         resources_display.ResourceLesson.TYPE,
                                         lesson.lesson_id, course)))
                     if unit.post_assessment:
-                        assessment = course.find_unit_by_id(unit.pre_assessment)
+                        assessment = course.find_unit_by_id(
+                            unit.post_assessment)
                         ret.append(
                             (assessment,
                              resource.Key(
