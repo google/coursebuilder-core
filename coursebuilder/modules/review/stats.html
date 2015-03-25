@@ -26,10 +26,11 @@
       }
 
       var options = {
-        'title': 'Number of assignments with the given number of peer reviews',
-        'width': 600,
-        'height': 300,
-        'legend': {position: 'none'}
+        title: 'Number of assignments with the given number of peer reviews',
+        width: 600,
+        height: 300,
+        legend: {position: 'none'},
+        colors: getGVColorPallet(),
       };
 
       for (i = 0; i < dashboard_analytics.units.length; i++) {
