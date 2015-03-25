@@ -1547,7 +1547,8 @@ class QuestionImporter(object):
         QuestionDAO.validate_unique_description(description)
         try:
             response = question.get('correctAnswerRegex')
-            response = response.value if response else None
+            # Regex /.*/ is added as a guard for questions with no answer.
+            response = response.value if response else '/.*/'
             return {
                 'version': QuestionDAO.VERSION,
                 'description': description,
