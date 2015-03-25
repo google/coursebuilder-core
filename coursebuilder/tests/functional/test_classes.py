@@ -255,6 +255,15 @@ class InfrastructureTest(actions.TestBase):
             'application/javascript; charset=utf-8',
             response.headers['Content-Type'])
 
+    def test_response_does_not_echo_unescaped_tags(self):
+        response = self.testapp.get(
+            '/rest/config/item?key=<script>alert(2)</script>').body
+        self.assertNotIn('<script>', response)
+        self.assertNotIn('</script>', response)
+        self.assertIn(
+            '\\\\u003Cscript\\\\u003Ealert(2)\\\\u003C/script\\\\u003E',
+            response)
+
     def test_xsrf_token_manager(self):
         """Test XSRF token operations."""
 

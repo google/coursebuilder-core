@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import datetime
 import itertools
 import json
+from StringIO import StringIO
 import types
 import urlparse
 from xml.etree import ElementTree
@@ -239,6 +240,17 @@ def dumps(*args, **kwargs):
             return list(obj)
         return None
 
+    def string_escape(in_str):
+        # Defend against XSS by escaping <, > and non-ASCII chars
+        out = StringIO()
+        for c in in_str.decode('utf8'):
+            char_val = ord(c)
+            if char_val > 0x7f or c == '<' or c == '>':
+                out.write('\\u%04X' % char_val)
+            else:
+                out.write(c)
+        return out.getvalue()
+
     class CustomJSONEncoder(json.JSONEncoder):
 
         def default(self, obj):
@@ -251,7 +263,7 @@ def dumps(*args, **kwargs):
     if 'cls' not in kwargs:
         kwargs['cls'] = CustomJSONEncoder
 
-    return json.dumps(*args, **kwargs)
+    return string_escape(json.dumps(*args, **kwargs))
 
 
 def loads(s, prefix=JSON_XSSI_PREFIX, strict=True, **kwargs):
