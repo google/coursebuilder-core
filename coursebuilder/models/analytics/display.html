@@ -29,8 +29,8 @@
   {% endif %}
   {% for rest_source in rest_sources|sort(attribute='title') %}
     <p>
-    {{ rest_source.title }}
     {% if rest_source.chunk_size > 0%}
+      {{ rest_source.title }}
       <button
          class="gcb_button"
          id="gcb_rest_source_page_request_zero_{{ rest_source.name }}"
