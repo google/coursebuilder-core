@@ -559,5 +559,6 @@ class ExitUrlTest(actions.TestBase):
                 'tab': 'data_pump'})})
         response = self.get(url)
         self.assertIn(
-            'cb_global.exit_url = \'dashboard?action=analytics&tab=data_pump\'',
+            'cb_global.exit_url = \'dashboard?action=analytics'
+            '\\u0026tab=data_pump\'',
             response.body)
