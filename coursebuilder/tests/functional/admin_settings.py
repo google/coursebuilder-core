@@ -79,8 +79,9 @@ class WelcomePageTests(actions.TestBase):
             'http://localhost/admin/welcome')
         response = self.get('/admin/welcome?action=welcome')
         assert_contains('Welcome to Course Builder', response.body)
-        assert_contains('/admin/welcome?action=add_first_course', response.body)
-        assert_contains('/admin/welcome?action=explore_sample', response.body)
+        assert_contains('action="/admin/welcome"', response.body)
+        assert_contains('"add_first_course"', response.body)
+        assert_contains('"explore_sample"', response.body)
 
     def test_explore_sample_course(self):
         actions.login(ADMIN_EMAIL, is_admin=True)

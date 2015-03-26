@@ -612,6 +612,25 @@ class StudentProfileDAO(object):
 
     TARGET_NAMESPACE = appengine_config.DEFAULT_NAMESPACE_NAME
 
+    # Each hook is called back after update() has completed without raising
+    # an exception.  Arguments are:
+    # profile: The PersonalProfile object for the user
+    # student: The Student object for the user
+    # Subsequent arguments are identical to the arguments list to the update()
+    # call.  Not documented here so as to not get out-of-date.
+    # The return value from hooks is discarded.  Since these hooks run
+    # after update() has succeeded, they should run as best-effort, rather
+    # than raising exceptions.
+    UPDATE_POST_HOOKS = []
+
+    # Each hook is called back after _add_new_student_for_current_user has
+    # completed without raising an exception.  Arguments are:
+    # student: The Student object for the user.
+    # The return value from hooks is discarded.  Since these hooks run
+    # after update() has succeeded, they should run as best-effort, rather
+    # than raising exceptions.
+    ADD_STUDENT_POST_HOOKS = []
+
     @classmethod
     def _memcache_key(cls, key):
         """Makes a memcache key from primary key."""
@@ -781,8 +800,16 @@ class StudentProfileDAO(object):
                 'Unable to send welcome notification; error was: ' + str(e))
 
     @classmethod
-    @db.transactional(xg=True)
     def _add_new_student_for_current_user(
+        cls, user_id, email, nick_name, additional_fields, labels=None):
+        student = cls._add_new_student_for_current_user_in_txn(
+          user_id, email, nick_name, additional_fields, labels)
+        common_utils.run_hooks(cls.ADD_STUDENT_POST_HOOKS, student)
+        return student
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _add_new_student_for_current_user_in_txn(
         cls, user_id, email, nick_name, additional_fields, labels=None):
         """Create new or re-enroll old student."""
 
@@ -886,8 +913,21 @@ class StudentProfileDAO(object):
             namespace_manager.set_namespace(old_namespace)
 
     @classmethod
-    @db.transactional(xg=True)
     def update(
+        cls, user_id, email, legal_name=None, nick_name=None,
+        date_of_birth=None, is_enrolled=None, final_grade=None,
+        course_info=None, labels=None, profile_only=False):
+        profile, student = cls._update_in_txn(
+            user_id, email, legal_name, nick_name, date_of_birth, is_enrolled,
+            final_grade, course_info, labels, profile_only)
+        common_utils.run_hooks(
+            cls.UPDATE_POST_HOOKS, profile, student, user_id, email,
+            legal_name, nick_name, date_of_birth, is_enrolled,
+            final_grade, course_info, labels, profile_only)
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _update_in_txn(
         cls, user_id, email, legal_name=None, nick_name=None,
         date_of_birth=None, is_enrolled=None, final_grade=None,
         course_info=None, labels=None, profile_only=False):
@@ -911,6 +951,8 @@ class StudentProfileDAO(object):
         cls._put_profile(profile)
         if not profile_only:
             student.put()
+
+        return profile, student
 
 
 class Student(BaseEntity):

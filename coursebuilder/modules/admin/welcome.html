@@ -60,13 +60,17 @@
           text-align: center;
         }
     </style>
+    <!-- import jQuery -->
+    <script
+       src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js">
+    </script>
   </head>
   <body>
-    <div id='top'>
+    <div id="top">
       <h2>Course Builder</h2>
       <p>version {{ version }}</p>
     </div>
-    <div id='bottom'>
+    <div id="bottom">
       {% if not course_count %}
       <p>You haven't created a course yet. To <i>create a course</i>,
           click below on one of the buttons.</p>
@@ -77,26 +81,35 @@
           <p>You have created <i>{{ course_count }} courses</i>. Great job!</p>
         {% endif %}
       {% endif %}
-      {% if course_count %}
       <p>
-        <form action='/admin/welcome?action=explore_sample' method='POST'>
-          <input name='xsrf_token' value='{{ explore_sample_xsrf }}' type='hidden'>
-          <button id='explore' type='submit'>Explore Sample Course</button>
+        <form action="/admin/welcome" method="POST">
+          <input name="action" id="action" value="" type="hidden">
+          <input name="xsrf_token" id="xsrf_token" value="" type="hidden">
+
+          {% if not course_count %}
+            <button id="create_new" type="submit">Create Empty Course</button>
+            <script>
+              function do_add_first_course(event) {
+                $("#action").attr("value", "add_first_course");
+                $("#xsrf_token").attr("value", "{{ add_first_xsrf }}");
+              }
+              $("#create_new").click(do_add_first_course);
+              $("#create_new").keydown(do_add_first_course);
+            </script>
+          {% endif %}
+          <button id="explore" type="submit">Explore Sample Course</button>
+          <script>
+            function do_explore_sample(event) {
+              $("#action").attr("value", "explore_sample");
+              $("#xsrf_token").attr("value", "{{ explore_sample_xsrf }}");
+            }
+            $("#explore").click(do_explore_sample);
+            $("#explore").keydown(do_explore_sample);
+          </script>
+          {% for item in welcome_form_content %}
+            {{ item }}
+          {% endfor %}
         </form>
-      </p>
-      {% else %}
-      <p>
-        <form action='/admin/welcome?action=add_first_course' method='POST'>
-          <input name='xsrf_token' value='{{ add_first_xsrf }}' type='hidden'>
-          <button id='create_new' type='submit'>Create Empty Course</button>
-        </form>
-        <form action='/admin/welcome?action=explore_sample' method='POST'>
-          <input name='xsrf_token' value='{{ explore_sample_xsrf }}' type='hidden'>
-          <button id='explore' type='submit'>Explore Sample Course</button>
-        </form>
-      </p>
-      {% endif %}
-      <p>Or go directly to a <a href='{{global_admin_url}}'>control panel</a>.
       </p>
     </div>
   </body>

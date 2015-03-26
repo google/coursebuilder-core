@@ -411,6 +411,8 @@ class ConfigPropertyItemRESTHandler(BaseRESTHandler):
         entity.value = str(new_value)
         entity.is_draft = json_object['is_draft']
         entity.put()
+        if item.after_change:
+            item.after_change(item, old_value)
 
         models.EventEntity.record(
             'put-property', users.get_current_user(), transforms.dumps({

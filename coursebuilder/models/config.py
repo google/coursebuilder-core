@@ -56,7 +56,35 @@ class ConfigProperty(object):
 
     def __init__(
         self, name, value_type, doc_string,
-        default_value=None, multiline=False, validator=None):
+        default_value=None, multiline=False, validator=None,
+        after_change=None):
+        """Create a new global config property.
+
+        These properties are persisted as ConfigPropertyEntity in the default
+        namespace.  As such, these properties apply to the installation as
+        a whole, rather than individual courses.
+
+        Args:
+          name: A name, by convention starting with "gcb_" for Google
+              Course Builder, and something else for third-party extensions.
+          value_type: A Python type, one of {bool, str, int}
+          doc_string: A brief description displayed on the admin page listing
+              all the config variables
+          default_value: The value used when no override has been set by the
+              site admin.
+          multiline: Whether the value, if value_type is str, can be
+              expected to extend to multiple lines of text.
+          validator: A function taking two parameters:
+              value: The value to validate
+              errors: A list of strings indicating problems.  If the value
+                  is acceptable, 'errors' must not be appended to, and
+                  conversely.
+          after_change: This is a function which is called only when the
+              value is changed by the site administrator via the UI.
+              (It is not called when the underlying ConfigPropertyEntity is
+              directly modified).  This function takes two one parameters:
+              the ConfigProperty instance, and the previous value.
+        """
 
         if value_type not in ALLOWED_TYPES:
             raise Exception('Bad value type: %s' % value_type)
@@ -67,6 +95,7 @@ class ConfigProperty(object):
         self._type = value_type
         self._doc_string = doc_string
         self._default_value = value_type(default_value)
+        self._after_change = after_change
 
         errors = []
         if self._validator and self._default_value:
@@ -84,6 +113,11 @@ class ConfigProperty(object):
     @property
     def validator(self):
         return self._validator
+
+    @property
+    def after_change(self):
+        """Properties may register callbacks to notice changes to value."""
+        return self._after_change
 
     @property
     def multiline(self):

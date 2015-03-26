@@ -126,6 +126,35 @@ class OverriddenEnvironment(object):
         return False
 
 
+class OverriddenConfig(object):
+    """Override a ConfigProperty value within a scope.
+
+    Usage:
+
+    def test_welcome_page(self):
+        with OverriddenConfig(sites.GCB_COURSES_CONFIG.name, ''):
+            .... test content needing to believe there are no courses....
+
+    """
+
+    def __init__(self, name, value):
+        self._name = name
+        self._value = value
+        self._had_prev_value = False
+        self._prev_value = None
+
+    def __enter__(self):
+        self._had_prev_value = self._name in config.Registry.test_overrides
+        self._prev_value = config.Registry.test_overrides.get(self._name)
+        config.Registry.test_overrides[self._name] = self._value
+
+    def __exit__(self, *unused_exception_info):
+        if not self._had_prev_value:
+            del config.Registry.test_overrides[self._name]
+        else:
+            config.Registry.test_overrides[self._name] = self._prev_value
+
+
 class TestBase(suite.AppEngineTestBase):
     """Contains methods common to all functional tests."""
 
@@ -804,14 +833,17 @@ def change_name(browser, new_name):
     check_profile(browser, new_name)
 
 
-def unregister(browser):
+def unregister(browser, course=None):
     """Unregister a student."""
-    response = browser.get('student/home')
+    if course:
+        response = browser.get('/%s/student/home' % course)
+    else:
+        response = browser.get('student/home')
     response = browser.click(response, 'Unenroll')
 
     assert_contains('to unenroll from', response.body)
     unregister_form = get_form_by_action(response, 'student/unenroll')
-    browser.submit(unregister_form)
+    browser.submit(unregister_form, response)
 
 
 class Permissions(object):

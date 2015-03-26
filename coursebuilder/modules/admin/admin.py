@@ -101,6 +101,19 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
     #     callback(course, errors)
     COPY_SAMPLE_COURSE_HOOKS = []
 
+    # Enable other modules to put global warnings on the welcome page.  This
+    # is useful when you want to ask for permission from the installation
+    # administrator, and you want to be absolutely certain the administrator
+    # has seen the request.  Items appended here must be callable, taking
+    # no parameters.  The return value will be inserted onto the welcome.html
+    # page; see the loop adding 'item_form_content' to the page.
+    WELCOME_FORM_HOOKS = []
+
+    # Items on this list are called back when the welcome page has been
+    # submitted.  These should take two parameters: the course just created
+    # and the page handler object.
+    POST_HOOKS = []
+
     def get_template(self, template_name):
         return jinja_utils.get_template(template_name, [TEMPLATE_DIR])
 
@@ -128,7 +141,8 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
     def post(self):
         if not self.can_edit():
             return
-        super(WelcomeHandler, self).post()
+        app_context = super(WelcomeHandler, self).post()
+        common_utils.run_hooks(self.POST_HOOKS, app_context, self)
 
     def _redirect(self, app_context, url):
         self.app_context = app_context
@@ -143,6 +157,10 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
         template_values['explore_sample_xsrf'] = self.create_xsrf_token(
             'explore_sample')
         template_values['global_admin_url'] = GlobalAdminHandler.LINK_URL
+        welcome_form_content = []
+        for hook in self.WELCOME_FORM_HOOKS:
+            welcome_form_content.append(hook())
+        template_values['welcome_form_content'] = welcome_form_content
         self.response.write(
             self.get_template('welcome.html').render(template_values))
 
@@ -182,9 +200,10 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
             ).get_app_context_for_namespace('ns_%s' % uid)
         if course:
             self._redirect(course, '/dashboard')
-            return
+            return course
         course = self._copy_sample_course(uid)
         self._redirect(course, '/dashboard')
+        return course
 
     def post_add_first_course(self):
         """Adds first course to the deployment."""
@@ -192,9 +211,10 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
         course = sites.get_course_index().get_course_for_path('/%s' % uid)
         if course:
             self._redirect(course, '/dashboard')
-            return
+            return course
         course = self._make_new_course(uid, 'My First Course')
         self._redirect(course, '/dashboard')
+        return course
 
 
 class BaseAdminHandler(ConfigPropertyEditor):

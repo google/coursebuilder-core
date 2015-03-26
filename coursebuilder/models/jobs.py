@@ -496,9 +496,10 @@ class AbstractCountingMapReduceJob(MapReduceJob):
 
     class NameCounter(jobs.AbstractCountingMapReduceJob):
         @staticmethod
-        def get_description(): return "count names"
-        @staticmethod
-        def get_entity_class(): return models.Student
+        def get_description():
+            return "count names"
+        def entity_class():
+            return models.Student
         @staticmethod
         def map(student):
             return (student.name.split()[0], 1)
