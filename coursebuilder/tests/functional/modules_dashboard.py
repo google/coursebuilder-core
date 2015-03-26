@@ -68,11 +68,14 @@ class QuestionDashboardTestCase(actions.TestBase):
         })
         mc_question_id = models.QuestionDAO.save(mc_question_dto)
 
-        # Create an assessment and add the question to the content
+        # Create an assessment and add the question to the content.
+        # Also include a broken question ref to the assessment (and expect this
+        # doesn't break anything).
         assessment_one = self.course.add_assessment()
         assessment_one.title = 'Test Assessment One'
         assessment_one.html_content = """
             <question quid="%s" weight="1" instanceid="1"></question>
+            <question quid="broken" weight="1" instanceid="broken"></question>
         """ % mc_question_id
 
         # Create a second question

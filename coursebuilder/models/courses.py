@@ -3067,17 +3067,22 @@ class Course(object):
         qglocations = {}
 
         def _add_to_map(component, unit, lesson=None):
-            if component.get('cpt_name') == 'question':
-                compononent_locations = qulocations.setdefault(
-                    long(component.get('quid')),
-                    {'lessons': {}, 'assessments': {}}
-                )
-            elif component.get('cpt_name') == 'question-group':
-                compononent_locations = qglocations.setdefault(
-                    long(component.get('qgid')),
-                    {'lessons': {}, 'assessments': {}}
-                )
-            else:
+            try:
+                if component.get('cpt_name') == 'question':
+                    compononent_locations = qulocations.setdefault(
+                        long(component.get('quid')),
+                        {'lessons': {}, 'assessments': {}}
+                    )
+                elif component.get('cpt_name') == 'question-group':
+                    compononent_locations = qglocations.setdefault(
+                        long(component.get('qgid')),
+                        {'lessons': {}, 'assessments': {}}
+                    )
+                else:
+                    return
+            except ValueError:
+                title = lesson.title if lesson else unit.title
+                logging.exception('Bad component ID found in "%s"', title)
                 return
 
             if lesson is not None:
