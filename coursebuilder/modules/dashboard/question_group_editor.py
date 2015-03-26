@@ -100,7 +100,9 @@ class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-hidden', 'inputex-select', 'inputex-string',
         'inputex-list']
-    EXTRA_JS_FILES = []
+
+    EXTRA_CSS_FILES = ['question_group_editor.css']
+    EXTRA_JS_FILES = ['question_group_editor.js']
 
     XSRF_TOKEN = 'question-group-edit'
 

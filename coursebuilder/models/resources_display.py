@@ -283,10 +283,14 @@ class ResourceQuestionGroup(resource.AbstractResourceHandler):
             select_data=question_select_data,
             extra_schema_dict_values={'className': 'question-group-question'}))
 
+        item_array_classes = 'question-group-items'
+        if not question_select_data:
+            item_array_classes += ' empty-question-list'
+
         item_array = schema_fields.FieldArray(
             'items', '', item_type=item_type,
             extra_schema_dict_values={
-                'className': 'question-group-items',
+                'className': item_array_classes,
                 'sortable': 'true',
                 'listAddLabel': 'Add a question',
                 'listRemoveLabel': 'Remove'})
