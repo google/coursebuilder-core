@@ -237,7 +237,7 @@ class MemcacheManager(object):
 
         is_cached, value = cls._local_cache_get(key, _namespace)
         if is_cached:
-            return value
+            return copy.deepcopy(value)
 
         value = memcache.get(key, namespace=_namespace)
 
@@ -250,7 +250,7 @@ class MemcacheManager(object):
             CACHE_MISS.inc(context=key)
 
         cls._local_cache_put(key, _namespace, value)
-        return value
+        return copy.deepcopy(value)
 
     @classmethod
     def get_multi(cls, keys, namespace=None):
@@ -278,6 +278,9 @@ class MemcacheManager(object):
     @classmethod
     def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None):
         """Sets an item in memcache if memcache is enabled."""
+        # Ensure subsequent mods to value do not affect the cached copy.
+        value = copy.deepcopy(value)
+
         try:
             if CAN_USE_MEMCACHE.value:
                 size = sys.getsizeof(value)
@@ -1212,22 +1215,11 @@ class BaseJsonDao(object):
 
     @classmethod
     def get_all_mapped(cls):
-        def maybe_clone_and_apply_hooks(mapped):
-            if not appengine_config.PRODUCTION_MODE:
-                # dev_appserver may return the identical object from Memcache
-                # which was inserted into it, causing the post_load_hooks to
-                # modify the Memcache'd object. In dev mode, clone the object
-                # before applying hooks to avoid this.
-                mapped = {
-                    dto_id: cls.DTO(dto_id, copy.deepcopy(dto.dict))
-                    for dto_id, dto in mapped.iteritems()}
-            cls._maybe_apply_post_load_hooks(mapped.itervalues())
-            return mapped
-
         # try to get from memcache
         entities = MemcacheManager.get(cls._memcache_all_key())
         if entities is not None and entities != NO_OBJECT:
-            return maybe_clone_and_apply_hooks(entities)
+            cls._maybe_apply_post_load_hooks(entities.itervalues())
+            return entities
 
         # get from datastore
         result = {dto.id: dto for dto in cls.get_all_iter()}
@@ -1238,7 +1230,8 @@ class BaseJsonDao(object):
             result_to_cache = result
         MemcacheManager.set(cls._memcache_all_key(), result_to_cache)
 
-        return maybe_clone_and_apply_hooks(result)
+        cls._maybe_apply_post_load_hooks(result.itervalues())
+        return result
 
     @classmethod
     def get_all(cls):
