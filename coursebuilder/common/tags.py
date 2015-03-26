@@ -24,7 +24,6 @@ import re
 from xml.etree import cElementTree
 
 import html5lib
-import lxml.html
 import safe_dom
 import webapp2
 
@@ -445,9 +444,13 @@ def get_components_from_html(html):
         - instanceid: the instance id of the component
         - cpt_name: the name of the component tag (e.g. gcb-googlegroup)
     """
-    content = lxml.html.fragment_fromstring(html, create_parent='div')
+    parser = html5lib.HTMLParser(
+        tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
+        namespaceHTMLElements=False)
+    content = parser.parseFragment('<div>%s</div>' % html)[0]
+
     components = []
-    for component in content.xpath('.//*[@instanceid]'):
+    for component in content.findall('.//*[@instanceid]'):
         component_dict = {'cpt_name': component.tag}
         component_dict.update(component.attrib)
         components.append(component_dict)
