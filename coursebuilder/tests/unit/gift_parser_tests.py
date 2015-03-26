@@ -32,7 +32,7 @@ class SampleQuestionsTest(unittest.TestCase):
 
     def test_sample_questions(self):
         questions = self._get_sample_questions()
-        self.assertEqual(37, len(questions))
+        self.assertEqual(28, len(questions))
         for question in questions:
             result = gift.GiftParser.parse(question)[0]
             question = gift.to_dict(result)

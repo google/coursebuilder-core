@@ -1,122 +1,95 @@
-Who's buried in Grant's tomb?{~Grant ~Jefferson =no one}
+Who created Course Builder?{~Coursera ~Udacity =Google}
 
-Grant is {~buried =entombed ~living} in Grant's tomb.
+Course Builder is {~difficult =easy ~impossible} to use.
 
-Grant is buried in Grant's tomb.{FALSE}
+Course Builder is written in Java.{FALSE}
 
-Who's buried in Grant's tomb?{=no one =nobody}
+How is Course Builder deployed?{=on app engine =in the cloud}
 
-When was Ulysses S. Grant born?{#1822:1}
+When was Course Builder launched?{#2012:1}
 
-Who's buried in Grant's tomb?{~Grant ~Jefferson =no one}
+Who created Course Builder?{~Coursera ~Udacity ~edX =Google Inc.}
 
-Grant is {~buried =entombed ~living} in Grant's tomb.
+Course Builder is {~difficult =easy ~impossible} to use.
 
-The American holiday of Thanksgiving is celebrated on the {
-    ~second
-    ~third
-    =fourth
-} Thursday of November.
+Course Builder is written in {
+    ~Scala
+    ~Go
+    =Python
+}, CSS, HTML, and JavaScript.
 
-Japanese characters originally came from what country? {
-    ~India
-    =China
-    ~Korea
-    ~Egypt}
+Course Builder was originally developed at which company? {
+    ~Coursera
+    =Google
+    ~edX
+    ~Udacity}
 
-Who's buried in Grant's tomb?{=no one =nobody}
+One plus one equals {=two =2}.
 
-Two plus two equals {=four =4}.
+Course Builder is written in java.{F}
 
-Grant is buried in Grant's tomb.{F}
+Course Builder is written in python.{T}
 
-The sun rises in the east.{T}
-
-Matching Question. {
-    =subquestion1 -> subanswer1
-    =subquestion2 -> subanswer2
-    =subquestion3 -> subanswer3
+Match Course Builder facts. {
+    =written in -> Python
+    =deployed on to -> cloud
+    =supported by -> Google
     }
 
-Match the following countries with their corresponding capitals. {
-    =Canada -> Ottawa
-    =Italy  -> Rome
-    =Japan  -> Tokyo
-    =India  -> New Delhi
+Match countries to capitals. {
+    =U.S. -> Washington, D.C.
+    =Spain  -> Madrid
+    =China  -> Beijing
+    =Poland  -> Warsaw
     }
 
-When was Ulysses S. Grant born? {#1822}
+When was Course Builder launched? {#2012}
 
-What is the value of pi (to 3 decimal places)? {#3.1415:0.0005}.
+What is the value of the Erdos-Borwein constant (to 3 decimal places)?
+{#1.6066:0.0005}.
 
-What is the value of pi (to 3 decimal places)? {#3.141..3.142}.
+What is the value of the Erdos-Borwein constant (to 3 decimal places)?
+{#1.606..1.607}.
 
-What's 2 plus 2? {#4}
+What's 1 plus 1? {#2}
 
-::Kanji Origins::Japanese characters originally
-came from what country? {=China}
+::Course Builder::Course Builder was originally
+developed by which company? {=Google}
 
-::Thanksgiving Date::The American holiday of Thanksgiving is
-celebrated on the {~second ~third =fourth} Thursday of November.
+::Course Builder::Course Builder was launched
+in {~January ~February, =September} of 2012.
 
-What's the answer to this multiple-choice question?{
-~wrong answer#feedback comment on the wrong answer
-~another wrong answer#feedback comment on this wrong answer
-=right answer#Very good!}
+Which company developed Course Builder?{
+~Coursera#wrong answer
+~Udacity#another wrong answer
+=Google#Great!}
 
-Who's buried in Grant's tomb?{
-=no one#excellent answer!
-=nobody#excellent answer!}
+How can Course Builder be run?{
+=in the cloud#great!
+=on a dev machine#great!}
 
-[markdown]Who's buried in **Grant's tomb**?{
-=no one#excellent answer!
-=nobody#excellent answer!}
+[markdown]**Course Builder** is written in?{
+=Python#excellent answer!
+=JavaScript#excellent answer!}
 
-Difficult question.{~wrong answer ~%50%half credit answer =full credit answer}
+Course Builder is.{~not awesome ~%50%good =great}
 
-::Jesus' hometown::Jesus Christ was from {
-    ~Jerusalem#This was an important city, but the wrong answer.
-    ~%25%Bethlehem#He was born here, but not raised here.
-    ~%50%Galilee#You need to be more specific.
-    =Nazareth#Yes! That's right!}.
+::Google's Headquarters::Google's Headquarters is in {
+    ~San Francisco#This city is close, but the wrong answer.
+    ~%25%Bay Area#You need to be more specific.
+    ~%50%Silicon Valley#You need to be more specific.
+    =Mountain View#Correct! Great!}.
 
-::Jesus' hometown:: Jesus Christ was from {
-    =Nazareth#Yes! That's right!
-    =%75%Nazereth#Right, but misspelled.
-    =%25%Bethlehem#He was born here, but not raised here.}
+::Google's Headquarters:: Google's Headquarters is in {
+    =Mountain View#Yes! That's right!
+    =%75%Mountain Views#Right, but misspelled.
+    =%25%Bay Area#Yes, but too broad.}
 
-What two people are entombed in Grant's tomb? {
-    ~%-50%No one
-    ~%50%Grant
-    ~%50%Grant's wife
-    ~%-50%Grant's father }
+Course Builder {
+    ~%-50%difficult to use
+    ~%50%easy to use
+    ~%50%requires reading the docs
+    ~%-50%impossible to use }
 
-Who's buried in Grant's tomb?{~Grant ~Jefferson =no one}
-
-Grant is {~buried =entombed ~living} in Grant's tomb.
-
-Grant is buried in Grant's tomb.{FALSE}
-
-Who's buried in Grant's tomb?{=no one =nobody}
-
-When was Ulysses S. Grant born?{#1822:5}
-
-Match the following countries with their corresponding
-capitals.{=Canada->Ottawa =Italy->Rome =Japan->Tokyo}
-
-::Grant's Tomb::Grant is {
-      ~buried#No one is buried there.
-      =entombed#Right answer!
-      ~living#We hope not!
-} in Grant's tomb.
-
-Difficult multiple choice question.{
-     ~wrong answer           #comment on wrong answer
-     ~%50%half credit answer #comment on answer
-     =full credit answer     #well done!}
-
-::Jesus' hometown (Short answer ex.):: Jesus Christ was from {
-     =Nazareth#Yes! That's right!
-     =%75%Nazereth#Right, but misspelled.
-     =%25%Bethlehem#He was born here, but not raised here.
-}
+Match countries to capitals.
+{=U.S.->Washington, D.C. =Spain->Madrid =China->Beijing =Poland->Warsaw}
