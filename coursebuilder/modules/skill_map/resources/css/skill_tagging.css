@@ -82,9 +82,7 @@ div.lightbox > div.background {
   z-index: 1000;
 }
 div.lightbox > div.content {
-  position: fixed;
-  top: 50%;
-  left: 50%;
+  position: absolute;
   z-index: 1001;
   background-color: #fff;
   padding: 28px;

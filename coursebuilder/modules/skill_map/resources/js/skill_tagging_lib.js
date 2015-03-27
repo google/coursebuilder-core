@@ -653,9 +653,12 @@ Lightbox.prototype = {
    */
   show: function() {
     this._container.show();
-    this._content
-        .css('top', Math.max(0, (this._window.height() - this._content.height()) / 2))
-        .css('left', Math.max(0, (this._window.width() - this._content.width()) / 2));
+    var top = this._window.scrollTop() +
+        Math.max(8, (this._window.height() - this._content.height()) / 2);
+    var left = this._window.scrollLeft() +
+        Math.max(8, (this._window.width() - this._content.width()) / 2);
+
+    this._content.css('top', top).css('left', left);
     return this;
   },
   /**
