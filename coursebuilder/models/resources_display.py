@@ -1041,6 +1041,10 @@ def get_unit_title_template(app_context):
         return '%(title)s'
     else:
         # I18N: Message displayed as title for unit within a course.
+        # Note that the items %(index) and %(title).  The %(index)
+        # will be replaced with a number indicating the unit's
+        # sequence I18N: number within the course, and the %(title)
+        # with the unit's title.
         return app_context.gettext('Unit %(index)s - %(title)s')
 
 
@@ -1058,7 +1062,9 @@ def display_short_unit_title(unit, app_context):
         return unit.title
     if unit.type != 'U':
         return unit.title
-    # I18N: Message displayed as title for unit within a course.
+    # I18N: Message displayed as title for unit within a course.  The
+    # "%s" will be replaced with the index number of the unit within
+    # the course.  E.g., "Unit 1", "Unit 2" and so on.
     unit_title = app_context.gettext('Unit %s')
     return unit_title % unit.index
 

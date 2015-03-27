@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-23 07:52-0700\n"
-"PO-Revision-Date: 2015-03-16 15:45-0700\n"
+"POT-Creation-Date: 2015-03-27 09:42-0700\n"
+"PO-Revision-Date: 2015-03-27 09:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fil <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -17,6 +17,24 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.6\n"
+
+#. Message displayed as title for unit within a course.
+#. Note that the items %(index) and %(title).  The %(index)
+#. will be replaced with a number indicating the unit's
+#. sequence I18N: number within the course, and the %(title)
+#. with the unit's title.
+#: experimental/coursebuilder/models/resources_display.py:1048
+#, python-format
+msgid "Unit %(index)s - %(title)s"
+msgstr ""
+
+#. Message displayed as title for unit within a course.  The
+#. "%s" will be replaced with the index number of the unit within
+#. the course.  E.g., "Unit 1", "Unit 2" and so on.
+#: experimental/coursebuilder/models/resources_display.py:1068
+#, python-format
+msgid "Unit %s"
+msgstr ""
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -297,7 +315,7 @@ msgstr "Hindi naipadala ang lahat ng mensahe (%s / %s):"
 #: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
-msgstr "OK, %s (na) mensahe ang naipadala"
+msgstr ""
 
 #. Title encouraging user to invite friends to join a course
 #: experimental/coursebuilder/modules/invitation/invitation.py:380
@@ -321,8 +339,8 @@ msgstr "Mag-subscribe/Mag-unsubscribe"
 
 #. Message - user has unsubscribed from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:408
-msgid "You are currently unsubscribed from invitations."
-msgstr "Kasalukuyan kang naka-unsubscribe sa mga imbitasyon."
+msgid "You are currently unsubscribed from course-related emails."
+msgstr ""
 
 #. Control allowing user to re-subscribe to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:412
@@ -331,11 +349,11 @@ msgstr "Mag-click dito upang muling mag-subscribe."
 
 #. Text indicating user has opted in to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:417
-msgid "You can currently receive invitations. "
-msgstr "Makatatanggap ka sa kasalukuyan ng mga imbitasyon. "
+msgid "You are currently receiving course-related emails. "
+msgstr ""
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:420
+#: experimental/coursebuilder/modules/invitation/invitation.py:421
 msgid "Click here to unsubscribe."
 msgstr "Mag-click dito upang mag-unsubscribe."
 
@@ -513,12 +531,12 @@ msgstr "Mga Aralin"
 #. Text for empty list of lessons
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:40
 msgid "Not taught"
-msgstr ""
+msgstr "Hindi itinuro"
 
 #. Header describing the skills for this lesson
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:59
 msgid "Taught in this lesson:"
-msgstr ""
+msgstr "Itinuro sa araling ito:"
 
 #. Header describing list of skills this lesson depends on
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:74
@@ -528,7 +546,7 @@ msgstr "Nakadepende sa:"
 #. Describe an empty set of prerequisite skills
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:78
 msgid "This lesson doesn't have any prerequisites."
-msgstr ""
+msgstr "Walang anumang mga paunang kinakailangan ang araling ito."
 
 #. Header describing list of skills this lesson leads to
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:93
@@ -1331,6 +1349,4 @@ msgstr "Susunod na Pahina"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Dulo"
-
-
 
