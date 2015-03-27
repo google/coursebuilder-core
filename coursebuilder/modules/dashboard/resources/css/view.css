@@ -94,12 +94,13 @@ td.gcb-nav-bar-links .gcb-nav-bar-more-content {
   position: absolute;
   z-index: 5;
   top: -6px;
-  right: -14px;
-  padding-top: 5px;
+  left: -5px;
+  padding: 5px 0px;
   background-color: #455A64;
   color: #ffffff;
   border: solid #404040 1px;
   border-radius: 3px;
+  text-align: left;
 }
 td.gcb-nav-bar-links .gcb-nav-bar-more-content button.gcb-button {
   margin-bottom: 5px;
