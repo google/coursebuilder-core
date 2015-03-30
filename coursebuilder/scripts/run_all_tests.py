@@ -219,7 +219,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.etl_mapreduce.FlattenJsonTests': 4,
     'tests.unit.common_catch_and_log.CatchAndLogTests': 6,
     'tests.unit.common_locales.LocalesTests': 2,
-    'tests.unit.common_locales.ParseAcceptLanguageTests': 3,
+    'tests.unit.common_locales.ParseAcceptLanguageTests': 6,
     'tests.unit.common_resource.ResourceKeyTests': 3,
     'tests.unit.common_schema_fields.SchemaFieldTests': 4,
     'tests.unit.common_schema_fields.FieldArrayTests': 3,

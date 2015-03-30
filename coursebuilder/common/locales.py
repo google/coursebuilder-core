@@ -19,6 +19,7 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import logging
 import os
+import re
 
 import appengine_config
 
@@ -129,12 +130,16 @@ def parse_accept_language(accept_language_str):
     parsed = []
     try:
         for item in accept_language_str.split(','):
-            lang = item
+            lang = item.strip()
             q = 1.0
             if ';' in item:
                 lang, q_str = item.split(';')
                 q = float(q_str[2:]) if q_str.startswith('q=') else float(q_str)
-            lang = lang.replace('-', '_')
+            components = lang.split('-')
+            if not all([re.match('^[a-zA-Z]+$', c) for c in components]):
+                continue
+            lang = '_'.join(
+                [components[0].lower()] + [c.upper() for c in components[1:]])
             parsed.append((lang, q))
         return sorted(parsed, None, lambda x: -x[1])
     except Exception:  # pylint: disable=broad-except

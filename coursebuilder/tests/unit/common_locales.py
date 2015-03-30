@@ -42,6 +42,23 @@ class ParseAcceptLanguageTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             locales.parse_accept_language('x' * 8192)
 
+    def test_coerces_case_to_standard_form(self):
+        """Expect form xx_XX returned."""
+        self.assertEqual(
+            [('en_US', 1.0), ('el_GR', 1.0), ('fr', 1.0)],
+            locales.parse_accept_language('en-us,EL-gr,FR'))
+
+    def test_item_split_ignores_whitespace(self):
+        """Expect form xx_XX returned."""
+        self.assertEqual(
+            [('en_US', 1.0), ('el_GR', 1.0), ('fr', 1.0)],
+            locales.parse_accept_language('en-US,  el-gr ,    fr '))
+
+    def test_rejects_invalid_syntax(self):
+        self.assertEqual(
+            [('el', 1.0), ('fr', 1.0)],
+            locales.parse_accept_language('el,-us,en-,12-34,fr'))
+
 
 class LocalesTests(unittest.TestCase):
     """Unit tests for the locale helper functions."""
