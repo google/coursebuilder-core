@@ -14,4 +14,3 @@ cron:
 - description: Run job to report count of courses and students to CourseBuilder.
   url: /cron/usage_reporting/report_usage
   schedule: every sunday 05:00
-  login: admin
