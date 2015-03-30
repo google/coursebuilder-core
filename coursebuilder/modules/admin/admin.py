@@ -885,7 +885,7 @@ class GlobalAdminHandler(
         ).add_text('Support'))
         nav_bars.append(nav)
 
-        tab_name = in_tab or self.request.get('tab')
+        tab_name = in_tab or self.request.get('tab') or self.DEFAULT_TAB
         sub_nav = safe_dom.NodeList()
         tab_group = tabs.Registry.get_tab_group(self.default_action)
         for tab in tab_group:

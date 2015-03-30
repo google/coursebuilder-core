@@ -1140,6 +1140,15 @@ class InfrastructureTest(actions.TestBase):
 class AdminAspectTest(actions.TestBase):
     """Test site from the Admin perspective."""
 
+    def test_default_admin_tab_is_courses(self):
+        actions.login('test_appstats@google.com', is_admin=True)
+        response = self.testapp.get('/admin/global')
+        dom = self.parse_html_string(self.testapp.get('/admin/global').body)
+        selected_tabs = dom.findall(
+            './/td[@class="gcb-nav-bar-links"]/a[@class="selected"]')
+        self.assertEqual(
+            ['Site Admin', 'Courses'], [s.text for s in selected_tabs])
+
     def test_appstats(self):
         """Checks that appstats is available when enabled."""
         email = 'test_appstats@google.com'
