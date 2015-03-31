@@ -205,7 +205,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.StudentUnifiedProfileTest': 19,
     'tests.functional.test_classes.TransformsEntitySchema': 1,
     'tests.functional.test_classes.TransformsJsonFileTestCase': 3,
-    'tests.functional.test_classes.VirtualFileSystemTest': 43,
+    'tests.functional.test_classes.VirtualFileSystemTest': 44,
     'tests.functional.test_classes.ImportActivityTests': 7,
     'tests.functional.test_classes.ImportAssessmentTests': 3,
     'tests.functional.test_classes.ImportGiftQuestionsTests': 1,
