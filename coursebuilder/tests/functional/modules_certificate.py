@@ -94,6 +94,17 @@ class CertificateHandlerTestCase(actions.TestBase):
         self.assertEquals(200, response.status_code)
         self.assertIn('Jane Doe', response.body)
 
+    def test_download_pdf(self):
+        actions.login('test@example.com')
+        models.Student.add_new_student_for_current_user('Test User', None, self)
+
+        response = self.get('/certificate.pdf')
+        self.assertEqual('application/pdf', response.headers['Content-Type'])
+        self.assertEqual(
+            'attachment; filename=certificate.pdf',
+            response.headers['Content-Disposition'])
+        self.assertIn('/Title (Course Builder Certificate)', response.body)
+
     def test_certificate_table_entry(self):
         actions.login('test@example.com')
         models.Student.add_new_student_for_current_user('Test User', None, self)
@@ -111,7 +122,8 @@ class CertificateHandlerTestCase(actions.TestBase):
         self.assertEquals('Certificate', table_entry[0])
         link = str(table_entry[1])
         self.assertEquals(
-            '<a href="certificate">Click for certificate</a>', link)
+            '<a href="certificate">Click for certificate</a> '
+            '| <a href="certificate.pdf">Download PDF</a>', link)
 
         # If the student is not qualified, a message is shown
         self.is_qualified = False

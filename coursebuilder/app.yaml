@@ -62,6 +62,8 @@ builtins:
 libraries:
 - name: jinja2
   version: "2.6"
+- name: PIL
+  version: "1.1.7"
 - name: pycrypto
   version: "2.6"
 - name: webapp2

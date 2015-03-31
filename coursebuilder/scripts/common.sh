@@ -231,6 +231,7 @@ DISTRIBUTED_LIBS="\
   networkx-1.9.1.zip \
   decorator-3.4.0.zip \
   dependo-0.1.4.zip \
+  reportlab-3.1.8.zip \
 "
 
 echo Using third party Python packages from $DISTRIBUTED_LIBS_DIR

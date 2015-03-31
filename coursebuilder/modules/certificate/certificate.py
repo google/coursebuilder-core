@@ -36,8 +36,12 @@ __author__ = [
 
 
 import os
+import StringIO
 
 from mapreduce import context
+from reportlab.lib import pagesizes
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
 
 import appengine_config
 from common import safe_dom
@@ -57,6 +61,7 @@ from modules.dashboard import course_settings
 from modules.dashboard import tabs
 
 CERTIFICATE_HANDLER_PATH = 'certificate'
+CERTIFICATE_PDF_HANDLER_PATH = 'certificate.pdf'
 RESOURCES_PATH = '/modules/certificate/resources'
 
 
@@ -83,6 +88,70 @@ class ShowCertificateHandler(utils.BaseHandler):
             'course': environ['course']['title'],
             'google_analytics_id': environ['course'].get('google_analytics_id')
         }))
+
+
+class ShowCertificatePdfHandler(utils.BaseHandler):
+    """Handler for student to print course certificate."""
+
+    def _print_cert(self, out, course, student):
+
+        c = canvas.Canvas(out, pagesize=pagesizes.landscape(pagesizes.LETTER))
+        c.setTitle('Course Builder Certificate')
+
+        # Draw the background image
+        image_path = os.path.join(
+            appengine_config.BUNDLE_ROOT,
+            'modules', 'certificate', 'resources', 'images', 'cert.png')
+        image_data = open(image_path).read()
+        image = canvas.ImageReader(StringIO.StringIO(image_data))
+        c.drawImage(
+            image, 0, -1.5 * inch, width=11 * inch, preserveAspectRatio=True)
+
+        text = c.beginText()
+
+        text.setTextOrigin(0.5 * inch, 4.5 * inch)
+        text.setFont('Helvetica', 40)
+        text.setFillColorRGB(75.0 / 255, 162.0 / 255, 65.0 / 255)
+        text.textLine(self.gettext('Certificate of Completion'))
+
+        text.setTextOrigin(0.5 * inch, 4.0 * inch)
+        text.setFillColorRGB(0.4, 0.4, 0.4)
+        text.setFont('Helvetica', 20)
+        text.textLine(self.gettext('Presented to'))
+
+        text.setTextOrigin(0.5 * inch, 2.3 * inch)
+        text.textLine(self.gettext('for successfully completing the'))
+        text.textLine(self.gettext('%(course)s course') % {'course': course})
+
+        c.drawText(text)
+
+        c.setStrokeColorRGB(0.8, 0.8, 0.8)
+        c.setLineWidth(0.1)
+        c.line(0.5 * inch, 3.0 * inch, 10.5 * inch, 3.0 * inch)
+
+        c.setFont('Helvetica', 24)
+        c.setFillColorRGB(0.4, 0.4, 0.4)
+        c.drawCentredString(5.0 * inch, 3.1 * inch, student.name)
+
+        c.showPage()
+        c.save()
+
+    def get(self):
+        """Handles GET requests."""
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
+            return
+
+        if not student_is_qualified(student, self.get_course()):
+            self.redirect('/')
+            return
+
+        course = courses.Course.get_environ(self.app_context)['course']['title']
+
+        self.response.headers['Content-Type'] = 'application/pdf'
+        self.response.headers['Content-Disposition'] = (
+            'attachment; filename=certificate.pdf')
+        self._print_cert(self.response.out, course, student)
 
 
 def _get_score_by_id(score_list, assessment_id):
@@ -183,12 +252,23 @@ def get_certificate_table_entry(handler, student, course):
     title = handler.gettext('Certificate')
 
     if student_is_qualified(student, course):
-        link = safe_dom.A(
-            CERTIFICATE_HANDLER_PATH
-        ).add_text(
-            # I18N: Label on control to navigate to page showing certificate.
-            handler.gettext('Click for certificate'))
-        return (title, link)
+        nl = safe_dom.NodeList()
+        nl.append(
+            safe_dom.A(
+                CERTIFICATE_HANDLER_PATH
+            ).add_text(
+                # I18N: Label on control to navigate to page showing certificate
+                handler.gettext('Click for certificate'))
+        ).append(
+            safe_dom.Text(' | ')
+        ).append(
+            safe_dom.A(
+                CERTIFICATE_PDF_HANDLER_PATH
+            ).add_text(
+                # I18N: Link for a PDF.
+                handler.gettext('Download PDF'))
+        )
+        return (title, nl)
     else:
         return (
             title,
@@ -418,7 +498,8 @@ def register_module():
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
 
     namespaced_routes = [
-        ('/' + CERTIFICATE_HANDLER_PATH, ShowCertificateHandler)]
+        ('/' + CERTIFICATE_HANDLER_PATH, ShowCertificateHandler),
+        ('/' + CERTIFICATE_PDF_HANDLER_PATH, ShowCertificatePdfHandler)]
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

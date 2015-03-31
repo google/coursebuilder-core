@@ -81,6 +81,7 @@ THIRD_PARTY_LIBS = [
     _Library('pyparsing-1.5.7.zip'),
     _Library('networkx-1.9.1.zip', relative_path='networkx-1.9.1'),
     _Library('decorator-3.4.0.zip', relative_path='src'),
+    _Library('reportlab-3.1.8.zip'),
 ]
 
 
