@@ -26,11 +26,14 @@ import logging
 import os
 import random
 import re
+import time
 import urllib
 
 import apiclient
+import apiclient.discovery
 import httplib2
 import oauth2client
+import oauth2client.client
 
 from common import catch_and_log
 from common import crypto
@@ -98,12 +101,20 @@ JSON_KEY = 'json_key'
 TABLE_LIFETIME = 'table_lifetime'
 PII_ENCRYPTION_TOKEN = 'pii_encryption_token'
 
+# Discovery service lookup retries constants
+DISCOVERY_SERVICE_MAX_ATTEMPTS = 10
+DISCOVERY_SERVICE_RETRY_SECONDS = 2
 
 def _get_data_source_class_by_name(name):
     source_classes = data_sources.Registry.get_rest_data_source_classes()
     for source_class in source_classes:
         if source_class.__name__ == name and source_class.exportable():
             return source_class
+
+    names = [source_class.__name__ for source_class in source_classes]
+    logging.critical(
+        'No entry found for data source class with name "%s".  '
+        'Available names are: %s', name, ' '.join(names))
     return None
 
 
@@ -412,8 +423,27 @@ class DataPumpJob(jobs.DurableJobBase):
             BIGQUERY_RW_SCOPE)
         http = httplib2.Http()
         http = credentials.authorize(http)
-        return apiclient.discovery.build(BIGQUERY_API_NAME,
-                                         BIGQUERY_API_VERSION, http=http), http
+
+        # Discovery.build has a timeout that's a little too aggressive.  Since
+        # this happens before we even have our job_context built, any errors
+        # returned from here will be fatal.  Since that's the case, add some
+        # extra forgiveness here by retrying several times, with a little bit
+        # of wait thrown in to allow the discovery service to recover, in case
+        # it really is just having a bad few moments.
+        attempts = 0
+        while True:
+            try:
+                return apiclient.discovery.build(
+                    BIGQUERY_API_NAME, BIGQUERY_API_VERSION, http=http), http
+            # pylint: disable=broad-except
+            except Exception, ex:
+                attempts += 1
+                if attempts >= DISCOVERY_SERVICE_MAX_ATTEMPTS:
+                    raise
+                logging.warning(
+                    'Ignoring HTTP connection timeout %d of %d',
+                    attempts, DISCOVERY_SERVICE_MAX_ATTEMPTS)
+                time.sleep(DISCOVERY_SERVICE_RETRY_SECONDS)
 
     def _maybe_create_course_dataset(self, service, bigquery_settings):
         """Create dataset within BigQuery if it's not already there."""
@@ -1257,3 +1287,14 @@ def register_module():
         notify_module_enabled=on_module_enabled,
         notify_module_disabled=on_module_disabled)
     return custom_module
+
+
+# Since this module contains a registry which may be populated from other
+# modules, we here import 'main' so that we are ensured that by the time this
+# module is loaded, the global code in 'main' has been run (either by this
+# import, or prior).  Note that we must do this import strictly after we
+# declare register_module(): If this import actually runs the code in main,
+# this module must have declared its own register_module() method so that the
+# the registration code can see it.
+# pylint: disable=unused-import
+import main
