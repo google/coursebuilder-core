@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-27 09:42-0700\n"
+"POT-Creation-Date: 2015-03-31 09:13-0700\n"
 "PO-Revision-Date: 2015-03-27 09:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: bg <LL@li.org>\n"
@@ -130,45 +130,54 @@ msgstr " Проверка на отговора "
 msgid " Hint "
 msgstr " Подсказка "
 
-#. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:183
-msgid "Certificate"
-msgstr "Сертификат"
-
-#. Label on control to navigate to page showing certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:190
-msgid "Click for certificate"
-msgstr "Кликнете за сертификата"
-
-#. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:196
-msgid ""
-"You have not yet met the course requirements for a certificate of "
-"completion."
-msgstr "Още не сте изпълнили изискванията за сертификат за завършен курс."
-
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
+#: experimental/coursebuilder/modules/certificate/certificate.py:115
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "Сертификат за завършен курс"
 
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
+#: experimental/coursebuilder/modules/certificate/certificate.py:120
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "Издаден на"
 
 #. Phrase signifying that a student has successfully completed a course.
+#: experimental/coursebuilder/modules/certificate/certificate.py:123
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "за успешно завършване на курса"
 
 #. Phrase giving the name of an instructional course.
+#: experimental/coursebuilder/modules/certificate/certificate.py:124
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "%(course)s"
+
+#. Title of section on page showing certificates for course completion.
+#: experimental/coursebuilder/modules/certificate/certificate.py:252
+msgid "Certificate"
+msgstr "Сертификат"
+
+#. Label on control to navigate to page showing certificate
+#: experimental/coursebuilder/modules/certificate/certificate.py:261
+msgid "Click for certificate"
+msgstr "Кликнете за сертификата"
+
+#. Link for a PDF.
+#: experimental/coursebuilder/modules/certificate/certificate.py:269
+msgid "Download PDF"
+msgstr ""
+
+#. Text indicating student has not yet completed a course.
+#: experimental/coursebuilder/modules/certificate/certificate.py:276
+msgid ""
+"You have not yet met the course requirements for a certificate of "
+"completion."
+msgstr "Още не сте изпълнили изискванията за сертификат за завършен курс."
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:28
