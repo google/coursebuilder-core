@@ -40,6 +40,8 @@ def _welcome_form_submitted(app_context, handler):
 
 def _make_welcome_form_content():
     """Add content to welcome page to get user's consent for stat collection."""
+    if messaging.is_disabled():
+        return None
 
     return safe_dom.Element(
         'div'

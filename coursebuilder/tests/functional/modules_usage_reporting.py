@@ -83,14 +83,14 @@ class UsageReportingTestBase(actions.TestBase):
         self.save_sender = messaging.Sender
         self.save_message = messaging.Message
         messaging.Sender = MockSender
-        messaging.Sender._DISABLED_FOR_TESTING = False
         messaging.Message = MockMessage
+        messaging.ENABLED_IN_DEV_FOR_TESTING = True
         actions.login(ADMIN_EMAIL, is_admin=True)
 
     def tearDown(self):
         MockSender.clear_sent()
+        messaging.ENABLED_IN_DEV_FOR_TESTING = False
         messaging.Sender = self.save_sender
-        messaging.Sender._DISABLED_FOR_TESTING = True
         messaging.Message = self.save_message
         sites.reset_courses()
         super(UsageReportingTestBase, self).tearDown()
@@ -560,7 +560,7 @@ class MessagingTests(actions.TestBase):
 
     def setUp(self):
         super(MessagingTests, self).setUp()
-        messaging.Sender._DISABLED_IN_DEV = False
+        messaging.ENABLED_IN_DEV_FOR_TESTING = True
         self.save_urlfetch_fetch = urlfetch.fetch
         urlfetch.fetch = self.mock_urlfetch_fetch
         actions.login(ADMIN_EMAIL, is_admin=True)
@@ -568,8 +568,8 @@ class MessagingTests(actions.TestBase):
             self.COURSE_NAME, ADMIN_EMAIL, self.COURSE_NAME)
 
     def tearDown(self):
+        messaging.ENABLED_IN_DEV_FOR_TESTING = False
         messaging.Sender._report_settings_timestamp = 0
-        messaging.Sender._DISABLED_FOR_TESTING = True
         urlfetch.fetch = self.save_urlfetch_fetch
         MessageCatcher.clear_sent()
         MessageCatcher.set_return_code(200)
@@ -834,3 +834,38 @@ class ConsentBannerRestHandlerTests(UsageReportingTestBase):
             messaging.Message._SOURCE: messaging.Message.BANNER_SOURCE,
         }]
         self.assertEquals(expected, MockSender.get_sent())
+
+
+class DevServerTests(UsageReportingTestBase):
+    """Test that consent widgets are turned off in normal dev mode."""
+
+    def test_welcome_page_message_not_shown_in_dev(self):
+        # First check the text is present in test mode
+        response = self.get('/admin/welcome')
+        self.assertIn(
+            'I agree that Google may collect information about this',
+            response.body)
+
+        # Switch off test mode
+        messaging.ENABLED_IN_DEV_FOR_TESTING = False
+
+        # Expect text is missing
+        response = self.get('/admin/welcome')
+        self.assertNotIn(
+            'I agree that Google may collect information about this',
+            response.body)
+
+
+    def test_consent_banner_not_shown_in_dev(self):
+        # First check banner is present in test mode
+        dom = self.parse_html_string(self.get('/admin/global').body)
+        banner = dom.find('.//div[@class="consent-banner"]')
+        self.assertIsNotNone(banner)
+
+        # Switch off test mode
+        messaging.ENABLED_IN_DEV_FOR_TESTING = False
+
+        # Expect to see banner missing
+        dom = self.parse_html_string(self.get('/admin/global').body)
+        banner = dom.find('.//div[@class="consent-banner"]')
+        self.assertIsNone(banner)

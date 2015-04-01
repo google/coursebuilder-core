@@ -52,13 +52,18 @@ _INSTALLATION_IDENTIFIER = config.ConfigProperty(
 # versus 'config')
 USAGE_REPORTING_FIELD_ID = 'usage_reporting_id'
 
+# Usage reporting is turned off on dev, but this flag overrides that, to
+# enable testing of messaging and UI.
+ENABLED_IN_DEV_FOR_TESTING = False
+
+
+def is_disabled():
+    return (
+        not appengine_config.PRODUCTION_MODE and not ENABLED_IN_DEV_FOR_TESTING)
+
 
 class Sender(object):
     """Namespace to permit replacement of messaging functions for testing."""
-
-    # Flag to suppress test runs and developer activity from emitting
-    # spurious results into our data.
-    _DISABLED_IN_DEV = not appengine_config.PRODUCTION_MODE
 
     # We want to be able to re-point the statistics reporting at some later
     # time.  To do that, we fetch an enablement flag and a destination URL
@@ -115,8 +120,7 @@ class Sender(object):
     def _emit_message(cls, message):
         """Emit message if allowed, not if not, or raise exception."""
         cls._refresh_report_settings()
-        if (cls._report_settings[cls._REPORT_ENABLED] and
-            not cls._DISABLED_IN_DEV):
+        if cls._report_settings[cls._REPORT_ENABLED] and not is_disabled():
 
             try:
                 response = urlfetch.fetch(

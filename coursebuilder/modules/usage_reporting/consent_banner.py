@@ -35,8 +35,8 @@ TEMPLATES_DIR = os.path.join(
 
 
 def _make_consent_banner(handler):
-    if config.is_consent_set():
-        return ''
+    if config.is_consent_set() or messaging.is_disabled():
+        return None
 
     template_values = {
         'xsrf_token': handler.create_xsrf_token(
