@@ -311,10 +311,8 @@ SkillTable.prototype = {
  * @class
  */
 function SkillList() {
-  // TODO(broussev): Add jasmine tests.
   this._skillLookupByIdTable = {};
   this._diagnosisData = null;
-  this._onLoadCallback = null;
   this._xsrfToken = null;
 }
 /**
@@ -335,13 +333,12 @@ SkillList.prototype = {
    */
   load: function(callback) {
     var that = this;
-    this._onLoadCallback = callback;
     $.ajax({
       type: 'GET',
       url: 'rest/modules/skill_map/skill',
       dataType: 'text',
       success: function(data) {
-        that._onLoad(data);
+        that._onLoad(callback, data);
       },
       error: function() {
         showMsg('Can\'t load the skills map.');
@@ -374,6 +371,7 @@ SkillList.prototype = {
         }
       });
     });
+    return true;
   },
 
   _onDeleteSkill: function(callback, data) {
@@ -532,7 +530,7 @@ SkillList.prototype = {
     return retval;
   },
 
-  _onLoad: function(data) {
+  _onLoad: function(callback, data) {
     data = parseAjaxResponse(data);
     if (data.status != 200) {
       showMsg('Unable to load skill map. Reload page and try again.');
@@ -541,6 +539,10 @@ SkillList.prototype = {
     this._xsrfToken = data['xsrf_token'];
     var payload = JSON.parse(data['payload']);
     this._updateFromPayload(payload);
+
+    if (callback) {
+      callback();
+    }
   },
 
   _updateFromPayload: function(payload) {
@@ -553,10 +555,6 @@ SkillList.prototype = {
     });
 
     this._diagnosisData = payload['diagnosis'];
-
-    if (this._onLoadCallback) {
-      this._onLoadCallback();
-    }
   },
 
   _onCreateOrUpdateSkill: function(callback, data) {
@@ -567,7 +565,10 @@ SkillList.prototype = {
     }
     var payload = JSON.parse(data.payload);
     this._updateFromPayload(payload);
-    callback(payload.skill, data.message);
+
+    if (callback) {
+      callback(payload.skill, data.message);
+    }
   }
 };
 
@@ -690,7 +691,6 @@ Lightbox.prototype = {
  *     to create a new skill rather that edit an existing one.
  */
 function EditSkillPopup(skillList, locationList, skillId) {
-  // TODO(broussev): Add jasmine tests.
   var that = this;
   this._skillId = skillId;
   this._skillList = skillList;
@@ -737,7 +737,7 @@ function EditSkillPopup(skillList, locationList, skillId) {
 
   if (skillId !== null && skillId !== undefined) {
     var skill = this._skillList.getSkillById(skillId);
-    var title = 'Edit skill';
+    var title = 'Edit Skill';
     this._nameInput.val(skill.name);
     this._descriptionInput.val(skill.description);
     this._skillList.eachPrerequisite(skill, function(prereq) {
@@ -844,7 +844,6 @@ EditSkillPopup.prototype = {
       showMsgAutoHide(message);
       that._onAjaxCreateSkillCallback(skill);
     }
-
     this._skillList.createOrUpdateSkill(onSkillCreatedOrUpdated, name,
         description, prerequisiteIds, locationKeys, that._skillId);
     this._lightbox.close();
@@ -1014,6 +1013,7 @@ ItemSelector.prototype = {
   },
   clear: function() {
     this._selectItemListOl.empty();
+    this._addItemButton.prop('disabled', true);
   },
   _bind: function() {
     var that = this;
