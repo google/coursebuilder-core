@@ -22,6 +22,7 @@ from controllers import sites
 from controllers import utils
 from models import custom_modules
 from modules.usage_reporting import config
+from modules.usage_reporting import consent_banner
 from modules.usage_reporting import course_creation
 from modules.usage_reporting import enrollment
 from modules.usage_reporting import students
@@ -62,13 +63,18 @@ class StartReportingJobs(utils.BaseHandler):
 
 def _notify_module_enabled():
     config.notify_module_enabled()
+    consent_banner.notify_module_enabled()
     course_creation.notify_module_enabled()
     enrollment.notify_module_enabled()
 
 
 def register_module():
     global custom_module  # pylint: disable=global-statement
-    global_handlers = [(StartReportingJobs.URL, StartReportingJobs)]
+    global_handlers = [
+        (StartReportingJobs.URL, StartReportingJobs),
+        (
+            consent_banner.ConsentBannerRestHandler.URL,
+            consent_banner.ConsentBannerRestHandler)]
     custom_module = custom_modules.Module(
         'Usage Reporting',
         'Sends anonymized usage statistics to CourseBuilder team.',

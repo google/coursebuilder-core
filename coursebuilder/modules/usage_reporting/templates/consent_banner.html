@@ -1,0 +1,136 @@
+<style type="text/css">
+  div.consent-banner {
+    padding: 4px;
+    background-color: rgb(189, 16, 224);
+    color: #fff;
+    font-size: 13px;
+    max-height: 500px;
+  }
+  div.consent-banner.hidden-consent-banner {
+    max-height: 0;
+    padding: 0;
+    overflow: hidden;
+    transition: all 200ms;
+  }
+  div.consent-banner h1 {
+    margin: 0;
+    font-weight: bold;
+    font-size: 13px;
+  }
+  div.consent-banner div.button-bar {
+    text-align: center;
+    margin: 10px 0;
+  }
+  div.consent-banner div.button-bar button {
+    padding: 10px 40px;
+    border: none;
+    border-radius: 6px;
+    margin: 0 10px;
+  }
+  div.consent-banner p.center {
+    text-align: center;
+  }
+  div.consent-banner p.strong {
+    font-weight: bold;
+  }
+</style>
+<script type="text/javascript">
+  $(function() {
+    var xsrfToken = $('div.consent-banner').data('xsrfToken');
+
+    /* TODO(jorr): This duplicates code in skill_tagging.js. Put it function in
+       shared location e.g. view.js */
+    function parseAjaxResponse(s) {
+      // XSSI prefix. Must be kept in sync with models/transforms.py.
+      var xssiPrefix = ")]}'";
+      return JSON.parse(s.replace(xssiPrefix, ''));
+    }
+
+    /* TODO(jorr): his duplicates code in skill_tagging.js. Put it function in
+       shared location e.g. view.js */
+    function withInputExFunctionsRemoved(f) {
+      var oldArrayToPrettyJsonString = Array.prototype.toPrettyJSONString;
+      var oldObjectToPrettyJsonString = Object.prototype.toPrettyJSONString;
+      delete Array.prototype.toPrettyJSONString;
+      delete Object.prototype.toPrettyJSONString;
+
+      try {
+        f();
+      } finally {
+        if (oldArrayToPrettyJsonString !== undefined) {
+          Array.prototype.toPrettyJSONString = oldArrayToPrettyJsonString;
+        }
+        if (oldObjectToPrettyJsonString !== undefined) {
+          Object.prototype.toPrettyJSONString = oldObjectToPrettyJsonString;
+        }
+      }
+    }
+
+    function onSuccess(data) {
+      var data = parseAjaxResponse(data);
+      if (data.status != 200) {
+        cbShowMsg(data.message);
+        return;
+      }
+      $('div.consent-banner').addClass('hidden-consent-banner');
+      cbShowMsg('Response saved')
+    }
+
+    function onError() {
+      cbShowMsg('Server error: Please try again');
+    }
+
+    $('div.consent-banner button').click(function() {
+      var request = {
+        xsrf_token: xsrfToken,
+        payload: JSON.stringify({
+          'is_allowed': $(this).data('isAllowed')
+        })
+      };
+      withInputExFunctionsRemoved(function() {
+        $.ajax({
+          type: 'POST',
+          url: '/rest/modules/usage_reporting/consent',
+          data: {request: JSON.stringify(request)},
+          dataType: 'text',
+          success: onSuccess,
+          error: onError
+        });
+      });
+    });
+  });
+</script>
+
+<div class="consent-banner" data-xsrf-token="{{ xsrf_token }}">
+  {% if is_super_admin %}
+    <h1>
+      Would you like to help improve Course Builder?
+    </h1>
+
+    <p>
+      Google would like to collect information about this deployment of Course
+      Builder to help improve Google’s products and services and for research
+      purposes. Google will maintain this data in accordance with Google’s
+      privacy policy and will not associate the data it collects with this
+      course or a user. Your response to this question will be sent to Google.
+    </p>
+
+    <div class="button-bar">
+      <button data-is-allowed="false">Don't Allow</button>
+      <button data-is-allowed="true">Allow</button>
+    </div>
+  {% else %}
+    <p>
+      Google would like permission to collect information about this deployment
+      of Course Builder to help improve Google’s products and services and for
+      research purposes. Google will maintain this data in accordance with
+      Google’s privacy policy and will not associate the data it collects with
+      this course or a user.
+    </p>
+
+    <p class="center strong">
+      Please ask your Course Builder Administrator to complete this
+      configuration setting.
+    </p>
+  {% endif %}
+</div>

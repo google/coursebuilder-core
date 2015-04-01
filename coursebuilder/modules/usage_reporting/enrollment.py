@@ -192,7 +192,8 @@ class StudentEnrollmentEventCounter(jobs.AbstractCountingMapReduceJob):
 
         total = sum(int(value) for value in values)
         timestamp, metric = StudentEnrollmentEventCounter.parse_key(key)
-        messaging.Message.send_course_message(metric, total, timestamp)
+        messaging.Message.send_course_message(
+            metric, total, timestamp=timestamp)
 
 
 def notify_module_enabled():

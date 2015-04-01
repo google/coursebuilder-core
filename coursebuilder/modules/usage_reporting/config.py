@@ -18,7 +18,9 @@ __author__ = [
     'Michael Gainer (mgainer@google.com)',
 ]
 
+import appengine_config
 from common import schema_fields
+from common import utils as common_utils
 from models import config
 from models import courses
 from modules.usage_reporting import messaging
@@ -27,7 +29,8 @@ from modules.usage_reporting import messaging
 def _on_change_report_allowed(config_property, unused_old_value):
     """Callback to report externally when value of REPORT_ALLOWED changes."""
     messaging.Message.send_instance_message(
-        messaging.Message.METRIC_REPORT_ALLOWED, config_property.value)
+        messaging.Message.METRIC_REPORT_ALLOWED, config_property.value,
+        source=messaging.Message.ADMIN_SOURCE)
 
 
 REPORT_ALLOWED = config.ConfigProperty(
@@ -41,12 +44,21 @@ REPORT_ALLOWED = config.ConfigProperty(
 
 
 def set_report_allowed(value):
-    entity = config.ConfigPropertyEntity.get_by_key_name(REPORT_ALLOWED.name)
-    if not entity:
-        entity = config.ConfigPropertyEntity(key_name=REPORT_ALLOWED.name)
-    entity.value = str(value)
-    entity.is_draft = False
-    entity.put()
+    with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+        entity = config.ConfigPropertyEntity.get_by_key_name(
+            REPORT_ALLOWED.name)
+        if not entity:
+            entity = config.ConfigPropertyEntity(key_name=REPORT_ALLOWED.name)
+        entity.value = str(value)
+        entity.is_draft = False
+        entity.put()
+
+
+def is_consent_set():
+    with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+        return (
+            config.ConfigPropertyEntity.get_by_key_name(REPORT_ALLOWED.name)
+            is not None)
 
 
 def notify_module_enabled():

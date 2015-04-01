@@ -34,7 +34,8 @@ def _welcome_form_submitted(app_context, handler):
     is_allowed = (consent_val == USAGE_REPORTING_CONSENT_CHECKBOX_VALUE)
     config.set_report_allowed(is_allowed)
     messaging.Message.send_instance_message(
-        messaging.Message.METRIC_REPORT_ALLOWED, is_allowed)
+        messaging.Message.METRIC_REPORT_ALLOWED, is_allowed,
+        source=messaging.Message.WELCOME_SOURCE)
 
 
 def _make_welcome_form_content():

@@ -80,8 +80,9 @@ class WelcomePageTests(actions.TestBase):
         response = self.get('/admin/welcome?action=welcome')
         assert_contains('Welcome to Course Builder', response.body)
         assert_contains('action="/admin/welcome"', response.body)
-        assert_contains('"add_first_course"', response.body)
-        assert_contains('"explore_sample"', response.body)
+        assert_contains('Create Empty Course', response.body)
+        assert_contains('Explore Sample Course', response.body)
+        assert_contains('Configure Settings', response.body)
 
     def test_explore_sample_course(self):
         actions.login(ADMIN_EMAIL, is_admin=True)
@@ -110,7 +111,17 @@ class WelcomePageTests(actions.TestBase):
         response = self.get('/first/dashboard')
         assert_contains('My First Course', response.body)
         response = self.get('/admin/welcome?action=welcome')
-        assert_does_not_contain('add_first_course', response.body)
+        assert_does_not_contain('Create Empty Course', response.body)
+
+    def test_configure_settings(self):
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        response = self.post(
+            '/admin/welcome?action=configure_settings',
+            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'configure_settings')})
+        self.assertEqual(302, response.status_int)
+        self.assertEqual(
+            response.headers['location'], 'http://localhost/admin/global')
 
     def test_explore_sample_course_idempotent(self):
         self.test_explore_sample_course()

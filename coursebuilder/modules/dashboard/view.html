@@ -50,6 +50,9 @@
     {% endif %}
   </head>
   <body>
+  {% for header in page_headers %}
+    {% if header %}{{ header }}{% endif %}
+  {% endfor %}
   <table class="gcb-nav-bar">
     {% for nav in top_nav %}
       <tr class="gcb-nav-bar-level-{{ loop.index }}">

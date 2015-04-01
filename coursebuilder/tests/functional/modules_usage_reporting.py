@@ -25,6 +25,7 @@ import urlparse
 from common import crypto
 from common import utils as common_utils
 from controllers import sites
+from models import courses
 from models import transforms
 from modules.usage_reporting import config
 from modules.usage_reporting import course_creation
@@ -33,6 +34,7 @@ from modules.usage_reporting import messaging
 from modules.usage_reporting import usage_reporting
 from tests.functional import actions
 
+from google.appengine.api import namespace_manager
 from google.appengine.api import urlfetch
 
 ADMIN_EMAIL = 'admin@foo.com'
@@ -121,12 +123,14 @@ class ConfigTests(UsageReportingTestBase):
             messaging.Message._VERSION: os.environ['GCB_PRODUCT_VERSION'],
             messaging.Message._METRIC: messaging.Message.METRIC_REPORT_ALLOWED,
             messaging.Message._VALUE: True,
+            messaging.Message._SOURCE: messaging.Message.ADMIN_SOURCE,
         }, {
             messaging.Message._INSTALLATION: FAKE_INSTALLATION_ID,
             messaging.Message._TIMESTAMP: FAKE_TIMESTAMP,
             messaging.Message._VERSION: os.environ['GCB_PRODUCT_VERSION'],
             messaging.Message._METRIC: messaging.Message.METRIC_REPORT_ALLOWED,
             messaging.Message._VALUE: False,
+            messaging.Message._SOURCE: messaging.Message.ADMIN_SOURCE,
         }]
         self.assertEquals(expected, MockSender.get_sent())
 
@@ -175,12 +179,14 @@ class ConfigTests(UsageReportingTestBase):
             messaging.Message._VERSION: os.environ['GCB_PRODUCT_VERSION'],
             messaging.Message._METRIC: messaging.Message.METRIC_REPORT_ALLOWED,
             messaging.Message._VALUE: True,
+            messaging.Message._SOURCE: messaging.Message.ADMIN_SOURCE,
         }, {
             messaging.Message._INSTALLATION: FAKE_INSTALLATION_ID,
             messaging.Message._TIMESTAMP: FAKE_TIMESTAMP,
             messaging.Message._VERSION: os.environ['GCB_PRODUCT_VERSION'],
             messaging.Message._METRIC: messaging.Message.METRIC_REPORT_ALLOWED,
             messaging.Message._VALUE: False,
+            messaging.Message._SOURCE: messaging.Message.ADMIN_SOURCE,
         }]
         self.assertEquals(expected, MockSender.get_sent())
 
@@ -221,6 +227,7 @@ class CourseCreationTests(UsageReportingTestBase):
             messaging.Message._VERSION: os.environ['GCB_PRODUCT_VERSION'],
             messaging.Message._METRIC: messaging.Message.METRIC_REPORT_ALLOWED,
             messaging.Message._VALUE: True,
+            messaging.Message._SOURCE: messaging.Message.WELCOME_SOURCE,
         }]
         self.assertEquals(expected, MockSender.get_sent())
 
@@ -243,6 +250,7 @@ class CourseCreationTests(UsageReportingTestBase):
             messaging.Message._VERSION: os.environ['GCB_PRODUCT_VERSION'],
             messaging.Message._METRIC: messaging.Message.METRIC_REPORT_ALLOWED,
             messaging.Message._VALUE: False,
+            messaging.Message._SOURCE: messaging.Message.WELCOME_SOURCE,
         }]
         self.assertEquals(expected, MockSender.get_sent())
 
@@ -706,3 +714,123 @@ class MessagingTests(actions.TestBase):
             messaging.Message.METRIC_REPORT_ALLOWED, True)
         MessageCatcher.set_return_code(200)
         self._assert_message_queued_and_succeeds()
+
+
+class ConsentBannerTests(UsageReportingTestBase):
+    COURSE_NAME = 'test_course'
+    SUPER_MESSAGE = 'Would you like to help improve Course Builder?'
+    NOT_SUPER_MESSAGE = 'Please ask your Course Builder Administrator'
+    NOT_SUPER_EMAIL = 'not-super@test.com'
+
+    def setUp(self):
+        super(ConsentBannerTests, self).setUp()
+
+        self.base = '/' + self.COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, ADMIN_EMAIL, 'Banner Test Course')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+        courses.Course.ENVIRON_TEST_OVERRIDES = {
+            'course': {'admin_user_emails': self.NOT_SUPER_EMAIL}}
+
+    def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        namespace_manager.set_namespace(self.old_namespace)
+        courses.Course.ENVIRON_TEST_OVERRIDES = {}
+        super(ConsentBannerTests, self).tearDown()
+
+    def test_banner_with_buttons_shown_to_super_user_on_dashboard(self):
+        dom = self.parse_html_string(self.get('dashboard').body)
+        banner = dom.find('.//div[@class="consent-banner"]')
+        self.assertIsNotNone(banner)
+        self.assertIn(self.SUPER_MESSAGE, banner.find('.//h1').text)
+        self.assertEqual(2, len(banner.findall('.//button')))
+
+    def test_banner_with_buttons_shown_to_super_user_on_global_admin(self):
+        dom = self.parse_html_string(self.get('/admin/global').body)
+        banner = dom.find('.//div[@class="consent-banner"]')
+        self.assertIsNotNone(banner)
+        self.assertIn(self.SUPER_MESSAGE, banner.find('.//h1').text)
+        self.assertEqual(2, len(banner.findall('.//button')))
+
+    def test_banner_without_buttons_shown_to_instructor_on_dashboard(self):
+        actions.logout()
+        actions.login(self.NOT_SUPER_EMAIL, is_admin=False)
+
+        dom = self.parse_html_string(self.get('dashboard').body)
+        banner = dom.find('.//div[@class="consent-banner"]')
+        self.assertIsNotNone(banner)
+        self.assertIn(self.NOT_SUPER_MESSAGE, banner.findall('.//p')[1].text)
+        self.assertEqual(0, len(banner.findall('.//button')))
+
+    def test_banner_not_shown_when_choices_have_been_made(self):
+        config.set_report_allowed(False)
+
+        # Check super-user role; global admin
+        dom = self.parse_html_string(self.get('/admin/global').body)
+        self.assertIsNone(dom.find('.//div[@class="consent-banner"]'))
+
+        # check super-user role; dashboard
+        dom = self.parse_html_string(self.get('dashboard').body)
+        self.assertIsNone(dom.find('.//div[@class="consent-banner"]'))
+
+        # Check non-super role; dashboadd
+        actions.logout()
+        actions.login(self.NOT_SUPER_EMAIL, is_admin=False)
+        dom = self.parse_html_string(self.get('dashboard').body)
+        self.assertIsNone(dom.find('.//div[@class="consent-banner"]'))
+
+
+class ConsentBannerRestHandlerTests(UsageReportingTestBase):
+    URL = '/rest/modules/usage_reporting/consent'
+    XSRF_TOKEN = 'usage_reporting_consent_banner'
+    def do_post(self, xsrf_token, is_allowed):
+        request = {
+          'xsrf_token': xsrf_token,
+          'payload': transforms.dumps({'is_allowed': is_allowed})
+        }
+        return self.post(self.URL, {'request': transforms.dumps(request)})
+
+    def test_handler_rejects_bad_xsrf_token(self):
+        response = self.do_post('bad_xsrf_token', False)
+        self.assertEqual(200, response.status_int)
+        response_dict = transforms.loads(response.body)
+        self.assertEqual(403, response_dict['status'])
+        self.assertIn('Bad XSRF token.', response_dict['message'])
+
+    def test_handler_rejects_non_super_user(self):
+        actions.logout()
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        response = self.do_post(xsrf_token, False)
+        self.assertEqual(200, response.status_int)
+        response_dict = transforms.loads(response.body)
+        self.assertEqual(401, response_dict['status'])
+        self.assertIn('Access denied.', response_dict['message'])
+
+    def test_handler_sets_consent_and_sends_message(self):
+        self.assertFalse(config.is_consent_set())
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+
+        response = self.do_post(xsrf_token, True)
+        self.assertTrue(config.is_consent_set())
+        self.assertTrue(config.REPORT_ALLOWED.value)
+
+        response = self.do_post(xsrf_token, False)
+        self.assertFalse(config.REPORT_ALLOWED.value)
+
+        expected = [{
+            messaging.Message._INSTALLATION: FAKE_INSTALLATION_ID,
+            messaging.Message._TIMESTAMP: FAKE_TIMESTAMP,
+            messaging.Message._VERSION: os.environ['GCB_PRODUCT_VERSION'],
+            messaging.Message._METRIC: messaging.Message.METRIC_REPORT_ALLOWED,
+            messaging.Message._VALUE: True,
+            messaging.Message._SOURCE: messaging.Message.BANNER_SOURCE,
+        }, {
+            messaging.Message._INSTALLATION: FAKE_INSTALLATION_ID,
+            messaging.Message._TIMESTAMP: FAKE_TIMESTAMP,
+            messaging.Message._VERSION: os.environ['GCB_PRODUCT_VERSION'],
+            messaging.Message._METRIC: messaging.Message.METRIC_REPORT_ALLOWED,
+            messaging.Message._VALUE: False,
+            messaging.Message._SOURCE: messaging.Message.BANNER_SOURCE,
+        }]
+        self.assertEquals(expected, MockSender.get_sent())

@@ -94,7 +94,7 @@ def evaluate_python_code(code):
 class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
     default_action = 'welcome'
     get_actions = [default_action]
-    post_actions = ['explore_sample', 'add_first_course']
+    post_actions = ['explore_sample', 'add_first_course', 'configure_settings']
 
     # Enable other modules to make changes to sample course import.
     # Each member must be a function of the form:
@@ -156,6 +156,8 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
             'add_first_course')
         template_values['explore_sample_xsrf'] = self.create_xsrf_token(
             'explore_sample')
+        template_values['configure_settings_xsrf'] = self.create_xsrf_token(
+            'configure_settings')
         template_values['global_admin_url'] = GlobalAdminHandler.LINK_URL
         welcome_form_content = []
         for hook in self.WELCOME_FORM_HOOKS:
@@ -215,6 +217,9 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
         course = self._make_new_course(uid, 'My First Course')
         self._redirect(course, '/dashboard')
         return course
+
+    def post_configure_settings(self):
+        self.redirect('/admin/global')
 
 
 class BaseAdminHandler(ConfigPropertyEditor):
@@ -854,6 +859,13 @@ class GlobalAdminHandler(
     # The URL used in relative addreses of this handler
     LINK_URL = '/admin/global'
 
+    # List of functions which are used to generate content displayed at the top
+    # of every dashboard page. Use this with caution, as it is extremely
+    # invasive of the UX. Each function receives the handler as arg and returns
+    # an object to be inserted into a Jinja template (e.g. a string, a safe_dom
+    # Node or NodeList, or a jinja2.Markup).
+    PAGE_HEADER_HOOKS = []
+
     default_action = 'admin'
     get_actions = [default_action]
     post_actions = []
@@ -945,6 +957,8 @@ class GlobalAdminHandler(
     def render_page(self, template_values, in_action=None, in_tab=None):
         page_title = template_values['page_title']
         template_values['header_title'] = page_title
+        template_values['page_headers'] = [
+            hook(self) for hook in self.PAGE_HEADER_HOOKS]
         template_values['breadcrumbs'] = page_title
 
         template_values['top_nav'] = self._get_top_nav(in_action, in_tab)

@@ -32,13 +32,12 @@
           font-weight: bold;
         }
         button {
-          margin-top: 24px;
-          margin-bottom: 24px;
+          display: block;
+          margin: 24px auto;
           border: none;
-          margin-left: 24px;
-          margin-right: 24px;
-          display: inline-block;
+          border-radius: 5px;
           padding: 12px;
+          width: 210px;
           color: #FFFFFF;
           text-decoration: none;
           background-color: #4d90fe;
@@ -64,6 +63,26 @@
     <script
        src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js">
     </script>
+    <script type='text/javascript'>
+      $(function() {
+        function do_add_first_course(event) {
+          $('#action').attr('value', 'add_first_course');
+          $('#xsrf_token').attr('value', '{{ add_first_xsrf|js_string }}');
+        }
+        function do_explore_sample(event) {
+          $('#action').attr('value', 'explore_sample');
+          $('#xsrf_token').attr('value', '{{ explore_sample_xsrf|js_string }}');
+        }
+        function do_configure_settings(event) {
+          $('#action').attr('value', 'configure_settings');
+          $('#xsrf_token').attr('value', '{{ configure_settings_xsrf|js_string }}');
+        }
+
+        $('#create_new').click(do_add_first_course).keydown(do_add_first_course);
+        $('#explore').click(do_explore_sample).keydown(do_explore_sample);
+        $('#configure_settings').click(do_configure_settings).keydown(do_configure_settings);
+      });
+    </script>
   </head>
   <body>
     <div id="top">
@@ -88,24 +107,9 @@
 
           {% if not course_count %}
             <button id="create_new" type="submit">Create Empty Course</button>
-            <script>
-              function do_add_first_course(event) {
-                $("#action").attr("value", "add_first_course");
-                $("#xsrf_token").attr("value", "{{ add_first_xsrf }}");
-              }
-              $("#create_new").click(do_add_first_course);
-              $("#create_new").keydown(do_add_first_course);
-            </script>
           {% endif %}
           <button id="explore" type="submit">Explore Sample Course</button>
-          <script>
-            function do_explore_sample(event) {
-              $("#action").attr("value", "explore_sample");
-              $("#xsrf_token").attr("value", "{{ explore_sample_xsrf }}");
-            }
-            $("#explore").click(do_explore_sample);
-            $("#explore").keydown(do_explore_sample);
-          </script>
+          <button id="configure_settings" type="submit">Configure Settings</button>
           {% for item in welcome_form_content %}
             {{ item }}
           {% endfor %}

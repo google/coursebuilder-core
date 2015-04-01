@@ -161,6 +161,13 @@ class DashboardHandler(
             (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler),
             (RoleRESTHandler.URI, RoleRESTHandler)]
 
+    # List of functions which are used to generate content displayed at the top
+    # of every dashboard page. Use this with caution, as it is extremely
+    # invasive of the UX. Each function receives the handler as arg and returns
+    # an object to be inserted into a Jinja template (e.g. a string, a safe_dom
+    # Node or NodeList, or a jinja2.Markup).
+    PAGE_HEADER_HOOKS = []
+
     # A list of functions which are used to generate extra info about a lesson
     # or unit in the course outline view. Modules which can provide extra info
     # should add a function to this list which accepts a course and a lesson or
@@ -405,6 +412,8 @@ class DashboardHandler(
     def render_page(self, template_values, in_action=None, in_tab=None):
         """Renders a page using provided template values."""
         template_values['header_title'] = template_values['page_title']
+        template_values['page_headers'] = [
+            hook(self) for hook in self.PAGE_HEADER_HOOKS]
         template_values['course_picker'] = self.get_course_picker()
         template_values['course_title'] = self.app_context.get_title()
         template_values['top_nav'] = self._get_top_nav(in_action, in_tab)

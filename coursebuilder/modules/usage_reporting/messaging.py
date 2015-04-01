@@ -164,6 +164,12 @@ class Message(object):
     _COURSE = 'course'  # Randomly-chosen course ID.  Optional.
     _METRIC = 'metric'  # A name from the set below.
     _VALUE = 'value'  # Integer or boolean value.
+    _SOURCE = 'source'  # String name of system component.
+
+    # Values to be used for the _SOURCE field
+    ADMIN_SOURCE = 'ADMIN_SETTINGS'
+    BANNER_SOURCE = 'CONSENT_BANNER'
+    WELCOME_SOURCE = 'WELCOME_PAGE'
 
     # Allowed values that can be used for the 'metric' parameter in
     # send_course_message() and send_instance_message().
@@ -228,7 +234,7 @@ class Message(object):
             message[cls._COURSE] = cls._get_random_course_id(course)
 
     @classmethod
-    def _build_message(cls, metric, value, timestamp):
+    def _build_message(cls, metric, value, source, timestamp):
         if metric not in cls._ALLOWED_METRICS:
             raise ValueError('Metric name "%s" not in %s' % (
                 metric, ' '.join(cls._ALLOWED_METRICS)))
@@ -238,18 +244,20 @@ class Message(object):
             cls._VERSION: os.environ['GCB_PRODUCT_VERSION'],
             cls._INSTALLATION: cls._get_random_installation_id()
         }
+        if source is not None:
+            message[cls._SOURCE] = source
         if not timestamp:
             timestamp = cls._get_time()
         message[cls._TIMESTAMP] = timestamp
         return message
 
     @classmethod
-    def send_course_message(cls, metric, value, timestamp=None):
-        message = cls._build_message(metric, value, timestamp)
+    def send_course_message(cls, metric, value, source=None, timestamp=None):
+        message = cls._build_message(metric, value, source, timestamp)
         cls._add_course_field(message)
         Sender.send_message(message)
 
     @classmethod
-    def send_instance_message(cls, metric, value, timestamp=None):
-        message = cls._build_message(metric, value, timestamp)
+    def send_instance_message(cls, metric, value, source=None, timestamp=None):
+        message = cls._build_message(metric, value, source, timestamp)
         Sender.send_message(message)
