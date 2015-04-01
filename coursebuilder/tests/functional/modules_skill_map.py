@@ -940,6 +940,33 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         depends_on = widget.findall('./div[2]/div[1]/ol/li')
         self.assertEqual(0, len(depends_on))
 
+    def test_same_skill_prerequ_of_multiple_skills(self):
+        # Set up one skill which is a prerequisite of two skills and expect it
+        # to be shown only once on the "Depends on row"
+        skill_graph = SkillGraph.load()
+        sa = skill_graph.add(Skill.build('a', 'common prerequisite'))
+        sb = skill_graph.add(Skill.build('b', 'depens on a'))
+        sc = skill_graph.add(Skill.build('c', 'also depends on a'))
+
+        skill_graph.add_prerequisite(sb.id, sa.id)
+        skill_graph.add_prerequisite(sc.id, sa.id)
+
+        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sb.id, sc.id]
+        self.course.save()
+
+        widget = self._getWidget()
+
+        # Check B and C are listed as skills in this lesson
+        skills_in_lesson = widget.findall('./div[1]//li[@class="skill"]')
+        self.assertEqual(2, len(skills_in_lesson))
+        actions.assert_contains('b', skills_in_lesson[0].text)
+        actions.assert_contains('c', skills_in_lesson[1].text)
+
+        # Skill A is listed exactly once in the "depends on" section
+        depends_on = widget.findall('./div[2]/div[1]/ol/li')
+        self.assertEqual(1, len(depends_on))
+        self.assertEqual(str(sa.id), depends_on[0].attrib['data-skill-id'])
+
     def test_skills_cards_have_title_description_and_lesson_links(self):
         # The lesson contains Skill A which has Skill B as a follow-on. Skill B
         # is found in Lesson 2. Check that the skill card shown for Skill B in

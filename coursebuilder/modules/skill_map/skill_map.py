@@ -1415,6 +1415,7 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
     skill_list = skill_map.get_skills_for_lesson(lesson.lesson_id)
 
     def filter_visible_locations(skill):
+        """Filter out references to lessons which are not visible."""
         locations = []
         for location in skill.locations:
             if not (
@@ -1434,6 +1435,7 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
         return clone
 
     def not_only_this_lesson(skill_list):
+        """Filter out skills which are taught only in the current lesson."""
         return [
             filter_visible_locations(skill) for skill in skill_list
             if [loc.lesson for loc in skill.locations] != [lesson]]
@@ -1443,8 +1445,8 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
     dependency_map = {}
     for skill in skill_list:
         skill = filter_visible_locations(skill)
-        prerequisites = not_only_this_lesson(skill.prerequisites)
-        successors = not_only_this_lesson(skill_map.successors(skill))
+        prerequisites = skill.prerequisites
+        successors = skill_map.successors(skill)
         depends_on_skills.update(prerequisites)
         leads_to_skills.update(successors)
         dependency_map[skill.id] = {
@@ -1457,8 +1459,8 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
       'unit': unit,
       'can_see_drafts': courses_module.courses.can_see_drafts(app_context),
       'skill_list': skill_list,
-      'depends_on_skills': depends_on_skills,
-      'leads_to_skills': leads_to_skills,
+      'depends_on_skills': not_only_this_lesson(depends_on_skills),
+      'leads_to_skills': not_only_this_lesson(leads_to_skills),
       'dependency_map': transforms.dumps(dependency_map)
     }
     return jinja2.Markup(
