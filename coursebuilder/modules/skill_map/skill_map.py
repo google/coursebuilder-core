@@ -1477,7 +1477,7 @@ def widget_display_flag_schema_provider(unused_course):
 
 def import_skill_map(app_ctx):
     fn = os.path.join(
-        appengine_config.BUNDLE_ROOT, 'data', 'skills.txt')
+        appengine_config.BUNDLE_ROOT, 'data', 'skills.json')
     with open(fn, 'r') as fin:
         nodes = json.loads(fin.read())
 
@@ -1519,10 +1519,12 @@ def import_skill_map(app_ctx):
     skill_graph = SkillGraph.load()
     for skill in skill_graph.skills:
         node = key_to_nodes[skill.id]
-        ul_tuple = (node['unit'], node['lesson'])
-        lesson = lesson_map[ul_tuple]
-        lesson.properties.setdefault(LESSON_SKILL_LIST_KEY, []).append(skill.id)
-        assert course.update_lesson(lesson)
+        for loc in node['locations']:
+            ul_tuple = (loc['unit'], loc['lesson'])
+            lesson = lesson_map[ul_tuple]
+            lesson.properties.setdefault(
+                LESSON_SKILL_LIST_KEY, []).append(skill.id)
+            assert course.update_lesson(lesson)
     course.save()
 
 

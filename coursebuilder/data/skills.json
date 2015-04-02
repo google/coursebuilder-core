@@ -1,0 +1,1118 @@
+[
+  {
+    "id": 1,
+    "name": "Query",
+    "description": "Question consisting of one or more words.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 1, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Identify property to filter on",
+    "description": "Skill of figuring out which property you can use to filter that will give you the target.  Example: should you filter by image type (color, face, photo, line art), filetype (ppt, pdf, csv...), date, site... etc.  ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 1, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Search results",
+    "description": "",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 1, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Filter",
+    "description": "Concept of flitering results sets by different properties.",
+    "prerequisites": [
+      3,
+      1
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Filter by color",
+    "description": "Filter images by color.",
+    "prerequisites": [
+      4
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Filter by similarity",
+    "description": "Filter images by similarity.",
+    "prerequisites": [
+      4
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Image search",
+    "description": "Use image search when it appears in search results, and use related image search to refine results.",
+    "prerequisites": [
+      6,
+      5
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 2
+      },
+      {
+        "unit": 3, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Page rank",
+    "description": "",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 1, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Spider",
+    "description": "A program that crawls the web to create the index. ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 1, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "Index",
+    "description": "",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 1, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "Document",
+    "description": "",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 1, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "How search works",
+    "description": "Learn how search works.",
+    "prerequisites": [
+      10,
+      11,
+      8,
+      9
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "name": "Salient word",
+    "description": "Semantic word with high discrimination power.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 1, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "name": "Choose keywords",
+    "description": "Learn to choose effective keywords.",
+    "prerequisites": [
+      13
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "Parasite word",
+    "description": "Words creating noise; opposite of salient keywords.",
+    "prerequisites": [
+      14
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "name": "Keyword choice",
+    "description": "Impact of the choice of search keywords.",
+    "prerequisites": [
+      14
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "Query refinement",
+    "description": "Iterative query refinement.",
+    "prerequisites": [
+      3,
+      14
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "Effective query",
+    "description": "Learn to build effective queries.",
+    "prerequisites": [
+      17,
+      12
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "name": "Caps",
+    "description": "Caps do not matter.",
+    "prerequisites": [
+      14
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "name": "Special chars",
+    "description": "",
+    "prerequisites": [
+      14
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "name": "Stop words",
+    "description": "",
+    "prerequisites": [
+      14
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "name": "Word order",
+    "description": "",
+    "prerequisites": [
+      14
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "name": "find_text function",
+    "description": "Finding text on a web page.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 1, "lesson": 6
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "name": "Search search results",
+    "description": "",
+    "prerequisites": [
+      23
+    ],
+    "locations": [
+      {
+        "unit": 1, "lesson": 6
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "name": "Type ahead suggestion",
+    "description": "Display of common queries that others have typed.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 26,
+    "name": "Information summary",
+    "description": "Information panel showing an information summary about a topic.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 27,
+    "name": "Search as you type",
+    "description": "Show search result in the background while typing.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 28,
+    "name": "Explore concept",
+    "description": "Explore the search space around a concept using information from knowledge graph panels, instant results, suggestions, and related searches.",
+    "prerequisites": [
+      26,
+      25,
+      27
+    ],
+    "locations": [
+      {
+        "unit": 2, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 29,
+    "name": "define function",
+    "description": "Define function or dictionary function",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 30,
+    "name": "Deep understanding",
+    "description": "Learn to use tools to go from a vague concept to a deeper understanding.",
+    "prerequisites": [
+      29,
+      18,
+      65
+    ],
+    "locations": [
+      {
+        "unit": 2, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 31,
+    "name": "Kinds of media",
+    "description": "Learn to use the different kinds of media.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 32,
+    "name": "Use various media results",
+    "description": "Select various media results to improve quality. Learn how different media results complement each other.",
+    "prerequisites": [
+      6,
+      5,
+      31
+    ],
+    "locations": [
+      {
+        "unit": 2, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 33,
+    "name": "Ellipses",
+    "description": "The snippet has \"ellipses\" in it that shorten the snippet to a readable length. ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 34,
+    "name": "Results structure",
+    "description": "Block structure of search results, consisting of title, source url, summary-snippet, highlighted keywords, overview, top-level-domain, deep-links, secondary-search-box",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 35,
+    "name": "SERP",
+    "description": "Reading the search engine results page. Use the page preview tool. Parts of a search engine result.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 36,
+    "name": "Rollover",
+    "description": "Use the rollover preview tool to understand better an issue.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 37,
+    "name": "Skimming through results",
+    "description": "Process information quickly by skimming through the search results.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 38,
+    "name": "Research topic",
+    "description": "Learn to research a topic iteratively.",
+    "prerequisites": [
+      37,
+      34,
+      33,
+      17,
+      36,
+      30
+    ],
+    "locations": [
+      {
+        "unit": 2, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 39,
+    "name": "Search 3D models",
+    "description": "Search in 3D models.",
+    "prerequisites": [
+      32
+    ],
+    "locations": [
+      {
+        "unit": 2, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 40,
+    "name": "Search legal docs",
+    "description": "Search in legal content.",
+    "prerequisites": [
+      32
+    ],
+    "locations": [
+      {
+        "unit": 2, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 41,
+    "name": "Search books",
+    "description": "Search in books.",
+    "prerequisites": [
+      32
+    ],
+    "locations": [
+      {
+        "unit": 2, "lesson": 5
+      },
+      {
+        "unit": 5, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 42,
+    "name": "Find different kinds of content",
+    "description": "Find different kinds of content efficiently: blogs, discussions, recipes, patents, books, 3D models, scholarly sources, and legal documents.",
+    "prerequisites": [
+      39,
+      18,
+      41,
+      38,
+      40
+    ],
+    "locations": [
+      {
+        "unit": 2, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 43,
+    "name": "News search",
+    "description": "What is News search?  And how to do it. (Use the News tab.)",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 3, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 44,
+    "name": "Query order",
+    "description": "Does the order of terms in a query matter?  Usually, no.  But once in a while, it makes a big difference.  How Google treats search terms in a query.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 3, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 45,
+    "name": "Query formatting",
+    "description": "What you need to know to format your search query properly.  Includes \"no space after the colon\"  and \"no space after the minus-sign\"  and format your site name properly (e.g., include the periods)",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 3, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 46,
+    "name": "Operator",
+    "description": "Signals to do something special and returns a subset of the results.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 3, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 47,
+    "name": "Site operator",
+    "description": "Focus on relevant results.",
+    "prerequisites": [
+      46
+    ],
+    "locations": [
+      {
+        "unit": 3, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 48,
+    "name": "Combine operators",
+    "description": "Combine operators to refine searches.",
+    "prerequisites": [
+      47,
+      31
+    ],
+    "locations": [
+      {
+        "unit": 3, "lesson": 2
+      },
+      {
+        "unit": 6, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 49,
+    "name": "Filetype operator",
+    "description": "",
+    "prerequisites": [
+      46,
+      48
+    ],
+    "locations": [
+      {
+        "unit": 3, "lesson": 2
+      },
+      {
+        "unit": 6, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 50,
+    "name": "Visualizing data",
+    "description": "",
+    "prerequisites": [
+      49
+    ],
+    "locations": [
+      {
+        "unit": 3, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 51,
+    "name": "Use minus operator",
+    "description": "Removing invasive results.",
+    "prerequisites": [
+      46,
+      48
+    ],
+    "locations": [
+      {
+        "unit": 3, "lesson": 3
+      },
+      {
+        "unit": 6, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 52,
+    "name": "Quotes operator",
+    "description": "Phrase search.",
+    "prerequisites": [
+      46,
+      48
+    ],
+    "locations": [
+      {
+        "unit": 3, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 53,
+    "name": "Intext operator",
+    "description": "Use intext operator to ensure the word you want is on the page you find.",
+    "prerequisites": [
+      46,
+      48
+    ],
+    "locations": [
+      {
+        "unit": 3, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 54,
+    "name": "Adv. Search UI",
+    "description": "Use the Advanced Search UI when appropriate.",
+    "prerequisites": [
+      46,
+      48
+    ],
+    "locations": [
+      {
+        "unit": 3, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 55,
+    "name": "Search by image",
+    "description": "Identify an image with Search by Image.",
+    "prerequisites": [
+      31,
+      7
+    ],
+    "locations": [
+      {
+        "unit": 4, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 56,
+    "name": "Search help",
+    "description": "Learn to get help on search.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 4, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 57,
+    "name": "Find facts",
+    "description": "Find facts about movies, drugs, cities, world-times, ups-tracking, flights using shortcuts.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 4, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 58,
+    "name": "Do calculations",
+    "description": "Perform calculations in the browser.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 4, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 59,
+    "name": "Easter egg",
+    "description": "Fun response to a query. Google does something you don't expect, e.g., [ how many horns does a unicorn have? ] ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 4, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 60,
+    "name": "Convert b/n units",
+    "description": "Convert between various measurement units.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 4, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 61,
+    "name": "Graph equations",
+    "description": "Graph a single or multiple functions.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 4, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 62,
+    "name": "Infographics",
+    "description": "Display infographics in the browser.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 4, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 63,
+    "name": "Convert calculate visualize",
+    "description": "Calculate math expressions and conversions from the search box.",
+    "prerequisites": [
+      61,
+      58,
+      59,
+      62,
+      60
+    ],
+    "locations": [
+      {
+        "unit": 4, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 64,
+    "name": "Time range query",
+    "description": "Limit results to sources from a specific time period.",
+    "prerequisites": [
+      4
+    ],
+    "locations": [
+      {
+        "unit": 4, "lesson": 4
+      },
+      {
+        "unit": 5, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 65,
+    "name": "Translate",
+    "description": "Translate words, sentences, and pages.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 2, "lesson": 2
+      },
+      {
+        "unit": 4, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 66,
+    "name": "Foreign language search",
+    "description": "Search pages in foreign languages using English.",
+    "prerequisites": [
+      65
+    ],
+    "locations": [
+      {
+        "unit": 4, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 67,
+    "name": "Understand credibility",
+    "description": "\"Credibility\" means the degree to which you find a resource believable.  Usually, that means it's accurate and created by an authoritative author(s).  ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 5, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 68,
+    "name": "Structure of a web address (URL)",
+    "description": "A web address, or URL, is composed of several parts.  First is the \"protocol\" (e.g., HTTP). Second comes the website name (e.g., www.historysite.com), of which the last part is the \"top level domain\"  (the .com part).  Lastly  comes the filename (e.g., \"imperialism/actions.html\")  which points directly to the file on the target website. ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 5, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 69,
+    "name": "Site perspective",
+    "description": "Understand site perspective.",
+    "prerequisites": [
+      17,
+      16
+    ],
+    "locations": [
+      {
+        "unit": 5, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 70,
+    "name": "Verify site credibility",
+    "description": "Verify the credibility of information you find. Distinguish between popularity and credibility.",
+    "prerequisites": [
+      64,
+      69
+    ],
+    "locations": [
+      {
+        "unit": 5, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 71,
+    "name": "Identify sources",
+    "description": "",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 5, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 72,
+    "name": "Avoid confirmation bias",
+    "description": "Avoid confirmation bias when conducting searches.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 5, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 73,
+    "name": "Compare results",
+    "description": "How to compare results between different searches.  Useful for understanding variant viewpoints. ",
+    "prerequisites": [
+      1,
+      44
+    ],
+    "locations": [
+      {
+        "unit": 5, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 74,
+    "name": "Do not bake answer in",
+    "description": "That is, do NOT put the expected answer into your query -- that leads Google to search for those terms. It's similar to \"leading the witness\" instead of allowing them to come up with answer on their own.",
+    "prerequisites": [
+      18
+    ],
+    "locations": [
+      {
+        "unit": 5, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 75,
+    "name": "Variant data",
+    "description": "Explore different variations of a concept or piece of information.",
+    "prerequisites": [
+      72,
+      74,
+      71,
+      38,
+      73
+    ],
+    "locations": [
+      {
+        "unit": 5, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 76,
+    "name": "Google Books",
+    "description": "Google Books is a large collection of scanned, indexed texts.  There are millions of books in Google Books, all searchable (although they vary greatly in the degree to which you can read the text, as determined by publishers). ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 5, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 77,
+    "name": "Use authoritative sources",
+    "description": "Search appropriate sources that offer authoritative information for the type of information you are trying to find.",
+    "prerequisites": [
+      70
+    ],
+    "locations": [
+      {
+        "unit": 5, "lesson": 3
+      }
+    ]
+  },
+  {
+    "id": 78,
+    "name": "Whois",
+    "description": "Use Whois to identify site owner.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 5, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 79,
+    "name": "Site meta info",
+    "description": "Find site meta information.",
+    "prerequisites": [
+      78,
+      18
+    ],
+    "locations": [
+      {
+        "unit": 5, "lesson": 4
+      }
+    ]
+  },
+  {
+    "id": 80,
+    "name": "Order of results",
+    "description": "The order of results on the SERP is determined by many factors (hundreds!).  But it is important to know that the order in which results appear on the page are the search engine's best estimate about how useful that result is with-respect-to your query.   It's important to know that the order of results is determined ONLY by the algorithm, and that someone cannot pay Google to move their result up higher into the results sequence. ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 5, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 81,
+    "name": "Vetting",
+    "description": "In English \"vetting\" means to give approval to something.  Such as, \"This book has been vetted to be complete and accurate.\"  In some cases, people misinterpret things they see as implicit \"vetting.\"  For instance, many sites use the Google Custom Search logo to indicate that they're using the Google tools to support their search process.  But Google does NOT vet their content--the Google Custom Search logo simply indicates that the code they're using is from Google--not that Google approves or has checked the quality of the site's content.  ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 5, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 82,
+    "name": "Distinguish products",
+    "description": "Distinguish between the Google products that indicate credibility and those that do not.",
+    "prerequisites": [
+      70
+    ],
+    "locations": [
+      {
+        "unit": 5, "lesson": 5
+      }
+    ]
+  },
+  {
+    "id": 83,
+    "name": "Know available tools",
+    "description": "Searchers need to know what kinds of tools are possible to use in their search process.  Example: when doing geographically-based searches, it's useful to know that Streetview often contains imagery of non-street areas (e.g., that around Stonehenge).  Generally, searchers need to know what the range of tools is, and what they can do with them. ",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 6, "lesson": 1
+      },
+      {
+        "unit": 6, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 84,
+    "name": "Or operator",
+    "description": "Use OR to include more than one way of expressing an idea.",
+    "prerequisites": [
+      46,
+      48
+    ],
+    "locations": [
+      {
+        "unit": 3, "lesson": 4
+      },
+      {
+        "unit": 6, "lesson": 1
+      }
+    ]
+  },
+  {
+    "id": 85,
+    "name": "Streetview",
+    "description": "Streetview is the ability to look around a location by using Google Maps.  Streetview also contains lots of non-street imagery as well (e.g., there are 'street views' inside of the US White House).",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 6, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 86,
+    "name": "Google News",
+    "description": "Google's aggregation of news feeds from around the world.",
+    "prerequisites": [],
+    "locations": [
+      {
+        "unit": 6, "lesson": 2
+      }
+    ]
+  },
+  {
+    "id": 87,
+    "name": "Context terms",
+    "description": "Context terms are terms added to a query that help target the search to objects that have particular properties.  For instance, to understand how a planetary gear works, you might have to add the context term \"diagram\" to your image search to find diagrams that illustrate how such a gear works. ",
+    "prerequisites": [
+      46
+    ],
+    "locations": [
+      {
+        "unit": 6, "lesson": 2
+      }
+    ]
+  }
+]
