@@ -43,6 +43,18 @@ def _make_welcome_form_content():
     if messaging.is_disabled():
         return None
 
+    checkbox = safe_dom.Element(
+        'input'
+    ).set_attribute(
+        'type', 'checkbox'
+    ).set_attribute(
+        'name', USAGE_REPORTING_CONSENT_CHECKBOX_NAME
+    ).set_attribute(
+        'value', USAGE_REPORTING_CONSENT_CHECKBOX_VALUE
+    )
+    if config.REPORT_ALLOWED.value or not config.is_consent_set():
+        checkbox.set_attribute('checked', 'checked')
+
     return safe_dom.Element(
         'div'
         ).set_attribute(
@@ -52,19 +64,7 @@ def _make_welcome_form_content():
                 'div'
                 ).set_attribute(
                     'style', 'float: left; width: 10%; '
-                ).add_child(
-                    safe_dom.Element(
-                        'input'
-                        ).set_attribute(
-                            'type', 'checkbox'
-                        ).set_attribute(
-                            'name', USAGE_REPORTING_CONSENT_CHECKBOX_NAME
-                        ).set_attribute(
-                            'checked', 'checked'
-                        ).set_attribute(
-                            'value', USAGE_REPORTING_CONSENT_CHECKBOX_VALUE
-                        )
-                )
+                ).add_child(checkbox)
         ).append(
             safe_dom.Element(
                 'div'

@@ -207,6 +207,24 @@ class CourseCreationTests(UsageReportingTestBase):
                 course_creation.USAGE_REPORTING_CONSENT_CHECKBOX_NAME,
                 response.body)
 
+    def test_welcome_page_checkbox_state(self):
+        # Expect checkbox checked when no setting made
+        dom = self.parse_html_string(self.get('/admin/welcome').body)
+        checkbox = dom.find('.//input[@type="checkbox"]')
+        self.assertEqual('checked', checkbox.attrib['checked'])
+
+        # Expect checkbox unchecked when setting is False
+        config.set_report_allowed(False)
+        dom = self.parse_html_string(self.get('/admin/welcome').body)
+        checkbox = dom.find('.//input[@type="checkbox"]')
+        self.assertNotIn('checked', checkbox.attrib)
+
+        # Expect checkbox checked when setting is True
+        config.set_report_allowed(True)
+        dom = self.parse_html_string(self.get('/admin/welcome').body)
+        checkbox = dom.find('.//input[@type="checkbox"]')
+        self.assertEqual('checked', checkbox.attrib['checked'])
+
     def test_submit_welcome_with_accept_checkbox_checked(self):
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
             'add_first_course')

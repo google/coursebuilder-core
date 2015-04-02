@@ -170,7 +170,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_usage_reporting.ConsentBannerTests': 4,
     'tests.functional.modules_usage_reporting.ConsentBannerRestHandlerTests': 3,
     'tests.functional.modules_usage_reporting.ConfigTests': 3,
-    'tests.functional.modules_usage_reporting.CourseCreationTests': 3,
+    'tests.functional.modules_usage_reporting.CourseCreationTests': 4,
     'tests.functional.modules_usage_reporting.DevServerTests': 2,
     'tests.functional.modules_usage_reporting.EnrollmentTests': 3,
     'tests.functional.modules_usage_reporting.MessagingTests': 8,
