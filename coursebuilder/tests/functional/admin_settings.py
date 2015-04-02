@@ -17,6 +17,7 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import cgi
+import os
 import re
 import urllib
 
@@ -91,10 +92,8 @@ class WelcomePageTests(actions.TestBase):
             params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 'explore_sample')})
         self.assertEqual(response.status_int, 302)
-        self.assertEqual(
-            response.headers['location'],
-            'http://localhost/sample/dashboard')
-        response = self.get('/sample/dashboard')
+        assert_contains('/dashboard', response.headers['location'])
+        response = self.get(response.headers['location'])
         assert_contains('Power Searching with Google', response.body)
         assert_does_not_contain('explore_sample', response.body)
 
@@ -123,16 +122,17 @@ class WelcomePageTests(actions.TestBase):
         self.assertEqual(
             response.headers['location'], 'http://localhost/admin/global')
 
-    def test_explore_sample_course_idempotent(self):
-        self.test_explore_sample_course()
-        self.test_explore_sample_course()
+    def test_explore_sample_course_not_idempotent(self):
+        for uid in ['sample', 'sample_%s' % os.environ[
+            'GCB_PRODUCT_VERSION'].replace('.', '_')]:
+            self.test_explore_sample_course()
+            response = self.get('/')
+            self.assertEqual(response.status_int, 302)
+            self.assertEqual(
+                response.headers['location'],
+                'http://localhost/%s/course?use_last_location=true' % uid)
 
         self.test_create_new_course()
-        response = self.get('/')
-        self.assertEqual(response.status_int, 302)
-        self.assertEqual(
-            response.headers['location'],
-            'http://localhost/sample/course?use_last_location=true')
 
     def test_create_new_course_idempotent(self):
         self.test_create_new_course()

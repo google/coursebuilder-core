@@ -182,8 +182,8 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
     def _copy_sample_course(self, uid):
         """Make a fresh copy of sample course."""
         src_app_context = sites.get_all_courses('course:/:/:')[0]
-        dst_app_context = self._make_new_course(
-            uid, src_app_context.get_title())
+        dst_app_context = self._make_new_course(uid, '%s (%s)' % (
+            src_app_context.get_title(), os.environ['GCB_PRODUCT_VERSION']))
         errors = []
         dst_course = courses.Course(None, dst_app_context)
         dst_course.import_from(src_app_context, errors)
@@ -197,13 +197,15 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
 
     def post_explore_sample(self):
         """Navigate to or import sample course."""
-        uid = 'sample'
-        course = sites.get_course_index(
-            ).get_app_context_for_namespace('ns_%s' % uid)
-        if course:
-            self._redirect(course, '/dashboard')
-            return course
-        course = self._copy_sample_course(uid)
+        course = None
+        for uid in ['sample', 'sample_%s' % os.environ[
+            'GCB_PRODUCT_VERSION'].replace('.', '_')]:
+            course = sites.get_course_index(
+                ).get_app_context_for_namespace('ns_%s' % uid)
+            if not course:
+                course = self._copy_sample_course(uid)
+                break
+        assert course is not None
         self._redirect(course, '/dashboard')
         return course
 
