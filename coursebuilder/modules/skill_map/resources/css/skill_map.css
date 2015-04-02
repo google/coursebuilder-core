@@ -21,7 +21,7 @@ table.skill-map-table th {
   background: #fff;
 }
 table.skill-map-table th.skill {
-  width: 250px;
+  width: 270px;
 }
 table.skill-map-table th.lessons {
   width: 5em;
@@ -41,6 +41,8 @@ table.skill-map-table td {
   overflow-x: hidden;
 }
 table.skill-map-table td .diagnosis.icon {
+  width: 25px;
+  padding: 0 2px 0 0;
   font-size: 15px;
   opacity: 0;
   transition: opacity 400ms;
