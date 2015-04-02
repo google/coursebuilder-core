@@ -940,6 +940,17 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         depends_on = widget.findall('./div[2]/div[1]/ol/li')
         self.assertEqual(0, len(depends_on))
 
+        # In fact even if skill A is also taught elsewhere, because it's taught
+        # in this lesson, don't list it.
+        other_lesson = self.course.add_lesson(self.unit)
+        other_lesson.title = 'Other Lesson'
+        other_lesson.now_available = True
+        other_lesson.properties[LESSON_SKILL_LIST_KEY] = [sa.id]
+        self.course.save()
+        widget = self._getWidget()
+        depends_on = widget.findall('./div[2]/div[1]/ol/li')
+        self.assertEqual(0, len(depends_on))
+
     def test_same_skill_prerequ_of_multiple_skills(self):
         # Set up one skill which is a prerequisite of two skills and expect it
         # to be shown only once on the "Depends on row"

@@ -1434,11 +1434,11 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
 
         return clone
 
-    def not_only_this_lesson(skill_list):
-        """Filter out skills which are taught only in the current lesson."""
+    def not_in_this_lesson(skill_list):
+        """Filter out skills which are taught in the current lesson."""
         return [
             filter_visible_locations(skill) for skill in skill_list
-            if [loc.lesson for loc in skill.locations] != [lesson]]
+            if lesson not in [loc.lesson for loc in skill.locations]]
 
     depends_on_skills = set()
     leads_to_skills = set()
@@ -1459,8 +1459,8 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
       'unit': unit,
       'can_see_drafts': courses_module.courses.can_see_drafts(app_context),
       'skill_list': skill_list,
-      'depends_on_skills': not_only_this_lesson(depends_on_skills),
-      'leads_to_skills': not_only_this_lesson(leads_to_skills),
+      'depends_on_skills': not_in_this_lesson(depends_on_skills),
+      'leads_to_skills': not_in_this_lesson(leads_to_skills),
       'dependency_map': transforms.dumps(dependency_map)
     }
     return jinja2.Markup(
