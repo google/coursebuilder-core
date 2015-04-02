@@ -111,7 +111,7 @@
           <button id="explore" type="submit">Explore Sample Course</button>
           <button id="configure_settings" type="submit">Configure Settings</button>
           {% for item in welcome_form_content %}
-            {{ item }}
+            {% if item %}{{ item }}{% endif %}
           {% endfor %}
         </form>
       </p>
