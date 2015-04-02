@@ -77,6 +77,9 @@ class Sender(object):
     # Field in control document giving target URL to which to POST reports.
     _REPORT_TARGET = 'target'
 
+    # Field in control document naming form field to use in POST.
+    _REPORT_FORM_FIELD = 'form_field'
+
     # If we need to make a report, and the target URL is older than this,
     # re-fetch the control page so we are current on the latest state of
     # the 'enable' and 'target' parameters.
@@ -88,9 +91,6 @@ class Sender(object):
         _REPORT_TARGET: ''
     }
     _report_settings_timestamp = 0
-
-    # Field name in the Google Forms document to use when POST-ing results.
-    _FORMS_FIELD = 'entry.1416541242'
 
     # Config options for task retries.
     _RETRY_OPT_NUM_TRIES = 10
@@ -123,10 +123,11 @@ class Sender(object):
         if cls._report_settings[cls._REPORT_ENABLED] and not is_disabled():
 
             try:
+                payload = urllib.urlencode(
+                    {cls._report_settings[cls._REPORT_FORM_FIELD]: message})
                 response = urlfetch.fetch(
                     cls._report_settings[cls._REPORT_TARGET], method='POST',
-                    follow_redirects=True,
-                    payload=urllib.urlencode({cls._FORMS_FIELD: message}))
+                    follow_redirects=True, payload=payload)
             except urlfetch.Error:
                 # If something went so wrong we got an exception (as opposed
                 # to simply getting a 500 server error from the target),

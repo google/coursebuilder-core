@@ -518,9 +518,11 @@ class UsageReportingTests(UsageReportingTestBase):
 class MessageCatcher(object):
 
     URL = 'https://docs.google.com/a/google.com/forms/d/<IDNUMBER>/formResponse'
+    FORM_FIELD = 'entry.12345'
     DEFAULT_CONFIG = transforms.dumps({
         messaging.Sender._REPORT_ENABLED: True,
         messaging.Sender._REPORT_TARGET: URL,
+        messaging.Sender._REPORT_FORM_FIELD: FORM_FIELD,
         })
     _config = DEFAULT_CONFIG
     _return_code = 200
@@ -536,8 +538,7 @@ class MessageCatcher(object):
     def post(cls, request):
         if cls._return_code == 200:
             # Pretend to not have seen the message if reporting a failure.
-            message = transforms.loads(
-                request.get(messaging.Sender._FORMS_FIELD)[0])
+            message = transforms.loads(request.get(cls.FORM_FIELD)[0])
             cls._messages.append(message)
         return cls.Response(cls._return_code, '')
 
@@ -658,6 +659,7 @@ class MessagingTests(actions.TestBase):
             transforms.dumps({
                 messaging.Sender._REPORT_ENABLED: False,
                 messaging.Sender._REPORT_TARGET: 'irrelevant',
+                messaging.Sender._REPORT_FORM_FIELD: 'irrelevant',
             }))
         messaging.Message.send_instance_message(
             messaging.Message.METRIC_REPORT_ALLOWED, True)
@@ -711,6 +713,7 @@ class MessagingTests(actions.TestBase):
             transforms.dumps({
                 messaging.Sender._REPORT_ENABLED: True,
                 messaging.Sender._REPORT_TARGET: 'a malformed url',
+                messaging.Sender._REPORT_FORM_FIELD: 'entry.12345',
             }))
         messaging.Message.send_instance_message(
             messaging.Message.METRIC_REPORT_ALLOWED, True)
