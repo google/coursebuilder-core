@@ -15,7 +15,16 @@ env_variables:
 
   # Regsitering 'certificate' after 'dashboard' for correct tab ordering.
   GCB_REGISTERED_MODULES:
+    modules.activity_tag.activity_tag
     modules.admin.admin
+    modules.announcements.announcements
+    modules.assessment_tags.questions
+    modules.balancer.balancer
+    modules.code_tags.code_tags
+    modules.core_tags.core_tags
+    modules.course_explorer.course_explorer
+    modules.courses.courses
+    modules.analytics.analytics
     modules.dashboard.dashboard
     modules.certificate.certificate
     modules.data_pump.data_pump
@@ -36,7 +45,6 @@ env_variables:
     modules.upload.upload
     modules.usage_reporting.usage_reporting
     modules.oauth2.oauth2=disabled
-
 
 
 includes:
