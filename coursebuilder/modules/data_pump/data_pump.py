@@ -1215,10 +1215,11 @@ def register_module():
         'JSON Key', 'text',
         i18n=False, validator=validate_json_key,
         description='Contents of a JSON key created in the Developers Console '
-        'for the instance where BigQuery is to be run.  See '
-        # TODO(mgainer): Get CB location of instructions to get client key
-        # for destination application.
-        'the instructions at ')
+        'for the instance where BigQuery is to be run.  See these videos for '
+        '<a href="https://www.youtube.com/watch?v=cz80K9DPtxg">'
+        'configuration</a> instructions as well as a brief demonstration of '
+        '<a href="https://www.youtube.com/watch?v=2ticBJcZGZ8">basic use.</a>"')
+
 
     def validate_table_lifetime(value, errors):
         if not value:
