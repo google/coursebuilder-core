@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-31 09:13-0700\n"
-"PO-Revision-Date: 2015-03-27 09:20-0700\n"
+"POT-Creation-Date: 2015-04-14 08:04-0700\n"
+"PO-Revision-Date: 2015-04-14 08:04-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ar <LL@li.org>\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n>=3 "
@@ -27,7 +27,7 @@ msgstr ""
 #: experimental/coursebuilder/models/resources_display.py:1048
 #, python-format
 msgid "Unit %(index)s - %(title)s"
-msgstr ""
+msgstr "الوحدة %(index)s - %(title)s"
 
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
@@ -35,7 +35,7 @@ msgstr ""
 #: experimental/coursebuilder/models/resources_display.py:1068
 #, python-format
 msgid "Unit %s"
-msgstr ""
+msgstr "الوحدة %s"
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -171,7 +171,7 @@ msgstr "انقر للحصول على شهادة"
 #. Link for a PDF.
 #: experimental/coursebuilder/modules/certificate/certificate.py:269
 msgid "Download PDF"
-msgstr ""
+msgstr "تنزيل ملف PDF"
 
 #. Text indicating student has not yet completed a course.
 #: experimental/coursebuilder/modules/certificate/certificate.py:276
@@ -321,7 +321,7 @@ msgstr "لم يتم إرسال جميع الرسائل (%s / %s):"
 #: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
-msgstr ""
+msgstr "حسنًا، تم إرسال %s من الرسائل"
 
 #. Title encouraging user to invite friends to join a course
 #: experimental/coursebuilder/modules/invitation/invitation.py:380
@@ -347,6 +347,8 @@ msgstr "اشتراك/إلغاء الاشتراك"
 #: experimental/coursebuilder/modules/invitation/invitation.py:408
 msgid "You are currently unsubscribed from course-related emails."
 msgstr ""
+"لقد ألغيت الاشتراك في الرسائل الإلكترونية المتعلقة بالمقرَّر التعليمي في "
+"الوقت الحالي."
 
 #. Control allowing user to re-subscribe to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:412
@@ -356,7 +358,7 @@ msgstr "انقر هنا لإعادة الاشتراك."
 #. Text indicating user has opted in to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:417
 msgid "You are currently receiving course-related emails. "
-msgstr ""
+msgstr "تستلم رسائل إلكترونية متعلقة بالمقرَّر التعليمي في الوقت الحالي. "
 
 #. Control allowing user to unsubscribe from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:421

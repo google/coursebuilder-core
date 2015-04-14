@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-31 09:13-0700\n"
-"PO-Revision-Date: 2015-03-27 09:20-0700\n"
+"POT-Creation-Date: 2015-04-14 08:04-0700\n"
+"PO-Revision-Date: 2015-04-14 08:04-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: hi <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -26,7 +26,7 @@ msgstr ""
 #: experimental/coursebuilder/models/resources_display.py:1048
 #, python-format
 msgid "Unit %(index)s - %(title)s"
-msgstr ""
+msgstr "इकाई %(index)s - %(title)s"
 
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
@@ -34,7 +34,7 @@ msgstr ""
 #: experimental/coursebuilder/models/resources_display.py:1068
 #, python-format
 msgid "Unit %s"
-msgstr ""
+msgstr "इकाई %s"
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -170,7 +170,7 @@ msgstr "प्रमाणपत्र के लिए क्लिक कर�
 #. Link for a PDF.
 #: experimental/coursebuilder/modules/certificate/certificate.py:269
 msgid "Download PDF"
-msgstr ""
+msgstr "PDF डाउनलोड करें"
 
 #. Text indicating student has not yet completed a course.
 #: experimental/coursebuilder/modules/certificate/certificate.py:276
@@ -322,7 +322,7 @@ msgstr "सभी संदेश भेजे नहीं गए थे (%s / 
 #: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
-msgstr ""
+msgstr "ठीक है, %s संदेश भेजे गए"
 
 #. Title encouraging user to invite friends to join a course
 #: experimental/coursebuilder/modules/invitation/invitation.py:380
@@ -348,6 +348,8 @@ msgstr "सदस्य बनें/सदस्यता छोड़ें"
 #: experimental/coursebuilder/modules/invitation/invitation.py:408
 msgid "You are currently unsubscribed from course-related emails."
 msgstr ""
+"वर्तमान में पाठ्यक्रम-संबंधित ईमेल के लिए आपकी सदस्यता को रद्द कर दिया "
+"गया है."
 
 #. Control allowing user to re-subscribe to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:412
@@ -357,7 +359,7 @@ msgstr "फिर से सदस्य बनने के लिए यहा
 #. Text indicating user has opted in to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:417
 msgid "You are currently receiving course-related emails. "
-msgstr ""
+msgstr "आप वर्तमान में पाठ्यक्रम-संबंधित ईमेल प्राप्त कर रहे हैं. "
 
 #. Control allowing user to unsubscribe from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:421
@@ -1232,12 +1234,12 @@ msgstr "छात्र प्रगति"
 #. Shown on the student profile page.
 #: experimental/coursebuilder/views/student_profile.html:60
 msgid "To leave the course permanently, click on Unenroll"
-msgstr "इस पाठ्यक्रम को स्थायी रूप से छोड़ने के लिए, नामांकन रहने दें क्लिक करें"
+msgstr "इस पाठ्यक्रम को स्थायी रूप से छोड़ने के लिए, नामांकन अभी नहीं क्लिक करें"
 
 #. Button that allows the student to unenroll from a course.
 #: experimental/coursebuilder/views/student_profile.html:66
 msgid "Unenroll"
-msgstr "नामांकन रहने दें"
+msgstr "नामांकन अभी नहीं"
 
 #. Text shown on progress page of course to redirect student to profile page.
 #: experimental/coursebuilder/views/student_profile.html:73

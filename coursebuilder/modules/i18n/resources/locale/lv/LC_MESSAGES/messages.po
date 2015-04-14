@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-31 09:13-0700\n"
-"PO-Revision-Date: 2015-03-27 09:20-0700\n"
+"POT-Creation-Date: 2015-04-14 08:04-0700\n"
+"PO-Revision-Date: 2015-04-14 08:04-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: lv <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n != 0 ? 1 :"
@@ -27,7 +27,7 @@ msgstr ""
 #: experimental/coursebuilder/models/resources_display.py:1048
 #, python-format
 msgid "Unit %(index)s - %(title)s"
-msgstr ""
+msgstr "Nodaļa %(index)s — %(title)s"
 
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
@@ -35,7 +35,7 @@ msgstr ""
 #: experimental/coursebuilder/models/resources_display.py:1068
 #, python-format
 msgid "Unit %s"
-msgstr ""
+msgstr "Sadaļa “%s”"
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -171,7 +171,7 @@ msgstr "Noklikšķiniet, lai skatītu sertifikātu"
 #. Link for a PDF.
 #: experimental/coursebuilder/modules/certificate/certificate.py:269
 msgid "Download PDF"
-msgstr ""
+msgstr "Lejupielādēt PDF failu"
 
 #. Text indicating student has not yet completed a course.
 #: experimental/coursebuilder/modules/certificate/certificate.py:276
@@ -323,7 +323,7 @@ msgstr "Daži ziņojumi netika nosūtīti (%s/%s):"
 #: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
-msgstr ""
+msgstr "Tika nosūtīti %s ziņojumi."
 
 #. Title encouraging user to invite friends to join a course
 #: experimental/coursebuilder/modules/invitation/invitation.py:380
@@ -349,6 +349,8 @@ msgstr "Abonēt/atteikt abonēšanu"
 #: experimental/coursebuilder/modules/invitation/invitation.py:408
 msgid "You are currently unsubscribed from course-related emails."
 msgstr ""
+"Pašlaik esat atteicies no e-pasta ziņojumu abonēšanas, kas saistīti ar "
+"kursu."
 
 #. Control allowing user to re-subscribe to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:412
@@ -358,7 +360,7 @@ msgstr "Nolikšķiniet šeit, lai tos atkal abonētu."
 #. Text indicating user has opted in to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:417
 msgid "You are currently receiving course-related emails. "
-msgstr ""
+msgstr "Pašlaik jūs saņemat ar kursu saistītus e-pasta ziņojumus. "
 
 #. Control allowing user to unsubscribe from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:421

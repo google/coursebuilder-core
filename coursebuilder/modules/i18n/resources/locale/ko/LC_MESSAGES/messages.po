@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-31 09:13-0700\n"
-"PO-Revision-Date: 2015-03-27 09:20-0700\n"
+"POT-Creation-Date: 2015-04-14 08:04-0700\n"
+"PO-Revision-Date: 2015-04-14 08:04-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ko <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -26,7 +26,7 @@ msgstr ""
 #: experimental/coursebuilder/models/resources_display.py:1048
 #, python-format
 msgid "Unit %(index)s - %(title)s"
-msgstr ""
+msgstr "%(index)s단원 - %(title)s"
 
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
@@ -34,7 +34,7 @@ msgstr ""
 #: experimental/coursebuilder/models/resources_display.py:1068
 #, python-format
 msgid "Unit %s"
-msgstr ""
+msgstr "단원 %s"
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -170,7 +170,7 @@ msgstr "수료증을 보려면 클릭"
 #. Link for a PDF.
 #: experimental/coursebuilder/modules/certificate/certificate.py:269
 msgid "Download PDF"
-msgstr ""
+msgstr "PDF 다운로드"
 
 #. Text indicating student has not yet completed a course.
 #: experimental/coursebuilder/modules/certificate/certificate.py:276
@@ -318,7 +318,7 @@ msgstr "일부 메일이 전송되지 않음(%s개/%s개):"
 #: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
-msgstr ""
+msgstr "메일 %s개 전송 완료"
 
 #. Title encouraging user to invite friends to join a course
 #: experimental/coursebuilder/modules/invitation/invitation.py:380
@@ -343,7 +343,7 @@ msgstr "수신허용/거부"
 #. Message - user has unsubscribed from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:408
 msgid "You are currently unsubscribed from course-related emails."
-msgstr ""
+msgstr "강의 관련 이메일을 수신 거부했습니다."
 
 #. Control allowing user to re-subscribe to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:412
@@ -353,7 +353,7 @@ msgstr "다시 수신하려면 여기를 클릭하세요."
 #. Text indicating user has opted in to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:417
 msgid "You are currently receiving course-related emails. "
-msgstr ""
+msgstr "강의 관련 이메일을 수신하고 있습니다. "
 
 #. Control allowing user to unsubscribe from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:421
