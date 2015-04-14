@@ -17,6 +17,7 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import ast
+import collections
 import datetime
 
 from mapreduce import context
@@ -34,6 +35,7 @@ from models import transforms
 from tools import verify
 
 from google.appengine.ext import db
+from google.appengine.api import datastore
 
 MAX_INCORRECT_REPORT = 5
 
@@ -134,6 +136,10 @@ class RawAnswersGenerator(jobs.MapReduceJob):
         QuestionAnswersEntity(key_name=key, data=data).put()
 
 
+StudentPlaceholder = collections.namedtuple(
+    'StudentPlaceholder', ['user_id', 'name', 'email'])
+
+
 class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
     """Make raw answers from QuestionAnswersEntity available via REST."""
 
@@ -179,6 +185,9 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
             'user_name', 'User Name', 'string',
             description='Name of the student providing this answer.'))
         reg.add_property(schema_fields.SchemaField(
+            'user_email', 'User Email', 'string',
+            description='Email address of the student providing this answer.'))
+        reg.add_property(schema_fields.SchemaField(
             'unit_id', 'Unit ID', 'string',
             description='ID of unit or assessment for this score.'))
         reg.add_property(schema_fields.SchemaField(
@@ -221,13 +230,26 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
         """Unpack all responses from single student into separate rows."""
 
         # Fill in responses with actual student name, not just ID.
-        student_ids = []
+        ids = []
         for entity in rows:
-            student_ids.append(entity.key().id_or_name())
-        students = (models.Student
-                    .all()
-                    .filter('user_id in', student_ids)
-                    .fetch(len(student_ids)))
+            ids.append(entity.key().id_or_name())
+
+        # Chunkify student lookups; 'in' has max of 30
+        students = []
+        size = datastore.MAX_ALLOWABLE_QUERIES
+        for ids_chunk in [ids[i:i + size] for i in xrange(0, len(ids), size)]:
+            students_chunk = (models.Student
+                              .all()
+                              .filter('user_id in', ids_chunk)
+                              .fetch(len(ids_chunk)))
+            students_by_id = {s.user_id: s for s in students_chunk}
+
+            for student_id in ids_chunk:
+                if student_id in students_by_id:
+                    students += [students_by_id[student_id]]
+                else:
+                    students += [StudentPlaceholder(
+                        student_id, '<unknown>', '<unknown>')]
 
         # Prepare to convert multiple-choice question indices to answer strings.
         mc_choices = {}
@@ -251,7 +273,8 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
                         given_answers = [given_answers]
                 ret.append({
                     'user_id': student.user_id,
-                    'user_name': student.name,
+                    'user_name': student.name or '<blank>',
+                    'user_email': student.email or '<blank>',
                     'unit_id': str(answer.unit_id),
                     'lesson_id': str(answer.lesson_id),
                     'sequence': answer.sequence,

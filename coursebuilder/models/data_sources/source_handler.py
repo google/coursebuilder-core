@@ -60,6 +60,9 @@ class _AbstractRestDataSourceHandler(utils.ApplicationHandler):
             'base class the type of the DB table it is to wrap.')
 
     def get(self):
+        self.post()
+
+    def post(self):
         """Returns a JSON response with a page of data and meta-information.
 
         The object contains the following fields:

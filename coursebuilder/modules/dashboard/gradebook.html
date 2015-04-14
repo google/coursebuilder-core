@@ -41,6 +41,10 @@
   margin-bottom: 1em;
 }
 
+.control-section {
+  float: left;
+}
+
 #gcb-gradebook .hover-block {
   position: absolute;
   background: white;
@@ -73,28 +77,52 @@
 </style>
 
 <div id="gcb-gradebook-controls">
-  <form action="">
-    <input
-       type="radio"
-       name="responses"
-       id="show_first_response">
-      Show first response<br>
-    <input
-       type="radio"
-       name="responses"
-       id="show_all_responses">
-      Show all responses<br>
-    <input
-       type="radio"
-       name="responses"
-       id="show_latest_response"
-       checked="true">
-      Show latest response<br>
-    <!-- TODO(mgainer): Controls for showing only score, not answers as well.
-         Getting this right means fiddling lots of colspan values in the header,
-         and that's more work than it's worth right now. -->
-  </form>
+  <div class="control-section">
+    <form action="">
+      <input
+         type="radio"
+         name="responses"
+         id="show_first_response">
+        Show first response<br>
+      <input
+         type="radio"
+         name="responses"
+         id="show_all_responses">
+        Show all responses<br>
+      <input
+         type="radio"
+         name="responses"
+         id="show_latest_response"
+         checked="true">
+        Show latest response<br>
+      <!-- TODO(mgainer): Controls for showing only score, not answers
+           as well.  Getting this right means fiddling lots of colspan
+           values in the header, and that's more work than it's worth
+           right now. -->
+    </form>
+  </div>
+  <div class="control-section">
+    <form action="">
+      <input
+         type="radio"
+         name="sort_by"
+         id="sort_by_name"
+         value="user_name"
+         checked="true"
+         >
+        Sort by Name<br>
+      <input
+         type="radio"
+         name="sort_by"
+         value="user_email"
+         id="sort_by_email"
+        >
+        Sort by Email<br>
+    </form>
+  </div>
+  <div style="clear: both;"></div>
 </div>
+
 
 <table
    id="gcb-gradebook"
@@ -198,7 +226,13 @@ $(document).ready(function(){
   $('#show_first_response').click(displayResponses);
   $('#show_all_responses').click(displayResponses);
   $('#show_latest_response').click(displayResponses);
+  $('#sort_by_name').click(reOrderRows);
+  $('#sort_by_email').click(reOrderRows);
 });
+
+function reOrderRows(){
+  gcbRestSourcePageChange('raw_student_answers', 0);
+}
 
 function displayResponses(){
   if($('#show_first_response')[0].checked){
@@ -226,10 +260,11 @@ function displayResponses(){
 function buildStudents(){
   var students = [];
   var studentsById = {};
+  var displayWhat = $("input[name=sort_by]:checked").val()
   jQuery.each(gradebookData, function(index, value){
     if (!(value.user_id in studentsById)){
       var student = {
-        'name': value.user_name,
+        'name': value[displayWhat],
         'answers': {}
       };
       students.push(student);

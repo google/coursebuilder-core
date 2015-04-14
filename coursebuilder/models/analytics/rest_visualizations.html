@@ -145,6 +145,7 @@ function gcbSourceDataSelectionChange(source) {
       window[v.callback_name](argumentPages);
     }
   }
+  cbHideMsg();
 }
 
 /* Collect user-specified parameters for a data source from the page. */
@@ -222,6 +223,7 @@ function gcbRestSourcePageRequest(source, pageNumber) {
   }
 
   if (pageNumber in dataSource.pages) {
+    cbShowAlert('Using page ' + pageNumber + ' from cache.')
     // If we already have that data, just use it.
     dataSource.currentPage = pageNumber;
     var elem = $('#gcb_rest_source_page_number_' + source)[0];
@@ -230,16 +232,23 @@ function gcbRestSourcePageRequest(source, pageNumber) {
 
   } else {
     // If we don't have the data, make an async request to the REST service.
+    cbShowAlert('Fetching page ' + pageNumber + ' with ' +
+        params.chunk_size + ' elements from server...');
     gcbUpdateLogMessages(
         source, {'level': 'Fetching page', 'message': pageNumber});
-    var url = (ENV.href + 'rest/data/' + source + '/items' +
-        '?data_source_token=' + encodeURIComponent(ENV.dataSourceToken) +
+    var url = (ENV.href + 'rest/data/' + source + '/items');
+    var data = (
+        'data_source_token=' + encodeURIComponent(ENV.dataSourceToken) +
         '&page_number=' + pageNumber +
         gcbRestSourceParametersAsUrlParameters(params));
     if (dataSource.sourceContext) {
-      url += '&source_context=' + dataSource.sourceContext;
+      data += '&source_context=' + dataSource.sourceContext;
     }
-    d3.xhr(url, 'application/javascript', gcbAcceptSource);
+    // Send request as a POST; context can get too big for AppEngine's
+    // allowed max GET size.
+    d3.xhr(url).header(
+        'Content-Type',
+        'application/x-www-form-urlencoded').post(data, gcbAcceptSource);
   }
 }
 

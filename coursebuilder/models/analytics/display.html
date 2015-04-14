@@ -28,7 +28,7 @@
       statistics on this page.</p>
   {% endif %}
   {% for rest_source in rest_sources|sort(attribute='title') %}
-    <p>
+    <div>
     {% if rest_source.chunk_size > 0%}
       {{ rest_source.title }}
       <button
@@ -68,10 +68,18 @@
       <!-- TODO(mgainer): Additional controls for filtering and ordering
            based on schema. -->
       Items per page:
-      <input type="text"
-             size="6"
-             id="gcb_rest_source_chunk_size_{{ rest_source.name }}"
-             value="{{ rest_source.chunk_size }}">
+      <!-- Use a form to permit <enter> to submit changed value for
+           number of items per page of data. -->
+      <form
+         action="#"
+         onsubmit="gcbRestSourcePageChange('{{ rest_source.name }}', 0);
+                   return false;">
+        <input type="text"
+               size="6"
+               id="gcb_rest_source_chunk_size_{{ rest_source.name }}"
+               value="{{ rest_source.chunk_size }}"
+               >
+      </form>
     {% else %}
       <!-- Data sources that are guaranteed to only have one page
            get bogus items for the page number display and page
@@ -82,7 +90,7 @@
       <span id="gcb_rest_source_page_number_{{ rest_source.name }}"
             style="display:none;"></span>
     {% endif %}
-    </p>
+    </div>
     <div id="gcb_log_rest_source_{{ rest_source.name }}"></div>
   {% endfor %}
   <br>
