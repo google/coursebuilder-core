@@ -21,6 +21,7 @@ import re
 import jinja2
 
 import appengine_config
+from common import crypto
 from controllers import sites
 from controllers import utils as controllers_utils
 from models.analytics import display
@@ -167,6 +168,17 @@ def generate_display_html(handler, xsrf_creator, visualizations):
     return display._generate_display_html(
         _TemplateRenderer(handler), xsrf_creator, handler.app_context,
         visualizations)
+
+
+class TabRenderer(object):
+    """Convenience class for creating tabs for rendering in dashboard."""
+
+    def __init__(self, contents):
+        self._contents = contents
+
+    def __call__(self, handler):
+        return generate_display_html(
+                handler, crypto.XsrfTokenManager, self._contents)
 
 
 class AnalyticsHandler(controllers_utils.ReflectiveRequestHandler,

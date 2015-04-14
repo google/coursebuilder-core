@@ -505,11 +505,6 @@ class SettingsPage(PageObject):
 
         self.wait().until(successful_load)
 
-    def click_course_options(self):
-        self.find_element_by_css_selector(
-            '#edit_course_settings > button').click()
-        return CourseOptionsEditorPage(self._tester)
-
 
 class CourseOptionsEditorPage(EditorPageObject):
     """Page object for the dashboard's course ioptions sub tab."""

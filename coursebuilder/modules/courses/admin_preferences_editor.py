@@ -19,7 +19,9 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 from common import schema_fields
 from models import models
 from models import roles
+from modules.dashboard import dashboard
 from modules.dashboard import dto_editor
+from modules.dashboard import tabs
 
 from google.appengine.api import users
 
@@ -34,20 +36,22 @@ class AdminPreferencesEditor(dto_editor.BaseDatastoreAssetEditor):
     (I.e, the dashboard.)
     """
 
-    def post_edit_admin_preferences(self):
+    @staticmethod
+    def edit_admin_preferences(handler):
         template_values = {}
-        self._edit_admin_preferences(
-            template_values,
+        AdminPreferencesEditor._edit_admin_preferences(
+            handler, template_values,
             '/dashboard?action=settings&tab=admin_prefs')
-        self.render_page(template_values, 'settings')
+        handler.render_page(template_values, 'settings')
 
-    def _edit_admin_preferences(self, template_values, exit_url):
-        if not roles.Roles.is_course_admin(self.app_context):
-            self.error(401)
+    @staticmethod
+    def _edit_admin_preferences(handler, template_values, exit_url):
+        if not roles.Roles.is_course_admin(handler.app_context):
+            handler.error(401)
             return
         template_values.update({
-            'page_title': self.format_title('Edit Preferences'),
-            'main_content': self.get_form(
+            'page_title': handler.format_title('Edit Preferences'),
+            'main_content': handler.get_form(
                 AdminPreferencesRESTHandler,
                 users.get_current_user().user_id(),
                 exit_url, deletable=False)
@@ -96,3 +100,14 @@ class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     def validate(self, prefs_dict, key, schema_version, errors):
         pass
+
+
+def on_module_enabled():
+    dashboard.DashboardHandler.add_custom_post_action(
+        'admin_prefs', AdminPreferencesEditor.edit_admin_preferences)
+
+    # Keep [Admin] Preferences, About, Advanced at very end of list.
+    tabs.Registry.register(
+        'settings', 'admin_prefs', 'Preferences',
+        AdminPreferencesEditor.edit_admin_preferences,
+        placement=tabs.Placement.END)

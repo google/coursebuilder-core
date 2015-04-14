@@ -623,16 +623,16 @@ class DashboardAccessTestCase(actions.TestBase):
         self.course_without_access = courses.Course(None, context)
 
         # pylint: disable=W0212
-        self.old_nav_mappings = DashboardHandler._nav_mappings
+        self.old_nav_mappings = DashboardHandler._custom_nav_mappings
         # pylint: disable=W0212
-        DashboardHandler._nav_mappings = {self.ACTION: 'outline'}
+        DashboardHandler._custom_nav_mappings = {self.ACTION: 'outline'}
         DashboardHandler.map_action_to_permission(
             'get_%s' % self.ACTION, self.PERMISSION)
         actions.logout()
 
     def tearDown(self):
         # pylint: disable=W0212
-        DashboardHandler._nav_mappings = self.old_nav_mappings
+        DashboardHandler._custom_nav_mappings = self.old_nav_mappings
         super(DashboardAccessTestCase, self).tearDown()
 
     def test_dashboard_access_method(self):
@@ -662,7 +662,7 @@ class DashboardAccessTestCase(actions.TestBase):
         picker_options = self._get_all_picker_options()
         self.assertEquals(len(list(picker_options)), 1)
         self.assertEquals(picker_options[0].get(
-            'href'), '/%s/dashboard?action=outline' % self.ACCESS_COURSE_NAME)
+            'href'), '/%s/dashboard' % self.ACCESS_COURSE_NAME)
         actions.logout()
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)

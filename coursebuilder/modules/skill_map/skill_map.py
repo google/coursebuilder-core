@@ -46,7 +46,7 @@ from models import resources_display
 from models import roles
 from models import transforms
 from modules.admin.admin import WelcomeHandler
-from modules import courses as courses_module
+from modules.courses import outline
 from modules.dashboard import dashboard
 from modules.dashboard import tabs
 from modules.dashboard.unit_lesson_editor import LessonRESTHandler
@@ -1354,7 +1354,7 @@ def register_tabs():
         'templates/skill_map_analytics.html',
         data_source_classes=[SkillMapDataSource])
     tabs.Registry.register('analytics', 'skill_map', 'Skill Map',
-                           [skill_map_visualization])
+                           analytics.TabRenderer([skill_map_visualization]))
 
 
 def lesson_rest_handler_schema_load_hook(lesson_field_registry):
@@ -1457,7 +1457,7 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
     template_values = {
       'lesson': lesson,
       'unit': unit,
-      'can_see_drafts': courses_module.courses.can_see_drafts(app_context),
+      'can_see_drafts': custom_modules.can_see_drafts(app_context),
       'skill_list': skill_list,
       'depends_on_skills': not_in_this_lesson(depends_on_skills),
       'leads_to_skills': not_in_this_lesson(leads_to_skills),
@@ -1532,9 +1532,9 @@ def notify_module_enabled():
     def get_action(handler):
         handler.redirect('/modules/skill_map?action=skill_map&tab=skills_table')
 
-    dashboard.DashboardHandler.COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS.append(
+    outline.COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS.append(
         course_outline_extra_info_decorator)
-    dashboard.DashboardHandler.COURSE_OUTLINE_EXTRA_INFO_TITLES.append('Skills')
+    outline.COURSE_OUTLINE_EXTRA_INFO_TITLES.append('Skills')
     dashboard.DashboardHandler.add_nav_mapping(
         SkillMapHandler.ACTION, SkillMapHandler.NAV_BAR_TAB)
     dashboard.DashboardHandler.get_actions.append('skill_map')

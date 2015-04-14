@@ -23,16 +23,64 @@ from modules.analytics import answers_aggregator
 from modules.analytics import clustering
 from modules.analytics import location_aggregator
 from modules.analytics import page_event_aggregator
+from modules.analytics import rest_providers
 from modules.analytics import student_aggregate
+from modules.analytics import student_answers
+from modules.analytics import synchronous_providers
 from modules.analytics import user_agent_aggregator
 from modules.analytics import youtube_event_aggregator
+from modules.dashboard import dashboard
 from modules.dashboard import tabs
-from modules.dashboard.dashboard import DashboardHandler
+
+ANALYTICS = 'analytics'
 
 custom_module = None
 
-
 def register_tabs():
+    multiple_choice_question = analytics.Visualization(
+        'multiple_choice_question',
+        'Multiple Choice Question',
+        'multiple_choice_question.html',
+        data_source_classes=[
+            synchronous_providers.QuestionStatsSource])
+    student_progress = analytics.Visualization(
+        'student_progress',
+        'Student Progress',
+        'student_progress.html',
+        data_source_classes=[
+            synchronous_providers.StudentProgressStatsSource])
+    enrollment_assessment = analytics.Visualization(
+        'enrollment_assessment',
+        'Enrollment/Assessment',
+        'enrollment_assessment.html',
+        data_source_classes=[
+            synchronous_providers.StudentEnrollmentAndScoresSource])
+    assessment_difficulty = analytics.Visualization(
+        'assessment_difficulty',
+        'Assessment Difficulty',
+        'assessment_difficulty.html',
+        data_source_classes=[
+            rest_providers.StudentAssessmentScoresDataSource])
+    labels_on_students = analytics.Visualization(
+        'labels_on_students',
+        'Labels on Students',
+        'labels_on_students.html',
+        data_source_classes=[rest_providers.LabelsOnStudentsDataSource])
+    question_answers = analytics.Visualization(
+        'question_answers',
+        'Question Answers',
+        'question_answers.html',
+        data_source_classes=[
+            student_answers.QuestionAnswersDataSource,
+            student_answers.CourseQuestionsDataSource,
+            student_answers.CourseUnitsDataSource])
+    gradebook = analytics.Visualization(
+        'gradebook',
+        'Gradebook',
+        'gradebook.html',
+        data_source_classes=[
+            student_answers.RawAnswersDataSource,
+            student_answers.OrderedQuestionsDataSource])
     clusters_visualization = analytics.Visualization(
         'clusters',
         'Cluster Manager',
@@ -49,10 +97,27 @@ def register_tabs():
         'cluster_stats.html',
         data_source_classes=[clustering.ClusterStatisticsDataSource])
 
-    tabs.Registry.register('analytics', 'clustering', 'Clustering',
-                           [clusters_visualization,
-                            student_vectors_visualization,
-                            stats_visualization])
+    tabs.Registry.register(ANALYTICS, 'students', 'Students',
+                           analytics.TabRenderer([
+                               labels_on_students,
+                               student_progress,
+                               enrollment_assessment]),
+                           placement=tabs.Placement.BEGINNING)
+    tabs.Registry.register(ANALYTICS, 'questions', 'Questions',
+                           analytics.TabRenderer([
+                               multiple_choice_question,
+                               question_answers]),
+                           placement=tabs.Placement.BEGINNING)
+    tabs.Registry.register(ANALYTICS, 'assessments', 'Assessments',
+                           analytics.TabRenderer([assessment_difficulty]))
+    tabs.Registry.register(ANALYTICS, 'gradebook', 'Gradebook',
+                           analytics.TabRenderer([gradebook]))
+    tabs.Registry.register(ANALYTICS, 'clustering', 'Clustering',
+                           analytics.TabRenderer([
+                               clusters_visualization,
+                               student_vectors_visualization,
+                               stats_visualization]))
+    dashboard.DashboardHandler.add_nav_mapping(ANALYTICS, 'Analytics')
 
 
 def add_actions():
@@ -67,10 +132,11 @@ def add_actions():
             auto_return=True, app_context=dashboard_instance.app_context)
         dashboard_instance.render_page(template_values, 'clusters')
 
-    DashboardHandler.add_custom_get_action('add_cluster',
-                                           cluster_prepare_template)
-    DashboardHandler.add_custom_get_action('edit_cluster',
-                                           cluster_prepare_template)
+    dashboard.DashboardHandler.add_custom_get_action(
+        'add_cluster', cluster_prepare_template)
+    dashboard.DashboardHandler.add_custom_get_action(
+        'edit_cluster', cluster_prepare_template)
+    dashboard.DashboardHandler.add_custom_get_action(ANALYTICS)
 
 
 def get_namespaced_handlers():
@@ -93,12 +159,39 @@ def register_module():
             page_event_aggregator.PageEventAggregator)
         student_aggregate.StudentAggregateComponentRegistry.register_component(
             youtube_event_aggregator.YouTubeEventAggregator)
+
         data_sources.Registry.register(
             student_aggregate.StudentAggregateComponentRegistry)
         data_sources.Registry.register(clustering.ClusterDataSource)
         data_sources.Registry.register(clustering.ClusterStatisticsDataSource)
         data_sources.Registry.register(
             clustering.TentpoleStudentVectorDataSource)
+        data_sources.Registry.register(
+            student_answers.QuestionAnswersDataSource)
+        data_sources.Registry.register(
+            student_answers.CourseQuestionsDataSource)
+        data_sources.Registry.register(student_answers.CourseUnitsDataSource)
+        data_sources.Registry.register(student_answers.AnswersDataSource)
+        data_sources.Registry.register(student_answers.RawAnswersDataSource)
+        data_sources.Registry.register(
+            student_answers.OrderedQuestionsDataSource)
+
+        data_sources.Registry.register(
+            synchronous_providers.QuestionStatsSource)
+        data_sources.Registry.register(
+            synchronous_providers.StudentEnrollmentAndScoresSource)
+        data_sources.Registry.register(
+            synchronous_providers.StudentProgressStatsSource)
+        data_sources.Registry.register(rest_providers.AssessmentsDataSource)
+        data_sources.Registry.register(rest_providers.UnitsDataSource)
+        data_sources.Registry.register(rest_providers.LessonsDataSource)
+        data_sources.Registry.register(
+            rest_providers.StudentAssessmentScoresDataSource)
+        data_sources.Registry.register(rest_providers.LabelsDataSource)
+        data_sources.Registry.register(rest_providers.StudentsDataSource)
+        data_sources.Registry.register(
+            rest_providers.LabelsOnStudentsDataSource)
+
         register_tabs()
         add_actions()
 

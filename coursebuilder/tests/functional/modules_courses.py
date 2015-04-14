@@ -18,8 +18,8 @@ __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 
 import actions
 from models import courses
+from models import custom_modules
 from models import models
-from modules.courses import courses as courses_module
 
 from google.appengine.api import namespace_manager
 
@@ -47,8 +47,8 @@ class AccessDraftsTestCase(actions.TestBase):
             'name': self.ROLE,
             'users': [self.USER_EMAIL],
             'permissions': {
-                courses_module.custom_module.name: [
-                courses_module.SEE_DRAFTS_PERMISSION]
+                custom_modules.core_module.name: [
+                    custom_modules.SEE_DRAFTS_PERMISSION]
             }
         })
         models.RoleDAO.save(role_dto)

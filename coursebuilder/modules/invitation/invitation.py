@@ -52,7 +52,7 @@ from models import courses
 from models import custom_modules
 from models import models
 from models import transforms
-from modules.dashboard import course_settings
+from modules.courses import settings
 from modules.notifications import notifications
 from modules.unsubscribe import unsubscribe
 
@@ -438,22 +438,9 @@ def register_module():
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS += [
             get_student_profile_invitation_link,
             get_student_profile_sub_unsub_link]
-        course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
+        settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
             TEMPLATES_DIR)
-        course_settings.CourseSettingsHandler.EXTRA_JS_FILES.append(
-            'invitation_course_settings.js')
-
-    def on_module_disabled():
-        for field in course_settings_fields:
-            courses.Course.OPTIONS_SCHEMA_PROVIDERS[
-                COURSE_SETTINGS_SCHEMA_SECTION].remove(field)
-        utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.remove(
-            get_student_profile_invitation_link)
-        utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.remove(
-            get_student_profile_sub_unsub_link)
-        course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.remove(
-            TEMPLATES_DIR)
-        course_settings.CourseSettingsHandler.EXTRA_JS_FILES.remove(
+        settings.CourseSettingsHandler.EXTRA_JS_FILES.append(
             'invitation_course_settings.js')
 
     global_routes = [
@@ -468,6 +455,5 @@ def register_module():
         'Invitation Page',
         'A page to invite others to register.',
         global_routes, namespaced_routes,
-        notify_module_disabled=on_module_disabled,
         notify_module_enabled=on_module_enabled)
     return custom_module

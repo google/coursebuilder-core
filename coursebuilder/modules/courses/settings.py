@@ -17,17 +17,24 @@
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
 import cgi
+import os
 import urllib
 
 from common import crypto
+from common import safe_dom
 from common import schema_fields
 from controllers import utils as controllers_utils
+from controllers import sites
 from models import courses
 from models import models
 from models import roles
 from models import transforms
+from models import vfs
+from modules.courses import messages
+from modules.dashboard import dashboard
 from modules.dashboard import filer
-from modules.dashboard import messages
+from modules.dashboard import tabs
+from modules.dashboard import utils as dashboard_utils
 from modules.oeditor import oeditor
 
 
@@ -51,81 +58,78 @@ class CourseSettingsRights(object):
         return cls.can_edit(handler)
 
 
-class CourseSettingsHandler(controllers_utils.ApplicationHandler):
+class CourseSettingsHandler(object):
     """Course settings handler."""
 
     EXTRA_CSS_FILES = []
     EXTRA_JS_FILES = []
     ADDITIONAL_DIRS = []
 
-    def post_course_availability(self):
-        course = self.get_course()
-        settings = course.get_environ(self.app_context)
-        availability = self.request.get('availability') == 'True'
+    def __init__(self):
+        raise NotImplementedError('Not for instantiation; just a namespace')
+
+    @staticmethod
+    def post_course_availability(handler):
+        course = handler.get_course()
+        settings = course.get_environ(handler.app_context)
+        availability = handler.request.get('availability') == 'True'
         settings['course']['now_available'] = availability
         course.save_settings(settings)
-        self.redirect('/dashboard')
+        handler.redirect('/dashboard')
 
-    def post_course_browsability(self):
-        course = self.get_course()
-        settings = course.get_environ(self.app_context)
-        browsability = self.request.get('browsability') == 'True'
+    @staticmethod
+    def post_course_browsability(handler):
+        course = handler.get_course()
+        settings = course.get_environ(handler.app_context)
+        browsability = handler.request.get('browsability') == 'True'
         settings['course']['browsable'] = browsability
         course.save_settings(settings)
-        self.redirect('/dashboard')
+        handler.redirect('/dashboard')
 
-    def post_edit_course_settings(self):
-        """Handles editing of course.yaml."""
-        filer.create_course_file_if_not_exists(self)
-        extra_args = {}
-        for name in ('section_names', 'tab', 'tab_title', 'exit_url'):
-            value = self.request.get(name)
-            if value:
-                extra_args[name] = value
-        self.redirect(self.get_action_url(
-            'edit_basic_settings', key='/course.yaml', extra_args=extra_args))
-
-    def get_edit_basic_settings(self):
-        """Shows editor for course.yaml."""
-
-        key = self.request.get('key')
-        tab = self.request.get('tab')
-        tab_title = self.request.get('tab_title')
-        section_names = urllib.unquote(self.request.get('section_names'))
-        exit_url = (
-            self.request.get('exit_url') or
-            self.canonicalize_url('/dashboard?action=settings&tab=%s' % tab))
-        template_values = {}
-        self._show_edit_settings_section(
-            template_values, key, tab, tab_title, section_names, exit_url)
-        self.render_page(template_values, in_action='settings')
-
-    def _show_edit_settings_section(self, template_values, key, tab, tab_title,
-                                    section_names=None, exit_url=''):
+    @staticmethod
+    def show_edit_settings_section(handler, template_values, key,
+                                   tab_title, section_names=None, exit_url=''):
 
         # The editor for all course settings is getting rather large.  Here,
         # prune out all sections except the one named.  Names can name either
         # entire sub-registries, or a single item.  E.g., "course" selects all
         # items under the 'course' sub-registry, while
         # "base.before_head_tag_ends" selects just that one field.
-        registry = self.get_course().create_settings_schema()
+        registry = handler.get_course().create_settings_schema()
         if section_names:
             registry = registry.clone_only_items_named(section_names.split(','))
 
-        rest_url = self.canonicalize_url(CourseSettingsRESTHandler.URI)
+        rest_url = handler.canonicalize_url(CourseSettingsRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
-            self, registry.get_json_schema(), registry.get_schema_dict(),
-            key, rest_url, exit_url, extra_css_files=self.EXTRA_CSS_FILES,
-            extra_js_files=self.EXTRA_JS_FILES,
-            additional_dirs=self.ADDITIONAL_DIRS,
+            handler, registry.get_json_schema(), registry.get_schema_dict(),
+            key, rest_url, exit_url,
+            extra_css_files=CourseSettingsHandler.EXTRA_CSS_FILES,
+            extra_js_files=CourseSettingsHandler.EXTRA_JS_FILES,
+            additional_dirs=CourseSettingsHandler.ADDITIONAL_DIRS,
             required_modules=CourseSettingsRESTHandler.REQUIRED_MODULES)
         template_values.update({
-            'page_title': self.format_title(
+            'page_title': handler.format_title(
                 'Settings > %s' %
                 urllib.unquote(tab_title)),
             'page_description': messages.EDIT_SETTINGS_DESCRIPTION,
             'main_content': form_html,
             })
+
+    @staticmethod
+    def show_settings_tab(handler, section_names):
+        tab = tabs.Registry.get_tab('settings',
+                                    handler.request.get('tab') or 'course')
+        template_values = {
+            'page_title': handler.format_title('Settings > %s' % tab.title),
+            'page_description': messages.SETTINGS_DESCRIPTION,
+        }
+        exit_url = handler.request.get('exit_url')
+
+        CourseSettingsHandler.show_edit_settings_section(
+            handler, template_values, '/course.yaml', tab.title,
+            section_names, exit_url)
+        return template_values
+
 
 
 class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
@@ -459,3 +463,182 @@ class HtmlHookRESTHandler(CourseYamlRESTHandler):
                 else:
                     del pruned_dict[element]
         return course_dict
+
+
+def _get_about_course(handler):
+
+    # Basic course info.
+    template_values = {}
+    course_info = []
+    course_actions = []
+    app_context = handler.app_context
+
+    if not app_context.is_editable_fs():
+        course_info.append('The course is read-only.')
+    else:
+        if app_context.now_available:
+            if app_context.get_environ()['course']['browsable']:
+                browsable = True
+                course_browsability_caption = (
+                    'Hide Course From Unregistered Users')
+                course_info.append('The course is is browsable by '
+                                   'un-registered users')
+            else:
+                browsable = False
+                course_browsability_caption = (
+                    'Allow Unregistered Users to Browse Course')
+                course_info.append('The course is not visible to '
+                                   'un-registered users.')
+            course_actions.append({
+                'id': 'course_browsability',
+                'caption': course_browsability_caption,
+                'action': handler.get_action_url('course_browsability'),
+                'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                    'course_browsability'),
+                'params': {'browsability': not browsable},
+                })
+
+    currentCourse = courses.Course(handler)
+    course_info.append('Schema Version: %s' % currentCourse.version)
+    course_info.append('Context Path: %s' % app_context.get_slug())
+    course_info.append('Datastore Namespace: %s' %
+                       app_context.get_namespace_name())
+
+    # Course file system.
+    fs = app_context.fs.impl
+    course_info.append(('File System: %s' % fs.__class__.__name__))
+    if fs.__class__ == vfs.LocalReadOnlyFileSystem:
+        course_info.append(('Home Folder: %s' % sites.abspath(
+            app_context.get_home_folder(), '/')))
+
+    data_info = dashboard_utils.list_files(handler, '/data/')
+
+    sections = [
+        {
+            'title': 'About the Course',
+            'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
+            'actions': course_actions,
+            'children': course_info},]
+
+    if currentCourse.version == courses.COURSE_MODEL_VERSION_1_2:
+        sections.append({
+            'title': 'Data Files',
+            'description': messages.DATA_FILES_DESCRIPTION,
+            'children': data_info})
+
+    template_values['alerts'] = handler.get_alerts()
+    template_values['sections'] = sections
+    return template_values
+
+
+def _text_file_to_safe_dom(reader, content_if_empty):
+    """Load text file and convert it to safe_dom tree for display."""
+    info = []
+    if reader:
+        lines = reader.read().decode('utf-8')
+        for line in lines.split('\n'):
+            if not line:
+                continue
+            pre = safe_dom.Element('pre')
+            pre.add_text(line)
+            info.append(pre)
+    else:
+        info.append(content_if_empty)
+    return info
+
+def _text_file_to_string(reader, content_if_empty):
+    """Load text file and convert it to string for display."""
+    if reader:
+        return reader.read().decode('utf-8')
+    else:
+        return content_if_empty
+
+def _get_settings_advanced(handler):
+    """Renders course settings view."""
+    template_values = {}
+    actions = []
+    app_context = handler.app_context
+    if app_context.is_editable_fs():
+        actions.append({
+            'id': 'edit_course_yaml',
+            'caption': 'Advanced Edit',
+            'action': handler.get_action_url(
+                'create_or_edit_settings',
+                extra_args={
+                    'tab': 'advanced',
+                    'tab_title': 'Advanced',
+                    }),
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'create_or_edit_settings')})
+
+    # course.yaml file content.
+    yaml_reader = app_context.fs.open(app_context.get_config_filename())
+    yaml_info = _text_file_to_safe_dom(yaml_reader, '< empty file >')
+    yaml_reader = app_context.fs.open(app_context.get_config_filename())
+    yaml_lines = _text_file_to_string(yaml_reader, '< empty file >')
+
+    # course_template.yaml file contents
+    course_template_reader = open(os.path.join(os.path.dirname(
+        __file__), '../../course_template.yaml'), 'r')
+    course_template_info = _text_file_to_safe_dom(
+        course_template_reader, '< empty file >')
+    course_template_reader = open(os.path.join(os.path.dirname(
+        __file__), '../../course_template.yaml'), 'r')
+    course_template_lines = _text_file_to_string(
+        course_template_reader, '< empty file >')
+
+    template_values['sections'] = [
+        {
+            'title': 'Contents of course.yaml file',
+            'description': messages.CONTENTS_OF_THE_COURSE_DESCRIPTION,
+            'actions': actions,
+            'children': yaml_info,
+            'code': yaml_lines,
+            'mode': 'yaml'
+        },
+        {
+            'title': 'Contents of course_template.yaml file',
+            'description': messages.COURSE_TEMPLATE_DESCRIPTION,
+            'children': course_template_info,
+            'code': course_template_lines,
+            'mode': 'yaml'
+        }
+    ]
+    return template_values
+
+
+def on_module_enabled():
+    dashboard.DashboardHandler.add_custom_post_action(
+        'course_availability', CourseSettingsHandler.post_course_availability)
+    dashboard.DashboardHandler.add_custom_post_action(
+        'course_browsability', CourseSettingsHandler.post_course_browsability)
+    dashboard.DashboardHandler.add_custom_post_action(
+        'edit_html_hook', HtmlHookHandler.post_edit_html_hook)
+    dashboard.DashboardHandler.add_custom_get_action(
+        'edit_html_hook', HtmlHookHandler.get_edit_html_hook)
+
+    # Default item in tab group should be dead first in list for good UX.
+    tabs.Registry.register(
+        'settings', 'course', 'Course',
+        lambda h: CourseSettingsHandler.show_settings_tab(h, 'course'),
+        placement=tabs.Placement.BEGINNING)
+    tabs.Registry.register(
+        'settings', 'homepage', 'Homepage',
+        lambda h: CourseSettingsHandler.show_settings_tab(h, 'homepage'))
+    # TODO(jorr): Remove the dependency on the invitations module in this line
+    tabs.Registry.register(
+        'settings', 'registration', 'Registration',
+        lambda h: CourseSettingsHandler.show_settings_tab(
+            h, 'registration,invitation'))
+    tabs.Registry.register(
+        'settings', 'units', 'Units and Lessons',
+        lambda h: CourseSettingsHandler.show_settings_tab(h, 'unit,assessment'))
+    tabs.Registry.register(
+        'settings', 'i18n', 'I18N',
+        lambda h: CourseSettingsHandler.show_settings_tab(h, 'i18n'))
+    tabs.Registry.register(
+        'settings', 'advanced', 'Advanced',
+        _get_settings_advanced, placement=tabs.Placement.END)
+    tabs.Registry.register(
+        'settings', 'about', 'About',
+        _get_about_course, placement=tabs.Placement.END)

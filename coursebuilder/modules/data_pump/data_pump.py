@@ -48,6 +48,7 @@ from models import data_sources
 from models import jobs
 from models import roles
 from models import transforms
+from modules.courses import settings
 from modules.dashboard import dashboard
 from modules.dashboard import tabs
 
@@ -1115,7 +1116,7 @@ class DashboardExtension(object):
             'data_pumps', 'Data Pumps', 'data_pump.html',
             data_source_classes=[DataPumpJobsDataSource])
         tabs.Registry.register('analytics', 'data_pump', 'Data Pump',
-                               [data_pump_visualization])
+                               analytics.TabRenderer([data_pump_visualization]))
 
         def post_action(handler):
             cls(handler).post_data_pump()
@@ -1270,8 +1271,10 @@ def register_module():
         data_sources.Registry.register(DataPumpJobsDataSource)
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             DATA_PUMP_SETTINGS_SCHEMA_SECTION] += course_settings_fields
-        tabs.Registry.register('settings', 'data_pump', 'Data Pump',
-                               DATA_PUMP_SETTINGS_SCHEMA_SECTION)
+        tabs.Registry.register(
+            'settings', 'data_pump', 'Data Pump',
+            lambda handler: settings.CourseSettingsHandler.show_settings_tab(
+                handler, DATA_PUMP_SETTINGS_SCHEMA_SECTION))
         DashboardExtension.register()
 
     def on_module_disabled():

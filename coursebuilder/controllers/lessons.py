@@ -33,6 +33,7 @@ from utils import XsrfTokenManager
 from common import jinja_utils
 from common import safe_dom
 from models import courses
+from models import custom_modules
 from models import models
 from models import student_work
 from models import transforms
@@ -41,7 +42,6 @@ from models.models import Student
 from models.models import StudentProfileDAO
 from models.review import ReviewUtils
 from models.student_work import StudentWorkUtils
-from modules import courses as courses_module
 from modules.review import domain
 from tools import verify
 
@@ -391,7 +391,7 @@ class UnitHandler(BaseHandler):
             self, app_context, unit, lesson, unused_student):
         title_h1 = safe_dom.Element(
             'h1', className='gcb-lesson-title').add_text(lesson.title)
-        can_see_drafts = courses_module.courses.can_see_drafts(self.app_context)
+        can_see_drafts = custom_modules.can_see_drafts(self.app_context)
         if not lesson.now_available and can_see_drafts:
             title_h1.add_text(' ').add_child(
                 safe_dom.Element('span', id='lesson-title-private').add_text(
@@ -417,7 +417,7 @@ class UnitHandler(BaseHandler):
             # the permission to see drafts, redirect to the main page.
             available_units = self.get_track_matching_student(student)
             if ((not unit.now_available or unit not in available_units) and
-                not courses_module.courses.can_see_drafts(self.app_context)):
+                not custom_modules.can_see_drafts(self.app_context)):
                 self.redirect('/')
                 return
 
@@ -744,7 +744,7 @@ class AssessmentHandler(BaseHandler):
         # If the assessment is not currently available, and the user does not
         # have the permission to see drafts redirect to the main page.
         if (not unit.now_available and
-            not courses_module.courses.can_see_drafts(self.app_context)):
+            not custom_modules.can_see_drafts(self.app_context)):
             self.redirect('/')
             return
 

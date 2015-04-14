@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2015 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,47 +23,33 @@ from controllers import utils
 from models import content
 from models import resources_display
 from models import custom_modules
-from models import roles
+from models import student_labels
+from modules.courses import admin_preferences_editor
+from modules.courses import assets
+from modules.courses import outline
+from modules.courses import settings
 from tools import verify
 
-
-All_LOCALES_PERMISSION = 'can_pick_all_locales'
-All_LOCALES_DESCRIPTION = 'Can pick all locales, including unavailable ones.'
-
-SEE_DRAFTS_PERMISSION = 'can_see_draft_content'
-SEE_DRAFTS_DESCRIPTION = 'Can see lessons and assessments with draft status.'
-
-
 custom_module = None
-
-
-def can_pick_all_locales(app_context):
-    return roles.Roles.is_user_allowed(
-        app_context, custom_module, All_LOCALES_PERMISSION)
-
-
-def can_see_drafts(app_context):
-    return roles.Roles.is_user_allowed(
-        app_context, custom_module, SEE_DRAFTS_PERMISSION)
 
 
 def register_module():
     """Registers this module in the registry."""
 
     def on_module_enabled():
-        roles.Roles.register_permissions(custom_module, permissions_callback)
         resource.Registry.register(resources_display.ResourceCourseSettings)
         resource.Registry.register(resources_display.ResourceUnit)
         resource.Registry.register(resources_display.ResourceAssessment)
         resource.Registry.register(resources_display.ResourceLink)
         resource.Registry.register(resources_display.ResourceLesson)
+        resource.Registry.register(resources_display.ResourceSAQuestion)
+        resource.Registry.register(resources_display.ResourceMCQuestion)
+        resource.Registry.register(resources_display.ResourceQuestionGroup)
         resource.Registry.register(utils.ResourceHtmlHook)
 
-    def permissions_callback(unused_app_context):
-        return [
-            roles.Permission(All_LOCALES_PERMISSION, All_LOCALES_DESCRIPTION),
-            roles.Permission(SEE_DRAFTS_PERMISSION, SEE_DRAFTS_DESCRIPTION)
-        ]
+        outline.on_module_enabled()
+        assets.on_module_enabled()
+        settings.on_module_enabled()
 
     # provide parser to verify
     verify.parse_content = content.parse_string_in_scope
@@ -85,7 +71,14 @@ def register_module():
         ('/student/settracks', utils.StudentSetTracksHandler),
         ('/student/home', utils.StudentProfileHandler),
         ('/student/unenroll', utils.StudentUnenrollHandler),
-        ('/unit', lessons.UnitHandler)]
+        ('/unit', lessons.UnitHandler),
+        (settings.CourseSettingsRESTHandler.URI,
+         settings.CourseSettingsRESTHandler),
+        (settings.HtmlHookRESTHandler.URI, settings.HtmlHookRESTHandler),
+        (admin_preferences_editor.AdminPreferencesRESTHandler.URI,
+         admin_preferences_editor.AdminPreferencesRESTHandler),
+    ]
+    courses_routes += student_labels.get_namespaced_handlers()
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

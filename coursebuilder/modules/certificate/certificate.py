@@ -57,7 +57,7 @@ from models import jobs
 from models import models
 from modules.analytics import student_aggregate
 from modules.certificate import custom_criteria
-from modules.dashboard import course_settings
+from modules.courses import settings
 from modules.dashboard import tabs
 
 CERTIFICATE_HANDLER_PATH = 'certificate'
@@ -419,7 +419,8 @@ def register_analytic():
     certificates_earned = analytics.Visualization(
         name, title, 'certificates_earned.html',
         data_source_classes=[CertificatesEarnedDataSource])
-    tabs.Registry.register('analytics', name, title, [certificates_earned])
+    tabs.Registry.register('analytics', name, title,
+                           analytics.TabRenderer([certificates_earned]))
 
 
 class CertificateAggregator(
@@ -463,36 +464,21 @@ def register_module():
 
     def on_module_enabled():
         register_analytic()
-        course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.append(
+        settings.CourseSettingsRESTHandler.REQUIRED_MODULES.append(
             'inputex-list')
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             courses.Course.SCHEMA_SECTION_COURSE].append(
                 get_criteria_editor_schema)
-        course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
+        settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
             os.path.dirname(__file__))
-        course_settings.CourseSettingsHandler.EXTRA_CSS_FILES.append(
+        settings.CourseSettingsHandler.EXTRA_CSS_FILES.append(
             'course_settings.css')
-        course_settings.CourseSettingsHandler.EXTRA_JS_FILES.append(
+        settings.CourseSettingsHandler.EXTRA_JS_FILES.append(
             'course_settings.js')
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.append(
             get_certificate_table_entry)
         student_aggregate.StudentAggregateComponentRegistry.register_component(
             CertificateAggregator)
-
-    def on_module_disabled():
-        course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.remove(
-            'inputex-list')
-        courses.Course.OPTIONS_SCHEMA_PROVIDERS[
-            courses.Course.SCHEMA_SECTION_COURSE].remove(
-                get_criteria_editor_schema)
-        course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.remove(
-            os.path.dirname(__file__))
-        course_settings.CourseSettingsHandler.EXTRA_CSS_FILES.remove(
-            'course_settings.css')
-        course_settings.CourseSettingsHandler.EXTRA_JS_FILES.remove(
-            'course_settings.js')
-        utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.remove(
-            get_certificate_table_entry)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
@@ -506,6 +492,5 @@ def register_module():
         'Show Certificate',
         'A page to show student certificate.',
         global_routes, namespaced_routes,
-        notify_module_disabled=on_module_disabled,
         notify_module_enabled=on_module_enabled)
     return custom_module

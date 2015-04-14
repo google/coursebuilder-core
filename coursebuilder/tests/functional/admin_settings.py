@@ -28,7 +28,7 @@ from controllers import utils
 from models import courses
 from models import models
 from models import transforms
-from modules.dashboard import course_settings
+from modules.courses import settings
 from modules.dashboard import filer
 from modules.i18n_dashboard import i18n_dashboard
 from tests.functional import actions
@@ -41,7 +41,7 @@ ADMIN_EMAIL = 'admin@foo.com'
 NAMESPACE = 'ns_%s' % COURSE_NAME
 BASE_URL = '/' + COURSE_NAME
 ADMIN_SETTINGS_URL = '/%s%s' % (
-    COURSE_NAME, course_settings.HtmlHookRESTHandler.URI)
+    COURSE_NAME, settings.HtmlHookRESTHandler.URI)
 TEXT_ASSET_URL = '/%s%s' % (
     COURSE_NAME, filer.TextAssetRESTHandler.URI)
 STUDENT_EMAIL = 'student@foo.com'
@@ -156,13 +156,13 @@ class HtmlHookTest(actions.TestBase):
         self.course = courses.Course(None, self.app_context)
         actions.login(ADMIN_EMAIL, is_admin=True)
         self.xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
-            course_settings.HtmlHookRESTHandler.XSRF_ACTION)
+            settings.HtmlHookRESTHandler.XSRF_ACTION)
 
     def tearDown(self):
-        settings = self.course.get_environ(self.app_context)
-        settings.pop('foo', None)
-        settings['html_hooks'].pop('foo', None)
-        self.course.save_settings(settings)
+        the_settings = self.course.get_environ(self.app_context)
+        the_settings.pop('foo', None)
+        the_settings['html_hooks'].pop('foo', None)
+        self.course.save_settings(the_settings)
         super(HtmlHookTest, self).tearDown()
 
     def test_hook_edit_button_presence(self):
@@ -187,7 +187,7 @@ class HtmlHookTest(actions.TestBase):
     def test_non_admin_permissions_failures(self):
         actions.login(STUDENT_EMAIL)
         student_xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
-            course_settings.HtmlHookRESTHandler.XSRF_ACTION)
+            settings.HtmlHookRESTHandler.XSRF_ACTION)
 
         response = self.get(ADMIN_SETTINGS_URL)
         self.assertEquals(200, response.status_int)
@@ -470,9 +470,9 @@ class HtmlHookTest(actions.TestBase):
             'baz', utils.HtmlHooks.get_content(self.course, 'foo.bar'))
 
     def test_insert_on_page_and_hook_content_found_using_old_separator(self):
-        settings = self.course.get_environ(self.app_context)
-        settings['html_hooks']['foo'] = {'bar': 'baz'}
-        self.course.save_settings(settings)
+        the_settings = self.course.get_environ(self.app_context)
+        the_settings['html_hooks']['foo'] = {'bar': 'baz'}
+        self.course.save_settings(the_settings)
         hooks = utils.HtmlHooks(self.course)
         content = hooks.insert('foo:bar')
         self.assertEquals('<div class="gcb-html-hook" id="foo-bar">baz</div>',

@@ -122,6 +122,7 @@ import appengine_config
 from common import caching
 from common import safe_dom
 from models import models
+from models import custom_modules
 from models import transforms
 from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
@@ -132,7 +133,6 @@ from models.roles import Roles
 from models.vfs import AbstractFileSystem
 from models.vfs import DatastoreBackedFileSystem
 from models.vfs import LocalReadOnlyFileSystem
-from modules.courses import courses as courses_module
 
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
@@ -810,7 +810,7 @@ class ApplicationContext(object):
         return self._fs.impl.__class__ == DatastoreBackedFileSystem
 
     def can_pick_all_locales(self):
-        return courses_module.can_pick_all_locales(self)
+        return custom_modules.can_pick_all_locales(self)
 
     def get_allowed_locales(self):
         environ = self.get_environ()

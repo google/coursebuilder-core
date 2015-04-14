@@ -37,7 +37,7 @@ from models import transforms
 from models import data_sources
 from models.entities import BaseEntity
 from modules.analytics import student_aggregate
-from modules.dashboard import student_answers_analytics
+from modules.analytics import student_answers
 from modules.dashboard import dto_editor
 
 from google.appengine.ext import db
@@ -272,7 +272,7 @@ def get_possible_dimensions(app_context):
     For more details in the structure of dimensions see ClusterEntity
     documentation.
     """
-    datasource = student_answers_analytics.OrderedQuestionsDataSource()
+    datasource = student_answers.OrderedQuestionsDataSource()
     template_values = {}
     # This has extra information but it was already implemented.
     # Also, the OrderedQuestionsDataSource takes care of the case

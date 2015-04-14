@@ -170,9 +170,12 @@ def register_on_enable():
         'scoring', 'Scoring', 'fake_visualizations.html',
         [ExamsDataSource, PupilsDataSource, AnswersDataSource])
 
-    tabs.Registry.register('analytics', 'exams', 'Exams', [exams])
-    tabs.Registry.register('analytics', 'pupils', 'Pupils', [pupils])
-    tabs.Registry.register('analytics', 'scoring', 'Scoring', [scoring])
+    tabs.Registry.register('analytics', 'exams', 'Exams',
+                           analytics.TabRenderer([exams]))
+    tabs.Registry.register('analytics', 'pupils', 'Pupils',
+                           analytics.TabRenderer([pupils]))
+    tabs.Registry.register('analytics', 'scoring', 'Scoring',
+                           analytics.TabRenderer([scoring]))
 
 
 def register_module():

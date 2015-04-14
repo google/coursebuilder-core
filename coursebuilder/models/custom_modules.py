@@ -16,6 +16,13 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+All_LOCALES_PERMISSION = 'can_pick_all_locales'
+All_LOCALES_DESCRIPTION = 'Can pick all locales, including unavailable ones.'
+
+SEE_DRAFTS_PERMISSION = 'can_see_draft_content'
+SEE_DRAFTS_DESCRIPTION = 'Can see lessons and assessments with draft status.'
+
+import roles
 
 class Module(object):
     """A class that holds module information."""
@@ -88,3 +95,43 @@ class Registry(object):
                 global_routes += registered_module.global_routes
                 namespaced_routes += registered_module.namespaced_routes
         return global_routes, namespaced_routes
+
+
+core_module = None
+
+def register_core_module(global_handlers, namespaced_handlers):
+    """Creates module containing core functionality.
+
+    This is not really a module, in the sense that it's not optional.
+    However, the items present are much more conveniently implemented
+    by using the Module logic.  Thus, rather than putting something
+    in coursebuilder/modules/core, we have this here, so as to indicate
+    that it's not really a module in the broader sense.
+    """
+
+    global core_module  # pylint: disable=global-statement
+
+    def permissions_callback(unused_app_context):
+        return [
+            roles.Permission(All_LOCALES_PERMISSION, All_LOCALES_DESCRIPTION),
+            roles.Permission(SEE_DRAFTS_PERMISSION, SEE_DRAFTS_DESCRIPTION)
+        ]
+
+    def notify_module_enabled():
+        roles.Roles.register_permissions(core_module, permissions_callback)
+
+    core_module = Module(
+        'Core REST services', 'A module to host core REST services',
+        global_handlers, namespaced_handlers,
+        notify_module_enabled=notify_module_enabled)
+    core_module.enable()
+
+
+def can_pick_all_locales(app_context):
+    return roles.Roles.is_user_allowed(
+        app_context, core_module, All_LOCALES_PERMISSION)
+
+
+def can_see_drafts(app_context):
+    return roles.Roles.is_user_allowed(
+        app_context, core_module, SEE_DRAFTS_PERMISSION)

@@ -230,7 +230,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
     ACTION = 'admin'
     DEFAULT_TAB = 'courses'
 
-    default_tab_action = 'admin'
+    def get_default_tab_action(self):
+        return 'admin'
 
     @classmethod
     def bind_tabs(cls):

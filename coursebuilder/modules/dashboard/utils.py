@@ -19,6 +19,8 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 import os
 
 import appengine_config
+
+from common import safe_dom
 from controllers import sites
 from models import vfs
 
@@ -72,3 +74,12 @@ def list_files(handler, subfolder, merge_local_files=False, all_paths=None):
         filename = os.path.relpath(abs_filename, home)
         result.append(vfs.AbstractFileSystem.normpath(filename))
     return sorted(result)
+
+
+def create_edit_button(edit_url):
+    return safe_dom.A(
+        href=edit_url,
+        className='icon md-mode-edit reveal-on-hover',
+        title='Edit',
+        alt='Edit',
+    )

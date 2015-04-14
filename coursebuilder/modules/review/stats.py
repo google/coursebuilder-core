@@ -109,4 +109,5 @@ def register_analytic():
     peer_review = analytics.Visualization(
         name, title, 'stats.html',
         data_source_classes=[PeerReviewStatsSource])
-    tabs.Registry.register('analytics', name, title, [peer_review])
+    tabs.Registry.register('analytics', name, title,
+                           analytics.TabRenderer([peer_review]))

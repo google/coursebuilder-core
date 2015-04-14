@@ -30,6 +30,7 @@ import resources
 import webapp2
 
 import appengine_config
+from common import crypto
 from common import safe_dom
 from controllers import sites
 from controllers import utils
@@ -39,6 +40,7 @@ from models import courses
 from models import custom_modules
 from models import jobs
 from models import transforms
+from modules.dashboard import dashboard
 
 from google.appengine.api import namespace_manager
 from google.appengine.api import search
@@ -354,78 +356,75 @@ class AssetsHandler(webapp2.RequestHandler):
             self.error(404)
 
 
-class SearchDashboardHandler(object):
-    """Should only be inherited by DashboardHandler, not instantiated."""
-
-    def get_search(self):
-        """Renders course indexing view."""
-        template_values = {'page_title': self.format_title('Search')}
-        mc_template_value = {}
-        mc_template_value['module_enabled'] = custom_module.enabled
-        indexing_job = IndexCourse(self.app_context).load()
-        clearing_job = ClearIndex(self.app_context).load()
-        if indexing_job and (not clearing_job or
-                             indexing_job.updated_on > clearing_job.updated_on):
-            if indexing_job.status_code in [jobs.STATUS_CODE_STARTED,
-                                            jobs.STATUS_CODE_QUEUED]:
-                mc_template_value['status_message'] = 'Indexing in progress.'
-                mc_template_value['job_in_progress'] = True
-            elif indexing_job.status_code == jobs.STATUS_CODE_COMPLETED:
-                mc_template_value['indexed'] = True
-                mc_template_value['last_updated'] = (
-                    indexing_job.updated_on.strftime(
-                        utils.HUMAN_READABLE_DATETIME_FORMAT))
-                mc_template_value['index_info'] = transforms.loads(
-                    indexing_job.output)
-            elif indexing_job.status_code == jobs.STATUS_CODE_FAILED:
-                mc_template_value['status_message'] = (
-                    'Indexing job failed with error: %s' % indexing_job.output)
-        elif clearing_job:
-            if clearing_job.status_code in [jobs.STATUS_CODE_STARTED,
-                                            jobs.STATUS_CODE_QUEUED]:
-                mc_template_value['status_message'] = 'Clearing in progress.'
-                mc_template_value['job_in_progress'] = True
-            elif clearing_job.status_code == jobs.STATUS_CODE_COMPLETED:
-                mc_template_value['status_message'] = (
-                    'The index has been cleared.')
-            elif clearing_job.status_code == jobs.STATUS_CODE_FAILED:
-                mc_template_value['status_message'] = (
-                    'Clearing job failed with error: %s' % clearing_job.output)
-        else:
+def _get_search(handler):
+    """Renders course indexing view."""
+    template_values = {'page_title': handler.format_title('Search')}
+    mc_template_value = {}
+    mc_template_value['module_enabled'] = custom_module.enabled
+    indexing_job = IndexCourse(handler.app_context).load()
+    clearing_job = ClearIndex(handler.app_context).load()
+    if indexing_job and (not clearing_job or
+                         indexing_job.updated_on > clearing_job.updated_on):
+        if indexing_job.status_code in [jobs.STATUS_CODE_STARTED,
+                                        jobs.STATUS_CODE_QUEUED]:
+            mc_template_value['status_message'] = 'Indexing in progress.'
+            mc_template_value['job_in_progress'] = True
+        elif indexing_job.status_code == jobs.STATUS_CODE_COMPLETED:
+            mc_template_value['indexed'] = True
+            mc_template_value['last_updated'] = (
+                indexing_job.updated_on.strftime(
+                    utils.HUMAN_READABLE_DATETIME_FORMAT))
+            mc_template_value['index_info'] = transforms.loads(
+                indexing_job.output)
+        elif indexing_job.status_code == jobs.STATUS_CODE_FAILED:
             mc_template_value['status_message'] = (
-                'No indexing job has been run yet.')
+                'Indexing job failed with error: %s' % indexing_job.output)
+    elif clearing_job:
+        if clearing_job.status_code in [jobs.STATUS_CODE_STARTED,
+                                        jobs.STATUS_CODE_QUEUED]:
+            mc_template_value['status_message'] = 'Clearing in progress.'
+            mc_template_value['job_in_progress'] = True
+        elif clearing_job.status_code == jobs.STATUS_CODE_COMPLETED:
+            mc_template_value['status_message'] = (
+                'The index has been cleared.')
+        elif clearing_job.status_code == jobs.STATUS_CODE_FAILED:
+            mc_template_value['status_message'] = (
+                'Clearing job failed with error: %s' % clearing_job.output)
+    else:
+        mc_template_value['status_message'] = (
+            'No indexing job has been run yet.')
 
-        mc_template_value['index_course_xsrf_token'] = self.create_xsrf_token(
-            'index_course')
-        mc_template_value['clear_index_xsrf_token'] = self.create_xsrf_token(
-            'clear_index')
+    mc_template_value['index_course_xsrf_token'] = (
+        crypto.XsrfTokenManager.create_xsrf_token('index_course'))
+    mc_template_value['clear_index_xsrf_token'] = (
+        crypto.XsrfTokenManager.create_xsrf_token('clear_index'))
 
-        template_values['main_content'] = jinja2.Markup(self.get_template(
-            'search_dashboard.html', [os.path.dirname(__file__)]
-            ).render(mc_template_value, autoescape=True))
+    template_values['main_content'] = jinja2.Markup(handler.get_template(
+        'search_dashboard.html', [os.path.dirname(__file__)]
+        ).render(mc_template_value, autoescape=True))
 
-        self.render_page(template_values)
+    handler.render_page(template_values)
 
-    def post_index_course(self):
-        """Submits a new indexing operation."""
-        try:
-            incremental = self.request.get('incremental') == 'true'
-            check_jobs_and_submit(IndexCourse(self.app_context, incremental),
-                                  self.app_context)
-        except db.TransactionFailedError:
-            # Double submission from multiple browsers, just pass
-            pass
-        self.redirect('/dashboard?action=search')
+def _post_index_course(handler):
+    """Submits a new indexing operation."""
+    try:
+        incremental = handler.request.get('incremental') == 'true'
+        check_jobs_and_submit(IndexCourse(handler.app_context, incremental),
+                              handler.app_context)
+    except db.TransactionFailedError:
+        # Double submission from multiple browsers, just pass
+        pass
+    handler.redirect('/dashboard?action=search')
 
-    def post_clear_index(self):
-        """Submits a new indexing operation."""
-        try:
-            check_jobs_and_submit(ClearIndex(self.app_context),
-                                  self.app_context)
-        except db.TransactionFailedError:
-            # Double submission from multiple browsers, just pass
-            pass
-        self.redirect('/dashboard?action=search')
+def _post_clear_index(handler):
+    """Submits a new indexing operation."""
+    try:
+        check_jobs_and_submit(ClearIndex(handler.app_context),
+                              handler.app_context)
+    except db.TransactionFailedError:
+        # Double submission from multiple browsers, just pass
+        pass
+    handler.redirect('/dashboard?action=search')
 
 
 class CronHandler(utils.BaseHandler):
@@ -557,9 +556,18 @@ def register_module():
         ('/search', SearchHandler)
     ]
 
+    def notify_module_enabled():
+        dashboard.DashboardHandler.add_nav_mapping('search', 'Search')
+        dashboard.DashboardHandler.add_custom_get_action('search', _get_search)
+        dashboard.DashboardHandler.add_custom_post_action(
+            'index_course', _post_index_course)
+        dashboard.DashboardHandler.add_custom_post_action(
+            'clear_index', _post_clear_index)
+
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         MODULE_NAME,
         'Provides search capabilities for courses',
-        global_routes, namespaced_routes)
+        global_routes, namespaced_routes,
+        notify_module_enabled=notify_module_enabled)
     return custom_module

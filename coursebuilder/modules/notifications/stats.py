@@ -140,4 +140,5 @@ def register_analytic():
     visualization = analytics.Visualization(
         name, title, 'stats.html',
         data_source_classes=[NotificationsDataSource])
-    tabs.Registry.register('analytics', name, title, [visualization])
+    tabs.Registry.register('analytics', name, title,
+                           analytics.TabRenderer([visualization]))

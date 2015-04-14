@@ -40,8 +40,8 @@ from models import models
 from models import transforms
 from models.progress import ProgressStats
 from models.progress import UnitLessonCompletionTracker
-from modules.data_source_providers import rest_providers
-from modules.data_source_providers import synchronous_providers
+from modules.analytics import rest_providers
+from modules.analytics import synchronous_providers
 from modules.mapreduce import mapreduce_module
 
 from google.appengine.api import files

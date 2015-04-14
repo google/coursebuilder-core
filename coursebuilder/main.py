@@ -23,28 +23,20 @@ import webapp2
 # The following import is needed in order to add third-party libraries.
 import appengine_config  # pylint: disable=unused-import
 
-from common import resource
 from controllers import sites
 from models import analytics
 from models import custom_modules
 from models import data_sources
-from models import resources_display
-from models import student_labels
+
 
 # Import, register, & enable modules named in app.yaml's GCB_REGISTERED_MODULES.
 appengine_config.import_and_enable_modules()
 
 # Core "module" is always present and registered.
-resource.Registry.register(resources_display.ResourceSAQuestion)
-resource.Registry.register(resources_display.ResourceMCQuestion)
-resource.Registry.register(resources_display.ResourceQuestionGroup)
-custom_modules.Module(
-    'Core REST services', 'A module to host core REST services',
+custom_modules.register_core_module(
     analytics.get_global_handlers(),
     analytics.get_namespaced_handlers() +
-    data_sources.get_namespaced_handlers() +
-    student_labels.get_namespaced_handlers()
-    ).enable()
+    data_sources.get_namespaced_handlers())
 
 # Collect routes (URL-matching regexes -> handler classes) for modules.
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()

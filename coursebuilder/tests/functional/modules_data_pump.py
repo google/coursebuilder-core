@@ -30,7 +30,7 @@ from models import jobs
 from models import models
 from models import transforms
 from modules.data_pump import data_pump
-from modules.data_source_providers import rest_providers
+from modules.analytics import rest_providers
 
 from google.appengine.ext import deferred
 
