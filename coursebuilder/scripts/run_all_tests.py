@@ -55,7 +55,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_analytics.AnalyticsTabsWithNoJobs': 8,
     'tests.functional.model_analytics.CronCleanupTest': 14,
     'tests.functional.model_analytics.MapReduceSimpleTest': 1,
-    'tests.functional.model_analytics.ProgressAnalyticsTest': 8,
+    'tests.functional.model_analytics.ProgressAnalyticsTest': 9,
     'tests.functional.model_analytics.QuestionAnalyticsTest': 3,
     'tests.functional.model_courses.CourseCachingTest': 5,
     'tests.functional.model_data_sources.PaginatedTableTest': 17,

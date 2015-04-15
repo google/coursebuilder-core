@@ -351,7 +351,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         assert_equals(
             progress_stats.compute_entity_dict('course', []),
             {'label': 'UNTITLED COURSE', 'u': {unit1.unit_id: {
-                'label': 'Unit %s' % unit1.index, 'l': {}}}, 's': {
+                'label': 'Unit %s' % unit1.index, 'l': {}, 's': {}}}, 's': {
                     assessment1.unit_id: {'label': assessment1.title}}})
         lesson11 = course.add_lesson(unit1)
         assert_equals(
@@ -364,6 +364,7 @@ class ProgressAnalyticsTest(actions.TestBase):
                 },
                 "u": {
                     unit1.unit_id: {
+                        "s": {},
                         "l": {
                             lesson11.lesson_id: {
                                 "a": {},
@@ -399,6 +400,7 @@ class ProgressAnalyticsTest(actions.TestBase):
                 },
                 "u": {
                     unit1.unit_id: {
+                        "s": {},
                         "l": {
                             lesson11.lesson_id: {
                                 "a": {},
@@ -423,6 +425,73 @@ class ProgressAnalyticsTest(actions.TestBase):
                 },
                 "label": 'UNTITLED COURSE'
             })
+
+    def test_entity_dict_for_pre_post_assessment(self):
+        """Tests correct entity_structure is built."""
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+        unit1 = course.add_unit()
+        pre_assessment = course.add_assessment()
+        pre_assessment.title = 'Pre Assessment'
+        post_assessment = course.add_assessment()
+        post_assessment.title = 'Post Assessment'
+
+        # Neither pre nor post assessment for unit
+        unit1.pre_assessment = None
+        unit1.post_assessment = None
+        progress_stats = ProgressStats(course)
+        assert_equals(
+            progress_stats.compute_entity_dict('course', []),
+            {'s': {
+                pre_assessment.unit_id: {'label': 'Pre Assessment'},
+                post_assessment.unit_id: {'label': 'Post Assessment'}},
+             'u': {unit1.unit_id: {
+                 's': {},
+                 'l': {},
+                 'label': 'Unit 1'}},
+             'label': 'UNTITLED COURSE'})
+
+        # Only pre
+        unit1.pre_assessment = pre_assessment.unit_id
+        unit1.post_assessment = None
+        progress_stats = ProgressStats(course)
+        assert_equals(
+            progress_stats.compute_entity_dict('course', []),
+            {'s': {post_assessment.unit_id: {'label': 'Post Assessment'}},
+             'u': {unit1.unit_id: {
+                 's': {pre_assessment.unit_id: {'label': 'Pre Assessment'}},
+                 'l': {},
+                 'label': 'Unit 1'}},
+             'label': 'UNTITLED COURSE'})
+
+        # Only post
+        unit1.pre_assessment = None
+        unit1.post_assessment = post_assessment.unit_id
+        progress_stats = ProgressStats(course)
+        assert_equals(
+            progress_stats.compute_entity_dict('course', []),
+            {'s': {pre_assessment.unit_id: {'label': 'Pre Assessment'}},
+             'u': {unit1.unit_id: {
+                 's': {post_assessment.unit_id: {'label': 'Post Assessment'}},
+                 'l': {},
+                 'label': 'Unit 1'}},
+             'label': 'UNTITLED COURSE'})
+
+        # Pre and post assessment set.
+        unit1.pre_assessment = pre_assessment.unit_id
+        unit1.post_assessment = post_assessment.unit_id
+        progress_stats = ProgressStats(course)
+        assert_equals(
+            progress_stats.compute_entity_dict('course', []),
+            {'s': {},
+             'u': {unit1.unit_id: {
+                 's': {
+                     pre_assessment.unit_id: {'label': 'Pre Assessment'},
+                     post_assessment.unit_id: {'label': 'Post Assessment'}},
+                 'l': {},
+                 'label': 'Unit 1'}},
+             'label': 'UNTITLED COURSE'})
+
 
 
 class QuestionAnalyticsTest(actions.TestBase):

@@ -1181,8 +1181,15 @@ class ProgressStats(object):
         return [unit.unit_id for unit in units]
 
     def _get_assessment_ids(self):
+        contained = set()
+        for unit in self._get_course().get_units_of_type(verify.UNIT_TYPE_UNIT):
+            if unit.pre_assessment:
+                contained.add(unit.pre_assessment)
+            if unit.post_assessment:
+                contained.add(unit.post_assessment)
+
         assessments = self._get_course().get_assessment_list()
-        return [a.unit_id for a in assessments]
+        return [a.unit_id for a in assessments if a.unit_id not in contained]
 
     def _get_lesson_ids(self, unit_id):
         lessons = self._get_course().get_lessons(unit_id)
@@ -1216,8 +1223,10 @@ class ProgressStats(object):
         unit = self._get_course().find_unit_by_id(unit_id)
         return 'Unit %s' % unit.index
 
-    def _get_assessment_label(self, unit_id):
-        assessment = self._get_course().find_unit_by_id(unit_id)
+    def _get_assessment_label(self, unit_id, assessment_id=None):
+        if not assessment_id:
+            assessment_id = unit_id
+        assessment = self._get_course().find_unit_by_id(assessment_id)
         return assessment.title
 
     def _get_lesson_label(self, unit_id, lesson_id):
@@ -1245,6 +1254,15 @@ class ProgressStats(object):
         return self._get_block_label(
             unit_id, lesson_id, unused_html_id, component_id)
 
+    def _get_pre_post_assessments(self, unit_id):
+        ret = []
+        unit = self._get_course().find_unit_by_id(unit_id)
+        if unit.pre_assessment:
+            ret.append(unit.pre_assessment)
+        if unit.post_assessment:
+            ret.append(unit.post_assessment)
+        return ret
+
     # Outlines the structure of the course. The key is the entity level, and
     # its value is a dictionary with following keys and its values:
     #   'children': list of tuples. Each tuple consists of string representation
@@ -1262,7 +1280,8 @@ class ProgressStats(object):
                          ('assessment', _get_assessment_ids)],
         },
         'unit': {
-            'children': [('lesson', _get_lesson_ids)],
+            'children': [('lesson', _get_lesson_ids),
+                         ('assessment', _get_pre_post_assessments)]
         },
         'assessment': {
             'children': [],
