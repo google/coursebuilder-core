@@ -122,6 +122,13 @@ def register_tabs():
 
 def add_actions():
     def cluster_prepare_template(dashboard_instance):
+        if not clustering.ClusterDataSource.any_clusterable_objects_exist(
+            dashboard_instance.app_context):
+            dashboard_instance.redirect(
+                dashboard_instance.get_action_url(
+                    'analytics', extra_args={'tab': 'clustering'}))
+            return
+
         key = dashboard_instance.request.get('key')
         template_values = {}
         template_values['page_title'] = dashboard_instance.format_title(

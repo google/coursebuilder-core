@@ -301,7 +301,7 @@ class ClusteringTabTests(actions.TestBase):
     def setUp(self):
         super(ClusteringTabTests, self).setUp()
         self.base = '/' + self.COURSE_NAME
-        context = actions.simple_add_course(
+        self.context = actions.simple_add_course(
             self.COURSE_NAME, self.ADMIN_EMAIL, 'Clustering Course')
 
         self.old_namespace = namespace_manager.get_namespace()
@@ -335,8 +335,14 @@ class ClusteringTabTests(actions.TestBase):
                  'vector': []})
             self.clusters_keys.append(clustering.ClusterDAO.save(new_cluster))
 
+    def _add_unit_to_course(self):
+        course = courses.Course(None, self.context)
+        course.add_unit()
+        course.save()
+
     def test_all_clusters_listed(self):
         """All the clusters in the db are listed in the page."""
+        self._add_unit_to_course()
         clusters_number = 100
         self._add_clusters(clusters_number)
         response = self.get(self.CLUSTER_TAB_URL)
@@ -355,14 +361,22 @@ class ClusteringTabTests(actions.TestBase):
             self.assertIn(self.description_str.format(index), response.body,
                 msg='Cluster description not present in page')
 
+    def test_no_add_cluster_button_when_no_course_elements(self):
+        url = 'dashboard?action=add_cluster'
+        response = self.get(self.CLUSTER_TAB_URL)
+        self.assertNotIn(url, response.body,
+                         msg='Url for add cluster unexpectedly found.')
+
     def test_add_cluster_button(self):
         """There is a new cluster button in the page"""
+        self._add_unit_to_course()
         url = 'dashboard?action=add_cluster'
         response = self.get(self.CLUSTER_TAB_URL)
         self.assertIn(url, response.body, msg='No url for add cluster found.')
 
     def test_edit_correct_url_present(self):
         """There is a correct update link for each cluster."""
+        self._add_unit_to_course()
         clusters_number = 10
         url = 'dashboard?action=edit_cluster&amp;key={}'
         self._add_clusters(clusters_number)
@@ -370,6 +384,21 @@ class ClusteringTabTests(actions.TestBase):
         for cluster_key in self.clusters_keys:
             self.assertIn(url.format(cluster_key), response.body)
 
+    def test_add_cluster_redirects_when_no_clusterables(self):
+        response = self.get('/%s/dashboard?action=add_cluster' %
+                            self.COURSE_NAME)
+        self.assertEquals(302, response.status_int)
+        self.assertEquals(
+            'http://localhost/%s/dashboard?action=analytics&tab=clustering' %
+            self.COURSE_NAME, response.location)
+
+    def test_edit_cluster_redirects_when_no_clusterables(self):
+        response = self.get('/%s/dashboard?action=edit_cluster' %
+                            self.COURSE_NAME)
+        self.assertEquals(302, response.status_int)
+        self.assertEquals(
+            'http://localhost/%s/dashboard?action=analytics&tab=clustering' %
+            self.COURSE_NAME, response.location)
 
 class ClusterRESTHandlerTest(actions.TestBase):
     """Tests for the add_cluster handler and page."""

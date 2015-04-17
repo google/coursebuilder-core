@@ -13,25 +13,30 @@
   Clusters can also be used to find relationships between behavior patterns and make predictions. For example, two clusters can be used to identify how many students who passed Lesson 1 with more than 80% obtained a good score on question 5 in Lesson 2.
 </p>
 
-<a href="dashboard?action=add_cluster" class="gcb-button gcb-pull-right">
-  Create new cluster
-</a>
-<table id="gcb-clustering">
-  <thead>
-    <th>Cluster name</th>
-    <th>Description</th>
-  </thead>
-  <tbody>
-    {% for cluster in clusters %}
-      <tr>
-        <td>
-          <!-- For loop starts with index 1 -->
-          <a href="{{ edit_urls[loop.index - 1] }}">{{ cluster.name }}</a>
-        </td>
-        <td>
-          {{ cluster.description }}
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% if no_clusterables %}
+  {{ no_clusterables }}
+{% else %}
+  <a href="dashboard?action=add_cluster" class="gcb-button gcb-pull-right">
+    Create new cluster
+  </a>
+
+  <table id="gcb-clustering">
+    <thead>
+      <th>Cluster name</th>
+      <th>Description</th>
+    </thead>
+    <tbody>
+      {% for cluster in clusters %}
+        <tr>
+          <td>
+            <!-- For loop starts with index 1 -->
+            <a href="{{ edit_urls[loop.index - 1] }}">{{ cluster.name }}</a>
+          </td>
+          <td>
+            {{ cluster.description }}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}

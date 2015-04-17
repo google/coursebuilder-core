@@ -162,6 +162,13 @@ class ClusterDataSource(data_sources.SynchronousQuery):
     """
 
     @staticmethod
+    def any_clusterable_objects_exist(app_context):
+        course = courses.Course(None, app_context=app_context)
+        if course.get_units() or models.QuestionDAO.get_all():
+            return True
+        return False
+
+    @staticmethod
     def fill_values(app_context, template_values):
         """Sets values into the dict used to fill out the Jinja template."""
         template_values['clusters'] = ClusterDAO.get_all()
@@ -172,7 +179,11 @@ class ClusterDataSource(data_sources.SynchronousQuery):
                 'key': cluster.id})
             edit_urls.append('dashboard?{}'.format(params))
         template_values['edit_urls'] = edit_urls
-
+        if not ClusterDataSource.any_clusterable_objects_exist(app_context):
+            template_values['no_clusterables'] = (
+                'No course items exist on which to make clusters.  '
+                'At least one unit, lesson, or question must exist '
+                'for clustering functionality is relevant.')
 
 def _has_right_side(dim):
     """Returns True if the value of dim[DIM_HIGH] is not None or ''."""
