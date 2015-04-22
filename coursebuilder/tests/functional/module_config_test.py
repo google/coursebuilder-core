@@ -416,6 +416,53 @@ class ModuleIncorporationTest(TestWithTempDir):
             ]
         self._expect_logs(expected)
 
+    def test_install_with_file_localhost_url(self):
+        self._install('--targets=foo@file://localhost%s' %
+                      os.path.abspath(self.foo_dir))
+        expected = [
+            'Downloading module foo',
+            'Installing module foo',
+            'Updating scripts/third_party_tests.yaml',
+            'Updating app.yaml',
+            'You should change this from its default',
+            ]
+        self._expect_logs(expected)
+
+    def test_install_with_file_nohost_url(self):
+        self._install('--targets=foo@file://%s' %
+                      os.path.abspath(self.foo_dir))
+        expected = [
+            'Downloading module foo',
+            'Installing module foo',
+            'Updating scripts/third_party_tests.yaml',
+            'Updating app.yaml',
+            'You should change this from its default',
+            ]
+        self._expect_logs(expected)
+
+    def test_install_with_relative_path_url(self):
+        self._install('--targets=foo@file://%s' %
+                      os.path.relpath(self.foo_dir))
+        expected = [
+            'Downloading module foo',
+            'Installing module foo',
+            'Updating scripts/third_party_tests.yaml',
+            'Updating app.yaml',
+            'You should change this from its default',
+            ]
+        self._expect_logs(expected)
+
+    def test_install_with_relative_path(self):
+        self._install('--targets=foo@%s' % os.path.relpath(self.foo_dir))
+        expected = [
+            'Downloading module foo',
+            'Installing module foo',
+            'Updating scripts/third_party_tests.yaml',
+            'Updating app.yaml',
+            'You should change this from its default',
+            ]
+        self._expect_logs(expected)
+
     def test_install_both(self):
         self._install('--targets=foo@%s,bar@%s' % (self.foo_dir, self.bar_dir))
         expected = (

@@ -80,7 +80,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_utils.QueryMapperTest': 4,
     'tests.functional.model_vfs.VfsLargeFileSupportTest': 6,
     'tests.functional.module_config_test.ManipulateAppYamlFileTest': 8,
-    'tests.functional.module_config_test.ModuleIncorporationTest': 8,
+    'tests.functional.module_config_test.ModuleIncorporationTest': 12,
     'tests.functional.module_config_test.ModuleManifestTest': 7,
     'tests.functional.modules_admin.AdminDashboardTabTests': 4,
     'tests.functional.modules_analytics.ClusterRESTHandlerTest': 29,
