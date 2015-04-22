@@ -43,7 +43,7 @@ files = [
   YUI_BASE + '/event-delegate/event-delegate.js',
   YUI_BASE + '/node-event-delegate/node-event-delegate.js',
   YUI_BASE + '/dom-style/dom-style.js',
-  'https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js',
+  'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
   KARMA_LIB + '/jasmine-jquery-1.5.2.js',
 
   // Test files
