@@ -51,6 +51,7 @@ from modules.dashboard import dashboard
 from modules.dashboard import tabs
 from modules.dashboard.unit_lesson_editor import LessonRESTHandler
 from modules.i18n_dashboard import i18n_dashboard
+from modules.skill_map import competency
 from modules.skill_map import skill_map_metrics
 
 from google.appengine.ext import db
@@ -1586,6 +1587,8 @@ def notify_module_enabled():
         TranslatableResourceSkill)
 
     register_tabs()
+
+    competency.notify_module_enabled()
 
 
 def register_module():

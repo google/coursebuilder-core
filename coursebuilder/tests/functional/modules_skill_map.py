@@ -37,6 +37,7 @@ from models import models
 from models import transforms
 from models.progress import UnitLessonCompletionTracker
 from modules.i18n_dashboard import i18n_dashboard
+from modules.skill_map import competency
 from modules.skill_map.skill_map import CountSkillCompletion
 from modules.skill_map.skill_map import LESSON_SKILL_LIST_KEY
 from modules.skill_map.skill_map import ResourceSkill
@@ -1900,3 +1901,61 @@ class SkillCompletionTrackerTests(BaseSkillMapTests):
         # Just does not raise any error
         tracker.update_skills(self.student, lprogress, self.lesson1.lesson_id)
         tracker.recalculate_progress(lprogress_tracker, lprogress, self.sa)
+
+class CompetencyMeasureTests(BaseSkillMapTests):
+
+    def setUp(self):
+        super(CompetencyMeasureTests, self).setUp()
+        self.skill_id = 12345
+        self.student = models.Student(user_id='321')
+        self.student.put()
+
+    def test_success_rate_measure(self):
+        measure = competency.SuccessRateCompetencyMeasure(self.student)
+        measure.load(self.skill_id)
+
+        # Expect 0.0 when nothing has been set
+        self.assertEqual(0.0, measure.get_skill_score())
+
+        # Expect to track percentage correct
+        measure.update(1.0)
+        self.assertEqual(1.0, measure.get_skill_score())
+        measure.update(0.0)
+        self.assertEqual(0.5, measure.get_skill_score())
+
+        # Expect save and load
+        measure.save()
+        measure = competency.SuccessRateCompetencyMeasure(self.student)
+        measure.load(self.skill_id)
+        self.assertEqual(0.5, measure.get_skill_score())
+
+        events_list = measure.get_events_list()
+        self.assertEqual(2, len(events_list))
+
+    def test_updater(self):
+        updater = competency.Registry.get_updater(self.student, self.skill_id)
+        updater.update(0.0)
+        updater.update(1.0)
+        updater.save()
+
+        measure = competency.SuccessRateCompetencyMeasure(self.student)
+        measure.load(self.skill_id)
+        self.assertEqual(0.5, measure.get_skill_score())
+
+    def test_safe_key(self):
+        def transform_function(pii_str):
+            return 'trans(%s)' % pii_str
+
+        measure = competency.SuccessRateCompetencyMeasure(self.student)
+        measure.load(self.skill_id)
+        measure.save()
+
+        user_id = self.student.user_id
+
+        entity = competency.CompetencyMeasureEntity.get_by_key_name(
+            competency.CompetencyMeasureEntity.create_key_name(
+                user_id, self.skill_id, 'SuccessRateCompetencyMeasure'))
+        safe_key = competency.CompetencyMeasureEntity.safe_key(
+            entity.key(), transform_function)
+        self.assertEqual(
+            safe_key.name(), 'trans(321):12345:SuccessRateCompetencyMeasure')

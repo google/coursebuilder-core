@@ -158,6 +158,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_rating.ExtraContentProvideTests': 4,
     'tests.functional.modules_rating.RatingHandlerTests': 15,
     'tests.functional.modules_search.SearchTest': 12,
+    'tests.functional.modules_skill_map.CompetencyMeasureTests': 3,
     'tests.functional.modules_skill_map.CountSkillCompletionsTests': 3,
     'tests.functional.modules_skill_map.LocationListRestHandlerTests': 2,
     'tests.functional.modules_skill_map.SkillAggregateRestHandlerTests': 6,
