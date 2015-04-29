@@ -348,7 +348,6 @@ window.GcbGoogleDriveTagParent = (function(
     // Serialization in $.ajax afoul of an infinite recursion with the InputEx
     // patches to Array and Object in place, so we remove/restore them around
     // the call.
-    module._removeInputExFunctions();
     var request = GoogleApiClientTools.stringifyJson({
       contents: contents,
       document_id: documentId,
@@ -361,7 +360,6 @@ window.GcbGoogleDriveTagParent = (function(
       type: 'PUT',
       url: GoogleApiClientTools.getGoogleDriveTagUrl()
     }).done(module._onCbPost);
-    module._restoreInputExFunctions();
   };
 
   module._onDocumentContentsDownloadError = function(xhr, status, error) {
@@ -415,14 +413,6 @@ window.GcbGoogleDriveTagParent = (function(
   };
 
   module._onPick = function(data) {
-    if (data.action !== module._PICKER_LOADED) {
-      // _onPick is called on load for the picker, on cancel, and when a user
-      // picks an item. Restore except in case of load; in that case we are in
-      // the context of the picker and want to leave the functions swapped out
-      // until control is returned to InputEx.
-      module._restoreInputExFunctions();
-    }
-
     if (data.action === module._PICKER_PICKED) {
       var documentId = data.docs[0].id;
       if (documentId) {
@@ -465,24 +455,7 @@ window.GcbGoogleDriveTagParent = (function(
       .setOAuthToken(GoogleApiClientTools.getAuthToken())
       .setOrigin(window.Dispatcher.getOrigin())
       .build();
-    module._removeInputExFunctions();
     picker.setVisible(true);
-  };
-
-  module._removeInputExFunctions = function() {
-    // InputEx adds a JSON prettifier to Array and Object. This works fine for
-    // InputEx code but blows up the Google Picker's setVisible(). Before we can
-    // make the picker visible, we have to move these functions out of the way.
-    module._oldArrayToPrettyJsonString = Array.prototype.toPrettyJSONString;
-    module._oldObjectToPrettyJsonString = Object.prototype.toPrettyJSONString;
-    delete Array.prototype.toPrettyJSONString;
-    delete Object.prototype.toPrettyJSONString;
-  };
-
-  module._restoreInputExFunctions = function() {
-    // Put back the items removed by _removeInputExFunctions.
-    Array.prototype.toPrettyJSONString = module._oldObjectToPrettyJsonString;
-    Object.prototype.toPrettyJSONString = module._oldObjectToPrettyJsonString;
   };
 
   module._setUpParentFrame = function() {

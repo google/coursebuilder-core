@@ -20,32 +20,6 @@ function parseAjaxResponse(s) {
 }
 
 /**
- * InputEx adds a JSON prettifier to Array and Object. This works fine for
- * InputEx code but breaks some library code (e.g., jQuery.ajax). Use this
- * to wrap a function which should be called with the InputEx extras turned
- * off.
- *
- * @param f {function} A zero-args function executed with prettifier removed.
- */
-function withInputExFunctionsRemoved(f) {
-  var oldArrayToPrettyJsonString = Array.prototype.toPrettyJSONString;
-  var oldObjectToPrettyJsonString = Object.prototype.toPrettyJSONString;
-  delete Array.prototype.toPrettyJSONString;
-  delete Object.prototype.toPrettyJSONString;
-
-  try {
-    f();
-  } finally {
-    if (oldArrayToPrettyJsonString !== undefined) {
-      Array.prototype.toPrettyJSONString = oldArrayToPrettyJsonString;
-    }
-    if (oldObjectToPrettyJsonString !== undefined) {
-      Object.prototype.toPrettyJSONString = oldObjectToPrettyJsonString;
-    }
-  }
-}
-
-/**
  * A skills table builder.
  *
  * @class
@@ -358,18 +332,16 @@ SkillList.prototype = {
     };
     var query_string = $.param(params);
     var url = 'rest/modules/skill_map/skill?' + query_string;
-    withInputExFunctionsRemoved(function() {
-      $.ajax({
-        url: url,
-        type: 'DELETE',
-        dataType: 'text',
-        success: function (data) {
-          that._onDeleteSkill(callback, data);
-        },
-        error: function () {
-          callback('error');
-        }
-      });
+    $.ajax({
+      url: url,
+      type: 'DELETE',
+      dataType: 'text',
+      success: function (data) {
+        that._onDeleteSkill(callback, data);
+      },
+      error: function () {
+        callback('error');
+      }
     });
     return true;
   },
@@ -466,17 +438,14 @@ SkillList.prototype = {
     }
 
     var request = JSON.stringify(requestDict);
-
-    withInputExFunctionsRemoved(function() {
-      $.ajax({
-        type: 'PUT',
-        url: 'rest/modules/skill_map/skill',
-        data: {'request': request},
-        dataType: 'text',
-        success: function(data) {
-          that._onCreateOrUpdateSkill(callback, data);
-        }
-      });
+    $.ajax({
+      type: 'PUT',
+      url: 'rest/modules/skill_map/skill',
+      data: {'request': request},
+      dataType: 'text',
+      success: function(data) {
+        that._onCreateOrUpdateSkill(callback, data);
+      }
     });
   },
 
