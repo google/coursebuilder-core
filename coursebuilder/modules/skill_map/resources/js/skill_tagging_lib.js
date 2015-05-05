@@ -4,7 +4,6 @@
 
 var SKILL_API_VERSION = '1';
 var ESC_KEY = 27;
-var MAX_SKILL_REQUEST_SIZE = 10;
 
 /*********************** Start Dependencies ***********************************/
 // The following symols are required to be defined in the global scope:
@@ -24,10 +23,10 @@ function parseAjaxResponse(s) {
  *
  * @class
  */
-function SkillTable(skillList, locationList) {
+function SkillTable(skills, lessons) {
   // TODO(broussev): Add jasmine tests.
-  this._skillList = skillList;
-  this._locationList = locationList;
+  this._skills = skills;
+  this._lessons = lessons;
 }
 
 SkillTable.prototype = {
@@ -45,7 +44,7 @@ SkillTable.prototype = {
     );
     td.find('.diagnosis.icon, button').data('id', skill.id);
 
-    var diagnosis = this._skillList.diagnosis(skill.id);
+    var diagnosis = this._skills.diagnosis(skill.id);
     if (diagnosis.status == SkillList.WARNING) {
       td.find('.diagnosis.icon').addClass('md-warning');
     } else if (diagnosis.status == SkillList.ERROR) {
@@ -67,23 +66,22 @@ SkillTable.prototype = {
     // add skill prerequisites
     var td = $('<td></td>');
     var ol = $('<ol class="skill-display-root"></ol>');
-    this._skillList.eachPrerequisite(skill, function(prereq) {
+    this._skills.eachPrerequisite(skill, function(prereq) {
       var prereqLi = $('<li class="skill"></li>').text(prereq.name);
       ol.append(prereqLi);
     });
     td.append(ol);
     tr.append(td);
 
-    // add skill locations
+    // add skill lessons
     var td = $('<td></td>');
     var ol = $('<ol class="comma-list"></ol>');
-    for (var i = 0; i < skill.locations.length; i++) {
-      var loc = skill.locations[i]
-      var title = loc.unit.title + ' ' + loc.lesson.title;
+    for (var i = 0; i < skill.lessons.length; i++) {
+      var loc = skill.lessons[i];
       var a = $('<a class="skill-location"></a>')
           .text(loc.label)
           .attr('href', loc.href)
-          .attr('title', title);
+          .attr('title', loc.description);
       ol.append($('<li></li>').append(a));
     }
     td.append(ol);
@@ -94,7 +92,7 @@ SkillTable.prototype = {
 
   _skillsCount: function() {
     var that = this;
-    return Object.keys(that._skillList._skillLookupByIdTable).length;
+    return Object.keys(that._skills._skillLookupByIdTable).length;
   },
 
   _buildHeader: function() {
@@ -118,7 +116,7 @@ SkillTable.prototype = {
     var tbody = $('<tbody></tbody>');
 
     var i = 0;
-    that._skillList.eachSkill(function(skill) {
+    that._skills.eachSkill(function(skill) {
       var row = that._buildRow(skill);
       row.addClass( i++ % 2 == 0 ? 'even' : 'odd');
       tbody.append(row);
@@ -137,8 +135,8 @@ SkillTable.prototype = {
       items: '.diagnosis.active',
       content: function() {
         var skillId = $(this).data('id');
-        var diagnosis = that._skillList.diagnosis(skillId);
-        var skill = that._skillList.getSkillById(skillId);
+        var diagnosis = that._skills.diagnosis(skillId);
+        var skill = that._skills.getSkillById(skillId);
         return that._diagnosisReport(skill, diagnosis);
       }
     });
@@ -148,12 +146,12 @@ SkillTable.prototype = {
         return false;
       }
       var skillId = $(this).data('id');
-      that._skillList.deleteSkill(_onAjaxDeleteCallback, skillId);
+      that._skills.deleteSkill(_onAjaxDeleteCallback, skillId);
     });
 
     tbody.find('.edit-skill').on('click', function(e){
       var skillId = $(this).data('id');
-      var skillPopUp = new EditSkillPopup(that._skillList, that._locationList,
+      var skillPopUp = new EditSkillPopup(that._skills, that._lessons,
           skillId);
       skillPopUp.open(function() {
         that._refresh();
@@ -199,7 +197,7 @@ SkillTable.prototype = {
     });
 
     this._content.find('.add-new-skill').on("click", function() {
-      var skillPopUp = new EditSkillPopup(that._skillList, that._locationList);
+      var skillPopUp = new EditSkillPopup(that._skills, that._lessons);
       skillPopUp.open(function() {
         that._refresh();
       });
@@ -249,11 +247,11 @@ SkillTable.prototype = {
         $.each(cycle, function(j, cycleSkillId) {
           // Put all the elements of the cycle one after the other (CSS will)
           // interpolate a '-->' between entries
-          var cycleSkill = that._skillList.getSkillById(cycleSkillId);
+          var cycleSkill = that._skills.getSkillById(cycleSkillId);
           li.append($('<span class="elem"></span>').text(cycleSkill.name));
         });
         // Put the first element of the cycle at the end of the cycle too
-        var firstSkill = that._skillList.getSkillById(cycle[0]);
+        var firstSkill = that._skills.getSkillById(cycle[0]);
         li.append($('<span class="elem"></span>').text(firstSkill.name));
         panel.find('.diagnosis.cycles .elem-list').append(li);
       });
@@ -267,7 +265,7 @@ SkillTable.prototype = {
         $.each(chain, function(j, chainSkillId) {
           // Put all the elements of the chain one after the other (CSS will)
           // interpolate a '-->' between entries
-          var chainSkill = that._skillList.getSkillById(chainSkillId);
+          var chainSkill = that._skills.getSkillById(chainSkillId);
           li.append($('<span class="elem"></span>').text(chainSkill.name));
         });
         panel.find('.diagnosis.long-chains .elem-list').append(li);
@@ -402,25 +400,31 @@ SkillList.prototype = {
    * @param skillId
    */
   createOrUpdateSkill: function(callback, name, description, prerequisiteIds,
-      locationKeys, skillId) {
+      lessonKeys, questionKeys, skillId) {
 
     var that = this;
     prerequisiteIds = prerequisiteIds || [];
-    locationKeys = locationKeys || [];
+    lessonKeys = lessonKeys || [];
+    questionKeys = questionKeys || [];
 
     if (! name) {
       showMsg('Name can\'t be empty');
       return;
     }
 
-    prerequisites = [];
+    var prerequisites = [];
     for (var i = 0; i < prerequisiteIds.length; i++) {
       prerequisites.push({'id': prerequisiteIds[i]});
     }
 
-    locations = [];
-    for (var i = 0; i < locationKeys.length; i++) {
-      locations.push({'key': locationKeys[i]});
+    var lessons = [];
+    for (var i = 0; i < lessonKeys.length; i++) {
+      lessons.push({'key': lessonKeys[i]});
+    }
+
+    var questions = [];
+    for (var i = 0; i < questionKeys.length; i++) {
+      questions.push({'key': questionKeys[i]});
     }
 
     var requestDict = {
@@ -430,7 +434,8 @@ SkillList.prototype = {
         'name': name,
         'description': description,
         'prerequisites': prerequisites,
-        'locations': locations
+        'lessons': lessons,
+        'questions': questions
       })
     };
     if (skillId) {
@@ -516,10 +521,10 @@ SkillList.prototype = {
 
   _updateFromPayload: function(payload) {
     var that = this;
-    var skillList = payload['skill_list'];
+    var skills = payload['skills'];
 
     this._skillLookupByIdTable = [];
-    $.each(skillList, function() {
+    $.each(skills, function() {
       that._skillLookupByIdTable[this.id] = this;
     });
 
@@ -542,8 +547,10 @@ SkillList.prototype = {
 };
 
 function LocationList() {
-  this._locations = null;
-  this._locationsByKey = null;
+  this._lessons = null;
+  this._lessonsByKey = null;
+  this._questions = null;
+  this._questionsByKey = null;
 }
 
 LocationList.prototype = {
@@ -551,7 +558,7 @@ LocationList.prototype = {
     var that = this;
     $.ajax({
       type: 'GET',
-      url: 'rest/modules/skill_map/location_list',
+      url: 'rest/modules/skill_map/locations',
       dataType: 'text',
       success: function(data) {
         that._onLoad(callback, data);
@@ -562,14 +569,24 @@ LocationList.prototype = {
     });
   },
 
-  each: function(callback) {
-    $.each(this._locations, function() {
+  eachLesson: function(callback) {
+    $.each(this._lessons, function() {
       callback(this);
     });
   },
 
-  getByKey: function(key) {
-    return this._locationsByKey[key];
+  getLessonByKey: function(key) {
+    return this._lessonsByKey[key];
+  },
+
+  eachQuestion: function(callback) {
+    $.each(this._questions, function() {
+      callback(this);
+    });
+  },
+
+  getQuestionByKey: function(key) {
+    return this._questionsByKey[key];
   },
 
   _onLoad: function(callback, data) {
@@ -580,10 +597,17 @@ LocationList.prototype = {
       return;
     }
     var payload = JSON.parse(data['payload']);
-    this._locations = payload['location_list'];
-    this._locationsByKey = [];
-    $.each(this._locations, function() {
-      that._locationsByKey[this.key] = this;
+
+    this._lessons = payload['lessons'];
+    this._lessonsByKey = [];
+    $.each(this._lessons, function() {
+      that._lessonsByKey[this.key] = this;
+    });
+
+    this._questions = payload['questions'];
+    this._questionsByKey = [];
+    $.each(this._questions, function() {
+      that._questionsByKey[this.key] = this;
     });
 
     if (callback) {
@@ -663,7 +687,7 @@ function EditSkillPopup(skillList, locationList, skillId) {
   var that = this;
   this._skillId = skillId;
   this._skillList = skillList;
-  this._locationList = locationList;
+  this._locations = locationList;
   this._documentBody = $(document.body);
   this._lightbox = new Lightbox();
   this._form = $(
@@ -683,9 +707,13 @@ function EditSkillPopup(skillList, locationList, skillId) {
       '    <label class="strong">Prerequisites</label>' +
       '    <div class="skill-prerequisites"></div>' +
       '  </div>' +
-      '  <div class="form-row location-row">' +
+      '  <div class="form-row lesson-row">' +
       '    <label class="strong">Lessons</label>' +
       '    <div class="lessons"></div>' +
+      '  </div>' +
+      '  <div class="form-row question-row">' +
+      '    <label class="strong">Questions</label>' +
+      '    <div class="questions"></div>' +
       '  </div>' +
       '  <div class="controls">' +
       '    <button class="gcb-button new-skill-save-button">Save</button>' +
@@ -699,9 +727,11 @@ function EditSkillPopup(skillList, locationList, skillId) {
   this._initPrereqDisplay();
 
   if (locationList) {
-    this._initLocationDisplay();
+    this._initLessonDisplay();
+    this._initQuestionDisplay();
   } else {
-    this._form.find('.location-row').hide();
+    this._form.find('.lesson-row').hide();
+    this._form.find('.question-row').hide();
   }
 
   if (skillId !== null && skillId !== undefined) {
@@ -712,8 +742,13 @@ function EditSkillPopup(skillList, locationList, skillId) {
     this._skillList.eachPrerequisite(skill, function(prereq) {
       that._prereqDisplay.add(prereq.id, prereq.name);
     });
-    $.each(skill.locations, function() {
-      that._locationDisplay.add(this.key, this.label + ' ' + this.lesson);
+    $.each(skill.lessons, function() {
+      that._lessonDisplay.add(this.key,
+          this.label + ' ' + this.description);
+    });
+    $.each(skill.questions, function() {
+      that._questionDisplay.add(
+          this.key, this.description);
     });
   } else {
     var title = 'Create New Skill';
@@ -781,25 +816,46 @@ EditSkillPopup.prototype = {
         .append(this._prereqSelector.element());
   },
 
-  _initLocationDisplay: function() {
-    // Set up a display and a chooser for the tagging locations and bind them
-    // together
+  _initLessonDisplay: function() {
+    // Set up display and chooser for tagging lessons and bind them together
     var that = this;
-    this._locationDisplay = new ListDisplay('location-display-root', 'location');
-    this._locationSelector = new ItemSelector(function(selectedLocationIds) {
-      $.each(selectedLocationIds, function() {
-        var location = that._locationList.getByKey(this);
-        that._locationDisplay.add(this, location.label + ' ' + location.lesson);
+    this._lessonDisplay = new ListDisplay(
+        'location-display-root', 'location');
+    this._lessonSelector = new ItemSelector(function(selectedLessonIds) {
+      $.each(selectedLessonIds, function() {
+        var lesson = that._locations.getLessonByKey(this);
+        that._lessonDisplay.add(this, lesson.label + ' ' + lesson.description);
       });
     }, '+ Add Lesson', 'Lesson...');
-    this._locationList.each(function(location) {
-      that._locationSelector.add(location.key,
-          location.label + ' ' + location.lesson);
+    this._locations.eachLesson(function(lesson) {
+      that._lessonSelector.add(lesson.key,
+          lesson.label + ' ' + lesson.description);
     });
 
     this._form.find('.lessons')
-        .append(this._locationDisplay.element())
-        .append(this._locationSelector.element());
+        .append(this._lessonDisplay.element())
+        .append(this._lessonSelector.element());
+  },
+
+  _initQuestionDisplay: function() {
+    // Set up a display and a chooser for tagging questions and bind them
+    // together
+    var that = this;
+    this._questionDisplay = new ListDisplay('question-display-root',
+        'question');
+    this._questionSelector = new ItemSelector(function(selectedQuestionIds) {
+      $.each(selectedQuestionIds, function() {
+        var question = that._locations.getQuestionByKey(this);
+        that._questionDisplay.add(this, question.description);
+      });
+    }, '+ Add Question', 'Question...');
+    this._locations.eachQuestion(function(question) {
+      that._questionSelector.add(question.key, question.description);
+    });
+
+    this._form.find('.questions')
+        .append(this._questionDisplay.element())
+        .append(this._questionSelector.element());
   },
 
   _onSave: function() {
@@ -807,14 +863,18 @@ EditSkillPopup.prototype = {
     var name = this._nameInput.val();
     var description = this._descriptionInput.val();
     var prerequisiteIds = this._prereqDisplay.items();
-    var locationKeys = this._locationDisplay ? this._locationDisplay.items() : [];
+    var locationKeys = this._lessonDisplay ?
+        this._lessonDisplay.items() : [];
+    var questionIds = this._questionDisplay ?
+        this._questionDisplay.items() : [];
 
     function onSkillCreatedOrUpdated(skill, message) {
       showMsgAutoHide(message);
       that._onAjaxCreateSkillCallback(skill);
     }
     this._skillList.createOrUpdateSkill(onSkillCreatedOrUpdated, name,
-        description, prerequisiteIds, locationKeys, that._skillId);
+        description, prerequisiteIds, locationKeys, questionIds,
+        that._skillId);
     this._lightbox.close();
   },
 

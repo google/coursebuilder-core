@@ -23,6 +23,7 @@ import cgi
 import copy
 import urllib
 
+from common import utils as common_utils
 from common.crypto import XsrfTokenManager
 from controllers import utils
 from models import roles
@@ -88,6 +89,28 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
     'get' methods, there are a number of hook functions you may need
     to override.  The only mandatory function is 'get_default_version()'.
     """
+
+    # Enable other modules to add transformations to the schema. Each member
+    # must be a function of the form:
+    #     callback(question_field_registry)
+    # where the argument is the root FieldRegistry for the schema
+    SCHEMA_LOAD_HOOKS = ()
+
+    # Enable other modules to add transformations to the load. Each member must
+    # be a function of the form:
+    #     callback(question, question_dict)
+    # and the callback should update fields of the question_dict, which will be
+    # returned to the caller of a GET request.
+
+    PRE_LOAD_HOOKS = ()
+
+    # Enable other modules to add transformations to the save. Each member must
+    # be a function of the form:
+    #     callback(question, question_dict)
+    # and the callback should update fields of the question with values read
+    # from the dict which was the payload of a PUT request.
+    PRE_SAVE_HOOKS = ()
+
 
     def sanitize_input_dict(self, json_dict):
         """Give subclasses a hook to clean up incoming data before storage.
@@ -198,6 +221,7 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
             item = self.DAO.DTO(None, python_dict)
 
         self.pre_save_hook(item)
+        common_utils.run_hooks(self.PRE_SAVE_HOOKS, item, python_dict)
         key_after_save = self.DAO.save(item)
         self.after_save_hook()
 
@@ -245,6 +269,7 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
                 return
             display_dict = copy.copy(item.dict)
             display_dict['id'] = item.id
+            common_utils.run_hooks(self.PRE_LOAD_HOOKS, item, display_dict)
             payload_dict = self.transform_for_editor_hook(display_dict)
         else:
             payload_dict = self.get_default_content()

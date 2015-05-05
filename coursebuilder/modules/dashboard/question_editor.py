@@ -19,6 +19,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import copy
 
 from common import schema_fields
+from common import utils as common_utils
 from models import roles
 from models import transforms
 from models import models
@@ -84,6 +85,12 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
 class BaseQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
     """Common methods for handling REST end points with questions."""
 
+    SCHEMA_LOAD_HOOKS = []
+
+    PRE_LOAD_HOOKS = []
+
+    PRE_SAVE_HOOKS = []
+
     def sanitize_input_dict(self, json_dict):
         json_dict['description'] = json_dict['description'].strip()
 
@@ -119,6 +126,8 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
         'inputex-string', 'inputex-list', 'inputex-number', 'inputex-hidden']
     EXTRA_JS_FILES = ['mc_question_editor_lib.js', 'mc_question_editor.js']
 
+    ADDITIONAL_DIRS = []
+
     XSRF_TOKEN = 'mc-question-edit'
 
     SCHEMA_VERSIONS = ['1.5']
@@ -127,8 +136,10 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
 
     @classmethod
     def get_schema(cls):
-        return resources_display.ResourceMCQuestion.get_schema(
+        question_schema = resources_display.ResourceMCQuestion.get_schema(
             course=None, key=None)
+        common_utils.run_hooks(cls.SCHEMA_LOAD_HOOKS, question_schema)
+        return question_schema
 
     def pre_save_hook(self, question):
         question.type = models.QuestionDTO.MULTIPLE_CHOICE
@@ -192,7 +203,10 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list',
         'inputex-hidden', 'inputex-integer']
+
     EXTRA_JS_FILES = []
+
+    ADDITIONAL_DIRS = []
 
     XSRF_TOKEN = 'sa-question-edit'
 
@@ -202,8 +216,10 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
 
     @classmethod
     def get_schema(cls):
-        return resources_display.ResourceSAQuestion.get_schema(
+        question_schema = resources_display.ResourceSAQuestion.get_schema(
             course=None, key=None)
+        common_utils.run_hooks(cls.SCHEMA_LOAD_HOOKS, question_schema)
+        return question_schema
 
     def pre_save_hook(self, question):
         question.type = models.QuestionDTO.SHORT_ANSWER

@@ -31,7 +31,7 @@ from common import resource
 from common import safe_dom
 from common import schema_fields
 from common import tags
-from controllers import lessons
+from controllers import lessons as lessons_controller
 from controllers import sites
 from controllers import utils
 from mapreduce import context
@@ -49,6 +49,9 @@ from modules.admin.admin import WelcomeHandler
 from modules.courses import outline
 from modules.dashboard import dashboard
 from modules.dashboard import tabs
+from modules.dashboard.question_editor import BaseQuestionRESTHandler
+from modules.dashboard.question_editor import McQuestionRESTHandler
+from modules.dashboard.question_editor import SaQuestionRESTHandler
 from modules.dashboard.unit_lesson_editor import LessonRESTHandler
 from modules.i18n_dashboard import i18n_dashboard
 from modules.skill_map import competency
@@ -66,8 +69,8 @@ TEMPLATES_DIR = os.path.join(
 # URI for skill map css, js, amd img assets.
 RESOURCES_URI = '/modules/skill_map/resources'
 
-# Key for storing list of skill id's in the properties table of a Lesson
-LESSON_SKILL_LIST_KEY = 'modules.skill_map.skill_list'
+# Key for storing list of skill id's in the properties/dict table of a DTO
+SKILLS_KEY = 'modules.skill_map.skill_list'
 
 
 def _assert(condition, message, errors):
@@ -195,8 +198,12 @@ class ResourceSkill(resource.AbstractResourceHandler):
         prerequisite_type.add_property(schema_fields.SchemaField(
             'id', '', 'integer', optional=True, i18n=False))
 
-        location_type = schema_fields.FieldRegistry('Location')
-        location_type.add_property(schema_fields.SchemaField(
+        lesson_type = schema_fields.FieldRegistry('Lesson')
+        lesson_type.add_property(schema_fields.SchemaField(
+            'key', '', 'string', optional=True, i18n=False))
+
+        question_type = schema_fields.FieldRegistry('Question')
+        question_type.add_property(schema_fields.SchemaField(
             'key', '', 'string', optional=True, i18n=False))
 
         schema = schema_fields.FieldRegistry(
@@ -211,7 +218,10 @@ class ResourceSkill(resource.AbstractResourceHandler):
             'prerequisites', 'Prerequisites', item_type=prerequisite_type,
             optional=True))
         schema.add_property(schema_fields.FieldArray(
-            'locations', 'Locations', item_type=location_type,
+            'lessons', 'Lessons', item_type=lesson_type,
+            optional=True))
+        schema.add_property(schema_fields.FieldArray(
+            'questions', 'Questions', item_type=question_type,
             optional=True))
         return schema
 
@@ -296,7 +306,7 @@ class SkillGraph(caching.RequestScopedSingleton):
                 prerequisite_id in self._skills,
                 'Skill has non-existent prerequisite', errors)
 
-        self._validate_unique_skill_name(skill.id, skill.name, errors)
+        self.validate_unique_skill_name(skill.id, skill.name, errors)
 
         skill_id = _SkillDao.save(skill)
         new_skill = Skill(skill_id, skill.dict)
@@ -308,25 +318,21 @@ class SkillGraph(caching.RequestScopedSingleton):
     def update(self, sid, attributes, errors):
         _assert(self.get(sid), 'Skill does not exist', errors)
 
-        # pylint: disable=protected-access
         prerequisite_ids = [
             x['id'] for x in attributes.get('prerequisites', [])]
         for pid in prerequisite_ids:
-            self._validate_prerequisite(sid, pid, errors)
-
-        # No duplicate prerequisites
-        _assert(
-            len(set(prerequisite_ids)) == len(prerequisite_ids),
-            'Prerequisites must be unique', errors)
-
-        self._validate_unique_skill_name(sid, attributes.get('name'), errors)
+            self.validate_distinct(sid, pid, errors)
+        self.validate_no_duplicate_prerequisites(prerequisite_ids, errors)
+        self.validate_unique_skill_name(sid, attributes.get('name'), errors)
 
         if errors:
             return sid
 
         skill_id = _SkillDao.save(Skill(sid, attributes))
+        # pylint: disable=protected-access
         self._skills[skill_id] = Skill(skill_id, attributes)
         self._rebuild()
+        # pylint: enable=protected-access
 
         return skill_id
 
@@ -337,10 +343,10 @@ class SkillGraph(caching.RequestScopedSingleton):
             'Skill is not present in the skill map', errors)
 
         successors = self.successors(skill_id)
+        # pylint: disable=protected-access
         for successor in successors:
             prerequisite_ids = successor.prerequisite_ids
             prerequisite_ids.remove(skill_id)
-            # pylint: disable=protected-access
             successor._set_prerequisite_ids(prerequisite_ids)
 
         _SkillDao.delete(self._skills[skill_id])
@@ -348,6 +354,7 @@ class SkillGraph(caching.RequestScopedSingleton):
 
         del self._skills[skill_id]
         self._rebuild()
+        # pylint: enable=protected-access
 
     def prerequisites(self, skill_id):
         """Get the immediate prerequisites of the given skill.
@@ -363,47 +370,53 @@ class SkillGraph(caching.RequestScopedSingleton):
             self._skills[prerequisite_id]
             for prerequisite_id in skill.prerequisite_ids]
 
-    def _validate_prerequisite(self, sid, pid, errors=None):
+    def validate_distinct(self, sid, pid, errors=None):
+        """Check that the skill and the prerequisite exist and that they
+        are distinct."""
+
         _assert(
             sid in self._skills, 'Skill does not exist', errors)
         _assert(
             pid in self._skills,
             'Prerequisite does not exist', errors)
-
         # No length-1 cycles (ie skill which is its own prerequisite)  allowed
         _assert(
             sid != pid,
             'A skill cannot be its own prerequisite', errors)
 
-    def _validate_unique_skill_name(self, skill_id, name, errors):
+    def validate_unique_skill_name(self, skill_id, name, errors):
         for other_skill in self.skills:
             if other_skill.id == skill_id:
                 continue
             _assert(
                 name != other_skill.name, 'Name must be unique', errors)
 
-    def add_prerequisite(self, skill_id, prerequisite_skill_id, errors=None):
-        self._validate_prerequisite(skill_id, prerequisite_skill_id, errors)
-
-        skill = self._skills.get(skill_id)
-        prerequisite_skills = skill.prerequisite_ids
+    def validate_prerequisite_not_set(
+            self, skill, prerequisite_skill_id, errors):
         _assert(
-            prerequisite_skill_id not in prerequisite_skills,
+            prerequisite_skill_id not in skill.prerequisite_ids,
             'This prerequisite has already been set', errors)
+
+    @classmethod
+    def validate_no_duplicate_prerequisites(cls, prerequisite_ids, errors):
+        _assert(
+            len(set(prerequisite_ids)) == len(prerequisite_ids),
+            'Prerequisites must be unique', errors)
+
+    def add_prerequisite(self, skill_id, prerequisite_skill_id, errors=None):
+        self.validate_distinct(skill_id, prerequisite_skill_id, errors)
+        skill = self._skills.get(skill_id)
+        self.validate_prerequisite_not_set(skill, prerequisite_skill_id, errors)
+        prerequisite_skills = skill.prerequisite_ids
         prerequisite_skills.add(prerequisite_skill_id)
         # pylint: disable=protected-access
         skill._set_prerequisite_ids(prerequisite_skills)
-
         _SkillDao.save(skill)
         self._rebuild()
+        # pylint: enable=protected-access
 
     def delete_prerequisite(self, skill_id, prerequisite_skill_id, errors=None):
-        _assert(
-            skill_id in self._skills, 'Skill does not exist', errors)
-        _assert(
-            prerequisite_skill_id in self._skills,
-            'Prerequisite does not exist', errors)
-
+        self.validate_distinct(skill_id, prerequisite_skill_id)
         skill = self._skills[skill_id]
         prerequisite_skills = skill.prerequisite_ids
         _assert(
@@ -415,6 +428,7 @@ class SkillGraph(caching.RequestScopedSingleton):
 
         _SkillDao.save(skill)
         self._rebuild()
+        # pylint: enable=protected-access
 
     def successors(self, skill_id):
         """Get the immediate successors of the given skill.
@@ -429,43 +443,89 @@ class SkillGraph(caching.RequestScopedSingleton):
 
 
 class LocationInfo(object):
-    """Info object for mapping skills to content locations."""
+    """Info object for mapping skills to locations."""
 
-    def __init__(self, unit, lesson):
-        assert lesson.unit_id == unit.unit_id
-        self._unit = unit
-        self._lesson = lesson
+    def __init__(self, course, res):
+        self._course = course
+        self._resource = res
+        self._key = None
+        self._label = None
+        self._description = None
+        self._href = None
+        self._edit_href = None
+        self._sort_key = None
+
+        if isinstance(res, courses.Lesson13):
+            self.build_lesson_location()
+        elif isinstance(res, models.QuestionDTO):
+            self.build_question_location()
+
+    def _get_formatted_type(self, question):
+        """Question type formatter."""
+        if question.type == models.QuestionDTO.MULTIPLE_CHOICE:
+            return '(mc)'
+        elif question.type == models.QuestionDTO.SHORT_ANSWER:
+            return '(sa)'
+        return ''
+
+    def build_question_location(self):
+        question = self._resource
+        qtype = resources_display.ResourceQuestionBase.get_question_key_type(
+            question)
+        self._key = resource.Key(qtype, question.id)
+        self._id = question.id
+        self._description = '%s %s' % (
+            self._get_formatted_type(question), question.description)
+        self._edit_href = resources_display.ResourceQuestionBase.get_edit_url(
+            self._key)
+
+    def build_lesson_location(self):
+        lesson = self._resource
+        self._key = resources_display.ResourceLesson.get_key(lesson)
+        self._id = lesson.lesson_id
+        unit = self._course.find_unit_by_id(lesson.unit_id)
+        if lesson.index is None:
+            self._label = '%s.' % unit.index
+        else:
+            self._label = '%s.%s' % (unit.index, lesson.index)
+        self._description = lesson.title
+        self._href = 'unit?unit=%s&lesson=%s' % (
+            lesson.unit_id, lesson.lesson_id)
+        self._edit_href = 'dashboard?action=edit_lesson&key=%s' % self._id
+        self._sort_key = (lesson.unit_id, lesson.lesson_id)
 
     @property
     def key(self):
-        return resources_display.ResourceLesson.get_key(self._lesson)
+        return self._key
+
+    @property
+    def id(self):
+        return self._id
 
     @property
     def label(self):
-        if self._lesson.index is None:
-            return '%s.' % self._unit.index
-        return '%s.%s' % (self._unit.index, self._lesson.index)
+        return self._label
+
+    @property
+    def description(self):
+        # '(' + this.type + ') ' + this.description)
+        return self._description
 
     @property
     def href(self):
-        return 'unit?unit=%s&lesson=%s' % (
-            self._unit.unit_id, self._lesson.lesson_id)
+        return self._href
 
     @property
     def edit_href(self):
-        return 'dashboard?action=edit_lesson&key=%s' % self._lesson.lesson_id
+        return self._edit_href
 
     @property
-    def lesson(self):
-        return self._lesson
-
-    @property
-    def unit(self):
-        return self._unit
+    def resource(self):
+        return self._resource
 
     @property
     def sort_key(self):
-        return self._unit.unit_id, self._lesson.lesson_id
+        return self._sort_key
 
     @classmethod
     def json_encoder(cls, obj):
@@ -473,10 +533,9 @@ class LocationInfo(object):
             return {
                 'key': str(obj.key),
                 'label': obj.label,
+                'description': obj.description,
                 'href': obj.href,
                 'edit_href': obj.edit_href,
-                'lesson': obj.lesson.title,
-                'unit': obj.unit.title,
                 'sort_key': obj.sort_key
             }
         return None
@@ -485,10 +544,13 @@ class LocationInfo(object):
 class SkillInfo(object):
     """Skill info object for skills with lesson and unit ids."""
 
-    def __init__(self, skill, locations=None, topo_sort_index=None):
+    def __init__(
+            self, skill, lessons=None, questions=None,
+            topo_sort_index=None):
         assert skill
         self._skill = skill
-        self._locations = locations or []
+        self._lessons = lessons or []
+        self._questions = questions or []
         self._prerequisites = []
         self._topo_sort_index = topo_sort_index
 
@@ -514,16 +576,20 @@ class SkillInfo(object):
         self._prerequisites = skills
 
     @property
-    def locations(self):
-        return self._locations
+    def lessons(self):
+        return self._lessons
+
+    @property
+    def questions(self):
+        return self._questions
 
     def set_topo_sort_index(self, topo_sort_index):
         self._topo_sort_index = topo_sort_index
 
     def sort_key(self):
-        if self._locations:
-            loc = min(sorted(self._locations, key=lambda x: x.sort_key))
-            return loc.unit.unit_id, loc.lesson.lesson_id
+        if self._lessons:
+            loc = min(sorted(self._lessons, key=lambda x: x.sort_key))
+            return loc.sort_key
         return None, None
 
     def topo_sort_key(self):
@@ -537,7 +603,8 @@ class SkillInfo(object):
                 'name': obj.name,
                 'description': obj.description,
                 'prerequisite_ids': [s.id for s in obj.prerequisites],
-                'locations': obj.locations,
+                'lessons': obj.lessons,
+                'questions': obj.questions,
                 'sort_key': obj.sort_key(),
                 'topo_sort_key': obj.topo_sort_key()
             }
@@ -562,17 +629,31 @@ class SkillMap(caching.RequestScopedSingleton):
 
         self._lessons_by_skill = {}
         for lesson in self._course.get_lessons_for_all_units():
-            skill_list = lesson.properties.get(LESSON_SKILL_LIST_KEY, [])
-            for skill_id in skill_list:
+            skill_ids = lesson.properties.get(SKILLS_KEY, [])
+            for skill_id in skill_ids:
                 self._lessons_by_skill.setdefault(skill_id, []).append(lesson)
 
+        self._questions_by_skill = {}
+        for question in models.QuestionDAO.get_all():
+            skill_ids = question.dict.get(SKILLS_KEY, [])
+            for skill_id in skill_ids:
+                self._questions_by_skill.setdefault(skill_id, []).append(
+                    question)
+
         self._skill_infos = {}
+
+        # add locations and questions
         for skill in self._skill_graph.skills:
             locations = []
             for lesson in self._lessons_by_skill.get(skill.id, []):
-                unit = self._units[lesson.unit_id]
-                locations.append(LocationInfo(unit, lesson))
-            self._skill_infos[skill.id] = SkillInfo(skill, locations)
+                locations.append(LocationInfo(self._course, lesson))
+            questions = []
+            for question in self._questions_by_skill.get(skill.id, []):
+                questions.append(LocationInfo(self._course, question))
+            self._skill_infos[skill.id] = SkillInfo(
+                skill, locations, questions)
+
+        # add prerequisites
         for skill in self._skill_graph.skills:
             prerequisites = []
             for pid in skill.prerequisite_ids:
@@ -640,8 +721,11 @@ class SkillMap(caching.RequestScopedSingleton):
         """
         # TODO(jorr): Can we stop relying on the unit and just use lesson id?
         lesson = self._course.find_lesson_by_id(None, lesson_id)
-        skill_list = lesson.properties.get(LESSON_SKILL_LIST_KEY, [])
-        return [self._skill_infos[skill_id] for skill_id in skill_list]
+        skills = lesson.properties.get(SKILLS_KEY, [])
+        return [self._skill_infos[skill_id] for skill_id in skills]
+
+    def get_questions_for_skill(self, skill):
+        return self._questions_by_skill.get(skill.id, [])
 
     def successors(self, skill_info):
         """Get the successors to the given skill.
@@ -672,53 +756,86 @@ class SkillMap(caching.RequestScopedSingleton):
     def get_skill(self, skill_id):
         return self._skill_infos[skill_id]
 
-    def add_skill_to_lessons(self, skill, locations):
-        """Add the skill to the given lessons.
+    def add_skill_to_lessons(self, skill, location_keys):
+        """Add the skill to the given lessons."""
 
-        Args:
-            skill: SkillInfo. The skill to be added
-            locations: Iterable of LocationInfo. The locations to add the skill.
-        """        # Add back references to the skill from the request payload
-        for loc in locations:
-            unit, lesson = resource.Key.fromstring(loc['key']).get_resource(
+        for loc in location_keys:
+            _, lesson = resource.Key.fromstring(loc['key']).get_resource(
                 self._course)
-            lesson.properties.setdefault(LESSON_SKILL_LIST_KEY, []).append(
+            lesson.properties.setdefault(SKILLS_KEY, []).append(
                 skill.id)
             assert self._course.update_lesson(lesson)
             # pylint: disable=protected-access
-            skill._locations.append(LocationInfo(unit, lesson))
+            skill._lessons.append(LocationInfo(self._course, lesson))
         self._course.save()
-        self._lessons_by_skill.setdefault(skill.id, []).extend(locations)
+        self._lessons_by_skill.setdefault(skill.id, []).extend(location_keys)
+        # pylint: enable=protected-access
 
     def delete_skill_from_lessons(self, skill):
-        #TODO(broussev): check, and if need be, refactor pre-save lesson hooks
         if not self._lessons_by_skill.get(skill.id):
             return
+        # pylint: disable=protected-access
         for lesson in self._lessons_by_skill[skill.id]:
-            lesson.properties[LESSON_SKILL_LIST_KEY].remove(skill.id)
+            lesson.properties[SKILLS_KEY].remove(skill.id)
             assert self._course.update_lesson(lesson)
         self._course.save()
         del self._lessons_by_skill[skill.id]
+        skill._lessons = []
+        # pylint: enable=protected-access
+
+    def add_skill_to_questions(self, skill, question_keys):
+        """Add the skill to the given questions.
+
+        Args:
+            skill: SkillInfo. The skill to be added
+            questions: List of {'id': str}.
+        """
+        if not question_keys:
+            return
+        keys = [resource.Key.fromstring(x['key']) for x in question_keys]
+        questions = [key.get_resource(self._course) for key in keys]
+
+        for question in questions:
+            question.dict.setdefault(
+                SKILLS_KEY, []).append(skill.id)
+        assert models.QuestionDAO.save_all(questions)
         # pylint: disable=protected-access
-        skill._locations = []
+        skill._questions.extend(
+            [LocationInfo(self._course, question.id) for question in questions])
+        self._questions_by_skill.setdefault(skill.id, []).extend(questions)
+        # pylint: enable=protected-access
+
+    def delete_skill_from_questions(self, skill):
+        """Delete the skill from all questions."""
+
+        # pylint: disable=protected-access
+        if not self._questions_by_skill.get(skill.id):
+            return
+        for question in self._questions_by_skill[skill.id]:
+            question.dict[SKILLS_KEY].remove(skill.id)
+        assert models.QuestionDAO.save_all(self._questions_by_skill[skill.id])
+        del self._questions_by_skill[skill.id]
+        skill._questions = []
+        # pylint: enable=protected-access
 
 
 class LocationListRestHandler(utils.BaseRESTHandler):
-    """REST handler to list all locations."""
+    """REST handler to list all locations and questions."""
 
-    URL = '/rest/modules/skill_map/location_list'
+    URL = '/rest/modules/skill_map/locations'
 
     def get(self):
         if not roles.Roles.is_course_admin(self.app_context):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 
-        location_list = []
-        for lesson in self.get_course().get_lessons_for_all_units():
-            unit = self.get_course().find_unit_by_id(lesson.unit_id)
-            location_list.append(LocationInfo(unit, lesson))
-
-        payload_dict = {'location_list': location_list}
+        payload_dict = {
+            'lessons': [
+                LocationInfo(self.get_course(), x)
+                for x in self.get_course().get_lessons_for_all_units()],
+            'questions': [
+                LocationInfo(self.get_course(), x)
+                for x in models.QuestionDAO.get_all()]}
         transforms.send_json_response(self, 200, '', payload_dict)
 
 
@@ -746,7 +863,7 @@ class SkillRestHandler(utils.BaseRESTHandler):
 
         skill_map = SkillMap.load(self.get_course())
         payload_dict = {
-            'skill_list': skill_map.skills(),
+            'skills': skill_map.skills(),
             'diagnosis': skill_map_metrics.SkillMapMetrics(skill_map).diagnose()
         }
 
@@ -779,8 +896,10 @@ class SkillRestHandler(utils.BaseRESTHandler):
         skill_map = SkillMap.load(self.get_course())
         skill = skill_map.get_skill(key)
 
-        # Note, first delete from lessons and then from the skill graph
+        # Note, first delete from lessons and questions and
+        # then from the skill graph
         skill_map.delete_skill_from_lessons(skill)
+        skill_map.delete_skill_from_questions(skill)
         skill_graph.delete(key, errors)
 
         skill_map = SkillMap.load(self.get_course())
@@ -790,7 +909,7 @@ class SkillRestHandler(utils.BaseRESTHandler):
             return
 
         payload_dict = {
-            'skill_list': skill_map.skills(),
+            'skills': skill_map.skills(),
             'diagnosis': skill_map_metrics.SkillMapMetrics(skill_map).diagnose()
         }
 
@@ -837,9 +956,13 @@ class SkillRestHandler(utils.BaseRESTHandler):
         skill_map = SkillMap.load(course)
         skill = skill_map.get_skill(key_after_save)
 
-        locations = python_dict.get('locations', [])
+        lesson_locations = python_dict.get('lessons', [])
         skill_map.delete_skill_from_lessons(skill)
-        skill_map.add_skill_to_lessons(skill, locations)
+        skill_map.add_skill_to_lessons(skill, lesson_locations)
+
+        question_locations = python_dict.get('questions', [])
+        skill_map.delete_skill_from_questions(skill)
+        skill_map.add_skill_to_questions(skill, question_locations)
 
         if errors:
             self.validation_error('\n'.join(errors), key=key)
@@ -848,7 +971,7 @@ class SkillRestHandler(utils.BaseRESTHandler):
         payload_dict = {
             'key': key_after_save,
             'skill': skill,
-            'skill_list': skill_map.skills(),
+            'skills': skill_map.skills(),
             'diagnosis': skill_map_metrics.SkillMapMetrics(skill_map).diagnose()
         }
 
@@ -1371,12 +1494,12 @@ def lesson_rest_handler_schema_load_hook(lesson_field_registry):
 def lesson_rest_handler_pre_load_hook(lesson, lesson_dict):
     lesson_dict['skills'] = [
         {'skill': skill} for skill in lesson.properties.get(
-            LESSON_SKILL_LIST_KEY, [])]
+            SKILLS_KEY, [])]
 
 
 def lesson_rest_handler_pre_save_hook(lesson, lesson_dict):
     if 'skills' in lesson_dict:
-        lesson.properties[LESSON_SKILL_LIST_KEY] = [
+        lesson.properties[SKILLS_KEY] = [
             item['skill'] for item in lesson_dict['skills']]
 
 
@@ -1385,12 +1508,34 @@ def course_outline_extra_info_decorator(course, unit_or_lesson):
         lesson = unit_or_lesson
         skill_map = SkillMap.load(course)
         # TODO(jorr): Should this list be being created by the JS library?
-        skill_list = safe_dom.Element('ol', className='skill-display-root')
+        skills = safe_dom.Element('ol', className='skill-display-root')
         for skill in skill_map.get_skills_for_lesson(lesson.lesson_id):
-            skill_list.add_child(
+            skills.add_child(
                 safe_dom.Element('li', className='skill').add_text(skill.name))
-        return skill_list
+        return skills
     return None
+
+
+def question_rest_handler_schema_load_hook(question_field_registry):
+    skill_type = schema_fields.FieldRegistry('Skill')
+    skill_type.add_property(schema_fields.SchemaField(
+        'skill', 'Skill', 'number', optional=True, i18n=False))
+    question_field_registry.add_property(schema_fields.FieldArray(
+        'skills', 'Skills', optional=True, item_type=skill_type,
+        extra_schema_dict_values={
+            'className': 'skill-panel inputEx-Field inputEx-ListField'}))
+
+
+def question_rest_handler_pre_load_hook(question, question_dict):
+    question_dict['skills'] = [
+        {'skill': skill} for skill in question.dict.get(
+            SKILLS_KEY, [])]
+
+
+def question_rest_handler_pre_save_hook(question, question_dict):
+    if 'skills' in question_dict:
+        question.dict[SKILLS_KEY] = [
+            x['skill'] for x in question_dict['skills']]
 
 
 def welcome_handler_import_skills_callback(app_ctx, unused_errors):
@@ -1413,39 +1558,40 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
         return None
 
     skill_map = SkillMap.load(handler.get_course())
-    skill_list = skill_map.get_skills_for_lesson(lesson.lesson_id)
+    skills = skill_map.get_skills_for_lesson(lesson.lesson_id)
 
-    def filter_visible_locations(skill):
+    def filter_visible_lessons(skill):
         """Filter out references to lessons which are not visible."""
-        locations = []
-        for location in skill.locations:
+        visible_lessons = []
+        for lesson_location in skill.lessons:
+            u, l = resources_display.ResourceLesson.get_resource(
+                handler.get_course(), lesson_location.id)
             if not (
-                location.unit.now_available
-                and location.unit in handler.get_track_matching_student(student)
-                and location.lesson.now_available
+                u.now_available and l.now_available
+                and u in handler.get_track_matching_student(student)
             ):
                 continue
-            locations.append(location)
+            visible_lessons.append(lesson_location)
 
         # pylint: disable=protected-access
-        clone = SkillInfo(skill._skill, locations=locations,
+        clone = SkillInfo(skill._skill, lessons=visible_lessons,
             topo_sort_index=skill._topo_sort_index)
         clone._prerequisites = skill._prerequisites
         # pylint: enable=protected-access
 
         return clone
 
-    def not_in_this_lesson(skill_list):
+    def not_in_this_lesson(skills):
         """Filter out skills which are taught in the current lesson."""
         return [
-            filter_visible_locations(skill) for skill in skill_list
-            if lesson not in [loc.lesson for loc in skill.locations]]
+            filter_visible_lessons(skill) for skill in skills
+            if lesson.lesson_id not in [x.id for x in skill.lessons]]
 
     depends_on_skills = set()
     leads_to_skills = set()
     dependency_map = {}
-    for skill in skill_list:
-        skill = filter_visible_locations(skill)
+    for skill in skills:
+        skill = filter_visible_lessons(skill)
         prerequisites = skill.prerequisites
         successors = skill_map.successors(skill)
         depends_on_skills.update(prerequisites)
@@ -1459,7 +1605,7 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
       'lesson': lesson,
       'unit': unit,
       'can_see_drafts': custom_modules.can_see_drafts(app_context),
-      'skill_list': skill_list,
+      'skills': skills,
       'depends_on_skills': not_in_this_lesson(depends_on_skills),
       'leads_to_skills': not_in_this_lesson(leads_to_skills),
       'dependency_map': transforms.dumps(dependency_map)
@@ -1524,7 +1670,7 @@ def import_skill_map(app_ctx):
             ul_tuple = (loc['unit'], loc['lesson'])
             lesson = lesson_map[ul_tuple]
             lesson.properties.setdefault(
-                LESSON_SKILL_LIST_KEY, []).append(skill.id)
+                SKILLS_KEY, []).append(skill.id)
             assert course.update_lesson(lesson)
     course.save()
 
@@ -1551,7 +1697,8 @@ def notify_module_enabled():
     dashboard.DashboardHandler.EXTRA_JS_HREF_LIST.append(
         '/modules/skill_map/resources/js/skill_tagging_lib.js')
 
-    lessons.UnitHandler.set_lesson_title_provider(lesson_title_provider)
+    lessons_controller.UnitHandler.set_lesson_title_provider(
+        lesson_title_provider)
 
     LessonRESTHandler.SCHEMA_LOAD_HOOKS.append(
         lesson_rest_handler_schema_load_hook)
@@ -1562,9 +1709,22 @@ def notify_module_enabled():
     LessonRESTHandler.REQUIRED_MODULES.append('inputex-list')
     LessonRESTHandler.REQUIRED_MODULES.append('inputex-number')
 
+    BaseQuestionRESTHandler.SCHEMA_LOAD_HOOKS.append(
+        question_rest_handler_schema_load_hook)
+    BaseQuestionRESTHandler.PRE_LOAD_HOOKS.append(
+        question_rest_handler_pre_load_hook)
+    BaseQuestionRESTHandler.PRE_SAVE_HOOKS.append(
+        question_rest_handler_pre_save_hook)
+
     # TODO(jorr): Use HTTP GET rather than including them as templates
     LessonRESTHandler.ADDITIONAL_DIRS.append(os.path.join(TEMPLATES_DIR))
     LessonRESTHandler.EXTRA_JS_FILES.append('skill_tagging.js')
+
+    McQuestionRESTHandler.ADDITIONAL_DIRS.append(TEMPLATES_DIR)
+    McQuestionRESTHandler.EXTRA_JS_FILES.append('skill_tagging.js')
+    SaQuestionRESTHandler.ADDITIONAL_DIRS.append(TEMPLATES_DIR)
+    SaQuestionRESTHandler.EXTRA_JS_FILES.append('skill_tagging.js')
+    SaQuestionRESTHandler.REQUIRED_MODULES.append('inputex-number')
 
     transforms.CUSTOM_JSON_ENCODERS.append(LocationInfo.json_encoder)
     transforms.CUSTOM_JSON_ENCODERS.append(SkillInfo.json_encoder)

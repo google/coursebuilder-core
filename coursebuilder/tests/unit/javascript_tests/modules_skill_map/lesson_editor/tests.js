@@ -29,15 +29,21 @@ MockSkillList.prototype = {
     }
   },
   createOrUpdateSkill: function(callback, name, description, prerequisiteIds,
-      locationKeys, skillId) {
+      lessonKeys, questionKeys, skillId) {
     var that = this;
     if (! skillId) {
       skillId = 'new-skill-' + (this.idCounter++);
     }
-    locations = [];
-    if (locationKeys){
-      $.each(locationKeys, function() {
-        locations.push(that.locationList.getByKey(this));
+    var lessons = [];
+    if (lessonKeys){
+      $.each(lessonKeys, function() {
+        lessons.push(that.locationList.getLessonByKey(this));
+      })
+    }
+    var questions = [];
+    if (questionKeys){
+      $.each(questionKeys, function() {
+        questions.push(that.locationList.getQuestionByKey(this));
       })
     }
     var skill = {
@@ -45,31 +51,46 @@ MockSkillList.prototype = {
       name: name,
       description: description,
       prerequisite_ids: prerequisiteIds,
-      locations: locations
+      lessons: lessons,
+      questions: questions
     };
     this.list.push(skill);
     callback(skill, 'OK');
   }
 };
 
-function MockLocationList(list) {
-  this.list = list || [];
+function MockLocationList(lessons, questions) {
+  this.lessons = lessons || [];
+  this.questions = questions || [];
 }
 MockLocationList.prototype = {
-  each: function(callback) {
-    $.each(this.list, function() {
+  eachLesson: function(callback) {
+    $.each(this.lessons, function() {
       callback(this);
     });
   },
-  getByKey: function(key) {
-    for (var i = 0; i < this.list.length; i++) {
-      if (this.list[i].key == key) {
-        return this.list[i];
+  getLessonByKey: function(key) {
+    for (var i = 0; i < this.lessons.length; i++) {
+      if (this.lessons[i].key == key) {
+        return this.lessons[i];
+      }
+    }
+    return null;
+  },
+  eachQuestion: function(callback) {
+    $.each(this.questions, function() {
+      callback(this);
+    });
+  },
+  getQuestionByKey: function(key) {
+    for (var i = 0; i < this.questions.length; i++) {
+      if (this.questions[i].key == key) {
+        return this.questions[i];
       }
     }
     return null;
   }
-}
+};
 
 describe('The skill tagging library', function() {
 
@@ -97,18 +118,22 @@ describe('The skill tagging library', function() {
       status: 200,
       xsrf_token: 'valid_xsrf_token',
       payload: JSON.stringify({
-        skill_list: [
+        skills: [
           {
             id: 's111',
             name: 'rock climbing',
             description: 'can climb rocks',
-            prerequisite_ids: []
+            prerequisite_ids: [],
+            lessons: [],
+            questions: []
           },
           {
             id: 's222',
             name: 'ice skating',
             description: 'can skate on ice',
-            prerequisite_ids: []
+            prerequisite_ids: [],
+            lessons: [],
+            questions: []
           }
         ],
         diagnosis: {
@@ -126,7 +151,7 @@ describe('The skill tagging library', function() {
     });
 
     describe('loading the skill map', function() {
-      it('GETs from the skill_list REST service', function() {
+      it('GETs skills from the skill REST service', function() {
         this.skillList.load(this.callback);
         expect($.ajax).toHaveBeenCalled();
         var arg = $.ajax.calls[0].args[0];
@@ -146,10 +171,10 @@ describe('The skill tagging library', function() {
         expect(this.callback).toHaveBeenCalled();
         expect(this.skillList.getSkillById('s111')).toEqual({
           id: 's111', name: 'rock climbing', description: 'can climb rocks',
-          prerequisite_ids: []});
+          prerequisite_ids: [], lessons: [], questions: []});
         expect(this.skillList.getSkillById('s222')).toEqual({
           id: 's222', name: 'ice skating', description: 'can skate on ice',
-          prerequisite_ids: []});
+          prerequisite_ids: [], lessons: [], questions: []});
       });
     });
 
@@ -168,7 +193,8 @@ describe('The skill tagging library', function() {
           name: 'ice skating',
           description: 'can skate',
           prerequisites: [],
-          locations: []
+          lessons: [],
+          questions: []
         });
       });
       it('displays an error if the status is not 200', function() {
@@ -191,9 +217,11 @@ describe('The skill tagging library', function() {
               id: 'skill001',
               name: 'ice skating',
               description: 'can skate',
-              prerequisite_ids: []
+              prerequisite_ids: [],
+              lessons: [],
+              questions: []
             },
-            skill_list: [],
+            skills: [],
             diagnosis: []
           })
         };
@@ -203,7 +231,9 @@ describe('The skill tagging library', function() {
           id: 'skill001',
           name: 'ice skating',
           description: 'can skate',
-          prerequisite_ids: []
+          prerequisite_ids: [],
+          lessons: [],
+          questions: []
         });
         expect(this.callback.calls[0].args[1]).toEqual('OK');
       });
@@ -250,7 +280,7 @@ describe('The skill tagging library', function() {
           status: 200,
           message: 'OK',
           payload: JSON.stringify({
-            skill_list: [],
+            skills: [],
             diagnosis: []
           })
         };
@@ -355,31 +385,44 @@ describe('The skill tagging library', function() {
   describe('EditSkillPopup', function() {
     beforeEach(function() {
       this.callback = jasmine.createSpy('callback');
-      this.locationList = new MockLocationList([
-      {
-        key: 'loc-1',
-        label: '1.1',
-        href: '/unit?lesson=1',
-        edit_href: '/edit?lesson=1',
-        lesson: 'Lesson 1',
-        unit: 'Unit 1',
-        sort_key: 0
-      }
-      ]);
+      this.locationList = new MockLocationList(
+        [
+          {
+            key: 'loc-1',
+            label: '1.1',
+            href: '/unit?lesson=1',
+            edit_href: '/edit?lesson=1',
+            description: 'Lesson 1',
+            sort_key: 0
+          }
+        ],
+        [
+          {
+            key: 'q-1',
+            label: '(mc)',
+            href: null,
+            edit_href: 'dashboard?action=edit_question&key=q-1',
+            description: '(mc) Question 1',
+            sort_key: 0
+          }
+        ]
+      );
       this.skillList = new MockSkillList([
         {
           id: 's111',
           name: 'rock climbing',
           description: 'can climb rocks',
           prerequisite_ids: [],
-          locations: []
+          lessons: [],
+          questions: []
         },
         {
           id: 's222',
           name: 'ice skating',
           description: 'can skate on ice',
           prerequisite_ids: [],
-          locations: []
+          lessons: [],
+          questions: []
         }
       ], this.locationList);
     });
@@ -411,7 +454,8 @@ describe('The skill tagging library', function() {
         name: 'new-skill',
         description: 'new-skill-description',
         prerequisite_ids: [],
-        locations: []
+        lessons: [],
+        questions: []
       };
 
       expect(this.callback.calls.length).toBe(1);
@@ -443,7 +487,8 @@ describe('The skill tagging library', function() {
         name: 'new-skill',
         description: 'new-skill-description',
         prerequisite_ids: [],
-        locations: []
+        lessons: [],
+        questions: []
       };
 
       expect(this.callback.calls.length).toBe(1);
@@ -490,7 +535,8 @@ describe('The skill tagging library', function() {
         name: 'rock climbing',
         description: 'can climb rocks',
         prerequisite_ids: ['s222'],
-        locations: []
+        lessons: [],
+        questions: []
       };
 
       expect(this.callback.calls.length).toBe(1);
@@ -537,14 +583,72 @@ describe('The skill tagging library', function() {
         name: 'rock climbing',
         description: 'can climb rocks',
         prerequisite_ids: [],
-        locations: [
+        lessons: [
           {
             key: 'loc-1',
             label: '1.1',
             href: '/unit?lesson=1',
             edit_href: '/edit?lesson=1',
-            lesson: 'Lesson 1',
-            unit: 'Unit 1',
+            description: 'Lesson 1',
+            sort_key: 0
+          }
+        ],
+        questions: []
+      };
+
+      expect(this.callback.calls.length).toBe(1);
+      expect(this.callback.calls[0].args[0]).toEqual(expectedSkill);
+      expect(this.skillList.list.length).toBe(3);
+      expect(this.skillList.list[2]).toEqual(expectedSkill);
+    });
+
+    it('can set questions', function() {
+      var popup = new EditSkillPopup(this.skillList, this.locationList, 's111');
+      popup.open(this.callback);
+
+      var popupDiv = $('div.edit-skill-popup');
+
+      // Expect the popup is not displaying any lessons yet
+      expect(popupDiv.find('ol.question-display-root li').length).toBe(0);
+
+      // Click the "Add Lesson" button in the "Lessons" section
+      expect(popupDiv.find('.questions button.add').text())
+          .toBe('+ Add Question');
+      popupDiv.find('.questions button.add').click();
+      expect(popupDiv.find('.questions .item-selector-root .selector'))
+          .toBeVisible();
+
+      // Click the selector to select "Lesson 1"
+      var items = popupDiv.find(
+          '.questions .item-selector-root .selector .item-list li');
+      expect($(items[0]).text()).toBe('(mc) Question 1');
+      $(items[0]).find('input').click();
+      expect($(items[0]).find('input').length).toBe(1);
+      popupDiv.find('.questions .item-selector-root .selector button.select')
+          .click();
+
+      // Expect the popup is now displaying the selected questions
+      expect(popupDiv.find('ol.question-display-root li').length).toBe(1);
+      expect(popupDiv.find('ol.question-display-root li').text())
+        .toBe('(mc) Question 1x'); // (The 'x' is the remove skill button)
+
+      // Save
+      popupDiv.find('.new-skill-save-button').click();
+
+      // Expect the question to be tagged with the skill.
+      var expectedSkill = {
+        id: 's111',
+        name: 'rock climbing',
+        description: 'can climb rocks',
+        prerequisite_ids: [],
+        lessons: [],
+        questions: [
+          {
+            key: 'q-1',
+            label: '(mc)',
+            href: null,
+            edit_href: 'dashboard?action=edit_question&key=q-1',
+            description: '(mc) Question 1',
             sort_key: 0
           }
         ]
@@ -560,8 +664,8 @@ describe('The skill tagging library', function() {
       // Open with location list absent
       var popup = new EditSkillPopup(this.skillList, null, 's111');
       popup.open(this.callback);
-      // Expect the lesson choser to be hidden
-      expect($('div.edit-skill-popup .form-row.location-row')).toBeHidden();
+      // Expect the lesson chooser to be hidden
+      expect($('div.edit-skill-popup .form-row.lesson-row')).toBeHidden();
     });
 
     it('can show the Lesson selector', function() {
@@ -569,7 +673,7 @@ describe('The skill tagging library', function() {
       var popup = new EditSkillPopup(this.skillList, this.locationList, 's111');
       popup.open(this.callback);
       // Expect the lesson choser to be visible
-      expect($('div.edit-skill-popup .form-row.location-row')).toBeVisible();
+      expect($('div.edit-skill-popup .form-row.lesson-row')).toBeVisible();
     });
   });
 });

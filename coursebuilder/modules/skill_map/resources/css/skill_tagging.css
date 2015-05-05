@@ -136,6 +136,14 @@ div.edit-skill-popup ol.location-display-root {
 div.edit-skill-popup ol.location-display-root li {
   height: 25px;
 }
+div.edit-skill-popup ol.question-display-root {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+div.edit-skill-popup ol.question-display-root li {
+  height: 25px;
+}
 div.edit-skill-popup ol.location-display-root button.close {
   background: none;
   border: none;

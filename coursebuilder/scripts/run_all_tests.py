@@ -169,7 +169,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_skill_map.SkillMapHandlerTests': 4,
     'tests.functional.modules_skill_map.SkillMapMetricTests': 10,
     'tests.functional.modules_skill_map.SkillMapTests': 4,
-    'tests.functional.modules_skill_map.SkillRestHandlerTests': 12,
+    'tests.functional.modules_skill_map.SkillRestHandlerTests': 16,
     'tests.functional.modules_skill_map.StudentSkillViewWidgetTests': 6,
     'tests.functional.modules_unsubscribe.GetUnsubscribeUrlTests': 1,
     'tests.functional.modules_unsubscribe.SubscribeAndUnsubscribeTests': 4,

@@ -39,7 +39,7 @@ from models.progress import UnitLessonCompletionTracker
 from modules.i18n_dashboard import i18n_dashboard
 from modules.skill_map import competency
 from modules.skill_map.skill_map import CountSkillCompletion
-from modules.skill_map.skill_map import LESSON_SKILL_LIST_KEY
+from modules.skill_map.skill_map import SKILLS_KEY
 from modules.skill_map.skill_map import ResourceSkill
 from modules.skill_map.skill_map import Skill
 from modules.skill_map.skill_map import SkillAggregateRestHandler
@@ -336,10 +336,10 @@ class SkillMapTests(BaseSkillMapTests):
         skill_2 = skill_graph.add(Skill.build(SKILL_NAME_2, SKILL_DESC_2))
 
         # lesson 1 has one skill
-        self.lesson1.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
+        self.lesson1.properties[SKILLS_KEY] = [skill_1.id]
         # lesson 2 has no skills
         # lesson 3 has both skills
-        self.lesson3.properties[LESSON_SKILL_LIST_KEY] = [
+        self.lesson3.properties[SKILLS_KEY] = [
                 skill_1.id, skill_2.id]
         self.course.save()
 
@@ -386,7 +386,7 @@ class SkillMapTests(BaseSkillMapTests):
 
 
 class LocationListRestHandlerTests(BaseSkillMapTests):
-    URL = 'rest/modules/skill_map/location_list'
+    URL = 'rest/modules/skill_map/locations'
 
     def test_refuses_list_to_non_admin(self):
         response = self.get(self.URL)
@@ -395,7 +395,7 @@ class LocationListRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(401, body['status'])
         self.assertEqual('Access denied.', body['message'])
 
-    def test_deleivers_list_of_all_locations(self):
+    def test_get_lessons(self):
         unit = self.course.add_unit()
         unit.title = 'Test Unit'
         lesson1 = self.course.add_lesson(unit)
@@ -411,17 +411,16 @@ class LocationListRestHandlerTests(BaseSkillMapTests):
         body = transforms.loads(response.body)
         self.assertEqual(200, body['status'])
         payload = transforms.loads(body['payload'])
-        location_list = payload['location_list']
+        lessons = payload['lessons']
 
-        expected_location_list = [
+        expected_lessons = [
             {
                 'edit_href': 'dashboard?action=edit_lesson&key=2',
                 'sort_key': [1, 2],
                 'label': '1.1',
                 'href': 'unit?unit=1&lesson=2',
                 'key': 'lesson:2',
-                'lesson': 'Test Lesson 1',
-                'unit': 'Test Unit'
+                'description': lesson1.title
             },
             {
                 'edit_href': 'dashboard?action=edit_lesson&key=3',
@@ -429,10 +428,9 @@ class LocationListRestHandlerTests(BaseSkillMapTests):
                 'label': '1.2',
                 'href': 'unit?unit=1&lesson=3',
                 'key': 'lesson:3',
-                'lesson': 'Test Lesson 2',
-                'unit': 'Test Unit'}]
-
-        self.assertEqual(expected_location_list, location_list)
+                'description': lesson2.title
+            }]
+        self.assertEqual(expected_lessons, lessons)
 
 
 class SkillRestHandlerTests(BaseSkillMapTests):
@@ -441,7 +439,8 @@ class SkillRestHandlerTests(BaseSkillMapTests):
 
     def _put(
             self, version=None, name=None, description=None,
-            prerequisite_ids=None, xsrf_token=None, key=None):
+            prerequisite_ids=None, xsrf_token=None, key=None,
+            lesson_ids=None, question_keys=None):
         payload = {
             'version': version,
             'name': name,
@@ -449,6 +448,10 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         if prerequisite_ids:
             payload['prerequisites'] = [
                 {'id': pid} for pid in prerequisite_ids]
+        if lesson_ids:
+            payload['lessons'] = [{'key': 'lesson:%s' % x} for x in lesson_ids]
+        if question_keys:
+            payload['questions'] = [{'key': x} for x in question_keys]
         request_dict = {
             'key': key,
             'xsrf_token': xsrf_token,
@@ -456,6 +459,22 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         response = self.put(
             self.URL, {'request': transforms.dumps(request_dict)})
         return transforms.loads(response.body)
+
+    def _create_mc_question(self, description):
+        """Create a multi-choice question."""
+
+        mc_dict = {
+            'description': description,
+            'type': models.QuestionDTO.MULTIPLE_CHOICE,
+            'choices': [{
+                'text': 'answer',
+                'score': 1.0
+            }],
+            'version': '1.5'
+        }
+        question = models.QuestionDTO(None, mc_dict)
+        qid = models.QuestionDAO.save(question)
+        return models.QuestionDAO.load(qid)
 
     def test_rejected_if_not_authorized(self):
         # Bad XSRF_TOKEN
@@ -502,6 +521,49 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(SKILL_NAME, skill.name)
         self.assertEqual(SKILL_DESC, skill.description)
 
+    def test_create_skill_with_question(self):
+        question = self._create_mc_question('description')
+        skill_graph = SkillGraph.load()
+        self.assertEqual(0, len(skill_graph.skills))
+
+        actions.login(ADMIN_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        question_key = 'question_mc:%s' % question.id
+        response = self._put(
+            version='1', name=SKILL_NAME, description=SKILL_DESC,
+            xsrf_token=xsrf_token, question_keys=[question_key])
+        self.assertEqual(200, response['status'])
+        self.assertEqual('Saved.', response['message'])
+        payload = transforms.loads(response['payload'])
+        key = payload['key']
+
+        q = models.QuestionDAO.load(question.id)
+        self.assertEqual([key], q.dict[SKILLS_KEY])
+
+    def test_create_skill_with_lesson(self):
+        unit = self.course.add_unit()
+        unit.title = 'Unit'
+        lesson = self.course.add_lesson(unit)
+        lesson.title = 'Lesson'
+        self.course.save()
+
+        skill_graph = SkillGraph.load()
+        self.assertEqual(0, len(skill_graph.skills))
+
+        actions.login(ADMIN_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        response = self._put(
+            version='1', name=SKILL_NAME, description=SKILL_DESC,
+            xsrf_token=xsrf_token, lesson_ids=[lesson.lesson_id])
+        self.assertEqual(200, response['status'])
+        self.assertEqual('Saved.', response['message'])
+        payload = transforms.loads(response['payload'])
+        key = payload['key']
+
+        self.course = courses.Course(None, self.app_context)
+        lesson = self.course.get_lessons_for_all_units()[0]
+        self.assertEqual([key], lesson.properties[SKILLS_KEY])
+
     def test_create_skill_with_prerequisites(self):
         skill_graph = SkillGraph.load()
 
@@ -530,7 +592,7 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         tgt_skill = payload['skill']
         self.assertEqual(SKILL_NAME_2, tgt_skill['name'])
         self.assertEqual(tgt_skill['description'], SKILL_DESC_2)
-        self.assertEqual([], tgt_skill['locations'])
+        self.assertEqual([], tgt_skill['lessons'])
         self.assertEqual(1, len(tgt_skill['prerequisite_ids']))
 
     def test_(self):
@@ -617,7 +679,7 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(skill_1.name, skill['name'])
         self.assertEqual(skill_1.description, skill['description'])
 
-    def test_get_skill_list(self):
+    def test_get_skills(self):
         skill_graph = SkillGraph.load()
 
         assert skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
@@ -630,20 +692,20 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(200, response['status'])
         self.assertIn('xsrf_token', response)
 
-        skill_list = transforms.loads(response['payload'])['skill_list']
-        self.assertEqual(3, len(skill_list))
+        skills = transforms.loads(response['payload'])['skills']
+        self.assertEqual(3, len(skills))
 
         # check that every skill has the following properties
-        keys = ['id', 'name', 'description', 'prerequisite_ids', 'locations',
-                'sort_key', 'topo_sort_key']
-        for skill in skill_list:
+        keys = ['id', 'name', 'description', 'prerequisite_ids', 'lessons',
+                'questions', 'sort_key', 'topo_sort_key']
+        for skill in skills:
             self.assertItemsEqual(keys, skill.keys())
 
         # check that skills are sorted in lexicographic order
         skill_names = sorted([SKILL_NAME, SKILL_NAME_2, SKILL_NAME_3])
-        self.assertEqual(skill_names, [x['name'] for x in skill_list])
+        self.assertEqual(skill_names, [x['name'] for x in skills])
 
-    def test_get_skills_multiple_locations(self):
+    def test_get_skills_multiple_lessons(self):
         """The skills are mapped to more than one lesson."""
         skill_graph = SkillGraph.load()
 
@@ -655,18 +717,18 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         lesson2 = self.course.add_lesson(unit)
         lesson2.title = 'Test Lesson 2'
         self.course.save()
-        lesson1.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
-        lesson2.properties[LESSON_SKILL_LIST_KEY] = [skill_1.id]
+        lesson1.properties[SKILLS_KEY] = [skill_1.id]
+        lesson2.properties[SKILLS_KEY] = [skill_1.id]
         self.course.save()
 
         actions.login(ADMIN_EMAIL)
         response = transforms.loads(self.get(self.URL).body)
         self.assertEqual(200, response['status'])
 
-        skill_list = transforms.loads(response['payload'])['skill_list']
-        self.assertEqual(1, len(skill_list))
-        # All locations listed
-        self.assertEqual(2, len(skill_list[0]['locations']))
+        skills = transforms.loads(response['payload'])['skills']
+        self.assertEqual(1, len(skills))
+        # All lessons listed
+        self.assertEqual(2, len(skills[0]['lessons']))
 
     def test_delete_skill(self):
         skill_graph = SkillGraph.load()
@@ -694,7 +756,7 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         # add one skill to the lesson
         skill_graph = SkillGraph.load()
         skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
-        lesson.properties[LESSON_SKILL_LIST_KEY] = [skill.id]
+        lesson.properties[SKILLS_KEY] = [skill.id]
         self.course.update_lesson(lesson)
         self.course.save()
 
@@ -718,6 +780,62 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         skill_map = SkillMap.load(course)
         lessons = skill_map.get_lessons_for_skill(skill)
         self.assertEqual([], lessons)
+
+    def test_delete_skill_with_question(self):
+        # create a question
+        description = 'description'
+        question = self._create_mc_question(description)
+
+        # link a skill to the question
+        skill_graph = SkillGraph.load()
+        skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        question.dict[SKILLS_KEY] = [skill.id]
+        models.QuestionDAO.save(question)
+
+        skill_map = SkillMap.load(self.course)
+        questions = skill_map.get_questions_for_skill(skill)
+        self.assertEqual(1, len(questions))
+        self.assertEqual(description, questions[0].description)
+
+        # delete the skill
+        actions.login(ADMIN_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        delete_url = '%s?%s' % (
+            self.URL,
+            urllib.urlencode({
+                'key': skill.id,
+                'xsrf_token': cgi.escape(xsrf_token)
+            }))
+        response = self.delete(delete_url)
+        self.assertEquals(200, response.status_int)
+
+        # assert question is not link to the deleted skill
+        question = models.QuestionDAO.load(question.id)
+        assert (
+            SKILLS_KEY not in question.dict or
+            not question.dict[SKILLS_KEY])
+
+    def test_get_skill_with_questions(self):
+        """Get a skill mapped to two questions."""
+
+        # map a skill to two questions
+        skill_graph = SkillGraph.load()
+        skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+        q1 = self._create_mc_question('description 1')
+        q2 = self._create_mc_question('description 2')
+        q1.dict[SKILLS_KEY] = [skill.id]
+        q2.dict[SKILLS_KEY] = [skill.id]
+        models.QuestionDAO.save_all([q1, q2])
+
+        # get skills
+        actions.login(ADMIN_EMAIL)
+        response = transforms.loads(self.get(self.URL).body)
+        self.assertEqual(200, response['status'])
+        skills = transforms.loads(response['payload'])['skills']
+        self.assertEqual(1, len(skills))
+
+        # assert that it's linked to two questions
+        self.assertEqual(2, len(skills[0]['questions']))
 
     def test_delete_prerequisites(self):
         skill_graph = SkillGraph.load()
@@ -853,7 +971,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         skill_graph = SkillGraph.load()
         sa = skill_graph.add(Skill.build('a', 'describe a'))
         sb = skill_graph.add(Skill.build('b', 'describe b'))
-        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sa.id, sb.id]
+        self.lesson.properties[SKILLS_KEY] = [sa.id, sb.id]
         self.course.save()
 
         # Skill widget is not shown if supressed by course setting
@@ -877,7 +995,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         skill_graph = SkillGraph.load()
         sa = skill_graph.add(Skill.build('a', 'describe a'))
         sb = skill_graph.add(Skill.build('b', 'describe b'))
-        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sa.id, sb.id]
+        self.lesson.properties[SKILLS_KEY] = [sa.id, sb.id]
         self.course.save()
 
         widget = self._getWidget()
@@ -901,9 +1019,12 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         actions.assert_contains('isn\'t a prerequisite', details_xml)
 
     def test_skills_with_prerequisites_and_successors(self):
-        # Set up lesson with two skills, B and C, where A is a prerequisite of B
-        # and D is a successor of B. Expect to see A and D listed in the
-        # 'depends on' and 'leads to' sections respectively
+        # Create skills, a, b, c, d
+        # a --> b
+        # c --> d
+        # Add skills {b, c} to self.lesson
+        # Expect self.lesson.depends_on == {a}
+        # Expect self.lesson.leads_to == {d}
         skill_graph = SkillGraph.load()
         sa = skill_graph.add(Skill.build('a', 'describe a'))
         sb = skill_graph.add(Skill.build('b', 'describe b'))
@@ -913,57 +1034,57 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         skill_graph.add_prerequisite(sb.id, sa.id)
         skill_graph.add_prerequisite(sd.id, sc.id)
 
-        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sb.id, sc.id]
+        self.lesson.properties[SKILLS_KEY] = [sb.id, sc.id]
         self.course.save()
 
         widget = self._getWidget()
 
-        # Check B and C are listed as skills in this lesson
+        # Check that 'b' and 'c' are listed as skills in this lesson
         skills_in_lesson = widget.findall('./div[1]//li[@class="skill"]')
         self.assertEqual(2, len(skills_in_lesson))
         actions.assert_contains('b', skills_in_lesson[0].text)
         actions.assert_contains('c', skills_in_lesson[1].text)
 
-        # Skill A is listed in the "depends on" section
+        # Skill 'a' is in depends_on
         depends_on = widget.findall('./div[2]/div[1]/ol/li')
         self.assertEqual(1, len(depends_on))
         self.assertEqual(str(sa.id), depends_on[0].attrib['data-skill-id'])
 
-        # Skill D is listed in the "leads to" section
+        # Skill 'd' is in leads_to'
         leads_to = widget.findall('./div[2]/div[2]/ol/li')
         self.assertEqual(1, len(leads_to))
         self.assertEqual(str(sd.id), leads_to[0].attrib['data-skill-id'])
 
-        # But if Skill A is also taught in this lesson, don't list it
-        self.lesson.properties[LESSON_SKILL_LIST_KEY].append(sa.id)
+        # Add skill 'a' to the lesson and check that is not in depends_on
+        self.lesson.properties[SKILLS_KEY].append(sa.id)
         self.course.save()
         widget = self._getWidget()
         depends_on = widget.findall('./div[2]/div[1]/ol/li')
         self.assertEqual(0, len(depends_on))
 
-        # In fact even if skill A is also taught elsewhere, because it's taught
+        # In fact even if 'a' is also taught elsewhere, because it's taught
         # in this lesson, don't list it.
         other_lesson = self.course.add_lesson(self.unit)
         other_lesson.title = 'Other Lesson'
         other_lesson.now_available = True
-        other_lesson.properties[LESSON_SKILL_LIST_KEY] = [sa.id]
+        other_lesson.properties[SKILLS_KEY] = [sa.id]
         self.course.save()
         widget = self._getWidget()
         depends_on = widget.findall('./div[2]/div[1]/ol/li')
         self.assertEqual(0, len(depends_on))
 
-    def test_same_skill_prerequ_of_multiple_skills(self):
+    def test_skill_with_multiple_follow_ons(self):
         # Set up one skill which is a prerequisite of two skills and expect it
-        # to be shown only once on the "Depends on row"
+        # to be shown only once in depends_on"
         skill_graph = SkillGraph.load()
         sa = skill_graph.add(Skill.build('a', 'common prerequisite'))
-        sb = skill_graph.add(Skill.build('b', 'depens on a'))
+        sb = skill_graph.add(Skill.build('b', 'depends on a'))
         sc = skill_graph.add(Skill.build('c', 'also depends on a'))
 
         skill_graph.add_prerequisite(sb.id, sa.id)
         skill_graph.add_prerequisite(sc.id, sa.id)
 
-        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sb.id, sc.id]
+        self.lesson.properties[SKILLS_KEY] = [sb.id, sc.id]
         self.course.save()
 
         widget = self._getWidget()
@@ -988,11 +1109,11 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         sb = skill_graph.add(Skill.build('b', 'describe b'))
         skill_graph.add_prerequisite(sb.id, sa.id)
 
-        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [sa.id]
+        self.lesson.properties[SKILLS_KEY] = [sa.id]
         lesson2 = self.course.add_lesson(self.unit)
         lesson2.title = 'Test Lesson 2'
         lesson2.now_available = True
-        lesson2.properties[LESSON_SKILL_LIST_KEY] = [sb.id]
+        lesson2.properties[SKILLS_KEY] = [sb.id]
         self.course.save()
 
         widget = self._getWidget()
@@ -1571,7 +1692,7 @@ class SkillI18nTests(actions.TestBase):
                 },
             })
         i18n_dashboard.ResourceBundleDAO.save(bundle)
-        self.lesson.properties[LESSON_SKILL_LIST_KEY] = [skill_key]
+        self.lesson.properties[SKILLS_KEY] = [skill_key]
         self.course.save()
 
         # Verify that we get the untranslated (lowercased) version when we
@@ -1844,9 +1965,9 @@ class SkillCompletionTrackerTests(BaseSkillMapTests):
         self._create_lessons()  # 3 lessons in unit 1
         self.student = models.Student(user_id='1')
         self._create_linear_progress()  # Lesson 1 and 2 completed
-        self.lesson1.properties[LESSON_SKILL_LIST_KEY] = [self.sa.id]
-        self.lesson2.properties[LESSON_SKILL_LIST_KEY] = [self.sb.id]
-        self.lesson3.properties[LESSON_SKILL_LIST_KEY] = [self.sa.id,
+        self.lesson1.properties[SKILLS_KEY] = [self.sa.id]
+        self.lesson2.properties[SKILLS_KEY] = [self.sb.id]
+        self.lesson3.properties[SKILLS_KEY] = [self.sa.id,
                                                           self.sc.id]
         self.course.save()
 
@@ -1869,7 +1990,7 @@ class SkillCompletionTrackerTests(BaseSkillMapTests):
         self._create_lessons()  # 3 lessons in unit 1
         self._add_student_and_progress()  # sa completed, sb in progress
         self._create_linear_progress()  # Lesson 1 and 2 completed
-        self.lesson1.properties[LESSON_SKILL_LIST_KEY] = [self.sa.id,
+        self.lesson1.properties[SKILLS_KEY] = [self.sa.id,
                                                           self.sb.id]
         self.course.save()
 

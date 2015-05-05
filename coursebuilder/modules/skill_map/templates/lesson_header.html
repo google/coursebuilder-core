@@ -27,15 +27,15 @@
         {{ gettext('Lessons') }}
       </div>
       <ol class="locations">
-        {% for location in skill.locations %}
+        {% for location in skill.lessons %}
           <li>
             <a href="{{ location.href }}">
-              {{ location.unit.index }}.{{ location.lesson.index }}
-              {{ location.lesson.title }}
+              {{ location.label }}
+              {{ location.description }}
             </a>
           </li>
         {% endfor %}
-        {% if not skill.locations %}
+        {% if not skill.lessons %}
           {# I18N: Text for empty list of lessons #}
           <li>{{ gettext('Not taught') }}</li>
         {% endif %}
@@ -52,13 +52,13 @@
     </span>
   {% endif %}
 </h1>
-{% if skill_list %}
+{% if skills %}
   <div class="skill-panel" data-dependency-map="{{ dependency_map }}">
     <div class="margins skills-in-this-lesson">
       {# I18N: Header describing the skills for this lesson #}
       <span class="section-title">{{ gettext('Taught in this lesson:') }}</span>
       <ol class="skill-display-root">
-        {% for skill in skill_list %}
+        {% for skill in skills %}
           <li class="skill"
               data-skill-id="{{ skill.id }}"
               data-skill-description="{{ skill.description }}">
