@@ -119,6 +119,7 @@
       "score": 1.0,
       "individualScores": [1, 1],
       "containedTypes": ["McQuestion", "SaQuestion"],
+      "quids": ["qg-0-mc-0-quid", "qg-0-sa-0-quid"],
       "location": "http://localhost:8080/unit?unit=1&lesson=2"
     },
     "event_source": "tag-assessment",
@@ -147,6 +148,10 @@
         "mc-0": "McQuestion",
         "sa-0": "SaQuestion"
       },
+      "quids": {
+        "mc-0": "mc-0-quid",
+        "sa-0": "sa-0-quid"
+      },
       "location": "http://localhost:8080/unit?unit=1&lesson=2"
     },
     "event_source": "attempt-lesson",
@@ -172,6 +177,9 @@
       "containedTypes": {
         "qg-0": ["McQuestion", "SaQuestion"]
       },
+      "quids": {
+        "qg-0": ["qg-0-mc-0-quid", "qg-0-sa-0-quid"]
+        },
       "location": "http://localhost:8080/unit?unit=1&lesson=2"
     },
     "event_source": "attempt-lesson",
@@ -199,6 +207,10 @@
         "answers": {
           "mc-0": [0],
           "sa-0": "falafel"
+        },
+        "quids": {
+          "mc-0": "mc-0-quid",
+          "sa-0": "sa-0-quid"
         },
         "mc-0": [true, false],
         "sa-0": {

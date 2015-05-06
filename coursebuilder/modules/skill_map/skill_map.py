@@ -55,6 +55,7 @@ from modules.dashboard.question_editor import SaQuestionRESTHandler
 from modules.dashboard.unit_lesson_editor import LessonRESTHandler
 from modules.i18n_dashboard import i18n_dashboard
 from modules.skill_map import competency
+from modules.skill_map import constants
 from modules.skill_map import skill_map_metrics
 
 from google.appengine.ext import db
@@ -68,10 +69,6 @@ TEMPLATES_DIR = os.path.join(
 
 # URI for skill map css, js, amd img assets.
 RESOURCES_URI = '/modules/skill_map/resources'
-
-# Key for storing list of skill id's in the properties/dict table of a DTO
-SKILLS_KEY = 'modules.skill_map.skill_list'
-
 
 def _assert(condition, message, errors):
     """Assert a condition and either log exceptions or raise AssertionError."""
@@ -629,13 +626,13 @@ class SkillMap(caching.RequestScopedSingleton):
 
         self._lessons_by_skill = {}
         for lesson in self._course.get_lessons_for_all_units():
-            skill_ids = lesson.properties.get(SKILLS_KEY, [])
+            skill_ids = lesson.properties.get(constants.SKILLS_KEY, [])
             for skill_id in skill_ids:
                 self._lessons_by_skill.setdefault(skill_id, []).append(lesson)
 
         self._questions_by_skill = {}
         for question in models.QuestionDAO.get_all():
-            skill_ids = question.dict.get(SKILLS_KEY, [])
+            skill_ids = question.dict.get(constants.SKILLS_KEY, [])
             for skill_id in skill_ids:
                 self._questions_by_skill.setdefault(skill_id, []).append(
                     question)
@@ -721,7 +718,7 @@ class SkillMap(caching.RequestScopedSingleton):
         """
         # TODO(jorr): Can we stop relying on the unit and just use lesson id?
         lesson = self._course.find_lesson_by_id(None, lesson_id)
-        skills = lesson.properties.get(SKILLS_KEY, [])
+        skills = lesson.properties.get(constants.SKILLS_KEY, [])
         return [self._skill_infos[skill_id] for skill_id in skills]
 
     def get_questions_for_skill(self, skill):
@@ -762,7 +759,7 @@ class SkillMap(caching.RequestScopedSingleton):
         for loc in location_keys:
             _, lesson = resource.Key.fromstring(loc['key']).get_resource(
                 self._course)
-            lesson.properties.setdefault(SKILLS_KEY, []).append(
+            lesson.properties.setdefault(constants.SKILLS_KEY, []).append(
                 skill.id)
             assert self._course.update_lesson(lesson)
             # pylint: disable=protected-access
@@ -776,7 +773,7 @@ class SkillMap(caching.RequestScopedSingleton):
             return
         # pylint: disable=protected-access
         for lesson in self._lessons_by_skill[skill.id]:
-            lesson.properties[SKILLS_KEY].remove(skill.id)
+            lesson.properties[constants.SKILLS_KEY].remove(skill.id)
             assert self._course.update_lesson(lesson)
         self._course.save()
         del self._lessons_by_skill[skill.id]
@@ -797,7 +794,7 @@ class SkillMap(caching.RequestScopedSingleton):
 
         for question in questions:
             question.dict.setdefault(
-                SKILLS_KEY, []).append(skill.id)
+                constants.SKILLS_KEY, []).append(skill.id)
         assert models.QuestionDAO.save_all(questions)
         # pylint: disable=protected-access
         skill._questions.extend(
@@ -812,7 +809,7 @@ class SkillMap(caching.RequestScopedSingleton):
         if not self._questions_by_skill.get(skill.id):
             return
         for question in self._questions_by_skill[skill.id]:
-            question.dict[SKILLS_KEY].remove(skill.id)
+            question.dict[constants.SKILLS_KEY].remove(skill.id)
         assert models.QuestionDAO.save_all(self._questions_by_skill[skill.id])
         del self._questions_by_skill[skill.id]
         skill._questions = []
@@ -1494,12 +1491,12 @@ def lesson_rest_handler_schema_load_hook(lesson_field_registry):
 def lesson_rest_handler_pre_load_hook(lesson, lesson_dict):
     lesson_dict['skills'] = [
         {'skill': skill} for skill in lesson.properties.get(
-            SKILLS_KEY, [])]
+            constants.SKILLS_KEY, [])]
 
 
 def lesson_rest_handler_pre_save_hook(lesson, lesson_dict):
     if 'skills' in lesson_dict:
-        lesson.properties[SKILLS_KEY] = [
+        lesson.properties[constants.SKILLS_KEY] = [
             item['skill'] for item in lesson_dict['skills']]
 
 
@@ -1529,12 +1526,12 @@ def question_rest_handler_schema_load_hook(question_field_registry):
 def question_rest_handler_pre_load_hook(question, question_dict):
     question_dict['skills'] = [
         {'skill': skill} for skill in question.dict.get(
-            SKILLS_KEY, [])]
+            constants.SKILLS_KEY, [])]
 
 
 def question_rest_handler_pre_save_hook(question, question_dict):
     if 'skills' in question_dict:
-        question.dict[SKILLS_KEY] = [
+        question.dict[constants.SKILLS_KEY] = [
             x['skill'] for x in question_dict['skills']]
 
 
@@ -1670,7 +1667,7 @@ def import_skill_map(app_ctx):
             ul_tuple = (loc['unit'], loc['lesson'])
             lesson = lesson_map[ul_tuple]
             lesson.properties.setdefault(
-                SKILLS_KEY, []).append(skill.id)
+                constants.SKILLS_KEY, []).append(skill.id)
             assert course.update_lesson(lesson)
     course.save()
 

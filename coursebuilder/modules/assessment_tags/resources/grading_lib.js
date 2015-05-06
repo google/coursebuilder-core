@@ -56,6 +56,7 @@ BaseQuestion.prototype.onCheckAnswer = function() {
   if (this.componentAudit) {
     var auditDict = {
       'instanceid': this.id,
+      'quid': this.data.quid,
       'answer': grade.answer,
       'score': Math.round(100 * grade.score) / 100,
       'type': this.type
@@ -311,6 +312,7 @@ QuestionGroup.prototype.onCheckAnswer = function() {
     'score': Math.round(100 * grade.score) / 100,
     'individualScores': grade.individualScores,
     'containedTypes': grade.containedTypes,
+    'quids': grade.quids,
     'type': this.type
   });
 };
@@ -322,11 +324,13 @@ QuestionGroup.prototype.grade = function() {
   var feedback = [];
   var individualScores = [];
   var containedTypes = [];
+  var quids = [];
   $.each(this.questions, function(index, question) {
     var grade = question.grade();
     answer.push(grade.answer);
     containedTypes.push(question.type);
     individualScores.push(grade.score);
+    quids.push(question.data.quid);
     score += that.data[question.id].weight * grade.score;
     feedback.push(grade.feedback);
   });
@@ -337,7 +341,8 @@ QuestionGroup.prototype.grade = function() {
     score: score / totalWeight,
     feedback: feedback,
     individualScores: individualScores,
-    containedTypes: containedTypes
+    containedTypes: containedTypes,
+    quids: quids
   };
 };
 
@@ -367,14 +372,17 @@ function gradeScoredLesson(questions, messages, question_batch_id) {
   var answers = {'version': '1.5'};
   var individualScores = {};
   var containedTypes = {};
+  var quids = {};
   $.each(questions, function(idx, question) {
     var grade = question.grade();
     if (question instanceof QuestionGroup) {
       individualScores[question.id] = grade.individualScores;
       containedTypes[question.id] = grade.containedTypes;
+      quids[question.id] = grade.quids;
     } else {
       individualScores[question.id] = grade.score;
       containedTypes[question.id] = question.type;
+      quids[question.id] = question.data.quid;
     }
     answers[question.id] = grade.answer;
     score += grade.score * question.getWeight();
@@ -391,7 +399,8 @@ function gradeScoredLesson(questions, messages, question_batch_id) {
     'answers': answers,
     'individualScores': individualScores,
     'score': score,
-    'containedTypes': containedTypes
+    'containedTypes': containedTypes,
+    'quids': quids
   });
 }
 
@@ -400,8 +409,11 @@ function gradeAssessment(questions, unitId, xsrfToken) {
   // The following prevents division-by-zero errors.
   var totalWeight = 1e-12;
   var answers = {
-    'version': '1.5', 'individualScores': {},
-    'containedTypes': {}, 'answers': {}
+    'version': '1.5',
+    'individualScores': {},
+    'containedTypes': {},
+    'answers': {},
+    'quids': {}
   };
   $.each(questions, function(idx, question) {
     var grade = question.grade();
@@ -412,9 +424,11 @@ function gradeAssessment(questions, unitId, xsrfToken) {
     if (question instanceof QuestionGroup) {
       answers.individualScores[question.id] = grade.individualScores;
       answers.containedTypes[question.id] = grade.containedTypes;
+      answers.quids[question.id] = grade.quids;
     } else {
       answers.individualScores[question.id] = grade.score;
       answers.containedTypes[question.id] = question.type;
+      answers.quids[question.id] = question.data.quid;
     }
   });
 

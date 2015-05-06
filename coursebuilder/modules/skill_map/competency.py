@@ -16,7 +16,11 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import collections
+
 from models import models
+from models import transforms
+from modules.skill_map import constants
 
 from google.appengine.ext import db
 
@@ -30,14 +34,13 @@ class BaseCompetencyMeasure(object):
     # criteria, at their own risk.
     CORRECT_INCORRECT_CUTOFF = 0.5
 
-    def __init__(self, student):
+    def __init__(self, user_id):
         self.dto = None
-        self.student = student
+        self.user_id = user_id
 
     def load(self, skill_id):
-        assert self.dto is None
         resource_key = CompetencyMeasureEntity.create_key_name(
-            self.student.user_id, skill_id, self.__class__.__name__)
+            self.user_id, skill_id, self.__class__.__name__)
         self.dto = CompetencyMeasureDao.load(resource_key)
         if not self.dto:
             self.dto = CompetencyMeasureDto(resource_key, {})
@@ -174,14 +177,87 @@ class Registry(object):
         cls._registry.append(competency_measure_class)
 
     @classmethod
-    def get_updater(cls, student, skill_id):
+    def get_updater(cls, user_id, skill_id):
         competency_measures = []
         for competency_measure_class in cls._registry:
-            measure = competency_measure_class(student)
+            measure = competency_measure_class(user_id)
             measure.load(skill_id)
             competency_measures.append(measure)
         return cls._Updater(competency_measures)
 
 
+QuestionScore = collections.namedtuple('QuestionScore', ['quid', 'score'])
+
+
+def _get_questions_scores_from_single_item(data):
+    if data['type'] == 'QuestionGroup':
+        question_scores = [
+            QuestionScore(quid, score)
+            for quid, score in zip(data['quids'], data['individualScores'])]
+    else:
+        question_scores = [QuestionScore(data['quid'], data['score'])]
+    return question_scores
+
+
+def _get_questions_scores_from_many_items(data):
+    if isinstance(data, list):
+        # It's a pre-1.5 assessment, so ignore it
+        return []
+
+    quids = data['quids']
+    scores = data['individualScores']
+    question_scores = []
+    for instanceid in quids:
+        quid = quids[instanceid]
+        score = scores[instanceid]
+        if isinstance(quid, basestring):
+            # It wasn't a question group
+            question_scores.append(QuestionScore(quid, score))
+        else:
+            # It's a question group and both quid and score are lists
+            question_scores += [
+                QuestionScore(q, s) for q, s in zip(quid, score)]
+    return question_scores
+
+
+def record_event_listener(source, user, data):
+    # Note the code in this method has similiarities to methods in
+    # models.event_transforms, but is (a) more limited in scope, and (b) needs
+    # less background information marshalled about the structure of the course
+
+    if source == 'tag-assessment':
+        # Sent when the "Check Answer" button is presson in a lesson
+        data = transforms.loads(data)
+        question_scores = _get_questions_scores_from_single_item(data)
+
+    elif source == 'attempt-lesson':
+        # Sent when the "Grade Questions" button is pressed in a lesson
+        # or when the "Check Answers" button is pressed in an assessment
+        data = transforms.loads(data)
+        question_scores = _get_questions_scores_from_many_items(data)
+
+    elif source == 'submit-assessment':
+        # Sent when an assignment is submitted.
+        data = transforms.loads(data)['values']
+        question_scores = _get_questions_scores_from_many_items(data)
+
+    else:
+        return
+
+    scores_by_skill = collections.defaultdict(list)
+    for question_score in question_scores:
+        question = models.QuestionDAO.load(question_score.quid)
+        for skill_id in question.dict.get(constants.SKILLS_KEY, []):
+            scores_by_skill[skill_id].append(question_score.score)
+
+    for skill_id, scores in scores_by_skill.iteritems():
+        updater = Registry.get_updater(user.user_id(), skill_id)
+        for score in scores:
+            updater.update(score)
+        updater.save()
+
+
 def notify_module_enabled():
     Registry.register(SuccessRateCompetencyMeasure)
+    models.EventEntity.EVENT_LISTENERS.append(record_event_listener)
+

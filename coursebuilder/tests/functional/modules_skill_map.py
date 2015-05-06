@@ -38,8 +38,8 @@ from models import transforms
 from models.progress import UnitLessonCompletionTracker
 from modules.i18n_dashboard import i18n_dashboard
 from modules.skill_map import competency
+from modules.skill_map.constants import SKILLS_KEY
 from modules.skill_map.skill_map import CountSkillCompletion
-from modules.skill_map.skill_map import SKILLS_KEY
 from modules.skill_map.skill_map import ResourceSkill
 from modules.skill_map.skill_map import Skill
 from modules.skill_map.skill_map import SkillAggregateRestHandler
@@ -54,6 +54,7 @@ from modules.skill_map.skill_map_metrics import CHAINS_MIN_LENGTH
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
+from google.appengine.api import users
 
 ADMIN_EMAIL = 'admin@foo.com'
 COURSE_NAME = 'skill_map_course'
@@ -117,6 +118,40 @@ class BaseSkillMapTests(actions.TestBase):
         self.lesson2.title = 'Test Lesson 2'
         self.lesson3 = self.course.add_lesson(self.unit)
         self.lesson3.title = 'Test Lesson 3'
+
+    def _create_mc_question(self, description):
+        """Create a multi-choice question."""
+
+        mc_dict = {
+            'description': description,
+            'type': models.QuestionDTO.MULTIPLE_CHOICE,
+            'choices': [
+                {
+                    'text': 'correct answer',
+                    'score': 1.0
+                },
+                {
+                    'text': 'incorrect answer',
+                    'score': 0.0
+                }],
+            'version': '1.5'
+        }
+        question = models.QuestionDTO(None, mc_dict)
+        qid = models.QuestionDAO.save(question)
+        return models.QuestionDAO.load(qid)
+
+    def _create_question_group(self, description, questions_list):
+        qg_dict = {
+            'description': description,
+            'introduction': '',
+            'items': [
+                {'weight': 1, 'question': question.id}
+                for question in questions_list],
+            'version': '1.5'
+        }
+        question_group = models.QuestionGroupDTO(None, qg_dict)
+        qgid = models.QuestionGroupDAO.save(question_group)
+        return models.QuestionGroupDAO.load(qgid)
 
 
 class SkillGraphTests(BaseSkillMapTests):
@@ -459,22 +494,6 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         response = self.put(
             self.URL, {'request': transforms.dumps(request_dict)})
         return transforms.loads(response.body)
-
-    def _create_mc_question(self, description):
-        """Create a multi-choice question."""
-
-        mc_dict = {
-            'description': description,
-            'type': models.QuestionDTO.MULTIPLE_CHOICE,
-            'choices': [{
-                'text': 'answer',
-                'score': 1.0
-            }],
-            'version': '1.5'
-        }
-        question = models.QuestionDTO(None, mc_dict)
-        qid = models.QuestionDAO.save(question)
-        return models.QuestionDAO.load(qid)
 
     def test_rejected_if_not_authorized(self):
         # Bad XSRF_TOKEN
@@ -1290,7 +1309,7 @@ class SkillAggregateRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(401, response['status'])
 
         # logged in but not admin
-        actions.login('user.foo.com')
+        actions.login('user@foo.com')
         response = transforms.loads(self.get(self.URL).body)
         self.assertEqual(401, response['status'])
 
@@ -2023,16 +2042,16 @@ class SkillCompletionTrackerTests(BaseSkillMapTests):
         tracker.update_skills(self.student, lprogress, self.lesson1.lesson_id)
         tracker.recalculate_progress(lprogress_tracker, lprogress, self.sa)
 
+
 class CompetencyMeasureTests(BaseSkillMapTests):
 
     def setUp(self):
         super(CompetencyMeasureTests, self).setUp()
         self.skill_id = 12345
-        self.student = models.Student(user_id='321')
-        self.student.put()
+        self.user_id = 321
 
     def test_success_rate_measure(self):
-        measure = competency.SuccessRateCompetencyMeasure(self.student)
+        measure = competency.SuccessRateCompetencyMeasure(self.user_id)
         measure.load(self.skill_id)
 
         # Expect 0.0 when nothing has been set
@@ -2046,7 +2065,7 @@ class CompetencyMeasureTests(BaseSkillMapTests):
 
         # Expect save and load
         measure.save()
-        measure = competency.SuccessRateCompetencyMeasure(self.student)
+        measure = competency.SuccessRateCompetencyMeasure(self.user_id)
         measure.load(self.skill_id)
         self.assertEqual(0.5, measure.get_skill_score())
 
@@ -2054,12 +2073,12 @@ class CompetencyMeasureTests(BaseSkillMapTests):
         self.assertEqual(2, len(events_list))
 
     def test_updater(self):
-        updater = competency.Registry.get_updater(self.student, self.skill_id)
+        updater = competency.Registry.get_updater(self.user_id, self.skill_id)
         updater.update(0.0)
         updater.update(1.0)
         updater.save()
 
-        measure = competency.SuccessRateCompetencyMeasure(self.student)
+        measure = competency.SuccessRateCompetencyMeasure(self.user_id)
         measure.load(self.skill_id)
         self.assertEqual(0.5, measure.get_skill_score())
 
@@ -2067,16 +2086,148 @@ class CompetencyMeasureTests(BaseSkillMapTests):
         def transform_function(pii_str):
             return 'trans(%s)' % pii_str
 
-        measure = competency.SuccessRateCompetencyMeasure(self.student)
+        measure = competency.SuccessRateCompetencyMeasure(self.user_id)
         measure.load(self.skill_id)
         measure.save()
 
-        user_id = self.student.user_id
-
         entity = competency.CompetencyMeasureEntity.get_by_key_name(
             competency.CompetencyMeasureEntity.create_key_name(
-                user_id, self.skill_id, 'SuccessRateCompetencyMeasure'))
+                self.user_id, self.skill_id, 'SuccessRateCompetencyMeasure'))
         safe_key = competency.CompetencyMeasureEntity.safe_key(
             entity.key(), transform_function)
         self.assertEqual(
             safe_key.name(), 'trans(321):12345:SuccessRateCompetencyMeasure')
+
+
+class EventListenerTests(BaseSkillMapTests):
+
+    def setUp(self):
+        # Set up three questions. The first will be stand-alone and the other
+        # two will be in a group. Tag them with skill A and Skill B as follows:
+        #   qu0: a
+        #   qu1: a, b
+        #   qu2: b
+
+        super(EventListenerTests, self).setUp()
+        self.qu0 = self._create_mc_question('Question 0')
+        self.qu1 = self._create_mc_question('Question 1')
+        self.qu2 = self._create_mc_question('Question 2')
+        self.qgp = self._create_question_group('Group', [self.qu1, self.qu2])
+        self._build_sample_graph()
+
+        self.qu0.dict[SKILLS_KEY] = [self.sa.id]
+        self.qu1.dict[SKILLS_KEY] = [self.sa.id, self.sb.id]
+        self.qu2.dict[SKILLS_KEY] = [self.sb.id]
+        models.QuestionDAO.save_all([self.qu0, self.qu1, self.qu2])
+
+        self.single_item_data = {
+            'instanceid': 'instanceid-0',
+            'type': 'QuestionGroup',
+            'location': 'http://localhost:8081/events/unit?unit=2&lesson=3',
+            'quids': [self.qu1.id, self.qu2.id],
+            'containedTypes': ['McQuestion', 'McQuestion'],
+            'answer': [[0], [1]],
+            'individualScores': [1, 0],
+            'score': 0
+        }
+
+        actions.login('user@foo.com')
+        self.user = users.get_current_user()
+
+    def tearDown(self):
+        actions.logout()
+        super(EventListenerTests, self).tearDown()
+
+    def _get_single_item_data(self, qu1score, qu2score):
+        return {
+            'instanceid': 'instanceid-0',
+            'type': 'QuestionGroup',
+            'location': 'http://localhost:8081/events/unit?unit=2&lesson=3',
+            'quids': [self.qu1.id, self.qu2.id],
+            'containedTypes': ['McQuestion', 'McQuestion'],
+            'answer': [[0], [1]],
+            'individualScores': [qu1score, qu2score],
+            'score': 0
+        }
+
+    def _get_many_item_data(self, qu0score, qu1score, qu2score):
+        return {
+            'type': 'scored-lesson',
+            'location': 'http://localhost:8081/events/unit?unit=2&lesson=3',
+            'quids': {
+                'instanceid-0': str(self.qu0.id),
+                'instanceid-1': [self.qu1.id, self.qu2.id]
+            },
+            'containedTypes': {
+                'instanceid-0': 'McQuestion',
+                'instanceid-1': ['McQuestion', 'McQuestion']
+            },
+            'answers': {
+                'version': '1.5',
+                'instanceid-0': [0],
+                'instanceid-1': [[1], [0]]
+            },
+            'individualScores': {
+                'instanceid-0': qu0score,
+                'instanceid-1': [qu1score, qu2score]
+            },
+            'score': 2
+        }
+
+    def _record_and_expect(self, evt_type, data, sa_measure, sb_measure):
+        competency.record_event_listener(evt_type, self.user, json.dumps(data))
+
+        measure = competency.SuccessRateCompetencyMeasure(self.user.user_id())
+        measure.load(self.sa.id)
+        self.assertEqual(sa_measure, measure.get_skill_score())
+        measure.load(self.sb.id)
+        self.assertEqual(sb_measure, measure.get_skill_score())
+
+
+    def test_record_tag_assessment(self):
+        # Running total: sa[ 1 / 1 ], sb[ 1 / 2 ]
+        data = self._get_single_item_data(1, 0)
+        self._record_and_expect('tag-assessment', data, 1.0, 0.5)
+
+        # Running total: sa[ 1 / 2 ], sb[ 2 / 4 ]
+        data = self._get_single_item_data(0, 1)
+        self._record_and_expect('tag-assessment', data, 0.5, 0.5)
+
+        # Running total: sa[ 1 / 3 ], sb[ 2 / 6 ]
+        data = self._get_single_item_data(0, 0)
+        self._record_and_expect('tag-assessment', data, 1.0 / 3, 1.0 / 3)
+
+    def test_record_attempt_lesson(self):
+        # Running total: sa[ 2 / 2 ], sb[ 1 / 2 ]
+        data = self._get_many_item_data(1, 1, 0)
+        self._record_and_expect('attempt-lesson', data, 1.0, 0.5)
+
+        # Running total: sa[ 3 / 4 ], sb[ 3 / 4 ]
+        data = self._get_many_item_data(0, 1, 1)
+        self._record_and_expect('attempt-lesson', data, 0.75, 0.75)
+
+        # Running total: sa[ 3 / 6 ], sb[ 3 / 6 ]
+        data = self._get_many_item_data(0, 0, 0)
+        self._record_and_expect('attempt-lesson', data, 0.5, 0.5)
+
+    def test_record_submit_assessment(self):
+        # Running total: sa[ 2 / 2 ], sb[ 1 / 2 ]
+        data = {'values': self._get_many_item_data(1, 1, 0)}
+        self._record_and_expect('submit-assessment', data, 1.0, 0.5)
+
+        # Running total: sa[ 3 / 4 ], sb[ 3 / 4 ]
+        data = {'values': self._get_many_item_data(0, 1, 1)}
+        self._record_and_expect('submit-assessment', data, 0.75, 0.75)
+
+        # Running total: sa[ 3 / 6 ], sb[ 3 / 6 ]
+        data = {'values': self._get_many_item_data(0, 0, 0)}
+        self._record_and_expect('submit-assessment', data, 0.5, 0.5)
+
+    def test_do_nothing_with_unrecognized_event_type(self):
+        competency.record_event_listener('some-other-event-type', self.user, {})
+        measure = competency.SuccessRateCompetencyMeasure(self.user.user_id())
+
+        measure.load(self.sa.id)
+        self.assertEqual(0.0, measure.get_skill_score())
+        measure.load(self.sb.id)
+        self.assertEqual(0.0, measure.get_skill_score())

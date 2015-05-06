@@ -318,10 +318,13 @@ describe('assessment tags', function() {
           'qg-0-mc-0': {'weight': '10'},
           'qg-0-sa-0': {'weight': '15'},
         },
-        'qg-0-mc-0': {choices: [
-          {score: '1', feedback: 'yes'},
-          {score: '0', feedback: 'no'}]},
+        'qg-0-mc-0': {
+          quid: 'qg-0-mc-0-quid',
+          choices: [
+            {score: '1', feedback: 'yes'},
+            {score: '0', feedback: 'no'}]},
         'qg-0-sa-0': {
+          quid: 'qg-0-sa-0-quid',
           hint: 'it\s \'falafel\'',
           graders: [{
             matcher: 'case_insensitive',
@@ -520,6 +523,7 @@ describe('assessment tags', function() {
     // Set up a multiple choice question
     var mcQuestionData = {
       'mc-0': {
+        quid: 'mc-0-quid',
         choices: [
           {score: '1', feedback: 'yes'},
           {score: '0', feedback: 'no'}
@@ -533,6 +537,7 @@ describe('assessment tags', function() {
     // Set up a short answer question
     var saQuestionData = {
       'sa-0': {
+        quid: 'sa-0-quid',
         hint: 'it\'s \'falafel\'',
         graders: [
           {

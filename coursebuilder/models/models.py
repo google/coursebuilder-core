@@ -1134,9 +1134,26 @@ class EventEntity(BaseEntity):
     # Each of the following is a string representation of a JSON dict.
     data = db.TextProperty(indexed=False)
 
+    # Modules may add functions to this list which will receive notification
+    # whenever an event is recorded. The method will be called with the
+    # arguments (source, user, data) from record().
+    EVENT_LISTENERS = []
+
+    @classmethod
+    @db.non_transactional
+    def _run_record_hooks(cls, source, user, data):
+        for listener in cls.EVENT_LISTENERS:
+            try:
+                listener(source, user, data)
+            except Exception:  # On purpose. pylint: disable=broad-except
+                logging.exception(
+                    'Event record hook failed: %s, %s, %s',
+                    source, user.user_id(), data)
+
     @classmethod
     def record(cls, source, user, data):
         """Records new event into a datastore."""
+        cls._run_record_hooks(source, user, data)
 
         event = cls()
         event.source = source

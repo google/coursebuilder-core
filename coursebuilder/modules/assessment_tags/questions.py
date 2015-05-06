@@ -80,7 +80,9 @@ def render_question(
         template_values['progress'] = progress
 
     template_file = None
-    js_data = {}
+    js_data = {
+        'quid': quid
+    }
     if question_dto.type == question_dto.MULTIPLE_CHOICE:
         template_file = 'templates/mc_question.html'
 
