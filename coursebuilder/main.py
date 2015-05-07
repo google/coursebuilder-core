@@ -23,11 +23,15 @@ import webapp2
 # The following import is needed in order to add third-party libraries.
 import appengine_config  # pylint: disable=unused-import
 
+from common import users
 from controllers import sites
 from models import analytics
 from models import custom_modules
 from models import data_sources
 
+
+# Set the default users service before we do anything else.
+users.UsersServiceManager.set(users.AppEnginePassthroughUsersService)
 
 # Import, register, & enable modules named in app.yaml's GCB_REGISTERED_MODULES.
 appengine_config.import_and_enable_modules()

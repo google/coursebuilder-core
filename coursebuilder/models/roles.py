@@ -19,10 +19,9 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import collections
 import config
 from common import utils
+from common import users
 from models import MemcacheManager
 from models import RoleDAO
-
-from google.appengine.api import users
 
 GCB_ADMIN_LIST = config.ConfigProperty(
     'gcb_admin_user_emails', str, (

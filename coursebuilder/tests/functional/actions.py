@@ -27,6 +27,7 @@ from xml.etree import cElementTree
 import html5lib
 
 import appengine_config
+from common import users
 from controllers import sites
 from controllers import utils
 import main
@@ -39,7 +40,6 @@ from tests import suite
 
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
-from google.appengine.api import users
 
 
 # All URLs referred to from all the pages.

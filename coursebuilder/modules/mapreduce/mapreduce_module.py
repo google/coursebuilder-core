@@ -26,6 +26,7 @@ from mapreduce.lib.pipeline import models as pipeline_models
 from mapreduce.lib.pipeline import pipeline
 
 from common import safe_dom
+from common import users
 from common.utils import Namespace
 from controllers import sites
 from controllers import utils
@@ -37,7 +38,6 @@ from models import transforms
 from models.config import ConfigProperty
 
 from google.appengine.api import files
-from google.appengine.api import users
 from google.appengine.ext import db
 
 # Module registration

@@ -31,6 +31,7 @@ from babel.messages import pofile
 from common import crypto
 from common import resource
 from common import tags
+from common import users
 from common import utils
 from common.utils import Namespace
 from controllers import sites
@@ -60,7 +61,6 @@ from tests.functional import actions
 
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
-from google.appengine.api import users
 from google.appengine.datastore import datastore_rpc
 
 

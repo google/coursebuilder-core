@@ -16,9 +16,9 @@
 
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
+from common import users
 
 from google.appengine.api import mail
-from google.appengine.api import users
 
 
 class EmailManager(object):

@@ -52,6 +52,7 @@ from common import crypto
 from common import jinja_utils
 from common import safe_dom
 from common import tags
+from common import users
 from common.utils import Namespace
 from controllers import sites
 from controllers.utils import ApplicationHandler
@@ -66,7 +67,6 @@ from modules.dashboard import tabs
 from modules.oeditor import oeditor
 
 from google.appengine.api import app_identity
-from google.appengine.api import users
 
 custom_module = None
 

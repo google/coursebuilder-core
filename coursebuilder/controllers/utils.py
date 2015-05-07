@@ -34,6 +34,7 @@ from common import resource
 from common import safe_dom
 from common import schema_fields
 from common import tags
+from common import users
 from common import utils as common_utils
 from common.crypto import XsrfTokenManager
 from models import courses
@@ -47,8 +48,6 @@ from models.models import Student
 from models.models import StudentProfileDAO
 from models.models import TransientStudent
 from models.roles import Roles
-
-from google.appengine.api import users
 
 # The name of the template dict key that stores a course's base location.
 COURSE_BASE_KEY = 'gcb_course_base'

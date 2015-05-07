@@ -17,13 +17,12 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 from common import schema_fields
+from common import users
 from models import models
 from models import roles
 from modules.dashboard import dashboard
 from modules.dashboard import dto_editor
 from modules.dashboard import tabs
-
-from google.appengine.api import users
 
 
 class AdminPreferencesEditor(dto_editor.BaseDatastoreAssetEditor):

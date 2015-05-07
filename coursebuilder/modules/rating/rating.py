@@ -24,6 +24,7 @@ import jinja2
 import appengine_config
 from common import schema_fields
 from common import tags
+from common import users
 from controllers import lessons
 from controllers import utils
 from models import courses
@@ -31,8 +32,6 @@ from models import custom_modules
 from models import data_sources
 from models import models
 from models import transforms
-
-from google.appengine.api import users
 
 RESOURCES_PATH = '/modules/rating/resources'
 

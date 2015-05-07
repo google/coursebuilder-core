@@ -30,6 +30,7 @@ import appengine_config
 from common import jinja_utils
 from common import safe_dom
 from common import tags
+from common import users
 from common import utils as common_utils
 from controllers import sites
 from controllers.utils import ApplicationHandler
@@ -47,7 +48,6 @@ from modules.dashboard import dashboard
 from modules.dashboard import tabs
 from modules.oeditor import oeditor
 
-from google.appengine.api import users
 import google.appengine.api.app_identity as app
 
 RESOURCES_PATH = '/modules/admin/resources'
@@ -458,12 +458,14 @@ class BaseAdminHandler(ConfigPropertyEditor):
         for line in yaml_lines:
             ol.add_child(safe_dom.Element('li').add_text(line))
 
-        # Application identity.
+        # Application identity and users service information.
         app_id = app.get_application_id()
         app_dict = {}
         app_dict['application_id'] = escape(app_id)
         app_dict['default_ver_hostname'] = escape(
             app.get_default_version_hostname())
+        app_dict['users_service_name'] = escape(
+            users.UsersServiceManager.get().get_service_name())
 
         template_values['main_content'] = safe_dom.NodeList().append(
             self.render_dict(app_dict, 'About the Application')

@@ -20,6 +20,7 @@ import urllib
 
 from controllers import utils
 from common import crypto
+from common import users
 from models import courses
 from models import models
 from models import transforms
@@ -28,7 +29,6 @@ from modules.rating import rating
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
-from google.appengine.api import users
 
 
 ADMIN_EMAIL = 'admin@foo.com'

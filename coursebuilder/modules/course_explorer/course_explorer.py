@@ -17,13 +17,12 @@
 __author__ = 'Rahul Singal (rahulsingal@google.com)'
 
 from common import safe_dom
+from common import users
 from controllers import utils
 from models import custom_modules
 from models.config import ConfigProperty
 from models.models import StudentProfileDAO
 from modules.course_explorer import student
-
-from google.appengine.api import users
 
 GCB_ENABLE_COURSE_EXPLORER_PAGE = ConfigProperty(
     'gcb_enable_course_explorer_page', bool,

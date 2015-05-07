@@ -24,6 +24,7 @@ import webapp2
 
 import appengine_config
 from common import jinja_utils
+from common import users
 from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import PageInitializerService
@@ -32,8 +33,6 @@ from models import courses as Courses
 from models import transforms
 from models.models import StudentProfileDAO
 from models.roles import Roles
-
-from google.appengine.api import users
 
 # We want to use views file in both /views and /modules/course_explorer/views.
 TEMPLATE_DIRS = [

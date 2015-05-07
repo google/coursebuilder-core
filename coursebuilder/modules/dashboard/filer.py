@@ -26,6 +26,7 @@ import yaml
 
 import appengine_config
 from common import schema_fields
+from common import users
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -35,8 +36,6 @@ from models import transforms
 from models import vfs
 from modules.dashboard import utils as dashboard_utils
 from modules.oeditor import oeditor
-
-from google.appengine.api import users
 
 # Set of string. The relative, normalized path bases we allow uploading of
 # binary data into.

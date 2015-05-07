@@ -20,12 +20,11 @@ import os
 
 import appengine_config
 from common import schema_fields
+from common import users
 from controllers import utils
 from models import courses
 from models import custom_modules
 from models import models
-
-from google.appengine.api import users
 
 EXTRA_TABS_KEY = 'extra_tabs'
 LABEL_KEY = 'label'

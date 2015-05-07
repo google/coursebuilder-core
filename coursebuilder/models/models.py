@@ -34,10 +34,10 @@ import transforms
 import appengine_config
 from common import caching
 from common import utils as common_utils
+from common import users
 
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
-from google.appengine.api import users
 from google.appengine.ext import db
 
 # We want to use memcache for both objects that exist and do not exist in the

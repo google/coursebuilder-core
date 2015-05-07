@@ -16,12 +16,11 @@
 
 __author__ = 'mgainer@google.com (Mike Gainer)'
 
+from common import users
 from common import utils as common_utils
 from controllers import utils
 import models
 from models import transforms
-
-from google.appengine.api import users
 
 PARAMETER_LABELS = 'labels'
 STUDENT_LABELS_URL = '/rest/student/labels'

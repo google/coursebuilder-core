@@ -30,6 +30,7 @@ from xml.etree import cElementTree
 
 from common import crypto
 from common import resource
+from common import users
 from controllers import sites
 from models import courses
 from models import jobs
@@ -54,7 +55,6 @@ from modules.skill_map.skill_map_metrics import CHAINS_MIN_LENGTH
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
-from google.appengine.api import users
 
 ADMIN_EMAIL = 'admin@foo.com'
 COURSE_NAME = 'skill_map_course'

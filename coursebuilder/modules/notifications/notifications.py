@@ -48,10 +48,10 @@ We strongly encourage use of that module so you don't spam people. See
 modules/unsubscribe/unsubscribe.py. The general pattern for using these modules
 is:
 
+  from common import users
+
   from modules.notifications import notifications
   from modules.unsubscribe import unsubscribe
-
-  from google.appengine.api import users
 
   user = users.get_current_user()
 

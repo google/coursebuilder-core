@@ -29,10 +29,10 @@ from mapreduce import input_readers
 from mapreduce import mapreduce_pipeline
 from mapreduce.lib.pipeline import pipeline
 import transforms
+from common import users
 from common.utils import Namespace
 
 from google.appengine import runtime
-from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import deferred
 

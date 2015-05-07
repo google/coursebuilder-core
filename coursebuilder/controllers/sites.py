@@ -121,6 +121,7 @@ from webapp2_extras import i18n
 import appengine_config
 from common import caching
 from common import safe_dom
+from common import users
 from models import models
 from models import custom_modules
 from models import transforms
@@ -135,7 +136,6 @@ from models.vfs import DatastoreBackedFileSystem
 from models.vfs import LocalReadOnlyFileSystem
 
 from google.appengine.api import namespace_manager
-from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import zipserve
 

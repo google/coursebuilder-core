@@ -24,10 +24,10 @@ import random
 import time
 
 import appengine_config
+from common import users
 from common import utils
 from models import config
 
-from google.appengine.api import users
 
 try:
     from Crypto.Cipher import AES

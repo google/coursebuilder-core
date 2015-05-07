@@ -22,12 +22,12 @@ import urlparse
 
 import appengine_config
 from common import crypto
+from common import users
 from controllers import utils
 from models import custom_modules
 from models import entities
 from models import services
 
-from google.appengine.api import users
 from google.appengine.ext import db
 
 

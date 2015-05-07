@@ -20,6 +20,7 @@ import cgi
 import urllib
 
 import appengine_config
+from common import users
 from common.utils import Namespace
 from controllers import sites
 from controllers.utils import BaseRESTHandler
@@ -30,7 +31,6 @@ from models import models
 from models import roles
 from models import transforms
 from modules.oeditor import oeditor
-from google.appengine.api import users
 from google.appengine.ext import db
 
 
