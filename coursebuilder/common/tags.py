@@ -318,11 +318,16 @@ def get_tag_bindings():
     return dict(Registry.get_all_tags().items())
 
 
-def html_string_to_element_tree(html_string):
+def html_string_to_element_tree(html_string, is_fragment=True):
     parser = html5lib.HTMLParser(
         tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
         namespaceHTMLElements=False)
-    return parser.parseFragment('<div>%s</div>' % html_string)[0]
+    if is_fragment:
+        # This returns the <div> element we wrap around the content.
+        return parser.parseFragment('<div>%s</div>' % html_string)[0]
+    else:
+        # This returns the <html> element.
+        return parser.parse(html_string)
 
 
 def html_to_safe_dom(html_string, handler, render_custom_tags=True):
