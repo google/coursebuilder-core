@@ -24,19 +24,51 @@ from tests.functional import actions
 from google.appengine.api import users as gae_users
 
 
-class AppEnginePassthroughUsersServiceTest(actions.TestBase):
+class ThrowExceptionOnEnterContext(users.Context):
+
+    def __enter__(self):
+        raise Exception('__enter__: ' + self.handler)
+
+
+class ThrowExceptionOnEnterUsersService(users.AbstractUsersService):
+
+    @classmethod
+    def get_context(cls, handler):
+        return ThrowExceptionOnEnterContext(handler)
+
+
+class ThrowExceptionOnExitContext(users.Context):
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        raise Exception('__exit__: ' + self.handler)
+
+
+class ThrowExceptionOnExitUsersService(users.AbstractUsersService):
+
+    @classmethod
+    def get_context(cls, handler):
+        return ThrowExceptionOnExitContext(handler)
+
+
+class TestBase(actions.TestBase):
+
+    def setUp(self):
+        super(TestBase, self).setUp()
+        self.old_users_service = users.UsersServiceManager.get()
+
+    def tearDown(self):
+        users.UsersServiceManager.set(self.old_users_service)
+        super(TestBase, self).tearDown()
+
+
+class AppEnginePassthroughUsersServiceTest(TestBase):
 
     def setUp(self):
         super(AppEnginePassthroughUsersServiceTest, self).setUp()
         self.destination_url = 'http://destination'
         self.email = 'user@example.com'
-        self.old_users_service = users.UsersServiceManager.get()
         users.UsersServiceManager.set(
             users.AppEnginePassthroughUsersService)
-
-    def tearDown(self):
-        users.UsersServiceManager.set(self.old_users_service)
-        super(AppEnginePassthroughUsersServiceTest, self).tearDown()
 
     def assert_service_results_equal_and_not_none(
             self, users_result, gae_users_result):
@@ -84,7 +116,28 @@ class AppEnginePassthroughUsersServiceTest(actions.TestBase):
         self.assertTrue(gae_users_result)
 
 
-class PublicExceptionsAndClassesIdentityTests(actions.TestBase):
+class ContextHooksCustomizationTest(TestBase):
+
+    def setUp(self):
+        super(ContextHooksCustomizationTest, self).setUp()
+        self.handler = 'fake_handler'
+
+    def test_custom_pre_hook_runs(self):
+        with self.assertRaisesRegexp(Exception, '__enter__: fake_handler'):
+            with ThrowExceptionOnEnterUsersService.get_context(self.handler):
+                pass
+
+    def test_custom_post_hook_runs(self):
+        with self.assertRaisesRegexp(Exception, '__exit__: fake_handler'):
+            with ThrowExceptionOnExitUsersService.get_context(self.handler):
+                pass
+
+    def test_default_hooks_succeed(self):
+        with users.AbstractUsersService.get_context(self.handler) as context:
+            self.assertEqual(self.handler, context.handler)
+
+
+class PublicExceptionsAndClassesIdentityTests(TestBase):
 
     def assert_all_is(self, expected_list, actual):
         for expected in expected_list:

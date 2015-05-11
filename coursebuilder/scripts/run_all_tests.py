@@ -45,6 +45,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.common_crypto.GenCryptoKeyFromHmac': 2,
     'tests.functional.common_crypto.GetExternalUserIdTests': 4,
     'tests.functional.common_users.AppEnginePassthroughUsersServiceTest': 5,
+    'tests.functional.common_users.ContextHooksCustomizationTest': 3,
     'tests.functional.common_users.PublicExceptionsAndClassesIdentityTests': 2,
     'tests.functional.explorer_module.CourseExplorerTest': 3,
     'tests.functional.explorer_module.CourseExplorerDisabledTest': 3,

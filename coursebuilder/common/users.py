@@ -108,6 +108,33 @@ User = _User
 
 # Base classes, default implementation, and manager.
 
+
+class Context(object):
+    """Default (noop) Context implementation.
+
+    Provides pre- (__enter__) and post- (__exit__) hooks around handler
+    dispatch() calls. Can be used to establish invariants or do teardown. Usage:
+
+        with UsersServiceManager.get().get_context(handler) as c:
+            handler.dispatch()
+    """
+
+    def __init__(self, handler):
+        """Creates a new Context.
+
+        Args:
+            handler: controllers.sites.ApplicationRequestHandler. The handler
+                for the current request.
+        """
+        self.handler = handler
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+
 class AbstractUsersService(object):
     """Base users service for custom auth integrations.
 
@@ -137,8 +164,17 @@ class AbstractUsersService(object):
         raise NotImplementedError
 
     # Methods that aren't part of the service interface, but are used elsewhere
-    # in the system (for example, when displaying debug info in the admin
-    # panels).
+    # in the system.
+
+    @classmethod
+    def get_context(cls, handler):
+        """Gets the Context for this users service.
+
+        Returns:
+            Context. The Context used to provide pre- or post-request dispatch
+                hooks.
+        """
+        return Context(handler)
 
     @classmethod
     def get_service_name(cls):
