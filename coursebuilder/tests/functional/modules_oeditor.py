@@ -59,3 +59,16 @@ class ObjectEditorTest(actions.TestBase):
             courses.COURSES_CAN_USE_GOOGLE_APIS.name] = True
         self.assertIsNotNone(self.get_script_tag_by_src(
             '/modules/core_tags/resources/drive_tag_script_manager.js'))
+
+
+class ButtonbarCssHandlerTests(actions.TestBase):
+
+    def _get(self):
+        return self.get('/modules/oeditor/buttonbar.css')
+
+    def test_response_is_cacheable(self):
+        self.assertEqual(
+            'max-age=600, public', self._get().headers['Cache-Control'])
+
+    def test_content_type_is_css(self):
+        self.assertEqual('text/css', self._get().headers['Content-Type'])

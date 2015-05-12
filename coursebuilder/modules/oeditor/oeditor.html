@@ -1,6 +1,6 @@
-<!-- TODO(psimakov): use local YUI library -->
 <link rel="stylesheet" type="text/css"
     href="/static/yui_3.6.0/yui/build/cssreset-context/cssreset-context-min.css">
+<link rel="stylesheet" type="text/css" href="/modules/oeditor/buttonbar.css">
 <script
     src="/static/yui_3.6.0/yui/build/yui/yui.js"></script>
 <link rel="stylesheet" type="text/css"
@@ -84,7 +84,7 @@
     // button captions
     cb_global.delete_button_caption = '{{ delete_button_caption|js_string }}'
     cb_global.save_button_caption = '{{ save_button_caption|js_string }}'
-    cb_global.custom_rte_tag_icons = JSON.parse("{{ custom_rte_tag_icons|js_string }}");
+    cb_global.rte_tag_data = JSON.parse("{{ rte_tag_data|js_string }}");
 
     cb_global.required_modules = [{% for module in required_modules %}
         '{{ module|js_string }}'{% if not loop.last %},{% endif %}{% endfor %}];

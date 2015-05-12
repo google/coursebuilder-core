@@ -811,24 +811,8 @@ class CourseContentElement(DashboardEditor):
         el.find_element_by_class_name('html').click()
         return self
 
-    def click_rte_add_custom_tag(self, index=0):
-        self.find_element_by_link_text(
-            'Insert Google Course Builder component', index).click()
-        return self
-
-    def select_rte_custom_tag_type(self, option_text):
-        """Select the given option from the custom content type selector."""
-        self._ensure_rte_iframe_ready_and_switch_to_it()
-        select_tag = self.find_element_by_name('tag')
-        for option in select_tag.find_elements_by_tag_name('option'):
-            if option.text == option_text:
-                option.click()
-                break
-        else:
-            self._tester.fail('No option "%s" found' % option_text)
-        self.wait().until(ec.element_to_be_clickable(
-                (by.By.PARTIAL_LINK_TEXT, 'Close')))
-        self._tester.driver.switch_to_default_content()
+    def click_rte_add_custom_tag(self, button_text, index=0):
+        self.find_element_by_link_text(button_text, index).click()
         return self
 
     def _ensure_rte_iframe_ready_and_switch_to_it(self):

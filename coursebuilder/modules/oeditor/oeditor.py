@@ -26,6 +26,7 @@ import appengine_config
 from common import jinja_utils
 from common import schema_fields
 from common import tags
+from controllers import sites
 from controllers import utils
 from models import custom_modules
 from models import transforms
@@ -129,11 +130,16 @@ class ObjectEditor(object):
             post_url = ''
             post_args = ''
 
-        custom_rte_tag_icons = []
+        rte_tag_data = []
         for tag, tag_class in tags.get_tag_bindings().items():
-            custom_rte_tag_icons.append({
+            rte_tag_data.append({
                 'name': tag,
+                'vendor': tag_class.vendor(),
+                'label': tag_class.name(),
                 'iconUrl': tag_class().get_icon_url()})
+        rte_tag_data = sorted(
+            rte_tag_data,
+            key=lambda item: (item['vendor'], item['label']))
 
         extra_script_tag_urls = []
         for callback in cls.EXTRA_SCRIPT_TAG_URLS:
@@ -157,7 +163,7 @@ class ObjectEditor(object):
             'auto_return': auto_return,
             'delete_button_caption': delete_button_caption,
             'save_button_caption': save_button_caption,
-            'custom_rte_tag_icons': transforms.dumps(custom_rte_tag_icons),
+            'rte_tag_data': transforms.dumps(rte_tag_data),
             'delete_message': delete_message,
             'can_highlight_code': CAN_HIGHLIGHT_CODE.value,
             'extra_script_tag_urls': extra_script_tag_urls,
@@ -179,7 +185,7 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
     """A handler to serve the content of the popup subeditor."""
 
     default_action = 'custom_tag'
-    get_actions = ['edit_custom_tag', 'add_custom_tag']
+    get_actions = ['edit_custom_tag']
     post_actions = []
 
     def get_template(self, template_name, dirs):
@@ -226,45 +232,23 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
         self.response.out.write(
             self.get_template('popup.html', []).render(template_values))
 
-    def get_add_custom_tag(self):
-        """Return the page for the popup used to add a custom HTML tag."""
-        tag_name = self.request.get('tag_name')
-        excluded_tags = self.request.get_all('excluded_tags')
 
-        tag_bindings = tags.get_tag_bindings()
-
-        select_data = []
-        for name in tag_bindings.keys():
-            if name not in excluded_tags:
-                clazz = tag_bindings[name]
-                select_data.append((name, '%s: %s' % (
-                    clazz.vendor(), clazz.name())))
-        select_data = sorted(select_data, key=lambda pair: pair[1])
-
-        if tag_name:
-            tag_class = tag_bindings[tag_name]
-        else:
-            tag_class = tag_bindings[select_data[0][0]]
-        tag = tag_class()
-        tag_schema = tag.get_schema(self)
-        tag_schema = self._validate_schema(tag, tag_schema)
-
-        schema = schema_fields.FieldRegistry('Add a Component')
-        type_select = schema.add_sub_registry('type', 'Component Type')
-        type_select.add_property(schema_fields.SchemaField(
-            'tag', 'Name', 'string', select_data=select_data))
-        schema.add_sub_registry('attributes', registry=tag_schema)
-
-        template_values = {}
-        template_values['form_html'] = ObjectEditor.get_html_for(
-            self, schema.get_json_schema(), schema.get_schema_dict(), None,
-            None, None,
-            required_modules=tag_class.required_modules(),
-            extra_js_files=['add_custom_tag.js'] + tag_class.extra_js_files(),
-            extra_css_files=tag_class.extra_css_files(),
-            additional_dirs=tag_class.additional_dirs())
-        self.response.out.write(
-            self.get_template('popup.html', []).render(template_values))
+class ButtonbarCssHandler(utils.BaseHandler):
+    def get(self):
+        css = []
+        for tag_name, tag_class in tags.get_tag_bindings().items():
+            css.append(
+                '.yui-toolbar-%(tag_name)s > .yui-toolbar-icon {'
+                '  background: url(%(icon_url)s) !important;'
+                '  background-size: 100%% !important;'
+                '  left: 5px;'
+                '}' % {
+                    'tag_name': tag_name,
+                    'icon_url': tag_class().get_icon_url()})
+        # Ensure this resource is cacheable.
+        sites.set_static_resource_cache_control(self)
+        self.response.headers['Content-Type'] = 'text/css'
+        self.response.out.write('\n'.join(css))
 
 
 def create_bool_select_annotation(
@@ -322,6 +306,7 @@ def register_module():
 
     oeditor_handlers = [('/oeditorpopup', PopupHandler)]
     global_routes = yui_handlers + codemirror_handler + [
+        ('/modules/oeditor/buttonbar.css', ButtonbarCssHandler),
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
 
     global custom_module  # pylint: disable=global-statement

@@ -267,21 +267,17 @@ describe('CustomTagManager', function() {
       {name: 'tag_1', iconUrl: 'http://www.icon.com/foo_1.png'},
       {name: 'tag_2', iconUrl: 'http://www.icon.com/foo_2.png'}
     ];
-    excludedCustomTags = [];
     frameProxyOpener = {
       open: function(url, value, submit, cancel) {}
     };
     serviceUrlProvider = {
-      getAddUrl: function() {
-        return 'add_url';
-      },
       getEditUrl: function(tag) {
         return 'edit_url?' + tag;
       }
     };
 
     customTagManager = new CustomTagManager(win, editor, customRteTagIcons,
-      excludedCustomTags, frameProxyOpener, serviceUrlProvider);
+      frameProxyOpener, serviceUrlProvider);
   });
 
   it('replaces a tag with marker images', function() {
@@ -361,11 +357,12 @@ describe('CustomTagManager', function() {
     spyOn(frameProxyOpener, 'open');
 
     // Testing
-    customTagManager.addCustomTag();
+    customTagManager.addCustomTag('gcb-math');
 
     // Verification
     expect(frameProxyOpener.open).toHaveBeenCalled();
-    expect(frameProxyOpener.open.mostRecentCall.args[0]).toEqual('add_url');
+    expect(frameProxyOpener.open.mostRecentCall.args[0])
+        .toEqual('edit_url?gcb-math');
   });
 
   it('opens a lightbox to edit a tag', function() {

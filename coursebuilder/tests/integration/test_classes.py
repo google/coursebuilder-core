@@ -506,8 +506,7 @@ class AdminTests(BaseIntegrationTest):
         ).send_rte_text(
             'YouTube:'
         ).click_rte_add_custom_tag(
-        ).select_rte_custom_tag_type(
-            'gcb: YouTube Video'
+            'YouTube Video'
         ).set_rte_lightbox_field(
             'input[name=videoid]', '123'
         ).click_rte_save(
@@ -532,8 +531,7 @@ class AdminTests(BaseIntegrationTest):
         ).send_rte_text(
             'Google Group:'
         ).click_rte_add_custom_tag(
-        ).select_rte_custom_tag_type(
-            'gcb: Google Group'
+            'Google Group'
         ).set_rte_lightbox_field(
             'input[name=group]', 'abc'
         ).set_rte_lightbox_field(
@@ -655,8 +653,7 @@ class QuestionsTest(BaseIntegrationTest):
         ).set_questions_are_scored(
         ).click_rich_text(
         ).click_rte_add_custom_tag(
-        ).select_rte_custom_tag_type(
-            'gcb: Question'
+            'Question'
         ).set_rte_lightbox_field(
             'input[name=weight]', 1
         ).click_rte_save(
@@ -670,8 +667,7 @@ class QuestionsTest(BaseIntegrationTest):
             'Public'
         ).click_rich_text(
         ).click_rte_add_custom_tag(
-        ).select_rte_custom_tag_type(
-            'gcb: Question'
+            'Question'
         ).set_rte_lightbox_field(
             'input[name=weight]', 1
         ).click_rte_save(
@@ -686,9 +682,8 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_rich_text(
             pageobjects.AddAssessment.INDEX_CONTENT
         ).click_rte_add_custom_tag(
+            'Question',
             pageobjects.AddAssessment.INDEX_CONTENT
-        ).select_rte_custom_tag_type(
-            'gcb: Question'
         ).set_rte_lightbox_field(
             'input[name=weight]', 1
         ).click_rte_save(
@@ -703,9 +698,8 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_rich_text(
             pageobjects.AddAssessment.INDEX_CONTENT
         ).click_rte_add_custom_tag(
+            'Question',
             pageobjects.AddAssessment.INDEX_CONTENT
-        ).select_rte_custom_tag_type(
-            'gcb: Question'
         ).set_rte_lightbox_field(
             'input[name=weight]', 1
         ).click_rte_save(
@@ -989,8 +983,7 @@ class EventsTest(BaseIntegrationTest):
         ).click_rich_text(
             pageobjects.AddUnit.INDEX_UNIT_HEADER
         ).click_rte_add_custom_tag(
-        ).select_rte_custom_tag_type(
-            'gcb: HTML5 Video'
+            'HTML5 Video'
         ).set_rte_lightbox_field(
             'input[name=url]',
             'http://techslides.com/demos/sample-videos/small.mp4'

@@ -18,6 +18,18 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
     },
 
     renderComponent: function() {
+      // The basic structure of an InputExField
+      //   <div class="inputEx-fieldWrapper">
+      //     <div class="inputEx-label"></div>
+      //     <div class="inputEx-Field"></div>
+      //     </div style="clear: both;"></div>
+      //   </div>
+      // When this method is called, "this" is populated with:
+      //   this.divEl: the inputEx-fieldWrapper
+      //   this.fieldContainer:  the inputEx-Field div
+      // It's important to note that this.fieldContainer has not yet been added
+      // as a child to this.divEl at this point.
+
       // Make a unique id for the field
       if (!GcbRteField.idCounter) {
         GcbRteField.idCounter = 0;
@@ -182,6 +194,29 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       this._lastResizeDimensions = {width: width, height: height};
     },
 
+    _addCustomComponentButtons: function(editor) {
+      var that = this;
+      var componentDataList = env.rte_tag_data;
+      for (var i = 0; i < componentDataList.length; i++) {
+        var componentData = componentDataList[i];
+        if (this.options.excludedCustomTags.indexOf(componentData.name) >= 0) {
+          continue;
+        }
+        var buttonDef = {
+          type: 'push',
+          label: componentData.label,
+          value: componentData.name,
+          disabled: false
+        };
+        editor.toolbar.addButtonToGroup(buttonDef, 'insertitem');
+      }
+      editor.toolbar.on('buttonClick',
+        function(evt) {
+          that._customTagManager.addCustomTag(evt.button.value);
+        });
+
+    },
+
     showNewRte: function() {
       this._replaceCodeMirrorWithTextArea();
 
@@ -251,20 +286,7 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       // Set up a button to add custom tags
       if (this.options.supportCustomTags) {
         editor.on('toolbarLoaded', function() {
-          var button = {
-            type: 'push',
-            label: 'Insert Google Course Builder component',
-            value: 'insertcustomtag',
-            disabled: false
-          };
-          editor.toolbar.addButtonToGroup(button, 'insertitem');
-          editor.toolbar.on('insertcustomtagClick',
-              function() {
-                // defer dereferencing the _customTagManager, which is
-                // created later
-                that._customTagManager.addCustomTag();
-              },
-              that, true);
+          that._addCustomComponentButtons(editor);
         });
 
         // Poll until the editor iframe has loaded and attach custom tag manager
@@ -273,14 +295,9 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
           if (ed && ed.contentWindow && ed.contentWindow.document &&
               ed.contentWindow.document.readyState == 'complete') {
             that._customTagManager = new CustomTagManager(ed.contentWindow,
-                editor, env.custom_rte_tag_icons,
-                that.options.excludedCustomTags,
+                editor, env.rte_tag_data,
                 new FrameProxyOpener(window),
                 {
-                  getAddUrl: function() {
-                    return getAddCustomTagUrl(
-                        env, null, that.options.excludedCustomTags);
-                  },
                   getEditUrl: function(tagName) {
                     return getEditCustomTagUrl(env, tagName);
                   }
@@ -389,16 +406,15 @@ FrameProxyOpener.prototype.open = function(url, getValue, context, submit,
  *
  * @param win the window from the RTE iframe
  * @param editor the YUI editor component itself
- * @param customRteTagIcons a list of pairs of tag names and their icon urls
+ * @param rteTagData a list of pairs of tag names and their icon urls
  * @param frameProxyOpener the opener object for the lightbox
  * @param serviceUrlProvider a provider for the urls the lightbox will use
  */
-function CustomTagManager(win, editor, customRteTagIcons, excludedCustomTags,
-    frameProxyOpener, serviceUrlProvider) {
+function CustomTagManager(win, editor, rteTagData, frameProxyOpener,
+    serviceUrlProvider) {
   this._win = win;
   this._editor = editor;
-  this._customRteTagIcons = customRteTagIcons;
-  this._excludedCustomTags = excludedCustomTags;
+  this._rteTagData = rteTagData;
   this._frameProxyOpener = frameProxyOpener;
   this._serviceUrlProvider = serviceUrlProvider;
 
@@ -487,15 +503,15 @@ CustomTagManager.prototype = {
     return value;
   },
 
-  addCustomTag: function() {
+  addCustomTag: function(tagName) {
     var that = this;
     this._insertInsertionPointTag();
     this._frameProxyOpener.open(
-      this._serviceUrlProvider.getAddUrl(),
+      this._serviceUrlProvider.getEditUrl(tagName),
       null,
-      {excludedCustomTags: this._excludedCustomTags}, // context object
+      {}, // context object
       function(value, schema) { // on submit
-        that._insertCustomTag(value, schema);
+        that._insertCustomTag(tagName, value, schema);
       },
       function () { // on cancel
         that._removeInsertionPointTag();
@@ -503,10 +519,10 @@ CustomTagManager.prototype = {
     );
   },
 
-  _insertCustomTag: function(value, schema) {
-    var node = this._win.document.createElement(value.type.tag);
+  _insertCustomTag: function(tagName, value, schema) {
+    var node = this._win.document.createElement(tagName);
     this._populateTagNode(
-        node, schema.properties.attributes.properties, value.attributes);
+        node, schema.properties, value);
     node.setAttribute('instanceid', this._getNewInstanceId());
 
     var insertionPoint = this._win.document.querySelector('.gcbInsertionPoint');
@@ -526,7 +542,7 @@ CustomTagManager.prototype = {
       function(schema) { // callback for tag values
         return that._getValueFromTagNode(schema.properties, node);
       },
-      {excludedCustomTags: this._excludedCustomTags}, // context object
+      {}, // context object
       function(value, schema) { // on submit
         var instanceid = node.getAttribute('instanceid');
         that._populateTagNode(node, schema.properties, value);
@@ -545,8 +561,8 @@ CustomTagManager.prototype = {
     var editorDoc = this._win.document;
     var that = this;
     this.markerTags = [];
-    for (var k = 0; k < this._customRteTagIcons.length; k++) {
-      var tag = this._customRteTagIcons[k];
+    for (var k = 0; k < this._rteTagData.length; k++) {
+      var tag = this._rteTagData[k];
       var elts = editorDoc.getElementsByTagName(tag.name);
       for (var i = elts.length - 1; i >= 0; i--) {
         var elt = elts[i];
@@ -642,7 +658,7 @@ CustomTagManager.prototype = {
 function DummyCustomTagManager() {};
 
 DummyCustomTagManager.prototype = {
-  addCustomTag: function() {},
+  addCustomTag: function(tagName) {},
   insertMarkerTags: function() {},
   removeMarkerTags: function() {}
 };

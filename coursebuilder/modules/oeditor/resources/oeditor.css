@@ -215,9 +215,8 @@ div.rte-control + div.inputEx-Field {
   /* Style the container for the textarea/RTE */
   margin-left: 136px;
 }
-.yui-toolbar-insertcustomtag > .yui-toolbar-icon {
-  background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB90EExI1FHIRmjUAAAA7dEVYdENvbW1lbnQARWRpdGVkIGJ5IFBhdWwgU2hlcm1hbiBmb3IgV1BDbGlwYXJ0LCBQdWJsaWMgRG9tYWlucCd6AAAAAtJJREFUOMu9k1uIVWUUx39r73P25ex9zoziKDENY8LoRIM+2EXLTGIk6AISXnAgkIKiHtQoULQeYgbTSBwirJcek24iCCEYFE2g08PIoFNWyDBoeMSp6czM0b3P2Wd/q4dd40yW+tR6+uD7+K3ff7E+mzur5bZtb1DVIYAWYeeuPAeW26z5xbA0hlO3A+S6ulYc37LpOfPIw+sU2LYnz8VKgP4WoH0ueqIg2ibsuiWlrW1xuPHZHuO6bv8Gm+FDDqoh+pGLHvZEk6JoWhT90pf0lqCCX3i6s6OzMeBjTIj+4KO9Dno5zABpUfRUQfRNR/S/GH6Xxbuvu5ZZVwo1DdGDLnrMvwEwRdFDrugJX3Q0uBlkLxR29jtUTYiaED3pofsdNJplcT7ILCZC0SgU3THbyIHH38gzWgmyOVSCLMb3wVyLw57oJ352/qYgus8VPe6LCkC77739cnvrbo1jwuo0SXUaR+EVB/5u9bvCh3XYnFfOpHBZhZU2PGbDpwnk1s5v+qq3Y0l3KZ+bsbsYxyz58RyKoMCRBkwZWGEpr96/nsbIEEdrfxBI1ug6TFmrm5uXzYYAtHse+/wmYoW+GqyxMru+xfcRo9wbTRNI9jZWONnQYbuUy3V3lYKO0LbnrvK8ZvovldnvCRXg/ToMRjUeHf+VdzTCFmEghY2Rvvd1Sk9uIknOluP6k6cnJlFgkevwYFMJz7JYZWVzKQrsdeGJxiQPqCAi9Na5+lZNNxkYABCg56e1D30cGQPAeD1hsDJJYpTzY2N84Anz5YbpzwZeivWz71KeB67N/CVg5ML1iFbPBaDFyfPMwgUkRll6aWwGIlm8ZE9Nt1XhyD8X0AJGviiPE6VmzoWi5P+CTAFbI77dXtPWf4MA2IAOT1cPfl6+OlppNIo1Y+5p930aKOGVMoOpaHeku4cML86Ocie1qMXJv/bC3XedecrmAtDJ/1l/AuP2RBQ/TdETAAAAAElFTkSuQmCC) !important;
-  left: 5px;
+.yui-toolbar-group-insertitem h3 {
+  width: auto !important;
 }
 div.yui-toolbar-titlebar {
   /* Hide the top titlebar on the RTE. */
