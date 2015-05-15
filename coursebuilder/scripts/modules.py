@@ -157,6 +157,8 @@ _MANIFEST_NAME = 'module.yaml'
 
 # Number of attempts to kill wayward subprocesses before giving up entirely.
 _KILL_ATTEMPTS = 5
+# Time budget for setup.sh invocations.
+_SETUP_SH_EXECUTION_MAX_SECONDS = 60 * 5
 
 # Command line flags supported
 PARSER = argparse.ArgumentParser()
@@ -332,7 +334,9 @@ def _install_if_needed(app_yaml, name, module_install_dir, coursebuilder_home):
     cwd = os.getcwd()
     try:
         os.chdir(module_install_dir)
-        _run_process(['bash', install_script_path, '-d', coursebuilder_home])
+        _run_process(
+            ['bash', install_script_path, '-d', coursebuilder_home],
+            patience_seconds=_SETUP_SH_EXECUTION_MAX_SECONDS)
     finally:
         os.chdir(cwd)
 
