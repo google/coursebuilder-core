@@ -1,386 +1,385 @@
-/**
- * Define the methods of the GCB rich text editor here.
- */
-function getGcbRteDefs(env, Dom, Editor, Resize) {
-  var IS_NEW_FORM_LAYOUT = false;
+function bindEditorField(Y) {
+  var RTE_TAG_DATA = cb_global.rte_tag_data;
+  var SCHEMA = cb_global.schema;
+  var CAN_HIGHLIGHT_CODE = cb_global.can_highlight_code
 
-  return {
-    setOptions: function(options) {
-      GcbRteField.superclass.setOptions.call(this, options);
-      this.options.opts = options.opts || {};
-      this.options.excludedCustomTags = options.excludedCustomTags || [];
-      this.options.supportCustomTags = options.supportCustomTags || false;
+  /**
+   * An editor component which provides HTML syntax highlighting.
+   * See TextAreaEditor for the full documentation of the interface.
+   *
+   * @class
+   */
+  function HtmlEditor(root) {
+    this.root = root;
+    this.codeMirrorInstance = CodeMirror(root, {
+      lineNumbers: true,
+      lineWrapping: true,
+      keyMap: "sublime",
+      mode: "htmlmixed",
+      extraKeys: {
+        "Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }
+      },
+      foldGutter: true,
+      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
+    });
+  }
+  HtmlEditor.prototype.hide = function() {
+    this.root.style.display = 'none';
+  };
+  HtmlEditor.prototype.show = function() {
+    this.root.style.display = null;
+    this.codeMirrorInstance.refresh();
+  };
+  HtmlEditor.prototype.setSize = function(width, height) {
+    this.codeMirrorInstance.setSize(width, height);
+  };
+  HtmlEditor.prototype.getValue = function() {
+    return this.codeMirrorInstance.getValue();
+  };
+  HtmlEditor.prototype.setValue = function(value) {
+    this.codeMirrorInstance.setValue(value);
+    var that = this;
+    setTimeout(function() {
+      that.codeMirrorInstance.refresh();
+    }, 0);
+  };
 
-      if (env.schema._inputex && env.schema._inputex.className
-          && env.schema._inputex.className.indexOf('new-form-layout') > -1) {
-        IS_NEW_FORM_LAYOUT = true;
+  /**
+   * An editor component which provides plain text editing in a textarea.
+   *
+   * @class
+   * @param root {Element} The root element to hold the editor's HTML.
+   */
+  function TextareaEditor(root) {
+    this.textarea = document.createElement('textarea');
+    root.appendChild(this.textarea);
+  }
+  /**
+   * Hide the component.
+   *
+   * @method
+   */
+  TextareaEditor.prototype.hide = function() {
+    this.textarea.style.display = 'none';
+  };
+  /**
+   * Reveal the component.
+   *
+   * @method
+   */
+  TextareaEditor.prototype.show = function() {
+    this.textarea.style.display = null;
+  };
+  /**
+   * Set the size of the editor component.
+   *
+   * @method
+   * @param width {number} The new width of the component.
+   * @param height {number} The new height of the component.
+   */
+  TextareaEditor.prototype.setSize = function(width, height) {
+    this.textarea.style.width = width + 'px';
+    this.textarea.style.height = height + 'px';
+  };
+  /**
+   * Get the current value in the editor.
+   *
+   * @method
+   * @return {string}
+   */
+  TextareaEditor.prototype.getValue = function() {
+    return this.textarea.value;
+  };
+  /**
+   * Set the value of the text to be edited.
+   *
+   * @method
+   * @param value {string}
+   */
+  TextareaEditor.prototype.setValue = function(value) {
+    this.textarea.value = value;
+  };
+
+  /**
+   * An editor component which provides rich text editing and management of CB
+   * content extensions.
+   * See TextAreaEditor for the full documentation of the interface.
+   *
+   * @class
+   */
+  function RichTextEditor(root, opts, supportCustomTags, excludedCustomTags) {
+    var that = this;
+
+    this.root = root;
+    this.excludedCustomTags = excludedCustomTags;
+
+    var textarea = document.createElement('textarea');
+    root.appendChild(textarea);
+
+    var extraCss =
+      '::-webkit-scrollbar {' +
+      '  width: 10px;' +
+      '}' +
+      '::-webkit-scrollbar:horizontal {' +
+      '  height: 10px;' +
+      '}' +
+      '::-webkit-scrollbar-track {' +
+      '  background-color: #f5f5f5;' +
+      '}' +
+      '::-webkit-scrollbar-thumb {' +
+      '  background-color: #c0c0c0;' +
+      '  border: solid 1px #b4b4b4;' +
+      '}';
+    var attrs = {extracss: extraCss};
+    for (var i in opts) {
+      if (opts.hasOwnProperty(i)) {
+        attrs[i] = opts[i];
       }
-    },
+    }
+    this.editor = new Y.YUI2.widget.Editor(textarea, attrs);
+    this._disableHtmlCleaning();
 
-    renderComponent: function() {
-      // The basic structure of an InputExField
-      //   <div class="inputEx-fieldWrapper">
-      //     <div class="inputEx-label"></div>
-      //     <div class="inputEx-Field"></div>
-      //     </div style="clear: both;"></div>
-      //   </div>
-      // When this method is called, "this" is populated with:
-      //   this.divEl: the inputEx-fieldWrapper
-      //   this.fieldContainer:  the inputEx-Field div
-      // It's important to note that this.fieldContainer has not yet been added
-      // as a child to this.divEl at this point.
-
-      // Make a unique id for the field
-      if (!GcbRteField.idCounter) {
-        GcbRteField.idCounter = 0;
-      }
-      this.id = "gcbRteField-" + GcbRteField.idCounter;
-      GcbRteField.idCounter += 1;
-
-      // Insert the text area for plain text editing
-      this.el = document.createElement('textarea');
-      this.el.setAttribute('id', this.id);
-      this.el.setAttribute('class', 'gcb-rte-textarea');
-      if(this.options.name) {
-        this.el.setAttribute('name', this.options.name);
-      }
-
-      this.fieldContainer.appendChild(this.el);
-      this.isInRteMode = false;
-
-      this._replaceTextAreaWithCodeMirror();
-      this.divEl.appendChild(this._getModeToggle());
-
-      if (! env.can_highlight_code) {
-        this._monitorResizeOfTextArea();
-      }
-    },
-
-    _getModeToggle: function() {
-      var that = this;
-      var controls = document.createElement("div");
-      controls.className = "rte-control showing-html";
-      controls.innerHTML =
-          '<div class="html">HTML</div>' +
-          '<div class="rich-text">Rich Text</div>';
-      var htmlButton = controls.querySelector('.html');
-      var rteButton = controls.querySelector('.rich-text');
-
-      htmlButton.onclick = function() {
-        that.hideRte();
-        controls.className = "rte-control showing-html";
-        that.isInRteMode = false;
-      };
-      rteButton.onclick = function() {
-          if (that.editor) {
-            that.showExistingRte();
-          } else {
-            that.showNewRte();
-          }
-          controls.className = "rte-control showing-rte";
-          that.isInRteMode = true;
-      };
-      return controls;
-    },
-
-    _monitorResizeOfTextArea: function() {
-      var that = this, width = 0, height = 0;
-      setInterval(function() {
-        if (that.el.offsetWidth != width || that.el.offsetHeight != height) {
-          width = that.el.offsetWidth;
-          height = that.el.offsetHeight;
-          that._resizeEditorsExceptTextArea(width, height);
-        }
-      }, 100);
-    },
-
-    _replaceTextAreaWithCodeMirror: function() {
-      var that = this;
-
-      if (! env.can_highlight_code) {
-        return;
-      }
-
-      this.cmReady = false;
-
-      // note: the first calling when this.cmInstance does not exist
-      //       (by renderComponent) will not make CodeMirror ready
-      //       this is because setValue must be call after renderComponent
-      //       (to sync old value from database, "" will passed for first time)
-      //       this is why this.cmReady will be set on the else clause
-      if (! this.cmInstance) {
-        this.cmInstance = CodeMirror(this.fieldContainer,
-            {
-              value: this.el.value,
-              lineNumbers: true,
-              lineWrapping: true,
-              keyMap: "sublime",
-              mode: "htmlmixed",
-              extraKeys: {
-                "Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }
-              },
-              foldGutter: true,
-              gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
-            }
-        );
-        // Reference used for testing
-        this.cmInstance.gcbCodeMirrorMonitor = this;
-
-        new Resize(this.cmInstance.getWrapperElement(),
-            {
-              handles: ['br'],
-              minHeight: 200,
-              minWidth: 200,
-              proxy: true,
-              setSize: false
-            }
-        ).on("resize", function(args) {
-          that._resizeEditors(args.width, args.height);
-        });
-      } else {
-        this.cmInstance.setValue(this.el.value);
-        this.cmReady = true;
-      }
-
-      Dom.addClass(this.el, "hidden");
-      Dom.removeClass(this.cmInstance.getWrapperElement(), "hidden");
-
-      window.setTimeout(function(){
-        that.cmInstance.refresh();
-      }, 0);
-    },
-
-    _syncTextAreaWithCodeMirror: function() {
-      if (! env.can_highlight_code) {
-        return;
-      }
-
-      this.el.value = this.cmInstance.getValue();
-    },
-
-    _replaceCodeMirrorWithTextArea: function() {
-      if (! env.can_highlight_code) {
-        return;
-      }
-
-      if (this.cmInstance) {
-        this._syncTextAreaWithCodeMirror();
-        this.cmReady = false;
-
-        Dom.removeClass(this.el, "hidden");
-        Dom.addClass(this.cmInstance.getWrapperElement(), "hidden");
-      }
-    },
-
-    _resizeEditors: function(width, height) {
-      this._resizeEditorsExceptTextArea(width, height);
-
-      // Resize the text area
-      this.el.style.width = width + "px";
-      this.el.style.height = height + "px";
-    },
-
-    _resizeEditorsExceptTextArea: function(width, height) {
-      if (this.editor) {
-        var toolbarHeight = this.editor.toolbar.get('element').clientHeight + 2;
-        if (! IS_NEW_FORM_LAYOUT) {
-          this.editor.set('width', width + 'px');
-        }
-        this.editor.set('height', (height - toolbarHeight) + 'px');
-      }
-      if (this.cmInstance) {
-        this.cmInstance.setSize(IS_NEW_FORM_LAYOUT ? null : width, height);
-      }
-      this._lastResizeDimensions = {width: width, height: height};
-    },
-
-    _addCustomComponentButtons: function(editor) {
-      var that = this;
-      var componentDataList = env.rte_tag_data;
-      for (var i = 0; i < componentDataList.length; i++) {
-        var componentData = componentDataList[i];
-        if (this.options.excludedCustomTags.indexOf(componentData.name) >= 0) {
-          continue;
-        }
-        var buttonDef = {
-          type: 'push',
-          label: componentData.label,
-          value: componentData.name,
-          disabled: false
-        };
-        editor.toolbar.addButtonToGroup(buttonDef, 'insertitem');
-      }
-      editor.toolbar.on('buttonClick',
-        function(evt) {
-          that._customTagManager.addCustomTag(evt.button.value);
-        });
-
-    },
-
-    showNewRte: function() {
-      this._replaceCodeMirrorWithTextArea();
-
-      var that = this;
-
-      var extraCss =
-        "::-webkit-scrollbar {" +
-        "  width: 10px;" +
-        "}" +
-        "::-webkit-scrollbar:horizontal {" +
-        "  height: 10px;" +
-        "}" +
-        "::-webkit-scrollbar-track {" +
-        "  background-color: #f5f5f5;" +
-        "}" +
-        "::-webkit-scrollbar-thumb {" +
-        "  background-color: #c0c0c0;" +
-        "  border: solid 1px #b4b4b4;" +
-        "}";
-      var _def = {
-        extracss: extraCss
-      }
-      for (var i in this.options.opts) {
-        if (this.options.opts.hasOwnProperty(i)) {
-          _def[i] = this.options.opts[i];
-        }
-      }
-
-      var editor = new Editor(this.id, _def);
-
-      // Disable any HTML cleaning done by the editor.
-      editor.cleanHTML = function(html) {
-        if (!html) {
-            html = this.getEditorHTML();
-        }
-        this.fireEvent('cleanHTML',
-            {type: 'cleanHTML', target: this, html: html});
-        return html;
-      };
-      editor._cleanIncomingHTML = function(html) {
-        return html;
-      };
-      editor._fixNodes = function() {};
-
-      editor.on('editorContentLoaded', function() {
-        new Resize(editor.get('element_cont').get('element'),
-          {
-            handles: ['br'],
-            minHeight: 300,
-            minWidth: 400,
-            proxy: true,
-            setSize: false
-          }
-        ).on('resize', function(args) {
-          that._resizeEditors(args.width, args.height);
-        });
-        if (that._lastResizeDimensions) {
-          that._resizeEditors(
-              that._lastResizeDimensions.width,
-              that._lastResizeDimensions.height);
-        }
-        if (IS_NEW_FORM_LAYOUT) {
-          editor.set('width', null);
-        }
+    this.editorIsRendered = $.Deferred(function(def) {
+      that.editor.on('afterRender', function() {
+        def.resolve();
       });
+    });
+    this.editorIsVisible = $.Deferred();
 
-      // Set up a button to add custom tags
-      if (this.options.supportCustomTags) {
-        editor.on('toolbarLoaded', function() {
-          that._addCustomComponentButtons(editor);
-        });
+    this._customTagManager = new DummyCustomTagManager();
+    if (supportCustomTags) {
+      $.when(this.editorIsRendered).then(function() {
+        that._addCustomComponentButtons();
+        that._bindCustomTagManager();
+      });
+    }
 
-        // Poll until the editor iframe has loaded and attach custom tag manager
-        (function() {
-          var ed = document.getElementById(that.id + '_editor');
-          if (ed && ed.contentWindow && ed.contentWindow.document &&
-              ed.contentWindow.document.readyState == 'complete') {
-            that._customTagManager = new CustomTagManager(ed.contentWindow,
-                editor, env.rte_tag_data,
-                new FrameProxyOpener(window),
-                {
-                  getEditUrl: function(tagName) {
-                    return getEditCustomTagUrl(env, tagName);
-                  }
-                });
-          } else {
-            setTimeout(arguments.callee, 100);
-          }
-        })();
-      } else {
-        this._customTagManager = new DummyCustomTagManager();
+    this.editor.render();
+  }
+  RichTextEditor.prototype.hide = function() {
+    this.root.style.display = 'none';
+    this.editorIsVisible = $.Deferred();
+  };
+  RichTextEditor.prototype.show = function() {
+    this.root.style.display = null;
+    this.editorIsVisible.resolve();
+  };
+  RichTextEditor.prototype.setSize = function(width, height) {
+    var that = this;
+    $.when(this.editorIsRendered, this.editorIsVisible).then(function() {
+      if (width) {
+        that.editor.set('width', width + 'px');
       }
-
-      this.editor = editor;
-      this.editor.render();
-    },
-
-    showExistingRte: function() {
-      this._replaceCodeMirrorWithTextArea();
-
-      var editor = this.editor,
-          textArea = this.el,
-          rteDiv = textArea.previousSibling,
-          resizeDiv = textArea.nextSibling;
-
-      Dom.setStyle(textArea, 'visibility', 'hidden');
-      Dom.setStyle(textArea, 'top', '-9999px');
-      Dom.setStyle(textArea, 'left', '-9999px');
-      Dom.setStyle(textArea, 'position', 'absolute');
-      Dom.removeClass(rteDiv, "hidden");
-      Dom.removeClass(resizeDiv, "hidden");
-      editor.get('element_cont').addClass('yui-editor-container');
-      editor._setDesignMode('on');
-      editor.setEditorHTML(textArea.value);
-      this._customTagManager.insertMarkerTags();
-    },
-
-    hideRte: function() {
-      var editor = this.editor,
-          textArea = this.el,
-          rteDiv = textArea.previousSibling,
-          resizeDiv = textArea.nextSibling;
-
-      this._customTagManager.removeMarkerTags();
-      editor.saveHTML();
-
-      Dom.addClass(rteDiv, "hidden");
-      Dom.addClass(resizeDiv, "hidden");
-      editor.get('element_cont').removeClass('yui-editor-container');
-      Dom.setStyle(textArea, 'visibility', 'visible');
-      Dom.setStyle(textArea, 'top', '');
-      Dom.setStyle(textArea, 'left', '');
-      Dom.setStyle(textArea, 'position', 'static');
-      Dom.addClass(textArea, 'raw-text-editor');
-
-      this._replaceTextAreaWithCodeMirror();
-    },
-
-    setValue: function(value, sendUpdatedEvt) {
-      if (this.isInRteMode) {
-        this.editor.setEditorHTML(value);
-      } else {
-        this.el.value = value;
-        this._replaceTextAreaWithCodeMirror();
+      // Note: be sure to calculate the toolbar height *after* setting the new
+      // width because the number of button rows may have changed.
+      // See: http://yui.github.io/yui2/docs/yui_2.9.0_full/examples/resize/rte_resize.html
+      var toolbarHeight = that.editor.toolbar.get('element').clientHeight + 2;
+      that.editor.set('height', (height - toolbarHeight) + 'px');
+    });
+  };
+  RichTextEditor.prototype.getValue = function() {
+    // Clean the editor text before saving, and then restore markers
+    this._customTagManager.removeMarkerTags();
+    var value = this.editor.saveHTML();
+    this._customTagManager.insertMarkerTags();
+    return value;
+  };
+  RichTextEditor.prototype.setValue = function(value) {
+    var that = this;
+    $.when(this.editorIsRendered).then(function() {
+      that.editor.setEditorHTML(value);
+      that._customTagManager.insertMarkerTags();
+    });
+  };
+  RichTextEditor.prototype._addCustomComponentButtons = function() {
+    // Add buttons to the tool bar for each of the CB custom components.
+    var that = this;
+    for (var i = 0; i < RTE_TAG_DATA.length; i++) {
+      var componentData = RTE_TAG_DATA[i];
+      if (this.excludedCustomTags.indexOf(componentData.name) >= 0) {
+        continue;
       }
-      if(sendUpdatedEvt !== false) {
-        this.fireUpdatedEvt();
-      }
-    },
-
-    getValue: function() {
-      if (this.isInRteMode) {
-        // Clean the editor text before saving, and then restore markers
-        this._customTagManager.removeMarkerTags();
-        var value = this.editor.saveHTML();
-        this._customTagManager.insertMarkerTags();
-        return value;
-      } else {
-        this._syncTextAreaWithCodeMirror();
-        return this.el.value;
+      var buttonDef = {
+        type: 'push',
+        label: componentData.label,
+        value: componentData.name,
+        disabled: false
+      };
+      this.editor.toolbar.addButtonToGroup(buttonDef, 'insertitem');
+    }
+    this.editor.toolbar.on('buttonClick', function(evt) {
+      that._onAddCustomComponentButtonClicked(evt);
+    });
+  };
+  RichTextEditor.prototype._onAddCustomComponentButtonClicked = function(evt) {
+    var value = evt.button.value;
+    for (var i = 0; i < RTE_TAG_DATA.length; i++) {
+      if (value == RTE_TAG_DATA[i].name) {
+        this._customTagManager.addCustomTag(value);
       }
     }
   };
-};
+  RichTextEditor.prototype._bindCustomTagManager = function() {
+    // Activate a helper class (CustomTagManager) to handle insertion of icons
+    // for custom tags in the rich text editor.
+    var serviceUrlProvider = {
+      getEditUrl: function(tagName) {
+        return getEditCustomTagUrl(cb_global, tagName);
+      }
+    };
+    this._customTagManager = new CustomTagManager(
+      this.root.querySelector('iframe').contentWindow,
+      this.editor,
+      RTE_TAG_DATA,
+      new FrameProxyOpener(window),
+      serviceUrlProvider
+    );
+  };
+  RichTextEditor.prototype._disableHtmlCleaning = function () {
+    // Disable any HTML cleaning done by the editor.
+    this.editor.cleanHTML = function(html) {
+      if (! html) {
+          html = this.getEditorHTML();
+      }
+      this.fireEvent('cleanHTML',
+          {type: 'cleanHTML', target: this, html: html});
+      return html;
+    };
+    this.editor._cleanIncomingHTML = function(html) {
+      return html;
+    };
+    this.editor._fixNodes = function() {};
+  };
+
+  /**
+   * The main class for CB's multi-faceted HTML editor. This base class handles
+   * switching between a number of alternate editor components (e.g., plain
+   * text, rich text editor, etc), and manages (re)sizing the component. The
+   * editors must all provide the following interface:
+   *   constructor(rootElt), hide(), show(), setSize(width, height), getValue(),
+   *   setValue(value).
+   * See TextAreaEditor for the full documentation of the interface.
+   *
+   * @class
+   */
+  function EditorField(options) {
+    EditorField.superclass.constructor.call(this, options);
+  }
+  Y.extend(EditorField, Y.inputEx.Field);
+
+  EditorField.prototype.setOptions = function(options) {
+    EditorField.superclass.setOptions.call(this, options);
+    this.opts = options.opts || {};
+    this.excludedCustomTags = options.excludedCustomTags || [];
+    this.supportCustomTags = options.supportCustomTags || false;
+
+    if (SCHEMA._inputex && SCHEMA._inputex.className
+        && SCHEMA._inputex.className.indexOf('new-form-layout') > -1) {
+      this.fixedWidthLayout = true;
+    }
+  };
+  EditorField.prototype.renderComponent = function() {
+    // The basic structure of an InputExField
+    //   <div class="inputEx-fieldWrapper">
+    //     <div class="inputEx-label"></div>
+    //     <div class="inputEx-Field"></div>
+    //     </div style="clear: both;"></div>
+    //   </div>
+    // When this method is called, "this" is populated with:
+    //   this.divEl: the inputEx-fieldWrapper
+    //   this.fieldContainer:  the inputEx-Field div
+    // Note that at this point this.fieldContainer has not yet been added as a
+    // child to this.divEl at this point.
+    var that = this;
+
+    Y.one(this.fieldContainer).addClass('cb-editor-field');
+    this.fieldContainer.innerHTML =
+        '<div class="tabbar">' +
+        '  <button class="html-button">HTML</button>' +
+        '  <button class="rte-button">Rich Text</button>' +
+        '</div>' +
+        '<div class="editors-div">' +
+        '  <div class="html-div"></div>' +
+        '  <div class="rte-div"></div>' +
+        '</div>';
+    this.tabbar = this.fieldContainer.querySelector('.tabbar');
+    this.htmlButton = this.fieldContainer.querySelector('.html-button');
+    this.rteButton = this.fieldContainer.querySelector('.rte-button');
+    this.editorsDiv = this.fieldContainer.querySelector('.editors-div');
+    this.htmlDiv = this.fieldContainer.querySelector('.html-div');
+    this.rteDiv = this.fieldContainer.querySelector('.rte-div');
+
+    if (CAN_HIGHLIGHT_CODE) {
+      this.htmlEditor = new HtmlEditor(this.htmlDiv);
+    } else {
+      this.htmlEditor = new TextareaEditor(this.htmlDiv);
+    }
+    this.richTextEditor = new RichTextEditor(this.rteDiv, this.opts,
+        this.supportCustomTags, this.excludedCustomTags);
+
+    // Default mode is HTML editing
+    this._selectHtmlMode();
+
+    // Bind the buttons
+    this.htmlButton.onclick = function() {
+      that._selectHtmlMode();
+      return false;
+    };
+    this.rteButton.onclick = function() {
+      that._selectRichTextMode();
+      return false;
+    };
+
+    // Bind the resizer
+    new Y.YUI2.util.Resize(this.editorsDiv, {
+      handles: ['br'],
+      minHeight: 200,
+      minWidth: 200,
+      proxy: true,
+      setSize: false
+    }).on('resize', function(evt) {
+      that._resize(evt.width, evt.height);
+    });
+  };
+  EditorField.prototype.setValue = function(value, sendUpdatedEvt) {
+    this.activeEditor.setValue(value);
+    if(sendUpdatedEvt !== false) {
+      this.fireUpdatedEvt();
+    }
+  };
+  EditorField.prototype.getValue = function() {
+    return this.activeEditor.getValue();
+  };
+  EditorField.prototype._selectHtmlMode = function() {
+    this.tabbar.className = 'tabbar showing-html';
+    this.htmlEditor.setValue(this.richTextEditor.getValue());
+    this.htmlEditor.show();
+    this.richTextEditor.hide();
+    this.activeEditor = this.htmlEditor;
+  };
+  EditorField.prototype._selectRichTextMode = function() {
+    this.tabbar.className = 'tabbar showing-rte';
+    this.richTextEditor.setValue(this.htmlEditor.getValue());
+    this.htmlEditor.hide();
+    this.richTextEditor.show();
+    this.activeEditor = this.richTextEditor;
+  };
+  EditorField.prototype._resize = function(width, height) {
+    if (this.fixedWidthLayout) {
+      this.editorsDiv.style.height = height + 'px';
+      this.htmlEditor.setSize(null, height);
+      this.richTextEditor.setSize(null, height);
+    } else {
+      this.editorsDiv.style.width = width + 'px';
+      this.editorsDiv.style.height = height + 'px';
+      this.htmlEditor.setSize(width, height);
+      this.richTextEditor.setSize(width, height);
+    }
+  };
+
+  // Bind the EditorField to handle HTML data type for InputEx.
+  Y.inputEx.registerType("html", EditorField, []);
+}
 
 /**
  * A utility class to open the lightbox window.

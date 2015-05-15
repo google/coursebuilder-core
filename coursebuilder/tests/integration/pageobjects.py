@@ -261,7 +261,8 @@ class AnnouncementsEditorPage(EditorPageObject):
             date_el.clear()
             date_el.send_keys(date)
         if body:
-            body_el = self.find_element_by_name('html')
+            body_el = self.find_element_by_css_selector(
+                'div.cb-editor-field div.html-div textarea')
             body_el.clear()
             body_el.send_keys(body)
         return self
@@ -657,7 +658,8 @@ class QuestionEditorPage(EditorPageObject):
     """Abstract superclass for page objects for add/edit questions pages."""
 
     def set_question(self, question):
-        question_el = self.find_element_by_name('question')
+        question_el = self.find_element_by_css_selector(
+            'div.cb-editor-field div.html-div textarea')
         question_el.clear()
         question_el.send_keys(question)
         return self
@@ -680,7 +682,9 @@ class MultipleChoiceEditorPage(QuestionEditorPage):
         return self
 
     def set_answer(self, n, answer):
-        answer_el = self.find_element_by_id('gcbRteField-' + str(2 * n + 1))
+        answer_el = self.find_element_by_css_selector(
+            'div.cb-editor-field div.html-div textarea',
+            index=2 * n + 1)
         answer_el.clear()
         answer_el.send_keys(answer)
         return self
@@ -787,8 +791,6 @@ class AddLink(DashboardEditor):
 
 
 class CourseContentElement(DashboardEditor):
-    RTE_EDITOR_FORMAT = 'gcbRteField-%d_editor'
-    RTE_TEXTAREA_ID = 'gcbRteField-0'
 
     def set_title(self, title):
         title_el = self.find_element_by_name('title')
@@ -798,17 +800,17 @@ class CourseContentElement(DashboardEditor):
 
     def click_rich_text(self, index=0):
         self.wait_until_status_message_hidden()
-        el = self.find_element_by_css_selector('div.rte-control', index)
+        el = self.find_element_by_css_selector('div.tabbar', index)
         self._tester.assertIn('showing-html', el.get_attribute('class'))
-        el.find_element_by_class_name('rich-text').click()
+        el.find_element_by_class_name('rte-button').click()
         self.wait().until(ec.element_to_be_clickable(
-            (by.By.ID, CourseContentElement.RTE_EDITOR_FORMAT % index)))
+            (by.By.CLASS_NAME, 'yui-editor-editable')))
         return self
 
     def click_plain_text(self, index=None):
-        el = self.find_element_by_css_selector('div.rte-control', index)
+        el = self.find_element_by_css_selector('div.tabbar', index)
         self._tester.assertIn('showing-rte', el.get_attribute('class'))
-        el.find_element_by_class_name('html').click()
+        el.find_element_by_class_name('html-button').click()
         return self
 
     def click_rte_add_custom_tag(self, button_text, index=0):
@@ -838,21 +840,15 @@ class CourseContentElement(DashboardEditor):
         return self
 
     def send_rte_text(self, text):
-        # Work around Selenium bug: If focus is in another window
-        # and in a text area, send_keys won't work.  Steal focus
-        # immediately before sending keys.
-        # https://code.google.com/p/selenium/issues/detail?id=2977
-        self._tester.driver.execute_script('window.focus();')
-        textarea = self.find_element_by_id('gcbRteField-0_editor')
-        textarea.click()
-        textarea.send_keys(keys.Keys.HOME)
-
-        textarea.send_keys(text)
+        iframe = self.find_element_by_css_selector('.yui-editor-editable')
+        iframe.send_keys(keys.Keys.HOME)
+        iframe.send_keys(text)
         return self
 
     def doubleclick_rte_element(self, elt_css_selector, index=0):
-        self._tester.driver.switch_to_frame(
-            CourseContentElement.RTE_EDITOR_FORMAT % index)
+        iframe = self.find_element_by_css_selector(
+            '.yui-editor-editable', index=index)
+        self._tester.driver.switch_to_frame(iframe)
         target = self.find_element_by_css_selector(elt_css_selector)
         action_chains.ActionChains(
             self._tester.driver).double_click(target).perform()
@@ -869,8 +865,8 @@ class CourseContentElement(DashboardEditor):
         return self
 
     def _get_rte_contents(self):
-        return self.find_element_by_id(
-            CourseContentElement.RTE_TEXTAREA_ID).get_attribute('value')
+        return self.find_element_by_css_selector(
+            'div.cb-editor-field div.rte-div textarea').get_attribute('value')
 
     def _get_instanceid_list(self):
         """Returns a list of the instanceid attrs in the lesson body."""
@@ -897,25 +893,13 @@ class CourseContentElement(DashboardEditor):
             self.instanceid_list_snapshot, self._get_instanceid_list())
         return self
 
-    def _codemirror_is_ready_builder(self, nth_instance):
-        def codemirror_is_ready(unused_driver):
-            return self._tester.driver.execute_script(
-                "return $('.CodeMirror')[%s]"
-                ".CodeMirror.gcbCodeMirrorMonitor.cmReady;" % nth_instance)
-
-        return codemirror_is_ready
-
     def setvalue_codemirror(self, nth_instance, code_body):
-        self.wait().until(self._codemirror_is_ready_builder(nth_instance))
-
         self._tester.driver.execute_script(
             "$('.CodeMirror')[%s].CodeMirror.setValue('%s');" % (
                 nth_instance, code_body))
         return self
 
     def assert_equal_codemirror(self, nth_instance, expected_code_body):
-        self.wait().until(self._codemirror_is_ready_builder(nth_instance))
-
         actual_code_body = self._tester.driver.execute_script(
             "return $('.CodeMirror')[%s].CodeMirror.getValue();" % nth_instance)
         self._tester.assertEqual(expected_code_body, actual_code_body)

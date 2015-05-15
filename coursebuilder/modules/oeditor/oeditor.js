@@ -144,26 +144,13 @@ function getEditCustomTagUrl(env, tagName) {
   return url;
 }
 
-/**
- * Define a YUI class for a Google Course Builder rich text editor.
- */
-var GcbRteField = function(options) {
-  GcbRteField.superclass.constructor.call(this, options);
-};
-
 function onPageLoad(env) {
   /**
    * Define a rich text editor widget in the module "gcb-rte".
    */
-  YUI.add("gcb-rte",
-    function(Y) {
-      Y.extend(GcbRteField, Y.inputEx.Field, getGcbRteDefs(
-          env, Y.DOM, Y.YUI2.widget.Editor, Y.YUI2.util.Resize));
-      Y.inputEx.registerType("html", GcbRteField, []);
-    },
-    '3.1.0',
-    {requires: ['inputex-field', 'yui2-editor', 'yui2-resize']}
-  );
+  YUI.add("gcb-rte", bindEditorField, '3.1.0', {
+    requires: ['inputex-field', 'yui2-editor', 'yui2-resize']
+  });
   YUI(getYuiConfig(env.bundle_lib_files)).use(
     env.required_modules,
     mainYuiFunction);

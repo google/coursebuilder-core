@@ -190,7 +190,10 @@ img.framed {
  * CSS for the GCB Rich Text Editor.
  */
 
-div.rte-control > div {
+div.cb-editor-field > div.tabbar {
+  margin: 0 0 5px 1px;
+}
+div.cb-editor-field > div.tabbar > button {
   display: inline-block;
   padding: 4px 0;
   width: 7em;
@@ -200,20 +203,16 @@ div.rte-control > div {
   margin-left: -1px;
   cursor: pointer;
 }
-div.rte-control.showing-html > div.html,
-div.rte-control.showing-rte > div.rich-text {
+div.cb-editor-field > div.tabbar.showing-html > button.html-button,
+div.cb-editor-field >  div.tabbar.showing-rte > button.rte-button {
   font-weight: bold;
   background-color: #ccc;
 }
-div.yui-editor-container {
+div.cb-editor-field div.editors-div {
   z-index: inherit;
 }
-div.inputEx-Field > div.yui-editor-container {
+div.cb-editor-field {
   width: 510px;
-}
-div.rte-control + div.inputEx-Field {
-  /* Style the container for the textarea/RTE */
-  margin-left: 136px;
 }
 .yui-toolbar-group-insertitem h3 {
   width: auto !important;
@@ -233,14 +232,12 @@ form.mc-container > fieldset {
 div.mc-container a:hover {
   text-decoration: none;
 }
-div.mc-container div.yui-editor-container {
+div.mc-container div.cb-editor-field {
   width: 550px;
 }
-div.mc-container textarea,
 div.mc-container div.CodeMirror {
   /* The question statement. */
   height: 45px;
-  width: 550px;
   margin: 0;
   padding: 0;
 }
@@ -253,12 +250,7 @@ div.mc-selection,
 div.set-scores-toggle {
   margin-left: 87px;
 }
-form.mc-container > fieldset > legend + div + div > div.rte-control {
-  /* The control for the question statement. */
-  margin-left: 88px;
-  margin-bottom: 5px;
-}
-form.mc-container > fieldset > legend + div + div > div.rte-control > div {
+form.mc-container div.tabbar > button {
   padding: 0;
 }
 div.mc-description input {
@@ -296,13 +288,6 @@ div.mc-choice > fieldset > legend + div + div,
 div.mc-choice > fieldset > legend + div + div + div {
   /* The choice text and the feedback text. */
   margin-left: 50px;
-}
-div.mc-choice div.rte-control {
-  margin-left: 1px;
-  margin-bottom: 5px;
-}
-div.mc-choice div.rte-control > div {
-  padding: 0;
 }
 div.mc-choice > div.toggle-feedback {
   /* The show-feedback button. */
@@ -344,20 +329,10 @@ div.sa-container fieldset > div.inputEx-fieldWrapper {
 div.sa-container a:hover {
   text-decoration: none;
 }
-div.sa-container div.rte-control {
-  margin-left: 88px;
-}
-div.sa-container div.rte-control > div {
+div.sa-container div.tabbar > button {
   padding: 0;
 }
-div.sa-container textarea,
-div.sa-container div.CodeMirror {
-  height: 75px;
-  width: 510px;
-  margin: 0;
-  padding: 0;
-}
-div.sa-container div.yui-editor-container {
+div.sa-container div.cb-editor-field {
   width: 510px;
 }
 div.sa-question,
@@ -391,9 +366,6 @@ div.sa-grader {
 }
 div.sa-grader > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
   width:60px;
-}
-div.sa-grader div.rte-control {
-  margin-left: 68px;
 }
 div.sa-grader + a { /* The delete choice button */
   float: right;
@@ -659,16 +631,12 @@ div.new-form-layout div.inputEx-Form-buttonBar {
   max-width: 500px;
   margin: 20px 0 0 0;
 }
-div.new-form-layout div.rte-control + div.inputEx-Field {
+div.new-form-layout div.cb-editor-field {
   margin-top: 5px;
   width: inherit;
   float: none;
   margin-left: 139px;
 }
-div.new-form-layout textarea.gcb-rte-textarea,
-div.new-form-layout div.CodeMirror {
+div.new-form-layout div.cb-editor-field div.CodeMirror {
   height: 400px;
-}
-div.new-form-layout div.inputEx-Field > div.yui-editor-container {
-  width: inherit;
 }
