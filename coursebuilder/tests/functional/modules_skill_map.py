@@ -583,6 +583,42 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         lesson = self.course.get_lessons_for_all_units()[0]
         self.assertEqual([key], lesson.properties[SKILLS_KEY])
 
+    def test_update_skill_with_lesson(self):
+        unit = self.course.add_unit()
+        unit.title = 'Unit'
+        lesson = self.course.add_lesson(unit)
+        lesson.title = 'Lesson'
+        self.course.save()
+
+        skill_graph = SkillGraph.load()
+        self.assertEqual(0, len(skill_graph.skills))
+        skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+
+        actions.login(ADMIN_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        response = self._put(
+            version='1',
+            name=SKILL_NAME_2,
+            description=SKILL_DESC,
+            xsrf_token=xsrf_token,
+            lesson_ids=[lesson.lesson_id],
+            key=skill.id)
+        self.assertEqual(200, response['status'])
+        self.assertEqual('Saved.', response['message'])
+        payload = transforms.loads(response['payload'])
+        key = payload['key']
+
+        self.course = courses.Course(None, self.app_context)
+        lesson = self.course.get_lessons_for_all_units()[0]
+        self.assertEqual([key], lesson.properties[SKILLS_KEY])
+
+        # check that skill.dict is not polluted with extra key-value pairs
+        skill_graph = SkillGraph.load()
+        updated_skill = skill_graph.skills[0]
+        self.assertItemsEqual(
+            ['version', 'name', 'description', 'last_modified'],
+            updated_skill.dict.keys())
+
     def test_create_skill_with_prerequisites(self):
         skill_graph = SkillGraph.load()
 
@@ -646,6 +682,23 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(src_skill.id, prerequisites[0].id)
         self.assertEqual(tgt_skill.name, SKILL_NAME_3)
         self.assertEqual(tgt_skill.description, SKILL_DESC_3)
+
+    def test_reject_update_with_duplicate_names(self):
+        skill_graph = SkillGraph.load()
+        skill_1 = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+
+        actions.login(ADMIN_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN)
+        response = self._put(
+            version='1',
+            name=skill_1.name,
+            description=SKILL_DESC_2,
+            xsrf_token=xsrf_token)
+
+        self.assertEqual(412, response['status'])
+        self.assertEqual('Name must be unique', response['message'])
+        skill_graph = skill_graph.load()
+        self.assertEqual(1, len(skill_graph.skills))
 
     def test_reject_update_with_duplicate_prerequisites(self):
         skill_graph = SkillGraph.load()

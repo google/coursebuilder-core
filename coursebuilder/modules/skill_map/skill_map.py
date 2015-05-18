@@ -305,6 +305,9 @@ class SkillGraph(caching.RequestScopedSingleton):
 
         self.validate_unique_skill_name(skill.id, skill.name, errors)
 
+        if errors:
+            return skill
+
         skill_id = _SkillDao.save(skill)
         new_skill = Skill(skill_id, skill.dict)
         self._skills[skill_id] = new_skill
@@ -313,8 +316,9 @@ class SkillGraph(caching.RequestScopedSingleton):
         return new_skill
 
     def update(self, sid, attributes, errors):
-        _assert(self.get(sid), 'Skill does not exist', errors)
+        skill = Skill(sid, attributes)
 
+        _assert(self.get(sid), 'Skill does not exist', errors)
         prerequisite_ids = [
             x['id'] for x in attributes.get('prerequisites', [])]
         for pid in prerequisite_ids:
@@ -323,15 +327,17 @@ class SkillGraph(caching.RequestScopedSingleton):
         self.validate_unique_skill_name(sid, attributes.get('name'), errors)
 
         if errors:
-            return sid
+            return skill
 
-        skill_id = _SkillDao.save(Skill(sid, attributes))
+        skill_id = _SkillDao.save(skill)
+
         # pylint: disable=protected-access
-        self._skills[skill_id] = Skill(skill_id, attributes)
+        skill = Skill(skill_id, attributes)
+        self._skills[skill_id] = skill
         self._rebuild()
         # pylint: enable=protected-access
 
-        return skill_id
+        return skill
 
     def delete(self, skill_id, errors=None):
         """Remove a skill from the skill map."""
@@ -937,27 +943,34 @@ class SkillRestHandler(utils.BaseRESTHandler):
             self.validation_error('Version %s not supported.' % version)
             return
 
+        lesson_locations = python_dict.pop('lessons', [])
+        question_locations = python_dict.pop('questions', [])
+
         errors = []
 
         course = self.get_course()
         skill_graph = SkillGraph.load()
 
         if key:
-            key_after_save = skill_graph.update(key, python_dict, errors)
+            skill = skill_graph.update(key, python_dict, errors)
         else:
             skill = Skill.build(
-                python_dict.get('name'), python_dict.get('description'),
+                python_dict.get('name'),
+                python_dict.get('description'),
                 python_dict.get('prerequisites'))
-            key_after_save = skill_graph.add(skill, errors=errors).id
+            skill = skill_graph.add(skill, errors=errors)
 
+        if errors:
+            self.validation_error('\n'.join(errors), key=skill.id)
+            return
+
+        key_after_save = skill.id
         skill_map = SkillMap.load(course)
         skill = skill_map.get_skill(key_after_save)
 
-        lesson_locations = python_dict.get('lessons', [])
         skill_map.delete_skill_from_lessons(skill)
         skill_map.add_skill_to_lessons(skill, lesson_locations)
 
-        question_locations = python_dict.get('questions', [])
         skill_map.delete_skill_from_questions(skill)
         skill_map.add_skill_to_questions(skill, question_locations)
 
