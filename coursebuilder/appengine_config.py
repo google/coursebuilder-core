@@ -67,20 +67,16 @@ class _Library(object):
 # Third-party library zip files.
 THIRD_PARTY_LIBS = [
     _Library('babel-0.9.6.zip'),
-    _Library('html5lib-0.95.zip'),
-    _Library('httplib2-0.8.zip', relative_path='httplib2-0.8/python2'),
+    _Library('decorator-3.4.0.zip', relative_path='src'),
     _Library('gaepytz-2011h.zip'),
-    _Library(
-        'google-api-python-client-1.1.zip',
-        relative_path='google-api-python-client-1.1'),
+    _Library('google-api-python-client-1.4.0.zip'),
+    _Library('html5lib-0.95.zip'),
     _Library('mapreduce-r645.zip'),
     _Library('markdown-2.5.zip', relative_path='Markdown-2.5'),
     _Library('mrs-mapreduce-0.9.zip', relative_path='mrs-mapreduce-0.9'),
-    _Library('python-gflags-2.0.zip', relative_path='python-gflags-2.0'),
+    _Library('networkx-1.9.1.zip', relative_path='networkx-1.9.1'),
     _Library('oauth-1.0.1.zip', relative_path='oauth'),
     _Library('pyparsing-1.5.7.zip'),
-    _Library('networkx-1.9.1.zip', relative_path='networkx-1.9.1'),
-    _Library('decorator-3.4.0.zip', relative_path='src'),
     _Library('reportlab-3.1.8.zip'),
 ]
 

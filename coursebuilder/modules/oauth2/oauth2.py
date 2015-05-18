@@ -54,13 +54,7 @@ http://api-python-client-doc.appspot.com/.
 
 Finally, a note about dependencies. Oauth2 requires google-api-python-client,
 which you can find at https://code.google.com/p/google-api-python-client/. We
-bundle version 1.1 with Course Builder. It requires httplib2, which you can find
-at https://code.google.com/p/httplib2/. We bundle version 0.8 with Course
-Builder.
-
-It also requires python-gflags from https://code.google.com/p/python-gflags/. We
-bundle 2.0 with Course Builder, and we've repackaged the downloadable .tar.gz as
-a .zip so Python can load its contents directly from sys.path.
+bundle version 1.4 with Course Builder, along with its dependencies.
 
 Good luck!
 """

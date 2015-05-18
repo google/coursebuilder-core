@@ -204,34 +204,31 @@ if need_install logilab/logilab/common ChangeLog " -- " 0.62.0 ; then
   rm -rf $tempdir
 fi
 
-
 DISTRIBUTED_LIBS="\
   babel-0.9.6.zip \
-  gaepytz-2011h.zip \
-  inputex-3.1.0.zip \
-  yui_2in3-2.9.0.zip \
-  yui_3.6.0.zip \
-  google-api-python-client-1.1.zip \
-  pyparsing-1.5.7.zip \
-  html5lib-0.95.zip \
-  httplib2-0.8.zip \
-  python-gflags-2.0.zip \
-  mrs-mapreduce-0.9.zip \
-  mapreduce-r645.zip \
-  markdown-2.5.zip \
+  codemirror-4.5.0.zip \
   crossfilter-1.3.7.zip \
   d3-3.4.3.zip \
   dc.js-1.6.0.zip \
-  oauth-1.0.1.zip \
-  mathjax-2.3.0.zip \
-  mathjax-fonts-2.3.0.zip \
-  codemirror-4.5.0.zip \
-  material-design-iconic-font-1.1.1.zip \
-  underscore-1.4.3.zip \
-  networkx-1.9.1.zip \
   decorator-3.4.0.zip \
   dependo-0.1.4.zip \
+  gaepytz-2011h.zip \
+  google-api-python-client-1.4.0.zip \
+  html5lib-0.95.zip \
+  inputex-3.1.0.zip \
+  mapreduce-r645.zip \
+  markdown-2.5.zip \
+  material-design-iconic-font-1.1.1.zip \
+  mathjax-2.3.0.zip \
+  mathjax-fonts-2.3.0.zip \
+  mrs-mapreduce-0.9.zip \
+  networkx-1.9.1.zip \
+  oauth-1.0.1.zip \
+  pyparsing-1.5.7.zip \
   reportlab-3.1.8.zip \
+  underscore-1.4.3.zip \
+  yui_2in3-2.9.0.zip \
+  yui_3.6.0.zip \
 "
 
 echo Using third party Python packages from $DISTRIBUTED_LIBS_DIR
