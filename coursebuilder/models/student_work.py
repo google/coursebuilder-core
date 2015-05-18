@@ -275,3 +275,11 @@ class StudentWorkUtils(object):
             assert item['index'] == len(answer_list)
             answer_list.append(item['value'])
         return answer_list
+
+
+def register_for_data_removal():
+    pass
+    # TODO(mgainer): Follow up with legal on how aggressive we need to be
+    # about cleaning up peer reviews on data_removal.  Cleaning these will
+    # mean possibly significant extra work cleaning up to preserve
+    # referential invariants.

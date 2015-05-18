@@ -28,6 +28,7 @@ env_variables:
     modules.dashboard.dashboard
     modules.certificate.certificate
     modules.data_pump.data_pump
+    modules.data_removal.data_removal
     modules.extra_tabs.extra_tabs
     modules.i18n_dashboard.i18n_dashboard
     modules.invitation.invitation

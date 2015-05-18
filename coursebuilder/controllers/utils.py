@@ -18,6 +18,7 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 
 import datetime
 import HTMLParser
+import logging
 import os
 import re
 import urllib
@@ -456,6 +457,89 @@ class ResourceHtmlHook(resource.AbstractResourceHandler):
                 }
             ret[key] = value
         return ret
+
+
+class CronHandler(webapp2.RequestHandler):
+    """Cron HTTP handlers should ensure caller is AppEngine, not external."""
+
+    def is_not_from_appengine_cron(self):
+        if 'X-AppEngine-Cron' not in self.request.headers:
+            self.response.out.write('Forbidden.')
+            self.response.set_status(403)
+            return True
+        return False
+
+
+class AbstractAllCoursesCronHandler(CronHandler):
+    """Common logic enabling Cron handlers to operate on all courses.
+
+    Individual cron handlers commonly need to operate against all courses
+    in an installation.  This class provides common base functionality
+    to do the iteration over courses and error handling, freeing
+    derived classes to implement only the feature-specific business logic.
+
+    Use by extending is_globally_enabled(), is_enabled_for_course() and
+    putting the business logic in cron_action().
+    """
+
+    @classmethod
+    def is_globally_enabled(cls):
+        """Derived classes tell base class whether feature is enabled."""
+        raise NotImplementedError()
+
+    @classmethod
+    def is_enabled_for_course(cls, app_context):
+        """Derived classes tell whether feature is enabled for a course."""
+        raise NotImplementedError()
+
+    def global_setup(self):
+        """Perform any expensive work.  Return value passed to cron_action()."""
+        return None
+
+    def cron_action(self, app_context, global_state):
+        """Do work for courses where is_enabled_for_course() returned true."""
+        raise NotImplementedError()
+
+    def get(self):
+        if self.is_not_from_appengine_cron():
+            return
+        self._internal_get()
+
+    @classmethod
+    def _for_testing_only_get(cls):
+        """Permits direct call to code under test, as opposed to using HTTP."""
+        response = webapp2.Response()
+        instance = cls()
+        instance.response = response
+        instance._internal_get()  # pylint: disable=protected-access
+
+    def _internal_get(self):
+        """Separate function from get() to permit simple calling by tests."""
+
+        if self.is_globally_enabled():
+            global_state = self.global_setup()
+            for app_context in sites.get_all_courses():
+                if self.is_enabled_for_course(app_context):
+                    namespace = app_context.get_namespace_name()
+                    with common_utils.Namespace(namespace):
+                        try:
+                            self.cron_action(app_context, global_state)
+                        except Exception, ex:  # pylint: disable=broad-except
+                            logging.critical(
+                                'Cron handler %s for course %s: %s',
+                                self.__class__.__name__, app_context.get_slug(),
+                                str(ex))
+                            common_utils.log_exception_origin()
+                else:
+                    logging.info(
+                        'Skipping cron handler %s for course %s',
+                        self.__class__.__name__, app_context.get_slug())
+            self.response.write('OK.')
+        else:
+            logging.info('Skipping cron handler %s; globally disabled.',
+                         self.__class__.__name__)
+            self.response.write('Disabled.')
+        self.response.set_status(200)
 
 
 class ApplicationHandler(webapp2.RequestHandler):
@@ -950,6 +1034,13 @@ class PreviewHandler(BaseHandler):
 class RegisterHandler(BaseHandler):
     """Handler for course registration."""
 
+    # Hooks provide a mechanism to prevent students from registering.  Hooks
+    # are called with the current application context and the user_id trying to
+    # register.  If registration should be prevented, the hook should return
+    # a list of alternate content to display on the registration page instead
+    # of the normal registration form.
+    PREVENT_REGISTRATION_HOOKS = []
+
     def get(self):
         """Handles GET request."""
         user = self.personalize_page_and_get_user()
@@ -979,6 +1070,11 @@ class RegisterHandler(BaseHandler):
         self.template_value['transient_student'] = True
         self.template_value['register_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('register-post'))
+
+        alternate_content = []
+        for hook in self.PREVENT_REGISTRATION_HOOKS:
+            alternate_content.extend(hook(self.app_context, user.user_id()))
+        self.template_value['alternate_content'] = alternate_content
 
         self.render('register.html')
 
@@ -1142,16 +1238,29 @@ class StudentSetTracksHandler(BaseHandler):
 class StudentUnenrollHandler(BaseHandler):
     """Handler for students to unenroll themselves."""
 
+    # Each hook in this list is excuted on get().  Hooks are passed the
+    # application context for the request.  They return a list of items which
+    # are included in the unenroll_confirmation_check.html page within the
+    # context of the form users submit to enroll.
+    GET_HOOKS = []
+
+    # Hooks in this list are executed on POST.  Hooks are called with the
+    # relevant Student instance and the POST request.
+    POST_HOOKS = []
+
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled()
         if not student:
             return
-
         self.template_value['student'] = student
         self.template_value['navbar'] = {}
         self.template_value['student_unenroll_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('student-unenroll'))
+        hook_items = []
+        for hook in self.GET_HOOKS:
+            hook_items.extend(hook(self.app_context))
+        self.template_value['hook_items'] = hook_items
         self.render('unenroll_confirmation_check.html')
 
     def post(self):
@@ -1159,12 +1268,11 @@ class StudentUnenrollHandler(BaseHandler):
         student = self.personalize_page_and_get_enrolled()
         if not student:
             return
-
         if not self.assert_xsrf_token_or_fail(self.request, 'student-unenroll'):
             return
-
+        for hook in self.POST_HOOKS:
+            hook(student, self.request)
         Student.set_enrollment_status_for_current(False)
-
         self.template_value['navbar'] = {}
         self.template_value['transient_student'] = True
         self.render('unenroll_confirmation.html')

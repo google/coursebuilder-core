@@ -28,6 +28,8 @@ from controllers import sites
 from models import analytics
 from models import custom_modules
 from models import data_sources
+from models import models
+from models import student_work
 
 
 # Set the default users service before we do anything else.
@@ -38,9 +40,14 @@ appengine_config.import_and_enable_modules()
 
 # Core "module" is always present and registered.
 custom_modules.register_core_module(
-    analytics.get_global_handlers(),
+    analytics.get_global_handlers() +
+    models.get_global_handlers(),
     analytics.get_namespaced_handlers() +
     data_sources.get_namespaced_handlers())
+
+# Register core components for data removal.
+models.register_for_data_removal()
+student_work.register_for_data_removal()
 
 # Collect routes (URL-matching regexes -> handler classes) for modules.
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()

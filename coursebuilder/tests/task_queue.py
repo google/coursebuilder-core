@@ -24,6 +24,7 @@ import re
 import appengine_config  # pylint: disable=unused-import
 
 from common import utils as common_utils
+from models import custom_modules
 from modules.mapreduce import mapreduce_module
 
 from google.appengine.ext import deferred
@@ -76,26 +77,10 @@ class DeferredTaskQueueItemHandler(TaskQueueItemHandler):
         deferred.run(data)
 
 
-class MapReduceTaskQueueItemHandler(TaskQueueItemHandler):
-    """Pass task queue items through to actually-registered Map/Reduce handlers.
-
-    The map/reduce internals enqueue a number of tasks onto the task queue
-    in order to complete a map/reduce pipeline.  These are handled as normal
-    POSTs to the various handler URLs.  However, given that we are at a
-    backleveled version of the AppEngine runtime, we need to do some minor
-    conversions in order to work around compatibility problems between
-    the old AppEngine runtime and some assumptions made by the Map Reduce code.
-    """
+class PostingTaskQueueItemHandler(TaskQueueItemHandler):
 
     def __init__(self, testapp):
         self._testapp = testapp
-        self._mapreduce_path_regex = re.compile('|'.join(
-            ['^' + path + r'/?(\?.*)?$' for path, unused_handler in
-             mapreduce_module.custom_module.global_routes]))
-
-    def matches(self, task):
-        match = self._mapreduce_path_regex.search(task['url'])
-        return match is not None
 
     def run(self, task):
         namespace = dict(task['headers']).get(
@@ -115,6 +100,43 @@ class MapReduceTaskQueueItemHandler(TaskQueueItemHandler):
                     str(response)))
 
 
+class MapReduceTaskQueueItemHandler(PostingTaskQueueItemHandler):
+    """Pass task queue items through to actually-registered Map/Reduce handlers.
+
+    The map/reduce internals enqueue a number of tasks onto the task queue
+    in order to complete a map/reduce pipeline.  These are handled as normal
+    POSTs to the various handler URLs.  However, given that we are at a
+    backleveled version of the AppEngine runtime, we need to do some minor
+    conversions in order to work around compatibility problems between
+    the old AppEngine runtime and some assumptions made by the Map Reduce code.
+    """
+
+    def __init__(self, testapp):
+        super(MapReduceTaskQueueItemHandler, self).__init__(testapp)
+        self._mapreduce_path_regex = re.compile('|'.join(
+            ['^' + path + r'/?(\?.*)?$' for path, unused_handler in
+             mapreduce_module.custom_module.global_routes]))
+
+    def matches(self, task):
+        match = self._mapreduce_path_regex.search(task['url'])
+        return match is not None
+
+
+class GlobalUrlItemHandler(PostingTaskQueueItemHandler):
+    """Locate handlers for task queue items in registered modules."""
+
+    def __init__(self, testapp):
+        super(GlobalUrlItemHandler, self).__init__(testapp)
+
+    def matches(self, task):
+        url = task['url']
+        for module in custom_modules.Registry.registered_modules.itervalues():
+            for route in module.global_routes:
+                if url == route[0]:
+                    return True
+        return False
+
+
 class TaskQueueHandlerDispatcher(object):
 
     def __init__(self, testapp, task_queue):
@@ -127,6 +149,7 @@ class TaskQueueHandlerDispatcher(object):
         # simpler to just nail these in by hand here.
         self._handlers.append(DeferredTaskQueueItemHandler())
         self._handlers.append(MapReduceTaskQueueItemHandler(testapp))
+        self._handlers.append(GlobalUrlItemHandler(testapp))
 
     def dispatch_task(self, task):
         found_handler = False

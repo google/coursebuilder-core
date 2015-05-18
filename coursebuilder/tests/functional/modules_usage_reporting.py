@@ -26,6 +26,7 @@ from common import crypto
 from common import utils as common_utils
 from controllers import sites
 from models import courses
+from models import models
 from models import transforms
 from modules.usage_reporting import config
 from modules.usage_reporting import course_creation
@@ -349,6 +350,8 @@ class EnrollmentTests(UsageReportingTestBase):
 
             # Actually run the job.
             enrollment.StudentEnrollmentEventCounter(app_context).submit()
+            self.execute_all_deferred_tasks(
+                models.StudentLifecycleObserver.QUEUE_NAME)
             self.execute_all_deferred_tasks()
         finally:
             job_class.build_additional_mapper_params = save_b_a_m_p
@@ -435,7 +438,10 @@ class EnrollmentTests(UsageReportingTestBase):
         self.assertEquals([], MockSender.get_sent())
 
         # Run all counting jobs.
-        usage_reporting.StartReportingJobs._submit_jobs()
+        with actions.OverriddenConfig(config.REPORT_ALLOWED.name, True):
+            usage_reporting.StartReportingJobs._for_testing_only_get()
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
         self.execute_all_deferred_tasks()
 
         # Verify counts.  (Ignore dates, these are fickle and subject to
@@ -471,7 +477,8 @@ class UsageReportingTests(UsageReportingTestBase):
 
     def test_disallowed(self):
         config.set_report_allowed(False)
-        response = self.get(usage_reporting.StartReportingJobs.URL)
+        response = self.get(usage_reporting.StartReportingJobs.URL,
+                            headers={'X-AppEngine-Cron': 'True'})
         self.assertEquals(200, response.status_int)
         self.assertEquals('Disabled.', response.body)
 
@@ -492,6 +499,8 @@ class UsageReportingTests(UsageReportingTestBase):
         self.assertEquals(200, response.status_int)
         self.assertEquals('OK.', response.body)
         now = int(time.time())
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
         self.execute_all_deferred_tasks()
 
         expected = [{
@@ -676,6 +685,8 @@ class MessagingTests(actions.TestBase):
         self.assertEquals(0, len(messages))
 
         # Now execute background tasks; expect one message.
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
         self.execute_all_deferred_tasks()
         messages = MessageCatcher.get_sent()
         self.assertEquals(1, len(messages))

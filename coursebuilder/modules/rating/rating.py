@@ -29,6 +29,7 @@ from controllers import lessons
 from controllers import utils
 from models import courses
 from models import custom_modules
+from models import data_removal
 from models import data_sources
 from models import models
 from models import transforms
@@ -293,6 +294,10 @@ def register_module():
         ].append(get_course_settings_fields)
         lessons.UnitHandler.EXTRA_CONTENT.append(extra_content)
         data_sources.Registry.register(RatingEventDataSource)
+        data_removal.Registry.register_indexed_by_user_id_remover(
+            StudentRatingProperty.delete_by_user_id_prefix)
+        data_removal.Registry.register_unindexed_entity_class(
+            StudentRatingEvent)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),

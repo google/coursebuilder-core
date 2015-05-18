@@ -20,6 +20,7 @@ import collections
 
 from models import models
 from models import transforms
+from models import data_removal
 from modules.skill_map import constants
 
 from google.appengine.ext import db
@@ -260,4 +261,5 @@ def record_event_listener(source, user, data):
 def notify_module_enabled():
     Registry.register(SuccessRateCompetencyMeasure)
     models.EventEntity.EVENT_LISTENERS.append(record_event_listener)
-
+    data_removal.Registry.register_indexed_by_user_id_remover(
+        CompetencyMeasureEntity.delete_by_user_id_prefix)

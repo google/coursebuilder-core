@@ -17,6 +17,7 @@
 """A collection of actions for testing Course Builder pages."""
 
 import cgi
+import cStringIO
 import functools
 import logging
 import os
@@ -190,10 +191,21 @@ class TestBase(suite.AppEngineTestBase):
         # Reload all properties now to flush the values modified in other tests.
         config.Registry.get_overrides(True)
 
+        self._log = cStringIO.StringIO()
+        self._stream_handler = logging.StreamHandler(self._log)
+        self._logger = logging.getLogger()
+        self._logger.addHandler(self._stream_handler)
+
     def tearDown(self):
         self.assert_default_namespace()
         sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = self.auto_deploy
         super(TestBase, self).tearDown()
+
+        self._logger.removeHandler(self._stream_handler)
+        self._log.close()
+
+    def assertLogContains(self, message):
+        self.assertIn(message, self._log.getvalue())
 
     def canonicalize(self, href, response=None):
         """Create absolute URL using <base> if defined, self.base otherwise."""
@@ -307,11 +319,12 @@ class TestBase(suite.AppEngineTestBase):
         response = self.testapp.get(url, **kwargs)
         return self.hook_response(response)
 
-    def post(self, url, params, expect_errors=False, upload_files=None):
+    def post(self, url, params, expect_errors=False, upload_files=None,
+             **kwargs):
         url = self.canonicalize(url)
         logging.info('HTTP Post: %s', url)
         response = self.testapp.post(url, params, expect_errors=expect_errors,
-                                     upload_files=upload_files)
+                                     upload_files=upload_files, **kwargs)
         return self.hook_response(response)
 
     def put(self, url, params, expect_errors=False):
@@ -833,7 +846,7 @@ def change_name(browser, new_name):
     check_profile(browser, new_name)
 
 
-def unregister(browser, course=None):
+def unregister(browser, course=None, do_data_removal=False):
     """Unregister a student."""
     if course:
         response = browser.get('/%s/student/home' % course)
@@ -843,6 +856,8 @@ def unregister(browser, course=None):
 
     assert_contains('to unenroll from', response.body)
     unregister_form = get_form_by_action(response, 'student/unenroll')
+    if do_data_removal and 'data_removal' in unregister_form.fields:
+        unregister_form['data_removal'] = True
     browser.submit(unregister_form, response)
 
 

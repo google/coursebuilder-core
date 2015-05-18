@@ -40,6 +40,7 @@ from models import config
 from models import counters
 from models import courses
 from models import custom_modules
+from models import entities
 from models import roles
 from models.config import ConfigProperty
 import modules.admin.config
@@ -49,6 +50,7 @@ from modules.dashboard import tabs
 from modules.oeditor import oeditor
 
 import google.appengine.api.app_identity as app
+from google.appengine.ext import db
 
 RESOURCES_PATH = '/modules/admin/resources'
 
@@ -229,6 +231,89 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
     ACTION = 'admin'
     DEFAULT_TAB = 'courses'
+
+    class AbstractDbTypeDescriber(object):
+
+        @classmethod
+        def title(cls):
+            """Return title text for table describing DB entity types."""
+            raise NotImplementedError()
+
+        @classmethod
+        def describe(cls, entity_type):
+            """Return SafeDom element describing entity."""
+            raise NotImplementedError()
+
+    class ModuleDescriber(AbstractDbTypeDescriber):
+
+        @classmethod
+        def title(cls):
+            return "Module"
+
+        @classmethod
+        def describe(cls, entity_type):
+            return safe_dom.Text(entity_type.__module__)
+
+    class NameDescriber(AbstractDbTypeDescriber):
+
+        @classmethod
+        def title(cls):
+            return "Name"
+
+        @classmethod
+        def describe(cls, entity_type):
+            return safe_dom.Text(entity_type.kind())
+
+    class HasSafeKeyDescriber(AbstractDbTypeDescriber):
+
+        @classmethod
+        def title(cls):
+            return 'Has safe_key()'
+
+        @classmethod
+        def describe(cls, entity_type):
+            if hasattr(entity_type, 'safe_key'):
+                safe_key = getattr(entity_type, 'safe_key')
+                if callable(safe_key):
+                    if safe_key.im_func != entities.BaseEntity.safe_key.im_func:
+                        return safe_dom.Element(
+                            'div', alt='checked', title='checked',
+                            classname='icon md md-check')
+            return None
+
+    class HasBlacklistDescriber(AbstractDbTypeDescriber):
+
+        @classmethod
+        def title(cls):
+            return 'Has BLACKLIST'
+
+        @classmethod
+        def describe(cls, entity_type):
+            if hasattr(entity_type, '_PROPERTY_EXPORT_BLACKLIST'):
+                blacklist = getattr(entity_type, '_PROPERTY_EXPORT_BLACKLIST')
+                if isinstance(blacklist, list) and blacklist:
+                    return safe_dom.Element(
+                        'div', alt='checked', title='checked',
+                        classname='icon md md-check')
+            return None
+
+
+    DB_TYPE_DESCRIBERS = [
+        ModuleDescriber,
+        NameDescriber,
+        HasSafeKeyDescriber,
+        HasBlacklistDescriber,
+    ]
+    DB_TYPE_MODULE_EXCLUDES = set([
+        'google.appengine.ext.blobstore.blobstore',
+        'google.appengine.ext.db',
+        'google.appengine.ext.db.metadata',
+        'google.appengine.ext.deferred.deferred',
+        'mapreduce.lib.pipeline.models',
+        'mapreduce.model',
+        'mapreduce.shuffler',
+        'oauth2client.appengine',
+    ])
 
     def get_default_tab_action(self):
         return 'admin'
@@ -458,6 +543,13 @@ class BaseAdminHandler(ConfigPropertyEditor):
         for line in yaml_lines:
             ol.add_child(safe_dom.Element('li').add_text(line))
 
+        # Describe DB entity types
+        entity_content = safe_dom.NodeList()
+        entity_content.append(
+            safe_dom.Element('h3').add_text('Database Entities'))
+        entity_content.append(self._describe_db_types())
+        entity_content.append(safe_dom.Element('p'))
+
         # Application identity and users service information.
         app_id = app.get_application_id()
         app_dict = {}
@@ -472,13 +564,49 @@ class BaseAdminHandler(ConfigPropertyEditor):
         ).append(
             module_content
         ).append(
+            entity_content
+        ).append(
             tag_content
         ).append(
             yaml_content
         ).append(
             self.render_dict(os.environ, 'Server Environment Variables'))
-
         self.render_page(template_values)
+
+
+    def _recurse_subclasses(self, entity_type, entity_types):
+        for subclass in entity_type.__subclasses__():
+            if subclass.__module__ not in self.DB_TYPE_MODULE_EXCLUDES:
+                entity_types.append(subclass)
+            self._recurse_subclasses(subclass, entity_types)
+
+    def _describe_db_types(self):
+        table = safe_dom.Element('table')
+        thead = safe_dom.Element('thead')
+        table.add_child(thead)
+        tr = safe_dom.Element('tr')
+        thead.add_child(tr)
+        for describer in self.DB_TYPE_DESCRIBERS:
+            th = safe_dom.Element('th')
+            th.add_text(describer.title())
+            tr.add_child(th)
+
+        entity_types = []
+        self._recurse_subclasses(db.Model, entity_types)
+        entity_types.sort(key=lambda et: (et.__module__, et.__name__))
+        tbody = safe_dom.Element('tbody')
+        table.add_child(tbody)
+        for entity_type in entity_types:
+            tr = safe_dom.Element('tr')
+            tbody.add_child(tr)
+            for describer in self.DB_TYPE_DESCRIBERS:
+                td = safe_dom.Element('td')
+                tr.add_child(td)
+                content = describer.describe(entity_type)
+                if content:
+                    td.add_child(content)
+
+        return table
 
     def get_settings(self):
         """Shows configuration properties information page."""

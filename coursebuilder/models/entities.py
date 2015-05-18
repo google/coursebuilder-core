@@ -173,6 +173,35 @@ class BaseEntity(db.Model):
         DB_DELETE.inc()
         super(BaseEntity, self).delete()
 
+    @classmethod
+    def delete_by_key(cls, id_or_name):
+        delete(db.Key.from_path(cls.kind(), id_or_name))
+
+    @classmethod
+    def delete_by_user_id_prefix(cls, user_id):
+        """Delete items keyed by a prefix of user ID and some suffix.
+
+        For example, StudentPropertyEntity is keyed with a name string
+        composed of the user ID, a hyphen, and an property name.  Since
+        we cannot simply look up items by user_id as a key, we do an
+        index range scan starting from the user_id up to but not
+        including the user_id incremented by one.
+
+        Args:
+          user_id: User ID as found in Student.user_id.
+        """
+        if user_id.isdigit():
+            # Obfuscated IDs only ever contain characters in 0...9.
+            next_user_id = str(int(user_id) + 1)
+        else:
+            # But this is not true in dev_appserver, which just re-uses the
+            # email address.
+            next_user_id = user_id[:-1] + unichr(ord(user_id[-1]) + 1)
+        query = cls.all(keys_only=True)
+        query.filter('__key__ >=', db.Key.from_path(cls.kind(), user_id))
+        query.filter('__key__ <', db.Key.from_path(cls.kind(), next_user_id))
+        delete(query.run())
+
     def _properties_for_export(self, transform_fn):
         """Creates an ExportEntity populated from this entity instance.
 

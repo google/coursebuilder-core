@@ -198,6 +198,84 @@ class ValidateLength(object):
                 'but the value "%s" is of length %d.' % (value, len(value)))
 
 
+class ValidateIntegerRange(object):
+
+    def __init__(self,
+                 lower_bound_inclusive=None,
+                 upper_bound_inclusive=None,
+                 lower_bound_exclusive=None,
+                 upper_bound_exclusive=None):
+        if (lower_bound_exclusive is not None and
+            lower_bound_inclusive is not None):
+            raise ValueError('Please specify only one lower bound.')
+        if (upper_bound_exclusive is not None and
+            upper_bound_inclusive is not None):
+            raise ValueError('Please specify only one upper bound.')
+        if (lower_bound_inclusive is None and
+            lower_bound_exclusive is None and
+            upper_bound_inclusive is None and
+            upper_bound_exclusive is None):
+            raise ValueError('Please specify at least one bound.')
+
+        # Convert to integers before checking ranges for sanity.
+        self._lower_bound_inclusive = None
+        self._lower_bound_exclusive = None
+        self._upper_bound_inclusive = None
+        self._upper_bound_exclusive = None
+        if lower_bound_inclusive != None:
+            self._lower_bound_inclusive = int(lower_bound_inclusive)
+        if lower_bound_exclusive != None:
+            self._lower_bound_exclusive = int(lower_bound_exclusive)
+        if upper_bound_inclusive != None:
+            self._upper_bound_inclusive = int(upper_bound_inclusive)
+        if upper_bound_exclusive != None:
+            self._upper_bound_exclusive = int(upper_bound_exclusive)
+
+        if (lower_bound_exclusive is not None and
+            upper_bound_exclusive is not None and
+            lower_bound_exclusive + 1 >= upper_bound_exclusive):
+            raise ValueError('Bounds do not permit any valid values.')
+        if (lower_bound_inclusive is not None and
+            upper_bound_exclusive is not None and
+            lower_bound_inclusive >= upper_bound_exclusive):
+            raise ValueError('Bounds do not permit any valid values.')
+        if (lower_bound_exclusive is not None and
+            upper_bound_inclusive is not None and
+            lower_bound_exclusive >= upper_bound_inclusive):
+            raise ValueError('Bounds do not permit any valid values.')
+        if (lower_bound_inclusive is not None and
+            upper_bound_inclusive is not None and
+            lower_bound_inclusive > upper_bound_inclusive):
+            raise ValueError('Bounds do not permit any valid values.')
+
+
+    def validate(self, value, errors):
+        try:
+            value = int(value)
+        except ValueError:
+            errors.append('"%s" is not an integer' % value)
+            return
+
+        if (self._lower_bound_inclusive is not None and
+            value < self._lower_bound_inclusive):
+            errors.append('This value must be greater than or equal to %d' %
+                          self._lower_bound_inclusive)
+        if (self._lower_bound_exclusive is not None and
+            value <= self._lower_bound_exclusive):
+            errors.append('This value must be greater than %d' %
+                          self._lower_bound_exclusive)
+        if (self._upper_bound_inclusive is not None and
+            value > self._upper_bound_inclusive):
+            errors.append('This value must be less than or equal to %d' %
+                          self._upper_bound_inclusive)
+        if (self._upper_bound_exclusive is not None and
+            value >= self._upper_bound_exclusive):
+            errors.append('This value must be less than %d' %
+                          self._upper_bound_exclusive)
+
+
+
+
 class Registry(object):
     """Holds all registered properties and their various overrides."""
     registered = {}
@@ -364,14 +442,6 @@ def run_all_unit_tests():
     assert int_prop.value == int_prop.default_value
 
 
-def validate_update_interval(value, errors):
-    value = int(value)
-    if value <= 0 or value >= MAX_UPDATE_INTERVAL_SEC:
-        errors.append(
-            'Expected a value between 0 and %s, exclusive.' % (
-                MAX_UPDATE_INTERVAL_SEC))
-
-
 UPDATE_INTERVAL_SEC = ConfigProperty(
     'gcb_config_update_interval_sec', int, (
         'An update interval (in seconds) for reloading runtime properties '
@@ -381,7 +451,9 @@ UPDATE_INTERVAL_SEC = ConfigProperty(
         'you can only set the value to 0 by directly modifying the app.yaml '
         'file.' % MAX_UPDATE_INTERVAL_SEC),
     default_value=DEFAULT_UPDATE_INTERVAL_SEC,
-    validator=validate_update_interval)
+    validator=ValidateIntegerRange(
+        lower_bound_inclusive=0,
+        upper_bound_inclusive=MAX_UPDATE_INTERVAL_SEC).validate)
 
 if __name__ == '__main__':
     run_all_unit_tests()

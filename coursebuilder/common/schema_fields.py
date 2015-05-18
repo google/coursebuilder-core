@@ -196,7 +196,7 @@ class SchemaField(Property):
     def __init__(
         self, name, label, property_type, select_data=None, description=None,
         optional=False, hidden=False, editable=True, i18n=None,
-        extra_schema_dict_values=None, validator=None):
+        extra_schema_dict_values=None, validator=None, default_value=None):
         Property.__init__(
             self, name, label, property_type, select_data=select_data,
             description=description, optional=optional,
@@ -205,6 +205,7 @@ class SchemaField(Property):
         self._editable = editable
         self._validator = validator
         self._i18n = i18n
+        self._default_value = default_value
 
     @property
     def hidden(self):
@@ -391,23 +392,27 @@ class FieldRegistry(Registry):
         return field_name_parts
 
     @classmethod
-    def _get_field_value(cls, key_part_list, entity):
+    def _get_field_value(cls, key_part_list, entity, default):
         if len(key_part_list) == 1:
             if type(entity) == dict and entity.has_key(key_part_list[0]):
                 return entity[key_part_list[0]]
-            return None
+            return default
         key = key_part_list.pop()
         if entity.has_key(key):
-            return cls._get_field_value(key_part_list, entity[key])
-        return None
+            return cls._get_field_value(key_part_list, entity[key], default)
+        return default
+
+    @classmethod
+    def get_field_value(cls, schema_field, entity):
+        return cls._get_field_value(
+            cls._get_field_name_parts(schema_field.name), entity,
+            schema_field._default_value)  # pylint: disable=protected-access
 
     def convert_entity_to_json_entity(self, entity, json_entry):
         for schema_field in self._properties:
-            field_name = schema_field.name
-            field_name_parts = self._get_field_name_parts(field_name)
-            value = self._get_field_value(field_name_parts, entity)
+            value = self.get_field_value(schema_field, entity)
             if type(value) != type(None):
-                json_entry[field_name] = value
+                json_entry[schema_field.name] = value
 
         for key in self._sub_registries.keys():
             json_entry[key] = {}
@@ -416,12 +421,12 @@ class FieldRegistry(Registry):
 
     def validate(self, payload, errors):
         for schema_field in self._properties:
-            field_name_parts = self._get_field_name_parts(schema_field.name)
-            value = self._get_field_value(field_name_parts, payload)
+            value = self.get_field_value(schema_field, payload)
             schema_field.validate(value, errors)
 
         for registry in self._sub_registries.values():
             registry.validate(payload, errors)
+
 
     @classmethod
     def is_complex_name(cls, name):

@@ -206,7 +206,7 @@ class AppEngineTestBase(FunctionalTestBase):
         self.testbed.init_user_stub()
         self.testbed.init_memcache_stub()
         self.testbed.init_datastore_v3_stub(consistency_policy=policy)
-        self.testbed.init_taskqueue_stub()
+        self.testbed.init_taskqueue_stub(root_path=os.environ['SOURCE_DIR'])
         self.taskq = self.testbed.get_stub(testbed.TASKQUEUE_SERVICE_NAME)
         self.testbed.init_urlfetch_stub()
         self.testbed.init_files_stub()

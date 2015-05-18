@@ -18,16 +18,23 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import collections
 import copy
+import datetime
 import logging
 import os
 import sys
 import time
+import webapp2
 
-from config import ConfigProperty
+import jinja2
+
+import config
 import counters
 from counters import PerfCounter
 from entities import BaseEntity
-import jinja2
+from entities import delete
+from entities import get
+from entities import put
+import data_removal
 import services
 import transforms
 
@@ -36,8 +43,11 @@ from common import caching
 from common import utils as common_utils
 from common import users
 
+from google.appengine.api import app_identity
+from google.appengine.api import mail
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
+from google.appengine.api import taskqueue
 from google.appengine.ext import db
 
 # We want to use memcache for both objects that exist and do not exist in the
@@ -53,7 +63,7 @@ MEMCACHE_MAX = (1000 * 1000 - 96 - 250)
 MEMCACHE_MULTI_MAX = 32 * 1000 * 1000
 
 # Global memcache controls.
-CAN_USE_MEMCACHE = ConfigProperty(
+CAN_USE_MEMCACHE = config.ConfigProperty(
     'gcb_can_use_memcache', bool, (
         'Whether or not to cache various objects in memcache. For production '
         'this value should be on to enable maximum performance. For '
@@ -345,7 +355,7 @@ class MemcacheManager(object):
                 namespace=cls._get_namespace(namespace), initial_value=0)
 
 
-CAN_AGGREGATE_COUNTERS = ConfigProperty(
+CAN_AGGREGATE_COUNTERS = config.ConfigProperty(
     'gcb_can_aggregate_counters', bool,
     'Whether or not to aggregate and record counter values in memcache. '
     'This allows you to see counter values aggregated across all frontend '
@@ -376,7 +386,7 @@ counters.incr_counter_global_value = incr_counter_global_value
 
 
 # Whether to record tag events in a database.
-CAN_SHARE_STUDENT_PROFILE = ConfigProperty(
+CAN_SHARE_STUDENT_PROFILE = config.ConfigProperty(
     'gcb_can_share_student_profile', bool, (
         'Whether or not to share student profile between different courses.'),
     False)
@@ -430,7 +440,7 @@ class ContentChunkDAO(object):
         entity = ContentChunkEntity.get_by_id(entity_id)
 
         if entity:
-            db.delete(entity)
+            delete(entity)
 
         MemcacheManager.delete(memcache_key)
 
@@ -607,29 +617,153 @@ class PersonalProfileDTO(object):
             self.course_info = personal_profile.course_info
 
 
+QUEUE_RETRIES_BEFORE_SENDING_MAIL = config.ConfigProperty(
+    'gcb_lifecycle_queue_retries_before_sending_mail', int,
+    'Course Builder uses a work queue to notify modules of changes in the '
+    'status of students.  (enrollment, unenrollment, and so on.)  Since '
+    'some of the work done from this queue is potentially sensitive (e.g., '
+    'privacy concerns), the queue will re-try failed work indefinitely.  '
+    'If the failures persist for this number of attempts, mail is sent to '
+    'course administrators to alert them of the problem.  Retries are done '
+    'with increasingly large delays 0:15, 0:30, 1:00, 2:00, 4:00, 8:00, '
+    '32:00, 1:04:00 and every two hours thereafter.  Mail is sent to all '
+    'course administrators.',
+    default_value=10,
+    validator=config.ValidateIntegerRange(1, 50).validate)
+
+
+class StudentLifecycleObserver(webapp2.RequestHandler):
+
+    QUEUE_NAME = 'user-lifecycle'
+    URL = '/_ah/queue/' + QUEUE_NAME
+    EVENT_ADD = 'add'
+    EVENT_UNENROLL = 'unenroll'
+    EVENT_REENROLL = 'reenroll'
+    EVENT_CALLBACKS = {
+        EVENT_ADD: {},
+        EVENT_UNENROLL: {},
+        EVENT_REENROLL: {},
+    }
+
+    @classmethod
+    def enqueue(cls, event, user_id, callbacks=None, transactional=True):
+        if event not in cls.EVENT_CALLBACKS:
+            raise ValueError('Event "%s" not in allowed list: %s' % (
+                event, ' '.join(cls.EVENT_CALLBACKS)))
+        if not user_id:
+            raise ValueError('User ID must be non-blank')
+        if not cls.EVENT_CALLBACKS[event]:
+            return  # No callbacks registered for event -> nothing to do; skip.
+
+        if callbacks:
+            for callback in callbacks:
+                if callback not in cls.EVENT_CALLBACKS[event]:
+                    raise ValueError(
+                        'Callback "%s" not in callbacks registered for event %s'
+                        % (callback, event))
+        else:
+            callbacks = cls.EVENT_CALLBACKS[event]
+
+        task = taskqueue.Task(params={
+            'event': event,
+            'user_id': user_id,
+            'callbacks': ' '.join(callbacks),
+            'timestamp': datetime.datetime.now().strftime(
+                transforms.ISO_8601_DATETIME_FORMAT),
+        })
+        task.add(cls.QUEUE_NAME, transactional=transactional)
+
+    def post(self):
+        if 'X-AppEngine-QueueName' not in self.request.headers:
+            self.response.set_status(500)
+            return
+        user_id = self.request.get('user_id')
+        if not user_id:
+            logging.critical('Student lifecycle queue had item with no user')
+            self.response.set_status(200)
+            return
+        event = self.request.get('event')
+        if not event:
+            logging.critical('Student lifecycle queue had item with no event')
+            self.response.set_status(200)
+            return
+        timestamp_str = self.request.get('timestamp')
+        try:
+            timestamp = datetime.datetime.strptime(
+                timestamp_str, transforms.ISO_8601_DATETIME_FORMAT)
+        except ValueError:
+            logging.critical('Student lifecycle queue: malformed timestamp %s',
+                             timestamp_str)
+            self.response.set_status(200)
+            return
+
+        callbacks = self.request.get('callbacks')
+        if not callbacks:
+            logging.warning('Odd: Student lifecycle with no callback items')
+            self.response.set_status(200)
+            return
+        callbacks = callbacks.split(' ')
+
+        remaining_callbacks = []
+        for callback in callbacks:
+            if callback not in self.EVENT_CALLBACKS[event]:
+                logging.error(
+                    'Student lifecycle event enqueued with callback named '
+                    '"%s", but no such callback is currently registered.',
+                    callback)
+                continue
+            try:
+                logging.info(
+                    '-- Student lifecycle callback %s for event %s starting --',
+                    callback, event)
+                self.EVENT_CALLBACKS[event][callback](user_id, timestamp)
+                logging.info(
+                    '-- Student lifecycle callback %s for event %s success --',
+                    callback, event)
+            except Exception, ex:  # pylint: disable=broad-except
+                logging.error(
+                    '-- Student lifecycle callback %s for %s fails: %s --',
+                    callback, event, str(ex))
+                common_utils.log_exception_origin()
+                remaining_callbacks.append(callback)
+
+        if remaining_callbacks == callbacks:
+            # If we have made _no_ progress, emit error and get queue backoff.
+            num_tries = int(
+                self.request.headers.get('X-AppEngine-TaskExecutionCount', '0'))
+            complaint = (
+                'Student lifecycle callback in namespace %s for '
+                'event %s enqueued at %s made no progress on any of the '
+                'callbacks %s for user %s after %d attempts',
+                namespace_manager.get_namespace() or '<blank>',
+                event, timestamp_str, callbacks, user_id, num_tries)
+            logging.warning(complaint)
+
+            if num_tries >= QUEUE_RETRIES_BEFORE_SENDING_MAIL.value:
+                app_id = app_identity.get_application_id
+                sender = 'queue_admin@%s.appspotmail.com' % app_id
+                subject = ('Queue processing: Excessive retries '
+                           'on student lifecycle queue')
+                body = complaint + ' in application ' + app_id
+                mail.send_mail_to_admins(sender, subject, body)
+        else:
+            # If we made some progress, but still have work to do, re-enqueue
+            # remaining work.
+            if remaining_callbacks:
+                logging.warning(
+                    'Student lifecycle callback for event %s enqueued at %s '
+                    'made some progress, but needs retries for the following '
+                    'callbacks: %s', event, timestamp_str, callbacks)
+                self.enqueue(event, user_id, callbacks=remaining_callbacks,
+                             transactional=False)
+            # Claim success if any work done, whether or not any work remains.
+            self.response.set_status(200)
+
+
 class StudentProfileDAO(object):
     """All access and mutation methods for PersonalProfile and Student."""
 
     TARGET_NAMESPACE = appengine_config.DEFAULT_NAMESPACE_NAME
-
-    # Each hook is called back after update() has completed without raising
-    # an exception.  Arguments are:
-    # profile: The PersonalProfile object for the user
-    # student: The Student object for the user
-    # Subsequent arguments are identical to the arguments list to the update()
-    # call.  Not documented here so as to not get out-of-date.
-    # The return value from hooks is discarded.  Since these hooks run
-    # after update() has succeeded, they should run as best-effort, rather
-    # than raising exceptions.
-    UPDATE_POST_HOOKS = []
-
-    # Each hook is called back after _add_new_student_for_current_user has
-    # completed without raising an exception.  Arguments are:
-    # student: The Student object for the user.
-    # The return value from hooks is discarded.  Since these hooks run
-    # after update() has succeeded, they should run as best-effort, rather
-    # than raising exceptions.
-    ADD_STUDENT_POST_HOOKS = []
 
     @classmethod
     def _memcache_key(cls, key):
@@ -804,7 +938,6 @@ class StudentProfileDAO(object):
         cls, user_id, email, nick_name, additional_fields, labels=None):
         student = cls._add_new_student_for_current_user_in_txn(
           user_id, email, nick_name, additional_fields, labels)
-        common_utils.run_hooks(cls.ADD_STUDENT_POST_HOOKS, student)
         return student
 
     @classmethod
@@ -837,6 +970,8 @@ class StudentProfileDAO(object):
         cls._put_profile(profile)
         student.put()
 
+        StudentLifecycleObserver.enqueue(
+            StudentLifecycleObserver.EVENT_ADD, user_id)
         return student
 
     @classmethod
@@ -917,12 +1052,8 @@ class StudentProfileDAO(object):
         cls, user_id, email, legal_name=None, nick_name=None,
         date_of_birth=None, is_enrolled=None, final_grade=None,
         course_info=None, labels=None, profile_only=False):
-        profile, student = cls._update_in_txn(
+        cls._update_in_txn(
             user_id, email, legal_name, nick_name, date_of_birth, is_enrolled,
-            final_grade, course_info, labels, profile_only)
-        common_utils.run_hooks(
-            cls.UPDATE_POST_HOOKS, profile, student, user_id, email,
-            legal_name, nick_name, date_of_birth, is_enrolled,
             final_grade, course_info, labels, profile_only)
 
     @classmethod
@@ -936,11 +1067,19 @@ class StudentProfileDAO(object):
         if not profile_only:
             student = Student.get_by_email(email)
             if not student:
-                raise Exception('Unable to find student for: %s' % user_id)
+                raise Exception('Unable to find student for: %s' % email)
 
         profile = cls._get_profile_by_user_id(user_id)
         if not profile:
             profile = cls.add_new_profile(user_id, email)
+
+        if (student and is_enrolled is not None and
+            student.is_enrolled != is_enrolled):
+            if is_enrolled:
+                event = StudentLifecycleObserver.EVENT_REENROLL
+            else:
+                event = StudentLifecycleObserver.EVENT_UNENROLL
+            StudentLifecycleObserver.enqueue(event, student.user_id)
 
         cls._update_attributes(
             profile, student, email=email, legal_name=legal_name,
@@ -951,8 +1090,6 @@ class StudentProfileDAO(object):
         cls._put_profile(profile)
         if not profile_only:
             student.put()
-
-        return profile, student
 
 
 class Student(BaseEntity):
@@ -1094,6 +1231,10 @@ class Student(BaseEntity):
                 'There is more than one student with user_id %s' % user_id)
         return students[0] if students else None
 
+    @classmethod
+    def delete_by_user_id(cls, user_id):
+        db.delete(cls.all(keys_only=True).filter('user_id =', user_id).run())
+
     def has_same_key_as(self, key):
         """Checks if the key of the student and the given key are equal."""
         return key == self.get_key()
@@ -1126,6 +1267,10 @@ class EventEntity(BaseEntity):
     recorded. Each event has a 'user_id' to represent an actor who triggered
     the event. The event 'data' is a JSON object, the format of which is defined
     elsewhere and depends on the type of the event.
+
+    When extending this class, be sure to register your new class with
+    models.data_removal.Registry so that instances can be cleaned up on user
+    un-registration.
     """
     recorded_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
     source = db.StringProperty(indexed=False)
@@ -1166,6 +1311,10 @@ class EventEntity(BaseEntity):
         model.user_id = transform_fn(self.user_id)
         return model
 
+    def get_user_ids(self):
+        # Thus far, events pertain only to one user; no need to look in data.
+        return [self.user_id]
+
 
 class StudentAnswersEntity(BaseEntity):
     """Student answers to the assessments."""
@@ -1181,7 +1330,14 @@ class StudentAnswersEntity(BaseEntity):
 
 
 class StudentPropertyEntity(BaseEntity):
-    """A property of a student, keyed by the string STUDENT_ID-PROPERTY_NAME."""
+    """A property of a student, keyed by the string STUDENT_ID-PROPERTY_NAME.
+
+    When extending this class, be sure to register your new class with
+    models.data_removal.Registry so that instances can be cleaned up on user
+    un-registration.  See an example of how to do that at the bottom of this
+    file.
+
+    """
 
     updated_on = db.DateTimeProperty(indexed=True)
 
@@ -1389,7 +1545,7 @@ class BaseJsonDao(object):
             if memcache_key not in memcache_entities]
         if datastore_keys:
             datastore_entities = dict(zip(
-                datastore_keys, db.get([
+                datastore_keys, get([
                     db.Key.from_path(cls.ENTITY.kind(), obj_id)
                     for obj_id in datastore_keys])))
         else:
@@ -1457,7 +1613,7 @@ class BaseJsonDao(object):
             entities.append(entity)
             cls.before_put(dto, entity)
 
-        keys = db.put(entities)
+        keys = put(entities)
         MemcacheManager.delete(cls._memcache_all_key())
         for key, entity in zip(keys, entities):
             MemcacheManager.set(cls._memcache_key(key.id_or_name()), entity)
@@ -2181,3 +2337,21 @@ class RoleDAO(BaseJsonDao):
     DTO = RoleDTO
     ENTITY = RoleEntity
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
+
+
+def get_global_handlers():
+    return [
+        (StudentLifecycleObserver.URL, StudentLifecycleObserver),
+    ]
+
+def register_for_data_removal():
+    removers = [
+        PersonalProfile.delete_by_key,
+        Student.delete_by_user_id,
+        StudentAnswersEntity.delete_by_key,
+        StudentPropertyEntity.delete_by_user_id_prefix,
+        StudentPreferencesEntity.delete_by_key,
+    ]
+    for remover in removers:
+        data_removal.Registry.register_indexed_by_user_id_remover(remover)
+    data_removal.Registry.register_unindexed_entity_class(EventEntity)

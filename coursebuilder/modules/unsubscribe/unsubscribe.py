@@ -25,6 +25,7 @@ from common import crypto
 from common import users
 from controllers import utils
 from models import custom_modules
+from models import data_removal
 from models import entities
 from models import services
 
@@ -175,6 +176,9 @@ class SubscriptionStateEntity(entities.BaseEntity):
     def safe_key(cls, db_key, transform_fn):
         return db.Key(cls.kind(), transform_fn(db_key.name()))
 
+    @classmethod
+    def delete_by_email(cls, email_address):
+        db.delete(db.Key.from_path(cls.kind(), email_address))
 
 custom_module = None
 
@@ -185,11 +189,15 @@ def register_module():
     namespaced_routes = [
         (UnsubscribeHandler.URL, UnsubscribeHandler)]
 
+    def notify_module_enabled():
+        data_removal.Registry.register_indexed_by_email_remover(
+            SubscriptionStateEntity.delete_by_email)
+
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Unsubscribe Module',
         'A module to enable unsubscription from emails.',
-        [], namespaced_routes)
+        [], namespaced_routes, notify_module_enabled=notify_module_enabled)
 
     class Service(services.Unsubscribe):
 

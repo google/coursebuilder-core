@@ -23,10 +23,12 @@ import time
 import traceback
 import urllib
 
+from common import utils as common_utils
 import entities
 from mapreduce import base_handler
 from mapreduce import input_readers
 from mapreduce import mapreduce_pipeline
+from mapreduce import util
 from mapreduce.lib.pipeline import pipeline
 import transforms
 from common import users
@@ -171,7 +173,7 @@ class DurableJob(DurableJobBase):
 
 class MapReduceJobPipeline(base_handler.PipelineBase):
 
-    def run(self, job_name, sequence_num, kwargs, namespace):
+    def run(self, job_name, sequence_num, kwargs, namespace, complete_fn):
         time_started = time.time()
 
         with Namespace(namespace):
@@ -180,7 +182,7 @@ class MapReduceJobPipeline(base_handler.PipelineBase):
                 MapReduceJob.build_output(self.root_pipeline_id, []))
         output = yield mapreduce_pipeline.MapreducePipeline(**kwargs)
         yield StoreMapReduceResults(job_name, sequence_num, time_started,
-                                    namespace, output)
+                                    namespace, output, complete_fn, kwargs)
 
     def finalized(self):
         pass  # Suppress default Pipeline behavior of sending email.
@@ -188,7 +190,8 @@ class MapReduceJobPipeline(base_handler.PipelineBase):
 
 class StoreMapReduceResults(base_handler.PipelineBase):
 
-    def run(self, job_name, sequence_num, time_started, namespace, output):
+    def run(self, job_name, sequence_num, time_started, namespace, output,
+            complete_fn, kwargs):
         results = []
 
         # TODO(mgainer): Notice errors earlier in pipeline, and mark job
@@ -200,6 +203,8 @@ class StoreMapReduceResults(base_handler.PipelineBase):
                 # string obtained via "str(result)".  Use AST as a safe
                 # alternative to eval() to get the Python object back.
                 results.append(ast.literal_eval(item))
+            if complete_fn:
+                util.for_name(complete_fn)(kwargs, results)
             time_completed = time.time()
             with Namespace(namespace):
                 db.run_in_transaction(
@@ -212,6 +217,9 @@ class StoreMapReduceResults(base_handler.PipelineBase):
         #
         # pylint: disable=broad-except
         except Exception, ex:
+            logging.critical('Failed running map/reduce job %s: %s', job_name,
+                             str(ex))
+            common_utils.log_exception_origin()
             time_completed = time.time()
             with Namespace(namespace):
                 db.run_in_transaction(
@@ -366,6 +374,30 @@ class MapReduceJob(DurableJobBase):
                                   'optionally implement combine() as a static '
                                   'method.')
 
+    @staticmethod
+    def complete(kwargs, results):
+        """Optional.  Called exactly once on successful job completion.
+
+        When a job has completed successfully, this function is called.
+        'kwargs' is a dict containing values provided to mappers/reducers,
+        including any items produced from your
+        build_additional_mapper_params() function, if impemented.  The
+        'results' parameter contains the list of results for the job.  These
+        are the same values as would be returned from get_results(job).
+
+        This is called after the results from the m/r job have been extracted,
+        but before logging success of the job in the DurableJobEntity row.
+        Raising an exception here will cause the job to be marked as failed,
+        despite the main m/r having succeeded.
+
+        NOTE: Be sure to use kwargs['mapper_params'] to access values added by
+        build_additional_mapper_params(), rather than using context.get() at
+        complete() time.  This is because the same thread may be used for
+        multiple job completions, and there's a race between setting the
+        global context and this function.
+        """
+        raise NotImplementedError()
+
     def build_additional_mapper_params(self, unused_app_context):
         """Build a dict of additional parameters to make available to mappers.
 
@@ -449,8 +481,13 @@ class MapReduceJob(DurableJobBase):
             getattr(MapReduceJob, 'combine')):
             kwargs['combiner_spec'] = '%s.%s.combine' % (
                 self.__class__.__module__, self.__class__.__name__)
+        complete_fn = None
+        if (getattr(self.__class__, 'complete') !=
+            getattr(MapReduceJob, 'complete')):
+            complete_fn = '%s.%s.complete' % (
+                self.__class__.__module__, self.__class__.__name__)
         mr_pipeline = MapReduceJobPipeline(self._job_name, sequence_num,
-                                           kwargs, self._namespace)
+                                           kwargs, self._namespace, complete_fn)
         mr_pipeline.start(base_path='/mapreduce/worker/pipeline')
         return sequence_num
 

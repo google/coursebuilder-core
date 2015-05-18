@@ -50,6 +50,7 @@ from common import tags
 from controllers import utils
 from models import courses
 from models import custom_modules
+from models import data_removal
 from models import models
 from models import transforms
 from modules.courses import settings
@@ -442,6 +443,8 @@ def register_module():
             TEMPLATES_DIR)
         settings.CourseSettingsHandler.EXTRA_JS_FILES.append(
             'invitation_course_settings.js')
+        data_removal.Registry.register_indexed_by_user_id_remover(
+            InvitationStudentProperty.delete_by_user_id_prefix)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]

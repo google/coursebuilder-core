@@ -19,6 +19,7 @@ __author__ = ['Michael Gainer (mgainer@google.com)']
 from models import analytics
 from models import custom_modules
 from models import data_sources
+from models import data_removal
 from modules.analytics import answers_aggregator
 from modules.analytics import clustering
 from modules.analytics import location_aggregator
@@ -198,6 +199,15 @@ def register_module():
         data_sources.Registry.register(rest_providers.StudentsDataSource)
         data_sources.Registry.register(
             rest_providers.LabelsOnStudentsDataSource)
+
+        data_removal.Registry.register_indexed_by_user_id_remover(
+            clustering.StudentVector.delete_by_key)
+        data_removal.Registry.register_indexed_by_user_id_remover(
+            clustering.StudentClusters.delete_by_key)
+        data_removal.Registry.register_indexed_by_user_id_remover(
+            student_aggregate.StudentAggregateEntity.delete_by_key)
+        data_removal.Registry.register_indexed_by_user_id_remover(
+            student_answers.QuestionAnswersEntity.delete_by_key)
 
         register_tabs()
         add_actions()

@@ -14,3 +14,8 @@ cron:
 - description: Run job to report count of courses and students to CourseBuilder.
   url: /cron/usage_reporting/report_usage
   schedule: every sunday 05:00
+- description: Runs batch jobs to delete items not indexable by user ID.
+  url: /cron/data_removal/batch_delete
+  # Compromise between keeping costs due to batch run down versus preventing
+  # user re-registration while deletion is not yet complete.
+  schedule: every 6 hours

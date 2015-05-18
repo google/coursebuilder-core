@@ -32,35 +32,43 @@
         {{course_info.reg_form.header_text | safe}}
       </p>
 
-      <form action="register" method='post'>
-        <input type="hidden" name="xsrf_token" value="{{ register_xsrf_token|escape }}">
-        <fieldset>
-          <ol>
-            <li>
-              <label class="gcb-reg-form-label" for="form01">
+      {% if alternate_content %}
+        {% for item in alternate_content %}
+          {{ item }}
+        {% endfor %}
+      {% else %}
+        <form action="register" method='post'>
+          <input
+             type="hidden"
+             name="xsrf_token"
+             value="{{ register_xsrf_token|escape }}">
+          <fieldset>
+            <ol>
+              <li>
+                <label class="gcb-reg-form-label" for="form01">
+                  {# I18N: A question in the registration form. #}
+                  {{ gettext('What is your name?') }}
+                </label>
                 {# I18N: A question in the registration form. #}
-                {{ gettext('What is your name?') }}
-              </label>
-              {# I18N: A question in the registration form. #}
-              <input
-                name="form01" id="form01" type="text"
-                value="{{ current_name|escape }}"
-                aria-label="{{ gettext('What is your name?') }}">
-            </li>
-            {% if course_info.reg_form.additional_registration_fields %}
-              {{course_info.reg_form.additional_registration_fields | safe}}
-            {% else %}
-              <!-- reg_form.additional_registration_fields -->
-            {% endif %}
-          </ol>
-        </fieldset>
+                <input
+                  name="form01" id="form01" type="text"
+                  value="{{ current_name|escape }}"
+                  aria-label="{{ gettext('What is your name?') }}">
+              </li>
+              {% if course_info.reg_form.additional_registration_fields %}
+                {{course_info.reg_form.additional_registration_fields | safe}}
+              {% else %}
+                <!-- reg_form.additional_registration_fields -->
+              {% endif %}
+            </ol>
+          </fieldset>
 
-        <button class="gcb-button" type="submit">
-          {# I18N: Button at the end of the registration form for a course. #}
-          {{ gettext('Enroll') }}
-        </button>
-      </form>
-
+          <button class="gcb-button" type="submit">
+            {# I18N: Button at the end of the registration form for a course. #}
+            {{ gettext('Enroll') }}
+          </button>
+        </form>
+      {% endif %}
     </div>
   </div>
 </div>

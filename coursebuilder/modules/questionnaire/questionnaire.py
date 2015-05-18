@@ -42,6 +42,7 @@ from common import tags
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import custom_modules
+from models import data_removal
 from models import data_sources
 from models import models
 from models import transforms
@@ -307,6 +308,8 @@ def register_module():
         tags.Registry.add_tag_binding(
             QuestionnaireTag.binding_name, QuestionnaireTag)
         data_sources.Registry.register(QuestionnaireDataSource)
+        data_removal.Registry.register_indexed_by_user_id_remover(
+            StudentFormEntity.delete_by_user_id_prefix)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),

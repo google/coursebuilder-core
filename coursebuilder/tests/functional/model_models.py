@@ -20,10 +20,12 @@ __author__ = [
 
 import datetime
 
+from common import utils as common_utils
 from models import config
 from models import entities
 from models import models
 from models import services
+from models import transforms
 from modules.notifications import notifications
 from tests.functional import actions
 
@@ -637,3 +639,199 @@ class StudentPropertyEntityTestCase(actions.ExportTestBase):
             'transformed_%s-%s' % (user_id, property_name),
             models.StudentPropertyEntity.safe_key(
                 student_property_key, self.transform).name())
+
+class StudentLifecycleObserverTestCase(actions.TestBase):
+
+    COURSE = 'lifecycle_test'
+    NAMESPACE = 'ns_' + COURSE
+    ADMIN_EMAIL = 'admin@foo.com'
+    STUDENT_EMAIL = 'student@foo.com'
+
+    def setUp(self):
+        super(StudentLifecycleObserverTestCase, self).setUp()
+        app_context = actions.simple_add_course(
+            self.COURSE, self.ADMIN_EMAIL, 'Lifecycle Test')
+        self.base = '/' + self.COURSE
+        self._user_id = None
+        self._num_add_calls = 0
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD][self.COURSE] = (
+                self._add_callback)
+        self._num_unenroll_calls = 0
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_UNENROLL][self.COURSE] = (
+                self._unenroll_callback)
+        self._num_reenroll_calls = 0
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_REENROLL][self.COURSE] = (
+                self._reenroll_callback)
+
+        self._num_exception_calls = 0
+        self._num_exceptions_to_raise = 0
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD]['raises'] = (
+                self._raise_exceptions)
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_UNENROLL]['raises'] = (
+                self._raise_exceptions)
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_REENROLL]['raises'] = (
+                self._raise_exceptions)
+
+    def _add_callback(self, user_id, timestamp):
+        self._user_id = user_id
+        self._timestamp = timestamp
+        self._num_add_calls += 1
+
+    def _unenroll_callback(self, user_id, timestamp):
+        self._num_unenroll_calls += 1
+
+    def _reenroll_callback(self, user_id, timestamp):
+        self._num_reenroll_calls += 1
+
+    def _raise_exceptions(self, user_id, timestamp):
+        self._num_exception_calls += 1
+        if self._num_exceptions_to_raise:
+            self._num_exceptions_to_raise -= 1
+            raise ValueError('bogus error')
+
+    def test_notifications_succeed(self):
+        actions.login(self.STUDENT_EMAIL)
+        user_id = None
+
+        actions.register(self, self.STUDENT_EMAIL)
+        self.assertIsNone(self._user_id)
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
+        self.assertIsNotNone(self._user_id)
+        user_id = self._user_id
+        self.assertEquals(1, self._num_add_calls)
+        self.assertEquals(0, self._num_unenroll_calls)
+        self.assertEquals(0, self._num_reenroll_calls)
+
+        actions.unregister(self)
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
+        self.assertEquals(1, self._num_add_calls)
+        self.assertEquals(1, self._num_unenroll_calls)
+        self.assertEquals(0, self._num_reenroll_calls)
+
+
+        with common_utils.Namespace(self.NAMESPACE):
+            models.StudentProfileDAO.update(
+                user_id, self.STUDENT_EMAIL, is_enrolled=True)
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
+        self.assertEquals(1, self._num_add_calls)
+        self.assertEquals(1, self._num_unenroll_calls)
+        self.assertEquals(1, self._num_reenroll_calls)
+
+
+    def test_bad_event_name(self):
+        with self.assertRaises(ValueError):
+            models.StudentLifecycleObserver.enqueue(
+                'not_a_real_event_name', 123)
+
+    def test_bad_user_id(self):
+        with self.assertRaises(ValueError):
+            models.StudentLifecycleObserver.enqueue(
+                models.StudentLifecycleObserver.EVENT_ADD, None)
+
+    def test_bad_callback(self):
+        with self.assertRaises(ValueError):
+            models.StudentLifecycleObserver.enqueue(
+                models.StudentLifecycleObserver.EVENT_ADD, 123, ['foo'])
+
+    def test_bad_post_not_from_appengine_queue_internals(self):
+        response = self.post(models.StudentLifecycleObserver.URL, {},
+                             expect_errors=True)
+        self.assertEquals(response.status_int, 500)
+
+    def test_bad_post_no_user_id(self):
+        response = self.post(
+            models.StudentLifecycleObserver.URL, {},
+            headers={'X-AppEngine-QueueName':
+                     models.StudentLifecycleObserver.QUEUE_NAME})
+        self.assertEquals(response.status_int, 200)
+        self.assertLogContains('Student lifecycle queue had item with no user')
+
+    def test_bad_post_no_event(self):
+        response = self.post(
+            models.StudentLifecycleObserver.URL, {'user_id': '123'},
+            headers={'X-AppEngine-QueueName':
+                     models.StudentLifecycleObserver.QUEUE_NAME})
+        self.assertEquals(response.status_int, 200)
+        self.assertLogContains('Student lifecycle queue had item with no event')
+
+    def test_bad_post_no_timestamp(self):
+        response = self.post(
+            models.StudentLifecycleObserver.URL,
+            {'user_id': '123', 'event': 'add'},
+            headers={'X-AppEngine-QueueName':
+                     models.StudentLifecycleObserver.QUEUE_NAME})
+        self.assertEquals(response.status_int, 200)
+        self.assertLogContains('Student lifecycle queue: malformed timestamp')
+
+    def test_bad_post_bad_timestamp(self):
+        response = self.post(
+            models.StudentLifecycleObserver.URL,
+            {'user_id': '123', 'event': 'add', 'timestamp': '12333'},
+            headers={'X-AppEngine-QueueName':
+                     models.StudentLifecycleObserver.QUEUE_NAME})
+        self.assertEquals(response.status_int, 200)
+        self.assertLogContains(
+            'Student lifecycle queue: malformed timestamp 12333')
+
+    def test_post_user_id_and_timestamp_pass_through_without_change(self):
+        user_id = '123'
+        timestamp = '2015-05-14T10:02:09.758704Z'
+
+        response = self.post(
+            models.StudentLifecycleObserver.URL,
+            {'user_id': user_id,
+             'event': 'add',
+             'timestamp': timestamp,
+             'callbacks': self.COURSE},
+            headers={'X-AppEngine-QueueName':
+                     models.StudentLifecycleObserver.QUEUE_NAME})
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(user_id, self._user_id)
+        self.assertEquals(timestamp, self._timestamp.strftime(
+            transforms.ISO_8601_DATETIME_FORMAT))
+
+    def test_bad_post_no_callbacks(self):
+        response = self.post(
+            models.StudentLifecycleObserver.URL,
+            {'user_id': '123',
+             'event': 'add',
+             'timestamp': '2015-05-14T10:02:09.758704Z'},
+            headers={'X-AppEngine-QueueName':
+                     models.StudentLifecycleObserver.QUEUE_NAME})
+        self.assertEquals(response.status_int, 200)
+        self.assertLogContains('Odd: Student lifecycle with no callback items')
+
+    def test_bad_post_bad_callback(self):
+        response = self.post(
+            models.StudentLifecycleObserver.URL,
+            {'user_id': '123',
+             'event': 'add',
+             'timestamp': '2015-05-14T10:02:09.758704Z',
+             'callbacks': 'fred'},
+            headers={'X-AppEngine-QueueName':
+                     models.StudentLifecycleObserver.QUEUE_NAME})
+        self.assertEquals(response.status_int, 200)
+        self.assertLogContains(
+            'Student lifecycle event enqueued with callback named '
+            '"fred", but no such callback is currently registered.')
+
+    def test_retry_on_exception(self):
+        num_exceptions = 1  # testing queue does not permit errors.  :-{
+        self._num_exceptions_to_raise = num_exceptions
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
+        self.assertEquals(1, self._num_add_calls)
+        self.assertEquals(0, self._num_unenroll_calls)
+        self.assertEquals(0, self._num_reenroll_calls)
+        self.assertEquals(num_exceptions + 1, self._num_exception_calls)
