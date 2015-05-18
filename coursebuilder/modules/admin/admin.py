@@ -559,6 +559,16 @@ class BaseAdminHandler(ConfigPropertyEditor):
         app_dict['users_service_name'] = escape(
             users.UsersServiceManager.get().get_service_name())
 
+        # sys.path information.
+        sys_path_content = safe_dom.NodeList()
+        sys_path_content.append(
+            safe_dom.Element('h3').add_text('sys.path')
+        )
+        ol = safe_dom.Element('ol')
+        sys_path_content.append(ol)
+        for path in sys.path:
+            ol.add_child(safe_dom.Element('li').add_text(path))
+
         template_values['main_content'] = safe_dom.NodeList().append(
             self.render_dict(app_dict, 'About the Application')
         ).append(
@@ -570,7 +580,10 @@ class BaseAdminHandler(ConfigPropertyEditor):
         ).append(
             yaml_content
         ).append(
-            self.render_dict(os.environ, 'Server Environment Variables'))
+            self.render_dict(os.environ, 'Server Environment Variables')
+        ).append(
+            sys_path_content
+        )
         self.render_page(template_values)
 
 
