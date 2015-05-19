@@ -510,6 +510,9 @@ class AdminTests(BaseIntegrationTest):
         ).set_rte_lightbox_field(
             'input[name=videoid]', '123'
         ).click_rte_save(
+        ).click_preview(
+        ).ensure_preview_document_matches_regex(
+            'YouTube:<div class="gcb-video-container">'
         ).click_plain_text(
         ).ensure_instanceid_count_equals(
             1

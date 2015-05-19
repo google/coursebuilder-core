@@ -1,0 +1,35 @@
+{% extends 'base_course.html' %}
+
+{% block assets %}
+  {{ super() }}
+  <link rel="stylesheet" type="text/css"
+      href="/modules/dashboard/resources/material-design-icons/css/material-design-iconic-font.min.css">
+  <style>
+    #gcb-header,
+    #gcb-footer {
+      display: none;
+    }
+  </style>
+  <script>
+    var questionData = {};
+    $(function() {
+      window.parent.postMessage('preview_editor_loaded',
+          window.location.origin);
+    });
+  </script>
+{% endblock %}
+
+{% block navbar %}
+{% endblock %}
+
+{% block main_content %}
+  <div class="gcb-lesson-content"
+       data-scored="False"
+       data-question-batch-id="Preview">
+    {{ value | gcb_tags }}
+  </div>
+  <form id="preview-editor-form" method="POST" action="oeditor/preview">
+    <input id="xsrf_token" type="hidden" name="xsrf_token">
+    <input id="preview-editor-value" type="hidden" name="value">
+  </form>
+{% endblock %}

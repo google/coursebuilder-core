@@ -204,7 +204,8 @@ div.cb-editor-field > div.tabbar > button {
   cursor: pointer;
 }
 div.cb-editor-field > div.tabbar.showing-html > button.html-button,
-div.cb-editor-field >  div.tabbar.showing-rte > button.rte-button {
+div.cb-editor-field >  div.tabbar.showing-rte > button.rte-button,
+div.cb-editor-field >  div.tabbar.showing-preview > button.preview-button {
   font-weight: bold;
   background-color: #ccc;
 }
@@ -214,12 +215,35 @@ div.cb-editor-field div.editors-div {
 div.cb-editor-field {
   width: 510px;
 }
+div.cb-editor-field div.preview-div iframe {
+  width: 100%;
+  height: 100%;
+}
 .yui-toolbar-group-insertitem h3 {
   width: auto !important;
 }
 div.yui-toolbar-titlebar {
   /* Hide the top titlebar on the RTE. */
   display: none;
+}
+div.cb-editor-field div.preview-div .ajax-spinner {
+  z-index: 1000;
+  text-align: center;
+}
+div.cb-editor-field div.preview-div .ajax-spinner > .background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  opacity: 0.3;
+  filter: alpha(opacity=30);
+}
+div.cb-editor-field div.preview-div .ajax-spinner > .spinner {
+  font-size: 400%;
+  position: absolute;
+  top: 40%;
 }
 
 /*

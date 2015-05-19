@@ -801,16 +801,22 @@ class CourseContentElement(DashboardEditor):
     def click_rich_text(self, index=0):
         self.wait_until_status_message_hidden()
         el = self.find_element_by_css_selector('div.tabbar', index)
-        self._tester.assertIn('showing-html', el.get_attribute('class'))
         el.find_element_by_class_name('rte-button').click()
+        self._tester.assertIn('showing-rte', el.get_attribute('class'))
         self.wait().until(ec.element_to_be_clickable(
             (by.By.CLASS_NAME, 'yui-editor-editable')))
         return self
 
     def click_plain_text(self, index=None):
         el = self.find_element_by_css_selector('div.tabbar', index)
-        self._tester.assertIn('showing-rte', el.get_attribute('class'))
         el.find_element_by_class_name('html-button').click()
+        self._tester.assertIn('showing-html', el.get_attribute('class'))
+        return self
+
+    def click_preview(self, index=None):
+        el = self.find_element_by_css_selector('div.tabbar', index)
+        el.find_element_by_class_name('preview-button').click()
+        self._tester.assertIn('showing-preview', el.get_attribute('class'))
         return self
 
     def click_rte_add_custom_tag(self, button_text, index=0):
@@ -861,6 +867,22 @@ class CourseContentElement(DashboardEditor):
             value,
             self.find_element_by_css_selector(
                 field_css_selector).get_attribute('value'))
+        self._tester.driver.switch_to_default_content()
+        return self
+
+    def ensure_preview_document_matches_regex(self, regex, index=None):
+        def preview_spinner_closed(driver):
+            spinner = self.find_element_by_css_selector(
+                'div.preview-editor div.ajax-spinner', index)
+            return not spinner.is_displayed()
+
+        self.wait().until(preview_spinner_closed)
+
+        iframe = self.find_element_by_css_selector(
+            'div.preview-editor iframe', index)
+        self._tester.driver.switch_to_frame(iframe)
+        preview_html = self._tester.driver.page_source
+        self._tester.assertRegexpMatches(preview_html, regex)
         self._tester.driver.switch_to_default_content()
         return self
 

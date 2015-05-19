@@ -23,14 +23,21 @@ import jinja2
 import webapp2
 
 import appengine_config
+from common import crypto
 from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import sites
 from controllers import utils
 from models import custom_modules
+from models import roles
 from models import transforms
 from models.config import ConfigProperty
+
+# Folder where Jinja template files are stored
+TEMPLATES_DIR = os.path.join(
+    appengine_config.BUNDLE_ROOT, 'modules', 'oeditor', 'templates')
+
 
 # a set of YUI and inputex modules required by the editor
 COMMON_REQUIRED_MODULES = [
@@ -166,7 +173,9 @@ class ObjectEditor(object):
             'rte_tag_data': transforms.dumps(rte_tag_data),
             'delete_message': delete_message,
             'can_highlight_code': CAN_HIGHLIGHT_CODE.value,
-            'extra_script_tag_urls': extra_script_tag_urls,
+            'preview_xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                PreviewHandler.XSRF_TOKEN),
+            'extra_script_tag_urls': extra_script_tag_urls
         }
 
         if delete_url and not read_only:
@@ -251,6 +260,34 @@ class ButtonbarCssHandler(utils.BaseHandler):
         self.response.out.write('\n'.join(css))
 
 
+class PreviewHandler(utils.BaseHandler):
+    """Handler for the editor's Preview tab."""
+
+    XSRF_TOKEN = 'oeditor-preview-handler'
+
+    def get(self):
+        """Deliver the Preview iframe, without user content."""
+        self.render('preview_editor.html', additional_dirs=[TEMPLATES_DIR])
+
+    def post(self):
+        """Deliver the Preview iframe, with embedded HTML from the editor."""
+        # By strict use of HTML verbs, this should be a GET, because it only
+        # requests data and has no lasting effects. However the "value"
+        # parameter is likely to be too big to be passed in URL query data.
+
+        if not self.assert_xsrf_token_or_fail(self.request, self.XSRF_TOKEN):
+            return
+
+        # This should be restricted to the course admin because the transformed
+        # data returned may contain questions, etc which are not public.
+        if not roles.Roles.is_course_admin(self.app_context):
+            self.error(401)
+            return
+
+        self.template_value['value'] = self.request.get('value', '')
+        self.render('preview_editor.html', additional_dirs=[TEMPLATES_DIR])
+
+
 def create_bool_select_annotation(
     keys_list, label, true_label, false_label, class_name=None,
     description=None):
@@ -302,7 +339,9 @@ def register_module():
                     appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip'),
                 '/static/2in3/'))]
 
-    oeditor_handlers = [('/oeditorpopup', PopupHandler)]
+    namespaced_routes = [
+        ('/oeditorpopup', PopupHandler),
+        ('/oeditor/preview', PreviewHandler)]
     global_routes = yui_handlers + codemirror_handler + [
         ('/modules/oeditor/buttonbar.css', ButtonbarCssHandler),
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
@@ -311,5 +350,5 @@ def register_module():
     custom_module = custom_modules.Module(
         'Object Editor',
         'A visual editor for editing various types of objects.',
-        global_routes, oeditor_handlers)
+        global_routes, namespaced_routes)
     return custom_module

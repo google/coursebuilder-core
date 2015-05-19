@@ -1,7 +1,8 @@
 function bindEditorField(Y) {
   var RTE_TAG_DATA = cb_global.rte_tag_data;
   var SCHEMA = cb_global.schema;
-  var CAN_HIGHLIGHT_CODE = cb_global.can_highlight_code
+  var CAN_HIGHLIGHT_CODE = cb_global.can_highlight_code;
+  var PREVIEW_XSRF_TOKEN = cb_global.preview_xsrf_token;
 
   /**
    * An editor component which provides HTML syntax highlighting.
@@ -252,6 +253,83 @@ function bindEditorField(Y) {
   };
 
   /**
+   * An "editor" component which displays the text in an iframe with the CSS
+   * styling for the student view.
+   * See TextAreaEditor for the full documentation of the interface.
+   *
+   * @class
+   * @param root {Element} The root element to hold the editor's HTML.
+   */
+  function PreviewEditor(root) {
+    var that = this;
+    root.innerHTML =
+        '<div class="preview-editor">' +
+        '  <div class="ajax-spinner">' +
+        '    <div class="background"></div>' +
+        '    <span class="spinner md md-settings md-spin"></span>' +
+        '  </div>' +
+        '  <iframe src="oeditor/preview"></iframe>' +
+        '</div>';
+    this.previewEditorDiv = root.querySelector('div.preview-editor');
+    this.iframe = root.querySelector('iframe');
+    this.ajaxSpinner = root.querySelector('div.ajax-spinner');
+
+    this.iframeIsLoaded = $.Deferred();
+
+    $(window).on('message', function(evt) {
+      if (evt.originalEvent.origin == window.location.origin &&
+          evt.originalEvent.source == that.iframe.contentWindow &&
+          evt.originalEvent.data == 'preview_editor_loaded') {
+        that.iframeIsLoaded.resolve();
+        that._hideAjaxSpinner();
+      }
+    });
+  }
+  PreviewEditor.prototype.hide = function() {
+    this.previewEditorDiv.style.display = 'none';
+  };
+  PreviewEditor.prototype.show = function() {
+    this.previewEditorDiv.style.display = null;
+  };
+  PreviewEditor.prototype.setSize = function(width, height) {
+    if (width) {
+      this.previewEditorDiv.style.width = width + 'px';
+    }
+    this.previewEditorDiv.style.height = height + 'px';
+  };
+  PreviewEditor.prototype.getValue = function() {
+    return this.value;
+  };
+  PreviewEditor.prototype.setValue = function(value) {
+    var that = this;
+    if (this.value === value) {
+      return;
+    }
+    this.value = value;
+    $.when(this.iframeIsLoaded).then(function() {
+      that._showAjaxSpinner();
+      that._reloadIframe(that.value);
+      that.iframeIsLoaded = $.Deferred();
+    });
+  };
+  PreviewEditor.prototype._showAjaxSpinner = function(value) {
+    this.ajaxSpinner.style.display = null;
+  };
+  PreviewEditor.prototype._hideAjaxSpinner = function(value) {
+    this.ajaxSpinner.style.display = 'none';
+  };
+  PreviewEditor.prototype._reloadIframe = function(value) {
+    var doc = this.iframe.contentWindow.document;
+    var form = doc.getElementById('preview-editor-form');
+    var xsrf_token = doc.getElementById('xsrf_token');
+    var input = doc.getElementById('preview-editor-value');
+
+    xsrf_token.value = PREVIEW_XSRF_TOKEN;
+    input.value = value;
+    form.submit();
+  };
+
+  /**
    * The main class for CB's multi-faceted HTML editor. This base class handles
    * switching between a number of alternate editor components (e.g., plain
    * text, rich text editor, etc), and manages (re)sizing the component. The
@@ -297,17 +375,21 @@ function bindEditorField(Y) {
         '<div class="tabbar">' +
         '  <button class="html-button">HTML</button>' +
         '  <button class="rte-button">Rich Text</button>' +
+        '  <button class="preview-button">Preview</button>' +
         '</div>' +
         '<div class="editors-div">' +
         '  <div class="html-div"></div>' +
         '  <div class="rte-div"></div>' +
+        '  <div class="preview-div"></div>' +
         '</div>';
     this.tabbar = this.fieldContainer.querySelector('.tabbar');
     this.htmlButton = this.fieldContainer.querySelector('.html-button');
     this.rteButton = this.fieldContainer.querySelector('.rte-button');
+    this.previewButton = this.fieldContainer.querySelector('.preview-button');
     this.editorsDiv = this.fieldContainer.querySelector('.editors-div');
     this.htmlDiv = this.fieldContainer.querySelector('.html-div');
     this.rteDiv = this.fieldContainer.querySelector('.rte-div');
+    this.previewDiv = this.fieldContainer.querySelector('.preview-div');
 
     if (CAN_HIGHLIGHT_CODE) {
       this.htmlEditor = new HtmlEditor(this.htmlDiv);
@@ -316,9 +398,13 @@ function bindEditorField(Y) {
     }
     this.richTextEditor = new RichTextEditor(this.rteDiv, this.opts,
         this.supportCustomTags, this.excludedCustomTags);
+    this.previewEditor = new PreviewEditor(this.previewDiv);
 
     // Default mode is HTML editing
-    this._selectHtmlMode();
+    this.tabbar.className = 'tabbar showing-html';
+    this.activeEditor = this.htmlEditor;
+    this.richTextEditor.hide();
+    this.previewEditor.hide();
 
     // Bind the buttons
     this.htmlButton.onclick = function() {
@@ -327,6 +413,10 @@ function bindEditorField(Y) {
     };
     this.rteButton.onclick = function() {
       that._selectRichTextMode();
+      return false;
+    };
+    this.previewButton.onclick = function() {
+      that._selectPreviewMode();
       return false;
     };
 
@@ -350,30 +440,35 @@ function bindEditorField(Y) {
   EditorField.prototype.getValue = function() {
     return this.activeEditor.getValue();
   };
+  EditorField.prototype._select = function (editor, className) {
+    var value = this.activeEditor.getValue();
+    var rect = this.editorsDiv.getBoundingClientRect();
+    this.activeEditor.hide();
+    this.htmlEditor.setValue(value);
+    this.richTextEditor.setValue(value);
+    this.previewEditor.setValue(value);
+    this.activeEditor = editor;
+    this.activeEditor.setSize(rect.width, rect.height);
+    editor.show();
+    this.tabbar.className = 'tabbar ' + className;
+  };
   EditorField.prototype._selectHtmlMode = function() {
-    this.tabbar.className = 'tabbar showing-html';
-    this.htmlEditor.setValue(this.richTextEditor.getValue());
-    this.htmlEditor.show();
-    this.richTextEditor.hide();
-    this.activeEditor = this.htmlEditor;
+    this._select(this.htmlEditor, 'showing-html');
   };
   EditorField.prototype._selectRichTextMode = function() {
-    this.tabbar.className = 'tabbar showing-rte';
-    this.richTextEditor.setValue(this.htmlEditor.getValue());
-    this.htmlEditor.hide();
-    this.richTextEditor.show();
-    this.activeEditor = this.richTextEditor;
+    this._select(this.richTextEditor, 'showing-rte');
+  };
+  EditorField.prototype._selectPreviewMode = function() {
+    this._select(this.previewEditor, 'showing-preview');
   };
   EditorField.prototype._resize = function(width, height) {
     if (this.fixedWidthLayout) {
       this.editorsDiv.style.height = height + 'px';
-      this.htmlEditor.setSize(null, height);
-      this.richTextEditor.setSize(null, height);
+      this.activeEditor.setSize(null, height);
     } else {
       this.editorsDiv.style.width = width + 'px';
       this.editorsDiv.style.height = height + 'px';
-      this.htmlEditor.setSize(width, height);
-      this.richTextEditor.setSize(width, height);
+      this.activeEditor.setSize(width, height);
     }
   };
 
