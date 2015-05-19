@@ -38,6 +38,7 @@ function bindEditorField(Y) {
     return this.codeMirrorInstance.getValue();
   };
   HtmlEditor.prototype.setValue = function(value) {
+    value = value || '';
     this.codeMirrorInstance.setValue(value);
     var that = this;
     setTimeout(function() {
