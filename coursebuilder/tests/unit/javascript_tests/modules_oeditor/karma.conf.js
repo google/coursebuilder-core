@@ -9,7 +9,7 @@ files = [
 
   // Files to test
   'modules/oeditor/oeditor.js',
-  'modules/oeditor/popup.js',
+  'modules/oeditor/resources/popup.js',
   'modules/oeditor/rte.js'
 ];
 

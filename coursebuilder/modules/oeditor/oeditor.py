@@ -38,7 +38,6 @@ from models.config import ConfigProperty
 TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'oeditor', 'templates')
 
-
 # a set of YUI and inputex modules required by the editor
 COMMON_REQUIRED_MODULES = [
     'inputex-group', 'inputex-form', 'inputex-jsonschema']
@@ -50,7 +49,7 @@ ALL_MODULES = [
     'inputex-url', 'inputex-uneditable', 'inputex-integer', 'inputex-hidden',
     'inputex-file', 'io-upload-iframe']
 
-RESOURCES_PATH = '/modules/oeditor/resources'
+RESOURCES_URI = '/modules/oeditor/resources'
 
 # Global code syntax highlighter controls.
 CAN_HIGHLIGHT_CODE = ConfigProperty(
@@ -239,7 +238,8 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
             extra_css_files=tag_class.extra_css_files(),
             additional_dirs=tag_class.additional_dirs())
         self.response.out.write(
-            self.get_template('popup.html', []).render(template_values))
+            self.get_template('popup.html', [TEMPLATES_DIR]
+        ).render(template_values))
 
 
 class ButtonbarCssHandler(utils.BaseHandler):
@@ -344,7 +344,7 @@ def register_module():
         ('/oeditor/preview', PreviewHandler)]
     global_routes = yui_handlers + codemirror_handler + [
         ('/modules/oeditor/buttonbar.css', ButtonbarCssHandler),
-        (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
+        (RESOURCES_URI +'/.*', tags.ResourcesHandler)]
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
