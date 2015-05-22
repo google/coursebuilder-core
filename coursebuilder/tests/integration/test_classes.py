@@ -649,11 +649,13 @@ class QuestionsTest(BaseIntegrationTest):
             'Unit 1 - Test Unit 1'
         #---------------------------------------------- Lesson 1 (graded)
         ).click_add_lesson(
+        ).click_settings_tab(
         ).set_title(
             'Question lesson - Graded'
         ).set_status(
             'Public'
         ).set_questions_are_scored(
+        ).click_content_tab(
         ).click_rich_text(
         ).click_rte_add_custom_tag(
             'Question'
@@ -664,10 +666,12 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_close(
         #---------------------------------------------- Lesson 2 (ungraded)
         ).click_add_lesson(
+        ).click_settings_tab(
         ).set_title(
             'Question lesson - UnGraded'
         ).set_status(
             'Public'
+        ).click_content_tab(
         ).click_rich_text(
         ).click_rte_add_custom_tag(
             'Question'

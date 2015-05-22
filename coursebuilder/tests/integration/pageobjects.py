@@ -798,25 +798,30 @@ class CourseContentElement(DashboardEditor):
         title_el.send_keys(title)
         return self
 
-    def click_rich_text(self, index=0):
+    def _click_tabbar(self, field_index=0, tabbar_index=0):
         self.wait_until_status_message_hidden()
-        el = self.find_element_by_css_selector('div.tabbar', index)
-        el.find_element_by_class_name('rte-button').click()
-        self._tester.assertIn('showing-rte', el.get_attribute('class'))
+        el = self.find_element_by_css_selector(
+            'div.cb-editor-field div.tabbar', index=field_index)
+        el.find_elements_by_css_selector('button')[tabbar_index].click()
+        for i, button in enumerate(el.find_elements_by_css_selector('button')):
+            if i == tabbar_index:
+                self._tester.assertIn('selected', button.get_attribute('class'))
+            else:
+                self._tester.assertNotIn(
+                    'selected', button.get_attribute('class'))
+
+    def click_rich_text(self, index=0):
+        self._click_tabbar(field_index=index, tabbar_index=1)
         self.wait().until(ec.element_to_be_clickable(
             (by.By.CLASS_NAME, 'yui-editor-editable')))
         return self
 
     def click_plain_text(self, index=None):
-        el = self.find_element_by_css_selector('div.tabbar', index)
-        el.find_element_by_class_name('html-button').click()
-        self._tester.assertIn('showing-html', el.get_attribute('class'))
+        self._click_tabbar(field_index=index, tabbar_index=0)
         return self
 
     def click_preview(self, index=None):
-        el = self.find_element_by_css_selector('div.tabbar', index)
-        el.find_element_by_class_name('preview-button').click()
-        self._tester.assertIn('showing-preview', el.get_attribute('class'))
+        self._click_tabbar(field_index=index, tabbar_index=2)
         return self
 
     def click_rte_add_custom_tag(self, button_text, index=0):
@@ -1002,6 +1007,16 @@ class AddLesson(CourseContentElement):
     def set_questions_give_feedback(self):
         select.Select(self.find_element_by_name(
             'scored')).select_by_visible_text('Questions only give feedback')
+        return self
+
+    def click_content_tab(self):
+        self.find_element_by_css_selector(
+            'legend + .tabbar > button:first-child').click()
+        return self
+
+    def click_settings_tab(self):
+        self.find_element_by_css_selector(
+            'legend + .tabbar > button:last-child').click()
         return self
 
 

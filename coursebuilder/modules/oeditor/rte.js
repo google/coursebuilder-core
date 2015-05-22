@@ -373,20 +373,11 @@ function bindEditorField(Y) {
 
     Y.one(this.fieldContainer).addClass('cb-editor-field');
     this.fieldContainer.innerHTML =
-        '<div class="tabbar">' +
-        '  <button class="html-button">HTML</button>' +
-        '  <button class="rte-button">Rich Text</button>' +
-        '  <button class="preview-button">Preview</button>' +
-        '</div>' +
         '<div class="editors-div">' +
         '  <div class="html-div"></div>' +
         '  <div class="rte-div"></div>' +
         '  <div class="preview-div"></div>' +
         '</div>';
-    this.tabbar = this.fieldContainer.querySelector('.tabbar');
-    this.htmlButton = this.fieldContainer.querySelector('.html-button');
-    this.rteButton = this.fieldContainer.querySelector('.rte-button');
-    this.previewButton = this.fieldContainer.querySelector('.preview-button');
     this.editorsDiv = this.fieldContainer.querySelector('.editors-div');
     this.htmlDiv = this.fieldContainer.querySelector('.html-div');
     this.rteDiv = this.fieldContainer.querySelector('.rte-div');
@@ -402,24 +393,23 @@ function bindEditorField(Y) {
     this.previewEditor = new PreviewEditor(this.previewDiv);
 
     // Default mode is HTML editing
-    this.tabbar.className = 'tabbar showing-html';
     this.activeEditor = this.htmlEditor;
     this.richTextEditor.hide();
     this.previewEditor.hide();
 
     // Bind the buttons
-    this.htmlButton.onclick = function() {
-      that._selectHtmlMode();
-      return false;
-    };
-    this.rteButton.onclick = function() {
-      that._selectRichTextMode();
-      return false;
-    };
-    this.previewButton.onclick = function() {
-      that._selectPreviewMode();
-      return false;
-    };
+    var tabbar = new TabBar();
+    tabbar.addTab('HTML', function() {
+      that._select(that.htmlEditor);
+    });
+    tabbar.addTab('Rich Text', function() {
+      that._select(that.richTextEditor);
+    });
+    tabbar.addTab('Preview', function() {
+      that._select(that.previewEditor);
+    });
+    tabbar.selectTab(0);
+    this.fieldContainer.insertBefore(tabbar.getRoot(), this.editorsDiv);
 
     // Bind the resizer
     new Y.YUI2.util.Resize(this.editorsDiv, {
@@ -441,7 +431,7 @@ function bindEditorField(Y) {
   EditorField.prototype.getValue = function() {
     return this.activeEditor.getValue();
   };
-  EditorField.prototype._select = function (editor, className) {
+  EditorField.prototype._select = function (editor) {
     var value = this.activeEditor.getValue();
     var rect = this.editorsDiv.getBoundingClientRect();
     this.activeEditor.hide();
@@ -451,16 +441,6 @@ function bindEditorField(Y) {
     this.activeEditor = editor;
     this.activeEditor.setSize(rect.width, rect.height);
     editor.show();
-    this.tabbar.className = 'tabbar ' + className;
-  };
-  EditorField.prototype._selectHtmlMode = function() {
-    this._select(this.htmlEditor, 'showing-html');
-  };
-  EditorField.prototype._selectRichTextMode = function() {
-    this._select(this.richTextEditor, 'showing-rte');
-  };
-  EditorField.prototype._selectPreviewMode = function() {
-    this._select(this.previewEditor, 'showing-preview');
   };
   EditorField.prototype._resize = function(width, height) {
     if (this.fixedWidthLayout) {

@@ -308,7 +308,8 @@ class UnitLessonEditor(ApplicationHandler):
             LessonRESTHandler, 'Lessons and Activities',
             schema=schema,
             annotations_dict=annotations_dict,
-            delete_xsrf_token='delete-lesson')
+            delete_xsrf_token='delete-lesson',
+            extra_js_files=['lesson_editor.js'])
 
 
 class CommonUnitRESTHandler(BaseRESTHandler):

@@ -187,28 +187,31 @@ img.framed {
 }
 
 /*
- * CSS for the GCB Rich Text Editor.
+ * CSS for the Tab Bar used by rich text editor field and elsewhere.
  */
+div.tabbar {
+  margin: 5px 0;
 
-div.cb-editor-field > div.tabbar {
-  margin: 0 0 5px 1px;
 }
-div.cb-editor-field > div.tabbar > button {
+div.tabbar > button {
   display: inline-block;
   padding: 4px 0;
   width: 7em;
   text-align: center;
   background-color: #dcdcdc;
   border: solid #666 1px;
-  margin-left: -1px;
+  margin-right: 3px;
   cursor: pointer;
 }
-div.cb-editor-field > div.tabbar.showing-html > button.html-button,
-div.cb-editor-field >  div.tabbar.showing-rte > button.rte-button,
-div.cb-editor-field >  div.tabbar.showing-preview > button.preview-button {
+div.tabbar > button.selected {
   font-weight: bold;
   background-color: #ccc;
 }
+
+/*
+ * CSS for the GCB Rich Text Editor.
+ */
+
 div.cb-editor-field div.editors-div {
   z-index: inherit;
 }

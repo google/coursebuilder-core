@@ -4,6 +4,60 @@ var ajaxRpcTimeoutMillis = 45 * 1000;
 var xssiPrefix = ")]}'";
 
 /**
+ * Utility class to build a very simple tabbar and to fire callback functions
+ * on each button press.
+ *
+ * @class
+ */
+function TabBar(className) {
+  this.root = $('<div></div>');
+  className = className || 'tabbar';
+  this.root.addClass(className);
+}
+/**
+ * Add a new button to the tab bar.
+ *
+ * @method
+ * @param label {string} The label to be displayed on the tab button
+ * @param onclick {function} A zero-args callback which is called when the
+ *     button is clicked.
+ */
+TabBar.prototype.addTab = function(label, onclick) {
+  var that = this;
+  var button = $('<button></button>');
+  button.click(function() {
+    that._select($(this));
+    onclick();
+    return false;
+  });
+  button.text(label);
+  this.root.append(button);
+};
+/**
+ * Return the root element of the tab bar.
+ *
+ * @method
+ * @return {Element} The root element.
+ */
+TabBar.prototype.getRoot = function() {
+  return this.root.get(0);
+};
+/**
+ * Select the button with given index. Note the callback function will not fire.
+ *
+ * @method
+ * @param index {number} Zero-based index of the button.
+ */
+TabBar.prototype.selectTab = function(index) {
+  this._select(this.root.find('> button').eq(index));
+};
+TabBar.prototype._select = function(button) {
+  this.root.find('> button').removeClass('selected');
+  button.addClass('selected');
+}
+
+
+/**
  * Compare two JS objects for equality by value.
  */
 function deepEquals(x, y) {
