@@ -22,6 +22,7 @@ All_LOCALES_DESCRIPTION = 'Can pick all locales, including unavailable ones.'
 SEE_DRAFTS_PERMISSION = 'can_see_draft_content'
 SEE_DRAFTS_DESCRIPTION = 'Can see lessons and assessments with draft status.'
 
+import collections
 import roles
 
 class Module(object):
@@ -82,7 +83,7 @@ class Module(object):
 class Registry(object):
     """A registry that holds all custom modules."""
 
-    registered_modules = {}
+    registered_modules = collections.OrderedDict()
     enabled_module_names = set()
 
     @classmethod
