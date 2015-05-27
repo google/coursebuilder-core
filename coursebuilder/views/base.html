@@ -226,20 +226,22 @@
         {% endif %}
 
         {% if logoutUrl %}
-        <div class="gcb-pull-right" style="font-size: larger;">
-          {{ email }}
-          {% if transient_student and can_register %}
-            {# I18N: Text shown in parentheses next to the student's email address at the top-right of all course pages, if the student is logged in but not registered for the course he/she is currently browsing. #}
-            ({{ gettext('Not registered') }})
-          {% endif %}
-          &nbsp;|&nbsp;
+        <div class="gcb-pull-right gcb-login-header" style="font-size: larger;">
+          <span class="gcb-login-header-email">
+            {{ email }}
+            {% if transient_student and can_register %}
+              {# I18N: Text shown in parentheses next to the student's email address at the top-right of all course pages, if the student is logged in but not registered for the course he/she is currently browsing. #}
+              ({{ gettext('Not registered') }})
+            {% endif %}
+            &nbsp;|&nbsp;
+          </span>
           <a href="{{ logoutUrl }}" style="text-decoration: underline;">
             {# I18N: Navbar text. #}
             {{ gettext('Logout') }}
           </a>
         </div>
         {% elif loginUrl %}
-        <div class="gcb-pull-right" style="font-size: larger;">
+        <div class="gcb-pull-right gcb-login-header" style="font-size: larger;">
           {# I18N: Navbar text. #}
           <a href="{{ loginUrl }}">{{ gettext('Login') }}</a>
         </div>
