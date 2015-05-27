@@ -73,8 +73,8 @@ class StudentLabelsRestHandler(utils.ApplicationHandler):
             self._send_response(None, [], 403, 'No logged-in user')
             return None
         student = (
-            models.StudentProfileDAO.get_enrolled_student_by_email_for(
-                user.email(), self.app_context))
+            models.StudentProfileDAO.get_enrolled_student_by_user_for(
+                user, self.app_context))
         if not student or not student.is_enrolled:
             self._send_response(None, [], 403, 'User is not enrolled')
             return None
