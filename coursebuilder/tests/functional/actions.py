@@ -156,10 +156,27 @@ class OverriddenConfig(object):
             config.Registry.test_overrides[self._name] = self._prev_value
 
 
+class _TestUser(object):
+    """Test user who uses email as his user_id."""
+
+    def __init__(self, email):
+        self._email = email
+
+    def user_id(self):
+        return self._email
+
+    def email(self):
+        return self._email
+
+
 class TestBase(suite.AppEngineTestBase):
     """Contains methods common to all functional tests."""
 
     last_request_url = None
+
+    @classmethod
+    def make_test_user(cls, email):
+        return _TestUser(email)
 
     def getApp(self):
         main.debug = True

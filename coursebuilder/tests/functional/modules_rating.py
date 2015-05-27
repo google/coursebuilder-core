@@ -181,7 +181,8 @@ class RatingHandlerTests(BaseRatingsTests):
 
     def test_get_returns_existing_rating(self):
         self.register_student()
-        student = models.Student.get_enrolled_student_by_email(STUDENT_EMAIL)
+        student = models.Student.get_enrolled_student_by_user(
+            self.make_test_user(STUDENT_EMAIL))
         prop = rating.StudentRatingProperty.load_or_create(student)
         prop.set_rating(self.key, 3)
         prop.put()
@@ -220,7 +221,8 @@ class RatingHandlerTests(BaseRatingsTests):
         self.assertEquals(200, response['status'])
         self.assertIn('Thank you for your feedback', response['message'])
 
-        student = models.Student.get_enrolled_student_by_email(STUDENT_EMAIL)
+        student = models.Student.get_enrolled_student_by_user(
+            self.make_test_user(STUDENT_EMAIL))
         prop = rating.StudentRatingProperty.load_or_create(student)
         self.assertEquals(2, prop.get_rating(self.key))
 
@@ -270,7 +272,8 @@ class RatingHandlerTests(BaseRatingsTests):
 
         # Register a student and give some feedback
         self.register_student()
-        student = models.Student.get_enrolled_student_by_email(STUDENT_EMAIL)
+        student = models.Student.get_enrolled_student_by_user(
+            self.make_test_user(STUDENT_EMAIL))
         response = self.post_data(
             rating_int=2, additional_comments='Good lesson')
         self.assertEquals(200, response['status'])

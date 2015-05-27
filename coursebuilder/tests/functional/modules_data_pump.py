@@ -408,7 +408,8 @@ class PiiTests(actions.TestBase):
             send_uncensored_pii_data=False)
 
         with common_utils.Namespace('ns_' + COURSE_NAME):
-            student = models.Student.get_by_email(USER_EMAIL)
+            student = models.Student.get_by_user(
+                self.make_test_user(USER_EMAIL))
             self.assertIsNotNone(student.user_id)
             self.assertIsNotNone(student_record['user_id'])
             self.assertNotEqual(student.user_id, student_record['user_id'])
@@ -419,7 +420,8 @@ class PiiTests(actions.TestBase):
         student_record = self._test_student_pii_data(
             send_uncensored_pii_data=True)
         with common_utils.Namespace('ns_' + COURSE_NAME):
-            student = models.Student.get_by_email(USER_EMAIL)
+            student = models.Student.get_by_user(
+                self.make_test_user(USER_EMAIL))
             self.assertIsNotNone(student.user_id)
             self.assertIsNotNone(student_record['user_id'])
             self.assertEqual(student.user_id, student_record['user_id'])

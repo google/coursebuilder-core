@@ -195,7 +195,7 @@ class InvitationHandler(utils.BaseHandler):
             self.redirect('/course')
             return
 
-        student = models.Student.get_enrolled_student_by_email(user.email())
+        student = models.Student.get_enrolled_student_by_user(user)
         if student is None:
             self.redirect('/course')
             return
@@ -255,7 +255,7 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 
-        student = models.Student.get_enrolled_student_by_email(user.email())
+        student = models.Student.get_enrolled_student_by_user(user)
         if not student:
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
@@ -306,7 +306,7 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
             elif unsubscribe.has_unsubscribed(email):
                 # No message to the user, for privacy reasons
                 logging.info('Declined to send email to unsubscribed user')
-            elif models.Student.get_enrolled_student_by_email(email):
+            elif models.Student.is_email_in_use(email):
                 # No message to the user, for privacy reasons
                 logging.info('Declined to send email to registered user')
             else:

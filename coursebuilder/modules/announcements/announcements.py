@@ -135,7 +135,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         if user is None:
             transient_student = True
         else:
-            student = Student.get_enrolled_student_by_email(user.email())
+            student = Student.get_enrolled_student_by_user(user)
             if not student:
                 transient_student = True
         self.template_value['transient_student'] = transient_student

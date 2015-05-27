@@ -226,8 +226,9 @@ class StudentLabelsTest(actions.TestBase):
         # Add some broken references to student's labels list.
         actions.login(REGISTERED_STUDENT_EMAIL)
         student = (
-            models.StudentProfileDAO.get_enrolled_student_by_email_for(
-                REGISTERED_STUDENT_EMAIL, FakeContext(NAMESPACE)))
+            models.StudentProfileDAO.get_enrolled_student_by_user_for(
+                self.make_test_user(REGISTERED_STUDENT_EMAIL),
+                FakeContext(NAMESPACE)))
         student.labels = '123123123 456456456 %d' % self.foo_id
         student.put()
 
@@ -334,8 +335,9 @@ class StudentLabelsTest(actions.TestBase):
 
     # --------------------------------- Registration
     def test_register_with_labels(self):
+        user = self.make_test_user(LABELS_STUDENT_EMAIL)
         student_name = 'John Smith from Back East'
-        actions.login(LABELS_STUDENT_EMAIL)
+        actions.login(user.email())
         response = actions.view_registration(self, COURSE_NAME)
         register_form = actions.get_form_by_action(response, 'register')
         self.post('/%s/%s' % (COURSE_NAME, register_form.action), {
@@ -345,6 +347,5 @@ class StudentLabelsTest(actions.TestBase):
         self._verify_labels(self.get(STUDENT_LABELS_URL), [self.bar_id,
                                                            self.baz_id])
         with common_utils.Namespace(NAMESPACE):
-            student = models.Student.get_enrolled_student_by_email(
-                LABELS_STUDENT_EMAIL)
+            student = models.Student.get_enrolled_student_by_user(user)
             self.assertEquals(student.name, student_name)

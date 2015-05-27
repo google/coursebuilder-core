@@ -118,7 +118,8 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
 
     def get_aggregated_data_by_email(self, email):
         with common_utils.Namespace('ns_' + self.COURSE_NAME):
-            student = models.Student.get_by_email('foo@bar.com')
+            student = models.Student.get_by_user(
+                self.make_test_user(('foo@bar.com')))
             aggregate_entity = (
                 student_aggregate.StudentAggregateEntity.get_by_key_name(
                     student.user_id))

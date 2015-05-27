@@ -80,7 +80,8 @@ class ProgressPercent(actions.TestBase):
 
         self.tracker = self.course.get_progress_tracker()
         with Namespace(NAMESPACE):
-            self.student = models.Student.get_by_email(STUDENT_EMAIL)
+            self.student = models.Student.get_by_user(
+                self.make_test_user(STUDENT_EMAIL))
 
     def _get_unit_page(self, unit):
         return self.get(BASE_URL + '/unit?unit=' + str(unit.unit_id))
@@ -176,7 +177,8 @@ class ProgressPercent(actions.TestBase):
 
         # Reload student; assessment scores are cached in student.
         with Namespace(NAMESPACE):
-            self.student = models.Student.get_by_email(STUDENT_EMAIL)
+            self.student = models.Student.get_by_user(
+                self.make_test_user(STUDENT_EMAIL))
 
         # Zero progress because posting the assessment did not score 100%.
         with Namespace(NAMESPACE):
@@ -205,7 +207,8 @@ class ProgressPercent(actions.TestBase):
 
         # Reload student; assessment scores are cached in student.
         with Namespace(NAMESPACE):
-            self.student = models.Student.get_by_email(STUDENT_EMAIL)
+            self.student = models.Student.get_by_user(
+                self.make_test_user(STUDENT_EMAIL))
 
         # 100% progress because pre-assessment was 100% correct.
         with Namespace(NAMESPACE):

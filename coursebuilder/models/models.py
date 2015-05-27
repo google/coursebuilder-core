@@ -910,6 +910,10 @@ class StudentProfileDAO(object):
         return None
 
     @classmethod
+    def get_profile_by_user(cls, user):
+        return cls.get_profile_by_user_id(user.user_id())
+
+    @classmethod
     def add_new_profile(cls, user_id, email):
         return cls._add_new_profile(user_id, email)
 
@@ -952,7 +956,8 @@ class StudentProfileDAO(object):
             profile = cls._add_new_profile(user_id, email)
 
         # create new student or re-enroll existing
-        student = Student.get_by_email(email)
+        student = Student._get_by_email(  # pylint: disable=protected-access
+            email)
         if not student:
             # TODO(psimakov): we must move to user_id as a key
             student = Student(key_name=email)
@@ -1038,12 +1043,12 @@ class StudentProfileDAO(object):
         ).get('welcome_notifications_sender')
 
     @classmethod
-    def get_enrolled_student_by_email_for(cls, email, app_context):
+    def get_enrolled_student_by_user_for(cls, user, app_context):
         """Returns student for a specific course."""
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(app_context.get_namespace_name())
-            return Student.get_enrolled_student_by_email(email)
+            return Student.get_enrolled_student_by_user(user)
         finally:
             namespace_manager.set_namespace(old_namespace)
 
@@ -1065,7 +1070,8 @@ class StudentProfileDAO(object):
         """Updates a student and/or their global profile."""
         student = None
         if not profile_only:
-            student = Student.get_by_email(email)
+            student = Student._get_by_email(  # pylint: disable=protected-access
+                email)
             if not student:
                 raise Exception('Unable to find student for: %s' % email)
 
@@ -1163,17 +1169,24 @@ class Student(BaseEntity):
             nick_name, additional_fields, handler, labels)
 
     @classmethod
-    def get_by_email(cls, email):
+    def _get_by_email(cls, email):
+        # TODO(psimakov): this is deprecated
         return Student.get_by_key_name(email.encode('utf8'))
 
     @classmethod
-    def get_enrolled_student_by_email(cls, email):
+    def get_by_user(cls, user):
+        # TODO(psimakov): change to use user_id
+        return cls._get_by_email(user.email())
+
+    @classmethod
+    def _get_enrolled_student_by_email(cls, email):
         """Returns enrolled student or None."""
+        # TODO(psimakov): this is deprecated
         student = MemcacheManager.get(cls._memcache_key(email))
         if NO_OBJECT == student:
             return None
         if not student:
-            student = Student.get_by_email(email)
+            student = Student._get_by_email(email)
             if student:
                 MemcacheManager.set(cls._memcache_key(email), student)
             else:
@@ -1184,12 +1197,23 @@ class Student(BaseEntity):
             return None
 
     @classmethod
+    def get_enrolled_student_by_user(cls, user):
+        """Returns enrolled student or None."""
+        # TODO(psimakov): this need to use user_id, not email
+        return cls._get_enrolled_student_by_email(user.email())
+
+    @classmethod
+    def is_email_in_use(cls, email):
+        """Checks if an email is in use by existing enrolled student."""
+        return cls._get_enrolled_student_by_email(email)
+
+    @classmethod
     def _get_user_and_student(cls):
         """Loads user and student and asserts both are present."""
         user = users.get_current_user()
         if not user:
             raise Exception('No current user.')
-        student = Student.get_by_email(user.email())
+        student = Student._get_by_email(user.email())
         if not student:
             raise Exception('Student instance corresponding to user %s not '
                             'found.' % user.email())

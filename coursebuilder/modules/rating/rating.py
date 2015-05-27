@@ -109,7 +109,7 @@ class RatingHandler(utils.BaseRESTHandler):
             transforms.send_json_response(self, 401, access_denied_msg, {})
             return (None, None)
 
-        student = models.Student.get_enrolled_student_by_email(user.email())
+        student = models.Student.get_enrolled_student_by_user(user)
         if student is None:
             transforms.send_json_response(self, 401, access_denied_msg, {})
             return (None, None)
@@ -266,7 +266,7 @@ def extra_content(app_context):
 
     user = users.get_current_user()
     if user is None or (
-        models.Student.get_enrolled_student_by_email(user.email()) is None
+        models.Student.get_enrolled_student_by_user(user) is None
     ):
         return None
 

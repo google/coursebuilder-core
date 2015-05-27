@@ -77,7 +77,8 @@ class AnswerHandler(BaseHandler):
         Returns:
             the student instance.
         """
-        student = Student.get_enrolled_student_by_email(email)
+        # pylint: disable=protected-access
+        student = Student._get_enrolled_student_by_email(email)
         course = self.get_course()
 
         # It may be that old Student entities don't have user_id set; fix it.
@@ -159,7 +160,7 @@ class AnswerHandler(BaseHandler):
 
         # Record assessment transaction.
         student = self.update_assessment_transaction(
-            student.key().name(), assessment_type, answers, score)
+            student.email, assessment_type, answers, score)
 
         if grader == courses.HUMAN_GRADER:
             rp = course.get_reviews_processor()

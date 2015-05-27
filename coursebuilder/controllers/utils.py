@@ -617,7 +617,7 @@ class CourseHandler(ApplicationHandler):
         user = self.get_user()
         if user is None:
             return None
-        return Student.get_by_email(user.email())
+        return Student.get_by_user(user)
 
     def _pick_first_valid_locale_from_list(self, desired_locales):
         available_locales = self.app_context.get_allowed_locales()
@@ -883,7 +883,7 @@ class BaseHandler(CourseHandler):
         if user is None:
             student = TRANSIENT_STUDENT
         else:
-            student = Student.get_enrolled_student_by_email(user.email())
+            student = Student.get_enrolled_student_by_user(user)
             if not student:
                 self.template_value['transient_student'] = True
                 student = TRANSIENT_STUDENT
@@ -938,8 +938,7 @@ class BaseHandler(CourseHandler):
         # TODO(psimakov): method called render() must not have mutations
         user = self.get_user()
         if user:
-            student = models.Student.get_enrolled_student_by_email(
-                user.email())
+            student = models.Student.get_enrolled_student_by_user(user)
             if student:
                 prefs.last_location = self.request.path_qs
                 models.StudentPreferencesDAO.save(prefs)
@@ -992,7 +991,7 @@ class PreviewHandler(BaseHandler):
         if user is None:
             student = TRANSIENT_STUDENT
         else:
-            student = Student.get_enrolled_student_by_email(user.email())
+            student = Student.get_enrolled_student_by_user(user)
             if not student:
                 student = TRANSIENT_STUDENT
 
@@ -1049,7 +1048,7 @@ class RegisterHandler(BaseHandler):
                 users.create_login_url(self.request.uri), normalize=False)
             return
 
-        student = Student.get_enrolled_student_by_email(user.email())
+        student = Student.get_enrolled_student_by_user(user)
         if student:
             self.redirect('/course')
             return

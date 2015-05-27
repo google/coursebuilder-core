@@ -98,7 +98,7 @@ def _get_current_student():
     if user is None:
         return None
     else:
-        return models.Student.get_enrolled_student_by_email(user.email())
+        return models.Student.get_enrolled_student_by_user(user)
 
 
 def _is_visible(tab_data, student):

@@ -54,6 +54,7 @@ class DataRemovalTests(actions.TestBase):
         self.assertEquals('OK.', response.body)
 
     def test_non_removal_policy(self):
+        user = self.make_test_user(self.STUDENT_EMAIL)
         with actions.OverriddenEnvironment({
             data_removal.DATA_REMOVAL_SETTINGS_SECTION: {
                 data_removal.REMOVAL_POLICY:
@@ -65,7 +66,7 @@ class DataRemovalTests(actions.TestBase):
             with common_utils.Namespace(self.NAMESPACE):
                 # After registration, we should have a student object, and no
                 # ImmediateRemovalState instance due to the don't-care policy.
-                student = models.Student.get_by_email(self.STUDENT_EMAIL)
+                student = models.Student.get_by_user(user)
                 self.assertIsNotNone(student)
                 self.assertIsNone(
                     removal_models.ImmediateRemovalState.get_by_user_id(
@@ -82,7 +83,7 @@ class DataRemovalTests(actions.TestBase):
             self.assertEquals(2, task_count)
             with common_utils.Namespace(self.NAMESPACE):
                 # After unregister, we should still have a student object.
-                student = models.Student.get_by_email(self.STUDENT_EMAIL)
+                student = models.Student.get_by_user(user)
                 self.assertIsNotNone(student)
                 self.assertIsNone(
                     removal_models.ImmediateRemovalState.get_by_user_id(
@@ -92,8 +93,9 @@ class DataRemovalTests(actions.TestBase):
                 self.assertEqual([None], r)
 
     def test_immediate_removal_policy(self):
+        user = self.make_test_user(self.STUDENT_EMAIL)
 
-        actions.login(self.STUDENT_EMAIL)
+        actions.login(user.email())
         actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
         task_count = self.execute_all_deferred_tasks(
             models.StudentLifecycleObserver.QUEUE_NAME)
@@ -103,7 +105,7 @@ class DataRemovalTests(actions.TestBase):
         with common_utils.Namespace(self.NAMESPACE):
             # After registration, we should have a student object, and
             # a ImmediateRemovalState instance.
-            student = models.Student.get_by_email(self.STUDENT_EMAIL)
+            student = models.Student.get_by_user(user)
             self.assertIsNotNone(student)
             user_id = student.user_id
             removal_state = removal_models.ImmediateRemovalState.get_by_user_id(
@@ -124,7 +126,7 @@ class DataRemovalTests(actions.TestBase):
         with common_utils.Namespace(self.NAMESPACE):
             # Immediately upon unregistration, we should still have the student
             # record, and removal state should be pending deletion.
-            student = models.Student.get_by_email(self.STUDENT_EMAIL)
+            student = models.Student.get_by_user(user)
             self.assertIsNotNone(student)
             removal_state = removal_models.ImmediateRemovalState.get_by_user_id(
                 user_id)
@@ -147,7 +149,7 @@ class DataRemovalTests(actions.TestBase):
             # Having processed the queue item, the student record should now
             # be gone.
             students = list(models.Student.all().run())
-            student = models.Student.get_by_email(self.STUDENT_EMAIL)
+            student = models.Student.get_by_user(user)
             self.assertIsNone(student)
             # But the record tracking removal should not yet be gone.
             removal_state = removal_models.ImmediateRemovalState.get_by_user_id(
@@ -182,7 +184,7 @@ class DataRemovalTests(actions.TestBase):
         # We should now be completely clean; the M/R job that finishes last
         # should also clean up the to-do tracking item.
         with common_utils.Namespace(self.NAMESPACE):
-            student = models.Student.get_by_email(self.STUDENT_EMAIL)
+            student = models.Student.get_by_user(user)
             self.assertIsNone(student)
             removal_state = removal_models.ImmediateRemovalState.get_by_user_id(
                 user_id)
@@ -193,22 +195,22 @@ class DataRemovalTests(actions.TestBase):
 
 
     def test_multiple_students(self):
-        # Register two students
-        actions.login(self.STUDENT_EMAIL)
-        actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
-        student1_id = None
+        user = self.make_test_user(self.STUDENT_EMAIL)
+        other_user = self.make_test_user('student002@foo.com')
 
-        OTHER_STUDENT = 'student002@foo.com'
-        actions.login(OTHER_STUDENT)
-        actions.register(self, OTHER_STUDENT, course=self.COURSE)
-        student2_id = None
+        # Register two students
+        actions.login(user.email())
+        actions.register(self, user.email(), course=self.COURSE)
+
+        actions.login(other_user.email())
+        actions.register(self, other_user.email(), course=self.COURSE)
 
         # Get IDs of those students; make an event for each.
         with common_utils.Namespace(self.NAMESPACE):
             student1_id = (
-                models.Student.get_by_email(self.STUDENT_EMAIL).user_id)
+                models.Student.get_by_user(user).user_id)
             student2_id = (
-                models.Student.get_by_email(OTHER_STUDENT).user_id)
+                models.Student.get_by_user(other_user).user_id)
             models.EventEntity(user_id=student1_id, source='test').put()
             models.EventEntity(user_id=student2_id, source='test').put()
 
@@ -227,22 +229,24 @@ class DataRemovalTests(actions.TestBase):
         # Unregistered student and his data are gone; still-registered
         # student's data is still present.
         with common_utils.Namespace(self.NAMESPACE):
-            self.assertIsNone(models.Student.get_by_email(self.STUDENT_EMAIL))
-            self.assertIsNotNone(models.Student.get_by_email(OTHER_STUDENT))
+            self.assertIsNone(models.Student.get_by_user(user))
+            self.assertIsNotNone(models.Student.get_by_user(other_user))
             entities = list(models.EventEntity.all().run())
             self.assertEquals(1, len(entities))
             self.assertEquals(student2_id, entities[0].user_id)
 
     def test_multiple_courses(self):
+        user = self.make_test_user(self.STUDENT_EMAIL)
+
         COURSE_TWO = 'course_two'
         COURSE_TWO_NS = 'ns_' + COURSE_TWO
 
         actions.simple_add_course(
             COURSE_TWO, self.ADMIN_EMAIL, 'Data Removal Test Two')
 
-        actions.login(self.STUDENT_EMAIL)
-        actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
-        actions.register(self, self.STUDENT_EMAIL, course=COURSE_TWO)
+        actions.login(user.email())
+        actions.register(self, user.email(), course=self.COURSE)
+        actions.register(self, user.email(), course=COURSE_TWO)
         actions.unregister(self, self.COURSE, do_data_removal=True)
 
         self.execute_all_deferred_tasks(
@@ -253,10 +257,10 @@ class DataRemovalTests(actions.TestBase):
         self.execute_all_deferred_tasks()
 
         with common_utils.Namespace(self.NAMESPACE):
-            self.assertIsNone(models.Student.get_by_email(self.STUDENT_EMAIL))
+            self.assertIsNone(models.Student.get_by_user(user))
         with common_utils.Namespace(COURSE_TWO_NS):
             self.assertIsNotNone(
-                models.Student.get_by_email(self.STUDENT_EMAIL))
+                models.Student.get_by_user(user))
 
     def test_student_property_removed(self):
         """Test a sampling of types whose index contains user ID.
@@ -264,14 +268,16 @@ class DataRemovalTests(actions.TestBase):
         Here, indices start with the user ID, but are suffixed with the name
         of a specific property sub-type.  Verify that these are removed.
         """
+        user = self.make_test_user(self.STUDENT_EMAIL)
+
 
         user_id = None
-        actions.login(self.STUDENT_EMAIL)
+        actions.login(user.email())
         actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
 
         # Get IDs of those students; make an event for each.
         with common_utils.Namespace(self.NAMESPACE):
-            student = models.Student.get_by_email(self.STUDENT_EMAIL)
+            student = models.Student.get_by_user(user)
             user_id = student.user_id
             p = models.StudentPropertyEntity.create(student, 'foo')
             p.value = 'foo'
@@ -314,17 +320,15 @@ class DataRemovalTests(actions.TestBase):
             self.assertEquals(0, len(l))
 
     def test_remove_by_email(self):
-        user_id = None
-        actions.login(self.STUDENT_EMAIL)
-        actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
+        user = self.make_test_user(self.STUDENT_EMAIL)
+
+        actions.login(user.email())
+        actions.register(self, user.email(), course=self.COURSE)
 
         # Get IDs of those students; make an event for each.
         with common_utils.Namespace(self.NAMESPACE):
-            student = models.Student.get_by_email(self.STUDENT_EMAIL)
-            user_id = student.user_id
-
             sse = unsubscribe.SubscriptionStateEntity(
-                key_name=self.STUDENT_EMAIL)
+                key_name=user.email())
             sse.save()
 
         actions.unregister(self, self.COURSE, do_data_removal=True)
@@ -383,13 +387,15 @@ class UserInteractionTests(actions.TestBase):
                           response.body)
             self.assertNotIn('What is your name?', response.body)
 
+        user = self.make_test_user(self.STUDENT_EMAIL)
+
         user_id = None
-        actions.login(self.STUDENT_EMAIL)
-        actions.register(self, self.STUDENT_EMAIL)
+        actions.login(user.email())
+        actions.register(self, user.email())
         with common_utils.Namespace(self.NAMESPACE):
             # After registration, we should have a student object, and
             # a ImmediateRemovalState instance.
-            student = models.Student.get_by_email(self.STUDENT_EMAIL)
+            student = models.Student.get_by_user(user)
             self.assertIsNotNone(student)
             user_id = student.user_id
 
@@ -408,7 +414,7 @@ class UserInteractionTests(actions.TestBase):
         # Can re-register after all items are cleaned.
         self.execute_all_deferred_tasks()
         with common_utils.Namespace(self.NAMESPACE):
-            student = models.Student.get_by_email(self.STUDENT_EMAIL)
+            student = models.Student.get_by_user(user)
             self.assertIsNone(student)
             removal_state = removal_models.ImmediateRemovalState.get_by_user_id(
                 user_id)

@@ -111,7 +111,8 @@ def _parse_request(course, unit_id, reviewee_id, reviewer_id=None):
     if not reviewee_id:
         return request_params, '412: No student email supplied.'
 
-    reviewee = models.Student.get_enrolled_student_by_email(reviewee_id)
+    # pylint: disable=protected-access
+    reviewee = models.Student._get_enrolled_student_by_email(reviewee_id)
     if not reviewee:
         return (request_params,
                 '412: No student with this email address exists.')
@@ -121,7 +122,8 @@ def _parse_request(course, unit_id, reviewee_id, reviewer_id=None):
     if reviewer_id is not None:
         if not reviewer_id:
             return request_params, '412: No reviewer email supplied.'
-        reviewer = models.Student.get_enrolled_student_by_email(reviewer_id)
+        # pylint: disable=protected-access
+        reviewer = models.Student._get_enrolled_student_by_email(reviewer_id)
         if not reviewer:
             return (request_params,
                     '412: No reviewer with this email address exists.')

@@ -89,8 +89,8 @@ class BaseQuestionnaireTests(actions.TestBase):
     def register(self):
         actions.login(STUDENT_EMAIL, is_admin=False)
         actions.register(self, STUDENT_NAME)
-        return models.Student.get_enrolled_student_by_email(STUDENT_EMAIL)
-
+        return models.Student.get_enrolled_student_by_user(
+            self.make_test_user(STUDENT_EMAIL))
 
 
 class QuestionnaireTagTests(BaseQuestionnaireTests):

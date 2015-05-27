@@ -106,9 +106,11 @@ class CertificateHandlerTestCase(actions.TestBase):
         self.assertIn('/Title (Course Builder Certificate)', response.body)
 
     def test_certificate_table_entry(self):
-        actions.login('test@example.com')
+        user = self.make_test_user('test@example.com')
+
+        actions.login(user.email())
         models.Student.add_new_student_for_current_user('Test User', None, self)
-        student = models.Student.get_by_email('test@example.com')
+        student = models.Student.get_by_user(user)
 
         all_courses = sites.get_all_courses()
         app_context = all_courses[0]
@@ -139,6 +141,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
 
     COURSE_NAME = 'certificate_criteria'
     STUDENT_EMAIL = 'foo@foo.com'
+    TEST_USER = actions.TestBase.make_test_user('foo@foo.com')
     ADMIN_EMAIL = 'admin@foo.com'
     ANALYTICS_URL = ('/' + COURSE_NAME +
                      '/dashboard?action=analytics&tab=certificates_earned')
@@ -155,11 +158,11 @@ class CertificateCriteriaTestCase(actions.TestBase):
 
         self.course = courses.Course(None, context)
         self.course.save()
-        actions.login(self.STUDENT_EMAIL)
-        actions.register(self, self.STUDENT_EMAIL)
+        actions.login(self.TEST_USER.email())
+        actions.register(self, self.TEST_USER.email())
         self.student = (
-            models.StudentProfileDAO.get_enrolled_student_by_email_for(
-                self.STUDENT_EMAIL, context))
+            models.StudentProfileDAO.get_enrolled_student_by_user_for(
+                self.TEST_USER, context))
 
         # Override course.yaml settings by patching app_context.
         self.get_environ_old = sites.ApplicationContext.get_environ

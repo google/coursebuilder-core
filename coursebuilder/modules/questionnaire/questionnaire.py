@@ -83,7 +83,7 @@ class QuestionnaireTag(tags.ContextAwareTag):
 
         user = context.handler.get_user()
         registered = False
-        if user and models.Student.get_enrolled_student_by_email(user.email()):
+        if user and models.Student.get_enrolled_student_by_user(user):
             registered = True
 
         template_vals = {
@@ -173,7 +173,7 @@ class QuestionnaireHandler(BaseRESTHandler):
         if user is None:
             return
 
-        student = models.Student.get_enrolled_student_by_email(user.email())
+        student = models.Student.get_enrolled_student_by_user(user)
         if student is None:
             return
 
@@ -210,7 +210,7 @@ class QuestionnaireHandler(BaseRESTHandler):
             transforms.send_json_response(self, 401, access_denied, {})
             return
 
-        student = models.Student.get_enrolled_student_by_email(user.email())
+        student = models.Student.get_enrolled_student_by_user(user)
         if student is None:
             transforms.send_json_response(self, 401, access_denied, {})
             return

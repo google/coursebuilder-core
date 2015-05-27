@@ -270,9 +270,8 @@ class CourseHandler(BaseHandler):
             if user is None:
                 student = TRANSIENT_STUDENT
             else:
-                student = Student.get_enrolled_student_by_email(user.email())
-                profile = StudentProfileDAO.get_profile_by_user_id(
-                    user.user_id())
+                student = Student.get_enrolled_student_by_user(user)
+                profile = StudentProfileDAO.get_profile_by_user(user)
                 self.template_value['has_global_profile'] = profile is not None
                 if not student:
                     student = TRANSIENT_STUDENT
@@ -1294,7 +1293,7 @@ class EventsRESTHandler(BaseRESTHandler):
     def process_event(self, user, source, payload_json):
         """Processes an event after it has been recorded in the event stream."""
 
-        student = models.Student.get_enrolled_student_by_email(user.email())
+        student = models.Student.get_enrolled_student_by_user(user)
         if not student:
             return
 

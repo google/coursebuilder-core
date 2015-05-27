@@ -851,7 +851,7 @@ class InfrastructureTest(actions.TestBase):
         app_context = sites.get_all_courses()[0]
         course = courses.Course(None, app_context=app_context)
 
-        email = 'test_assessments@google.com'
+        user = self.make_test_user('test_assessments@google.com')
         name = 'Test Assessments'
 
         assessment_1 = course.add_assessment()
@@ -895,14 +895,14 @@ class InfrastructureTest(actions.TestBase):
             assert not errors
 
             # Register.
-            actions.login(email)
+            actions.login(user.email())
             actions.register(self, name)
 
             # Submit assessment 1.
             actions.submit_assessment(self, assessment_1.unit_id, first)
             student = (
-                models.StudentProfileDAO.get_enrolled_student_by_email_for(
-                    email, app_context))
+                models.StudentProfileDAO.get_enrolled_student_by_user_for(
+                    user, app_context))
             student_scores = course.get_all_scores(student)
 
             assert len(student_scores) == 2
@@ -936,8 +936,8 @@ class InfrastructureTest(actions.TestBase):
             # We need to reload the student instance, because its properties
             # have changed.
             student = (
-                models.StudentProfileDAO.get_enrolled_student_by_email_for(
-                    email, app_context))
+                models.StudentProfileDAO.get_enrolled_student_by_user_for(
+                    user, app_context))
             student_scores = course.get_all_scores(student)
 
             assert len(student_scores) == 2
@@ -967,8 +967,8 @@ class InfrastructureTest(actions.TestBase):
                 'score': '0', 'assessment_type': assessment_1.unit_id}
             actions.submit_assessment(self, assessment_1.unit_id, first_retry)
             student = (
-                models.StudentProfileDAO.get_enrolled_student_by_email_for(
-                    email, app_context))
+                models.StudentProfileDAO.get_enrolled_student_by_user_for(
+                    user, app_context))
             student_scores = course.get_all_scores(student)
 
             assert len(student_scores) == 2
@@ -1913,15 +1913,17 @@ class StudentAspectTest(actions.TestBase):
             }
         }
         with actions.OverriddenEnvironment(environ):
+            user = self.make_test_user(email)
+
             # Login and register.
-            actions.login(email)
+            actions.login(user.email())
             actions.register_with_additional_fields(self, name, zipcode, score)
 
             # Verify that registration results in capturing additional
             # registration questions.
             old_namespace = namespace_manager.get_namespace()
             namespace_manager.set_namespace(self.namespace)
-            student = models.Student.get_enrolled_student_by_email(email)
+            student = models.Student.get_enrolled_student_by_user(user)
 
             # Check that two registration additional fields are populated
             # with correct values.
@@ -2593,7 +2595,7 @@ class AssessmentTest(actions.TestBase):
 
         course = courses.Course(None, app_context=sites.get_all_courses()[0])
 
-        email = 'test_assessments@google.com'
+        user = self.make_test_user('test_assessments@google.com')
         name = 'Test Assessments'
 
         pre_answers = [{'foo': 'bar'}, {'Alice': u'Bob (тест данные)'}]
@@ -2607,7 +2609,7 @@ class AssessmentTest(actions.TestBase):
         second_fin = {'assessment_type': 'Fin', 'score': '100000'}
 
         # Register.
-        actions.login(email)
+        actions.login(user.email())
         actions.register(self, name)
 
         # Navigate to the course overview page.
@@ -2619,7 +2621,7 @@ class AssessmentTest(actions.TestBase):
         old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace(self.namespace)
         try:
-            student = models.Student.get_enrolled_student_by_email(email)
+            student = models.Student.get_enrolled_student_by_user(user)
 
             # Check that four score objects (corresponding to the four sample
             # assessments) exist right now, and that they all have zero
@@ -2631,7 +2633,7 @@ class AssessmentTest(actions.TestBase):
 
             # Submit assessments and check that the score is updated.
             actions.submit_assessment(self, 'Pre', pre)
-            student = models.Student.get_enrolled_student_by_email(email)
+            student = models.Student.get_enrolled_student_by_user(user)
             student_scores = course.get_all_scores(student)
             assert len(student_scores) == 4
             for assessment in student_scores:
@@ -2641,7 +2643,7 @@ class AssessmentTest(actions.TestBase):
                     assert assessment['score'] == 0
 
             actions.submit_assessment(self, 'Mid', mid)
-            student = models.Student.get_enrolled_student_by_email(email)
+            student = models.Student.get_enrolled_student_by_user(user)
 
             # Navigate to the course overview page.
             response = self.get('course')
@@ -2652,7 +2654,7 @@ class AssessmentTest(actions.TestBase):
 
             # Submit the final assessment.
             actions.submit_assessment(self, 'Fin', fin)
-            student = models.Student.get_enrolled_student_by_email(email)
+            student = models.Student.get_enrolled_student_by_user(user)
 
             # Submit the sample peer review assessment.
             actions.submit_assessment(self, 'ReviewAssessmentExample', peer)
@@ -2682,7 +2684,7 @@ class AssessmentTest(actions.TestBase):
             assert [] == answers['Fin']
 
             # Check that scores are recorded properly.
-            student = models.Student.get_enrolled_student_by_email(email)
+            student = models.Student.get_enrolled_student_by_user(user)
             assert int(course.get_score(student, 'Pre')) == 1
             assert int(course.get_score(student, 'Mid')) == 2
             assert int(course.get_score(student, 'Fin')) == 3
@@ -2692,7 +2694,7 @@ class AssessmentTest(actions.TestBase):
             # Try posting a new midcourse exam with a lower score;
             # nothing should change.
             actions.submit_assessment(self, 'Mid', second_mid)
-            student = models.Student.get_enrolled_student_by_email(email)
+            student = models.Student.get_enrolled_student_by_user(user)
             assert int(course.get_score(student, 'Pre')) == 1
             assert int(course.get_score(student, 'Mid')) == 2
             assert int(course.get_score(student, 'Fin')) == 3
@@ -2702,7 +2704,7 @@ class AssessmentTest(actions.TestBase):
             # Now try posting a postcourse exam with a higher score and note
             # the changes.
             actions.submit_assessment(self, 'Fin', second_fin)
-            student = models.Student.get_enrolled_student_by_email(email)
+            student = models.Student.get_enrolled_student_by_user(user)
             assert int(course.get_score(student, 'Pre')) == 1
             assert int(course.get_score(student, 'Mid')) == 2
             assert int(course.get_score(student, 'Fin')) == 100000
