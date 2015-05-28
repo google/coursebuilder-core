@@ -18,8 +18,6 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import os
 
-import webapp2
-
 # The following import is needed in order to add third-party libraries.
 import appengine_config  # pylint: disable=unused-import
 
@@ -71,7 +69,7 @@ webapp2_i18n_config = {'translations_path': os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules/i18n/resources/locale')}
 
 # init application
-app = webapp2.WSGIApplication(
+app = users.AuthInterceptorWSGIApplication(
     global_routes + appstats_routes + app_routes,
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=not appengine_config.PRODUCTION_MODE)

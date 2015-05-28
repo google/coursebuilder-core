@@ -1202,17 +1202,15 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         if self.CAN_IMPERSONATE:
             self.impersonate_and_dispatch()
         else:
-            with users.UsersServiceManager.get().get_context(self):
-                super(ApplicationRequestHandler, self).dispatch()
+            super(ApplicationRequestHandler, self).dispatch()
 
     def impersonate_and_dispatch(self):
         """Dispatches request with user impersonation."""
         impersonate_info = self.request.headers.get(
             self.IMPERSONATE_HEADER_NAME)
         if not impersonate_info:
-            with users.UsersServiceManager.get().get_context(self):
-                super(ApplicationRequestHandler, self).dispatch()
-                return
+            super(ApplicationRequestHandler, self).dispatch()
+            return
 
         impersonate_info = transforms.loads(impersonate_info)
         email = impersonate_info.get('email')
@@ -1229,9 +1227,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         try:
             logging.info('Impersonating %s.', email)
             users.get_current_user = get_impersonated_user
-            with users.UsersServiceManager.get().get_context(self):
-                super(ApplicationRequestHandler, self).dispatch()
-                return
+            super(ApplicationRequestHandler, self).dispatch()
+            return
         finally:
             users.get_current_user = old_get_current_user
 

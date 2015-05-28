@@ -56,6 +56,8 @@ __author__ = [
 
 import logging
 
+import webapp2
+
 from google.appengine.api import users
 
 _LOG = logging.getLogger('coursebuilder.common.users')
@@ -109,30 +111,22 @@ User = _User
 # Base classes, default implementation, and manager.
 
 
-class Context(object):
-    """Default (noop) Context implementation.
+class AuthInterceptorWSGIApplication(webapp2.WSGIApplication):
+    """WSGIApplication that adds an auth seam bracketing requests.
 
-    Provides pre- (__enter__) and post- (__exit__) hooks around handler
-    dispatch() calls. Can be used to establish invariants or do teardown. Usage:
+    To apply pre- and post-request hooks to a request, implement a subclass of
+    webapp2.RequestContext. This is a Python context object; your pre-request
+    hook is __enter__ and your post-request hook is __exit__. See
+    https://webapp-improved.appspot.com/api/webapp2.html#webapp2.RequestContext
+    for the contract you must fulfill.
 
-        with UsersServiceManager.get().get_context(handler) as c:
-            handler.dispatch()
+    Return a reference to this class from your AbstractUserService
+    implementation's get_request_context_class().
     """
 
-    def __init__(self, handler):
-        """Creates a new Context.
-
-        Args:
-            handler: controllers.sites.ApplicationRequestHandler. The handler
-                for the current request.
-        """
-        self.handler = handler
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
+    @property
+    def request_context_class(self):
+        return UsersServiceManager.get().get_request_context_class()
 
 
 class AbstractUsersService(object):
@@ -167,14 +161,9 @@ class AbstractUsersService(object):
     # in the system.
 
     @classmethod
-    def get_context(cls, handler):
-        """Gets the Context for this users service.
-
-        Returns:
-            Context. The Context used to provide pre- or post-request dispatch
-                hooks.
-        """
-        return Context(handler)
+    def get_request_context_class(cls):
+        """Gets the Context class for this users service."""
+        return webapp2.RequestContext
 
     @classmethod
     def get_service_name(cls):

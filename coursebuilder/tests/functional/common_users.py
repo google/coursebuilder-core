@@ -18,36 +18,39 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+import logging
+
+import webapp2
+
 from common import users
 from tests.functional import actions
 
 from google.appengine.api import users as gae_users
 
 
-class ThrowExceptionOnEnterContext(users.Context):
+class TestHandler(webapp2.RequestHandler):
+
+    def get(self):
+        logging.warning('In get')
+
+
+class TestRequestContext(webapp2.RequestContext):
 
     def __enter__(self):
-        raise Exception('__enter__: ' + self.handler)
-
-
-class ThrowExceptionOnEnterUsersService(users.AbstractUsersService):
-
-    @classmethod
-    def get_context(cls, handler):
-        return ThrowExceptionOnEnterContext(handler)
-
-
-class ThrowExceptionOnExitContext(users.Context):
+        logging.warning('In __enter__')
+        return super(TestRequestContext, self).__enter__()
 
     def __exit__(self, exc_type, exc_value, traceback):
-        raise Exception('__exit__: ' + self.handler)
+        logging.warning('In __exit__')
+        return super(TestRequestContext, self).__exit__(
+            exc_type, exc_value, traceback)
 
 
-class ThrowExceptionOnExitUsersService(users.AbstractUsersService):
+class TestService(users.AppEnginePassthroughUsersService):
 
     @classmethod
-    def get_context(cls, handler):
-        return ThrowExceptionOnExitContext(handler)
+    def get_request_context_class(cls):
+        return TestRequestContext
 
 
 class TestBase(actions.TestBase):
@@ -116,27 +119,6 @@ class AppEnginePassthroughUsersServiceTest(TestBase):
         self.assertTrue(gae_users_result)
 
 
-class ContextHooksCustomizationTest(TestBase):
-
-    def setUp(self):
-        super(ContextHooksCustomizationTest, self).setUp()
-        self.handler = 'fake_handler'
-
-    def test_custom_pre_hook_runs(self):
-        with self.assertRaisesRegexp(Exception, '__enter__: fake_handler'):
-            with ThrowExceptionOnEnterUsersService.get_context(self.handler):
-                pass
-
-    def test_custom_post_hook_runs(self):
-        with self.assertRaisesRegexp(Exception, '__exit__: fake_handler'):
-            with ThrowExceptionOnExitUsersService.get_context(self.handler):
-                pass
-
-    def test_default_hooks_succeed(self):
-        with users.AbstractUsersService.get_context(self.handler) as context:
-            self.assertEqual(self.handler, context.handler)
-
-
 class PublicExceptionsAndClassesIdentityTests(TestBase):
 
     def assert_all_is(self, expected_list, actual):
@@ -157,3 +139,18 @@ class PublicExceptionsAndClassesIdentityTests(TestBase):
         self.assert_all_is(
             [users.UserNotFoundError, users._UserNotFoundError],
             gae_users.UserNotFoundError)
+
+
+class RequestContextHooksTest(TestBase):
+
+    def getApp(self):
+        return users.AuthInterceptorWSGIApplication([('/', TestHandler)])
+
+    def setUp(self):
+        super(RequestContextHooksTest, self).setUp()
+        users.UsersServiceManager.set(TestService)
+
+    def test_request_context_hooks_bracket_request_methods(self):
+        self.testapp.get('/')
+
+        self.assertLogContains('In __enter__\nIn get\nIn __exit__')
