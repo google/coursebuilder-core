@@ -126,7 +126,12 @@ class AuthInterceptorWSGIApplication(webapp2.WSGIApplication):
 
     @property
     def request_context_class(self):
-        return UsersServiceManager.get().get_request_context_class()
+        users_service = UsersServiceManager.get()
+        if not users_service:
+            raise Exception(
+                'Users service not set. See common.users.UsersServiceManager.')
+
+        return users_service.get_request_context_class()
 
 
 class AbstractUsersService(object):

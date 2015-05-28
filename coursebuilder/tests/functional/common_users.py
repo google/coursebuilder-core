@@ -119,6 +119,27 @@ class AppEnginePassthroughUsersServiceTest(TestBase):
         self.assertTrue(gae_users_result)
 
 
+class AuthInterceptorAndRequestHooksTest(TestBase):
+
+    def getApp(self):
+        return users.AuthInterceptorWSGIApplication([('/', TestHandler)])
+
+    def setUp(self):
+        super(AuthInterceptorAndRequestHooksTest, self).setUp()
+        users.UsersServiceManager.set(TestService)
+
+    def test_request_context_hooks_bracket_request_methods(self):
+        self.testapp.get('/')
+
+        self.assertLogContains('In __enter__\nIn get\nIn __exit__')
+
+    def test_requests_raise_descriptive_exception_if_users_service_unset(self):
+        users.UsersServiceManager.set(None)
+
+        with self.assertRaisesRegexp(Exception, 'Users service not set.'):
+            response = self.testapp.get('/')
+
+
 class PublicExceptionsAndClassesIdentityTests(TestBase):
 
     def assert_all_is(self, expected_list, actual):
@@ -139,18 +160,3 @@ class PublicExceptionsAndClassesIdentityTests(TestBase):
         self.assert_all_is(
             [users.UserNotFoundError, users._UserNotFoundError],
             gae_users.UserNotFoundError)
-
-
-class RequestContextHooksTest(TestBase):
-
-    def getApp(self):
-        return users.AuthInterceptorWSGIApplication([('/', TestHandler)])
-
-    def setUp(self):
-        super(RequestContextHooksTest, self).setUp()
-        users.UsersServiceManager.set(TestService)
-
-    def test_request_context_hooks_bracket_request_methods(self):
-        self.testapp.get('/')
-
-        self.assertLogContains('In __enter__\nIn get\nIn __exit__')
