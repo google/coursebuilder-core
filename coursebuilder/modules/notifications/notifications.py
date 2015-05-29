@@ -19,9 +19,9 @@ queries the current status of notifications.
 
 Notifications are transported by email. Every message you send consumes email
 quota. A message is a single payload delivered to a single user. We do not
-provide the entire interface email does (no CC, BCC, attachments, or HTML
-bodies). Note that messages are not sent when you call Manager.send_async(), but
-instead enqueued and sent later -- usually within a minute.
+provide the entire interface email does (no CC, BCC, attachments). Note that
+messages are not sent when you call Manager.send_async(), but instead enqueued
+and sent later -- usually within a minute.
 
 This module has several advantages over using App Engine's mail.send_mail()
 directly.
@@ -57,7 +57,8 @@ is:
 
   if user and not unsubscribe.has_unsubscribed(user.email):
     notifications.Manager.send_async(
-        user.email, 'sender@example.com', 'intent', 'subject', 'body'
+        user.email, 'sender@example.com', 'intent', 'body', 'subject',
+        html='<p>html</p>'
     )
 """
 
@@ -193,25 +194,22 @@ class NotificationTooOldError(Error):
 class RetentionPolicy(object):
     """Retention policy for notification data.
 
-    Notification data is spread between the Notification and Payload
-    objects (of which see below). Two parts of this data may be large:
-    Notification.audit_trail, and Payload.body.
+    Notification data is spread between the Notification and Payload objects (of
+    which see below). Three parts of this data may be large:
+    Notification.audit_trail, Payload.body, and Payload.html.
 
     We allow clients to specify a retention policy when calling
-    Manager.send_async(). This retention policy is a bundle of logic
-    applied after we know a notification has been sent. How and when
-    the retention policy is run is up to the implementation; we make
-    no guarantees except that once the notification is sent we will
-    attempt run() at least once, and if it mutates its input we will
-    attempt to apply those mutations at least once.
+    Manager.send_async(). This retention policy is a bundle of logic applied
+    after we know a notification has been sent. How and when the retention
+    policy is run is up to the implementation; we make no guarantees except that
+    once the notification is sent we will attempt run() at least once, and if it
+    mutates its input we will attempt to apply those mutations at least once.
 
-    Practically, it can be used to prevent retention of data in the
-    datastore that is of no use to the client, even for audit
-    purposes.
+    Practically, it can be used to prevent retention of data in the datastore
+    that is of no use to the client, even for audit purposes.
 
-    Note that 'retention' here has nothing to do with broader user
-    data privacy and retention concerns -- this is purely about
-    responsible resource usage.
+    Note that 'retention' here has nothing to do with broader user data privacy
+    and retention concerns -- this is purely about responsible resource usage.
 
     """
 
@@ -245,13 +243,14 @@ class RetainAll(RetentionPolicy):
 
 
 class RetainAuditTrail(RetentionPolicy):
-    """Policy that blanks Payload.body but not Notification.audit_trail."""
+    """Policy that blanks body and html but not audit trail."""
 
     NAME = 'audit_trail'
 
     @classmethod
     def run(cls, unused_notification, payload):
         payload.body = None
+        payload.html = None
 
 
 # Dict of string -> RetentionPolicy where key is the policy's NAME. All
@@ -351,13 +350,14 @@ class Manager(object):
     @classmethod
     def send_async(
             cls, to, sender, intent, body, subject, audit_trail=None,
-            retention_policy=None):
+            html=None, retention_policy=None):
         """Asyncronously sends a notification via email.
 
         Args:
 
             to: string. Recipient email address. Must have a valid form, but we
                     cannot know that the address can actually be delivered to.
+
             sender: string. Email address of the sender of the
                     notification. Must be a valid sender for the App Engine
                     deployment at the time the deferred send_mail() call
@@ -371,12 +371,17 @@ class Manager(object):
                     intent. Used when creating keys in the index; values that
                     cause the resulting key to be >500B will fail.  May not
                     contain a colon.
-            body: string. The data payload of the notification. Must fit in a
-                    datastore entity.
+            body: string. The data payload of the notification as plain text.
+                    Must fit in a datastore entity.
             subject: string. Subject line for the notification.
             audit_trail: JSON-serializable object. An optional audit trail that,
                     when used with the default retention policy, will be
                     retained even after the body is scrubbed from the datastore.
+            html: optional string. The data payload of the notification as html.
+                    Must fit in a datastore entity when combined with the plain
+                    text version. Both the html and plain text body will be
+                    sent, and the recipient's mail client will decide which to
+                    show.
             retention_policy: RetentionPolicy. The retention policy to use for
                     data after a Notification has been sent. By default, we
                     retain the audit_trail but not the body.
@@ -410,7 +415,7 @@ class Manager(object):
             # pylint: disable=unbalanced-tuple-unpacking,unpacking-non-sequence
             notification, payload = cls._make_unsaved_models(
                 audit_trail, body, enqueue_date, intent, retention_policy.NAME,
-                sender, subject, to,
+                sender, subject, to, html=html,
                 )
         except Exception, e:
             COUNTER_SEND_ASYNC_FAILED_BAD_ARGUMENTS.inc()
@@ -437,15 +442,15 @@ class Manager(object):
     @classmethod
     def _make_unsaved_models(
         cls, audit_trail, body, enqueue_date, intent, retention_policy, sender,
-        subject, to):
+        subject, to, html=None):
         notification = Notification(
             audit_trail=audit_trail, enqueue_date=enqueue_date, intent=intent,
             _retention_policy=retention_policy, sender=sender, subject=subject,
-            to=to,
+            to=to
         )
         payload = Payload(
-            body=body, enqueue_date=enqueue_date, intent=intent, to=to,
-            _retention_policy=retention_policy,
+            body=body, enqueue_date=enqueue_date, html=html, intent=intent,
+            to=to, _retention_policy=retention_policy,
         )
 
         return notification, payload
@@ -524,9 +529,15 @@ class Manager(object):
             raise permanent_failure
 
         try:
+            # Avoid passing falsy kwargs to appengine's mail.py since it will
+            # throw an exception.
+            kwargs = {}
+            if payload.html:
+                kwargs['html'] = payload.html
+
             send_mail_fn(
                 notification.sender, notification.to, notification.subject,
-                payload.body
+                payload.body, **kwargs
             )
             sent = True
         # Must be vague. pylint: disable=broad-except
@@ -589,9 +600,9 @@ class Manager(object):
 
         IMPORTANT: because we're using
         datastore_rpc.TransactionOptions.INDEPENDENT, mutations on notification
-        and payload here are *not* transactionally consistent in the
-        caller. Consequently, callers must not read or mutate them after calling
-        this method.
+        and payload here are *not* transactionally consistent in the caller.
+        Consequently, callers must not read or mutate them after calling this
+        method.
 
         The upside is that this allows us to record failure data on entities
         inside a transaction, and that transaction can throw without rolling
@@ -886,8 +897,9 @@ class _Model(entities.BaseEntity):
 
 class Notification(_Model):
 
-    # Audit trail of JSON-serializable data. By default Payload.body is deleted
-    # when it is no longer needed. If you need information for audit purposes,
+    # Audit trail of JSON-serializable data. By default Payload.body
+    # and Payload.html are deleted when they are no longer needed.
+    # If you need information for audit purposes,
     # pass it here, and the default retention policy will keep it.
     audit_trail = _SerializedProperty()
     # Email address used to compose the From:. Subject to the sender
@@ -938,8 +950,9 @@ class Payload(_Model):
 
     # Body of the payload.
     body = db.TextProperty()
+    html = db.TextProperty()
 
-    _PROPERTY_EXPORT_BLACKLIST = [body]
+    _PROPERTY_EXPORT_BLACKLIST = [body, html]
 
     def __init__(self, *args, **kwargs):
         super(Payload, self).__init__(*args, **kwargs)
@@ -991,10 +1004,10 @@ def register_module():
 
         def send_async(
             self, to, sender, intent, body, subject, audit_trail=None,
-            retention_policy=None):
+            html=None, retention_policy=None):
             return Manager.send_async(
                 to, sender, intent, body, subject, audit_trail=audit_trail,
-                retention_policy=retention_policy)
+                html=None, retention_policy=retention_policy)
 
     services.notifications = Service()
     return custom_module

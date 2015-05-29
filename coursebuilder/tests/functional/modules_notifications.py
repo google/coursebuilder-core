@@ -48,6 +48,7 @@ class CronTest(actions.TestBase):
 
         self.audit_trail = {'key': 'value'}
         self.body = 'body'
+        self.html = '<p>html</p>'
         self.intent = 'intent'
         self.to = 'to@example.com'
         self.sender = 'sender@example.com'
@@ -98,7 +99,7 @@ class CronTest(actions.TestBase):
             notifications.Manager._make_unsaved_models(
                 self.audit_trail, self.body, self.now, self.intent,
                 notifications.RetainAuditTrail.NAME, self.sender, self.subject,
-                self.to,
+                self.to, html=self.html,
                 )
             )
         notification = db.get(notification_key)
@@ -111,6 +112,7 @@ class CronTest(actions.TestBase):
         self.assert_task_not_enqueued()
         self.assertTrue(notification._done_date)
         self.assertFalse(payload.body)    # RetainAuditTrail applied.
+        self.assertFalse(payload.html)    # RetainAuditTrail applied.
         self.assertEqual(0, self.stats.missing_policy)
         self.assertEqual(1, self.stats.policy_run)
         self.assertEqual(1, self.stats.started)
@@ -120,7 +122,7 @@ class CronTest(actions.TestBase):
             notifications.Manager._make_unsaved_models(
                 self.audit_trail, self.body, self.now, self.intent,
                 notifications.RetainAuditTrail.NAME, self.sender, self.subject,
-                self.to,
+                self.to, html=self.html,
                 )
             )
         notification = db.get(notification_key)
@@ -135,6 +137,7 @@ class CronTest(actions.TestBase):
         self.assert_task_not_enqueued()
         self.assertTrue(notification._done_date)
         self.assertTrue(payload.body)    # RetainAuditTrail not applied.
+        self.assertTrue(payload.html)    # RetainAuditTrail not applied.
         self.assertEqual(0, self.stats.policy_run)
         self.assertEqual(0, self.stats.reenqueued)
         self.assertEqual(1, self.stats.started)
@@ -184,7 +187,7 @@ class CronTest(actions.TestBase):
             notifications.Manager._make_unsaved_models(
                 self.audit_trail, self.body, self.now, self.intent,
                 notifications.RetainAuditTrail.NAME, self.sender, self.subject,
-                self.to,
+                self.to, html=self.html,
                 )
             )
         notification = db.get(notification_key)
@@ -199,6 +202,7 @@ class CronTest(actions.TestBase):
         self.assert_task_not_enqueued()
         self.assertTrue(notification._done_date)
         self.assertTrue(payload.body)    # RetainAuditTrail not applied.
+        self.assertTrue(payload.html)    # RetainAuditTrail not applied.
         self.assertEqual(1, self.stats.missing_policy)
         self.assertEqual(0, self.stats.policy_run)
         self.assertEqual(1, self.stats.started)
@@ -208,7 +212,7 @@ class CronTest(actions.TestBase):
             notifications.Manager._make_unsaved_models(
                 self.audit_trail, self.body, self.now, self.intent,
                 notifications.RetainAuditTrail.NAME, self.sender, self.subject,
-                self.to,
+                self.to, html=self.html,
                 )
             )
         notification = db.get(notification_key)
@@ -221,6 +225,7 @@ class CronTest(actions.TestBase):
         self.assert_task_not_enqueued()
         self.assertTrue(notification._done_date)
         self.assertFalse(payload.body)    # RetainAuditTrail applied.
+        self.assertFalse(payload.html)    # RetainAuditTrail applied.
         self.assertEqual(0, self.stats.missing_policy)
         self.assertEqual(1, self.stats.policy_run)
         self.assertEqual(1, self.stats.started)
@@ -281,6 +286,7 @@ class ManagerTest(actions.TestBase):
 
         self.audit_trail = {'key': 'value'}
         self.body = 'body'
+        self.html = '<p>html</p>'
         self.intent = 'intent'
         self.to = 'to@example.com'
         self.sender = 'sender@example.com'
@@ -582,6 +588,7 @@ class ManagerTest(actions.TestBase):
             self.to, self.sender, self.intent, self.body, self.subject,
             audit_trail=self.audit_trail,
             retention_policy=notifications.RetainAll,
+            html=self.html,
             )
         notification, payload = db.get([notification_key, payload_key])
 
@@ -615,8 +622,12 @@ class ManagerTest(actions.TestBase):
         self.execute_all_deferred_tasks()
         messages = self.get_mail_stub().get_sent_messages()
         self.assertEqual(1, len(messages))
+        message = messages[0]
+        self.assertEqual(self.body, message.body.payload)
+        self.assertEqual(self.html, message.html.payload)
 
         self.assertEqual(self.body, db.get(payload_key).body)  # Policy override
+        self.assertEqual(self.html, db.get(payload_key).html)  # Policy override
 
         self.assertEqual(1, notifications.COUNTER_RETENTION_POLICY_RUN.value)
         self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
