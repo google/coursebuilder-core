@@ -218,6 +218,7 @@ function bindEditorField(Y) {
     for (var i = 0; i < RTE_TAG_DATA.length; i++) {
       if (value == RTE_TAG_DATA[i].name) {
         this._customTagManager.addCustomTag(value);
+        return;
       }
     }
   };
@@ -233,7 +234,7 @@ function bindEditorField(Y) {
       this.root.querySelector('iframe').contentWindow,
       this.editor,
       RTE_TAG_DATA,
-      new FrameProxyOpener(window),
+      new FrameProxyOpener(window.top),
       serviceUrlProvider
     );
   };
@@ -471,8 +472,8 @@ FrameProxyOpener.prototype.open = function(url, getValue, context, submit,
   if (this._win.frameProxy) {
     this._win.frameProxy.close();
   }
-  this._win.frameProxy = new FrameProxy('modal-editor', url, getValue, context,
-      submit, cancel);
+  this._win.frameProxy = new FrameProxy(this._win, 'modal-editor', url,
+      getValue, context, submit, cancel);
   this._win.frameProxy.open();
 };
 

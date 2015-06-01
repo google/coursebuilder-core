@@ -67,7 +67,8 @@ FramedEditorControls.prototype = {
  *     value object as a parameter
  * @param onClose a callback when the user clicks close
  */
-function FrameProxy(rootId, url, getValue, context, onSubmit, onClose) {
+function FrameProxy(win, rootId, url, getValue, context, onSubmit, onClose) {
+  this._win = win;
   this._rootId = rootId;
   this._url = url;
   this._getValue = getValue;
@@ -79,9 +80,9 @@ function FrameProxy(rootId, url, getValue, context, onSubmit, onClose) {
 }
 FrameProxy.prototype = {
   open: function() {
-    this._root = document.getElementById(this._rootId);
+    this._root = this._win.document.getElementById(this._rootId);
     this._root.className = '';
-    this._iframe = document.createElement('iframe');
+    this._iframe = this._win.document.createElement('iframe');
     this._iframe.src = this._url;
     this._iframe.id = 'modal-editor-iframe';
     this._root.appendChild(this._iframe);

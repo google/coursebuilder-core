@@ -182,6 +182,7 @@ describe('FrameProxy', function() {
     spyOn(callbacks, 'onClose');
 
     proxy =  new FrameProxy(
+        window,
         'rootid',
         'http://url',
         callbacks.getValue,

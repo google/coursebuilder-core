@@ -394,6 +394,41 @@ class AdminTests(BaseIntegrationTest):
             0, unit_header_html
         ).click_close()
 
+    def test_in_place_lesson_editing(self):
+        name = self.create_new_course()[0]
+        self.load_dashboard(
+            name
+        ).click_add_unit(
+        ).set_title(
+            'Test Unit 1'
+        ).set_status(
+            'Public'
+        ).click_save(
+        ).click_close(
+        ).verify_course_outline_contains_unit(
+            'Unit 1 - Test Unit 1'
+        ).click_add_lesson(
+        ).click_settings_tab(
+        ).set_title(
+            'Test Lesson'
+        ).set_status(
+            'Public'
+        ).click_content_tab(
+        ).click_plain_text(
+        ).setvalue_codemirror(
+            0, 'Lorem ipsum'
+        ).click_save(
+        ).click_close(
+        ).click_on_course_outline_components(
+            '1. Test Lesson'
+        ).click_edit_lesson(
+        ).edit_lesson_iframe_assert_equal_codemirror(
+            'Lorem ipsum'
+        ).edit_lesson_iframe_setvalue_codemirror(
+            'Lorem ipsum dolor sit amet'
+        ).edit_lesson_iframe_click_save(
+        ).assert_lesson_content_contains('Lorem ipsum dolor sit amet')
+
     def test_cancel_add_with_no_changes_should_not_need_confirm(self):
         """Test entering editors and clicking close without making changes."""
 

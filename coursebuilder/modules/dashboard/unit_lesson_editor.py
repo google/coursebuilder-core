@@ -311,6 +311,46 @@ class UnitLessonEditor(ApplicationHandler):
             delete_xsrf_token='delete-lesson',
             extra_js_files=['lesson_editor.js'])
 
+    def get_in_place_lesson_editor(self):
+        """Shows the lesson editor iframed inside a lesson page."""
+        if not self.app_context.is_editable_fs():
+            return
+
+        key = self.request.get('key')
+
+        course = courses.Course(self)
+        lesson = course.find_lesson_by_id(None, key)
+        annotations_dict = (
+            None if lesson.has_activity
+            else UnitLessonEditor.HIDE_ACTIVITY_ANNOTATIONS)
+        schema = LessonRESTHandler.get_schema(course, key)
+        annotations_dict = schema.get_schema_dict() + annotations_dict
+
+        if courses.has_only_new_style_activities(course):
+            schema.get_property('objectives').extra_schema_dict_values[
+              'excludedCustomTags'] = set(['gcb-activity'])
+
+        extra_js_files = [
+            'lesson_editor.js', 'in_place_lesson_editor_iframe.js'
+        ] + LessonRESTHandler.EXTRA_JS_FILES
+
+        form_html = oeditor.ObjectEditor.get_html_for(
+            self,
+            schema.get_json_schema(),
+            annotations_dict,
+            key, self.canonicalize_url(LessonRESTHandler.URI), None,
+            required_modules=LessonRESTHandler.REQUIRED_MODULES,
+            additional_dirs=LessonRESTHandler.ADDITIONAL_DIRS,
+            extra_css_files=LessonRESTHandler.EXTRA_CSS_FILES,
+            extra_js_files=extra_js_files)
+        template = self.get_template('in_place_lesson_editor.html', [])
+        template_values = {
+            'form_html': form_html,
+            'extra_css_href_list': self.EXTRA_CSS_HREF_LIST,
+            'extra_js_href_list': self.EXTRA_JS_HREF_LIST
+        }
+        self.response.write(template.render(template_values))
+
 
 class CommonUnitRESTHandler(BaseRESTHandler):
     """A common super class for all unit REST handlers."""

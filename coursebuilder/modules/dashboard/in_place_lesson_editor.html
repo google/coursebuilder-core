@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!--
+  Content for the iframe which presents the lesson editor inside the lesson
+  view.
+-->
+<html>
+  <head>
+    <!-- import jQuery -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/modules/oeditor/resources/butterbar.js"></script>
+
+    <link rel="stylesheet" type="text/css"
+        href="/modules/dashboard/resources/css/view.css"/>
+
+    {% for href in extra_css_href_list %}
+      <link rel="stylesheet" type="text/css" href="{{ href }}">
+    {% endfor %}
+
+    {% for href in extra_js_href_list %}
+      <script src="{{ href }}"></script>
+    {% endfor %}
+
+    <style>
+      body {
+        overflow: hidden;
+        background-color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    {{ form_html }}
+  </body>
+</html>

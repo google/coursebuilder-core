@@ -371,7 +371,7 @@ function mainYuiFunction(Y) {
 }
 
 function isFramed() {
-  return window.parent != window;
+  return window.parent != window && window.parent.frameProxy;
 }
 
 function TopLevelEditorControls(Y, env) {

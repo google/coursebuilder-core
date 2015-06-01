@@ -18,6 +18,7 @@ __author__ = [
     'John Orr (jorr@google.com)'
 ]
 
+from contextlib import contextmanager
 import re
 import time
 
@@ -467,6 +468,62 @@ class LessonPage(CourseContentPage):
                     instanceid, attribute))
             return state == desired_state
         self.wait(timeout=max_patience).until(in_desired_state)
+        return self
+
+    def assert_lesson_content_contains(self, expected_text):
+        text = self.find_element_by_css_selector('.gcb-lesson-content').text
+        self._tester.assertEquals(expected_text, text)
+        return self
+
+    def click_edit_lesson(self, index=None):
+        self.find_element_by_css_selector(
+            '.gcb-edit-lesson-button', index=index).click()
+        return self
+
+    @contextmanager
+    def _edit_lesson_iframe(self, index=None):
+        # Call this function as:
+        #   with self._edit_lesson_iframe():
+        #       <browser executes in context of iframe>
+        # The code up to the yield executes on enter and the remainder on exit.
+
+        editor = self.find_element_by_css_selector(
+            'div.in-place-lesson-editor', index=index)
+
+        def editor_is_loaded(unused_driver):
+            return editor.find_element_by_css_selector('.ajax-spinner.hidden')
+        self.wait().until(editor_is_loaded)
+
+        iframe = editor.find_element_by_css_selector('iframe')
+        self._tester.driver.switch_to_frame(iframe)
+
+        yield
+
+        self._tester.driver.switch_to_default_content()
+
+    def edit_lesson_iframe_assert_equal_codemirror(self, expected, index=None):
+        with self._edit_lesson_iframe():
+            actual = self._tester.driver.execute_script(
+                'return $(".CodeMirror")[0].CodeMirror.getValue();')
+            self._tester.assertEqual(expected, actual)
+        return self
+
+    def edit_lesson_iframe_setvalue_codemirror(self, value, index=None):
+        with self._edit_lesson_iframe():
+            self._tester.driver.execute_script(
+                "$('.CodeMirror')[0].CodeMirror.setValue('%s');" % value)
+        return self
+
+    def edit_lesson_iframe_click_save(self, index=None):
+        with self._edit_lesson_iframe():
+            self.find_element_by_css_selector(
+                '.inputEx-Button-Submit-Link').click()
+
+        def save_completed(unused_driver):
+            return not self._tester.driver.find_elements_by_css_selector(
+                'div.in-place-lesson-editor')
+        self.wait().until(save_completed)
+
         return self
 
 

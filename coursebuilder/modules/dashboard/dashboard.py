@@ -93,7 +93,7 @@ class DashboardHandler(
         'edit_question', 'add_question_group', 'edit_question_group',
         'add_label', 'edit_label', 'question_preview',
         'roles', 'add_role', 'edit_role', 'edit_custom_unit',
-        'import_gift_questions']
+        'import_gift_questions', 'in_place_lesson_editor']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [

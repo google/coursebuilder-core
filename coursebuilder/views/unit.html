@@ -22,6 +22,18 @@
 {% block top_content %}
 {% endblock %}
 
+
+{% if is_read_write_course and is_course_admin %}
+  {% block assets %}
+    {{ super() }}
+    <script src="/modules/dashboard/resources/js/in_place_lesson_editor.js"></script>
+    <link rel="stylesheet" type="text/css"
+        href="/modules/dashboard/resources/css/in_place_lesson_editor.css">
+    <link rel="stylesheet" type="text/css"
+        href="/modules/dashboard/resources/material-design-icons/css/material-design-iconic-font.min.css">
+  {% endblock %}
+{% endif %}
+
 {% block main_content %}
 
 <script>
