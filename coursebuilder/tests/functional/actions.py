@@ -159,11 +159,12 @@ class OverriddenConfig(object):
 class _TestUser(object):
     """Test user who uses email as his user_id."""
 
-    def __init__(self, email):
+    def __init__(self, email, user_id):
         self._email = email
+        self._user_id = user_id
 
     def user_id(self):
-        return self._email
+        return self._user_id
 
     def email(self):
         return self._email
@@ -175,8 +176,10 @@ class TestBase(suite.AppEngineTestBase):
     last_request_url = None
 
     @classmethod
-    def make_test_user(cls, email):
-        return _TestUser(email)
+    def make_test_user(cls, email, user_id=None):
+        if not user_id:
+            user_id = str(int(email.encode('hex'), 16))
+        return _TestUser(email, user_id)
 
     def getApp(self):
         main.debug = True
@@ -480,10 +483,12 @@ def get_form_by_action(response, action):
     return form
 
 
-def login(email, is_admin=False):
-    os.environ['USER_EMAIL'] = email
-    os.environ['USER_ID'] = email
-
+def login(email, is_admin=False, user=None):
+    if not user:
+        assert email
+        user = TestBase.make_test_user(email)
+    os.environ['USER_EMAIL'] = user.email()
+    os.environ['USER_ID'] = user.user_id()
     is_admin_value = '0'
     if is_admin:
         is_admin_value = '1'

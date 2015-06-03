@@ -226,7 +226,8 @@ class InvitationHandlerTests(BaseInvitationTests):
         # To reduce spam the service should NOT email registered users, but for
         # privacy reasons should report to the requestor that it did.
         registered_student = 'some_other_student@foo.com'
-        models.Student(key_name=registered_student, is_enrolled=True).put()
+        actions.login(registered_student)
+        actions.register(self, 'Test User')
 
         response = self._do_valid_email_list_post([registered_student])
         self.assertEquals(200, response['status'])

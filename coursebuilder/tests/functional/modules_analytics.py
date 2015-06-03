@@ -117,9 +117,12 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
                 'Submission', 'FileDataEntity', 'FileMetadataEntity'])]))
 
     def get_aggregated_data_by_email(self, email):
+        # email and user_id must match the values listed in Student.json file
+        user = self.make_test_user(
+            'foo@bar.com', user_id='124317316405206137111')
+
         with common_utils.Namespace('ns_' + self.COURSE_NAME):
-            student = models.Student.get_by_user(
-                self.make_test_user(('foo@bar.com')))
+            student = models.Student.get_by_user(user)
             aggregate_entity = (
                 student_aggregate.StudentAggregateEntity.get_by_key_name(
                     student.user_id))
@@ -1089,7 +1092,10 @@ class StudentVectorGeneratorTests(actions.TestBase):
 
     def _load_initial_data(self):
         """Creates several StudentAggregateEntity based on the file item."""
-        self.aggregate_entity = student_aggregate.StudentAggregateEntity()
+        # email must match the value listed in Student.json file
+        self.aggregate_entity = student_aggregate.StudentAggregateEntity(
+            key_name='foo@bar.com')
+
         # Upload data from scoring
         data_path = self._get_data_path('scoring')
         expected_path = os.path.join(data_path, 'expected',

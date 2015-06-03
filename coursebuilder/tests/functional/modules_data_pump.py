@@ -413,6 +413,7 @@ class PiiTests(actions.TestBase):
             self.assertIsNotNone(student.user_id)
             self.assertIsNotNone(student_record['user_id'])
             self.assertNotEqual(student.user_id, student_record['user_id'])
+            self.assertNotIn('email', student_record)
             self.assertNotIn('name', student_record)
             self.assertNotIn('additional_fields', student_record)
 
@@ -425,6 +426,7 @@ class PiiTests(actions.TestBase):
             self.assertIsNotNone(student.user_id)
             self.assertIsNotNone(student_record['user_id'])
             self.assertEqual(student.user_id, student_record['user_id'])
+            self.assertEqual(student.email, student_record['email'])
             self.assertEquals('user@foo.com', student_record['name'])
             self.assertEquals(
               'user@foo.com',

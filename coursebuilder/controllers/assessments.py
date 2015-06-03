@@ -65,7 +65,7 @@ class AnswerHandler(BaseHandler):
     # Find student entity and save answers
     @db.transactional(xg=True)
     def update_assessment_transaction(
-        self, email, assessment_type, new_answers, score):
+        self, key_name, assessment_type, new_answers, score):
         """Stores answer and updates user scores.
 
         Args:
@@ -77,8 +77,11 @@ class AnswerHandler(BaseHandler):
         Returns:
             the student instance.
         """
-        # pylint: disable=protected-access
-        student = Student._get_enrolled_student_by_email(email)
+        student = Student.get_by_key_name(key_name)
+        if not student or not student.is_enrolled:
+            raise Exception(
+                'Expected enrolled student with key_name "%s".', key_name)
+
         course = self.get_course()
 
         # It may be that old Student entities don't have user_id set; fix it.
@@ -160,7 +163,7 @@ class AnswerHandler(BaseHandler):
 
         # Record assessment transaction.
         student = self.update_assessment_transaction(
-            student.email, assessment_type, answers, score)
+            student.key().name(), assessment_type, answers, score)
 
         if grader == courses.HUMAN_GRADER:
             rp = course.get_reviews_processor()

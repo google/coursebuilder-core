@@ -227,7 +227,7 @@ class StudentAggregateGenerator(jobs.MapReduceJob):
         # Convenience for collections: Pre-load Student and Course objects.
         student = None
         try:
-            student = models.Student.get_student_by_user_id(user_id)
+            student = models.Student.get_by_user_id(user_id)
         # pylint: disable=broad-except
         except Exception:
             common_utils.log_exception_origin()

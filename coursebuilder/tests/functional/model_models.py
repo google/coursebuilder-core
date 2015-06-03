@@ -585,6 +585,7 @@ class StudentProfileDAOTestCase(actions.ExportTestBase):
         sender = 'sender@example.com'
         title = 'title'
         student = models.Student(key_name=email, name=nick_name)
+        student.put()
         self.swap(services.notifications, 'enabled', lambda: True)
         self.swap(services.unsubscribe, 'enabled', lambda: True)
         handler = actions.MockHandler(

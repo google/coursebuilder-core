@@ -96,11 +96,11 @@ class CourseExplorerTest(BaseExplorerTest):
 
     def test_single_completed_course(self):
         """Tests when a single completed course is present."""
-        email = 'test_assessments@google.com'
+        user = self.make_test_user('test_assessments@google.com')
         name = 'Test Assessments'
 
         # Register.
-        actions.login(email)
+        actions.login(user.email())
         actions.register(self, name)
 
         response = self.get('/explorer')
@@ -109,7 +109,7 @@ class CourseExplorerTest(BaseExplorerTest):
         assert_does_not_contain('View score', response.body)
 
         # Assign a grade to the course enrolled to mark it complete.
-        profile = PersonalProfile.get_by_key_name(email)
+        profile = PersonalProfile.get_by_key_name(user.user_id())
         info = {'final_grade': 'A'}
         course_info_dict = {'': info}
         profile.course_info = transforms.dumps(course_info_dict)

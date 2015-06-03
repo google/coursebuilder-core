@@ -272,7 +272,7 @@ class ImmediateRemovalPolicy(AbstractDataRemovalPolicy):
         # the by-email deletions on some earlier attempt.
         student = None
         try:
-            student = models.Student.get_student_by_user_id(user_id)
+            student = models.Student.get_by_user_id(user_id)
         except Exception, ex:  # pylint: disable=broad-except
             logging.error('Failed looking up student by user ID %s', user_id)
             common_utils.log_exception_origin()

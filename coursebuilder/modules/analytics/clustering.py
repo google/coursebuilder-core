@@ -593,7 +593,7 @@ class StudentVectorGenerator(jobs.MapReduceJob):
 
         progress_data = None
         user_id = item.key().name()
-        student = models.Student.get_student_by_user_id(user_id)
+        student = models.Student.get_by_user_id(user_id)
         if student:
             raw_data = models.StudentPropertyEntity.get(
                 student, progress.UnitLessonCompletionTracker.PROPERTY_KEY)

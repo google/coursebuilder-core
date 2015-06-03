@@ -816,7 +816,6 @@ class StudentProfileDAO(object):
         date_of_birth=None, is_enrolled=None, final_grade=None,
         course_info=None):
         """Modifies various attributes of Student's Global Profile."""
-        # TODO(psimakov): update of email does not work for student
         if email is not None:
             profile.email = email
 
@@ -922,7 +921,7 @@ class StudentProfileDAO(object):
         cls, nick_name, additional_fields, handler, labels=None):
         user = users.get_current_user()
 
-        student_by_uid = Student.get_student_by_user_id(user.user_id())
+        student_by_uid = Student.get_by_user_id(user.user_id())
         is_valid_student = (student_by_uid is None or
                             student_by_uid.user_id == user.user_id())
         assert is_valid_student, (
@@ -940,14 +939,19 @@ class StudentProfileDAO(object):
     @classmethod
     def _add_new_student_for_current_user(
         cls, user_id, email, nick_name, additional_fields, labels=None):
+        student = Student.get_by_user_id(user_id)
+        key_name = None
+        if student:
+            key_name = student.key().name()
         student = cls._add_new_student_for_current_user_in_txn(
-          user_id, email, nick_name, additional_fields, labels)
+          key_name, user_id, email, nick_name, additional_fields, labels)
         return student
 
     @classmethod
     @db.transactional(xg=True)
     def _add_new_student_for_current_user_in_txn(
-        cls, user_id, email, nick_name, additional_fields, labels=None):
+        cls, key_name, user_id, email, nick_name, additional_fields,
+        labels=None):
         """Create new or re-enroll old student."""
 
         # create profile if does not exist
@@ -956,11 +960,11 @@ class StudentProfileDAO(object):
             profile = cls._add_new_profile(user_id, email)
 
         # create new student or re-enroll existing
-        student = Student._get_by_email(  # pylint: disable=protected-access
-            email)
-        if not student:
-            # TODO(psimakov): we must move to user_id as a key
-            student = Student(key_name=email)
+        if key_name:
+            student = Student.get_by_key_name(key_name)
+        else:
+            student = Student._add_new(  # pylint: disable=protected-access
+                user_id, email)
 
         # update profile
         cls._update_attributes(
@@ -968,7 +972,7 @@ class StudentProfileDAO(object):
             labels=labels)
 
         # update student
-        student.user_id = user_id
+        student.email = email
         student.additional_fields = additional_fields
 
         # put both
@@ -1057,21 +1061,25 @@ class StudentProfileDAO(object):
         cls, user_id, email, legal_name=None, nick_name=None,
         date_of_birth=None, is_enrolled=None, final_grade=None,
         course_info=None, labels=None, profile_only=False):
+        student = Student.get_by_user_id(user_id)
+        key_name = None
+        if student:
+            key_name = student.key().name()
         cls._update_in_txn(
-            user_id, email, legal_name, nick_name, date_of_birth, is_enrolled,
-            final_grade, course_info, labels, profile_only)
+            key_name, user_id, email, legal_name, nick_name, date_of_birth,
+            is_enrolled, final_grade, course_info, labels, profile_only)
 
     @classmethod
     @db.transactional(xg=True)
     def _update_in_txn(
-        cls, user_id, email, legal_name=None, nick_name=None,
+        cls, key_name, user_id, email, legal_name=None, nick_name=None,
         date_of_birth=None, is_enrolled=None, final_grade=None,
         course_info=None, labels=None, profile_only=False):
         """Updates a student and/or their global profile."""
         student = None
         if not profile_only:
-            student = Student._get_by_email(  # pylint: disable=protected-access
-                email)
+            if key_name:
+                student = Student.get_by_key_name(key_name)
             if not student:
                 raise Exception('Unable to find student for: %s' % email)
 
@@ -1098,10 +1106,191 @@ class StudentProfileDAO(object):
             student.put()
 
 
+class StudentCache(caching.RequestScopedSingleton):
+    """Class that manages optimized loading of Students from datastore."""
+
+    def __init__(self):
+        self._key_name_to_student = {}
+
+    @classmethod
+    def _key(cls, user_id):
+        """Make key specific to user_id and current namespace."""
+        return '%s-%s' % (MemcacheManager.get_namespace(), user_id)
+
+    def _get_by_user_id_from_datastore(self, user_id):
+        """Load Student by user_id. Fail if user_id is not unique."""
+        # In the CB 1.8 and below email was the key_name. This is no longer
+        # true. To support legacy Student entities do a double look up here:
+        # first by the key_name value and then by the user_id field value.
+        student = Student.get_by_key_name(user_id)
+        if student:
+            return student
+
+        students = Student.all().filter(
+            Student.user_id.name, user_id).fetch(limit=2)
+        if len(students) > 1:
+            raise Exception(
+                'There is more than one student with user_id "%s"' % user_id)
+
+        return students[0] if students else None
+
+    def _get_by_user_id(self, user_id):
+        """Get cached Student with user_id or load one from datastore."""
+        key = self._key(user_id)
+        if key in self._key_name_to_student:
+            return self._key_name_to_student[key]
+        student = self._get_by_user_id_from_datastore(user_id)
+        self._key_name_to_student[key] = student
+        return student
+
+    def _remove(self, user_id):
+        """Remove cached value by user_id."""
+        key = self._key(user_id)
+        if key in self._key_name_to_student:
+            del self._key_name_to_student[key]
+
+    @classmethod
+    def remove(cls, user_id):
+        # pylint: disable=protected-access
+        return cls.instance()._remove(user_id)
+
+    @classmethod
+    def get_by_user_id(cls, user_id):
+        # pylint: disable=protected-access
+        return cls.instance()._get_by_user_id(user_id)
+
+
+class _EmailProperty(db.StringProperty):
+    """Class that provides dual look up of email property value."""
+
+    def __get__(self, model_instance, model_class):
+        if model_instance is None:
+            return self
+
+        # Try to get and use the actual stored value.
+        value = super(_EmailProperty, self).__get__(model_instance, model_class)
+        if value:
+            return value
+
+        # In CB 1.8 and before email was used as a key to Student entity. This
+        # is no longer true. Here we provide the backwards compatibility for the
+        # legacy Student instances. If user_id and key.name match, it means that
+        # the user_id is a key and we should not use key as email and email is
+        # not set. If key.name and user_id don't match, the key is also an
+        # email.
+        if model_instance.is_saved():
+            user_id = model_instance.user_id
+            key_name = model_instance.key().name()
+            if key_name != user_id:
+                return key_name
+
+        return None
+
+
+class _ReadOnlyStringProperty(db.StringProperty):
+    """Class that provides set once read-only property."""
+
+    def __set__(self, model_instance, value):
+        if model_instance:
+            validated_value = self.validate(value)
+            current_value = self.get_value_for_datastore(model_instance)
+            if current_value and current_value != validated_value:
+                raise ValueError(
+                    'Unable to change set once read-only property '
+                    '%s.' % self.name)
+        super(_ReadOnlyStringProperty, self).__set__(model_instance, value)
+
+
 class Student(BaseEntity):
-    """Student data specific to a course instance."""
+    """Student data specific to a course instance.
+
+    This entity represents a student in a specific course. It has somewhat
+    complex key_name/user_id/email behavior that comes from the legacy mistakes.
+    Current and historical behavior of this class is documented in detail below.
+
+    Let us start with the historical retrospect. In CB 1.8 and below:
+        - key_name
+            - is email for new users
+        - email
+            - is used as key_name
+            - is unique
+            - is immutable
+        - user_id
+            - was introduced in CB 1.2.0
+            - was an independent field and not a key_name
+            - held google.appengine.api.users.get_current_user().user_id()
+            - mutations were not explicitly prevented, but no mutations are
+              known to have occurred
+            - was used as foreign key in other tables
+
+    Anyone who attempts federated identity will find use of email as key_name
+    completely unacceptable. So we decided to make user_id a key_name.
+
+    The ideal solution would have been:
+        - store user_id as key_name for new and legacy users
+        - store email as an independent mutable field
+
+    The ideal solution was rejected upon discussion. It required taking course
+    offline and running M/R or ETL job to modify key_name. All foreign key
+    relationships that used old key_name value would need to be fixed up to use
+    new value. ETL would also need to be aware of different key structure before
+    and after CB 1.8. All in all the ideal approach is complex, invasive and
+    error prone. It was ultimately rejected.
+
+    The currently implemented solution is:
+        - key_name
+            - == user_id for new users
+            - == email for users created in CB 1.8 and below
+        - user_id
+            - is used as key_name
+            - is immutable independent field
+            - holds google.appengine.api.users.get_current_user().user_id()
+            - historical convention is to use user_id as foreign key in other
+              tables
+        - email
+            - is an independent field
+            - is mutable
+
+    This solution is a bit complex, but provides all of the behaviors of the
+    ideal solution. It is 100% backwards compatible and does not require offline
+    upgrade step. For example, if student, who registered and unregistered in
+    CB 1.8 or below, now re-registers, we will reactivate his original student
+    entry thus keeping all prior progress (modulo data-removal policy).
+
+    The largest new side effects is:
+        - there may be several users with the same email in one course
+
+    If email uniqueness is desired it needs to be added on separately.
+
+    We automatically execute core CB functional tests under both the old and the
+    new key_name logic. This is done in LegacyEMailAsKeyNameTest. The exact
+    interplay of key_name/user_id/email is tested in StudentKeyNameTest. We also
+    manually ran the entire test suite with _LEGACY_EMAIL_AS_KEY_NAME_ENABLED
+    set to True and all test passed, except test_rpc_performance in the class
+    tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest. This
+    failure is expected as we have extra datastore lookup in get() by email.
+
+    We did not optimize get() by email RPC performance as this call is used
+    rarely. To optimize dual datastore lookup in get_by_user_id() we tried
+    memcache and request-scope cache for Student. Request-scoped cache provided
+    much better results and this is what we implemented.
+
+    We are confident that core CB components, including peer review system, use
+    user_id as foreign key and will continue working with no changes. Any custom
+    components that used email as foreign key they will stop working and will
+    require modifications and an upgrade step.
+
+    TODO(psimakov):
+        - review how email changes propagate between global and per-course
+          namespaces
+
+    Good luck!
+
+    """
+
     enrolled_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
-    user_id = db.StringProperty(indexed=True)
+    user_id = _ReadOnlyStringProperty(indexed=True)
+    email = _EmailProperty(indexed=True)
     name = db.StringProperty(indexed=False)
     additional_fields = db.TextProperty(indexed=False)
     is_enrolled = db.BooleanProperty(indexed=False)
@@ -1110,16 +1299,31 @@ class Student(BaseEntity):
     scores = db.TextProperty(indexed=False)
     labels = db.StringProperty(indexed=False)
 
+    # In CB 1.8 and below an email was used as a key_name. This is no longer
+    # true and a user_id is the key_name. We transparently support legacy
+    # Student entity instances that still have email as key_name, but we no
+    # longer create new entries. If you need to enable this old behavior set the
+    # flag below to True.
+    _LEGACY_EMAIL_AS_KEY_NAME_ENABLED = False
+
+    # TODO(mgainer): why is user_id is not here?
     _PROPERTY_EXPORT_BLACKLIST = [
         additional_fields,  # Suppress all additional_fields items.
         # Convenience items if not all additional_fields should be suppressed:
         #'additional_fields.xsrf_token',  # Not PII, but also not useful.
         #'additional_fields.form01',  # User's name on registration form.
-        name]
+        email, name]
 
     @classmethod
     def safe_key(cls, db_key, transform_fn):
         return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
+
+    @classmethod
+    def _add_new(cls, user_id, email):
+        if cls._LEGACY_EMAIL_AS_KEY_NAME_ENABLED:
+            return Student(key_name=email, email=email, user_id=user_id)
+        else:
+            return Student(key_name=user_id, email=email, user_id=user_id)
 
     def for_export(self, transform_fn):
         """Creates an ExportEntity populated from this entity instance."""
@@ -1139,28 +1343,18 @@ class Student(BaseEntity):
         return False
 
     @property
-    def email(self):
-        return self.key().name()
-
-    @property
     def profile(self):
         return StudentProfileDAO.get_profile_by_user_id(self.user_id)
 
-    @classmethod
-    def _memcache_key(cls, key):
-        """Makes a memcache key from primary key."""
-        return 'entity:student:%s' % key
-
     def put(self):
-        """Do the normal put() and also add the object to memcache."""
-        result = super(Student, self).put()
-        MemcacheManager.set(self._memcache_key(self.key().name()), self)
-        return result
+        """Do the normal put() and also add the object to cache."""
+        StudentCache.remove(self.user_id)
+        return super(Student, self).put()
 
     def delete(self):
-        """Do the normal delete() and also remove the object from memcache."""
+        """Do the normal delete() and also remove the object from cache."""
+        StudentCache.remove(self.user_id)
         super(Student, self).delete()
-        MemcacheManager.delete(self._memcache_key(self.key().name()))
 
     @classmethod
     def add_new_student_for_current_user(
@@ -1169,43 +1363,43 @@ class Student(BaseEntity):
             nick_name, additional_fields, handler, labels)
 
     @classmethod
-    def _get_by_email(cls, email):
-        # TODO(psimakov): this is deprecated
-        return Student.get_by_key_name(email.encode('utf8'))
+    def get_first_by_email(cls, email):
+        """Get the first student matching requested email.
+
+        Returns:
+            A tuple: (Student, unique). The first value is the first student
+            object with requested email. The second value is set to True if only
+            exactly one student has this email on record; False otherwise.
+        """
+        # In the CB 1.8 and below email was the key_name. This is no longer
+        # true. To support legacy Student entities do a double look up here:
+        # first by the key_name value and then by the email field value.
+        student = cls.get_by_key_name(email)
+        if student:
+            return (student, True)
+        students = cls.all().filter(cls.email.name, email).fetch(limit=2)
+        if not students:
+            return (None, False)
+        return (students[0], len(students) == 1)
 
     @classmethod
     def get_by_user(cls, user):
-        # TODO(psimakov): change to use user_id
-        return cls._get_by_email(user.email())
-
-    @classmethod
-    def _get_enrolled_student_by_email(cls, email):
-        """Returns enrolled student or None."""
-        # TODO(psimakov): this is deprecated
-        student = MemcacheManager.get(cls._memcache_key(email))
-        if NO_OBJECT == student:
-            return None
-        if not student:
-            student = Student._get_by_email(email)
-            if student:
-                MemcacheManager.set(cls._memcache_key(email), student)
-            else:
-                MemcacheManager.set(cls._memcache_key(email), NO_OBJECT)
-        if student and student.is_enrolled:
-            return student
-        else:
-            return None
+        return cls.get_by_user_id(user.user_id())
 
     @classmethod
     def get_enrolled_student_by_user(cls, user):
         """Returns enrolled student or None."""
-        # TODO(psimakov): this need to use user_id, not email
-        return cls._get_enrolled_student_by_email(user.email())
+        student = cls.get_by_user_id(user.user_id())
+        if student and student.is_enrolled:
+            return student
+        return None
 
     @classmethod
     def is_email_in_use(cls, email):
-        """Checks if an email is in use by existing enrolled student."""
-        return cls._get_enrolled_student_by_email(email)
+        """Checks if an email is in use by one of existing student."""
+        if cls.all().filter(cls.email.name, email).fetch(limit=1):
+            return True
+        return False
 
     @classmethod
     def _get_user_and_student(cls):
@@ -1213,10 +1407,10 @@ class Student(BaseEntity):
         user = users.get_current_user()
         if not user:
             raise Exception('No current user.')
-        student = Student._get_by_email(user.email())
+        student = Student.get_by_user(user)
         if not student:
-            raise Exception('Student instance corresponding to user %s not '
-                            'found.' % user.email())
+            raise Exception('Student instance corresponding to user_id %s not '
+                            'found.' % user.user_id())
         return user, student
 
     @classmethod
@@ -1248,16 +1442,15 @@ class Student(BaseEntity):
         return db.Key.from_path(Student.kind(), user_id)
 
     @classmethod
-    def get_student_by_user_id(cls, user_id):
-        students = cls.all().filter(cls.user_id.name, user_id).fetch(limit=2)
-        if len(students) == 2:
-            raise Exception(
-                'There is more than one student with user_id %s' % user_id)
-        return students[0] if students else None
+    def get_by_user_id(cls, user_id):
+        """Get object from datastore with the help of cache."""
+        return StudentCache.get_by_user_id(user_id)
 
     @classmethod
     def delete_by_user_id(cls, user_id):
-        db.delete(cls.all(keys_only=True).filter('user_id =', user_id).run())
+        student = cls.get_by_user_id(user_id)
+        if student:
+            student.delete()
 
     def has_same_key_as(self, key):
         """Checks if the key of the student and the given key are equal."""

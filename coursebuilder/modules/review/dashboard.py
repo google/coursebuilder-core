@@ -111,9 +111,11 @@ def _parse_request(course, unit_id, reviewee_id, reviewer_id=None):
     if not reviewee_id:
         return request_params, '412: No student email supplied.'
 
-    # pylint: disable=protected-access
-    reviewee = models.Student._get_enrolled_student_by_email(reviewee_id)
-    if not reviewee:
+    reviewee, unique = models.Student.get_first_by_email(reviewee_id)
+    if not unique:
+        return (request_params,
+                '412: Several students with this email address exist.')
+    if not reviewee or not reviewee.is_enrolled:
         return (request_params,
                 '412: No student with this email address exists.')
     request_params['reviewee'] = reviewee
@@ -122,9 +124,11 @@ def _parse_request(course, unit_id, reviewee_id, reviewer_id=None):
     if reviewer_id is not None:
         if not reviewer_id:
             return request_params, '412: No reviewer email supplied.'
-        # pylint: disable=protected-access
-        reviewer = models.Student._get_enrolled_student_by_email(reviewer_id)
-        if not reviewer:
+        reviewer, unique = models.Student.get_first_by_email(reviewer_id)
+        if not unique:
+            return (request_params,
+                    '412: Several students with this email address exist.')
+        if not reviewer or not reviewer.is_enrolled:
             return (request_params,
                     '412: No reviewer with this email address exists.')
         request_params['reviewer'] = reviewer
@@ -213,8 +217,8 @@ def get_edit_assignment(handler):
         params = get_readonly_review(handler, unit, reviews[idx])
         reviews_params.append(params)
 
-        reviewer = models.Student.get_student_by_user_id(
-            review_step.reviewer_key.name()).key().name()
+        reviewer = models.Student.get_by_user_id(
+            review_step.reviewer_key.name()).email
         reviewers.append(reviewer)
 
     assert len(reviewers) == len(review_steps)

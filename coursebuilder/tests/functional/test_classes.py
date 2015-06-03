@@ -1743,6 +1743,219 @@ class CourseAuthorCourseCreationTest(actions.TestBase):
         self.assertNotIn('/course_three', response.body)
 
 
+class StudentKeyNameTest(actions.TestBase):
+    """Test use of email and user_id as key_name in Student."""
+
+    def setUp(self):
+        super(StudentKeyNameTest, self).setUp()
+        self._old_enabled = models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED
+
+    def tearDown(self):
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = self._old_enabled
+        super(StudentKeyNameTest, self).tearDown()
+
+    def _assert_user_lookups_work(
+        self, user=None, email=None, user_id=None, by_email=True):
+        if not user:
+            user = self.make_test_user(email, user_id)
+
+        student = models.Student.get_by_user(user)
+        self.assertEqual(user.email(), student.email)
+        self.assertEqual(user.user_id(), student.user_id)
+
+        student = models.Student.get_by_user_id(user.user_id())
+        self.assertEqual(user.email(), student.email)
+        self.assertEqual(user.user_id(), student.user_id)
+
+        if by_email:
+            student, _ = models.Student.get_first_by_email(user.email())
+            self.assertEqual(user.email(), student.email)
+            self.assertEqual(user.user_id(), student.user_id)
+
+    def test_user_id_is_immutable(self):
+        user = self.make_test_user(
+            'test_user_id_is_immutable@google.com', user_id='123')
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = False
+        actions.login(None, user=user)
+        actions.register(self, 'Test User')
+
+        def mutate_user_id():
+            student = models.Student.get_by_user_id('123')
+            student.user_id = '456'
+
+        self.assertRaises(ValueError, mutate_user_id)
+
+    def test_email_can_change(self):
+        user = self.make_test_user(
+            'test_email_change@google.com', user_id='123')
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = True
+        actions.login(None, user=user)
+        actions.register(self, 'Test EMail Change')
+
+        self._assert_user_lookups_work(user=user)
+
+        student, unique = models.Student.get_first_by_email(user.email())
+        self.assertTrue(unique)
+        student.email = 'new_email@google.com'
+        student.put()
+
+        self._assert_user_lookups_work(
+            email='new_email@google.com', user_id='123')
+
+        student, unique = models.Student.get_first_by_email(
+            'new_email@google.com')
+        self.assertTrue(unique)
+        self.assertEqual('test_email_change@google.com', student.key().name())
+
+    def test_email_is_unique_under_legacy(self):
+        user1 = self.make_test_user('user1@google.com', user_id='123')
+        user2 = self.make_test_user('user2@google.com', user_id='456')
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = True
+
+        actions.login(None, user=user1)
+        actions.register(self, 'User 1')
+        actions.logout()
+
+        actions.login(None, user=user2)
+        actions.register(self, 'User 2')
+        actions.logout()
+
+        student, unique = models.Student.get_first_by_email(user1.email())
+        self.assertTrue(unique)
+        student.email = 'user2@google.com'
+        student.put()
+
+        student, unique = models.Student.get_first_by_email(user1.email())
+        self.assertTrue(unique)
+        self.assertEqual('User 1', student.name)
+        self.assertEqual('user2@google.com', student.email)
+
+        self._assert_user_lookups_work(
+            email='user2@google.com', user_id='123', by_email=False)
+        self._assert_user_lookups_work(user=user2)
+
+    def test_email_is_not_unique(self):
+        user1 = self.make_test_user('user1@google.com', user_id='123')
+        user2 = self.make_test_user('user2@google.com', user_id='456')
+        user1_changed = self.make_test_user('user2@google.com', user_id='123')
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = False
+
+        actions.login(None, user=user1)
+        actions.register(self, 'User 1')
+        actions.logout()
+
+        actions.login(None, user=user2)
+        actions.register(self, 'User 2')
+        actions.logout()
+
+        student, unique = models.Student.get_first_by_email(user1.email())
+        self.assertTrue(unique)
+        student.email = 'user2@google.com'
+        student.put()
+
+        self._assert_user_lookups_work(
+            email='user2@google.com', user_id='123', by_email=False)
+        self._assert_user_lookups_work(user=user2, by_email=False)
+
+        # this email no longer in use by user1
+        self.assertEqual(
+            (None, False),
+            models.Student.get_first_by_email('user1@google.com'))
+
+        # two users have the same email
+        student, unique = models.Student.get_first_by_email('user2@google.com')
+        self.assertTrue(student.user_id == "123" or student.user_id == "456")
+        self.assertFalse(unique)
+
+        # check both users can login both having identical email addresses
+
+        actions.login(None, user=user1_changed)
+        response = self.get('student/home')
+        assert_contains('user2@google.com', response.body)
+        assert_contains('User 1', response.body)
+        actions.logout()
+
+        actions.login(None, user=user2)
+        response = self.get('student/home')
+        assert_contains('user2@google.com', response.body)
+        assert_contains('User 2', response.body)
+        actions.logout()
+
+    def test_mixed_key_name_strategies(self):
+        user1 = self.make_test_user('user1@google.com', user_id='123')
+        user2 = self.make_test_user('user2@google.com', user_id='456')
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = True
+        actions.login(None, user=user1)
+        actions.register(self, 'Legacy User 1')
+        actions.logout()
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = False
+
+        actions.login(None, user=user2)
+        actions.register(self, 'User 2')
+        actions.logout()
+
+        self._assert_user_lookups_work(user=user1)
+        self.assertEqual(
+            user1.email(), models.Student.get_by_user(user1).key().name())
+
+        self._assert_user_lookups_work(user=user2)
+        self.assertEqual(
+            user2.user_id(), models.Student.get_by_user(user2).key().name())
+
+    def test_legacy_user_can_reregister(self):
+        user1 = self.make_test_user('user1@google.com', user_id='123')
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = True
+
+        actions.login(None, user=user1)
+        actions.register(self, 'User 1')
+        actions.unregister(self)
+        actions.logout()
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = False
+
+        actions.login(None, user=user1)
+        actions.register(self, 'User 1')
+
+        self.assertEqual(1, len(models.Student.all().fetch(2)))
+
+    def test_two_users_with_identical_emails_can_register(self):
+        user1 = self.make_test_user('user1@google.com', user_id='123')
+        user2 = self.make_test_user('user1@google.com', user_id='456')
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = True
+        actions.login(None, user=user1)
+        actions.register(self, 'User 1')
+        actions.logout()
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = False
+        actions.login(None, user=user2)
+        actions.register(self, 'User 2')
+        actions.logout()
+
+        self.assertEqual(2, len(models.Student.all().fetch(2)))
+
+    def test_registration_relies_on_user_id_and_ignores_email(self):
+        user1 = self.make_test_user('user1@google.com', user_id='123')
+        user2 = self.make_test_user('user2@google.com', user_id='123')
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = True
+
+        actions.login(None, user=user1)
+        actions.register(self, 'User 1')
+        actions.logout()
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = False
+
+        actions.login(None, user=user2)
+        self.assertRaises(Exception, actions.register, 'User 2')
+
+
 class StudentAspectTest(actions.TestBase):
     """Test the site from the Student perspective."""
 
@@ -2988,7 +3201,7 @@ class MultipleCoursesTest(MultipleCoursesTestBase):
             students = models.Student.all().fetch(1000)
             assert len(students) == 1
             for student in students:
-                assert_equals(course.email, student.key().name())
+                assert_equals(course.email, student.email)
                 assert_equals(course.name, student.name)
         finally:
             namespace_manager.set_namespace(old_namespace)
@@ -4672,6 +4885,23 @@ class MemcacheTest(MemcacheTestBase):
     """Executes all tests with memcache enabled."""
 
 
+class LegacyEMailAsKeyNameTestBase(actions.TestBase):
+    """Executes all tests with legacy Student key as email enabled."""
+
+    def setUp(self):
+        super(LegacyEMailAsKeyNameTestBase, self).setUp()
+        self.old_value = models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = True
+
+    def tearDown(self):
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = self.old_value
+        super(LegacyEMailAsKeyNameTestBase, self).tearDown()
+
+
+class LegacyEMailAsKeyNameTest(LegacyEMailAsKeyNameTestBase):
+    """Executes all tests with legacy Student key as email enabled."""
+
+
 class PiiHolder(entities.BaseEntity):
     user_id = db.StringProperty(indexed=True)
     age = db.IntegerProperty(indexed=False)
@@ -5246,3 +5476,4 @@ MemcacheTest.__bases__ += (InfrastructureTest,) + ALL_COURSE_TESTS
 CourseUrlRewritingTest.__bases__ += ALL_COURSE_TESTS
 VirtualFileSystemTest.__bases__ += ALL_COURSE_TESTS
 DatastoreBackedSampleCourseTest.__bases__ += ALL_COURSE_TESTS
+LegacyEMailAsKeyNameTest.__bases__ += ALL_COURSE_TESTS
