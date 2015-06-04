@@ -112,7 +112,7 @@ def _parse_request(course, unit_id, reviewee_id, reviewer_id=None):
         return request_params, '412: No student email supplied.'
 
     reviewee, unique = models.Student.get_first_by_email(reviewee_id)
-    if not unique:
+    if reviewee and not unique:
         return (request_params,
                 '412: Several students with this email address exist.')
     if not reviewee or not reviewee.is_enrolled:
@@ -125,7 +125,7 @@ def _parse_request(course, unit_id, reviewee_id, reviewer_id=None):
         if not reviewer_id:
             return request_params, '412: No reviewer email supplied.'
         reviewer, unique = models.Student.get_first_by_email(reviewer_id)
-        if not unique:
+        if reviewer and not unique:
             return (request_params,
                     '412: Several students with this email address exist.')
         if not reviewer or not reviewer.is_enrolled:
