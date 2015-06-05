@@ -1612,8 +1612,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         response = self.get(response.request.url)
         assert_contains('currently enrolled: 6', response.body)
         assert_contains(
-            'test-assessment (deleted): completed 5, average score 2.0',
-            response.body)
+            'test-assessment: completed 5, average score 2.0', response.body)
 
     def test_no_announcements(self):
         """Test course author can trigger adding sample announcements."""

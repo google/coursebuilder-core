@@ -7,7 +7,7 @@
 <ul>
   {% for unit in scores %}
     <li>
-      {% if unit['title'] %}{{ unit['title'] }}{% else %}Assessment {{ unit['key'] }} (deleted){% endif %}: completed {{ unit['completed'] }}, average score {{ unit['avg'] }}
+      {{ unit['key'] }}: completed {{ unit['completed'] }}, average score {{ unit['avg'] }}
     </li>
   {% endfor %}
   <li>
