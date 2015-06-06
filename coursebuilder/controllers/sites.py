@@ -1187,6 +1187,12 @@ order they are defined.""")
     ), 'course:/:/:', multiline=True, validator=_courses_config_validator)
 
 
+class _Route(object):
+
+    def __init__(self, handler_method):
+        self.handler_method = handler_method
+
+
 class ApplicationRequestHandler(webapp2.RequestHandler):
     """Handles dispatching of all URL's to proper handlers."""
 
@@ -1250,7 +1256,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         cls.bind_to(urls, urls_map)
         cls.urls_map = urls_map
 
-    def get_handler(self):
+    def get_handler(self, verb, path):
         """Finds a course suitable for handling this request."""
         course = get_course_for_current_request()
         if not course:
@@ -1259,9 +1265,22 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         path = get_path_info()
         if not path:
             return None
+        path = unprefix(path, course.get_slug())
 
-        return self.get_handler_for_course_type(
-            course, unprefix(path, course.get_slug()))
+        handler = self.get_handler_for_course_type(course, path)
+        if handler:
+            handler.route = _Route(verb)
+            handler.request = self.request
+            handler.response = self.response
+            handler.app_context = course
+
+            # This variable represents the path after the namespace prefix is
+            # removed. The full path is still stored in self.request.path. For
+            # example, if self.request.path is '/new_course/foo/bar/baz/...',
+            # the path_translated would be '/foo/bar/baz/...'.
+            handler.path_translated = path
+
+        return handler
 
     def can_handle_course_requests(self, context):
         """Reject all, but authors requests, to an unpublished course."""
@@ -1293,20 +1312,14 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
     def get_handler_for_course_type(self, context, path):
         """Gets the right handler for the given context and path."""
-
         if not self.can_handle_course_requests(context):
             return None
 
-        # TODO(psimakov): Add docs (including args and returns).
-        norm_path = os.path.normpath(path)
-
         # Handle static assets here.
+        norm_path = os.path.normpath(path)
         if norm_path.startswith(GCB_ASSETS_FOLDER_NAME):
             abs_file = abspath(context.get_home_folder(), norm_path)
             handler = AssetHandler(self, abs_file)
-            handler.request = self.request
-            handler.response = self.response
-            handler.app_context = context
             STATIC_HANDLER_COUNT.inc()
             return handler
 
@@ -1314,17 +1327,6 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         handler_factory = self._get_handler_factory_for_path(path)
         if handler_factory:
             handler = handler_factory()
-            handler.app_context = context
-            handler.request = self.request
-            handler.response = self.response
-
-            # This variable represents the path after the namespace prefix is
-            # removed. The full path is still stored in self.request.path. For
-            # example, if self.request.path is '/new_course/foo/bar/baz/...',
-            # the path_translated would be '/foo/bar/baz/...'.
-            handler.path_translated = path
-
-            debug('Handler: %s > %s' % (path, handler.__class__.__name__))
             DYNAMIC_HANDLER_COUNT.inc()
             return handler
 
@@ -1342,16 +1344,18 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     @appengine_config.timeandlog('invoke_http_verb')
     def invoke_http_verb(self, verb, path, no_handler):
         """Sets up the environemnt and invokes HTTP verb on the self.handler."""
+        self.request.route_args = []
+        self.request.route_kwargs = {}
         try:
             set_path_info(path)
-            handler = self.get_handler()
+            handler = self.get_handler(verb.lower(), path)
             if not handler:
                 no_handler(path)
             else:
                 set_default_response_headers(handler)
                 self.before_method(handler, verb, path)
                 try:
-                    getattr(handler, verb.lower())()
+                    handler.dispatch()
                 finally:
                     self.after_method(handler, verb, path)
         finally:
@@ -1403,7 +1407,7 @@ def assert_handled(src, target_handler):
         # of course.now_available flag value. Here we patch for that.
         app_handler.can_handle_course_requests = lambda context: True
 
-        handler = app_handler.get_handler()
+        handler = app_handler.get_handler(None, None)
         if handler is None and target_handler is None:
             return None
         assert isinstance(handler, target_handler)
