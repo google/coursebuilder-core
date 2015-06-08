@@ -9,116 +9,124 @@
   {% endif %}
   <h1>{{ assessment_title }}</h1>
 
-  {% if assessment_script_src %}
-    <script src="{{ assessment_script_src }}"></script>
-  {% endif %}
+  {% if now_available or can_see_drafts %}
 
-  <script>
-    assessmentXsrfToken = '{{ assessment_xsrf_token }}';
-
-    var assessmentGlobals = {};
-    assessmentGlobals.isReviewForm = false;
-    assessmentGlobals.grader = '{{ grader }}';
-    {% if saved_answers %}
-      assessmentGlobals.savedAnswers = JSON.parse("{{saved_answers | js_string}}");
+    {% if assessment_script_src %}
+      <script src="{{ assessment_script_src }}"></script>
     {% endif %}
-  </script>
 
-  {% if grader == 'human' %}
-    <p>
-      {% if due_date_exceeded %}
-        <strong>
-          {# I18N: Text shown to students when they visit an assignment page for which the due date has passed. #}
-          {{ gettext('The due date for submitting this assignment has passed. It was due on %(submission_due_date)s.', submission_due_date=submission_due_date) }}
-        </strong>
-      {% else %}
-        <strong>
-          {# I18N: Shown to the student on the assignment page. #}
-          {{ gettext('Due date for this assignment: ') }}
-        </strong>
-        {{ submission_due_date }}.
+    <script>
+      assessmentXsrfToken = '{{ assessment_xsrf_token }}';
+
+      var assessmentGlobals = {};
+      assessmentGlobals.isReviewForm = false;
+      assessmentGlobals.grader = '{{ grader }}';
+      {% if saved_answers %}
+        assessmentGlobals.savedAnswers = JSON.parse("{{saved_answers | js_string}}");
       {% endif %}
-    </p>
+    </script>
 
-    {% if matcher == 'peer' %}
+    {% if grader == 'human' %}
       <p>
-        <em>
-          {# I18N: Instructions to the student for a peer-reviewed assignment. #}
-          {{ gettext('You may only submit this assignment once. After you submit it, the assignment will become read-only, and you will not be able to modify your answers. The answers you submit here will be reviewed by your peers.')}}
-        </em>
+        {% if due_date_exceeded %}
+          <strong>
+            {# I18N: Text shown to students when they visit an assignment page for which the due date has passed. #}
+            {{ gettext('The due date for submitting this assignment has passed. It was due on %(submission_due_date)s.', submission_due_date=submission_due_date) }}
+          </strong>
+        {% else %}
+          <strong>
+            {# I18N: Shown to the student on the assignment page. #}
+            {{ gettext('Due date for this assignment: ') }}
+          </strong>
+          {{ submission_due_date }}.
+        {% endif %}
       </p>
+
+      {% if matcher == 'peer' %}
+        <p>
+          <em>
+            {# I18N: Instructions to the student for a peer-reviewed assignment. #}
+            {{ gettext('You may only submit this assignment once. After you submit it, the assignment will become read-only, and you will not be able to modify your answers. The answers you submit here will be reviewed by your peers.')}}
+          </em>
+        </p>
+      {% endif %}
+
+      <hr>
     {% endif %}
 
-    <hr>
-  {% endif %}
+    {% if model_version == '1.4' %}
+      {% import 'readonly_assessment.html' as readonly_assessment %}
+    {% endif %}
 
-  {% if model_version == '1.4' %}
-    {% import 'readonly_assessment.html' as readonly_assessment %}
-  {% endif %}
+    {% if readonly_student_assessment is defined %}
+      {# I18N: Header text for a previously-submitted assignment. #}
+      <h3>{{ gettext('Submitted assignment') }}</h3>
 
-  {% if readonly_student_assessment is defined %}
-    {# I18N: Header text for a previously-submitted assignment. #}
-    <h3>{{ gettext('Submitted assignment') }}</h3>
+      <div class="gcb-border-box">
+        {% if model_version == '1.4' %}
+          {{ readonly_assessment.display(readonly_student_assessment) }}
+        {% elif model_version == '1.5' %}
+          {{
+            html_assessment.render(
+                unit_id, assessment_xsrf_token, html_saved_answers, html_content, readonly=True, transient_student=transient_student)
+          }}
+        {% endif %}
+      </div>
 
-    <div class="gcb-border-box">
-      {% if model_version == '1.4' %}
-        {{ readonly_assessment.display(readonly_student_assessment) }}
-      {% elif model_version == '1.5' %}
-        {{
-          html_assessment.render(
-              unit_id, assessment_xsrf_token, html_saved_answers, html_content, readonly=True, transient_student=transient_student)
-        }}
+      {% if reviews_received is defined or not due_date_exceeded %}
+        {# I18N: Header text for the list of reviews received for an assignment. #}
+        <h3>{{ gettext('Reviews received') }}</h3>
       {% endif %}
+
+      {% if reviews_received is not defined %}
+        {% if not due_date_exceeded %}
+          <em>
+            {# I18N: Text shown below a student's peer-reviewed assignment. #}
+            {{ gettext('After you have completed the required number of peer reviews for this assignment, the reviews you have received will appear here.') }}
+          </em>
+
+          <br><br>
+
+          <a href="reviewdashboard?unit={{ unit_id }}" class="gcb-button">
+            {# I18N: Text shown on a button that allows the student to navigate from an assignment submission page to the peer review dashboard for that assignment. #}
+            {{ gettext('Go to the review dashboard') }}
+          </a>
+        {% endif %}
+      {% elif not reviews_received %}
+        {# I18N: Text shown below a student's peer-reviewed assignment. #}
+        <em>{{ gettext('You have not received any peer reviews yet.') }}</em>
+      {% else %}
+        {% for review in reviews_received %}
+          <h4>Review {{ loop.index }}</h4>
+          <div class="gcb-border-box">
+            {% if model_version == '1.4' %}
+              {{ readonly_assessment.display(review) }}
+            {% elif model_version == '1.5' %}
+              {{
+                  html_assessment.render(unit_id, assessment_xsrf_token,
+                      review['saved_answers'], review['content'], readonly=True,
+                      transient_student=transient_student)
+              }}
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+    {% endif %}
+
+    <div id="assessmentContents"></div>
+
+    {% if model_version == '1.5' and not readonly_student_assessment %}
+      {{
+        html_assessment.render(
+            unit_id, assessment_xsrf_token, html_saved_answers, html_content,
+            check_answers=html_check_answers, transient_student=transient_student)
+      }}
+    {% endif %}
+  {% else %}
+    <div>
+      {# I18N: Text shown for an assessment that has not been made public. #}
+      {{ gettext('This assessment is not available.')}}
     </div>
-
-    {% if reviews_received is defined or not due_date_exceeded %}
-      {# I18N: Header text for the list of reviews received for an assignment. #}
-      <h3>{{ gettext('Reviews received') }}</h3>
-    {% endif %}
-
-    {% if reviews_received is not defined %}
-      {% if not due_date_exceeded %}
-        <em>
-          {# I18N: Text shown below a student's peer-reviewed assignment. #}
-          {{ gettext('After you have completed the required number of peer reviews for this assignment, the reviews you have received will appear here.') }}
-        </em>
-
-        <br><br>
-
-        <a href="reviewdashboard?unit={{ unit_id }}" class="gcb-button">
-          {# I18N: Text shown on a button that allows the student to navigate from an assignment submission page to the peer review dashboard for that assignment. #}
-          {{ gettext('Go to the review dashboard') }}
-        </a>
-      {% endif %}
-    {% elif not reviews_received %}
-      {# I18N: Text shown below a student's peer-reviewed assignment. #}
-      <em>{{ gettext('You have not received any peer reviews yet.') }}</em>
-    {% else %}
-      {% for review in reviews_received %}
-        <h4>Review {{ loop.index }}</h4>
-        <div class="gcb-border-box">
-          {% if model_version == '1.4' %}
-            {{ readonly_assessment.display(review) }}
-          {% elif model_version == '1.5' %}
-            {{
-                html_assessment.render(unit_id, assessment_xsrf_token,
-                    review['saved_answers'], review['content'], readonly=True,
-                    transient_student=transient_student)
-            }}
-          {% endif %}
-        </div>
-      {% endfor %}
-    {% endif %}
-
-  {% endif %}
-
-  <div id="assessmentContents"></div>
-
-  {% if model_version == '1.5' and not readonly_student_assessment %}
-    {{
-      html_assessment.render(
-          unit_id, assessment_xsrf_token, html_saved_answers, html_content,
-          check_answers=html_check_answers, transient_student=transient_student)
-    }}
   {% endif %}
 </div>

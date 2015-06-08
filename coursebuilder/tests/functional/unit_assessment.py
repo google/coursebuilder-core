@@ -89,6 +89,13 @@ class UnitPrePostAssessmentTest(actions.TestBase):
     def _get_unit_page(self, unit):
         return self.get(BASE_URL + '/unit?unit=' + str(unit.unit_id))
 
+    def _unit_assessment_url(self, unit_id, assessment_id):
+        return "{base}/unit?unit={unit}&assessment={assessment}".format(
+            base=BASE_URL,
+            unit=unit_id,
+            assessment=assessment_id,
+        )
+
     def _click_button(self, class_name, response):
         matches = re.search(
             r'<div class="%s">\s*<a href="([^"]*)"' % class_name, response.body)
@@ -674,3 +681,41 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.assertIn('Previous Page', response.body)
         self.assertNotIn('Next Page', response.body)
         self.assertIn(' End ', response.body)
+
+    def test_private_assessments(self):
+        actions.login(ADMIN_EMAIL)
+
+        self.unit_one_lesson.pre_assessment = self.assessment_one.unit_id
+        self.unit_one_lesson.post_assessment = self.assessment_two.unit_id
+        self.assessment_one.now_available = False
+        self.assessment_two.now_available = False
+        self.course.save()
+
+        actions.login(STUDENT_EMAIL)
+
+        response = self.get(self._unit_assessment_url(
+            self.unit_one_lesson.unit_id, self.assessment_one.unit_id))
+        self.assertNotIn(self.assessment_one.html_content, response.body,
+            msg=('Private pre-assessment content should not be visible to '
+                'student'))
+        self.assertIn("This assessment is not available", response.body)
+
+        response = self.get(self._unit_assessment_url(
+            self.unit_one_lesson.unit_id, self.assessment_two.unit_id))
+        self.assertNotIn(self.assessment_two.html_content, response.body,
+            msg=('Private post-assessment content should not be visible to '
+                'student'))
+        self.assertIn("This assessment is not available", response.body)
+
+        actions.login(ADMIN_EMAIL)
+
+        response = self.get(self._unit_assessment_url(
+            self.unit_one_lesson.unit_id, self.assessment_one.unit_id))
+        self.assertIn(self.assessment_one.html_content, response.body,
+            msg='Private pre-assessment content should be visible to admin')
+
+        response = self.get(self._unit_assessment_url(
+            self.unit_one_lesson.unit_id, self.assessment_two.unit_id))
+        self.assertIn(self.assessment_two.html_content, response.body,
+            msg='Private post-assessment content should be visible to admin')
+

@@ -229,7 +229,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.ImportActivityTests': 7,
     'tests.functional.test_classes.ImportAssessmentTests': 3,
     'tests.functional.test_classes.ImportGiftQuestionsTests': 1,
-    'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 17,
+    'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 18,
     'tests.functional.unit_description.UnitDescriptionsTest': 1,
     'tests.functional.unit_header_footer.UnitHeaderFooterTest': 11,
     'tests.functional.unit_on_one_page.UnitOnOnePageTest': 3,
