@@ -339,6 +339,7 @@ class AssetsHandler(webapp2.RequestHandler):
 
         if os.path.basename(os.path.dirname(path)) != 'assets':
             self.error(404)
+            return
 
         resource_file = os.path.join(appengine_config.BUNDLE_ROOT, path)
 
