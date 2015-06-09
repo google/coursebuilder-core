@@ -24,6 +24,7 @@ from common import crypto
 from common.utils import Namespace
 from models import courses
 from models import models
+from models import resources_display
 from models import transforms
 from models.custom_modules import Module
 from models.roles import Permission
@@ -769,3 +770,54 @@ class DashboardCustomNavTestCase(actions.TestBase):
         selected_tab_path = ('.//*[@class="gcb-nav-bar-level-2"]'
                              '//a[@class="selected"]')
         self.assertEquals('Students', dom.find(selected_tab_path).text)
+
+
+class TestLessonSchema(actions.TestBase):
+
+    COURSE_NAME = 'lesson_dashboard'
+    ADMIN_EMAIL = 'admin@foo.com'
+
+    def setUp(self):
+        super(TestLessonSchema, self).setUp()
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Lesson Course')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.course = courses.Course(None, context)
+        self.unit = self.course.add_unit()
+        self.course.save()
+
+    def tearDown(self):
+        namespace_manager.set_namespace(self.old_namespace)
+        super(TestLessonSchema, self).tearDown()
+
+    def test_video_field_hidden_in_new_lessons(self):
+        lesson = self.course.add_lesson(self.unit)
+        self.course.save()
+
+        schema = get_lesson_schema(self.course, lesson)
+        video_options = find_schema_field(schema, ['properties', 'video',
+            '_inputex'])
+        self.assertEqual(video_options['_type'], 'hidden')
+
+    def test_video_field_not_hidden_in_lessons_with_field_set(self):
+        lesson = self.course.add_lesson(self.unit)
+        lesson.video = 'oHg5SJYRHA0'
+        self.course.save()
+
+        schema = get_lesson_schema(self.course, lesson)
+        video_options = find_schema_field(schema, ['properties', 'video',
+            '_inputex'])
+        self.assertNotEqual(video_options.get('_type'), 'hidden')
+
+def get_lesson_schema(course, lesson):
+    return resources_display.ResourceLesson.get_schema(
+        course, lesson.lesson_id).get_schema_dict()
+
+def find_schema_field(schema, key):
+    for field, options in schema:
+        if field == key:
+            return options
+

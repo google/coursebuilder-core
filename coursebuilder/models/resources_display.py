@@ -945,6 +945,9 @@ class ResourceLesson(resource.AbstractResourceHandler):
                     (unit.unit_id,
                      cgi.escape(display_unit_title(unit, course.app_context))))
 
+        lesson_data = cls.get_data_dict(course, key)
+        has_video_id = bool(lesson_data.get('video'))
+
         lesson = schema_fields.FieldRegistry(
             'Lesson', description='Lesson', extra_schema_dict_values={
                 'className': 'inputEx-Group new-form-layout'})
@@ -957,8 +960,8 @@ class ResourceLesson(resource.AbstractResourceHandler):
             'unit_id', 'Parent Unit', 'string', i18n=False,
             select_data=unit_list))
         lesson.add_property(schema_fields.SchemaField(
-            'video', 'Video ID', 'string', optional=True,
-            description=messages.LESSON_VIDEO_ID_DESCRIPTION))
+            'video', 'Video ID', 'string', hidden=not has_video_id,
+            optional=True, description=messages.LESSON_VIDEO_ID_DESCRIPTION))
         lesson.add_property(schema_fields.SchemaField(
             'scored', 'Scored', 'string', optional=True, i18n=False,
             description=messages.LESSON_SCORED_DESCRIPTION,
