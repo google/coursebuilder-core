@@ -106,6 +106,8 @@ class StudentEnrollmentAndScoresSource(data_sources.SynchronousQuery):
     def fill_values(app_context, template_values, job):
         stats = transforms.loads(job.output)
 
+        course = courses.Course(None, app_context)
+
         template_values['enrolled'] = stats['enrollment']['enrolled']
         template_values['unenrolled'] = stats['enrollment']['unenrolled']
         scores = []
@@ -113,8 +115,16 @@ class StudentEnrollmentAndScoresSource(data_sources.SynchronousQuery):
         for key, value in stats['scores'].items():
             total_records += value[0]
             avg = round(value[1] / value[0], 1) if value[0] else 0
-            scores.append({'key': key, 'completed': value[0],
-                           'avg': avg})
+
+            assessment = course.find_unit_by_id(key)
+            if assessment:
+                title = assessment.title
+            else:
+                title = "Assessment {} (deleted)".format(key)
+
+            record = {'key': key, 'completed': value[0], 'avg': avg,
+                'title':title}
+            scores.append(record)
         template_values['scores'] = scores
         template_values['total_records'] = total_records
 
