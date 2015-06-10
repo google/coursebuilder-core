@@ -42,7 +42,7 @@ class Notifications(Service):
         raise NotImplementedError()
 
     def send_async(
-        self, to, sender, intent, body, subject, audit_trail=None,
+        self, to, sender, intent, body, subject, audit_trail=None, html=None,
         retention_policy=None):
         """Asyncronously sends a notification via email.
 
@@ -68,6 +68,11 @@ class Notifications(Service):
           audit_trail: JSON-serializable object. An optional audit trail that,
               when used with the default retention policy, will be retained
               even after the body is scrubbed from the datastore.
+          html: optional string. The data payload of the notification as html.
+                  Must fit in a datastore entity when combined with the plain
+                  text version. Both the html and plain text body will be
+                  sent, and the recipient's mail client will decide which to
+                  show.
           retention_policy: RetentionPolicy. The retention policy to use for
               data after a Notification has been sent. By default, we retain the
               audit_trail but not the body.

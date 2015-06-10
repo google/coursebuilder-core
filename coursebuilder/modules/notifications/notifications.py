@@ -1007,7 +1007,7 @@ def register_module():
             html=None, retention_policy=None):
             return Manager.send_async(
                 to, sender, intent, body, subject, audit_trail=audit_trail,
-                html=None, retention_policy=retention_policy)
+                html=html, retention_policy=retention_policy)
 
     services.notifications = Service()
     return custom_module
