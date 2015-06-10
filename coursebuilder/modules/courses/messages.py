@@ -19,26 +19,9 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 from common import safe_dom
 
 
-ASSETS_DESCRIPTION = safe_dom.assemble_text_message("""
-These are all the assets for your course. You can upload new images and
-documents here, after which you can use them in your lessons and activities.
-You may create, edit, and delete activities and assessments from the Outline
-page. All other assets must be edited by an administrator.
-""", None)
-
 COURSE_OUTLINE_DESCRIPTION = safe_dom.assemble_text_message(
     'Build, organize and preview your course here.',
     'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
-
-EDIT_SETTINGS_DESCRIPTION = safe_dom.assemble_text_message("""
-The course.yaml file contains many course settings.
-""", 'https://code.google.com/p/course-builder/wiki/CourseSettings')
-
-EDIT_HTML_HOOK_DESCRIPTION = safe_dom.assemble_text_message("""
-HTML hooks are snippets of HTML code that are inserted at different points on
-the pages of a course.  Editing these snippets here permits you to make
-global changes to these items.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
 
 ABOUT_THE_COURSE_DESCRIPTION = safe_dom.assemble_text_message("""
 This information is configured by an administrator from the Admin pages.

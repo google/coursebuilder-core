@@ -19,8 +19,6 @@ __author__ = 'Sean Lip (sll@google.com)'
 import os
 import urllib
 
-import messages
-
 from controllers.lessons import create_readonly_assessment_params
 from models import courses
 from models import models
@@ -149,8 +147,6 @@ def get_edit_assignment(handler):
 
     template_values = {}
     template_values['page_title'] = handler.format_title(page_title)
-    template_values['page_description'] = (
-        messages.ASSIGNMENTS_MENU_DESCRIPTION)
 
     unit_id = handler.request.get('unit_id')
     if not unit_id:

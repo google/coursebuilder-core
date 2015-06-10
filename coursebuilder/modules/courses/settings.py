@@ -111,7 +111,6 @@ class CourseSettingsHandler(object):
             'page_title': handler.format_title(
                 'Settings > %s' %
                 urllib.unquote(tab_title)),
-            'page_description': messages.EDIT_SETTINGS_DESCRIPTION,
             'main_content': form_html,
             })
 
@@ -121,7 +120,6 @@ class CourseSettingsHandler(object):
                                     handler.request.get('tab') or 'course')
         template_values = {
             'page_title': handler.format_title('Settings > %s' % tab.title),
-            'page_description': messages.SETTINGS_DESCRIPTION,
         }
         exit_url = handler.request.get('exit_url')
 
@@ -375,8 +373,6 @@ class HtmlHookHandler(controllers_utils.ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Hook HTML')
-        template_values['page_description'] = (
-            messages.EDIT_HTML_HOOK_DESCRIPTION)
         template_values['main_content'] = form_html
         self.render_page(template_values)
 

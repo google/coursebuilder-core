@@ -24,8 +24,6 @@ import sys
 import time
 import urllib
 
-import messages
-
 import appengine_config
 from common import jinja_utils
 from common import safe_dom
@@ -441,7 +439,6 @@ class BaseAdminHandler(ConfigPropertyEditor):
         """Shows server performance counters page."""
         template_values = {}
         template_values['page_title'] = self.format_title('Metrics')
-        template_values['page_description'] = messages.METRICS_DESCRIPTION
 
         perf_counters = {}
 
@@ -495,7 +492,6 @@ class BaseAdminHandler(ConfigPropertyEditor):
         """Shows server environment and deployment information page."""
         template_values = {}
         template_values['page_title'] = self.format_title('Deployment')
-        template_values['page_description'] = messages.DEPLOYMENT_DESCRIPTION
 
         # modules
         module_content = safe_dom.NodeList()
@@ -625,7 +621,6 @@ class BaseAdminHandler(ConfigPropertyEditor):
         """Shows configuration properties information page."""
         template_values = {}
         template_values['page_title'] = self.format_title('Settings')
-        template_values['page_description'] = messages.SETTINGS_DESCRIPTION
 
         content = safe_dom.NodeList()
         content.append(safe_dom.Element(
@@ -803,7 +798,6 @@ class BaseAdminHandler(ConfigPropertyEditor):
         """Shows a list of all courses available on this site."""
         template_values = {}
         template_values['page_title'] = self.format_title('Courses')
-        template_values['page_description'] = messages.COURSES_DESCRIPTION
 
         content = safe_dom.NodeList()
         content.append(

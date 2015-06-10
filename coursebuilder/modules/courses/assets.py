@@ -25,7 +25,6 @@ from controllers import sites
 from models import courses
 from models import models
 from models import transforms
-from modules.courses import messages
 from modules.dashboard import dashboard
 from modules.dashboard import utils as dashboard_utils
 from modules.dashboard import tabs
@@ -594,7 +593,6 @@ def _get_assets(handler, add_assets):
     title_text = 'Assets > %s' % tab.title
     template_values = {
         'page_title': handler.format_title(title_text),
-        'page_description': messages.ASSETS_DESCRIPTION,
         'main_content': items,
     }
     return template_values

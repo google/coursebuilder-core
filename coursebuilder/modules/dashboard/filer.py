@@ -21,7 +21,6 @@ import cgi
 import os
 import urllib
 
-import messages
 import yaml
 
 import appengine_config
@@ -141,7 +140,6 @@ class FileManagerAndEditor(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Settings')
-        template_values['page_description'] = messages.EDIT_SETTINGS_DESCRIPTION
         template_values['main_content'] = form_html
         self.render_page(template_values, in_action='settings')
 
@@ -194,7 +192,6 @@ class FileManagerAndEditor(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Manage Asset')
-        template_values['page_description'] = messages.UPLOAD_ASSET_DESCRIPTION
         template_values['main_content'] = form_html
         self.render_page(template_values, 'assets', tab_name)
 

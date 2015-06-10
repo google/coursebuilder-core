@@ -19,7 +19,6 @@ __author__ = 'John Orr (jorr@google.com)'
 import cgi
 import logging
 import urllib
-import messages
 
 from common import utils as common_utils
 from controllers import sites
@@ -88,7 +87,6 @@ class UnitLessonEditor(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Import Course')
-        template_values['page_description'] = messages.IMPORT_COURSE_DESCRIPTION
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
@@ -201,9 +199,9 @@ class UnitLessonEditor(ApplicationHandler):
         return
 
     def _render_edit_form_for(
-        self, rest_handler_cls, title, schema=None, annotations_dict=None,
-        delete_xsrf_token='delete-unit', page_description=None,
-        additional_dirs=None, extra_js_files=None, extra_css_files=None):
+        self, rest_handler_cls, title, additional_dirs=None,
+        annotations_dict=None, delete_xsrf_token='delete-unit',
+        extra_js_files=None, extra_css_files=None, schema=None):
         """Renders an editor form for a given REST handler class."""
         annotations_dict = annotations_dict or []
         if schema:
@@ -254,8 +252,6 @@ class UnitLessonEditor(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit %s' % title)
-        if page_description:
-            template_values['page_description'] = page_description
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
@@ -263,7 +259,6 @@ class UnitLessonEditor(ApplicationHandler):
         """Shows unit editor."""
         self._render_edit_form_for(
             UnitRESTHandler, 'Unit',
-            page_description=messages.UNIT_EDITOR_DESCRIPTION,
             annotations_dict=UnitRESTHandler.get_annotations_dict(
                 courses.Course(self), int(self.request.get('key'))))
 
@@ -275,21 +270,17 @@ class UnitLessonEditor(ApplicationHandler):
         self._render_edit_form_for(
             rest_handler,
             custom_unit.name,
-            page_description=rest_handler.DESCRIPTION,
             annotations_dict=rest_handler.get_schema_annotations_dict(
                 courses.Course(self)))
 
     def get_edit_link(self):
         """Shows link editor."""
-        self._render_edit_form_for(
-            LinkRESTHandler, 'Link',
-            page_description=messages.LINK_EDITOR_DESCRIPTION)
+        self._render_edit_form_for(LinkRESTHandler, 'Link')
 
     def get_edit_assessment(self):
         """Shows assessment editor."""
         self._render_edit_form_for(
             AssessmentRESTHandler, 'Assessment',
-            page_description=messages.ASSESSMENT_EDITOR_DESCRIPTION,
             extra_js_files=['assessment_editor_lib.js', 'assessment_editor.js'])
 
     def get_edit_lesson(self):
