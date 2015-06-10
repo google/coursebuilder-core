@@ -478,6 +478,90 @@ TopLevelEditorControls.prototype = {
     }
   },
 
+  _getEditorFieldState: function() {
+    var editorFieldConstructor = this._Y.inputEx.getFieldClass('html');
+    var groupConstructor = this._Y.inputEx.getFieldClass('group');
+    var listConstructor = this._Y.inputEx.getFieldClass('list');
+
+    var inputs = this._env.form.inputsNames;
+    var state = {};
+
+    doRecursion(inputs, state);
+    return state;
+
+    function doRecursion(inputs, state) {
+      for (var name in inputs) {
+        if (inputs.hasOwnProperty(name)) {
+          var field = inputs[name];
+          if (field.constructor === groupConstructor) {
+            state[name] = {};
+            doRecursion(field.inputsNames, state[name]);
+          } else if (field.constructor === listConstructor) {
+            state[name] = [];
+            doRecursion(field.subFields, state[name]);
+          } else if (field.constructor === editorFieldConstructor) {
+            state[name] = {editorType: field.getEditorType()};
+          }
+        }
+      }
+    }
+  },
+
+  _storeEditorFieldState: function() {
+    var state = this._getEditorFieldState();
+    var request = {
+      xsrf_token: this._env.editor_prefs.xsrf_token,
+      payload: JSON.stringify({
+        location: this._env.editor_prefs.location,
+        key: this._env.save_args.key,
+        state: state
+      })
+    };
+    this._Y.io('oeditor/rest/editor_prefs', {
+      method: 'POST',
+      data: {request: JSON.stringify(request)}
+    })
+  },
+
+  _restoreEditorFieldState: function() {
+    var that = this;
+    var editorFieldConstructor = this._Y.inputEx.getFieldClass('html');
+    var groupConstructor = this._Y.inputEx.getFieldClass('group');
+    var listConstructor = this._Y.inputEx.getFieldClass('list');
+
+    var inputs = this._env.form.inputsNames;
+
+    doRecursion(inputs, this._env.editor_prefs.prefs || {});
+
+    function doRecursion(inputs, state) {
+      for (var name in inputs) {
+        if (inputs.hasOwnProperty(name)) {
+          var field = inputs[name];
+          var prefs = state[name] || {};
+          if (field.constructor === groupConstructor) {
+            doRecursion(field.inputsNames, prefs);
+          } else if (field.constructor == listConstructor) {
+            doRecursion(field.subFields, prefs);
+          } else if (field.constructor === editorFieldConstructor) {
+            setEditorFieldState(field, prefs);
+          }
+        }
+      }
+    }
+
+    function setEditorFieldState(field, fieldPrefs) {
+      var editorType = fieldPrefs.editorType;
+      if (! editorType) {
+        if (field.getValue()) {
+          editorType = editorFieldConstructor.prototype.HTML_EDITOR;
+        } else {
+          editorType = editorFieldConstructor.prototype.RICH_TEXT_EDITOR;
+        }
+      }
+      field.setEditorType(editorType);
+    }
+  },
+
   _onSaveComplete: function(status, message, payload) {
     enableAllControlButtons(this._env.form)
     if (! status) {
@@ -503,6 +587,10 @@ TopLevelEditorControls.prototype = {
         this._env.save_args.key = payload.key;
       }
     }
+
+    // Also store the state of the EditorField tabs. (Note this must come after
+    // save_args.key is updated.)
+    this._storeEditorFieldState()
 
     // update UI
     if (this._env.auto_return) {
@@ -644,6 +732,7 @@ TopLevelEditorControls.prototype = {
     // push payload into form
     var payload = parseJson(json.payload);
     this._env.form.setValue(payload);
+    this._restoreEditorFieldState();
 
     // Put some hints on the field wrapper divs about what type of input field
     // is being used.

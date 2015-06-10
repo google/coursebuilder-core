@@ -381,6 +381,7 @@ class AdminTests(BaseIntegrationTest):
             unit_title
         ).set_status(
             'Public'
+        ).click_plain_text(
         ).setvalue_codemirror(
             0, unit_header_html
         ).assert_equal_codemirror(
@@ -582,6 +583,20 @@ class AdminTests(BaseIntegrationTest):
             'YouTube:<gcb-youtube videoid="321" %s></gcb-youtube>' % (
                 instanceid_regex, instanceid_regex
             )
+        ).click_save(
+        #---------- Test editor state is saved ----------
+        ).click_close(
+        ).click_edit_lesson(
+            0
+        ).assert_editor_selected_tab(
+            'HTML'
+        ).click_rich_text(
+        ).click_save(
+        ).click_close(
+        ).click_edit_lesson(
+            0
+        ).assert_editor_selected_tab(
+            'Rich Text'
         )
 
     def test_add_edit_delete_label(self):

@@ -27,12 +27,17 @@ from common import crypto
 from common import jinja_utils
 from common import schema_fields
 from common import tags
+from common import users
 from controllers import sites
 from controllers import utils
 from models import custom_modules
+from models import entities
+from models import models as m_models
 from models import roles
 from models import transforms
 from models.config import ConfigProperty
+
+from google.appengine.ext import db
 
 # Folder where Jinja template files are stored
 TEMPLATES_DIR = os.path.join(
@@ -147,6 +152,21 @@ class ObjectEditor(object):
             rte_tag_data,
             key=lambda item: (item['vendor'], item['label']))
 
+        editor_prefs = {
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                EditorPrefsRestHandler.XSRF_TOKEN),
+            'location': rest_url,
+            'key': object_key,
+            'prefs': {}
+        }
+        user = users.get_current_user()
+        if user is not None:
+            key_name = EditorPrefsDao.create_key_name(
+                user.user_id(), rest_url, object_key)
+            editor_prefs_dto = EditorPrefsDao.load(key_name)
+            if editor_prefs_dto:
+                editor_prefs['prefs'] = editor_prefs_dto.dict
+
         extra_script_tag_urls = []
         for callback in cls.EXTRA_SCRIPT_TAG_URLS:
             for url in callback():
@@ -174,6 +194,7 @@ class ObjectEditor(object):
             'can_highlight_code': CAN_HIGHLIGHT_CODE.value,
             'preview_xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 PreviewHandler.XSRF_TOKEN),
+            'editor_prefs': transforms.dumps(editor_prefs),
             'extra_script_tag_urls': extra_script_tag_urls
         }
 
@@ -288,6 +309,89 @@ class PreviewHandler(utils.BaseHandler):
         self.render('preview_editor.html', additional_dirs=[TEMPLATES_DIR])
 
 
+class EditorPrefsEntity(entities.BaseEntity):
+    """Holds the editor preferences for a user and editor location."""
+    # The key is a colon-separated triple user_id:url:key where the editor
+    # REST URL is the URL passed to ObjectEditor.get_html_for as rest_url. The
+    # data is a JSON object of the following form:
+    #     {
+    #       "field1": {"editorType: "html", ...},
+    #       "field2": {
+    #         "subfield1": {"editorType: "html", ...}
+    #       }
+    #     }
+    # The schema of the fields in the data object follows the schema of the
+    # OEditor object.
+    data = db.TextProperty(indexed=False)
+
+    @classmethod
+    def create_key_name(cls, user_id, url, key):
+        user_id = str(user_id)
+        url = url or ''
+        key = key or ''
+        assert ':' not in user_id
+        assert ':' not in url
+        return '%s:%s:%s' % (user_id, url, key)
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        user_id, url, key = db_key.name().split(':', 2)
+        return db.Key.from_path(
+            cls.kind(), cls.create_key_name(transform_fn(user_id), url, key))
+
+
+class EditorPrefsDto(object):
+    def __init__(self, the_id, data_dict):
+        self.id = the_id
+        self.dict = data_dict
+
+
+class EditorPrefsDao(m_models.BaseJsonDao):
+    DTO = EditorPrefsDto
+    ENTITY = EditorPrefsEntity
+    ENTITY_KEY_TYPE = m_models.BaseJsonDao.EntityKeyTypeName
+
+    @classmethod
+    def create_key_name(cls, user_id, url, key):
+        return cls.ENTITY.create_key_name(user_id, url, key)
+
+
+class EditorPrefsRestHandler(utils.BaseRESTHandler):
+    """Record the editor state for rich text editors."""
+
+    XSRF_TOKEN = 'oeditor-editor-prefs-handler'
+
+    def post(self):
+        # Receive a payload of the form:
+        #     {
+        #       "location": url_for_rest_handler,
+        #       "key": the key of the object being edited,
+        #       "state": object_holding_editor_state
+        #     }
+
+        request = transforms.loads(self.request.get('request'))
+        if not self.assert_xsrf_token_or_fail(request, self.XSRF_TOKEN, {}):
+            return
+
+        user = self.get_user()
+        if user is None:
+            self.error(401)
+            return
+
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
+
+        payload = transforms.loads(request.get('payload'))
+
+        key_name = EditorPrefsDao.create_key_name(
+            user.user_id(), payload['location'], payload['key'])
+        editor_prefs = EditorPrefsDto(key_name, payload['state'])
+        EditorPrefsDao.save(editor_prefs)
+
+        transforms.send_json_response(self, 200, 'Saved.', payload_dict={})
+
+
 def create_bool_select_annotation(
     keys_list, label, true_label, false_label, class_name=None,
     description=None):
@@ -341,7 +445,9 @@ def register_module():
 
     namespaced_routes = [
         ('/oeditorpopup', PopupHandler),
-        ('/oeditor/preview', PreviewHandler)]
+        ('/oeditor/preview', PreviewHandler),
+        ('/oeditor/rest/editor_prefs', EditorPrefsRestHandler)]
+
     global_routes = yui_handlers + codemirror_handler + [
         ('/modules/oeditor/buttonbar.css', ButtonbarCssHandler),
         (RESOURCES_URI +'/.*', tags.ResourcesHandler)]

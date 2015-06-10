@@ -93,6 +93,7 @@
     cb_global.delete_message = '{{ delete_message|js_string }}';
     cb_global.can_highlight_code = {% if can_highlight_code %}true{% else %}false{% endif %};
     cb_global.preview_xsrf_token = '{{ preview_xsrf_token | js_string }}';
+    cb_global.editor_prefs = JSON.parse('{{ editor_prefs | js_string }}');
     cb_global.load_schema_with_annotations = function(schema) {
       {% for annotation in schema_annotations %}
         schema.root{% for element in annotation[0] %}['{{element|js_string}}']{% endfor %}

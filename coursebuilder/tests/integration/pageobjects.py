@@ -338,6 +338,11 @@ class DashboardPage(PageObject):
             'div.course-outline li.add-lesson button').click()
         return AddLesson(self._tester)
 
+    def click_edit_lesson(self, lesson_index):
+        self.find_element_by_css_selector(
+            'div.row.lesson a.md-mode-edit', index=lesson_index).click()
+        return AddLesson(self._tester, expected_message='')
+
     def click_assets(self):
         self.find_element_by_link_text('Assets').click()
         return AssetsPage(self._tester)
@@ -715,6 +720,9 @@ class QuestionEditorPage(EditorPageObject):
     """Abstract superclass for page objects for add/edit questions pages."""
 
     def set_question(self, question):
+        # Click the first tabbar button to select plain text
+        self.find_element_by_css_selector('.mc-question .tabbar button').click()
+
         question_el = self.find_element_by_css_selector(
             'div.cb-editor-field div.html-div textarea')
         question_el.clear()
@@ -739,6 +747,9 @@ class MultipleChoiceEditorPage(QuestionEditorPage):
         return self
 
     def set_answer(self, n, answer):
+        # Click the first button on the n'th tabbar to select plain text extry
+        self.find_element_by_css_selector(
+            '.mc-choice-text .tabbar button', index=3 * n).click()
         answer_el = self.find_element_by_css_selector(
             'div.cb-editor-field div.html-div textarea',
             index=2 * n + 1)
@@ -879,6 +890,14 @@ class CourseContentElement(DashboardEditor):
 
     def click_preview(self, index=None):
         self._click_tabbar(field_index=index, tabbar_index=2)
+        return self
+
+    def assert_editor_selected_tab(self, button_text, index=None):
+        self.wait_until_status_message_hidden()
+        el = self.find_element_by_css_selector(
+            'div.cb-editor-field div.tabbar', index=index)
+        button = el.find_element_by_css_selector('button.selected')
+        self._tester.assertEquals(button_text, button.text)
         return self
 
     def click_rte_add_custom_tag(self, button_text, index=0):
@@ -1045,11 +1064,12 @@ class AddAssessment(CourseContentElement):
 class AddLesson(CourseContentElement):
     """Page object to model the dashboard's lesson editor."""
 
-    def __init__(self, tester):
+    CREATION_MESSAGE = 'New lesson has been created and saved.'
+
+    def __init__(self, tester, expected_message=CREATION_MESSAGE):
         super(AddLesson, self).__init__(tester)
         self.instanceid_list_snapshot = []
-        self.expect_status_message_to_be(
-            'New lesson has been created and saved.')
+        self.expect_status_message_to_be(expected_message)
 
     def ensure_lesson_body_textarea_matches_regex(self, regex):
         rte_contents = self._get_rte_contents()

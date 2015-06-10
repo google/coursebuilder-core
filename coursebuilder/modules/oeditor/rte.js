@@ -11,6 +11,7 @@ function bindEditorField(Y) {
    * @class
    */
   function HtmlEditor(root) {
+    var that = this;
     this.root = root;
     this.codeMirrorInstance = CodeMirror(root, {
       lineNumbers: true,
@@ -23,7 +24,15 @@ function bindEditorField(Y) {
       foldGutter: true,
       gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
     });
+
+    this.ready = $.Deferred();
+    this.codeMirrorInstance.on('update', function() {
+      that.ready.resolve();
+    });
   }
+  HtmlEditor.prototype.isReady = function() {
+    return this.ready;
+  };
   HtmlEditor.prototype.hide = function() {
     this.root.style.display = 'none';
   };
@@ -56,6 +65,16 @@ function bindEditorField(Y) {
     this.textarea = document.createElement('textarea');
     root.appendChild(this.textarea);
   }
+  /**
+   * Return a promise for the editor being fully loaded.
+   *
+   * @method
+   */
+  TextareaEditor.prototype.isReady = function() {
+    var ready = $.Deferred();
+    ready.resolve();
+    return ready;
+  };
   /**
    * Hide the component.
    *
@@ -158,6 +177,9 @@ function bindEditorField(Y) {
 
     this.editor.render();
   }
+  RichTextEditor.prototype.isReady = function() {
+    return this.editorIsRendered;
+  };
   RichTextEditor.prototype.hide = function() {
     this.root.style.display = 'none';
     this.editorIsVisible = $.Deferred();
@@ -287,6 +309,9 @@ function bindEditorField(Y) {
       }
     });
   }
+  PreviewEditor.prototype.isReady = function() {
+    return this.iframeIsLoaded;
+  };
   PreviewEditor.prototype.hide = function() {
     this.previewEditorDiv.style.display = 'none';
   };
@@ -347,6 +372,10 @@ function bindEditorField(Y) {
   }
   Y.extend(EditorField, Y.inputEx.Field);
 
+  EditorField.prototype.HTML_EDITOR = 'html';
+  EditorField.prototype.RICH_TEXT_EDITOR = 'rte';
+  EditorField.prototype.PREVIEW_EDITOR = 'preview';
+
   EditorField.prototype.setOptions = function(options) {
     EditorField.superclass.setOptions.call(this, options);
     this.opts = options.opts || {};
@@ -399,18 +428,18 @@ function bindEditorField(Y) {
     this.previewEditor.hide();
 
     // Bind the buttons
-    var tabbar = new TabBar();
-    tabbar.addTab('HTML', function() {
-      that._select(that.htmlEditor);
+    this.tabbar = new TabBar();
+    this.tabbar.addTab('HTML', function() {
+      that.setEditorType(that.HTML_EDITOR);
     });
-    tabbar.addTab('Rich Text', function() {
-      that._select(that.richTextEditor);
+    this.tabbar.addTab('Rich Text', function() {
+      that.setEditorType(that.RICH_TEXT_EDITOR);
     });
-    tabbar.addTab('Preview', function() {
-      that._select(that.previewEditor);
+    this.tabbar.addTab('Preview', function() {
+      that.setEditorType(that.PREVIEW_EDITOR);
     });
-    tabbar.selectTab(0);
-    this.fieldContainer.insertBefore(tabbar.getRoot(), this.editorsDiv);
+    this.tabbar.selectTab(0);
+    this.fieldContainer.insertBefore(this.tabbar.getRoot(), this.editorsDiv);
 
     // Bind the resizer
     new Y.YUI2.util.Resize(this.editorsDiv, {
@@ -432,14 +461,48 @@ function bindEditorField(Y) {
   EditorField.prototype.getValue = function() {
     return this.activeEditor.getValue();
   };
+  EditorField.prototype.getEditorType = function() {
+    if (this.activeEditor === this.htmlEditor) {
+      return this.HTML_EDITOR;
+    } else if (this.activeEditor === this.richTextEditor) {
+      return this.RICH_TEXT_EDITOR;
+    } else if (this.activeEditor === this.previewEditor) {
+      return this.PREVIEW_EDITOR;
+    } else {
+      return null;
+    }
+  };
+  EditorField.prototype.setEditorType = function(editorType) {
+    var that = this;
+    $.when(this.htmlEditor.isReady(),
+        this.richTextEditor.isReady(),
+        this.previewEditor.isReady()
+    ).then(function() {
+      that._deferredSetEditorType(editorType)
+    });
+  };
+  EditorField.prototype._deferredSetEditorType = function(editorType) {
+    var editor = null;
+    if (editorType == this.HTML_EDITOR) {
+      editor = this.htmlEditor;
+      this.tabbar.selectTab(0);
+    } else if (editorType == this.RICH_TEXT_EDITOR) {
+      editor = this.richTextEditor;
+      this.tabbar.selectTab(1);
+    } else if (editorType == this.PREVIEW_EDITOR) {
+      editor = this.previewEditor;
+      this.tabbar.selectTab(2);
+    }
+    if (editor !== null) {
+      this._select(editor);
+    }
+  };
   EditorField.prototype._select = function (editor) {
     var value = this.activeEditor.getValue();
     var rect = this.editorsDiv.getBoundingClientRect();
     this.activeEditor.hide();
-    this.htmlEditor.setValue(value);
-    this.richTextEditor.setValue(value);
-    this.previewEditor.setValue(value);
     this.activeEditor = editor;
+    this.activeEditor.setValue(value);
     this.activeEditor.setSize(rect.width, rect.height);
     editor.show();
   };
