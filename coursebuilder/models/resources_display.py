@@ -743,9 +743,10 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
             'className': 'inputEx-Group new-form-layout'})
         ret.add_property(schema_fields.SchemaField(
             'key', 'ID', 'string', editable=False,
-            extra_schema_dict_values={'className': 'inputEx-Field keyHolder'}))
+            extra_schema_dict_values={'className': 'inputEx-Field keyHolder'},
+            hidden=True))
         ret.add_property(schema_fields.SchemaField(
-            'type', 'Type', 'string', editable=False))
+            'type', 'Type', 'string', editable=False, hidden=True))
         ret.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string', optional=True))
         ret.add_property(schema_fields.SchemaField(
