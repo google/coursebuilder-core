@@ -2059,6 +2059,27 @@ class StudentKeyNameTest(actions.TestBase):
             email='user2@google.com', user_id='123', by_email=False)
         self._assert_user_lookups_work(user=user2)
 
+    def test_two_users_with_identical_emails_can_register(self):
+        user1 = self.make_test_user('user@google.com', user_id='123')
+        user2 = self.make_test_user('user@google.com', user_id='456')
+        self.assertEqual(0, len(models.Student.all()))
+
+        models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = False
+
+        actions.login(None, user=user1)
+        actions.register(self, 'User 1')
+        actions.logout()
+
+        actions.login(None, user=user2)
+        actions.register(self, 'User 2')
+        actions.logout()
+
+        self.assertEqual(2, len(models.Student.all()))
+        student1 = models.Student.get_by_user(user1)
+        self.assertEqual('123', student1.user_id)
+        student2 = models.Student.get_by_user(user2)
+        self.assertEqual('456', student2.user_id)
+
     def test_email_is_not_unique(self):
         user1 = self.make_test_user('user1@google.com', user_id='123')
         user2 = self.make_test_user('user2@google.com', user_id='456')
