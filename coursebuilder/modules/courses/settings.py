@@ -471,28 +471,6 @@ def _get_about_course(handler):
 
     if not app_context.is_editable_fs():
         course_info.append('The course is read-only.')
-    else:
-        if app_context.now_available:
-            if app_context.get_environ()['course']['browsable']:
-                browsable = True
-                course_browsability_caption = (
-                    'Hide Course From Unregistered Users')
-                course_info.append('The course is is browsable by '
-                                   'un-registered users')
-            else:
-                browsable = False
-                course_browsability_caption = (
-                    'Allow Unregistered Users to Browse Course')
-                course_info.append('The course is not visible to '
-                                   'un-registered users.')
-            course_actions.append({
-                'id': 'course_browsability',
-                'caption': course_browsability_caption,
-                'action': handler.get_action_url('course_browsability'),
-                'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
-                    'course_browsability'),
-                'params': {'browsability': not browsable},
-                })
 
     currentCourse = courses.Course(handler)
     course_info.append('Schema Version: %s' % currentCourse.version)

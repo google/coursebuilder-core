@@ -2275,7 +2275,8 @@ class Course(object):
             Course.SCHEMA_SECTION_COURSE, 'Course')
         course_opts.add_property(schema_fields.SchemaField(
             'course:now_available', 'Availability', 'boolean',
-            description='Make the course available to students.'))
+            description='Make the course available to students.',
+            hidden=True))
         course_opts.add_property(schema_fields.SchemaField(
             'course:browsable', 'Make Course Browsable', 'boolean',
             description='Allow non-registered users to view course content.'))
@@ -2451,7 +2452,7 @@ class Course(object):
             'navigation bar.'))
         unit_opts.add_property(schema_fields.SchemaField(
             'course:display_unit_title_without_index',
-            'Display Unit Title Without Index', 'boolean',
+            'Hide Unit Numbering', 'boolean',
             description='Omit the unit number when displaying unit titles.'))
 
         def must_contain_one_string_substitution(value, errors):

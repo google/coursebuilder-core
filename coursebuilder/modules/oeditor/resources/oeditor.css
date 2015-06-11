@@ -667,3 +667,6 @@ div.new-form-layout div.cb-editor-field {
 div.new-form-layout div.cb-editor-field div.CodeMirror {
   height: 400px;
 }
+div.new-form-layout div.cb-editor-small div.CodeMirror {
+  height: 200px;
+}

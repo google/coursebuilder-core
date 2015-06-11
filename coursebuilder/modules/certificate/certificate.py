@@ -319,7 +319,7 @@ def get_criteria_editor_schema(course):
             True if course.needs_human_grader(unit) else False)
 
     return schema_fields.FieldArray(
-        'certificate_criteria', 'Certificate criteria',
+        'certificate_criteria', 'Certificate Criteria',
         item_type=criterion_type,
         description='Certificate award criteria. Add the criteria which '
             'students must meet to be awarded a certificate of completion. '

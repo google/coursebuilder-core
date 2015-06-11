@@ -773,12 +773,6 @@ class ResourceUnit(ResourceUnitBase):
     def get_schema(cls, course, key):
         schema = cls._generate_common_schema('Unit')
         schema.add_property(schema_fields.SchemaField(
-            'unit_header', 'Unit Header', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags': tags.EditorBlacklists.DESCRIPTIVE_SCOPE,
-                'className': 'inputEx-Field html-content'}))
-        schema.add_property(schema_fields.SchemaField(
             'pre_assessment', 'Pre Assessment', 'integer', optional=True))
         schema.add_property(schema_fields.SchemaField(
             'post_assessment', 'Post Assessment', 'integer', optional=True))
@@ -794,11 +788,17 @@ class ResourceUnit(ResourceUnitBase):
             'users to manually mark a unit or lesson as complete, '
             'overriding the automatic progress tracking.'))
         schema.add_property(schema_fields.SchemaField(
+            'unit_header', 'Unit Header', 'html', optional=True,
+            extra_schema_dict_values={
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags': tags.EditorBlacklists.DESCRIPTIVE_SCOPE,
+                'className': 'inputEx-Field html-content cb-editor-small'}))
+        schema.add_property(schema_fields.SchemaField(
             'unit_footer', 'Unit Footer', 'html', optional=True,
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.DESCRIPTIVE_SCOPE,
-                'className': 'inputEx-Field html-content'}))
+                'className': 'inputEx-Field html-content cb-editor-small'}))
         return schema
 
     @classmethod

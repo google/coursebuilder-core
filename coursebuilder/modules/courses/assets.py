@@ -303,7 +303,7 @@ def _list_questions(handler, all_questions, all_question_groups, location_maps):
         safe_dom.Element(
             'a', className='gcb-button gcb-pull-right',
             href='dashboard?action=import_gift_questions'
-        ).add_text('Import GIFT Questions')
+        ).add_text('Add GIFT Questions')
     ).append(_create_filter()).append(
         safe_dom.Element('div', style='clear: both; padding-top: 2px;')
     ).append(safe_dom.Element('h3').add_text(
@@ -484,7 +484,8 @@ def _list_labels(handler):
             models.LabelDTO.LABEL_TYPES,
             lambda a, b: cmp(a.menu_order, b.menu_order)):
 
-            type_li = safe_dom.Element('li').add_text(label_type.title)
+            type_li = safe_dom.Element('li').add_child(
+                safe_dom.Element('strong').add_text(label_type.title))
             all_labels_ul.add_child(type_li)
             labels_of_type_ul = safe_dom.Element('ul')
             type_li.add_child(labels_of_type_ul)

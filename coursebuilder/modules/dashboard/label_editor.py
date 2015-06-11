@@ -67,7 +67,7 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
         schema.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         schema.add_property(schema_fields.SchemaField(
-            'id', 'ID', 'string', optional=True, editable=False))
+            'id', 'ID', 'string', editable=False, hidden=True, optional=True))
         schema.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string'))
         schema.add_property(schema_fields.SchemaField(
