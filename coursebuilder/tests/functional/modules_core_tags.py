@@ -49,10 +49,6 @@ class GoogleDriveTestBase(actions.TestBase):
         config.Registry.test_overrides = {}
         super(GoogleDriveTestBase, self).tearDown()
 
-    def assert_404_response_with_empty_body(self, response):
-        self.assertEqual(404, response.status_code)
-        self.assertEqual('', response.body)
-
     def disable_courses_can_use_google_apis(self):
         config.Registry.test_overrides[
             courses.COURSES_CAN_USE_GOOGLE_APIS.name] = False
@@ -307,7 +303,7 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
         response = self.testapp.put(
             core_tags._GOOGLE_DRIVE_TAG_PATH, expect_errors=True, params=params)
 
-        self.assert_404_response_with_empty_body(response)
+        self.assertEqual(404, response.status_code)
 
     def test_put_returns_500_if_save_throws(self):
 
@@ -423,7 +419,7 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
                 'resource_id': 'other_' + self.resource_id,
         })
 
-        self.assert_404_response_with_empty_body(response)
+        self.assertEqual(404, response.status_code)
 
 
 class TagsMarkdown(actions.TestBase):

@@ -350,9 +350,10 @@ class AssetsHandler(webapp2.RequestHandler):
         try:
             sites.set_static_resource_cache_control(self)
             self.response.status = 200
-            self.response.headers['Content-Type'] = mimetype
             stream = open(resource_file)
-            self.response.write(stream.read())
+            content = stream.read()
+            self.response.headers['Content-Type'] = mimetype
+            self.response.write(content)
         except IOError:
             self.error(404)
 

@@ -213,6 +213,11 @@ COUNTER_BY_HTTP_CODE = {
     500: HTTP_STATUS_500}
 
 
+class BaseZipHandler(zipserve.ZipHandler, utils.StarRouteHandlerMixin):
+    """Base class for zip handlers."""
+    pass
+
+
 def count_stats(handler):
     """Records statistics about the request and the response."""
     try:
@@ -336,7 +341,7 @@ def set_default_response_headers(handler):
 def make_zip_handler(zipfilename):
     """Creates a handler that serves files from a zip file."""
 
-    class CustomZipHandler(zipserve.ZipHandler):
+    class CustomZipHandler(BaseZipHandler):
         """Custom ZipHandler that properly controls caching."""
 
         def get(self, *args):
@@ -372,7 +377,7 @@ def make_zip_handler(zipfilename):
     return CustomZipHandler
 
 
-class CssComboZipHandler(zipserve.ZipHandler):
+class CssComboZipHandler(BaseZipHandler):
     """A handler which combines a files served from a zip file.
 
     The paths for the files within the zip file are presented
@@ -497,7 +502,7 @@ class AssetHandler(utils.BaseHandler):
                 return
             set_static_resource_cache_control(self)
             self.response.headers['Content-Type'] = self.get_mime_type(
-                self.filename)
+               self.filename)
             self.response.write(stream.read())
         finally:
             models.MemcacheManager.end_readonly()
@@ -1204,6 +1209,10 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     # the name of the impersonation header
     IMPERSONATE_HEADER_NAME = 'Gcb-Impersonate'
 
+    # custom global and namespaced error handlers; specify your methods here
+    GLOBAL_ERROR_HANDLER = None
+    NAMESPACED_ERROR_HANDLER = None
+
     def dispatch(self):
         if self.CAN_IMPERSONATE:
             self.impersonate_and_dispatch()
@@ -1243,12 +1252,12 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         """Recursively builds a map from a list of (URL, Handler) tuples."""
         for url in urls:
             path_prefix = url[0]
-            handler = url[1]
-            urls_map[path_prefix] = handler
+            handler_class = url[1]
+            urls_map[path_prefix] = handler_class
 
             # add child handlers
-            if hasattr(handler, 'get_child_routes'):
-                cls.bind_to(handler.get_child_routes(), urls_map)
+            if hasattr(handler_class, 'get_child_routes'):
+                cls.bind_to(handler_class.get_child_routes(), urls_map)
 
     @classmethod
     def bind(cls, urls):
@@ -1293,8 +1302,9 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         if path in ApplicationRequestHandler.urls_map:
             return ApplicationRequestHandler.urls_map[path]
 
-        # Check if partial path maps. For now, let only zipserve.ZipHandler
-        # handle partial matches. We want to find the longest possible match.
+        # Check if partial path maps. For now, let only classes of type
+        # utils.StarRouteHandlerMixin handle partial matches. We want to find
+        # the longest possible match if alternatives exist.
         parts = path.split('/')
         candidate = None
         partial_path = ''
@@ -1303,9 +1313,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
                 partial_path += '/' + part
                 if partial_path in ApplicationRequestHandler.urls_map:
                     handler = ApplicationRequestHandler.urls_map[partial_path]
-                    if (
-                            isinstance(handler, zipserve.ZipHandler) or
-                            issubclass(handler, zipserve.ZipHandler)):
+                    if isinstance(handler, utils.StarRouteHandlerMixin) or (
+                        issubclass(handler, utils.StarRouteHandlerMixin)):
                         candidate = handler
 
         return candidate
@@ -1343,35 +1352,141 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
     @appengine_config.timeandlog('invoke_http_verb')
     def invoke_http_verb(self, verb, path, no_handler):
-        """Sets up the environemnt and invokes HTTP verb on the self.handler."""
-        self.request.route_args = []
-        self.request.route_kwargs = {}
+        """Set up environment, find appropriate handler and dispatch to it."""
+
+        # make sure this response has not been dispatched yet
+        if self.response.status_code != 200 or self.response.body:
+            self._finalize_response(
+                self.request, self.response, self.response.status_code)
+            return
+
+        # setup context and dispatch
         try:
             set_path_info(path)
             handler = self.get_handler(verb.lower(), path)
-            if not handler:
-                no_handler(path)
+            if handler:
+                self._dispatch(handler, verb, path)
             else:
-                set_default_response_headers(handler)
-                self.before_method(handler, verb, path)
-                try:
-                    handler.dispatch()
-                finally:
-                    self.after_method(handler, verb, path)
+                no_handler(path)
         finally:
             count_stats(self)
             unset_path_info()
 
+    @classmethod
+    def _get_status_code_from_dispatch_exception(cls, verb, path, e):
+        if isinstance(e, webapp2.HTTPException):
+            status_code = e.code
+        else:
+            status_code = 500
+        if status_code >= 500:
+            logging.error(
+                'Error dispatching %s to %s: %s\n%s',
+                verb, path, e, traceback.format_exc())
+        return status_code
+
+    def _dispatch(self, handler, verb, path):
+        """Dispatch the verb, path to a given handler."""
+        # these need to be empty, or dispatch() will attempt to use them; we
+        # don't want them to be set or used because routing phase if over by now
+        self.request.route_args = []
+        self.request.route_kwargs = {}
+
+        set_default_response_headers(handler)
+
+        self.before_method(handler, verb, path)
+        try:
+            status_code = None
+            try:
+                handler.dispatch()
+                status_code = handler.response.status_code
+            except Exception as e:  # pylint: disable=broad-except
+                status_code = self._get_status_code_from_dispatch_exception(
+                    verb, path, e)
+            self._finalize_namespaced_response(
+                handler.app_context,
+                handler.request, handler.response, status_code)
+        finally:
+            self.after_method(handler, verb, path)
+
+    @classmethod
+    def _needs_error_handler(cls, request, response, status_code):
+        """Checks if response has a an error, which need to be handled."""
+        is_rest_handler = issubclass(cls, utils.RESTHandlerMixin)
+        has_pending_content = len(response.body) > 0
+        is_suitable_error_code = status_code >= 400
+        return (
+            is_suitable_error_code and
+            not has_pending_content and
+            not is_rest_handler)
+
+    @classmethod
+    def _finalize_response(cls, request, response, status_code):
+        if cls._needs_error_handler(request, response, status_code):
+            error_handler = cls.GLOBAL_ERROR_HANDLER
+            if not error_handler:
+                error_handler = cls._default_error_hander
+            error_handler(request, response, status_code)
+
+    @classmethod
+    def _finalize_namespaced_response(
+        cls, app_context, request, response, status_code):
+        assert app_context
+        if cls._needs_error_handler(request, response, status_code):
+            error_handler = cls.NAMESPACED_ERROR_HANDLER
+            if not error_handler:
+                error_handler = cls._default_namespaced_error_hander
+            error_handler(app_context, request, response, status_code)
+
+    @classmethod
+    def _default_error_hander(cls, request, response, status_code):
+        """Render default global error page."""
+        response.status_code = status_code
+        if status_code < 500:
+            response.out.write(
+                'Unable to access requested page. '
+                'HTTP status code: %s.' % status_code)
+        else:
+            msg = 'Server error. HTTP status code: %s.' % status_code
+            logging.error(msg)
+            response.out.write(msg)
+
+    @classmethod
+    def _default_namespaced_error_hander(
+        cls, app_context, request, response, status_code):
+        """Render default namespaced error page."""
+        response.status_code = status_code
+        if status_code < 500:
+            response.out.write(
+                'Unable to access requested page in the course %s. '
+                'HTTP status code: '
+                '%s.' % (app_context.slug, status_code))
+        else:
+            msg = (
+                'Server error accessing the course %s. '
+                'HTTP status code: '
+                '%s.' % (app_context.slug, status_code))
+            logging.error(msg)
+            response.out.write(msg)
+
     def _error_404(self, path):
         """Fail with 404."""
         self.error(404)
+        self._finalize_response(self.request, self.response, 404)
 
     def _login_or_404(self, path):
         """If no user, offer login page, otherwise fail 404."""
         if not users.get_current_user():
             self.redirect(users.create_login_url(path))
         else:
-            self.error(404)
+            self._error_404(path)
+
+    @classmethod
+    def handle_exception(cls, request, response, e):
+        status_code = cls._get_status_code_from_dispatch_exception(
+            request.method.lower(), request.path, e)
+        if status_code >= 500:
+            logging.error(e)
+        cls._finalize_response(request, response, status_code)
 
     def get(self, path):
         self.invoke_http_verb('GET', path, self._login_or_404)
@@ -1384,6 +1499,21 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
     def delete(self, path):
         self.invoke_http_verb('DELETE', path, self._error_404)
+
+
+class WSGIRouter(webapp2.Router):
+    """Router that provides finalizaton."""
+
+    def dispatch(self, request, response):
+        result = super(WSGIRouter, self).dispatch(request, response)
+        if result:
+            response = result
+
+        # pylint: disable=protected-access
+        ApplicationRequestHandler._finalize_response(
+            request, response, response.status_code)
+
+        return response
 
 
 def assert_mapped(src, dest):
@@ -1648,19 +1778,19 @@ def test_url_to_handler_mapping_for_course_type():
         def __init__(self):
             self.app_context = None
 
-    class FakeHandler2(zipserve.ZipHandler):
+    class FakeHandler2(BaseZipHandler):
 
         def __init__(self):
             super(FakeHandler2, self).__init__()
             self.app_context = None
 
-    class FakeHandler3(zipserve.ZipHandler):
+    class FakeHandler3(BaseZipHandler):
 
         def __init__(self):
             super(FakeHandler3, self).__init__()
             self.app_context = None
 
-    class FakeHandler4(zipserve.ZipHandler):
+    class FakeHandler4(BaseZipHandler):
 
         def __init__(self):
             super(FakeHandler4, self).__init__()
@@ -1772,6 +1902,51 @@ def test_path_construction():
                 os.path.normpath('/a/b/d'))
 
 
+def test_star_handler():
+    """Tests a handler that is mapped to a route with '*'."""
+
+    class FakeHandler0(object):
+
+        def __init__(self):
+            self.app_context = None
+
+    class FakeHandler1(utils.StarRouteHandlerMixin):
+
+        def __init__(self):
+            super(FakeHandler1, self).__init__()
+            self.app_context = None
+
+    class FakeHandler2(object):
+
+        def __init__(self):
+            super(FakeHandler2, self).__init__()
+            self.app_context = None
+
+    handler0 = FakeHandler0
+    handler1 = FakeHandler1
+    handler2 = FakeHandler2
+    urls = [('/', handler0), ('/1', handler1), ('/2', handler2)]
+    ApplicationRequestHandler.bind(urls)
+
+    setup_courses('course:/a/b:/c/d, course:/e/f:/g/h')
+
+    assert_handled('/a/b/1', FakeHandler1)
+    assert_handled('/a/b/1/', FakeHandler1)
+    assert_handled('/a/b/1/bar', FakeHandler1)
+    assert_handled('/a/b/1/bar/', FakeHandler1)
+    assert_handled('/a/b/1/bar/baz', FakeHandler1)
+    assert_handled('/a/b/1/bar/baz/', FakeHandler1)
+    assert_handled('/a/b/1/bar/baz?alive=1&john=2', FakeHandler1)
+
+    assert_handled('/a/b/2', FakeHandler2)
+    assert_handled('/a/b/2/', None)
+    assert_handled('/a/b/2/bar', None)
+    assert_handled('/a/b/2/bar/', None)
+    assert_handled('/a/b/2/bar/baz', None)
+    assert_handled('/a/b/2/bar/baz/', None)
+    assert_handled('/a/b/2/bar/baz?alive=1&john=2', None)
+
+
 def run_all_unit_tests():
     assert not ApplicationRequestHandler.CAN_IMPERSONATE
 
@@ -1786,6 +1961,7 @@ def run_all_unit_tests():
     test_url_to_handler_mapping_for_course_type()
     test_path_construction()
     test_rule_validations()
+    test_star_handler()
 
 if __name__ == '__main__':
     run_all_unit_tests()

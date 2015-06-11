@@ -250,12 +250,13 @@ class ResourcesHandler(webapp2.RequestHandler):
 
         try:
             self.response.status = 200
-            self.response.headers['Content-Type'] = mimetype
             self.response.cache_control.no_cache = None
             self.response.cache_control.public = 'public'
             self.response.cache_control.max_age = 600
             stream = open(resource_file)
-            self.response.write(self.transform_resource(stream.read()))
+            content = self.transform_resource(stream.read())
+            self.response.headers['Content-Type'] = mimetype
+            self.response.write(content)
         except IOError:
             self.error(404)
 

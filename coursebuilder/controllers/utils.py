@@ -116,6 +116,16 @@ HUMAN_READABLE_DATE_FORMAT = '%Y-%m-%d'
 HUMAN_READABLE_TIME_FORMAT = '%H:%M:%S UTC'
 
 
+class RESTHandlerMixin(object):
+    """A mixin class to mark any handler as REST handler."""
+    pass
+
+
+class StarRouteHandlerMixin(object):
+    """A mixin class to mark any handler that supports '*' routes."""
+    pass
+
+
 class PageInitializer(object):
     """Abstract class that defines an interface to initialize page headers."""
 
@@ -950,7 +960,7 @@ class BaseHandler(CourseHandler):
         return None
 
 
-class BaseRESTHandler(CourseHandler):
+class BaseRESTHandler(CourseHandler, RESTHandlerMixin):
     """Base REST handler."""
 
     def __init__(self, *args, **kwargs):

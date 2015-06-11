@@ -70,6 +70,8 @@ webapp2_i18n_config = {'translations_path': os.path.join(
 
 # init application
 app = users.AuthInterceptorWSGIApplication(
-    global_routes + appstats_routes + app_routes,
+    None,
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=not appengine_config.PRODUCTION_MODE)
+app.router = sites.WSGIRouter(global_routes + appstats_routes + app_routes)
+app.handle_exception = sites.ApplicationRequestHandler.handle_exception

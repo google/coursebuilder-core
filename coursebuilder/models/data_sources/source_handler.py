@@ -24,7 +24,8 @@ from models import transforms
 from models.data_sources import utils as data_sources_utils
 
 
-class _AbstractRestDataSourceHandler(utils.ApplicationHandler):
+class _AbstractRestDataSourceHandler(
+    utils.ApplicationHandler, utils.RESTHandlerMixin):
     """Webapp2 handler for REST data sources.
 
     This class must be derived from to override the get_data_source_class()

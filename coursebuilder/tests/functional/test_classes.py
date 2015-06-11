@@ -44,10 +44,12 @@ from review_stats import PeerReviewAnalyticsTest
 import appengine_config
 from common import crypto
 from common.utils import Namespace
+from common import tags
 from controllers import lessons
 from controllers import sites
 from controllers import utils
 from controllers.utils import XsrfTokenManager
+import main
 from models import config
 from models import courses
 from models import entities
@@ -60,7 +62,8 @@ from models import vfs
 from models.courses import Course
 import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
-import modules.oeditor.oeditor
+from modules import course_explorer
+from modules import search
 from tools import verify
 from tools.etl import etl
 from tools.etl import etl_lib
@@ -71,7 +74,7 @@ from tools.etl import testing
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
-
+import webapp2
 
 # A number of data files in a test course.
 COURSE_FILE_COUNT = 70
@@ -109,6 +112,224 @@ def _assert_identical_data_entity_exists(app_context, test_object):
         assert existing_object.key().id() == test_object.key().id()
     finally:
         namespace_manager.set_namespace(old_namespace)
+
+
+class WSGIRoutingTest(actions.TestBase):
+    """Test WSGI-like routing and error handling in sites.py."""
+
+    def setUp(self):
+        super(WSGIRoutingTest, self).setUp()
+        sites.setup_courses('')
+        actions.login('test@example.com', is_admin=True)
+
+    def tearDown(self):
+        sites.reset_courses()
+        super(WSGIRoutingTest, self).tearDown()
+
+    def _validate_handlers(self, routes, allowed_types, ignore_modules=None):
+        if not ignore_modules:
+            ignore_modules = set()
+
+        for _, handler_class in routes:
+            known = False
+
+            # check inheritance
+            for _type in allowed_types:
+                if issubclass(handler_class, _type):
+                    known = True
+                    break
+
+            # check modules
+            class_name = handler_class.__module__
+            for _module in ignore_modules:
+                if class_name.startswith(_module):
+                    known = True
+                    break
+
+            if not known:
+                raise Exception(
+                    'Unsupported handler type: %s.', handler_class)
+
+    def test_all_namespaced_handlers_are_of_known_types(self):
+        supported = [
+            utils.ApplicationHandler,
+            utils.CronHandler,
+            utils.RESTHandlerMixin,
+            utils.StarRouteHandlerMixin,
+            sites.ApplicationRequestHandler]
+
+        self._validate_handlers(main.app_routes, supported)
+
+        self._validate_handlers(
+            main.global_routes,
+            supported + [
+                course_explorer.student.AssetsHandler,
+                course_explorer.student.BaseStudentHandler,
+                course_explorer.student.IndexPageHandler,
+                models.StudentLifecycleObserver,
+                search.search.AssetsHandler,
+                tags.ResourcesHandler,
+            ], ignore_modules=[
+                'mapreduce.lib', 'mapreduce.handlers', 'mapreduce.main',
+                'mapreduce.status'])
+
+    def getApp(self):
+        """Setup test WSGI app with variety of test handlers."""
+
+        class _Aborting404Handler(utils.ApplicationHandler):
+
+            def get(self):
+                self.abort(404)
+
+            def post(self):
+                raise Exception('Intentional error')
+
+        class _EmptyError404Handler(utils.ApplicationHandler):
+
+            def get(self):
+                self.error(404)
+
+            def post(self):
+                raise Exception('Intentional error')
+
+        class _FullError404Handler(utils.ApplicationHandler):
+
+            def get(self):
+                self.error(404)
+                self.response.out.write('Failure')
+
+        class _Vocal200Handler(utils.ApplicationHandler):
+
+            def get(self):
+                # this handler is bound to only one path
+                self.response.out.write('Success')
+
+        class _VocalRegexBound200Handler(utils.ApplicationHandler):
+
+            def get(self, path):
+                # WSGI will pass path in here because this handler is bound to a
+                # regex Route
+                self.response.out.write(
+                    'Success on "%s"' % path)
+
+        class _VocalStar200Handler(
+            utils.ApplicationHandler, utils.StarRouteHandlerMixin):
+
+            def get(self):
+                # WSGI will NOT pass path in here because this handler is NOT
+                # bound to a regex Route; we need to extract and analyze path
+                # directly
+                self.response.out.write(
+                    'Success on "%s"' % self.request.path)
+
+        all_routes = [
+            ('/a', _Vocal200Handler),
+            (r'/b(.*)', _VocalRegexBound200Handler),
+            ('/c', _VocalStar200Handler),
+            ('/d', _Aborting404Handler),
+            ('/e', _EmptyError404Handler),
+            ('/f', _FullError404Handler)]
+
+        global_routes = [] + all_routes
+        namespaced_routes = [] + all_routes
+        sites.ApplicationRequestHandler.bind(namespaced_routes)
+        app_routes = [(r'(.*)', sites.ApplicationRequestHandler)]
+
+        app = webapp2.WSGIApplication()
+        app.router = sites.WSGIRouter(global_routes + app_routes)
+        app.handle_exception = sites.ApplicationRequestHandler.handle_exception
+
+        return app
+
+    def test_global_routes(self):
+        # this route works without courses; it does NOT support '*'
+        self.assertEqual(200, self.testapp.get('/a').status_code)
+        self.assertEqual(404, self.testapp.get(
+            '/a/any/other', expect_errors=True).status_code)
+
+        # this route works without courses; it does support '*' via regex Route
+        response = self.testapp.get('/b')
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('Success on ""', response.body)
+        response = self.testapp.get('/b/any/other')
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('Success on "/any/other"', response.body)
+
+        # this route works without courses; it should support '*' via mixin
+        # class StarRouteHandlerMixin, but it does not;
+        self.assertEqual(200, self.testapp.get('/c').status_code)
+        # TODO(psimakov): this is counter intuitive: we marked the handler with
+        # mixin class StarRouteHandlerMixin, but it does not support '*'; the
+        # root cause is in sites,py; the request gets there, but we do not
+        # dispatch to any routes in there if request does not start with a
+        # course prefix; thus global routes will arrive into sites.py
+        # dispatcher, but will always 404 because they can not be mapped to any
+        # of the courses; I am not sure if we can or fix this, but this note
+        # will capture the details
+        self.assertEqual(404, self.testapp.get(
+            '/c/any/other', expect_errors=True).status_code)
+
+        # these routes always returns 404 and body of response generated by
+        # the default error handler
+        for path in ['/d', '/e']:
+            response = self.testapp.get(path, expect_errors=True)
+            self.assertEqual(404, response.status_code)
+            self.assertEqual(
+                'Unable to access requested page. HTTP status code: 404.',
+                response.body)
+            response = self.testapp.post(path, expect_errors=True)
+            self.assertEqual(500, response.status_code)
+            self.assertEqual(
+                'Server error. HTTP status code: 500.', response.body)
+
+        # this route always returns 404 and body of response generated by
+        # the handler itself
+        response = self.testapp.get('/f', expect_errors=True)
+        self.assertEqual(404, response.status_code)
+        self.assertEqual('Failure', response.body)
+
+    def test_course_routes(self):
+        # define courses
+        sites.setup_courses('course:/foo::ns_foo, course:/bar::ns_bar')
+
+        # retest all global routes
+        self.test_global_routes()
+
+        self.assertEqual(200, self.testapp.get('/foo/a').status_code)
+
+        # regex routes don't work in our courses; one must use mixin class
+        # StarRouteHandlerMixin
+        self.assertEqual(404, self.testapp.get(
+            '/foo/b', expect_errors=True).status_code)
+        self.assertEqual(404, self.testapp.get(
+            '/foo/b/any/other', expect_errors=True).status_code)
+
+        # this route uses mixin class StarRouteHandlerMixin correctly
+        self.assertEqual(200, self.testapp.get('/foo/c').status_code)
+        response = self.testapp.get('/foo/c/any/other')
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('Success on "/foo/c/any/other"', response.body)
+
+        # these routes always returns 404 and a body of response generated by
+        # the default error handler
+        for path in ['/d', '/e']:
+            response = self.testapp.get('/foo%s' % path, expect_errors=True)
+            self.assertEqual(404, response.status_code)
+            self.assertEqual(
+                'Unable to access requested page in the course /foo. '
+                'HTTP status code: 404.', response.body)
+
+            response = self.testapp.post('/foo%s' % path, expect_errors=True)
+            self.assertEqual(500, response.status_code)
+            self.assertEqual(
+                'Server error accessing the course /foo. '
+                'HTTP status code: 500.', response.body)
+
+        # this route always returns 404 and a body of response generated by
+        # the handler itself
+        response = self.testapp.get('/foo/f', expect_errors=True)
+        self.assertEqual(404, response.status_code)
+        self.assertEqual('Failure', response.body)
 
 
 class InfrastructureTest(actions.TestBase):
