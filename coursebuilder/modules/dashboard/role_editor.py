@@ -96,7 +96,9 @@ class RoleRESTHandler(dto_editor.BaseDatastoreRestHandler):
             'description', 'Description', 'text', optional=True))
         # TODO(gdejonghe) Use user.id instead of user.email
         schema.add_property(schema_fields.SchemaField(
-            'users', 'User Emails', 'text', optional=True))
+            'users', 'User Emails', 'text',
+            description='Separate emails by commas or spaces.',
+            optional=True))
 
         subschema = schema.add_sub_registry('modules', 'Permission Modules')
 

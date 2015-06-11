@@ -70,7 +70,10 @@ def options_schema_provider(unused_course):
         LABEL_KEY, 'Label', 'string', optional=True,
         description='The tab to be shown on the navbar.'))
     extra_tab_type.add_property(schema_fields.SchemaField(
-        POSITION_KEY, 'Tab Position', 'string', optional=True, i18n=False,
+        POSITION_KEY, 'Tab Position', 'string',
+        description='Left and Right positions indicate on which side of the '
+        'search field the tab will show in the main navigation bar.',
+        i18n=False, optional=True,
         select_data=[(POS_LEFT, 'Left'), (POS_RIGHT, 'Right')]))
     extra_tab_type.add_property(schema_fields.SchemaField(
         VISIBILITY_KEY, 'Visibility', 'string', optional=True, i18n=False,

@@ -149,8 +149,10 @@ class ResourceSAQuestion(ResourceQuestionBase):
             'Answer',
             extra_schema_dict_values={'className': 'sa-grader'})
         grader_type.add_property(schema_fields.SchemaField(
-            'score', 'Score', 'string', optional=True, i18n=False,
-            extra_schema_dict_values={'className': 'sa-grader-score'}))
+            'score', 'Score', 'string',
+            description=messages.SHORT_ANSWER_SCORE_DESCRIPTION,
+            extra_schema_dict_values={'className': 'sa-grader-score'},
+            i18n=False, optional=True))
         grader_type.add_property(schema_fields.SchemaField(
             'matcher', 'Grading', 'string', optional=True, i18n=False,
             select_data=cls.GRADER_TYPES,
@@ -750,7 +752,9 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
         ret.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string', optional=True))
         ret.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True))
+            'description', 'Description', 'string',
+            description=str(messages.UNIT_DESCRIPTION_DESCRIPTION),
+            optional=True))
         ret.add_property(schema_fields.FieldArray(
             'label_groups', 'Labels',
             item_type=LabelGroupsHelper.make_labels_group_schema_field(),
@@ -823,22 +827,25 @@ class ResourceAssessment(ResourceUnitBase):
         # Course level settings.
         course_opts = cls._generate_common_schema('Assessment Config')
         course_opts.add_property(schema_fields.SchemaField(
-            'weight', 'Weight', 'string', optional=True, i18n=False))
+            'weight', 'Weight', 'string',
+            description=str(messages.ASSESSMENT_WEIGHT_DESCRIPTION),
+            i18n=False, optional=True))
         course_opts.add_property(schema_fields.SchemaField(
-            'content', 'Assessment Content', 'text', optional=True,
+            'content', 'Assessment Content (JavaScript)', 'text', optional=True,
             description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION),
             extra_schema_dict_values={'className': 'inputEx-Field content'}))
         course_opts.add_property(schema_fields.SchemaField(
-            'html_content', 'Assessment Content (HTML)', 'html', optional=True,
+            'html_content', 'Assessment Content', 'html', optional=True,
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.ASSESSMENT_SCOPE,
                 'className': 'inputEx-Field html-content'}))
         course_opts.add_property(schema_fields.SchemaField(
             'html_check_answers', '"Check Answers" Buttons', 'boolean',
-            optional=True,
+            description=str(messages.CHECK_ANSWERS_DESCRIPTION),
             extra_schema_dict_values={
-                'className': 'inputEx-Field assessment-editor-check-answers'}))
+                'className': 'inputEx-Field assessment-editor-check-answers'},
+            optional=True))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SUBMISSION_DUE_DATE_KEY),
             'Submission Due Date', 'string', optional=True,
@@ -850,7 +857,7 @@ class ResourceAssessment(ResourceUnitBase):
                              registry=course_opts)
 
         review_opts = reg.add_sub_registry(
-            'review_opts', 'Review Config',
+            'review_opts', 'Peer Review',
             description=str(messages.ASSESSMENT_DETAILS_DESCRIPTION))
         if len(courses.ALLOWED_MATCHERS_NAMES) > 1:
             review_opts.add_property(schema_fields.SchemaField(
@@ -859,13 +866,14 @@ class ResourceAssessment(ResourceUnitBase):
                 select_data=courses.ALLOWED_MATCHERS_NAMES.items()))
 
         review_opts.add_property(schema_fields.SchemaField(
-            'review_form', 'Reviewer Feedback Form', 'text', optional=True,
+            'review_form', 'Reviewer Feedback Form (JavaScript)', 'text', optional=True,
             description=str(messages.REVIEWER_FEEDBACK_FORM_DESCRIPTION),
             extra_schema_dict_values={
                 'className': 'inputEx-Field review-form'}))
         review_opts.add_property(schema_fields.SchemaField(
-            'html_review_form', 'Reviewer Feedback Form (HTML)', 'html',
+            'html_review_form', 'Reviewer Feedback Form', 'html',
             optional=True,
+            description=str(messages.REVIEWER_FEEDBACK_FORM_HTML_DESCRIPTION),
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.ASSESSMENT_SCOPE,

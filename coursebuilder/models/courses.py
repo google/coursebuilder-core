@@ -2382,13 +2382,10 @@ class Course(object):
             'reg_form:additional_registration_fields', 'Additional Fields',
             'html', description='Additional registration text or questions.'))
         registration_opts.add_property(schema_fields.SchemaField(
-            'course:whitelist', 'Whitelisted Students', 'text', optional=True,
-            i18n=False,
-            description='List of email addresses of students who may register.'
-            'Syntax: Entries may be separated with any combination of '
-            'tabs, spaces, commas, or newlines.  Existing values using "[" and '
-            '"]" around email addresses continues to be supported.  '
-            'Regular expressions are not supported.'))
+            'course:whitelist', 'Whitelisted Students', 'text',
+            description='A list of email addresses of students who may register'
+            '.  Separate email addresses by commas or spaces.',
+            i18n=False, optional=True))
         registration_opts.add_property(schema_fields.SchemaField(
             'course:send_welcome_notifications',
             'Send welcome notifications', 'boolean', description='If enabled, '
@@ -2478,16 +2475,15 @@ class Course(object):
             Course.SCHEMA_SECTION_I18N, 'I18N')
         i18n_opts.add_property(schema_fields.SchemaField(
             'course:can_student_change_locale', 'Let Student Change Locale',
-            'boolean', optional=True,
-            description='Allow student to change locale at any time '
-            'during the course. If True, a language picker is shown to the '
-            'student and locale changes are allowed at any time. If False, a '
-            'language picker is not shown to the student and the desired '
-            'locale must be assigned during registration process via Locale '
-            'Labels. Current locale for any request is determined by looking '
-            'into student Locale Labels first, and then (if this value here '
-            'is set to True) into student preferences set by the language '
-            'picker.'))
+            'boolean',
+            description='Allow student to change locale at any time during the '
+            'course. If checked, a language picker is shown to the student and '
+            'locale changes are allowed at any time. If unchecked, a language '
+            'picker is not shown to the student and the desired locale must be '
+            'assigned during registration process via Locale Labels. Current '
+            'locale for any request is determined by looking into student '
+            'Locale Labels first, and then, if this value here is checked, into'
+            ' student preferences set by the language picker.', optional=True))
         locale_data_for_select = [
             (loc, locales.get_locale_display_name(loc))
             for loc in locales.get_system_supported_locales()]

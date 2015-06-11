@@ -37,7 +37,12 @@ REVIEWER_FEEDBACK_FORM_DESCRIPTION = safe_dom.assemble_text_message("""
 Review form questions and answers (JavaScript format).
 """, 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
+REVIEWER_FEEDBACK_FORM_HTML_DESCRIPTION = """
+Add the content that reviewers of a Peer Review assignment see.
+"""
+
 REVIEW_DUE_DATE_FORMAT_DESCRIPTION = safe_dom.assemble_text_message("""
+The review date must be later than the Submission Date.
 Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
 in the UTC timezone.
 """, 'https://code.google.com/p/course-builder/wiki/PeerReview')
@@ -46,7 +51,8 @@ REVIEW_MIN_COUNT_DESCRIPTION = safe_dom.assemble_text_message(
     None, 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
 REVIEW_TIMEOUT_IN_MINUTES = safe_dom.assemble_text_message("""
-This value should be specified in minutes.
+How long a reviewer has to review an assignment once the reviewer accepts the
+assignment.  This value should be specified in minutes.
 """, 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
 LESSON_VIDEO_ID_DESCRIPTION = """
@@ -110,4 +116,21 @@ Width of the input field, measured in columns.
 
 LINK_EDITOR_URL_DESCRIPTION = """
 Links to external sites must start with 'http' or https'.
+"""
+
+ASSESSMENT_WEIGHT_DESCRIPTION = """
+Specify how many points to assign to this assessment.
+"""
+
+CHECK_ANSWERS_DESCRIPTION = """
+Choose whether your students can get feedback on whether the answer is correct.
+"""
+
+UNIT_DESCRIPTION_DESCRIPTION = """
+Students see this description on the syllabus page.
+"""
+
+SHORT_ANSWER_SCORE_DESCRIPTION = """
+Points a student receives for answering this question correctly. 1.0 indicates
+full credit.
 """
