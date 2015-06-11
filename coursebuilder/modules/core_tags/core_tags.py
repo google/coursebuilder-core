@@ -194,6 +194,13 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
             cls._oeditor_extra_script_tags_urls)
 
     @classmethod
+    def _get_tag_renderer_url(cls, slug, type_id, resource_id):
+        args = urllib.urlencode(
+            {'type_id': type_id, 'resource_id': resource_id})
+        slug = '' if slug == '/' else slug  # Courses may be at / or /slug.
+        return '%s%s?%s' % (slug, _GOOGLE_DRIVE_TAG_RENDERER_PATH, args)
+
+    @classmethod
     def _oeditor_extra_script_tags_urls(cls):
         script_urls = []
         if courses.COURSES_CAN_USE_GOOGLE_APIS.value:
@@ -297,11 +304,6 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
             footer.append(script)
 
         return (header, footer)
-
-    def _get_tag_renderer_url(self, slug, type_id, resource_id):
-        args = urllib.urlencode(
-            {'type_id': type_id, 'resource_id': resource_id})
-        return '%s%s?%s' % (slug, _GOOGLE_DRIVE_TAG_RENDERER_PATH, args)
 
 
 class GoogleDriveRESTHandler(utils.BaseRESTHandler):

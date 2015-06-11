@@ -421,6 +421,20 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
 
         self.assertEqual(404, response.status_code)
 
+    def test_get_tag_renderer_url_for_course_at_root(self):
+        self.assertEqual(
+            '/modules/core_tags/googledrivetagrenderer?'
+            'resource_id=resource_id&type_id=type_id',
+            core_tags.GoogleDrive._get_tag_renderer_url(
+                '/', 'type_id', 'resource_id'))
+
+    def test_get_tag_renderer_url_for_course_with_slug(self):
+        self.assertEqual(
+            '/slug/modules/core_tags/googledrivetagrenderer?'
+            'resource_id=resource_id&type_id=type_id',
+            core_tags.GoogleDrive._get_tag_renderer_url(
+                '/slug', 'type_id', 'resource_id'))
+
 
 class TagsMarkdown(actions.TestBase):
 

@@ -22,8 +22,7 @@ window.GoogleApiClientTools = (function(JSON) {
   };
 
   module.getGoogleDriveTagUrl = function() {
-    var slug = top.window.location.pathname.split('/')[1];
-    return '/' + encodeURIComponent(slug) + '/modules/core_tags/googledrivetag';
+    return 'modules/core_tags/googledrivetag';
   };
 
   module.getTypeId = function() {
