@@ -866,7 +866,8 @@ class ResourceAssessment(ResourceUnitBase):
                 select_data=courses.ALLOWED_MATCHERS_NAMES.items()))
 
         review_opts.add_property(schema_fields.SchemaField(
-            'review_form', 'Reviewer Feedback Form (JavaScript)', 'text', optional=True,
+            'review_form', 'Reviewer Feedback Form (JavaScript)', 'text',
+            optional=True,
             description=str(messages.REVIEWER_FEEDBACK_FORM_DESCRIPTION),
             extra_schema_dict_values={
                 'className': 'inputEx-Field review-form'}))
