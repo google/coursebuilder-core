@@ -2062,7 +2062,7 @@ class StudentKeyNameTest(actions.TestBase):
     def test_two_users_with_identical_emails_can_register(self):
         user1 = self.make_test_user('user@google.com', user_id='123')
         user2 = self.make_test_user('user@google.com', user_id='456')
-        self.assertEqual(0, len(models.Student.all()))
+        self.assertEqual(0, len(models.Student.all().fetch(2)))
 
         models.Student._LEGACY_EMAIL_AS_KEY_NAME_ENABLED = False
 
@@ -2074,7 +2074,7 @@ class StudentKeyNameTest(actions.TestBase):
         actions.register(self, 'User 2')
         actions.logout()
 
-        self.assertEqual(2, len(models.Student.all()))
+        self.assertEqual(2, len(models.Student.all().fetch(2)))
         student1 = models.Student.get_by_user(user1)
         self.assertEqual('123', student1.user_id)
         student2 = models.Student.get_by_user(user2)
