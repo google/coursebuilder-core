@@ -3,13 +3,13 @@
 {% macro render_row(item) -%}
   <div class="row {{ item.class }}">
     <div class="left-matter">
-      <div class="reorder reveal-on-hover icon md md-view-headline"></div>
-      <div class="name">
-        <a href="{{ item.href }}" data-title="{{ item.title }}">{{ item.title }}</a>
-      </div>
+      <div class="reorder icon row-hover md md-view-headline"></div>
       {% for action in item.actions %}
         {{ action }}
       {% endfor %}
+      <div class="name">
+        <a href="{{ item.href }}" data-title="{{ item.title }}">{{ item.title }}</a>
+      </div>
     </div>
     <div class="extras">
       {% for extra in item.extras %}
@@ -33,12 +33,13 @@
   </div>
   <div class="row course">
     <div class="left-matter">
-      <div class="name"><a href="course">Course - {{ course.title }}</a></div>
       <form action="{{ course.availability.url }}" method="POST">
         <input type="hidden" name="xsrf_token" value="{{ course.availability.xsrf_token }}">
         <input type="hidden" name="availability" value="{{ course.availability.param }}">
         <button class="{{ course.availability.class }}" type="submit"></button>
       </form>
+      <a alt="Edit" class="icon row-hover md-mode-edit" href="dashboard?action=settings&amp;tab=course" title="Edit"></a>
+      <div class="name"><a href="course">Course - {{ course.title }}</a></div>
     </div>
   </div>
   <ol class="course">
@@ -55,7 +56,7 @@
           {% endif %}
           <ol class="unit">
             {% for lesson in unit.lessons %}
-              <li data-lesson-id="{{ lesson.lesson_id }}" 
+              <li data-lesson-id="{{ lesson.lesson_id }}"
                   data-auto-index="{{ lesson.auto_index }}">
                 {{ render_row(lesson) }}
               </li>
@@ -70,7 +71,6 @@
             <li class="add-lesson">
               <div class="row add-lesson">
                 <div class="left-matter">
-                  <div class="reorder icon"></div>
                   <form action="dashboard?action=add_lesson" method="POST">
                     <input type="hidden" name="xsrf_token" value="{{ add_lesson_xsrf_token }}">
                     <input type="hidden" name="unit_id" value="{{ unit.unit_id }}">

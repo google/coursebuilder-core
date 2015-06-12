@@ -66,17 +66,19 @@ div.course-outline div.left-matter {
   width: 580px;
   border-right: solid #ccc 1px;
 }
-div.course-outline div.row.course > div > div.name {
-  margin-left: 5px;
-}
 div.course-outline div.row.custom-unit > div > div.name {
   font-weight: bold;
 }
+.course-outline .row .name {
+  margin-left: 20px;
+}
+.course-outline .row.course .name {
+  margin-left: 0;
+}
 div.course-outline div.row.lesson > div > div.name,
 div.course-outline div.row.pre-assessment > div > div.name,
-div.course-outline div.row.post-assessment > div > div.name,
-div.course-outline div.row.add-lesson > div > div.name {
-  margin-left: 20px;
+div.course-outline div.row.post-assessment > div > div.name {
+  margin-left: 40px;
   max-width: 300px;
   white-space: nowrap;
   overflow-x: hidden;
@@ -84,8 +86,7 @@ div.course-outline div.row.add-lesson > div > div.name {
 }
 div.course-outline.read-only div.row:hover div.reorder,
 div.course-outline div.row.pre-assessment > div > div.reorder,
-div.course-outline div.row.post-assessment > div > div.reorder,
-div.course-outline div.row.add-lesson > div > div.reorder {
+div.course-outline div.row.post-assessment > div > div.reorder {
   opacity: 0;
   cursor: inherit;
 }
@@ -98,19 +99,11 @@ div.course-outline button {
 div.course-outline div.row.add-lesson button {
   font-style: italic;
   color: #777;
-  margin-left: 20px;
+  margin-left: 110px;
 }
 div.course-outline div.row > div,
 div.course-outline div.row > div > div {
   display: inline-block;
-}
-div.course-outline .reveal-on-hover {
-  opacity: 0;
-  transition: opacity 200ms;
-}
-div.course-outline div.row:hover .reveal-on-hover,
-div.course-outline .reveal-on-hover.md-lock {
-  opacity: 1;
 }
 div.course-outline .icon {
   display: inline-block;
@@ -121,13 +114,28 @@ div.course-outline .icon {
   width: 20px;
   line-height: 24px;
   padding: 2px 4px 2px 0;
-  color: #555;
   text-decoration: none;
+  box-sizing: border-box;
+}
+.course-outline .row-hover.icon {
+  color: #ccc;
+  transition: color 200ms;
+}
+.course-outline .row:hover .row-hover.icon,
+.course-outline .row .row-hover.icon.md-lock {
+  /* locked locks are dark even when not hovered */
+  color: #555;
 }
 div.course-outline div.reorder {
-  margin-left: 6px;
   cursor: move;
+}
+div.course-outline div.left-matter {
+    margin-left: 6px;
 }
 div.course-outline div.extras {
   padding-right: 20px;
+}
+div.course-outline div.row.course div.left-matter {
+  /* account for the lack of a reorder icon */
+  padding-left: 23.9931px;
 }

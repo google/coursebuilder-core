@@ -47,7 +47,7 @@ def _render_status_icon(handler, resource, key, component_type):
         return
     icon = safe_dom.Element(
         'div', data_key=str(key), data_component_type=component_type)
-    common_classes = 'reveal-on-hover icon icon-draft-status md'
+    common_classes = 'row-hover icon icon-draft-status md'
     if not handler.app_context.is_editable_fs():
         common_classes += ' inactive'
     if resource.now_available:
@@ -212,9 +212,9 @@ def _render_course_outline_to_html(handler, course):
                 'xsrf_token': handler.create_xsrf_token('course_availability'),
                 'param': not handler.app_context.now_available,
                 'class': (
-                    'reveal-on-hover icon md md-lock-open'
+                    'row-hover icon md md-lock-open'
                     if handler.app_context.now_available else
-                    'reveal-on-hover icon md md-lock')
+                    'row-hover icon md md-lock')
             }
         },
         'units': units,

@@ -379,7 +379,7 @@ class CourseOutlineTestCase(actions.TestBase):
         a = li.find('./div/div/div[@class="name"]/a')
         self.assertEquals(a.get('href', ''), href)
         self.assertEquals(a.text, title)
-        padlock = li.find('./div/div/div[3]')
+        padlock = li.find('./div/div/div[2]')
         self.assertEquals(padlock.get('data-component-type', ''), ctype)
         self.assertEquals(padlock.get('data-key', ''), str(key))
         self.assertIn(lock_class, padlock.get('class', ''))
@@ -453,10 +453,10 @@ class CourseOutlineTestCase(actions.TestBase):
         lis = self.parse_html_string(
             self.get(self.URL).body).findall('.//ol[@class="course"]/li')
         self.assertIn(
-            'md-lock', lis[0].find('./div/div/div[3]').get('class', ''))
+            'md-lock', lis[0].find('./div/div/div[2]').get('class', ''))
         self.assertIn(
             'md-lock-open',
-            lis[2].find('ol/li/div/div/div[3]').get('class', ''))
+            lis[2].find('ol/li/div/div/div[2]').get('class', ''))
 
         # Repeat but set assessment to public and lesson to private
         response = self._set_draft_status(
@@ -468,9 +468,9 @@ class CourseOutlineTestCase(actions.TestBase):
         lis = self.parse_html_string(
             self.get(self.URL).body).findall('.//ol[@class="course"]/li')
         self.assertIn(
-            'md-lock-open', lis[0].find('./div/div/div[3]').get('class', ''))
+            'md-lock-open', lis[0].find('./div/div/div[2]').get('class', ''))
         self.assertIn(
-            'md-lock', lis[2].find('ol/li/div/div/div[3]').get('class', ''))
+            'md-lock', lis[2].find('ol/li/div/div/div[2]').get('class', ''))
 
 
 class RoleEditorTestCase(actions.TestBase):

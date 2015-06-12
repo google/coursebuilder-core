@@ -37,9 +37,9 @@ SkillTable.prototype = {
     var td = $(
         '<td class="skill">' +
         '  <div class="diagnosis icon md"></div>' +
+        '  <button class="icon md md-delete delete-skill row-hover"></button> ' +
+        '  <button class="icon md md-mode-edit edit-skill row-hover"></button> ' +
         '  <span class="skill-name"></span> ' +
-        '  <button class="icon md md-delete reveal-on-hover delete-skill"></button> ' +
-        '  <button class="icon md md-mode-edit reveal-on-hover edit-skill"></button> ' +
         '</td>'
     );
     td.find('.diagnosis.icon, button').data('id', skill.id);

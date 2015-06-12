@@ -86,12 +86,12 @@ table.skill-map-table th span.skill-count {
 table.skill-map-table button:focus {
   outline: none;
 }
-table.skill-map-table .reveal-on-hover {
-  opacity: 0;
-  transition: opacity 200ms;
+.skill-map-table .row-hover.icon {
+  color: #ccc;
+  transition: color 200ms;
 }
-table.skill-map-table tr.row:hover .reveal-on-hover {
-  opacity: 1;
+.skill-map-table .row:hover .row-hover.icon {
+  color: #555;
 }
 table.skill-map-table button.add-new-skill {
 }

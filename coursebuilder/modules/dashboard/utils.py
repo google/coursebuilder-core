@@ -79,7 +79,7 @@ def list_files(handler, subfolder, merge_local_files=False, all_paths=None):
 def create_edit_button(edit_url):
     return safe_dom.A(
         href=edit_url,
-        className='icon md-mode-edit reveal-on-hover',
+        className='icon md-mode-edit row-hover',
         title='Edit',
         alt='Edit',
     )
