@@ -1146,6 +1146,7 @@ class InfrastructureTest(actions.TestBase):
             # View the student profile page.
             response = self.get('student/home')
             assert_does_not_contain('Overall course score', response.body)
+            assert_does_not_contain('Skills Progress', response.body)
 
             # Add a weight to the first assessment.
             assessment_1.weight = 10
@@ -4136,10 +4137,7 @@ class LessonComponentsTest(DatastoreBackedCourseTest):
 
         self.tracker = self.course.get_progress_tracker()
 
-    def test_component_discovery(self):
-        """Test extraction of components from a lesson body."""
-        cpt_list = self.course.get_components(
-            self.unit.unit_id, self.lesson.lesson_id)
+    def _assert_components(self, cpt_list):
         assert cpt_list == [
             {'instanceid': 'QN', 'quid': '123', 'weight': '1',
              'cpt_name': 'question'},
@@ -4147,10 +4145,23 @@ class LessonComponentsTest(DatastoreBackedCourseTest):
              'videoid': 'Kdg2drcUjYI'},
             {'instanceid': 'QG', 'qgid': '456', 'cpt_name': 'question-group'}
         ]
-
         valid_cpt_ids = self.tracker.get_valid_component_ids(
             self.unit.unit_id, self.lesson.lesson_id)
         self.assertEqual(set(['QN', 'QG']), set(valid_cpt_ids))
+
+    def test_component_discovery(self):
+        """Test extraction of components from a lesson body."""
+
+        cpt_list = self.course.get_components(
+            self.unit.unit_id, self.lesson.lesson_id)
+        self._assert_components(cpt_list)
+
+    def test_component_discovery_using_html5lib(self):
+        """Test extraction of components from a lesson body using html5lib."""
+
+        cpt_list = self.course.get_components(
+            self.unit.unit_id, self.lesson.lesson_id, use_lxml=False)
+        self._assert_components(cpt_list)
 
     def test_component_progress(self):
         """Test that progress tracking for components is done correctly."""

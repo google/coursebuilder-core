@@ -24,13 +24,20 @@ import re
 from xml.etree import cElementTree
 
 import html5lib
-import lxml.html
 import safe_dom
 import webapp2
 
 import appengine_config
 from common import schema_fields
 from models import config
+
+_LXML_AVAILABLE = False
+try:
+    import lxml.html
+    _LXML_AVAILABLE = True
+except ImportError:
+    if appengine_config.PRODUCTION_MODE:
+        raise
 
 
 CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(
@@ -438,7 +445,7 @@ def html_to_safe_dom(html_string, handler, render_custom_tags=True):
     return node_list
 
 
-def get_components_from_html(html):
+def get_components_from_html(html, use_lxml=_LXML_AVAILABLE):
     """Returns a list of dicts representing the components in a lesson.
 
     Args:
@@ -451,6 +458,30 @@ def get_components_from_html(html):
         - instanceid: the instance id of the component
         - cpt_name: the name of the component tag (e.g. gcb-googlegroup)
     """
+    if use_lxml:
+        return get_components_using_lxml(html)
+    else:
+        return get_components_using_html5lib(html)
+
+
+def get_components_using_html5lib(html):
+    """Find lesson components using the pure python html5lib library."""
+
+    parser = html5lib.HTMLParser(
+        tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
+        namespaceHTMLElements=False)
+    content = parser.parseFragment('<div>%s</div>' % html)[0]
+    components = []
+    for component in content.findall('.//*[@instanceid]'):
+        component_dict = {'cpt_name': component.tag}
+        component_dict.update(component.attrib)
+        components.append(component_dict)
+    return components
+
+
+def get_components_using_lxml(html):
+    """Find lesson components using the fast C-binding lxml library."""
+
     content = lxml.html.fromstring('<div>%s</div>' % html)
     components = []
     for component in content.xpath('.//*[@instanceid]'):

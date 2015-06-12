@@ -2954,7 +2954,7 @@ class Course(object):
     def get_parent_unit(self, unit_id):
         return self._model.get_parent_unit(unit_id)
 
-    def get_components(self, unit_id, lesson_id):
+    def get_components(self, unit_id, lesson_id, use_lxml=True):
         """Returns a list of dicts representing the components in a lesson.
 
         Args:
@@ -2972,7 +2972,8 @@ class Course(object):
         if not lesson.objectives:
             return []
 
-        return common.tags.get_components_from_html(lesson.objectives)
+        return common.tags.get_components_from_html(
+            lesson.objectives, use_lxml)
 
     def get_content_as_dict_safe(self, unit, errors, kind='assessment'):
         """Validate the assessment or review script and return as a dict."""
