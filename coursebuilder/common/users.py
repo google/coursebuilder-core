@@ -81,24 +81,24 @@ UserNotFoundError = _UserNotFoundError
 
 def create_login_url(dest_url=None, _auth_domain=None, federated_identity=None):
     # Treat as module-protected. pylint: disable=protected-access
-    return UsersServiceManager.get()._create_login_url(
+    return UsersServiceManager.get().create_login_url(
         dest_url=dest_url, _auth_domain=_auth_domain,
         federated_identity=federated_identity)
 
 
 def create_logout_url(dest_url):
     # Treat as module-protected. pylint: disable=protected-access
-    return UsersServiceManager.get()._create_logout_url(dest_url)
+    return UsersServiceManager.get().create_logout_url(dest_url)
 
 
 def get_current_user():
     # Treat as module-protected. pylint: disable=protected-access
-    return UsersServiceManager.get()._get_current_user()
+    return UsersServiceManager.get().get_current_user()
 
 
 def is_current_user_admin():
     # Treat as module-protected. pylint: disable=protected-access
-    return UsersServiceManager.get()._is_current_user_admin()
+    return UsersServiceManager.get().is_current_user_admin()
 
 
 # Public classes from google.appengine.api.users. Keep protected symbols in case
@@ -146,24 +146,28 @@ class AbstractUsersService(object):
     # Methods that constitute the service interface.
 
     @classmethod
-    def _create_login_url(
+    def create_login_url(
             cls, dest_url=None, _auth_domain=None, federated_identity=None):
         raise NotImplementedError
 
     @classmethod
-    def _create_logout_url(cls, dest_url):
+    def create_logout_url(cls, dest_url):
         raise NotImplementedError
 
     @classmethod
-    def _get_current_user(cls):
+    def get_current_user(cls):
         raise NotImplementedError
 
     @classmethod
-    def _is_current_user_admin(cls):
+    def is_current_user_admin(cls):
         raise NotImplementedError
 
     # Methods that aren't part of the service interface, but are used elsewhere
     # in the system.
+
+    @classmethod
+    def get_federated_email_resolver_class(cls):
+        return FederatedEmailResolver
 
     @classmethod
     def get_request_context_class(cls):
@@ -180,23 +184,34 @@ class AppEnginePassthroughUsersService(AbstractUsersService):
     """Users service that's just a passthrough to google.appengine.api.users."""
 
     @classmethod
-    def _create_login_url(
+    def create_login_url(
             cls, dest_url=None, _auth_domain=None, federated_identity=None):
         return users.create_login_url(
             dest_url=dest_url, _auth_domain=_auth_domain,
             federated_identity=federated_identity)
 
     @classmethod
-    def _create_logout_url(cls, dest_url):
+    def create_logout_url(cls, dest_url):
         return users.create_logout_url(dest_url)
 
     @classmethod
-    def _get_current_user(cls):
+    def get_current_user(cls):
         return users.get_current_user()
 
     @classmethod
-    def _is_current_user_admin(cls):
+    def is_current_user_admin(cls):
         return users.is_current_user_admin()
+
+
+class FederatedEmailResolver(object):
+    """Resolves federated emails for users.
+
+    By default, there is no federated authentication, so we always return None.
+    """
+
+    @classmethod
+    def get(cls, unused_user_id):
+        return None
 
 
 class UsersServiceManager(object):

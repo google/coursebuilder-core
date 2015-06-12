@@ -20,6 +20,7 @@ __author__ = [
 
 import datetime
 
+from common import users
 from common import utils as common_utils
 from models import config
 from models import entities
@@ -479,6 +480,58 @@ class QuestionDAOTestCase(actions.TestBase):
 
 
 class StudentTestCase(actions.ExportTestBase):
+
+    def setUp(self):
+        super(StudentTestCase, self).setUp()
+        self.old_users_service = users.UsersServiceManager.get()
+
+    def tearDown(self):
+        users.UsersServiceManager.set(self.old_users_service)
+        super(StudentTestCase, self).tearDown()
+
+    def test_federated_email_returns_and_caches_none_by_default(self):
+        student = models.Student(user_id='1')
+
+        # Check backing value starts at None, uncached. On access of the public
+        # computed property, check the backing value is still None (since the
+        # expected value is None in this case), but that the None value is now
+        # cached.
+        self.assertIsNone(student._federated_email_value)
+        self.assertFalse(student._federated_email_cached)
+
+        self.assertIsNone(student.federated_email)
+
+        self.assertIsNone(student._federated_email_value)
+        self.assertTrue(student._federated_email_cached)
+
+    def test_federated_email_returns_and_caches_data_from_custom_resolver(self):
+
+        class Resolver(users.FederatedEmailResolver):
+
+            @classmethod
+            def get(cls, unused_user_id):
+                return 'resolved@example.com'
+
+        class UsersService(users.AbstractUsersService):
+
+            @classmethod
+            def get_federated_email_resolver_class(cls):
+                return Resolver
+
+        users.UsersServiceManager.set(UsersService)
+
+        student = models.Student(user_id='1')
+
+        # Check backing value starts at None, uncached. On access of the public
+        # computed property, check the backing value is now set and cached.
+        self.assertIsNone(student._federated_email_value)
+        self.assertFalse(student._federated_email_cached)
+
+        self.assertEquals('resolved@example.com', student.federated_email)
+
+        self.assertEquals(
+            'resolved@example.com', student._federated_email_value)
+        self.assertTrue(student._federated_email_cached)
 
     def test_for_export_transforms_correctly(self):
         user_id = '1'

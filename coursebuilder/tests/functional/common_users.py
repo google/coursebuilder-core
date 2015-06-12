@@ -97,6 +97,12 @@ class AppEnginePassthroughUsersServiceTest(TestBase):
         self.assert_service_results_equal_and_not_none(
             users_result, gae_users_result)
 
+    def test_federated_email_resolver_returns_none(self):
+        service = users.UsersServiceManager.get()
+
+        self.assertIsNone(
+            service.get_federated_email_resolver_class().get('any_user_id'))
+
     def test_get_current_user_delegates_to_gae_users_service(self):
         actions.login(self.email)
         users_result = users.get_current_user()

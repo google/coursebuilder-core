@@ -1314,6 +1314,11 @@ class Student(BaseEntity):
         #'additional_fields.form01',  # User's name on registration form.
         email, name]
 
+    def __init__(self, *args, **kwargs):
+        super(Student, self).__init__(*args, **kwargs)
+        self._federated_email_cached = False
+        self._federated_email_value = None
+
     @classmethod
     def safe_key(cls, db_key, transform_fn):
         return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
@@ -1337,6 +1342,25 @@ class Student(BaseEntity):
         # from safe_key().
         model.key_by_user_id = self.get_key(transform_fn=transform_fn)
         return model
+
+    @property
+    def federated_email(self):
+        """Gets the federated email address of the student.
+
+        This always returns None unless federated authentication is enabled and
+        the federated authentication implementation implements an email
+        resolver. See common.users.FederatedEmailResolver.
+        """
+        if not self._federated_email_cached:
+            assert self.user_id
+            manager = users.UsersServiceManager.get()
+            resolver = manager.get_federated_email_resolver_class()
+            assert resolver
+
+            self._federated_email_value = resolver.get(self.user_id)
+            self._federated_email_cached = True
+
+        return self._federated_email_value
 
     @property
     def is_transient(self):
