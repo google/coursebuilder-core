@@ -37,24 +37,17 @@ class AdminPreferencesEditor(dto_editor.BaseDatastoreAssetEditor):
 
     @staticmethod
     def edit_admin_preferences(handler):
-        template_values = {}
-        AdminPreferencesEditor._edit_admin_preferences(
-            handler, template_values,
-            '/dashboard?action=settings&tab=admin_prefs')
-        handler.render_page(template_values, 'settings')
-
-    @staticmethod
-    def _edit_admin_preferences(handler, template_values, exit_url):
         if not roles.Roles.is_course_admin(handler.app_context):
             handler.error(401)
             return
-        template_values.update({
+        models.StudentPreferencesDAO.load_or_create()  # Prefs must exist.
+        return {
             'page_title': handler.format_title('Edit Preferences'),
             'main_content': handler.get_form(
                 AdminPreferencesRESTHandler,
                 users.get_current_user().user_id(),
-                exit_url, deletable=False)
-        })
+                exit_url='', deletable=False)
+        }
 
 
 class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):

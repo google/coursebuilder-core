@@ -49,6 +49,7 @@ def register_module():
 
         outline.on_module_enabled()
         assets.on_module_enabled()
+        admin_preferences_editor.on_module_enabled()
         settings.on_module_enabled()
 
     # provide parser to verify

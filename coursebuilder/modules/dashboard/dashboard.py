@@ -99,7 +99,7 @@ class DashboardHandler(
     post_actions = [
         'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson',
-        'edit_admin_preferences', 'set_draft_status',
+        'set_draft_status',
         'add_to_question_group',
         'clone_question', 'add_custom_unit']
     child_routes = [
