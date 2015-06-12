@@ -20,9 +20,16 @@ describe('normalize scores', function() {
     Y = YUI();
     Y.use('node', 'array-extras');
 
-    this.addMatchers({
-      toBeArrayEqual: function(expected) {
-        return arrayEqual(this.actual, expected);
+    jasmine.addMatchers({
+      toBeArrayEqual: function(util, customEqualityTesters) {
+        return {
+          compare: function(actual, expected) {
+            return {
+              pass: arrayEqual(actual, expected),
+              message: 'Expected ' + actual + ' to equal ' + expected
+            };
+          }
+        }
       }
     });
   });
@@ -164,7 +171,12 @@ describe('draft status toggling', function() {
     cbShowMsgAutoHide = jasmine.createSpy("cbShowMsgAutoHide");
     this.oldPost = $.post;
     $.post = jasmine.createSpy("$.post");
-    this.padlock = $("<div class='icon md-lock'>");
+    var content = $(
+        '<div class="course-outline" data-status-xsrf-token="token">' +
+        '  <div class="icon md-lock"' +
+        '      data-key="9" data-component-type="lesson"></div>' +
+        '</div>');
+    this.padlock = content.find('div.md-lock');
     onDraftStatusClick.call(this.padlock);
   });
   afterEach(function() {
@@ -179,7 +191,10 @@ describe('draft status toggling', function() {
       'dashboard',
       {
         action: 'set_draft_status',
-        set_draft: 0
+        set_draft: 0,
+        'key': 9,
+        'type': 'lesson',
+        'xsrf_token': 'token'
       },
       jasmine.any(Function),
       'text'

@@ -19,10 +19,10 @@ shopt -s nullglob
 CHROMEDRIVER_VERSION=2.10
 CHROMEDRIVER_DIR=$RUNTIME_HOME/chromedriver-$CHROMEDRIVER_VERSION
 if [[ $OSTYPE == linux* ]] ; then
-  NODE_DOWNLOAD_FOLDER=node-v0.10.1-linux-x64
+  NODE_DOWNLOAD_FOLDER=node-v0.12.4-linux-x64
   CHROMEDRIVER_ZIP=chromedriver_linux64.zip
 elif [[ $OSTYPE == darwin* ]] ; then
-  NODE_DOWNLOAD_FOLDER=node-v0.10.1-darwin-x64
+  NODE_DOWNLOAD_FOLDER=node-v0.12.4-darwin-x64
   CHROMEDRIVER_ZIP=chromedriver_mac32.zip
 else
   echo "Target OS '$TARGET_OS' must start with 'linux' or 'darwin'."
@@ -45,7 +45,11 @@ fi
 
 # Configures the runtime environment.
 export PYTHONPATH=$SOURCE_DIR:$GOOGLE_APP_ENGINE_HOME:$RUNTIME_HOME/oauth2client
-PATH=$RUNTIME_HOME/node/bin:$RUNTIME_HOME/phantomjs/bin:$CHROMEDRIVER_DIR:$PATH
+PATH=$RUNTIME_HOME/node/node_modules/karma/bin\
+:$RUNTIME_HOME/node/bin\
+:$RUNTIME_HOME/phantomjs/bin\
+:$CHROMEDRIVER_DIR\
+:$PATH
 export YUI_BASE=$RUNTIME_HOME/yui/build
 export KARMA_LIB=$RUNTIME_HOME/karma_lib
 
@@ -132,14 +136,18 @@ if [ ! -x $CHROMEDRIVER_DIR/chromedriver ] ; then
   rm chromedriver-download.zip
 fi
 
-if need_install node ChangeLog Version 0.10.1 ; then
+if need_install node ChangeLog Version 0.12.4 ; then
   echo Installing Node.js
-  curl --location --silent http://nodejs.org/dist/v0.10.1/$NODE_DOWNLOAD_FOLDER.tar.gz -o node-download.tgz
+  curl --location --silent http://nodejs.org/dist/v0.12.4/$NODE_DOWNLOAD_FOLDER.tar.gz -o node-download.tgz
   tar xzf node-download.tgz --directory $RUNTIME_HOME
   mv $RUNTIME_HOME/$NODE_DOWNLOAD_FOLDER $RUNTIME_HOME/node
   rm node-download.tgz
   echo Installing Karma
-  $RUNTIME_HOME/node/bin/npm install -g karma@0.8.7
+  pushd $RUNTIME_HOME/node
+  ./bin/npm install jasmine-core@2.3.4 phantomjs@1.9.8 karma@0.12.36 \
+      karma-jasmine@0.3.5 karma-phantomjs-launcher@0.2.0 karma-jasmine-jquery \
+      --save-dev
+  popd
 fi
 
 if need_install phantomjs ChangeLog Version 1.9.0 ; then
@@ -158,13 +166,6 @@ if need_install phantomjs ChangeLog Version 1.9.0 ; then
     echo "Target OS '$OSTYPE' must start with 'linux' or 'darwin'."
     exit -1
   fi
-fi
-
-if need_install karma_lib 'jasmine-jquery*.js' Version 1.5.2 ; then
-  echo Installing required karma lib files
-  mkdir -p $RUNTIME_HOME/karma_lib
-  curl --location --silent $CB_ARCHIVE_URL/jasmine-jquery-1.5.2.js --create-dirs -o jasmine-jquery-1.5.2.js
-  mv jasmine-jquery-1.5.2.js $RUNTIME_HOME/karma_lib
 fi
 
 if need_install logilab/pylint ChangeLog " -- " 1.4.0 ; then

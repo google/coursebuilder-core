@@ -107,9 +107,12 @@ describe('assessment tags', function() {
         var auditDict;
         var eventPayloads = JSON.parse(
             readFixtures('tests/unit/common/event_payloads.json'));
-        var questionData = {'mc-0': {choices: [
-            {score: '1', feedback: 'yes'},
-            {score: '0', feedback: 'no'}]}};
+        var questionData = {
+          'mc-0': {
+            quid: 'mc-0-quid',
+            choices: [
+              {score: '1', feedback: 'yes'},
+              {score: '0', feedback: 'no'}]}};
         var mc = new McQuestion(el, questionData, MESSAGES, function(arg) {
           auditDict = arg;
           auditDict.location = LOGGING_LOCATION;
@@ -191,6 +194,7 @@ describe('assessment tags', function() {
     });
     function getQuestionData(matcher, response) {
       return {'sa-0': {
+        quid: 'sa-0-quid',
         hint: 'it\s \'falafel\'',
         graders: [{
           matcher: matcher,

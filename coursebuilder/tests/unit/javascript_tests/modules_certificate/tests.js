@@ -24,6 +24,8 @@ describe('certificate criteria user interface', function() {
       loadFixtures(
           'tests/unit/javascript_tests/modules_certificate/fixture.html');
       this.assessmentDropdown = $(".assessment-dropdown select");
+      // Execute the jQuery onReady function
+      onReady();
     });
 
     it('selects a peer graded assessment', function() {

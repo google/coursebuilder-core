@@ -69,8 +69,8 @@ describe("questionnaire library", function () {
     onSubmitButtonClick(this.key, "my-xsrf-token", this.button);
 
     expect($.ajax).toHaveBeenCalled();
-    expect($.ajax.mostRecentCall.args.length).toBe(1);
-    var ajaxArg = $.ajax.mostRecentCall.args[0];
+    expect($.ajax.calls.mostRecent().args.length).toBe(1);
+    var ajaxArg = $.ajax.calls.mostRecent().args[0];
     expect(ajaxArg.type).toBe("POST");
     expect(ajaxArg.url).toBe("rest/modules/questionnaire");
     expect(ajaxArg.dataType).toBe("text");

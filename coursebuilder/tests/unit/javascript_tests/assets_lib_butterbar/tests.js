@@ -26,7 +26,7 @@ describe('ButterBar', function() {
   });
   it('hides automatically when called with cbShowMsgAutoHide', function() {
     window.clearTimeout = jasmine.createSpy('window.clearTimeout');
-    window.setTimeout = jasmine.createSpy('window.setTimeout').andCallFake(
+    window.setTimeout = jasmine.createSpy('window.setTimeout').and.callFake(
       cbHideMsg);
     cbShowMsgAutoHide('Hello, World!');
     expect(window.clearTimeout).not.toHaveBeenCalled();
@@ -35,10 +35,11 @@ describe('ButterBar', function() {
   });
   it('restarts timeout when cbShowMsgAutoHide is called twice', function() {
     window.clearTimeout = jasmine.createSpy('window.clearTimeout');
-    window.setTimeout = jasmine.createSpy('window.setTimeout').andReturn(101);
+    window.setTimeout = jasmine.createSpy('window.setTimeout')
+        .and.returnValue(101);
     cbShowMsgAutoHide('Hello, World!');
     cbShowMsgAutoHide('Hello, World!');
     expect(window.clearTimeout).toHaveBeenCalledWith(101);
-    expect(window.setTimeout.calls.length).toBe(2);
+    expect(window.setTimeout.calls.count()).toBe(2);
   });
 });

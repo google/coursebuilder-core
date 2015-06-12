@@ -154,20 +154,22 @@ describe('The skill tagging library', function() {
       it('GETs skills from the skill REST service', function() {
         this.skillList.load(this.callback);
         expect($.ajax).toHaveBeenCalled();
-        var arg = $.ajax.calls[0].args[0];
+        var arg = $.ajax.calls.argsFor(0)[0];
         expect(arg.type).toEqual('GET');
         expect(arg.url).toEqual('rest/modules/skill_map/skill');
         expect(arg.dataType).toEqual('text');
       });
       it('displays an error if the status is not 200', function() {
         this.skillList.load(this.callback);
-        $.ajax.calls[0].args[0].success(JSON.stringify({status: 400}));
+        $.ajax.calls.argsFor(0)[0].success(JSON.stringify({status: 400}));
         expect(showMsg).toHaveBeenCalled();
-        expect(showMsg.calls[0].args[0]).toMatch(/^Unable to load skill map./);
+        expect(showMsg.calls.argsFor(0)[0])
+            .toMatch(/^Unable to load skill map./);
       });
       it('loads a valid skill map', function() {
         this.skillList.load(this.callback);
-        $.ajax.calls[0].args[0].success(JSON.stringify(SKILL_LIST_REST_RESPONSE));
+        $.ajax.calls.argsFor(0)[0]
+            .success(JSON.stringify(SKILL_LIST_REST_RESPONSE));
         expect(this.callback).toHaveBeenCalled();
         expect(this.skillList.getSkillById('s111')).toEqual({
           id: 's111', name: 'rock climbing', description: 'can climb rocks',
@@ -183,7 +185,7 @@ describe('The skill tagging library', function() {
         this.skillList.createOrUpdateSkill(
             this.callback, 'ice skating', 'can skate');
         expect($.ajax).toHaveBeenCalled();
-        var arg = $.ajax.calls[0].args[0];
+        var arg = $.ajax.calls.argsFor(0)[0];
         expect(arg.type).toEqual('PUT');
         expect(arg.url).toEqual('rest/modules/skill_map/skill');
         var request = JSON.parse(arg.data.request);
@@ -200,10 +202,10 @@ describe('The skill tagging library', function() {
       it('displays an error if the status is not 200', function() {
         this.skillList.createOrUpdateSkill(
             this.callback, 'ice skating', 'can skate');
-        $.ajax.calls[0].args[0].success(JSON.stringify(
+        $.ajax.calls.argsFor(0)[0].success(JSON.stringify(
             {status: 400, message: 'Server error'}));
         expect(showMsg).toHaveBeenCalled();
-        expect(showMsg.calls[0].args[0]).toEqual('Server error');
+        expect(showMsg.calls.argsFor(0)[0]).toEqual('Server error');
       });
       it('inserts the skill with key, and issues callback after save', function() {
         this.skillList.createOrUpdateSkill(
@@ -225,9 +227,9 @@ describe('The skill tagging library', function() {
             diagnosis: []
           })
         };
-        $.ajax.calls[0].args[0].success(JSON.stringify(payload));
+        $.ajax.calls.argsFor(0)[0].success(JSON.stringify(payload));
         expect(this.callback).toHaveBeenCalled();
-        expect(this.callback.calls[0].args[0]).toEqual({
+        expect(this.callback.calls.argsFor(0)[0]).toEqual({
           id: 'skill001',
           name: 'ice skating',
           description: 'can skate',
@@ -235,7 +237,7 @@ describe('The skill tagging library', function() {
           lessons: [],
           questions: []
         });
-        expect(this.callback.calls[0].args[1]).toEqual('OK');
+        expect(this.callback.calls.argsFor(0)[1]).toEqual('OK');
       });
     });
 
@@ -243,12 +245,12 @@ describe('The skill tagging library', function() {
       it ('DELETEs the skill with the REST service', function() {
         // Load the sample skill map
         this.skillList.load(this.callback);
-        $.ajax.calls[0].args[0]
+        $.ajax.calls.argsFor(0)[0]
             .success(JSON.stringify(SKILL_LIST_REST_RESPONSE));
 
         var retval = this.skillList.deleteSkill(this.callback, 's111');
 
-        var arg = $.ajax.calls[1].args[0];
+        var arg = $.ajax.calls.argsFor(1)[0];
         expect(arg.type).toEqual('DELETE');
         expect(arg.url).toEqual('rest/modules/skill_map/skill' +
             '?xsrf_token=valid_xsrf_token&key=s111');
@@ -260,19 +262,19 @@ describe('The skill tagging library', function() {
       it ('displays an error message if the status is not 200', function() {
         // Load the sample skill map
         this.skillList.load(this.callback);
-        $.ajax.calls[0].args[0]
+        $.ajax.calls.argsFor(0)[0]
             .success(JSON.stringify(SKILL_LIST_REST_RESPONSE));
 
         this.skillList.deleteSkill(this.callback, 's111');
-        $.ajax.calls[1].args[0].success(JSON.stringify(
+        $.ajax.calls.argsFor(1)[0].success(JSON.stringify(
             {status: 400, message: 'Server error'}));
         expect(showMsg).toHaveBeenCalled();
-        expect(showMsg.calls[0].args[0]).toEqual('Server error');
+        expect(showMsg.calls.argsFor(0)[0]).toEqual('Server error');
       });
       it ('calls the callback', function() {
         // Load the sample skill map
         this.skillList.load(this.callback);
-        $.ajax.calls[0].args[0]
+        $.ajax.calls.argsFor(0)[0]
             .success(JSON.stringify(SKILL_LIST_REST_RESPONSE));
 
         this.skillList.deleteSkill(this.callback, 's111');
@@ -284,9 +286,9 @@ describe('The skill tagging library', function() {
             diagnosis: []
           })
         };
-        $.ajax.calls[1].args[0].success(JSON.stringify(payload));
-        expect(this.callback.calls[1].args[0]).toEqual('success');
-        expect(this.callback.calls[1].args[1]).toEqual('OK');
+        $.ajax.calls.argsFor(1)[0].success(JSON.stringify(payload));
+        expect(this.callback.calls.argsFor(1)[0]).toEqual('success');
+        expect(this.callback.calls.argsFor(1)[1]).toEqual('OK');
       });
     });
   });
@@ -364,8 +366,8 @@ describe('The skill tagging library', function() {
       $('input[type=checkbox]:first').click();
       $('button.select').click();
       expect(this.callback).toHaveBeenCalled();
-      expect(this.callback.calls[0].args[0].length).toBe(1);
-      expect(this.callback.calls[0].args[0][0]).toBe('s1');
+      expect(this.callback.calls.argsFor(0)[0].length).toBe(1);
+      expect(this.callback.calls.argsFor(0)[0][0]).toBe('s1');
     });
 
     it('is disabled when empty', function() {
@@ -458,8 +460,8 @@ describe('The skill tagging library', function() {
         questions: []
       };
 
-      expect(this.callback.calls.length).toBe(1);
-      expect(this.callback.calls[0].args[0]).toEqual(expectedSkill);
+      expect(this.callback.calls.count()).toBe(1);
+      expect(this.callback.calls.argsFor(0)[0]).toEqual(expectedSkill);
       expect(this.skillList.list.length).toBe(3);
       expect(this.skillList.list[2]).toEqual(expectedSkill);
     });
@@ -491,8 +493,8 @@ describe('The skill tagging library', function() {
         questions: []
       };
 
-      expect(this.callback.calls.length).toBe(1);
-      expect(this.callback.calls[0].args[0]).toEqual(expectedSkill);
+      expect(this.callback.calls.count()).toBe(1);
+      expect(this.callback.calls.argsFor(0)[0]).toEqual(expectedSkill);
       expect(this.skillList.list.length).toBe(3);
       expect(this.skillList.list[2]).toEqual(expectedSkill);
     });
@@ -539,8 +541,8 @@ describe('The skill tagging library', function() {
         questions: []
       };
 
-      expect(this.callback.calls.length).toBe(1);
-      expect(this.callback.calls[0].args[0]).toEqual(expectedSkill);
+      expect(this.callback.calls.count()).toBe(1);
+      expect(this.callback.calls.argsFor(0)[0]).toEqual(expectedSkill);
       expect(this.skillList.list.length).toBe(3);
       expect(this.skillList.list[2]).toEqual(expectedSkill);
     });
@@ -596,8 +598,8 @@ describe('The skill tagging library', function() {
         questions: []
       };
 
-      expect(this.callback.calls.length).toBe(1);
-      expect(this.callback.calls[0].args[0]).toEqual(expectedSkill);
+      expect(this.callback.calls.count()).toBe(1);
+      expect(this.callback.calls.argsFor(0)[0]).toEqual(expectedSkill);
       expect(this.skillList.list.length).toBe(3);
       expect(this.skillList.list[2]).toEqual(expectedSkill);
     });
@@ -654,8 +656,8 @@ describe('The skill tagging library', function() {
         ]
       };
 
-      expect(this.callback.calls.length).toBe(1);
-      expect(this.callback.calls[0].args[0]).toEqual(expectedSkill);
+      expect(this.callback.calls.count()).toBe(1);
+      expect(this.callback.calls.argsFor(0)[0]).toEqual(expectedSkill);
       expect(this.skillList.list.length).toBe(3);
       expect(this.skillList.list[2]).toEqual(expectedSkill);
     });

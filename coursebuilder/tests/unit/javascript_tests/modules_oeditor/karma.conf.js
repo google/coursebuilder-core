@@ -1,21 +1,16 @@
-basePath = '../../../..';
+module.exports = function(config) {
+  config.set({
+    basePath: '../../../..',
+    files: [
+      'tests/unit/javascript_tests/modules_oeditor/*.js',
+      'modules/oeditor/oeditor.js',
+      'modules/oeditor/resources/popup.js',
+      'modules/oeditor/rte.js'
+    ],
 
-files = [
-  JASMINE,
-  JASMINE_ADAPTER,
-
-  // Test files
-  'tests/unit/javascript_tests/modules_oeditor/*.js',
-
-  // Files to test
-  'modules/oeditor/oeditor.js',
-  'modules/oeditor/resources/popup.js',
-  'modules/oeditor/rte.js'
-];
-
-exclude = [
-  '**/karma.conf.js'
-];
-
-browsers = ['PhantomJS'];
-singleRun = true;
+    exclude: ['**/karma.conf.js'],
+    frameworks: ['jasmine-jquery', 'jasmine'],
+    browsers: ['PhantomJS'],
+    singleRun: true
+  });
+};

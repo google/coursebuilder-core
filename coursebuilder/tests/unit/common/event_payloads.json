@@ -84,6 +84,7 @@
   "multiple_choice_15": {
     "event_data": {
       "type": "McQuestion",
+      "quid": "mc-0-quid",
       "instanceid": "mc-0",
       "answer": [0],
       "score": 1,
@@ -101,6 +102,7 @@
   "short_answer_15": {
     "event_data": {
       "type": "SaQuestion",
+      "quid": "sa-0-quid",
       "instanceid": "sa-0",
       "answer": "falafel",
       "score": 1,

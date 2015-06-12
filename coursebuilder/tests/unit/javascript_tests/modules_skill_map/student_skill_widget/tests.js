@@ -10,7 +10,7 @@ describe('The student skill widget', function() {
     loadFixtures('tests/unit/javascript_tests/modules_skill_map/' +
         'student_skill_widget/fixture.html');
 
-    jasmine.Clock.useMock();
+    jasmine.clock().install();
     $.fx.off = true;
 
     this.detailsPanel = $('div.skill-panel div.skill-details');
@@ -20,18 +20,23 @@ describe('The student skill widget', function() {
     init();
   });
 
+  afterEach(function() {
+    jasmine.clock().uninstall();
+    $(document.body).empty();
+  });
+
   it('opens/closes when the arrow is clicked', function() {
     expect(this.detailsPanel).toBeHidden();
     expect(this.button).toHaveClass('md-keyboard-arrow-down');
 
     this.button.click();
-    jasmine.Clock.tick(500);
+    jasmine.clock().tick(500);
 
     expect(this.detailsPanel).not.toBeHidden();
     expect(this.button).toHaveClass('md-keyboard-arrow-up');
 
     this.button.click();
-    jasmine.Clock.tick(500);
+    jasmine.clock().tick(500);
 
     expect(this.detailsPanel).toBeHidden();
     expect(this.button).toHaveClass('md-keyboard-arrow-down');
@@ -40,14 +45,14 @@ describe('The student skill widget', function() {
   it('fires events when it is opened or closed', function() {
     // Click once to open
     this.button.click();
-    jasmine.Clock.tick(500);
-    expect(gcbAudit.calls[0].args).toEqual(
+    jasmine.clock().tick(500);
+    expect(gcbAudit.calls.argsFor(0)).toEqual(
         [true, {type: 'open', isOpened: true}, 'skill-panel', true]);
 
     // Click again to close
     this.button.click();
-    jasmine.Clock.tick(500);
-    expect(gcbAudit.calls[1].args).toEqual(
+    jasmine.clock().tick(500);
+    expect(gcbAudit.calls.argsFor(1)).toEqual(
         [true, {type: 'open', isOpened: false}, 'skill-panel', true]);
   });
 
@@ -60,7 +65,7 @@ describe('The student skill widget', function() {
 
     // Click once to open
     this.button.click();
-    jasmine.Clock.tick(500);
+    jasmine.clock().tick(500);
 
     expect($('div.skill-panel .skill-card.highlighted').length).toBe(0);
     expect($('div.skill-panel .skill-card.shaded').length).toBe(0);
@@ -89,7 +94,7 @@ describe('The student skill widget', function() {
   it('removes highlights when something else is clicked', function() {
     // Click once to open
     this.button.click();
-    jasmine.Clock.tick(500);
+    jasmine.clock().tick(500);
 
     expect($('div.skill-panel .skill-card.highlighted').length).toBe(0);
     expect($('div.skill-panel .skill-card.shaded').length).toBe(0);
@@ -107,24 +112,24 @@ describe('The student skill widget', function() {
 
   it('fires an event when a skill is clicked', function() {
     // Expect nothing happens if the widget is closed
-    expect(gcbAudit.calls.length).toBe(0);
+    expect(gcbAudit.calls.count()).toBe(0);
     this.filterLi.click();
-    expect(gcbAudit.calls.length).toBe(0);
+    expect(gcbAudit.calls.count()).toBe(0);
 
     // Click once to open
     this.button.click();
-    jasmine.Clock.tick(500);
+    jasmine.clock().tick(500);
 
     var skillId = 6350779162034176;
     expect(this.filterLi).toHaveData('skillId', skillId);
 
     // Expect one event from opening the widget
-    expect(gcbAudit.calls.length).toBe(1);
+    expect(gcbAudit.calls.count()).toBe(1);
 
     this.filterLi.click();
     // Now expect a second event
-    expect(gcbAudit.calls.length).toBe(2);
-    expect(gcbAudit.calls[1].args).toEqual(
+    expect(gcbAudit.calls.count()).toBe(2);
+    expect(gcbAudit.calls.argsFor(1)).toEqual(
         [
           true,
           {type: 'skill-hover', skillId: skillId},
@@ -153,7 +158,7 @@ describe('The student skill widget', function() {
 
     // Click to open the widget
     this.button.click();
-    jasmine.Clock.tick(500);
+    jasmine.clock().tick(500);
 
     expect($('.skill-panel-tooltip').length).toBe(0);
 

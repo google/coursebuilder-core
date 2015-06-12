@@ -79,12 +79,12 @@ describe('FramedEditorControls', function() {
     };
 
     spyOn(frameProxy, 'init');
-    spyOn(frameProxy, 'getValue').andReturn('parent_form_value');
+    spyOn(frameProxy, 'getValue').and.returnValue('parent_form_value');
     spyOn(frameProxy, 'setValue');
     spyOn(frameProxy, 'close');
     spyOn(frameProxy, 'submit');
     spyOn(frameProxy, 'onLoad');
-    spyOn(env.form, 'getValue').andReturn('form_value');
+    spyOn(env.form, 'getValue').and.returnValue('form_value');
     spyOn(env.form, 'setValue');
     spyOn(env, 'onFormLoad');
 
@@ -139,7 +139,7 @@ describe('FramedEditorControls', function() {
     var formContainer = {
       style: {}
     }
-    spyOn(document, 'getElementById').andReturn(formContainer)
+    spyOn(document, 'getElementById').and.returnValue(formContainer)
     framedEditorControls.populateForm();
     expect(frameProxy.init).toHaveBeenCalledWith(env.schema);
     expect(env.form.setValue).toHaveBeenCalledWith('parent_form_value');
@@ -175,9 +175,9 @@ describe('FrameProxy', function() {
     };
     spyOn(root, 'appendChild');
     spyOn(root, 'removeChild');
-    spyOn(document, 'getElementById').andReturn(root);
-    spyOn(document, 'createElement').andReturn(iframe);
-    spyOn(callbacks, 'getValue').andReturn(DEFAULT_VALUE);
+    spyOn(document, 'getElementById').and.returnValue(root);
+    spyOn(document, 'createElement').and.returnValue(iframe);
+    spyOn(callbacks, 'getValue').and.returnValue(DEFAULT_VALUE);
     spyOn(callbacks, 'onSubmit');
     spyOn(callbacks, 'onClose');
 
@@ -225,14 +225,14 @@ describe('FrameProxy', function() {
     proxy.open();
     proxy.close();
     expect(callbacks.onClose).toHaveBeenCalled();
-    expect(callbacks.onSubmit.calls.length).toEqual(0);
+    expect(callbacks.onSubmit.calls.count()).toEqual(0);
     expect(root.removeChild).toHaveBeenCalledWith(iframe);
     expect(root.className).toEqual('hidden');
   });
 
   it('does not call its callback on close if it was never opened', function() {
     proxy.close();
-    expect(callbacks.onClose.calls.length).toEqual(0);
+    expect(callbacks.onClose.calls.count()).toEqual(0);
   });
 
   it('tidies itself and calls its callback on submit', function() {
@@ -240,7 +240,7 @@ describe('FrameProxy', function() {
     proxy.submit();
     expect(callbacks.onSubmit)
         .toHaveBeenCalledWith(DEFAULT_VALUE, DEFAULT_SCHEMA);
-    expect(callbacks.onClose.calls.length).toEqual(0);
+    expect(callbacks.onClose.calls.count()).toEqual(0);
     expect(root.removeChild).toHaveBeenCalledWith(iframe);
     expect(root.className).toEqual('hidden');
   });
@@ -362,7 +362,7 @@ describe('CustomTagManager', function() {
 
     // Verification
     expect(frameProxyOpener.open).toHaveBeenCalled();
-    expect(frameProxyOpener.open.mostRecentCall.args[0])
+    expect(frameProxyOpener.open.calls.mostRecent().args[0])
         .toEqual('edit_url?gcb-math');
   });
 
@@ -382,7 +382,7 @@ describe('CustomTagManager', function() {
 
     // Verification
     expect(frameProxyOpener.open).toHaveBeenCalled();
-    expect(frameProxyOpener.open.mostRecentCall.args[0])
+    expect(frameProxyOpener.open.calls.mostRecent().args[0])
         .toEqual('edit_url?tagname');
   });
 });

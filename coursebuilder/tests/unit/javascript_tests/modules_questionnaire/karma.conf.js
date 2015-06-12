@@ -1,40 +1,28 @@
-basePath = '../../../..';
-
-var KARMA_LIB = process.env.KARMA_LIB;
-
-files = [
-  JASMINE,
-  JASMINE_ADAPTER,
-  'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
-  KARMA_LIB + '/jasmine-jquery-1.5.2.js',
-
-
-  // Test files
-  'tests/unit/javascript_tests/modules_questionnaire/*.js',
-
-  // Test resources
-  {
-    pattern: 'tests/unit/javascript_tests/modules_questionnaire/fixture.html',
-    watched: true,
-    included: false,
-    served: true
-  },
-
-  {
-    pattern: 'tests/unit/javascript_tests/modules_questionnaire/form_data.json',
-    watched: true,
-    included: false,
-    served: true
-  },
-
-  // Files to test
-  'modules/questionnaire/resources/js/questionnaire.js'
-
-];
-
-exclude = [
-  '**/karma.conf.js'
-];
-
-browsers = ['PhantomJS'];
-singleRun = true;
+module.exports = function(config) {
+  config.set({
+    basePath: '../../../..',
+    files: [
+      'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
+      'tests/unit/javascript_tests/modules_questionnaire/*.js',
+      {
+        pattern: 'tests/unit/javascript_tests/modules_questionnaire/' +
+            'fixture.html',
+        watched: true,
+        included: false,
+        served: true
+      },
+      {
+        pattern: 'tests/unit/javascript_tests/modules_questionnaire/' +
+            'form_data.json',
+        watched: true,
+        included: false,
+        served: true
+      },
+      'modules/questionnaire/resources/js/questionnaire.js'
+    ],
+    exclude: ['**/karma.conf.js'],
+    frameworks: ['jasmine-jquery', 'jasmine'],
+    browsers: ['PhantomJS'],
+    singleRun: true,
+  });
+};

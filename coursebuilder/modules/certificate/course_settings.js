@@ -1,11 +1,13 @@
 var isPeerAssessmentTable;
 
-$(function() {
+$(onReady);
+
+function onReady() {
   if (cb_global.schema.properties.course) {
     // Only activate this functionality on the Settings > Course view
     init();
   }
-});
+}
 
 
 function init() {

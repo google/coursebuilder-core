@@ -24,6 +24,9 @@ describe('core tags module', function() {
 
   describe('parent and child frame tests', function() {
     // TODO(johncox): tests.
+    it('runs an empty test', function() {
+      // Jasmine requires at least one test
+    })
   });
 
 });
