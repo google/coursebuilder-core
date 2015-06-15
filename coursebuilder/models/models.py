@@ -1352,12 +1352,11 @@ class Student(BaseEntity):
         resolver. See common.users.FederatedEmailResolver.
         """
         if not self._federated_email_cached:
-            assert self.user_id
             manager = users.UsersServiceManager.get()
             resolver = manager.get_federated_email_resolver_class()
             assert resolver
-
-            self._federated_email_value = resolver.get(self.user_id)
+            self._federated_email_value = (
+                resolver.get(self.user_id) if self.user_id else None)
             self._federated_email_cached = True
 
         return self._federated_email_value

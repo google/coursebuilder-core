@@ -533,6 +533,21 @@ class StudentTestCase(actions.ExportTestBase):
             'resolved@example.com', student._federated_email_value)
         self.assertTrue(student._federated_email_cached)
 
+    def test_federated_email_returns_none_for_legacy_users_sans_user_id(self):
+        student = models.Student()
+
+        # Check backing value starts at None, uncached. On access of the public
+        # computed property, check the backing value is still None (since the
+        # expected value is None in this case), but that the None value is now
+        # cached.
+        self.assertIsNone(student._federated_email_value)
+        self.assertFalse(student._federated_email_cached)
+
+        self.assertIsNone(student.federated_email)
+
+        self.assertIsNone(student._federated_email_value)
+        self.assertTrue(student._federated_email_cached)
+
     def test_for_export_transforms_correctly(self):
         user_id = '1'
         student = models.Student(key_name='name', user_id='1', is_enrolled=True)
