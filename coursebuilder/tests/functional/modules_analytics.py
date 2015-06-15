@@ -94,11 +94,13 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
         # Load the course to the VFS, and populate the DB w/ entities
         parser = etl.create_args_parser()
         etl.add_internal_args_support(parser)
-        etl.main(parser.parse_args([
-            'upload', 'course', '/' + self.COURSE_NAME, 'mycourse',
-            'localhost:8081', '--archive_path', course_data,
-            '--internal', '--archive_type', 'directory',
-            '--disable_remote', '--force_overwrite', '--log_level', 'WARNING']))
+        with actions.PreserveOsEnvironDebugMode():
+            etl.main(parser.parse_args([
+                'upload', 'course', '/' + self.COURSE_NAME, 'mycourse',
+                'localhost:8081', '--archive_path', course_data,
+                '--internal', '--archive_type', 'directory',
+                '--disable_remote', '--force_overwrite', '--log_level',
+                'WARNING']))
 
     def load_datastore(self, path):
         data_path = self._get_data_path(path)
@@ -107,14 +109,16 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
 
         parser = etl.create_args_parser()
         etl.add_internal_args_support(parser)
-        etl.main(parser.parse_args([
-            'upload', 'datastore', '/' + self.COURSE_NAME, 'mycourse',
-            'localhost:8081', '--archive_path', datastore_data,
-            '--internal', '--archive_type', 'directory',
-            '--disable_remote', '--force_overwrite', '--log_level', 'WARNING',
-            '--exclude_types',
-            ','.join([
-                'Submission', 'FileDataEntity', 'FileMetadataEntity'])]))
+        with actions.PreserveOsEnvironDebugMode():
+            etl.main(parser.parse_args([
+                'upload', 'datastore', '/' + self.COURSE_NAME, 'mycourse',
+                'localhost:8081', '--archive_path', datastore_data,
+                '--internal', '--archive_type', 'directory',
+                '--disable_remote', '--force_overwrite', '--log_level',
+                'WARNING',
+                '--exclude_types',
+                ','.join([
+                    'Submission', 'FileDataEntity', 'FileMetadataEntity'])]))
 
     def get_aggregated_data_by_email(self, email):
         # email and user_id must match the values listed in Student.json file

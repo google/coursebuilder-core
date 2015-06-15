@@ -121,6 +121,7 @@ class OverriddenEnvironment(object):
 
     def __enter__(self):
         courses.Course.get_environ = self._get_environ
+        return self
 
     def __exit__(self, *unused_exception_info):
         courses.Course.get_environ = self._old_get_environ
@@ -148,6 +149,7 @@ class OverriddenConfig(object):
         self._had_prev_value = self._name in config.Registry.test_overrides
         self._prev_value = config.Registry.test_overrides.get(self._name)
         config.Registry.test_overrides[self._name] = self._value
+        return self
 
     def __exit__(self, *unused_exception_info):
         if not self._had_prev_value:
@@ -168,6 +170,48 @@ class _TestUser(object):
 
     def email(self):
         return self._email
+
+
+class PreserveOsEnvironDebugMode(object):
+    """Saves and restores os.environ['SERVER_SOFTWARE'] to retain debug mode.
+
+    TODO(mgainer): This can be removed once auto-backup CL is committed.
+    (That CL has a change to separate out the importation of tools.etl.remote
+    so that that module is included only in production)
+
+    When certain libraries are loaded (specifically the remote access API as
+    used by tools/etl/etl.py), the os.environ variable SERVER_SOFTWARE is
+    modified from a value that indicates a development/unit-test environment
+    to a value that indicates a production environment.  This class is meant
+    to wrap calls to etl.main() so that this value is saved and restored so
+    that the call to etl.main() does not affect the calling test or subsequent
+    tests using the same environment.  This is particularly a problem for
+    tests which also use map/reduce.  The cloud storage API relies on the
+    value of this environment variable to determine whether to try to contact
+    production servers in Borg or to run locally.
+
+    Usage:
+
+    def test_foo(self):
+        do_some_stuff()
+        with PreserveOsEnvironDebugMode():
+           etl.main( ..... args ..... )
+        self.execute_all_deferred_tasks()
+    """
+
+    def __init__(self):
+        self._save_mode = None
+
+    def __enter__(self):
+        self._save_mode = os.environ.get('SERVER_SOFTWARE')
+        return self
+
+    def __exit__(self, *unused_exception_info):
+        if self._save_mode is None:
+            if 'SERVER_SOFTWARE' in os.environ:
+                del os.environ['SERVER_SOFTWARE']
+        else:
+            os.environ['SERVER_SOFTWARE'] = self._save_mode
 
 
 class TestBase(suite.AppEngineTestBase):

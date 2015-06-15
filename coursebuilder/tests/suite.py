@@ -212,6 +212,7 @@ class AppEngineTestBase(FunctionalTestBase):
         self.testbed.init_files_stub()
         self.testbed.init_blobstore_stub()
         self.testbed.init_mail_stub()
+        self.testbed.init_app_identity_stub()
         # TODO(emichael): Fix this when an official stub is created
         self.testbed._register_stub(
             'search', simple_search_stub.SearchServiceStub())

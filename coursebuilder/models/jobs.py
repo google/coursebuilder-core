@@ -28,13 +28,15 @@ import entities
 from mapreduce import base_handler
 from mapreduce import input_readers
 from mapreduce import mapreduce_pipeline
+from mapreduce import output_writers
 from mapreduce import util
-from mapreduce.lib.pipeline import pipeline
+from pipeline import pipeline
 import transforms
 from common import users
 from common.utils import Namespace
 
 from google.appengine import runtime
+from google.appengine.api import app_identity
 from google.appengine.ext import db
 from google.appengine.ext import deferred
 
@@ -193,16 +195,16 @@ class StoreMapReduceResults(base_handler.PipelineBase):
     def run(self, job_name, sequence_num, time_started, namespace, output,
             complete_fn, kwargs):
         results = []
-
         # TODO(mgainer): Notice errors earlier in pipeline, and mark job
         # as failed in that case as well.
         try:
-            iterator = input_readers.RecordsReader(output, 0)
-            for item in iterator:
-                # Map/reduce puts reducer output into blobstore files as a
-                # string obtained via "str(result)".  Use AST as a safe
-                # alternative to eval() to get the Python object back.
-                results.append(ast.literal_eval(item))
+            iterator = input_readers.GoogleCloudStorageInputReader(output, 0)
+            for file_reader in iterator:
+                for item in file_reader:
+                    # Map/reduce puts reducer output into blobstore files as a
+                    # string obtained via "str(result)".  Use AST as a safe
+                    # alternative to eval() to get the Python object back.
+                    results.append(ast.literal_eval(item))
             if complete_fn:
                 util.for_name(complete_fn)(kwargs, results)
             time_completed = time.time()
@@ -227,6 +229,20 @@ class StoreMapReduceResults(base_handler.PipelineBase):
                     MapReduceJob.build_output(self.root_pipeline_id, results,
                                               str(ex)),
                     long(time_completed - time_started))
+
+
+class GoogleCloudStorageConsistentOutputReprWriter(
+    output_writers.GoogleCloudStorageConsistentOutputWriter):
+
+    def write(self, data):
+        if isinstance(data, basestring):
+            # Convert from unicode, as returned from transforms.dumps()
+            data = str(data)
+            if not data.endswith('\n'):
+                data += '\n'
+        else:
+            data = repr(data) + '\n'
+        super(GoogleCloudStorageConsistentOutputReprWriter, self).write(data)
 
 
 class MapReduceJob(DurableJobBase):
@@ -464,6 +480,19 @@ class MapReduceJob(DurableJobBase):
             'namespace': self._namespace,
             })
 
+        # Config parameters for reducer, output writer stages.  Copy from
+        # mapper_params so that the implemented reducer function also gets
+        # to see any parameters built by build_additional_mapper_params().
+        reducer_params = {}
+        reducer_params.update(self.mapper_params)
+        bucket_name = app_identity.get_default_gcs_bucket_name()
+        reducer_params.update({
+            'output_writer': {
+                output_writers.GoogleCloudStorageOutputWriter.BUCKET_NAME_PARAM:
+                    bucket_name,
+            }
+        })
+
         kwargs = {
             'job_name': self._job_name,
             'mapper_spec': '%s.%s.map' % (
@@ -473,9 +502,9 @@ class MapReduceJob(DurableJobBase):
             'input_reader_spec':
                 'mapreduce.input_readers.DatastoreInputReader',
             'output_writer_spec':
-                'mapreduce.output_writers.BlobstoreRecordsOutputWriter',
+                'models.jobs.GoogleCloudStorageConsistentOutputReprWriter',
             'mapper_params': self.mapper_params,
-            'reducer_params': self.mapper_params,
+            'reducer_params': reducer_params,
         }
         if (getattr(self.__class__, 'combine') !=
             getattr(MapReduceJob, 'combine')):

@@ -185,8 +185,7 @@ class ZipAwareOpen(object):
             third_party_module.some_func_that_calls_open()
     """
 
-    THIRD_PARTY_LIB_PATHS = {
-        l.file_path: l.full_path for l in appengine_config.THIRD_PARTY_LIBS}
+    LIB_PATHS = {l.file_path: l.full_path for l in appengine_config.ALL_LIBS}
 
     def zip_aware_open(self, name, *args, **kwargs):
         """Override open() iff opening a file in a library .zip for reading."""
@@ -198,7 +197,7 @@ class ZipAwareOpen(object):
 
             # Only consider .zip files known in the third-party libraries
             # registered in appengine_config.py
-            for path in ZipAwareOpen.THIRD_PARTY_LIB_PATHS:
+            for path in ZipAwareOpen.LIB_PATHS:
 
                 # Don't use zip-open if the file we are looking for _is_
                 # the sought .zip file.  (We are recursed into from the
@@ -209,7 +208,7 @@ class ZipAwareOpen(object):
                     # Possibly extend simple path to .zip file with relative
                     # path inside .zip file to meaningful contents.
                     name = name.replace(
-                        path, ZipAwareOpen.THIRD_PARTY_LIB_PATHS[path])
+                        path, ZipAwareOpen.LIB_PATHS[path])
 
                     # Strip off on-disk path to .zip file.  This leaves
                     # us with the absolute path within the .zip file.

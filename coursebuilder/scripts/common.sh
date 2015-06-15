@@ -206,6 +206,7 @@ if need_install logilab/logilab/common ChangeLog " -- " 0.62.0 ; then
 fi
 
 DISTRIBUTED_LIBS="\
+  appengine-mapreduce-0.8.2.zip \
   babel-0.9.6.zip \
   codemirror-4.5.0.zip \
   crossfilter-1.3.7.zip \
@@ -215,9 +216,11 @@ DISTRIBUTED_LIBS="\
   dependo-0.1.4.zip \
   gaepytz-2011h.zip \
   google-api-python-client-1.4.0.zip \
+  GoogleAppEngineCloudStorageClient-1.9.15.0.zip \
+  GoogleAppEnginePipeline-1.9.17.0.zip \
+  Graphy-1.0.0.zip \
   html5lib-0.95.zip \
   inputex-3.1.0.zip \
-  mapreduce-r645.zip \
   markdown-2.5.zip \
   material-design-iconic-font-1.1.1.zip \
   mathjax-2.3.0.zip \
@@ -227,6 +230,7 @@ DISTRIBUTED_LIBS="\
   oauth-1.0.1.zip \
   pyparsing-1.5.7.zip \
   reportlab-3.1.8.zip \
+  simplejson-3.7.1.zip \
   underscore-1.4.3.zip \
   yui_2in3-2.9.0.zip \
   yui_3.6.0.zip \

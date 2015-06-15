@@ -63,22 +63,34 @@ class _Library(object):
             path = os.path.join(path, self._relative_path)
         return path
 
+# Google-produced library zip files.
+GOOGLE_LIBS = [
+    _Library('google-api-python-client-1.4.0.zip'),
+    _Library('GoogleAppEngineCloudStorageClient-1.9.15.0.zip',
+             relative_path='GoogleAppEngineCloudStorageClient-1.9.15.0'),
+    _Library('GoogleAppEnginePipeline-1.9.17.0.zip',
+             relative_path='GoogleAppEnginePipeline-1.9.17.0'),
+]
 
 # Third-party library zip files.
 THIRD_PARTY_LIBS = [
     _Library('babel-0.9.6.zip'),
     _Library('decorator-3.4.0.zip', relative_path='src'),
     _Library('gaepytz-2011h.zip'),
-    _Library('google-api-python-client-1.4.0.zip'),
+    _Library('Graphy-1.0.0.zip', relative_path='Graphy-1.0.0'),
     _Library('html5lib-0.95.zip'),
-    _Library('mapreduce-r645.zip'),
+    _Library('appengine-mapreduce-0.8.2.zip',
+             relative_path='appengine-mapreduce-0.8.2/python/src'),
     _Library('markdown-2.5.zip', relative_path='Markdown-2.5'),
     _Library('mrs-mapreduce-0.9.zip', relative_path='mrs-mapreduce-0.9'),
     _Library('networkx-1.9.1.zip', relative_path='networkx-1.9.1'),
     _Library('oauth-1.0.1.zip', relative_path='oauth'),
     _Library('pyparsing-1.5.7.zip'),
     _Library('reportlab-3.1.8.zip'),
+    _Library('simplejson-3.7.1.zip', relative_path='simplejson-3.7.1'),
 ]
+
+ALL_LIBS = GOOGLE_LIBS + THIRD_PARTY_LIBS
 
 
 def gcb_force_default_encoding(encoding):
@@ -104,7 +116,7 @@ def _third_party_libs_from_env():
 
 def gcb_init_third_party():
     """Add all third party libraries to system path."""
-    for lib in THIRD_PARTY_LIBS + _third_party_libs_from_env():
+    for lib in ALL_LIBS + _third_party_libs_from_env():
         if not os.path.exists(lib.file_path):
             raise Exception('Library does not exist: %s' % lib.file_path)
         sys.path.insert(0, lib.full_path)

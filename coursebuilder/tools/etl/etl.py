@@ -207,12 +207,14 @@ _DELETE_DATASTORE_CONFIRMATION_INPUT = 'YES, DELETE'
 # map/reduce's "_AE_... classes), or legacy types no longer required.
 _EXCLUDE_TYPES = set([
     # Map/reduce internal types:
+    '_AE_Barrier_Index',
     '_AE_MR_MapreduceState',
     '_AE_MR_ShardState',
     '_AE_Pipeline_Barrier',
     '_AE_Pipeline_Record',
     '_AE_Pipeline_Slot',
     '_AE_Pipeline_Status',
+    '_AE_TokenStorage_'
     # AppEngine internal background jobs queue
     '_DeferredTaskEntity',
     ])

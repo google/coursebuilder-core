@@ -642,7 +642,7 @@ class ModuleIncorporationTest(TestWithTempDir):
 
         # Touch into place the hard-coded expected set of libs so we don't
         # get spurious errors.
-        for lib in appengine_config.THIRD_PARTY_LIBS:
+        for lib in appengine_config.ALL_LIBS:
             with open(lib.file_path, 'w'):
                 pass
 

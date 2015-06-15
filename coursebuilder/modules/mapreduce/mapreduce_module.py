@@ -17,13 +17,14 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import datetime
-import re
+import logging
 import urllib
 
+import cloudstorage
 from mapreduce import main as mapreduce_main
 from mapreduce import parameters as mapreduce_parameters
-from mapreduce.lib.pipeline import models as pipeline_models
-from mapreduce.lib.pipeline import pipeline
+from pipeline import models as pipeline_models
+from pipeline import pipeline
 
 from common import safe_dom
 from common import users
@@ -33,11 +34,8 @@ from controllers import utils
 from models import custom_modules
 from models import data_sources
 from models import jobs
-from models import roles
-from models import transforms
 from models.config import ConfigProperty
 
-from google.appengine.api import files
 from google.appengine.ext import db
 
 # Module registration
@@ -156,7 +154,7 @@ class CronMapreduceCleanupHandler(utils.BaseHandler):
 
         # Belt and suspenders.  The app.yaml settings should ensure that
         # only admins can use this URL, but check anyhow.
-        if not roles.Roles.is_direct_super_admin():
+        if 'X-AppEngine-Cron' not in self.request.headers:
             self.error(400)
             return
 
@@ -164,7 +162,7 @@ class CronMapreduceCleanupHandler(utils.BaseHandler):
             datetime.timedelta(days=MAX_MAPREDUCE_METADATA_RETENTION_DAYS))
 
     @classmethod
-    def _collect_blobstore_paths(cls, root_key):
+    def _collect_cloudstore_paths(cls, root_key):
         paths = set()
         # pylint: disable=protected-access
         for model, field_name in ((pipeline_models._SlotRecord, 'value'),
@@ -183,17 +181,29 @@ class CronMapreduceCleanupHandler(utils.BaseHandler):
                     # vary widely, but all are provided via this interface as
                     # some combination of Python scalar, list, tuple, and
                     # dict.  Rather than depend on specifics of the map/reduce
-                    # internals, crush the object to a string and parse that.
+                    # internals, manually rummage around.  Experiment shows
+                    # this to be sufficient.
                     try:
                         data_object = getattr(record, field_name)
                     except TypeError:
                         data_object = None
-                    if data_object:
-                        text = transforms.dumps(data_object)
-                        for path in re.findall(r'"(/blobstore/[^"]+)"', text):
-                            paths.add(path)
+                    if (data_object and
+                        isinstance(data_object, list) and
+                        all(isinstance(x, basestring) for x in data_object) and
+                        all(x[0] == '/' for x in data_object)
+                    ):
+                        paths.update(data_object)
                 prev_cursor = query.cursor()
         return paths
+
+    @classmethod
+    def _clean_cloudstore_paths_for_key(cls, root_key, min_start_time_millis):
+        for path in cls._collect_cloudstore_paths(root_key):
+            try:
+                cloudstorage.delete(path)
+                logging.info('Deleted cloud storage file %s', path)
+            except cloudstorage.NotFoundError:
+                logging.info('Cloud storage file %s already deleted', path)
 
     @classmethod
     def _clean_mapreduce(cls, max_age):
@@ -250,8 +260,8 @@ class CronMapreduceCleanupHandler(utils.BaseHandler):
                             root_key = db.Key.from_path(
                                 pipeline_models._PipelineRecord.kind(),
                                 pipeline_id)
-                            for path in cls._collect_blobstore_paths(root_key):
-                                files.delete(path)
+                            cls._clean_cloudstore_paths_for_key(
+                                root_key, min_start_time_millis)
 
                             # This only enqueues a deferred cleanup item, so
                             # transactionality with marking the job cleaned is

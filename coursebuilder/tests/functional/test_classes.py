@@ -68,7 +68,8 @@ from tools import verify
 from tools.etl import etl
 from tools.etl import etl_lib
 from tools.etl import examples
-from tools.etl import remote
+with actions.PreserveOsEnvironDebugMode():
+    from tools.etl import remote
 from tools.etl import testing
 
 from google.appengine.api import memcache
@@ -171,7 +172,7 @@ class WSGIRoutingTest(actions.TestBase):
                 tags.ResourcesHandler,
             ], ignore_modules=[
                 'mapreduce.lib', 'mapreduce.handlers', 'mapreduce.main',
-                'mapreduce.status'])
+                'mapreduce.status', 'pipeline.pipeline', 'pipeline.status_ui'])
 
     def getApp(self):
         """Setup test WSGI app with variety of test handlers."""

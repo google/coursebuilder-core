@@ -21,12 +21,14 @@ import datetime
 import os
 import time
 
+import cloudstorage
+
 import actions
 from actions import assert_contains
 from actions import assert_does_not_contain
 from actions import assert_equals
-from mapreduce.lib.pipeline import models as pipeline_models
-from mapreduce.lib.pipeline import pipeline
+from pipeline import models as pipeline_models
+from pipeline import pipeline
 
 import appengine_config
 from common import utils as common_utils
@@ -44,7 +46,6 @@ from modules.analytics import rest_providers
 from modules.analytics import synchronous_providers
 from modules.mapreduce import mapreduce_module
 
-from google.appengine.api import files
 from google.appengine.ext import db
 
 
@@ -711,22 +712,22 @@ class CronCleanupTest(actions.TestBase):
         with common_utils.Namespace('ns_' + course_name):
             return len(pipeline.get_root_list()['pipelines'])
 
-    def _get_blobstore_paths(self, course_name):
+    def _get_cloudstore_paths(self, course_name):
         ret = set()
         with common_utils.Namespace('ns_' + course_name):
             for state in pipeline.get_root_list()['pipelines']:
                 root_key = db.Key.from_path(
                     pipeline_models._PipelineRecord.kind(), state['pipelineId'])
                 paths = (mapreduce_module.CronMapreduceCleanupHandler
-                         ._collect_blobstore_paths(root_key))
+                         ._collect_cloudstore_paths(root_key))
                 ret = ret.union(paths)
         return ret
 
-    def _assert_blobstore_paths_removed(self, course_name, paths):
+    def _assert_cloudstore_paths_removed(self, course_name, paths):
         with common_utils.Namespace('ns_' + course_name):
             for path in paths:
-                with self.assertRaises(files.FinalizationError):
-                    files.open(path)
+                with self.assertRaises(cloudstorage.NotFoundError):
+                    cloudstorage.open(path)
 
     def _force_finalize(self, job):
         # For reasons that I do not grok, running the deferred task list
@@ -749,7 +750,8 @@ class CronCleanupTest(actions.TestBase):
         self.assertEquals(400, response.status_int)
 
     def test_admin_cleanup_gets_200_ok(self):
-        response = self.get('/cron/mapreduce/cleanup', expect_errors=True)
+        response = self.get('/cron/mapreduce/cleanup', expect_errors=True,
+                            headers={'X-AppEngine-Cron': 'True'})
         self.assertEquals(200, response.status_int)
 
     def test_no_jobs_no_cleanup(self):
@@ -810,12 +812,12 @@ class CronCleanupTest(actions.TestBase):
 
         self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
         self.assertEquals(1, self._clean_jobs(datetime.timedelta(seconds=0)))
-        paths = self._get_blobstore_paths(COURSE_ONE)
-        self.assertEquals(8, len(paths))
+        paths = self._get_cloudstore_paths(COURSE_ONE)
+        self.assertEquals(6, len(paths))
 
         self.execute_all_deferred_tasks()  # Run deferred deletion task.
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
-        self._assert_blobstore_paths_removed(COURSE_ONE, paths)
+        self._assert_cloudstore_paths_removed(COURSE_ONE, paths)
 
     def test_multiple_runs_cleaned(self):
         mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
@@ -825,12 +827,12 @@ class CronCleanupTest(actions.TestBase):
 
         self.assertEquals(3, self._get_num_root_jobs(COURSE_ONE))
         self.assertEquals(3, self._clean_jobs(datetime.timedelta(seconds=0)))
-        paths = self._get_blobstore_paths(COURSE_ONE)
-        self.assertEquals(24, len(paths))
+        paths = self._get_cloudstore_paths(COURSE_ONE)
+        self.assertEquals(18, len(paths))
 
         self.execute_all_deferred_tasks()  # Run deferred deletion task.
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
-        self._assert_blobstore_paths_removed(COURSE_ONE, paths)
+        self._assert_cloudstore_paths_removed(COURSE_ONE, paths)
 
     def test_cleanup_modifies_incomplete_status(self):
         mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
@@ -862,19 +864,19 @@ class CronCleanupTest(actions.TestBase):
             self.execute_all_deferred_tasks()
 
         self.assertEquals(2, self._get_num_root_jobs(COURSE_ONE))
-        course_one_paths = self._get_blobstore_paths(COURSE_ONE)
-        self.assertEquals(16, len(course_one_paths))
+        course_one_paths = self._get_cloudstore_paths(COURSE_ONE)
+        self.assertEquals(12, len(course_one_paths))
         self.assertEquals(2, self._get_num_root_jobs(COURSE_TWO))
-        course_two_paths = self._get_blobstore_paths(COURSE_TWO)
-        self.assertEquals(16, len(course_two_paths))
+        course_two_paths = self._get_cloudstore_paths(COURSE_TWO)
+        self.assertEquals(12, len(course_two_paths))
 
         self.assertEquals(4, self._clean_jobs(datetime.timedelta(seconds=0)))
 
         self.execute_all_deferred_tasks()  # Run deferred deletion task.
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
         self.assertEquals(0, self._get_num_root_jobs(COURSE_TWO))
-        self._assert_blobstore_paths_removed(COURSE_ONE, course_one_paths)
-        self._assert_blobstore_paths_removed(COURSE_TWO, course_two_paths)
+        self._assert_cloudstore_paths_removed(COURSE_ONE, course_one_paths)
+        self._assert_cloudstore_paths_removed(COURSE_TWO, course_two_paths)
 
     def test_cleanup_handler(self):
         mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
@@ -889,7 +891,8 @@ class CronCleanupTest(actions.TestBase):
         # Note that since the actual handler uses a max time limit of
         # a few days, we need to set up a canceled job which, having
         # no defined start-time will be cleaned up immediately.
-        self.get('/cron/mapreduce/cleanup')
+        self.get('/cron/mapreduce/cleanup',
+                 headers={'X-AppEngine-Cron': 'True'})
 
         self.execute_all_deferred_tasks(iteration_limit=1)
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
