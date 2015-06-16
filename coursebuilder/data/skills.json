@@ -862,7 +862,7 @@
   },
   {
     "id": 68,
-    "name": "Structure of a web address (URL)",
+    "name": "URL structure",
     "description": "A web address, or URL, is composed of several parts.  First is the \"protocol\" (e.g., HTTP). Second comes the website name (e.g., www.historysite.com), of which the last part is the \"top level domain\"  (the .com part).  Lastly  comes the filename (e.g., \"imperialism/actions.html\")  which points directly to the file on the target website. ",
     "prerequisites": [],
     "locations": [

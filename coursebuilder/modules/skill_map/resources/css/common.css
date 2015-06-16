@@ -15,6 +15,21 @@ ol.skill-display-root > li.skill {
   padding: 0.1em 0.4em;
   margin: 0 0.2em !important;
 }
+ol.skill-display-root > li.unknown {
+  background-color: #697792;
+}
+ol.skill-display-root > li.not-started {
+  background-color: #bdc9e1;
+}
+ol.skill-display-root > li.low-competency {
+  background-color: #74a9cf;
+}
+ol.skill-display-root > li.med-competency {
+  background-color: #2b8cbe;
+}
+ol.skill-display-root > li.high-competency {
+  background-color: #045a8d;
+}
 ol.skill-display-root > li.skill > button.close {
   background: inherit;
   color: inherit;
@@ -44,6 +59,21 @@ li.skill-card {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.skill-card > div.unknown {
+  background-color: #697792;
+}
+.skill-card > div.not-started {
+  background-color: #bdc9e1;
+}
+.skill-card > div.low-competency {
+  background-color: #74a9cf;
+}
+.skill-card > div.med-competency {
+  background-color: #2b8cbe;
+}
+.skill-card > div.high-competency {
+  background-color: #045a8d;
+}
 .skill-card > div.description {
   line-height: 16px;
   height: 60px;
@@ -72,4 +102,44 @@ li.skill-card {
  }
 .skill-card > div.locations > ol a {
   color: #15c;
+}
+.proficiency-legend > .legend-title {
+  text-align: right;
+  margin-bottom: 5px;
+  font-weight: bold;
+  float: right;
+}
+.proficiency-legend .legend-scale ul {
+  clear: right;
+  margin: 0;
+  padding: 0;
+  float: right;
+  list-style: none;
+}
+.proficiency-legend .legend-scale ul li {
+  width: 35px;
+  float: left;
+  margin-bottom: 6px;
+  display: block;
+  text-align: center;
+  font-size: 80%;
+  list-style: none;
+}
+.proficiency-legend ul.legend-labels li span {
+  height: 15px;
+  width: 35px;
+  display: block;
+  float: left;
+}
+.proficiency-legend ul.legend-labels li span.not-started {
+  background-color: #bdc9e1;
+}
+.proficiency-legend ul.legend-labels li span.low-competency {
+  background-color: #74a9cf;
+}
+.proficiency-legend ul.legend-labels li span.med-competency {
+  background-color: #2b8cbe;
+}
+.proficiency-legend ul.legend-labels li span.high-competency {
+  background-color: #045a8d;
 }

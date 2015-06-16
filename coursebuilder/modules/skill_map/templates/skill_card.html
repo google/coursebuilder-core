@@ -1,0 +1,52 @@
+{% macro display(skill) -%}
+  <li class="skill-card" data-skill-id="{{ skill.id }}">
+    <div class="name {{ skill.score_level }}">
+      {{ skill.name }}
+    </div>
+    <div class="description">
+      <div class="content">
+        {{ skill.description }}
+      </div>
+      <div class="fade"></div>
+    </div>
+    <div class="locations">
+      <div class="title">
+        {# I18N: Header for list of links to lessons #}
+        {{ gettext('Lessons') }}
+      </div>
+      <ol class="locations">
+        {% for location in skill.lessons %}
+          <li>
+            <a href="{{ location.href }}">
+              {{ location.label }}
+              {{ location.description }}
+            </a>
+          </li>
+        {% endfor %}
+        {% if not skill.lessons %}
+          {# I18N: Text for empty list of lessons #}
+          <li>{{ gettext('Not taught') }}</li>
+        {% endif %}
+      </ol>
+    </div>
+  </li>
+{%- endmacro %}
+
+{% macro display_proficiency_legend() -%}
+  <div class='proficiency-legend'>
+    <div class='legend-title'>
+      {# I18N: Header for skill proficiency legend #}
+      {{ gettext('Proficiency level') }}
+    </div>
+    <div class='legend-scale'>
+      <ul class='legend-labels'>
+        {# I18N: Label for low skill proficiency #}
+        <li><span class="not-started"></span>{{ gettext('low') }}</li>
+        <li><span class="low-competency"></span></li>
+        <li><span class="med-competency"></span></li>
+        {# I18N: Label for high skill proficiency #}
+        <li><span class="high-competency"></span>{{ gettext('high') }}</li>
+      </ul>
+    </div>
+  </div>
+{%- endmacro %}

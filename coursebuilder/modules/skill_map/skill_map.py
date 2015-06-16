@@ -57,6 +57,7 @@ from modules.i18n_dashboard import i18n_dashboard
 from modules.skill_map import competency
 from modules.skill_map import constants
 from modules.skill_map import skill_map_metrics
+from modules.skill_map import recommender
 
 from google.appengine.ext import db
 from google.appengine.api import namespace_manager
@@ -548,13 +549,14 @@ class SkillInfo(object):
     """Skill info object for skills with lesson and unit ids."""
 
     def __init__(
-            self, skill, lessons=None, questions=None,
+            self, skill, lessons=None, questions=None, measure=None,
             topo_sort_index=None):
         assert skill
         self._skill = skill
         self._lessons = lessons or []
         self._questions = questions or []
         self._prerequisites = []
+        self._competency_measure = measure
         self._topo_sort_index = topo_sort_index
 
     @property
@@ -586,6 +588,29 @@ class SkillInfo(object):
     def questions(self):
         return self._questions
 
+    @property
+    def competency_measure(self):
+        return self._competency_measure
+
+    @competency_measure.setter
+    def competency_measure(self, measure):
+        """Sets skill score."""
+        self._competency_measure = measure
+
+    @property
+    def score(self):
+        if self._competency_measure:
+            return self._competency_measure.score
+        else:
+            return None
+
+    @property
+    def score_level(self):
+        if self._competency_measure:
+            return self._competency_measure.score_level
+        else:
+            return competency.BaseCompetencyMeasure.UNKNOWN
+
     def set_topo_sort_index(self, topo_sort_index):
         self._topo_sort_index = topo_sort_index
 
@@ -598,6 +623,11 @@ class SkillInfo(object):
     def topo_sort_key(self):
         return self.sort_key() + (self._topo_sort_index, )
 
+    @property
+    def proficient(self):
+        assert self.competency_measure
+        return self.competency_measure.proficient
+
     @classmethod
     def json_encoder(cls, obj):
         if isinstance(obj, cls):
@@ -609,7 +639,9 @@ class SkillInfo(object):
                 'lessons': obj.lessons,
                 'questions': obj.questions,
                 'sort_key': obj.sort_key(),
-                'topo_sort_key': obj.topo_sort_key()
+                'topo_sort_key': obj.topo_sort_key(),
+                'score': obj.score,
+                'score_level': obj.score_level
             }
         return None
 
@@ -625,6 +657,7 @@ class SkillMap(caching.RequestScopedSingleton):
         self._rebuild(skill_graph, course)
 
     def _rebuild(self, skill_graph, course):
+        self._user_id = None
         self._skill_graph = skill_graph
         self._course = course
 
@@ -653,8 +686,7 @@ class SkillMap(caching.RequestScopedSingleton):
             questions = []
             for question in self._questions_by_skill.get(skill.id, []):
                 questions.append(LocationInfo(self._course, question))
-            self._skill_infos[skill.id] = SkillInfo(
-                skill, locations, questions)
+            self._skill_infos[skill.id] = SkillInfo(skill, locations, questions)
 
         # add prerequisites
         for skill in self._skill_graph.skills:
@@ -679,6 +711,8 @@ class SkillMap(caching.RequestScopedSingleton):
         """Returns topologically sorted co-sets."""
         successors = self.build_successors()
         ret = []
+        if not successors:
+            return ret
         co_set = set(
             successors.keys()) - reduce(
             set.union, successors.values())  # Skills with no prerequisites.
@@ -705,10 +739,16 @@ class SkillMap(caching.RequestScopedSingleton):
             self._skill_infos[skill.id].set_topo_sort_index(
                 chain.index(skill.id))
 
+    def personalized(self):
+        return self._user_id is not None
+
     @classmethod
-    def load(cls, course):
+    def load(cls, course, user_id=None):
         skill_graph = SkillGraph.load()
-        return cls.instance(skill_graph, course)
+        skill_map = cls.instance(skill_graph, course)
+        if user_id:
+            skill_map.add_competency_measures(user_id)
+        return skill_map
 
     def get_lessons_for_skill(self, skill):
         return self._lessons_by_skill.get(skill.id, [])
@@ -722,10 +762,11 @@ class SkillMap(caching.RequestScopedSingleton):
         Returns:
             A list of SkillInfo objects.
         """
+
         # TODO(jorr): Can we stop relying on the unit and just use lesson id?
         lesson = self._course.find_lesson_by_id(None, lesson_id)
-        skills = lesson.properties.get(constants.SKILLS_KEY, [])
-        return [self._skill_infos[skill_id] for skill_id in skills]
+        sids = lesson.properties.get(constants.SKILLS_KEY, [])
+        return [self._skill_infos[skill_id] for skill_id in sids]
 
     def get_questions_for_skill(self, skill):
         return self._questions_by_skill.get(skill.id, [])
@@ -742,6 +783,16 @@ class SkillMap(caching.RequestScopedSingleton):
         return {
             self._skill_infos[s.id]
             for s in self._skill_graph.successors(skill_info.id)}
+
+    def add_competency_measures(self, user_id):
+        """Personalize skill map with user's competency measures."""
+
+        sids = self._skill_infos.keys()
+        measures = competency.SuccessRateCompetencyMeasure.bulk_load(
+            user_id, sids)
+        for measure in measures:
+            self._skill_infos[measure.skill_id].competency_measure = measure
+        self._user_id = user_id
 
     def skills(self, sort_by='name'):
         if sort_by == 'name':
@@ -1494,7 +1545,7 @@ def register_tabs():
 def lesson_rest_handler_schema_load_hook(lesson_field_registry):
     skill_type = schema_fields.FieldRegistry('Skill')
     skill_type.add_property(schema_fields.SchemaField(
-        'skill', 'Skill', 'number', optional=True, i18n=False))
+        'skill', 'Skill', 'integer', optional=True, i18n=False))
     lesson_field_registry.add_property(schema_fields.FieldArray(
         'skills', 'Skills', optional=True, item_type=skill_type,
         extra_schema_dict_values={
@@ -1529,7 +1580,7 @@ def course_outline_extra_info_decorator(course, unit_or_lesson):
 def question_rest_handler_schema_load_hook(question_field_registry):
     skill_type = schema_fields.FieldRegistry('Skill')
     skill_type.add_property(schema_fields.SchemaField(
-        'skill', 'Skill', 'number', optional=True, i18n=False))
+        'skill', 'Skill', 'integer', optional=True, i18n=False))
     question_field_registry.add_property(schema_fields.FieldArray(
         'skills', 'Skills', optional=True, item_type=skill_type,
         extra_schema_dict_values={
@@ -1559,7 +1610,37 @@ def welcome_handler_import_skills_callback(app_ctx, unused_errors):
         namespace_manager.set_namespace(old_namespace)
 
 
-def lesson_title_provider(handler, app_context, unit, lesson, student):
+def filter_visible_lessons(handler, student, skill):
+    """Filter out references to lessons which are not visible."""
+    visible_lessons = []
+    for lesson_location in skill.lessons:
+        u, l = resources_display.ResourceLesson.get_resource(
+            handler.get_course(), lesson_location.id)
+        if not (
+            u.now_available and l.now_available
+            and u in handler.get_track_matching_student(student)
+        ):
+            continue
+        visible_lessons.append(lesson_location)
+
+    # pylint: disable=protected-access
+    cloned_skill_info = SkillInfo(skill._skill, lessons=visible_lessons,
+        measure=skill.competency_measure,
+        topo_sort_index=skill._topo_sort_index)
+    cloned_skill_info._prerequisites = skill._prerequisites
+    # pylint: enable=protected-access
+
+    return cloned_skill_info
+
+
+def not_in_this_lesson(handler, lesson, student, skills):
+    """Filter out skills which are taught in the current lesson."""
+    return [
+        filter_visible_lessons(handler, student, skill) for skill in skills
+        if lesson.lesson_id not in [x.id for x in skill.lessons]]
+
+
+def lesson_title_provider(handler, app_context, lesson, student):
     if not isinstance(lesson, courses.Lesson13):
         return None
 
@@ -1567,58 +1648,38 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
     if env['course'].get('display_skill_widget') is False:
         return None
 
-    skill_map = SkillMap.load(handler.get_course())
+    if isinstance(student, models.TransientStudent):
+        skill_map = SkillMap.load(handler.get_course())
+    else:
+        skill_map = SkillMap.load(
+            handler.get_course(), user_id=student.user_id)
     skills = skill_map.get_skills_for_lesson(lesson.lesson_id)
-
-    def filter_visible_lessons(skill):
-        """Filter out references to lessons which are not visible."""
-        visible_lessons = []
-        for lesson_location in skill.lessons:
-            u, l = resources_display.ResourceLesson.get_resource(
-                handler.get_course(), lesson_location.id)
-            if not (
-                u.now_available and l.now_available
-                and u in handler.get_track_matching_student(student)
-            ):
-                continue
-            visible_lessons.append(lesson_location)
-
-        # pylint: disable=protected-access
-        clone = SkillInfo(skill._skill, lessons=visible_lessons,
-            topo_sort_index=skill._topo_sort_index)
-        clone._prerequisites = skill._prerequisites
-        # pylint: enable=protected-access
-
-        return clone
-
-    def not_in_this_lesson(skills):
-        """Filter out skills which are taught in the current lesson."""
-        return [
-            filter_visible_lessons(skill) for skill in skills
-            if lesson.lesson_id not in [x.id for x in skill.lessons]]
 
     depends_on_skills = set()
     leads_to_skills = set()
     dependency_map = {}
     for skill in skills:
-        skill = filter_visible_lessons(skill)
+        skill = filter_visible_lessons(handler, student, skill)
         prerequisites = skill.prerequisites
         successors = skill_map.successors(skill)
         depends_on_skills.update(prerequisites)
         leads_to_skills.update(successors)
         dependency_map[skill.id] = {
-          'depends_on': [s.id for s in prerequisites],
-          'leads_to': [s.id for s in successors]
+            'depends_on': [s.id for s in prerequisites],
+            'leads_to': [s.id for s in successors]
         }
 
     template_values = {
-      'lesson': lesson,
-      'unit': unit,
-      'can_see_drafts': custom_modules.can_see_drafts(app_context),
-      'skills': skills,
-      'depends_on_skills': not_in_this_lesson(depends_on_skills),
-      'leads_to_skills': not_in_this_lesson(leads_to_skills),
-      'dependency_map': transforms.dumps(dependency_map)
+        'lesson': lesson,
+        'can_see_drafts': custom_modules.can_see_drafts(app_context),
+        'skills': skills,
+        'depends_on_skills': not_in_this_lesson(
+            handler, lesson, student, depends_on_skills),
+        'leads_to_skills': not_in_this_lesson(
+            handler, lesson, student, leads_to_skills),
+        'dependency_map': transforms.dumps(dependency_map),
+        'display_skill_level_legend': (
+            False if isinstance(student, models.TransientStudent) else True)
     }
     return jinja2.Markup(
         handler.get_template('lesson_header.html', [TEMPLATES_DIR]
@@ -1685,6 +1746,34 @@ def import_skill_map(app_ctx):
     course.save()
 
 
+def skills_progress_provider(handler, app_context, student):
+    """Displays student progress on the profile page."""
+
+    if not app_context.is_editable_fs():
+        return None
+
+    env = courses.Course.get_environ(app_context)
+    if env['course'].get('display_skill_widget') is False:
+        return None
+
+    course = handler.get_course()
+    if course.version == courses.COURSE_MODEL_VERSION_1_2:
+        return None
+
+    skill_map = SkillMap.load(handler.get_course(), user_id=student.user_id)
+    skill_recommender = recommender.SkillRecommender.instance(skill_map)
+    recommended, learned = skill_recommender.recommend()
+
+    template_values = {
+        'recently_learned_skills': learned[:4],
+        'learn_next_skills': recommended[:4],
+        'skills_exist': len(skill_map.skills()) > 0
+    }
+    return jinja2.Markup(
+        handler.get_template('skills_progress.html', [TEMPLATES_DIR]
+    ).render(template_values))
+
+
 def notify_module_enabled():
     def get_action(handler):
         handler.redirect('/modules/skill_map?action=skill_map&tab=skills_table')
@@ -1709,6 +1798,8 @@ def notify_module_enabled():
 
     lessons_controller.UnitHandler.set_lesson_title_provider(
         lesson_title_provider)
+    utils.StudentProfileHandler.EXTRA_PROFILE_SECTION_PROVIDERS.append(
+        skills_progress_provider)
 
     LessonRESTHandler.SCHEMA_LOAD_HOOKS.append(
         lesson_rest_handler_schema_load_hook)
@@ -1717,7 +1808,7 @@ def notify_module_enabled():
     LessonRESTHandler.PRE_SAVE_HOOKS.append(
         lesson_rest_handler_pre_save_hook)
     LessonRESTHandler.REQUIRED_MODULES.append('inputex-list')
-    LessonRESTHandler.REQUIRED_MODULES.append('inputex-number')
+    LessonRESTHandler.REQUIRED_MODULES.append('inputex-integer')
 
     BaseQuestionRESTHandler.SCHEMA_LOAD_HOOKS.append(
         question_rest_handler_schema_load_hook)
@@ -1732,9 +1823,9 @@ def notify_module_enabled():
 
     McQuestionRESTHandler.ADDITIONAL_DIRS.append(TEMPLATES_DIR)
     McQuestionRESTHandler.EXTRA_JS_FILES.append('skill_tagging.js')
+    McQuestionRESTHandler.REQUIRED_MODULES.append('inputex-integer')
     SaQuestionRESTHandler.ADDITIONAL_DIRS.append(TEMPLATES_DIR)
     SaQuestionRESTHandler.EXTRA_JS_FILES.append('skill_tagging.js')
-    SaQuestionRESTHandler.REQUIRED_MODULES.append('inputex-number')
 
     transforms.CUSTOM_JSON_ENCODERS.append(LocationInfo.json_encoder)
     transforms.CUSTOM_JSON_ENCODERS.append(SkillInfo.json_encoder)
@@ -1777,6 +1868,7 @@ def register_module():
         (RESOURCES_URI + '/css/.*', tags.ResourcesHandler),
         (RESOURCES_URI + '/js/course_outline.js', tags.JQueryHandler),
         (RESOURCES_URI + '/js/lesson_header.js', tags.JQueryHandler),
+        (RESOURCES_URI + '/js/skills_progress.js', tags.JQueryHandler),
         (RESOURCES_URI + '/js/skill_tagging_lib.js', tags.IifeHandler),
         (RESOURCES_URI + '/d3-3.4.3/(d3.min.js)', d3_js_handler),
         (RESOURCES_URI + '/underscore-1.4.3/(underscore.min.js)',

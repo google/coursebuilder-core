@@ -284,8 +284,7 @@ class DataRemovalTests(actions.TestBase):
             p.put()
             invitation.InvitationStudentProperty.load_or_create(student)
             questionnaire.StudentFormEntity.load_or_create(student, 'a_form')
-            cm = competency.BaseCompetencyMeasure(user_id)
-            cm.load(123)
+            cm = competency.BaseCompetencyMeasure.load(user_id, 1)
             cm.save()
 
         # Assure ourselves that we have exactly one of the items we just added.

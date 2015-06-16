@@ -52,6 +52,7 @@ from modules.skill_map.skill_map import _SkillDao
 from modules.skill_map.skill_map import SkillCompletionTracker
 from modules.skill_map.skill_map_metrics import SkillMapMetrics
 from modules.skill_map.skill_map_metrics import CHAINS_MIN_LENGTH
+from modules.skill_map.recommender import SkillRecommender
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
@@ -330,6 +331,7 @@ class SkillMapTests(BaseSkillMapTests):
         self.lesson3 = self.course.add_lesson(self.unit)
         self.lesson3.title = 'Test Lesson 3'
         self.course.save()
+        self.user_id = 1
 
     def tearDown(self):
         self.course.clear_current()
@@ -418,6 +420,64 @@ class SkillMapTests(BaseSkillMapTests):
         # when there are no skill graph updates
         skill_map_3 = SkillMap.load(self.course)
         self.assertEqual(skill_map_2, skill_map_3)
+
+    def test_personalized_skill_map_w_measures(self):
+        """Test that measures are loaded for personalized skill maps."""
+
+        self._build_sample_graph()
+        skill_map = SkillMap.load(self.course, self.user_id)
+        assert skill_map.personalized()
+        skills = skill_map.skills()
+        self.assertEqual(6, len(skills))
+        for skill in skills:
+            self.assertEqual(0.0, skill.score)
+            self.assertEqual(
+                competency.SuccessRateCompetencyMeasure.NOT_STARTED,
+                skill.score_level)
+            assert not skill.proficient
+
+    def test_recommender(self):
+        """Test topo skill recommender."""
+
+        self._build_sample_graph()
+
+        # set skill sa score to 1.0 and skill sb score to 0.5
+        measure_sa = competency.SuccessRateCompetencyMeasure.load(
+            self.user_id, self.sa.id)
+        measure_sa.add_score(1.0)
+        measure_sa.save()
+        measure_sb = competency.SuccessRateCompetencyMeasure.load(
+            self.user_id, self.sb.id)
+        measure_sb.add_score(0.0)
+        measure_sb.add_score(1.0)
+        measure_sb.save()
+
+        # verify that the proficient skill list equals [sa]
+        # verify that the recommended skill list equals [sb, sc]
+        skill_map = SkillMap.load(self.course, self.user_id)
+        recommender = SkillRecommender.instance(skill_map)
+        recommended, learned = recommender.recommend()
+        self.assertEqual(1, len(learned))
+        self.assertEqual(2, len(recommended))
+        self.assertEqual(self.sb.id, recommended[0].id)
+        self.assertEqual(self.sc.id, recommended[1].id)
+        assert learned[0].competency_measure.last_modified
+
+        # add second successful attempt for skill b and:
+        # verify that the proficient skill list equals [sa, sb]
+        # verify that the recommended skill list equals [sc, sd]
+        measure_sb = competency.SuccessRateCompetencyMeasure.load(
+            self.user_id, self.sb.id)
+        measure_sb.add_score(1.0)
+        assert measure_sb.proficient
+        measure_sb.save()
+        skill_map = SkillMap.load(self.course, self.user_id)
+        recommender = SkillRecommender.instance(skill_map)
+        recommended, proficient = recommender.recommend()
+        self.assertEqual(2, len(proficient))
+        self.assertEqual(2, len(recommended))
+        self.assertEqual(self.sc.id, recommended[0].id)
+        self.assertEqual(self.sd.id, recommended[1].id)
 
 
 class LocationListRestHandlerTests(BaseSkillMapTests):
@@ -769,7 +829,8 @@ class SkillRestHandlerTests(BaseSkillMapTests):
 
         # check that every skill has the following properties
         keys = ['id', 'name', 'description', 'prerequisite_ids', 'lessons',
-                'questions', 'sort_key', 'topo_sort_key']
+                'questions', 'sort_key', 'topo_sort_key', 'score',
+                'score_level']
         for skill in skills:
             self.assertItemsEqual(keys, skill.keys())
 
@@ -1030,7 +1091,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.lesson.now_available = True
         self.course.save()
 
-    def _getWidget(self):
+    def _getSkillPanelWidget(self):
         url = 'unit?unit=%(unit)s&lesson=%(lesson)s' % {
             'unit': self.unit.unit_id, 'lesson': self.lesson.lesson_id}
         dom = self.parse_html_string(self.get(url).body)
@@ -1049,18 +1110,18 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         # Skill widget is not shown if supressed by course setting
         env = {'course': {'display_skill_widget': False}}
         with actions.OverriddenEnvironment(env):
-            self.assertIsNone(self._getWidget())
+            self.assertIsNone(self._getSkillPanelWidget())
 
         # But the skill widget *is* shown if the course setting is True or is
         # unset
-        self.assertIsNotNone(self._getWidget())
+        self.assertIsNotNone(self._getSkillPanelWidget())
 
         env = {'course': {'display_skill_widget': True}}
         with actions.OverriddenEnvironment(env):
-            self.assertIsNotNone(self._getWidget())
+            self.assertIsNotNone(self._getSkillPanelWidget())
 
     def test_no_skills_in_lesson(self):
-        self.assertIsNone(self._getWidget())
+        self.assertIsNone(self._getSkillPanelWidget())
 
     def test_skills_with_no_prerequisites_or_successors(self):
         # Expect skills shown and friendly messages for prerequ and successors
@@ -1070,14 +1131,14 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.lesson.properties[SKILLS_KEY] = [sa.id, sb.id]
         self.course.save()
 
-        widget = self._getWidget()
+        widget = self._getSkillPanelWidget()
         skills_div, details_div, control_div = widget.findall('./*')
 
         actions.assert_contains(
             'Taught in this lesson',
             skills_div.find('./span[@class="section-title"]').text)
 
-        li_list = skills_div.findall('.//li[@class="skill"]')
+        li_list = skills_div.findall('.//li[@class="skill unknown"]')
         self.assertEqual(2, len(li_list))
         actions.assert_contains('a', li_list[0].text)
         actions.assert_contains(
@@ -1109,10 +1170,11 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.lesson.properties[SKILLS_KEY] = [sb.id, sc.id]
         self.course.save()
 
-        widget = self._getWidget()
+        widget = self._getSkillPanelWidget()
 
         # Check that 'b' and 'c' are listed as skills in this lesson
-        skills_in_lesson = widget.findall('./div[1]//li[@class="skill"]')
+        skills_in_lesson = widget.findall(
+            './div[1]//li[@class="skill unknown"]')
         self.assertEqual(2, len(skills_in_lesson))
         actions.assert_contains('b', skills_in_lesson[0].text)
         actions.assert_contains('c', skills_in_lesson[1].text)
@@ -1130,7 +1192,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         # Add skill 'a' to the lesson and check that is not in depends_on
         self.lesson.properties[SKILLS_KEY].append(sa.id)
         self.course.save()
-        widget = self._getWidget()
+        widget = self._getSkillPanelWidget()
         depends_on = widget.findall('./div[2]/div[1]/ol/li')
         self.assertEqual(0, len(depends_on))
 
@@ -1141,7 +1203,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         other_lesson.now_available = True
         other_lesson.properties[SKILLS_KEY] = [sa.id]
         self.course.save()
-        widget = self._getWidget()
+        widget = self._getSkillPanelWidget()
         depends_on = widget.findall('./div[2]/div[1]/ol/li')
         self.assertEqual(0, len(depends_on))
 
@@ -1159,10 +1221,11 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.lesson.properties[SKILLS_KEY] = [sb.id, sc.id]
         self.course.save()
 
-        widget = self._getWidget()
+        widget = self._getSkillPanelWidget()
 
         # Check B and C are listed as skills in this lesson
-        skills_in_lesson = widget.findall('./div[1]//li[@class="skill"]')
+        skills_in_lesson = widget.findall(
+            './div[1]//li[@class="skill unknown"]')
         self.assertEqual(2, len(skills_in_lesson))
         actions.assert_contains('b', skills_in_lesson[0].text)
         actions.assert_contains('c', skills_in_lesson[1].text)
@@ -1188,11 +1251,11 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         lesson2.properties[SKILLS_KEY] = [sb.id]
         self.course.save()
 
-        widget = self._getWidget()
+        widget = self._getSkillPanelWidget()
         leads_to = widget.findall('./div[2]/div[2]/ol/li')
         self.assertEqual(1, len(leads_to))
         card = leads_to[0]
-        name = card.find('.//div[@class="name"]').text
+        name = card.find('.//div[@class="name unknown"]').text
         description = card.find(
             './/div[@class="description"]/div[@class="content"]').text
         locations = card.findall('.//ol[@class="locations"]/li/a')
@@ -1211,7 +1274,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.course.save()
 
         # Except the subsequent skill does not show its lesson
-        widget = self._getWidget()
+        widget = self._getSkillPanelWidget()
         leads_to = widget.findall('./div[2]/div[2]/ol/li')
         card = leads_to[0]
         locations = card.findall('.//ol[@class="locations"]/li')
@@ -2100,56 +2163,67 @@ class CompetencyMeasureTests(BaseSkillMapTests):
 
     def setUp(self):
         super(CompetencyMeasureTests, self).setUp()
-        self.skill_id = 12345
+        self.skill_id = 1
+        self.skill_2_id = 2
         self.user_id = 321
 
     def test_success_rate_measure(self):
-        measure = competency.SuccessRateCompetencyMeasure(self.user_id)
-        measure.load(self.skill_id)
+        measure = competency.SuccessRateCompetencyMeasure.load(
+            self.user_id, self.skill_id)
 
         # Expect 0.0 when nothing has been set
-        self.assertEqual(0.0, measure.get_skill_score())
+        self.assertEqual(0.0, measure.score)
 
         # Expect to track percentage correct
-        measure.update(1.0)
-        self.assertEqual(1.0, measure.get_skill_score())
-        measure.update(0.0)
-        self.assertEqual(0.5, measure.get_skill_score())
+        measure.add_score(1.0)
+        self.assertEqual(1.0, measure.score)
+        measure.add_score(0.0)
+        self.assertEqual(0.5, measure.score)
 
         # Expect save and load
         measure.save()
-        measure = competency.SuccessRateCompetencyMeasure(self.user_id)
-        measure.load(self.skill_id)
-        self.assertEqual(0.5, measure.get_skill_score())
+        measure = competency.SuccessRateCompetencyMeasure.load(
+            self.user_id, self.skill_id)
+        self.assertEqual(0.5, measure.score)
 
-        events_list = measure.get_events_list()
-        self.assertEqual(2, len(events_list))
+        self.assertEqual(2, len(measure.scores))
 
-    def test_updater(self):
-        updater = competency.Registry.get_updater(self.user_id, self.skill_id)
-        updater.update(0.0)
-        updater.update(1.0)
+    def test_add_score_to_competency_measure(self):
+        updater = competency.CompetencyMeasureRegistry.get_updater(
+            self.user_id, self.skill_id)
+        updater.add_score(0.0)
+        updater.add_score(1.0)
         updater.save()
 
-        measure = competency.SuccessRateCompetencyMeasure(self.user_id)
-        measure.load(self.skill_id)
-        self.assertEqual(0.5, measure.get_skill_score())
+        measure = competency.SuccessRateCompetencyMeasure.load(
+            self.user_id, self.skill_id)
+        self.assertEqual(0.5, measure.score)
 
     def test_safe_key(self):
         def transform_function(pii_str):
             return 'trans(%s)' % pii_str
 
-        measure = competency.SuccessRateCompetencyMeasure(self.user_id)
-        measure.load(self.skill_id)
+        measure = competency.SuccessRateCompetencyMeasure.load(
+            self.user_id, self.skill_id)
         measure.save()
 
         entity = competency.CompetencyMeasureEntity.get_by_key_name(
             competency.CompetencyMeasureEntity.create_key_name(
-                self.user_id, self.skill_id, 'SuccessRateCompetencyMeasure'))
+                self.user_id, self.skill_id,
+                competency.SuccessRateCompetencyMeasure.__name__))
         safe_key = competency.CompetencyMeasureEntity.safe_key(
             entity.key(), transform_function)
         self.assertEqual(
-            safe_key.name(), 'trans(321):12345:SuccessRateCompetencyMeasure')
+            safe_key.name(),
+            'trans(%s):%s:SuccessRateCompetencyMeasure' % (
+                self.user_id, self.skill_id))
+
+    def test_bulk_load_competency_measure(self):
+        measures = competency.SuccessRateCompetencyMeasure.bulk_load(
+            self.user_id, [self.skill_id, self.skill_2_id])
+        self.assertEqual(2, len(measures))
+        self.assertEqual(0.0, measures[0].score)
+        self.assertEqual(0.0, measures[1].score)
 
 
 class EventListenerTests(BaseSkillMapTests):
@@ -2230,11 +2304,12 @@ class EventListenerTests(BaseSkillMapTests):
     def _record_and_expect(self, evt_type, data, sa_measure, sb_measure):
         competency.record_event_listener(evt_type, self.user, json.dumps(data))
 
-        measure = competency.SuccessRateCompetencyMeasure(self.user.user_id())
-        measure.load(self.sa.id)
-        self.assertEqual(sa_measure, measure.get_skill_score())
-        measure.load(self.sb.id)
-        self.assertEqual(sb_measure, measure.get_skill_score())
+        measure = competency.SuccessRateCompetencyMeasure.load(
+            self.user.user_id(), self.sa.id)
+        self.assertEqual(sa_measure, measure.score)
+        measure = competency.SuccessRateCompetencyMeasure.load(
+            self.user.user_id(), self.sb.id)
+        self.assertEqual(sb_measure, measure.score)
 
 
     def test_record_tag_assessment(self):
@@ -2278,9 +2353,9 @@ class EventListenerTests(BaseSkillMapTests):
 
     def test_do_nothing_with_unrecognized_event_type(self):
         competency.record_event_listener('some-other-event-type', self.user, {})
-        measure = competency.SuccessRateCompetencyMeasure(self.user.user_id())
-
-        measure.load(self.sa.id)
-        self.assertEqual(0.0, measure.get_skill_score())
-        measure.load(self.sb.id)
-        self.assertEqual(0.0, measure.get_skill_score())
+        measure = competency.SuccessRateCompetencyMeasure.load(
+            self.user.user_id(), self.sa.id)
+        self.assertEqual(0.0, measure.score)
+        measure = competency.SuccessRateCompetencyMeasure.load(
+            self.user.user_id(), self.sb.id)
+        self.assertEqual(0.0, measure.score)

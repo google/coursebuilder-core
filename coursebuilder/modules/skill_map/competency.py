@@ -29,29 +29,54 @@ from google.appengine.ext import db
 class BaseCompetencyMeasure(object):
     """Base class to model the behavior of a competency measure algorithm."""
 
-    # Default value to distinuish between scores which are judged correct vs
+    # Default value to distinguish between scores which are judged correct vs
     # incorrect. Specifically, if x >= CORRECT_INCORRECT_CUTOFF, it is correct
-    # and otherwise incorrect. Implementors are of course free to use different
-    # criteria, at their own risk.
+    # and otherwise incorrect. Course implementers are free to use
+    # different criteria.
     CORRECT_INCORRECT_CUTOFF = 0.5
 
-    def __init__(self, user_id):
-        self.dto = None
-        self.user_id = user_id
+    NOT_STARTED = 'not-started'
+    LOW_PROFICIENCY = 'low-competency'
+    MED_PROFICIENCY = 'med-competency'
+    HIGH_PROFICIENCY = 'high-competency'
+    UNKNOWN = 'unknown'
 
-    def load(self, skill_id):
-        resource_key = CompetencyMeasureEntity.create_key_name(
-            self.user_id, skill_id, self.__class__.__name__)
-        self.dto = CompetencyMeasureDao.load(resource_key)
-        if not self.dto:
-            self.dto = CompetencyMeasureDto(resource_key, {})
+    def __init__(self, user_id, skill_id, competency_dto):
+        self.user_id = user_id
+        self.skill_id = skill_id
+        self.competency_dto = competency_dto
+
+    @classmethod
+    def load(cls, user_id, skill_id):
+        key = CompetencyMeasureEntity.create_key_name(
+            user_id, skill_id, cls.__name__)
+        competency_dto = CompetencyMeasureDao.load(key)
+        if not competency_dto:
+            return cls(user_id, skill_id, CompetencyMeasureDto(key, {}))
+        return cls(user_id, skill_id, competency_dto)
+
+    @classmethod
+    def bulk_load(cls, user_id, skill_ids):
+        """Competency measures bulk load."""
+
+        keys = []
+        for skill_id in skill_ids:
+            keys.append(CompetencyMeasureEntity.create_key_name(
+                user_id, skill_id, cls.__name__))
+        competency_dtos = CompetencyMeasureDao.bulk_load(keys)
+        ret = []
+        for key, skill_id, dto in zip(keys, skill_ids, competency_dtos):
+            if dto:
+                ret.append(cls(user_id, skill_id, dto))
+            else:
+                ret.append(
+                    cls(user_id, skill_id, CompetencyMeasureDto(key, {})))
+        return ret
 
     def save(self):
-        assert self.dto is not None
-        CompetencyMeasureDao.save(self.dto)
-        self.dto = None
+        CompetencyMeasureDao.save(self.competency_dto)
 
-    def update(
+    def add_score(
             self, normalized_score, unit_id=None, lesson_id=None, block_id=None,
             timestamp=None):
         """Update competency scores for the student. The base implementation
@@ -62,20 +87,37 @@ class BaseCompetencyMeasure(object):
         Args:
             skill_id: the id for the skill for which the result is reported
             normalized_score: a float in the range 0.0 .. 1.0."""
-        assert self.dto is not None
-        self.dto.append_event({
+        assert self.competency_dto is not None
+        self.competency_dto.add_score({
             'normalized_score': normalized_score,
             'unit_id': unit_id,
             'lesson_id': lesson_id,
             'block_id': block_id,
             'timestamp': timestamp})
 
-    def get_skill_score(self):
+    @property
+    def score(self):
         raise NotImplementedError()
 
-    def get_events_list(self):
-        assert self.dto is not None
-        return self.dto.get_events_list()
+    @property
+    def score_level(self):
+        raise NotImplementedError()
+
+    @property
+    def scores(self):
+        return self.competency_dto.get_scores()
+
+    @property
+    def last_modified(self):
+        return self.competency_dto.last_modified
+
+    @property
+    def proficient(self):
+        raise NotImplementedError()
+
+    @property
+    def attempted(self):
+        raise NotImplementedError()
 
 
 class CompetencyMeasureDto(object):
@@ -95,11 +137,19 @@ class CompetencyMeasureDto(object):
     def set_data(self, property_name, property_value):
         self.dict.setdefault('data', {})[property_name] = property_value
 
-    def append_event(self, event):
+    def add_score(self, event):
         self.dict.setdefault('events', []).append(event)
 
-    def get_events_list(self):
+    def get_scores(self):
         return self.dict.get('events', [])
+
+    @property
+    def last_modified(self):
+        return self.dict.get('last_modified') or ''
+
+    @last_modified.setter
+    def last_modified(self, value):
+        self.dict['last_modified'] = value
 
 
 class CompetencyMeasureEntity(models.BaseEntity):
@@ -129,7 +179,7 @@ class CompetencyMeasureEntity(models.BaseEntity):
             cls.create_key_name(transform_fn(user_id), skill_id, class_name))
 
 
-class CompetencyMeasureDao(models.BaseJsonDao):
+class CompetencyMeasureDao(models.LastModfiedJsonDao):
     DTO = CompetencyMeasureDto
     ENTITY = CompetencyMeasureEntity
     ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeName
@@ -141,22 +191,48 @@ class SuccessRateCompetencyMeasure(BaseCompetencyMeasure):
     CORRECT_KEY = 'correct'
     COUNT_KEY = 'count'
 
-    def update(self, normalized_score, **kwargs):
-        super(SuccessRateCompetencyMeasure, self).update(
+    def add_score(self, normalized_score, **kwargs):
+        super(SuccessRateCompetencyMeasure, self).add_score(
             normalized_score, **kwargs)
 
-        count = self.dto.get_data(self.COUNT_KEY) or 0
-        self.dto.set_data(self.COUNT_KEY, count + 1)
+        count = self.competency_dto.get_data(self.COUNT_KEY) or 0
+        self.competency_dto.set_data(self.COUNT_KEY, count + 1)
         if normalized_score >= self.CORRECT_INCORRECT_CUTOFF:
-            correct = self.dto.get_data(self.CORRECT_KEY) or 0
-            self.dto.set_data(self.CORRECT_KEY, correct + 1)
+            correct = self.competency_dto.get_data(self.CORRECT_KEY) or 0
+            self.competency_dto.set_data(self.CORRECT_KEY, correct + 1)
 
-    def get_skill_score(self):
-        correct = self.dto.get_data(self.CORRECT_KEY) or 0
-        count = self.dto.get_data(self.COUNT_KEY) or 0
+    @property
+    def score(self):
+        correct = self.competency_dto.get_data(self.CORRECT_KEY) or 0
+        count = self.competency_dto.get_data(self.COUNT_KEY) or 0
         return float(correct) / count if count else 0.0
 
-class Registry(object):
+    @property
+    def score_level(self):
+        """Returns encoded competency labels used as css classes."""
+
+        if not self.competency_dto.get_data(self.COUNT_KEY):
+            return self.NOT_STARTED
+        score = self.score
+        if score < 0.0 or score > 1.0:
+            raise ValueError('Unexpected skill score: %s.' % score)
+        if score <= 0.33:
+            return self.LOW_PROFICIENCY
+        if score <= 0.66:
+            return self.MED_PROFICIENCY
+        if score <= 1.0:
+            return self.HIGH_PROFICIENCY
+
+    @property
+    def proficient(self):
+        return self.score >= 0.66
+
+    @property
+    def attempted(self):
+        return self.competency_dto.get_data(self.COUNT_KEY) is not None
+
+
+class CompetencyMeasureRegistry(object):
 
     _registry = []
 
@@ -164,9 +240,9 @@ class Registry(object):
         def __init__(self, competency_measures):
             self._competency_measures = competency_measures
 
-        def update(self, normalized_score):
+        def add_score(self, normalized_score):
             for competency_measure in self._competency_measures:
-                competency_measure.update(normalized_score)
+                competency_measure.add_score(normalized_score)
 
         def save(self):
             for competency_measure in self._competency_measures:
@@ -181,8 +257,7 @@ class Registry(object):
     def get_updater(cls, user_id, skill_id):
         competency_measures = []
         for competency_measure_class in cls._registry:
-            measure = competency_measure_class(user_id)
-            measure.load(skill_id)
+            measure = competency_measure_class.load(user_id, skill_id)
             competency_measures.append(measure)
         return cls._Updater(competency_measures)
 
@@ -222,7 +297,7 @@ def _get_questions_scores_from_many_items(data):
 
 
 def record_event_listener(source, user, data):
-    # Note the code in this method has similiarities to methods in
+    # Note the code in this method has similarities to methods in
     # models.event_transforms, but is (a) more limited in scope, and (b) needs
     # less background information marshalled about the structure of the course
 
@@ -252,14 +327,15 @@ def record_event_listener(source, user, data):
             scores_by_skill[skill_id].append(question_score.score)
 
     for skill_id, scores in scores_by_skill.iteritems():
-        updater = Registry.get_updater(user.user_id(), skill_id)
+        updater = CompetencyMeasureRegistry.get_updater(
+            user.user_id(), skill_id)
         for score in scores:
-            updater.update(score)
+            updater.add_score(score)
         updater.save()
 
 
 def notify_module_enabled():
-    Registry.register(SuccessRateCompetencyMeasure)
+    CompetencyMeasureRegistry.register(SuccessRateCompetencyMeasure)
     models.EventEntity.EVENT_LISTENERS.append(record_event_listener)
     data_removal.Registry.register_indexed_by_user_id_remover(
         CompetencyMeasureEntity.delete_by_user_id_prefix)

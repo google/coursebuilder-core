@@ -687,7 +687,7 @@ class UnitHandler(BaseHandler):
         title = None
         if self._LESSON_TITLE_PROVIDER:
             title = self._LESSON_TITLE_PROVIDER(
-                self.app_context, unit, lesson, student)
+                self.app_context, lesson, student)
         if title is None:
             title = self._default_lesson_title_provider(
                 self.app_context, unit, lesson, student)

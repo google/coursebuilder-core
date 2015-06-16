@@ -1,0 +1,72 @@
+<link rel="stylesheet" type="text/css"
+    href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
+
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
+
+<link rel="stylesheet" type="text/css"
+    href="/modules/skill_map/resources/css/lesson_header.css">
+
+<script src="/modules/skill_map/resources/js/skills_progress.js"></script>
+
+<link rel="stylesheet" type="text/css"
+    href="/modules/dashboard/resources/material-design-icons/css/material-design-iconic-font.min.css">
+
+<link rel="stylesheet" type="text/css"
+    href="/modules/skill_map/resources/css/common.css">
+
+{% import 'skill_card.html' as skill_card %}
+
+{% if skills_exist %}
+  {# I18N: Header for skills progress section #}
+  <h2>{{ gettext('Skills Progress') }}</h2>
+
+  {% if recently_learned_skills or learn_next_skills %}
+    <div class="skill-panel">
+      <div>
+        <div class="margins">
+
+          {{ skill_card.display_proficiency_legend() }}
+
+          <div>
+            {# I18N: List of acquired skills for a student #}
+            <span class="section-title">{{ gettext('Achievements') }}</span>
+            {% if not recently_learned_skills %}
+              <span class="empty-skill-list-message">
+                {# Describe an empty set of acquired skills #}
+                {{ gettext('Currently, no acquired skills.') }}
+              </span>
+            {% endif %}
+          </div>
+
+          {% if recently_learned_skills %}
+            <ol class="depends-on skill-display-root">
+              {% for skill in recently_learned_skills %}
+                {{ skill_card.display(skill) }}
+              {% endfor %}
+            </ol>
+          {% endif %}
+        </div>
+
+        <div class="margins">
+          <div>
+            {# I18N: List of skills recommended to a student to learn #}
+            <span class="section-title">{{ gettext('Recommended Next') }}</span>
+            {% if not learn_next_skills %}
+              <span class="empty-skill-list-message">
+                {# I18N: Describe an empty set of recommended skills #}
+                {{ gettext('Currently, you have no recommended skills.') }}
+              </span>
+            {% endif %}
+          </div>
+          {% if learn_next_skills %}
+            <ol class="leads-to skill-display-root">
+              {% for skill in learn_next_skills %}
+                {{ skill_card.display(skill) }}
+              {% endfor %}
+            </ol>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endif %}

@@ -1135,6 +1135,11 @@ class StudentProfileHandler(BaseHandler):
     # title of the data and the second the value to display.
     EXTRA_STUDENT_DATA_PROVIDERS = []
 
+    # A list of callbacks which provides extra sections to the Student Progress
+    # page. Each callback is passed the current handler, the app_context,
+    # and the student and returns a jinja2.Markup or a safe_dom object.
+    EXTRA_PROFILE_SECTION_PROVIDERS = []
+
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled()
@@ -1186,6 +1191,12 @@ class StudentProfileHandler(BaseHandler):
         for data_provider in self.EXTRA_STUDENT_DATA_PROVIDERS:
             extra_student_data.append(data_provider(self, student, course))
         self.template_value['extra_student_data'] = extra_student_data
+
+        profile_sections = []
+        for profile_section_provider in self.EXTRA_PROFILE_SECTION_PROVIDERS:
+            profile_sections.append(profile_section_provider(
+                self, self.app_context, student))
+        self.template_value['profile_sections'] = profile_sections
 
         self.render('student_profile.html')
 

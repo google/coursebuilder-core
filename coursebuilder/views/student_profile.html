@@ -79,8 +79,15 @@
         {# I18N: Shown when the student profile cannot be found in the database. #}
         <p>{{ gettext('Student profile not found ...')}}</p>
       {% endif %}
+
+      {% for section in profile_sections %}
+        <div>
+          {{ section }}
+        </div>
+      {% endfor %}
     </div>
   </div>
 </div>
 
 {% endblock %}
+

@@ -12,37 +12,7 @@
 <link rel="stylesheet" type="text/css"
     href="/modules/skill_map/resources/css/common.css">
 
-{% macro render_skill_card(skill) -%}
-  <li class="skill-card" data-skill-id="{{ skill.id }}">
-    <div class="name">{{ skill.name }}</div>
-    <div class="description">
-      <div class="content">
-        {{ skill.description }}
-      </div>
-      <div class="fade"></div>
-    </div>
-    <div class="locations">
-      <div class="title">
-        {# I18N: Header for list of links to lessons #}
-        {{ gettext('Lessons') }}
-      </div>
-      <ol class="locations">
-        {% for location in skill.lessons %}
-          <li>
-            <a href="{{ location.href }}">
-              {{ location.label }}
-              {{ location.description }}
-            </a>
-          </li>
-        {% endfor %}
-        {% if not skill.lessons %}
-          {# I18N: Text for empty list of lessons #}
-          <li>{{ gettext('Not taught') }}</li>
-        {% endif %}
-      </ol>
-    </div>
-  </li>
-{%- endmacro %}
+{% import 'skill_card.html' as skill_card %}
 
 <h1 class="gcb-lesson-title">
   {{ lesson.title }}
@@ -52,6 +22,7 @@
     </span>
   {% endif %}
 </h1>
+
 {% if skills %}
   <div class="skill-panel" data-dependency-map="{{ dependency_map }}">
     <div class="margins skills-in-this-lesson">
@@ -59,16 +30,25 @@
       <span class="section-title">{{ gettext('Taught in this lesson:') }}</span>
       <ol class="skill-display-root">
         {% for skill in skills %}
-          <li class="skill"
-              data-skill-id="{{ skill.id }}"
-              data-skill-description="{{ skill.description }}">
+          <li class="skill {{ skill.score_level }}"
+            data-skill-id="{{ skill.id }}"
+            data-skill-description="{{ skill.description }}"
+            {% if skill.score %}
+              data-skill-score="{{ skill.score }}"
+            {% endif %}>
             {{ skill.name }}
           </li>
         {% endfor %}
       </ol>
     </div>
+
     <div class="skill-details">
       <div class="margins">
+
+        {% if display_skill_level_legend %}
+          {{ skill_card.display_proficiency_legend() }}
+        {% endif %}
+
         <div>
           {# I18N: Header describing list of skills this lesson depends on #}
           <span class="section-title">{{ gettext('Depends on:') }}</span>
@@ -82,7 +62,7 @@
         {% if depends_on_skills %}
           <ol class="depends-on skill-display-root">
             {% for skill in depends_on_skills %}
-              {{ render_skill_card(skill) }}
+              {{ skill_card.display(skill) }}
             {% endfor %}
           </ol>
         {% endif %}
@@ -101,7 +81,7 @@
         {% if leads_to_skills %}
           <ol class="leads-to skill-display-root">
             {% for skill in leads_to_skills %}
-              {{ render_skill_card(skill) }}
+              {{ skill_card.display(skill) }}
             {% endfor %}
           </ol>
         {% endif %}
