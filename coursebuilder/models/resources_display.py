@@ -855,9 +855,10 @@ class ResourceAssessment(ResourceUnitBase):
         reg.add_sub_registry('assessment', 'Assessment Config',
                              registry=course_opts)
 
-        review_opts = reg.add_sub_registry(
-            'review_opts', 'Peer Review',
-            description=str(messages.ASSESSMENT_DETAILS_DESCRIPTION))
+        review_opts = reg.add_sub_registry('review_opts', 'Peer Review',
+            description=str(messages.ASSESSMENT_DETAILS_DESCRIPTION),
+            extra_schema_dict_values={'id': 'peer-review-group'})
+
         if len(courses.ALLOWED_MATCHERS_NAMES) > 1:
             review_opts.add_property(schema_fields.SchemaField(
                 workflow_key(courses.MATCHER_KEY), 'Review Matcher', 'string',

@@ -113,11 +113,12 @@ class Registry(object):
         if prop:
             return self._properties.pop(self._properties.index(prop))
 
-    def add_sub_registry(
-        self, name, title=None, description=None, registry=None):
-        """Add a sub registry to for this Registry."""
+    def add_sub_registry(self, name, title=None, description=None,
+        registry=None, extra_schema_dict_values=None):
+        """Add a sub registry to this Registry."""
         if not registry:
-            registry = Registry(title, description)
+            registry = self.__class__(title=title, description=description,
+                extra_schema_dict_values=extra_schema_dict_values)
         self._sub_registries[name] = registry
         return registry
 
@@ -304,14 +305,6 @@ class FieldArray(SchemaField):
 
 class FieldRegistry(Registry):
     """FieldRegistry is an object with SchemaField properties."""
-
-    def add_sub_registry(
-        self, name, title=None, description=None, registry=None):
-        """Add a sub registry to for this Registry."""
-        if not registry:
-            registry = FieldRegistry(title, description=description)
-        self._sub_registries[name] = registry
-        return registry
 
     def get_json_schema_dict(self):
         schema_dict = dict(self._registry)
