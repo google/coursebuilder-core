@@ -2268,7 +2268,7 @@ class Course(object):
         """Create the registry for course properties."""
 
         reg = schema_fields.FieldRegistry('Course Settings',
-            description='Course Settings', extra_schema_dict_values={
+            extra_schema_dict_values={
                 'className': 'inputEx-Group new-form-layout'})
 
         course_opts = reg.add_sub_registry(

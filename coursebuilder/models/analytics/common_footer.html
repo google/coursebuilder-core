@@ -1,7 +1,5 @@
-{% for status_message in status_messages %}
-    {{ status_message }}
-{% endfor %}
-
+<div class="section">
+<h3>
 {% if status_messages %}
   {% if any_generator_still_running %}
     <form id="gcb-cancel-visualization-{{ visualization }}"
@@ -9,8 +7,9 @@
       <input type="hidden" name="r" value="{{ r }}">
       <input type="hidden" name="xsrf_token" value="{{ xsrf_token_cancel }}">
       <input type="hidden" name="visualization" value="{{ visualization }}">
-      <button class="gcb-button" type="submit">
-        Cancel Statistic Calculation
+      <button class="gcb-button gcb-icon-button" type="submit">
+         <span class="icon md-cancel"></span>
+         <span>Cancel</span>
       </button>
     </form>
   {% else %}
@@ -20,10 +19,21 @@
       <input type="hidden" name="xsrf_token" value="{{ xsrf_token_run }}">
       <input type="hidden" name="visualization" value="{{ visualization }}">
       <button
-         class="gcb-button gcb-pull-right"
+         class="gcb-button gcb-icon-button"
          type="submit">
-        Update Statistic
+         <span class="icon md-refresh"></span>
+         <span>Update</span>
       </button>
     </form>
   {% endif %}
 {% endif %}
+<span class="title-text">{{title}}</span></h3>
+
+{% for status_message in status_messages %}
+  <p>{{ status_message }}</p>
+{% endfor %}
+
+{% if visualization_content %}
+{{visualization_content}}
+{% endif %}
+</div>

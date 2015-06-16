@@ -179,14 +179,13 @@ SkillTable.prototype = {
     var that = this;
 
     this._content = $(
-      '<div class="controls">' +
-      '  <label class="show-warnings">' +
+      '<div class="controls gcb-button-toolbar">' +
+      '  <label class="show-warnings gcb-pull-right">' +
       '    <input type="checkbox" class="health-checkbox" checked>' +
       '    Show warnings' +
       '  </label>' +
       '  <button class="gcb-button add-new-skill">+ Create New Skill</button>' +
       '</div>' +
-      '<h3>Skills Table</h3>' +
       '<table class="skill-map-table"></table>');
 
     this._table = this._content.filter('table.skill-map-table');

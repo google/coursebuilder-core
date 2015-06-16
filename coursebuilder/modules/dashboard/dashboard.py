@@ -517,7 +517,6 @@ class DashboardHandler(
             'caption': 'Add Role',
             'href': self.get_action_url('add_role')}]
         sections = [{
-                'title': 'Roles',
                 'description': messages.ROLES_DESCRIPTION,
                 'actions': actions,
                 'pre': self._render_roles_list()

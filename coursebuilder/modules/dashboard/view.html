@@ -86,53 +86,60 @@
       </div>
     </div>
 
-    {% if sections %}
     <div id='gcb-main-content'>
-      {% for section in sections %}
-      <div id='gcb-section'>
-        {% for action in section.actions %}
-          {% if action.href %}
-          <a id='{{ action.id }}' class="gcb-button gcb-pull-right" role="button"
-              href="{{ action.href }}" >{{ action.caption }}</a>
-          {% else %}
-          <form id='{{ action.id }}' action='{{ action.action }}' method='POST'>
-            <input type="hidden" name="xsrf_token" value="{{ action.xsrf_token }}">
-            {% if action.params %}
-              {% for name, value in action.params.iteritems() %}
-                <input type="hidden" name="{{ name }}" value="{{ value }}">
-              {% endfor %}
-            {% endif %}
-            <button class="gcb-button gcb-pull-right" type="submit">{{ action.caption }}</button>
-          </form>
-          {% endif %}
-        {% endfor %}
-        {% if section.actions %}
-          <div style='clear: both; padding-top: 2px;' />
-        {% endif %}
-        <h3>{{ section.title }}</h3>
-        {% if section.description %}
-          <p class="description">
-            {{ section.description }}
-          </p>
-        {% endif %}
-        {% if section.pre %}
-          {{ section.pre }}
-        {% elif can_highlight_code and section.code %}
-          <code class="codemirror-container-readonly" mode={{section.mode}}>{{ section.code }}</code>
-        {% else %}
-          <ol>
-            {% if not section.children %}
-            &lt; none &gt;
-            {% endif %}
-            {% for item in section.children %}
-            <li>{{ item }}</li>
+      {% if sections %}
+        {% for section in sections %}
+        <div id='gcb-section'>
+          <div class='gcb-button-toolbar'>
+            {% for action in section.actions %}
+              {% if action.href %}
+              <a id='{{ action.id }}' class="gcb-button" role="button"
+                  href="{{ action.href }}" >{{ action.caption }}</a>
+              {% else %}
+              <form id='{{ action.id }}' action='{{ action.action }}' method='POST'>
+                <input type="hidden" name="xsrf_token" value="{{ action.xsrf_token }}">
+                {% if action.params %}
+                  {% for name, value in action.params.iteritems() %}
+                    <input type="hidden" name="{{ name }}" value="{{ value }}">
+                  {% endfor %}
+                {% endif %}
+                <button class="gcb-button" type="submit">{{ action.caption }}</button>
+              </form>
+              {% endif %}
             {% endfor %}
-          </ol>
-        {% endif %}
-      </div>
-      {% endfor %}
+          </div>
+          {% if section.title %}
+          <h3>{{ section.title }}</h3>
+          {% endif %}
+          {% if section.description %}
+            <p class="description">
+              {{ section.description }}
+            </p>
+          {% endif %}
+          {% if section.pre %}
+            {{ section.pre }}
+          {% elif can_highlight_code and section.code %}
+            <code class="codemirror-container-readonly" mode={{section.mode}}>{{ section.code }}</code>
+          {% else %}
+            <ol>
+              {% if not section.children %}
+              &lt; none &gt;
+              {% endif %}
+              {% for item in section.children %}
+              <li>{{ item }}</li>
+              {% endfor %}
+            </ol>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      {% if main_content %}
+          {{ main_content }}
+      {% endif %}
     </div>
-    {% if can_highlight_code %}
+
+    {% if sections and can_highlight_code %}
       <script>
         CodeMirror.modeURL = "/static/codemirror/mode/%N/%N.js";
         $('.codemirror-container-readonly').each(function() {
@@ -148,12 +155,6 @@
           CodeMirror.autoLoadMode(cmInstance, mode);
         });
       </script>
-    {% endif %}
-    {% endif %}
-    {% if main_content %}
-    <div id='gcb-main-content'>
-        {{ main_content }}
-    </div>
     {% endif %}
     <div id='modal-window'>
       <div id='modal-background'></div>

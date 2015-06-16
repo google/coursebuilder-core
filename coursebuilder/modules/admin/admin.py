@@ -636,9 +636,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
             ).add_child(
                 safe_dom.Element('th').add_text('Description')
             ))
-        content.append(
-            safe_dom.Element('h3').add_text('All Settings')
-        ).append(table)
+        content.append(table)
 
         def get_style_for(value, value_type):
             """Formats CSS style for given value."""
@@ -801,14 +799,15 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
         content = safe_dom.NodeList()
         content.append(
-            safe_dom.Element(
-                'a', id='add_course', className='gcb-button gcb-pull-right',
-                role='button', href='%s?action=add_course' % self.LINK_URL
-            ).add_text('Add Course')
+            safe_dom.Element('div', className='gcb-button-toolbar'
+            ).append(
+                safe_dom.Element(
+                    'a', id='add_course', className='gcb-button',
+                    role='button', href='%s?action=add_course' % self.LINK_URL
+                ).add_text('Add Course')
+            )
         ).append(
             safe_dom.Element('div', style='clear: both; padding-top: 2px;')
-        ).append(
-            safe_dom.Element('h3').add_text('All Courses')
         )
         table = safe_dom.Element('table')
         content.append(table)

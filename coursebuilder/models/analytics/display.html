@@ -1,19 +1,21 @@
+<div class="section">
 {% if any_generator_not_running %}
-  <form id="gcb-generate-analytics-data"
-        action="analytics?action=run_visualizations"
-        method="POST">
-    <input type="hidden" name="r" value="{{ r }}">
-    <input type="hidden" name="xsrf_token" value="{{ xsrf_token_run }}">
-    {% for visualization in visualizations %}
-      <input type="hidden" name="visualization" value="{{ visualization }}">
-    {% endfor %}
-    <button class="gcb-button gcb-pull-right"
-            type="submit">
-      Update All Statistics
-    </button>
-  </form>
-  <br>
-  <br>
+  <div class="gcb-button-toolbar">
+    <form id="gcb-generate-analytics-data"
+          action="analytics?action=run_visualizations"
+          method="POST">
+      <input type="hidden" name="r" value="{{ r }}">
+      <input type="hidden" name="xsrf_token" value="{{ xsrf_token_run }}">
+      {% for visualization in visualizations %}
+        <input type="hidden" name="visualization" value="{{ visualization }}">
+      {% endfor %}
+      <button class="gcb-button gcb-icon-button"
+              type="submit">
+        <span class="icon md-refresh"></span>
+        <span>Update All</span>
+      </button>
+    </form>
+  </div>
 {% endif %}
 
 
@@ -93,9 +95,8 @@
     </div>
     <div id="gcb_log_rest_source_{{ rest_source.name }}"></div>
   {% endfor %}
-  <br>
 {% endif %}
-
+</div>
 
 {% for section in sections %}
   {{ section }}

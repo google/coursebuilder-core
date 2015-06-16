@@ -214,7 +214,7 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         # Ensure that analytics appear to be running and have cancel buttons.
         assert_contains('is running', response.body)
-        assert_contains('Cancel Statistic Calculation', response.body)
+        assert_contains('Cancel', response.body)
 
         # Now that all analytics are pending, ensure that we do _not_ have
         # an update-all button.

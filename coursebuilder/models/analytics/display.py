@@ -99,27 +99,11 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
             get_generator_status_message(generator_class, job).append(
                 get_pipeline_link(xsrf, app_context, generator_class, job)))
 
-    # <h3> title block.
-    html_sections.append(safe_dom.Element('h3').add_text(visualization.title))
-    html_sections.append(safe_dom.Element('br'))
-
-    # Boilerplate content for each visualization's required generators
-    html_sections.append(template_renderer.render(
-        None, 'models/analytics/common_footer.html',
-        {
-            'visualization': visualization.name,
-            'any_generator_still_running': any_generator_still_running,
-            'status_messages': generator_status_messages,
-            'xsrf_token_run': xsrf.create_xsrf_token('run_visualizations'),
-            'xsrf_token_cancel': xsrf.create_xsrf_token(
-                'cancel_visualizations'),
-            'r': template_renderer.get_current_url(),
-        }))
-
     # If this source wants to generate inline values for its template,
     # and all generators that this source depends are complete (or zero
     # generators are depended on) then-and-only-then allow the source
     # to generate template values
+    visualization_content = None
     if all_generators_completed_ok:
         template_values = {'visualization': visualization.name}
         for source_class in visualization.data_source_classes:
@@ -133,8 +117,22 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
                 source_class.fill_values(app_context, template_values,
                                          *synchronous_query_jobs)
 
-        html_sections.append(template_renderer.render(
-                visualization, visualization.template_name, template_values))
+        visualization_content = template_renderer.render(
+            visualization, visualization.template_name, template_values)
+
+    html_sections.append(template_renderer.render(
+        None, 'models/analytics/common_footer.html',
+        {
+            'title':visualization.title,
+            'visualization': visualization.name,
+            'any_generator_still_running': any_generator_still_running,
+            'status_messages': generator_status_messages,
+            'xsrf_token_run': xsrf.create_xsrf_token('run_visualizations'),
+            'xsrf_token_cancel': xsrf.create_xsrf_token(
+                'cancel_visualizations'),
+            'r': template_renderer.get_current_url(),
+            'visualization_content':visualization_content,
+        }))
 
     return html_sections
 

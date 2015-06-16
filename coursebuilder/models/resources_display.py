@@ -819,8 +819,7 @@ class ResourceAssessment(ResourceUnitBase):
 
     @classmethod
     def get_schema(cls, course, key):
-        reg = schema_fields.FieldRegistry(
-            'Assessment Entity', description='Assessment',
+        reg = schema_fields.FieldRegistry('Assessment Entity',
             extra_schema_dict_values={
                 'className': 'inputEx-Group new-form-layout'})
 

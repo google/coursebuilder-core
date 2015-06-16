@@ -1,7 +1,6 @@
 table.i18n-progress-table {
   border: none;
   max-width: 1200px;
-  margin: 0 auto;
 }
 table.i18n-progress-table td.resource-locale-entry.done {
   background-color: #cfc;

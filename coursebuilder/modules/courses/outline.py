@@ -28,7 +28,6 @@ from models import resources_display
 from modules.dashboard import dashboard
 from modules.dashboard import unit_lesson_editor
 from modules.dashboard import utils as dashboard_utils
-from modules.courses import messages
 from tools import verify
 
 # A list of functions which are used to generate extra info about a lesson
@@ -272,8 +271,6 @@ def _get_outline(handler):
 
     sections = [
         {
-            'title': 'Course Outline',
-            'description': messages.COURSE_OUTLINE_DESCRIPTION,
             'actions': outline_actions,
             'pre': _render_course_outline_to_html(handler, currentCourse)}]
 

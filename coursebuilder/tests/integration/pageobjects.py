@@ -596,7 +596,7 @@ class AssetsPage(PageObject):
         return self
 
     def click_upload(self):
-        self.find_element_by_link_text('Upload to assets/img').click()
+        self.find_element_by_css_selector('#upload-button').click()
         return AssetsEditorPage(self._tester)
 
     def verify_image_file_by_name(self, name):
@@ -604,8 +604,8 @@ class AssetsPage(PageObject):
         return self
 
     def verify_no_image_file_by_name(self, name):
-        self.wait().until(ec.visibility_of_element_located((
-            by.By.XPATH, '//h3[starts-with(.,\'Images & Documents\')]')))
+        self.wait().until(ec.visibility_of_element_located(
+            (by.By.ID, 'upload-button')))
         try:
             self.find_element_by_link_text(name)  # throw exception if not found
             raise AssertionError('Found file %s which should be absent' % name)

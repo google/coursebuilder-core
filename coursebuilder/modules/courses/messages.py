@@ -19,10 +19,6 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 from common import safe_dom
 
 
-COURSE_OUTLINE_DESCRIPTION = safe_dom.assemble_text_message(
-    'Build, organize and preview your course here.',
-    'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
-
 ABOUT_THE_COURSE_DESCRIPTION = safe_dom.assemble_text_message("""
 This information is configured by an administrator from the Admin pages.
 """, None)

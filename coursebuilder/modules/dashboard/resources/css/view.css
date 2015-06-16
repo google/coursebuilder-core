@@ -131,9 +131,11 @@ div#gcb-footer {
 h2 {
   margin-left: 32px;
 }
+.section + .section {
+  margin-top: 40px;
+}
 h3 {
   color: #37474F;
-  border-bottom: solid 1px #455A64;
 }
 p.page-description {
   margin: 0;
@@ -149,7 +151,8 @@ div#formContainer {
   margin: 0;
 }
 .gcb-button {
-  margin: 0px 0px 0px 4px;
+  display: inline-block;
+  margin: 0;
   padding: 4px 12px;
   background-color: #37474F;
   color: #fff;
@@ -158,6 +161,24 @@ div#formContainer {
   border-radius: 3px;
   font-size: 12px;
 }
+.gcb-button-toolbar {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+.gcb-icon-button {
+  padding-top:0;
+  padding-bottom:0;
+  padding-left: 8px;
+  line-height: 20px;
+}
+.gcb-icon-button .icon {
+  color: inherit;
+  padding:0;
+}
+.gcb-icon-button span {
+  vertical-align: middle;
+}
+
 .gcb-pull-right {
   float: right;
 }
@@ -269,7 +290,7 @@ div#formContainer div.settings-list-item fieldset legend span {
   max-height: 400px;
   overflow: auto;
   overflow-y: scroll;
-  margin: 10px 0px 20px 0px;
+  margin: 0px 0px 20px 0px;
   border: solid 1px;
 }
 .assets-table {
@@ -361,7 +382,8 @@ div#formContainer div.settings-list-item fieldset legend span {
 .filter-popup {
   display: none;
   position: absolute;
-  right: 100%;
+  right: 0;
+  top: 26px;
   width: 470px;
   background-color: #fff;
   border: 1px solid #ccc;
@@ -552,4 +574,7 @@ div.codemirror-container-readonly {
 
 div.codemirror-container-readonly div.CodeMirror {
     height: auto!important;
+}
+.title-text {
+  vertical-align: middle;
 }

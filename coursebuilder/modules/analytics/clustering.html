@@ -16,9 +16,11 @@
 {% if no_clusterables %}
   {{ no_clusterables }}
 {% else %}
-  <a href="dashboard?action=add_cluster" class="gcb-button gcb-pull-right">
-    Create new cluster
-  </a>
+  <div class="gcb-button-toolbar">
+    <a href="dashboard?action=add_cluster" class="gcb-button">
+      Create new cluster
+    </a>
+  </div>
 
   <table id="gcb-clustering">
     <thead>

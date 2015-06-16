@@ -489,7 +489,6 @@ def _get_about_course(handler):
 
     sections = [
         {
-            'title': 'About the Course',
             'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
             'actions': course_actions,
             'children': course_info},]

@@ -89,25 +89,18 @@ def _list_and_format_file_list(
     if handler.app_context.is_editable_fs() and upload:
         output.append(
             safe_dom.Element(
-                'a', className='gcb-button gcb-pull-right',
+                'a', className='gcb-button gcb-icon-button',
                 href='dashboard?%s' % urllib.urlencode(
                     {'action': 'manage_asset',
                      'tab': tab_name,
-                     'key': subfolder})
-            ).add_text(
-                'Upload to ' + subfolder.lstrip('/').rstrip('/'))
-        ).append(
-            safe_dom.Element(
-                'div', style='clear: both; padding-top: 2px;'
+                     'key': subfolder}),
+                id='upload-button',
+            ).append(
+                safe_dom.Element('span', className='icon md-file-upload')
+            ).append(
+                safe_dom.Element('span').add_text(" Upload")
             )
         )
-    if title:
-        h3 = safe_dom.Element('h3')
-        if count:
-            h3.add_text('%s (%s)' % (title, count))
-        else:
-            h3.add_text(title)
-        output.append(h3)
     if sub_title:
         output.append(safe_dom.Element('blockquote').add_text(sub_title))
     if items:
@@ -239,16 +232,6 @@ def _add_assets_table(output, table_id, columns):
     tr.add_children(ths)
     return table
 
-def _create_filter():
-    return safe_dom.Element(
-        'div', className='gcb-pull-right filter-container',
-        id='question-filter'
-    ).add_child(
-        safe_dom.Element(
-            'button', className='gcb-button gcb-pull-right filter-button'
-        ).add_text('Filter')
-    )
-
 def _create_empty_footer(text, colspan, set_hidden=False):
     """Creates a <tfoot> that will be visible when the table is empty."""
     tfoot = safe_dom.Element('tfoot')
@@ -289,26 +272,38 @@ def _list_questions(handler, all_questions, all_question_groups, location_maps):
     if not handler.app_context.is_editable_fs():
         return safe_dom.NodeList()
 
-    output = safe_dom.NodeList().append(
-        safe_dom.Element(
-            'a', className='gcb-button gcb-pull-right',
-            href='dashboard?action=add_mc_question'
-        ).add_text('Add Multiple Choice')
-    ).append(
-        safe_dom.Element(
-            'a', className='gcb-button gcb-pull-right',
-            href='dashboard?action=add_sa_question'
-        ).add_text('Add Short Answer')
-    ).append(
-        safe_dom.Element(
-            'a', className='gcb-button gcb-pull-right',
-            href='dashboard?action=import_gift_questions'
-        ).add_text('Add GIFT Questions')
-    ).append(_create_filter()).append(
-        safe_dom.Element('div', style='clear: both; padding-top: 2px;')
+    output = safe_dom.NodeList(
     ).append(safe_dom.Element('h3').add_text(
         'Questions (%s)' % len(all_questions)
-    ))
+    )).append(
+        safe_dom.Element(
+            'div', className='gcb-button-toolbar'
+        ).append(
+            safe_dom.Element(
+                'a', className='gcb-button',
+                href='dashboard?action=add_mc_question'
+            ).add_text('Add Multiple Choice')
+        ).append(safe_dom.Text(' ')).append(
+            safe_dom.Element(
+                'a', className='gcb-button',
+                href='dashboard?action=add_sa_question'
+            ).add_text('Add Short Answer')
+        ).append(safe_dom.Text(' ')).append(
+            safe_dom.Element(
+                'a', className='gcb-button',
+                href='dashboard?action=import_gift_questions'
+            ).add_text('Add GIFT Questions')
+        ).append(
+            safe_dom.Element(
+                'div', className='filter-container gcb-pull-right',
+                id='question-filter'
+            ).append(
+                safe_dom.Element(
+                    'button', className='gcb-button filter-button'
+                ).add_text('Filter')
+            )
+        )
+    )
 
     # Create questions table
     table = _add_assets_table(
@@ -398,19 +393,23 @@ def _list_question_groups(
         return safe_dom.NodeList()
 
     output = safe_dom.NodeList()
+    output.append(safe_dom.Element('h3').add_text(
+        'Question Groups (%s)' % len(all_question_groups)
+    ))
     output.append(
         safe_dom.Element(
-            'a', className='gcb-button gcb-pull-right',
-            href='dashboard?action=add_question_group'
-        ).add_text('Add Question Group')
+            'div', className='gcb-button-toolbar'
+        ).append(
+            safe_dom.Element(
+                'a', className='gcb-button',
+                href='dashboard?action=add_question_group'
+            ).add_text('Add Question Group')
+        )
     ).append(
         safe_dom.Element(
             'div', style='clear: both; padding-top: 2px;'
         )
     )
-    output.append(safe_dom.Element('h3').add_text(
-        'Question Groups (%s)' % len(all_question_groups)
-    ))
 
     # Create question groups table
     table = _add_assets_table(
@@ -466,16 +465,13 @@ def _list_labels(handler):
 
     output.append(
         safe_dom.A('dashboard?action=add_label',
-                   className='gcb-button gcb-pull-right'
+                   className='gcb-button'
                   ).add_text('Add Label')
         ).append(
             safe_dom.Element(
                 'div', style='clear: both; padding-top: 2px;'
             )
         )
-    output.append(
-            safe_dom.Element('h3').add_text('Labels')
-    )
     labels = models.LabelDAO.get_all()
     if labels:
         all_labels_ul = safe_dom.Element('ul')

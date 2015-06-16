@@ -3682,7 +3682,6 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
         actions.login('test_readonly@example.com', is_admin=True)
 
         response = self.get('sample/dashboard?action=i18n_dashboard')
-        self.assertNotIn('(readonly)', response.body)
         self.assertNotIn('input disabled', response.body)
         self.assertIn('action=i18n_download', response.body)
         self.assertIn('action=i18n_upload', response.body)
@@ -3692,7 +3691,6 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
         with actions.OverriddenEnvironment(
             {'course': {'prevent_translation_edits': True}}):
             response = self.get('sample/dashboard?action=i18n_dashboard')
-            self.assertIn('(readonly)', response.body)
             self.assertIn('input disabled', response.body)
             self.assertNotIn('action=i18n_download', response.body)
             self.assertNotIn('action=i18n_upload', response.body)

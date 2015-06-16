@@ -670,3 +670,9 @@ div.new-form-layout div.cb-editor-field div.CodeMirror {
 div.new-form-layout div.cb-editor-small div.CodeMirror {
   height: 200px;
 }
+
+#cb-oeditor-form > fieldset > .inputEx-Group-legend,
+#cb-oeditor-form > fieldset > .inputEx-Group:first-of-type > fieldset > .inputEx-Group-legend {
+  /* Hide the first group title in the form since it duplicates the navigation */
+  display: none;
+}

@@ -1951,9 +1951,6 @@ class I18nDashboardHandler(BaseDashboardExtension):
             'page_title': self.handler.format_title('I18n Workflow'),
             'main_content': jinja2.utils.Markup(main_content),
             'sections': [{
-                    'title': 'Internationalization%s' % (
-                        ' (readonly)' if self.is_readonly(
-                            self.course) else ''),
                     'actions': actions,
                     'pre': ' ',
                     }]

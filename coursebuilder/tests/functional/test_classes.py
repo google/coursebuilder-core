@@ -1622,12 +1622,10 @@ class AdminAspectTest(actions.TestBase):
 
         response = self.testapp.get('/admin/global')
         assert_contains('Power Searching with Google', response.body)
-        assert_contains('All Courses', response.body)
 
         response = self.testapp.get('/admin/global?tab=settings')
         assert_contains('gcb_admin_user_emails', response.body)
         assert_contains('gcb_config_update_interval_sec', response.body)
-        assert_contains('All Settings', response.body)
 
         response = self.testapp.get('/admin/global?tab=perf')
         assert_contains('gcb-admin-uptime-sec:', response.body)
