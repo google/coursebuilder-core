@@ -74,13 +74,14 @@ GOOGLE_LIBS = [
 
 # Third-party library zip files.
 THIRD_PARTY_LIBS = [
+    _Library('Graphy-1.0.0.zip', relative_path='Graphy-1.0.0'),
+    _Library('appengine-mapreduce-0.8.2.zip',
+             relative_path='appengine-mapreduce-0.8.2/python/src'),
     _Library('babel-0.9.6.zip'),
     _Library('decorator-3.4.0.zip', relative_path='src'),
     _Library('gaepytz-2011h.zip'),
-    _Library('Graphy-1.0.0.zip', relative_path='Graphy-1.0.0'),
     _Library('html5lib-0.95.zip'),
-    _Library('appengine-mapreduce-0.8.2.zip',
-             relative_path='appengine-mapreduce-0.8.2/python/src'),
+    _Library('identity-toolkit-python-client-0.1.6.zip'),
     _Library('markdown-2.5.zip', relative_path='Markdown-2.5'),
     _Library('mrs-mapreduce-0.9.zip', relative_path='mrs-mapreduce-0.9'),
     _Library('networkx-1.9.1.zip', relative_path='networkx-1.9.1'),

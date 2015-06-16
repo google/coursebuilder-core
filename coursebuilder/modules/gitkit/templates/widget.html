@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <script
+    type="text/javascript"
+    src="//www.gstatic.com/authtoolkit/js/gitkit.js"></script>
+  <link
+    type="text/css"
+    rel="stylesheet"
+    href="//www.gstatic.com/authtoolkit/css/gitkit.css">
+  </head>
+  <body>
+    <div
+      id="widget"
+      data-branding-url="{{ branding_url }}"
+      data-browser-api-key="{{ browser_api_key }}"
+      data-email-url="{{ email_url }}"
+      data-favicon-url="{{ favicon_url }}"
+      data-signin-url="{{ signin_url }}"
+      data-title="{{ title }}"></div>
+    <script type="text/javascript">
+      (function() {
+        var widget = document.getElementById("widget");
+        var brandingUrl = widget.getAttribute('data-branding-url');
+        var browserApiKey = widget.getAttribute('data-browser-api-key');
+        var emailUrl = widget.getAttribute('data-email-url');
+        var faviconUrl = widget.getAttribute('data-favicon-url');
+        var signinUrl = widget.getAttribute('data-signin-url');
+        var title = widget.getAttribute('data-title');
+
+        var config = {
+          acUiConfig: {
+            branding: brandingUrl,
+            favicon: faviconUrl,
+            title: title
+          },
+          apiKey: browserApiKey,
+          callbacks: {
+            'queryParameterForSignInSuccessUrl': 'signInSuccessUrl',
+            'signInSuccess': function(idToken, account, signInSuccessUrl) {
+              var redirect = '/modules/gitkit/signin' + (
+                  signInSuccessUrl ?
+                  '?signInSuccessUrl=' + encodeURIComponent(signInSuccessUrl) :
+                  '');
+              window.location = redirect;
+              return false;
+            }
+          },
+          oobActionUrl: emailUrl,
+          signInOptions: ["google", "facebook"],  // Disables username/password.
+          signInSuccessUrl: signinUrl,
+          siteName: 'Course Builder'
+        };
+        window.google.identitytoolkit.start(
+          '#widget', config, 'JAVASCRIPT_ESCAPED_POST_BODY');
+      })();
+    </script>
+  </body>
+</html>

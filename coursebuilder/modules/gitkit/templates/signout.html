@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <script
+    type="text/javascript"
+    src="//www.gstatic.com/authtoolkit/js/gitkit.js"></script>
+  </head>
+  <body>
+    <div
+      id="credentials"
+      data-browser-api-key="{{ browser_api_key }}"
+      data-url-arg-name="{{ dest_url }}"></div>
+    <script type="text/javascript">
+      (function() {
+        function getEncodedDestUrl(search, argName) {
+          search = search || '';
+          var parts = search.substring(1).split('&');
+
+          for (var i = 0; i < parts.length; i++) {
+            var mapping = parts[i].split('=', 2);
+            if (mapping[0] === argName) {
+              return mapping[1];
+            }
+          }
+
+          return null;
+        }
+
+        var credentials = document.getElementById('credentials');
+        var argName = credentials.getAttribute('data-url-arg-name');
+        var config = {
+          apiKey: credentials.getAttribute('data-browser-api-key'),
+          callbacks: {
+            'signOut': function() {
+              var destUrl = getEncodedDestUrl(window.location.search, argName);
+              var redirect = '/modules/gitkit/signout/continue' +
+                (destUrl ? '?dest_url=' + destUrl : '');
+              window.location = redirect;
+              return false;
+            }
+          }
+        };
+        window.google.identitytoolkit.setConfig(config);
+        window.google.identitytoolkit.signOut();
+      })();
+    </script>
+  </body>
+</html>

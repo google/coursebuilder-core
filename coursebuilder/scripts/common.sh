@@ -220,6 +220,7 @@ DISTRIBUTED_LIBS="\
   GoogleAppEnginePipeline-1.9.17.0.zip \
   Graphy-1.0.0.zip \
   html5lib-0.95.zip \
+  identity-toolkit-python-client-0.1.6.zip \
   inputex-3.1.0.zip \
   markdown-2.5.zip \
   material-design-iconic-font-1.1.1.zip \

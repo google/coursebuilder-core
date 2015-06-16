@@ -1,0 +1,18 @@
+# This file provides a mechanism for configuring GITKit via the Course Builder
+# admin console, while keeping all non-admin users out. The workflow is:
+#
+# 1. Push a version with "enabled" set to False and your email address in
+#    "admins".
+# 2. Visit /admin and configure GITKit. Also, configure all Course Builder
+#    admins via /admin; while GITKit is enabled, users.is_current_user_admin()
+#    will return True for only those users.
+# 3. When you are ready to enable GITKit signins and have configured admins,
+#    flip "enabled" to True and push a new version.
+#
+# When "enabled" is True, only these users are allowed to sign in. All other users
+# will be kept out.
+admins:
+  - test@example.com
+# If True, GITKit authentication will be used.
+# If False, GAE authentication will be used and the admins list will apply.
+enabled: False
