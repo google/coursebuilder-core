@@ -151,8 +151,10 @@ class ResourceSAQuestion(ResourceQuestionBase):
         grader_type.add_property(schema_fields.SchemaField(
             'score', 'Score', 'string',
             description=messages.SHORT_ANSWER_SCORE_DESCRIPTION,
-            extra_schema_dict_values={'className': 'sa-grader-score'},
-            i18n=False, optional=True))
+            extra_schema_dict_values={
+                'className': 'sa-grader-score',
+                'value': '1.0',
+            }, i18n=False, optional=True))
         grader_type.add_property(schema_fields.SchemaField(
             'matcher', 'Grading', 'string', optional=True, i18n=False,
             select_data=cls.GRADER_TYPES,
