@@ -20,6 +20,17 @@ describe('certificate criteria user interface', function() {
 
   describe('fill in form', function() {
     beforeEach(function() {
+      window.cb_global.form = {
+        inputsNames: {
+          course: {
+            inputsNames: {
+              certificate_criteria: {
+                on: function() {}
+              }
+            }
+          }
+        }
+      };
       jasmine.getFixtures().fixturesPath = 'base/';
       loadFixtures(
           'tests/unit/javascript_tests/modules_certificate/fixture.html');
@@ -46,8 +57,8 @@ describe('certificate criteria user interface', function() {
       this.assessmentDropdown.val("default");
       onAssignmentDropdownChanged(this.assessmentDropdown);
       expect($(".inputEx-description").is(':hidden')).toBe(true);
-      expect($(".pass-percent").is(':visible')).toBe(true);
-      expect($(".custom-criteria").is(':visible')).toBe(true);
+      expect($(".pass-percent").is(':hidden')).toBe(true);
+      expect($(".custom-criteria").is(':hidden')).toBe(true);
     });
     it('selects custom criterion option', function() {
       this.assessmentDropdown.val("");
@@ -56,30 +67,24 @@ describe('certificate criteria user interface', function() {
       expect($(".pass-percent").is(':hidden')).toBe(true);
       expect($(".custom-criteria").is(':visible')).toBe(true);
     });
-    it('sets a custom criterion directly', function() {
-      var custom_dropdown = $(".custom-criteria select");
-      custom_dropdown.val("something");
-      onCustomCriteriaDropdownChanged(custom_dropdown);
-      expect($(".assessment-dropdown").is(':visible')).toBe(true);
-      expect($(".inputEx-description").is(':hidden')).toBe(true);
-      expect($(".pass-percent").is(':hidden')).toBe(true);
-    });
   });
 
   describe('save form', function() {
     var criteria = [];
-    window.cb_global.form = {
-      getValue : function() {
-        return {
-          course: {
-            certificate_criteria : criteria
-          }
-        }
-      }
-    };
     window.cbShowMsg = function (unusedMessage) {
       return;
     }
+    beforeEach(function(){
+      window.cb_global.form = {
+        getValue : function() {
+          return {
+            course: {
+              certificate_criteria : criteria
+            }
+          }
+        }
+      };
+    })
     afterEach(function() {
       while(criteria.length > 0) {
         criteria.pop();

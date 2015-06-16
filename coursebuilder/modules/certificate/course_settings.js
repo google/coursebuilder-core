@@ -9,31 +9,28 @@ function onReady() {
   }
 }
 
+function updateCriterionDivs(){
+  $(".settings-list-item .assessment-dropdown select").each(function() {
+    onAssignmentDropdownChanged($(this));
+  });
+}
 
 function init() {
   isPeerAssessmentTable = cb_global.schema.properties.course.properties
       .certificate_criteria._inputex.is_peer_assessment_table;
 
-  var criterionDivs = $(".settings-list-item");
+  // Pre-run event handlers on existing and newly created records
+  updateCriterionDivs();
+  cb_global.form.inputsNames.course.inputsNames.certificate_criteria
+    .on("updated", function(){
+      updateCriterionDivs();
+    });
 
-  //Initial setup
-  criterionDivs.find(".assessment-dropdown select").each(
-    function(index, element) {
-      onAssignmentDropdownChanged($(element));
-    }
-  );
-  criterionDivs.find(".custom-criteria select").each(function(index, element) {
-    onCustomCriteriaDropdownChanged($(element));
-  });
-
-  //Attach handlers
+  // Event handlers
   $(".settings-list").on("change", ".assessment-dropdown select", function(e) {
     onAssignmentDropdownChanged($(this));
   });
 
-  $(".settings-list").on("change", ".custom-criteria select", function(e) {
-    onCustomCriteriaDropdownChanged($(this));
-  });
   cb_global.onSaveClick = onCourseSettingsSave;
 }
 
@@ -49,8 +46,8 @@ function onAssignmentDropdownChanged(selectElement) {
   var customCriteria = fieldset.find(".custom-criteria").parent();
   var passPercent = fieldset.find(".pass-percent").parent();
   if (selectElement.val() == "default") {
-    customCriteria.show();
-    passPercent.show();
+    customCriteria.hide();
+    passPercent.hide();
     selectElement.next("div.inputEx-description").hide();
   } else if (selectElement.val() == "") {
     customCriteria.show();
@@ -70,22 +67,6 @@ function onAssignmentDropdownChanged(selectElement) {
       passPercent.show();
       selectElement.next("div.inputEx-description").hide();
     }
-  }
-}
-
-/**
- * Handle selection of a custom criterion method.
- */
-function onCustomCriteriaDropdownChanged(selectElement) {
-  var fieldset = selectElement.closest("fieldset")
-  var assessmentDropdown = fieldset.find(".assessment-dropdown select");
-  if (selectElement.val() == "") {
-    onAssignmentDropdownChanged(assessmentDropdown.find("select"))
-  } else {
-    var passPercent = fieldset.find(".pass-percent");
-    passPercent.find("input").val("");
-    passPercent.parent().hide();
-    assessmentDropdown.val("");
   }
 }
 
