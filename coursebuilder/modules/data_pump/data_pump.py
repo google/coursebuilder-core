@@ -1176,11 +1176,11 @@ def register_module():
 
     project_id = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PROJECT_ID,
-        'Project ID', 'string', validator=validate_project_id,
-        description='The ID (not the name!) of the Project to which to '
-        'send data.  See the list of projects and their IDs at '
+        'Project ID', 'string',
+        description='(Required) The ID (not the name!) of the Project to which '
+        'to send data.  See the list of projects and their IDs at '
         'https://console.developers.google.com/project',
-        i18n=False)
+        i18n=False, optional=True, validator=validate_project_id)
     dataset_name = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + DATASET_NAME,
         'Dataset Name', 'string',
@@ -1213,13 +1213,13 @@ def register_module():
     json_key = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + JSON_KEY,
         'JSON Key', 'text',
-        i18n=False, validator=validate_json_key,
-        description='Contents of a JSON key created in the Developers Console '
-        'for the instance where BigQuery is to be run.  See these videos for '
+        description='(Required) Contents of a JSON key created in the '
+        'Developers Console for the instance where BigQuery is to be run.  See '
+        'these videos for '
         '<a href="https://www.youtube.com/watch?v=cz80K9DPtxg">'
         'configuration</a> instructions as well as a brief demonstration of '
-        '<a href="https://www.youtube.com/watch?v=2ticBJcZGZ8">basic use.</a>"')
-
+        '<a href="https://www.youtube.com/watch?v=2ticBJcZGZ8">basic use.</a>"',
+        i18n=False, optional=True, validator=validate_json_key)
 
     def validate_table_lifetime(value, errors):
         if not value:
