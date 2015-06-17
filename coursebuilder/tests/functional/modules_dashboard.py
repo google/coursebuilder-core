@@ -18,6 +18,7 @@ __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 
 import cgi
 import time
+import json
 
 import actions
 from common import crypto
@@ -59,6 +60,21 @@ class QuestionDashboardTestCase(actions.TestBase):
     def tearDown(self):
         namespace_manager.set_namespace(self.old_namespace)
         super(QuestionDashboardTestCase, self).tearDown()
+
+    def test_unused_question(self):
+        # Create an unused question
+        unused_question_dto = models.QuestionDTO(None, {
+            'description': 'unused',
+            'type': 0
+        })
+        unused_question_id = models.QuestionDAO.save(unused_question_dto)
+        self.course.save()
+
+        dom = self.parse_html_string(self.get(self.URL).body)
+        question_row = dom.find('.//tr[@data-quid=\'{}\']'.format(
+            unused_question_id))
+        filter_data = json.loads(question_row.get('data-filter'))
+        self.assertEqual(filter_data['unused'], 1)
 
     def test_table_entries(self):
         # Create a question

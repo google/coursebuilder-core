@@ -380,7 +380,7 @@ def _list_questions(handler, all_questions, all_question_groups, location_maps):
         filter_info['units'] = list(unit_ids) + [
             a.unit_id for a in  locations.get('assessments', ())]
         filter_info['groups'] = [qg.id for qg in used_by_groups]
-        filter_info['unused'] = 0 if locations else 1
+        filter_info['unused'] = int(not (locations and any(locations.values())))
         tr.add_attribute(data_filter=transforms.dumps(filter_info))
         tbody.add_child(tr)
 
