@@ -64,7 +64,7 @@ table.skill-map-table td.description {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-table.skill-map-table tr td span.prerequisite {
+table.skill-map-table tr td span.related-skills {
   background: #5cb85c;
   border-color: #1B7C1B;
   color: white;

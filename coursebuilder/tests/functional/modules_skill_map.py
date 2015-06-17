@@ -337,6 +337,26 @@ class SkillMapTests(BaseSkillMapTests):
         self.course.clear_current()
         super(SkillMapTests, self).tearDown()
 
+    def test_follow_on_skills(self):
+        self._build_sample_graph()
+        # a-d
+        #  /
+        # b
+        # c--e--f
+        skill_map = SkillMap.load(self.course)
+        skills = skill_map.skills()
+
+        sa = next(x for x in skills if x.name == 'a')
+        self.assertEqual(1, len(sa.successors))
+        self.assertEqual('d', sa.successors[0].name)
+
+        sb = next(x for x in skills if x.name == 'b')
+        self.assertEqual(1, len(sb.successors))
+        self.assertEqual('d', sb.successors[0].name)
+
+        sd = next(x for x in skills if x.name == 'd')
+        self.assertEqual(0, len(sd.successors))
+
     def test_topo_sort(self):
         self._build_sample_graph()
         skill_map = SkillMap.load(self.course)
@@ -830,7 +850,7 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         # check that every skill has the following properties
         keys = ['id', 'name', 'description', 'prerequisite_ids', 'lessons',
                 'questions', 'sort_key', 'topo_sort_key', 'score',
-                'score_level']
+                'score_level', 'successor_ids']
         for skill in skills:
             self.assertItemsEqual(keys, skill.keys())
 

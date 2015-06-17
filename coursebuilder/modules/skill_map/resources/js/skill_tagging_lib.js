@@ -73,6 +73,16 @@ SkillTable.prototype = {
     td.append(ol);
     tr.append(td);
 
+    // add skill successors
+    var td = $('<td></td>');
+    var ol = $('<ol class="skill-display-root"></ol>');
+    this._skills.eachSuccessor(skill, function(successor) {
+      var successorLi = $('<li class="skill"></li>').text(successor.name);
+      ol.append(successorLi);
+    });
+    td.append(ol);
+    tr.append(td);
+
     // add skill lessons
     var td = $('<td></td>');
     var ol = $('<ol class="comma-list"></ol>');
@@ -102,12 +112,13 @@ SkillTable.prototype = {
       '  <tr>' +
       '    <th class="skill">Skill <span class="skill-count"></span></th>' +
       '    <th class="description">Description</th>' +
-      '    <th class="prerequisite">Prerequisites</th>' +
+      '    <th class="related-skills">Prerequisites</th>' +
+      '    <th class="related-skills">Leads to</th>' +
       '    <th class="lessons">Lessons</th>' +
       '  </tr>' +
       '</thead>'
     );
-    thead.find('.skill-count').text('(' + that._skillsCount() + ')')
+    thead.find('.skill-count').text('(' + that._skillsCount() + ')');
     return thead;
   },
 
@@ -385,6 +396,20 @@ SkillList.prototype = {
       var prereq = this._skillLookupByIdTable[skill.prerequisite_ids[i]];
       if (prereq) {
         callback(prereq);
+      }
+    }
+  },
+
+  /**
+   * Iterate over the successors of a skill
+   *
+   * @param callback {function} A function taking a skill as its arg.
+   */
+  eachSuccessor: function(skill, callback) {
+    for (var i = 0; i < skill.successor_ids.length; i++) {
+      var successor = this._skillLookupByIdTable[skill.successor_ids[i]];
+      if (successor) {
+        callback(successor);
       }
     }
   },

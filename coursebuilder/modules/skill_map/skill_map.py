@@ -556,6 +556,7 @@ class SkillInfo(object):
         self._lessons = lessons or []
         self._questions = questions or []
         self._prerequisites = []
+        self._successors = []
         self._competency_measure = measure
         self._topo_sort_index = topo_sort_index
 
@@ -579,6 +580,15 @@ class SkillInfo(object):
     def prerequisites(self, skills):
         """Sets prerequisite skills."""
         self._prerequisites = skills
+
+    @property
+    def successors(self):
+        return self._successors
+
+    @successors.setter
+    def successors(self, skills):
+        """Sets successors skills."""
+        self._successors = skills
 
     @property
     def lessons(self):
@@ -636,6 +646,7 @@ class SkillInfo(object):
                 'name': obj.name,
                 'description': obj.description,
                 'prerequisite_ids': [s.id for s in obj.prerequisites],
+                'successor_ids': [s.id for s in obj.successors],
                 'lessons': obj.lessons,
                 'questions': obj.questions,
                 'sort_key': obj.sort_key(),
@@ -694,6 +705,13 @@ class SkillMap(caching.RequestScopedSingleton):
             for pid in skill.prerequisite_ids:
                 prerequisites.append(self._skill_infos[pid])
             self._skill_infos[skill.id].prerequisites = prerequisites
+
+        # add successors
+        for skill in self._skill_graph.skills:
+            successors = []
+            for skill_dto in self._skill_graph.successors(skill.id):
+                successors.append(self._skill_infos[skill_dto.id])
+            self._skill_infos[skill.id].successors = successors
 
     def build_successors(self):
         """Returns a dictionary keyed by skills' ids.
