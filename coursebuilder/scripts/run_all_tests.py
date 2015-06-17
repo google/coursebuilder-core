@@ -111,7 +111,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_dashboard.CourseOutlineTestCase': 1,
     'tests.functional.modules_dashboard.DashboardAccessTestCase': 3,
     'tests.functional.modules_dashboard.TestLessonSchema': 2,
-    'tests.functional.modules_dashboard.QuestionDashboardTestCase': 9,
+    'tests.functional.modules_dashboard.QuestionDashboardTestCase': 10,
     'tests.functional.modules_dashboard.RoleEditorTestCase': 3,
     'tests.functional.modules_data_pump.SchemaConversionTests': 1,
     'tests.functional.modules_data_pump.StudentSchemaValidationTests': 2,
