@@ -28,9 +28,11 @@ each time they authenticate.
 
 Currently, this implementation is known to work with the Google and Facebook
 providers. Other providers are likely possible but have not been tested.
-Notably, it does not yet support username/password via accountchooser.com, and
-any attempts to use email functionality will break.
+Notably, we do not yet support username/password via accountchooser.com, and any
+attempts to use email functionality (either with Google and Facebook, or with
+username/password) will break.
 
+TODO(johncox): add email functionality (forgot password, etc.).
 TODO(johncox): add support for username/password.
 
 The basic authentication flow is
