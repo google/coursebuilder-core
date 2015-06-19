@@ -2269,10 +2269,13 @@ class Course(object):
 
         reg = schema_fields.FieldRegistry('Course Settings',
             extra_schema_dict_values={
-                'className': 'inputEx-Group new-form-layout'})
+                'className': 'inputEx-Group new-form-layout hidden-header'})
 
         course_opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_COURSE, 'Course')
+            Course.SCHEMA_SECTION_COURSE, 'Course',
+            extra_schema_dict_values={
+                'className': 'inputEx-Group hidden-header'
+            })
         course_opts.add_property(schema_fields.SchemaField(
             'course:now_available', 'Availability', 'boolean',
             description='Make the course available to students.',
@@ -2327,7 +2330,10 @@ class Course(object):
             'http://www.google.com/tagmanager'))
 
         homepage_opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_HOMEPAGE, 'Homepage')
+            Course.SCHEMA_SECTION_HOMEPAGE, 'Homepage',
+            extra_schema_dict_values={
+                'className': 'inputEx-Group hidden-header'
+            })
         homepage_opts.add_property(schema_fields.SchemaField(
             'base:show_gplus_button', 'Show G+ Button', 'boolean',
             optional=True, description='Whether to show a G+ button on the '
@@ -2369,7 +2375,10 @@ class Course(object):
             'and terms of service'))
 
         registration_opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_REGISTRATION, 'Registration')
+            Course.SCHEMA_SECTION_REGISTRATION, 'Registration',
+            extra_schema_dict_values={
+                'className': 'inputEx-Group hidden-header'
+            })
         registration_opts.add_property(schema_fields.SchemaField(
             'reg_form:can_register', 'Enable Registrations', 'boolean',
             description='Checking this box allows new students to register for '
@@ -2432,7 +2441,10 @@ class Course(object):
 
         # Unit level settings.
         unit_opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_UNITS_AND_LESSONS, 'Units and Lessons')
+            Course.SCHEMA_SECTION_UNITS_AND_LESSONS, 'Units and Lessons',
+            extra_schema_dict_values={
+                'className': 'inputEx-Group hidden-header'
+            })
         unit_opts.add_property(schema_fields.SchemaField(
             'unit:hide_lesson_navigation_buttons',
             'Hide Lesson Navigation Buttons',
@@ -2472,7 +2484,10 @@ class Course(object):
             validator=must_contain_one_string_substitution))
 
         i18n_opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_I18N, 'I18N')
+            Course.SCHEMA_SECTION_I18N, 'I18N',
+            extra_schema_dict_values={
+                'className': 'inputEx-Group hidden-header'
+            })
         i18n_opts.add_property(schema_fields.SchemaField(
             'course:can_student_change_locale', 'Let Student Change Locale',
             'boolean',
@@ -2532,7 +2547,10 @@ class Course(object):
             if not sub_registry:
                 sub_registry = reg.add_sub_registry(
                     schema_section,
-                    schema_section.replace('_', ' ').title())
+                    schema_section.replace('_', ' ').title(),
+                    extra_schema_dict_values={
+                        'className': 'inputEx-Group hidden-header'
+                    })
             for schema_provider in cls.OPTIONS_SCHEMA_PROVIDERS[schema_section]:
                 sub_registry.add_property(schema_provider(course))
         return reg

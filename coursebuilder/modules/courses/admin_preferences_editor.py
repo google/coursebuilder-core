@@ -64,7 +64,7 @@ class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):
         ret = schema_fields.FieldRegistry(
             'Admin Prefs', description='Administrator preferences',
             extra_schema_dict_values={
-                'className': 'inputEx-Group new-form-layout'})
+                'className': 'inputEx-Group new-form-layout hidden-header'})
         ret.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         ret.add_property(schema_fields.SchemaField(
