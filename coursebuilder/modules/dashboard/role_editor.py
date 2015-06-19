@@ -74,7 +74,7 @@ class RoleRESTHandler(dto_editor.BaseDatastoreRestHandler):
         item_type.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string', optional=True,
             editable=False,
-            extra_schema_dict_values={'className': 'inputEx-description'}))
+            extra_schema_dict_values={'className': 'permission-label'}))
 
         item_array = schema_fields.FieldArray(
             module_name, module_name, item_type=item_type,

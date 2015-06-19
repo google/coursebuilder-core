@@ -518,8 +518,11 @@ div.permission-item .inputEx-fieldWrapper {
   vertical-align: text-top;
   margin: 0;
 }
-div.permission-item .inputEx-fieldWrapper + .inputEx-fieldWrapper + .inputEx-fieldWrapper {
-  display: block;
+.permission-label {
+  display: inline;
+}
+.permission-name {
+  display: none;
 }
 div#formContainer fieldset .permission-item fieldset {
   margin: 0;
