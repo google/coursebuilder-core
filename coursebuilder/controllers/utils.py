@@ -922,7 +922,7 @@ class BaseHandler(CourseHandler):
         return True
 
     @appengine_config.timeandlog('BaseHandler.render')
-    def render(self, template_file, additional_dirs=None):
+    def render(self, template_file, additional_dirs=None, save_location=True):
         """Renders a template."""
         prefs = models.StudentPreferencesDAO.load_or_create()
 
@@ -940,12 +940,13 @@ class BaseHandler(CourseHandler):
         # students so future visits to the course's base URL sends the student
         # to the most-recently-visited page.
         # TODO(psimakov): method called render() must not have mutations
-        user = self.get_user()
-        if user:
-            student = models.Student.get_enrolled_student_by_user(user)
-            if student:
-                prefs.last_location = self.request.path_qs
-                models.StudentPreferencesDAO.save(prefs)
+        if save_location and self.request.method == 'GET':
+            user = self.get_user()
+            if user:
+                student = models.Student.get_enrolled_student_by_user(user)
+                if student:
+                    prefs.last_location = self.request.path_qs
+                    models.StudentPreferencesDAO.save(prefs)
 
     def get_redirect_location(self, student):
         if (not student.is_transient and

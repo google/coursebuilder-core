@@ -288,7 +288,8 @@ class PreviewHandler(utils.BaseHandler):
 
     def get(self):
         """Deliver the Preview iframe, without user content."""
-        self.render('preview_editor.html', additional_dirs=[TEMPLATES_DIR])
+        self.render('preview_editor.html', additional_dirs=[TEMPLATES_DIR],
+            save_location=False)
 
     def post(self):
         """Deliver the Preview iframe, with embedded HTML from the editor."""
