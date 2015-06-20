@@ -41,6 +41,7 @@ fi
 # Ensure that start_in_shell.sh is executable
 if [ ! -x "$SOURCE_DIR/scripts/start_in_shell.sh" ]; then
   chmod u+x "$SOURCE_DIR/scripts/start_in_shell.sh"
+  chmod u+x "$SOURCE_DIR/scripts/pylint.sh"
 fi
 
 # Configures the runtime environment.
