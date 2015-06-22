@@ -51,7 +51,7 @@ ALL_MODULES = [
     'querystring-stringify-simple', 'inputex-select', 'inputex-string',
     'inputex-radio', 'inputex-date', 'inputex-datepicker', 'inputex-checkbox',
     'inputex-list', 'inputex-color', 'gcb-rte', 'inputex-textarea',
-    'inputex-url', 'inputex-uneditable', 'inputex-integer', 'inputex-hidden',
+    'inputex-url', 'gcb-uneditable', 'inputex-integer', 'inputex-hidden',
     'inputex-file', 'io-upload-iframe']
 
 RESOURCES_URI = '/modules/oeditor/resources'

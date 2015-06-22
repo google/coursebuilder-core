@@ -208,7 +208,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
 
     REQUIRED_MODULES = [
         'inputex-date', 'gcb-rte', 'inputex-select', 'inputex-string',
-        'inputex-uneditable', 'inputex-checkbox', 'inputex-list',
+        'gcb-uneditable', 'inputex-checkbox', 'inputex-list',
         'inputex-hidden']
 
     @classmethod

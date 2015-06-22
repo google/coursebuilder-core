@@ -454,7 +454,7 @@ class UnitRESTHandler(CommonUnitRESTHandler):
     SCHEMA_JSON = SCHEMA.get_json_schema()
     SCHEMA_DICT = SCHEMA.get_json_schema_dict()
     REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'inputex-uneditable',
+        'inputex-string', 'inputex-select', 'gcb-uneditable',
         'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-integer',
         'inputex-checkbox', 'gcb-rte']
 
@@ -506,7 +506,7 @@ class LinkRESTHandler(CommonUnitRESTHandler):
     SCHEMA_DICT = SCHEMA.get_json_schema_dict()
     SCHEMA_ANNOTATIONS_DICT = SCHEMA.get_schema_dict()
     REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'inputex-uneditable',
+        'inputex-string', 'inputex-select', 'gcb-uneditable',
         'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-checkbox']
 
 
@@ -529,7 +529,7 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
     SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
     REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'inputex-uneditable']
+        'inputex-string', 'inputex-select', 'gcb-uneditable']
 
     @classmethod
     def _get_course_list(cls):
@@ -637,7 +637,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
 
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-textarea',
-        'inputex-uneditable', 'inputex-integer', 'inputex-hidden',
+        'gcb-uneditable', 'inputex-integer', 'inputex-hidden',
         'inputex-checkbox', 'inputex-list']
 
 
@@ -707,7 +707,7 @@ class LessonRESTHandler(BaseRESTHandler):
 
     REQUIRED_MODULES = [
         'inputex-string', 'gcb-rte', 'inputex-select', 'inputex-textarea',
-        'inputex-uneditable', 'inputex-checkbox', 'inputex-hidden']
+        'gcb-uneditable', 'inputex-checkbox', 'inputex-hidden']
 
     # Enable modules to specify locations to load JS and CSS files
     ADDITIONAL_DIRS = []

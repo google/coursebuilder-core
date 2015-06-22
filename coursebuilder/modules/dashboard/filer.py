@@ -411,7 +411,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
 
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-textarea', 'inputex-select',
-        'inputex-uneditable']
+        'gcb-uneditable']
 
     URI = '/rest/files/item'
     FILE_ENCODING_TEXT = 'text/utf-8'
@@ -605,7 +605,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
     DISPLAYABLE_SCHEMA_JSON = DISPLAYABLE_SCHEMA.get_json_schema()
     DISPLAYABLE_SCHEMA_ANNOTATIONS_DICT = DISPLAYABLE_SCHEMA.get_schema_dict()
     REQUIRED_MODULES = [
-        'inputex-string', 'inputex-uneditable', 'inputex-file',
+        'inputex-string', 'gcb-uneditable', 'inputex-file',
         'inputex-hidden', 'io-upload-iframe']
 
     XSRF_TOKEN_NAME = 'asset-upload'

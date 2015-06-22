@@ -205,6 +205,9 @@ function onPageLoad(env) {
   YUI.add("gcb-rte", bindEditorField, '3.1.0', {
     requires: ['inputex-field', 'yui2-editor', 'yui2-resize']
   });
+  YUI.add("gcb-uneditable", bindUneditableField, '3.1.0', {
+    requires: ['inputex-uneditable']
+  });
   YUI(getYuiConfig(env.bundle_lib_files)).use(
     env.required_modules,
     mainYuiFunction);

@@ -244,7 +244,7 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
 
     REQUIRED_MODULES = [
         'inputex-date', 'inputex-string', 'inputex-textarea', 'inputex-url',
-        'inputex-checkbox', 'inputex-select', 'inputex-uneditable', 'gcb-rte',
+        'inputex-checkbox', 'inputex-select', 'gcb-uneditable', 'gcb-rte',
         'inputex-hidden',
     ]
 
@@ -390,7 +390,7 @@ class HtmlHookRESTHandler(CourseYamlRESTHandler):
 
     REGISTRY = _create_hook_registry()
     REQUIRED_MODULES = [
-        'inputex-textarea', 'inputex-uneditable', 'gcb-rte', 'inputex-hidden']
+        'inputex-textarea', 'gcb-uneditable', 'gcb-rte', 'inputex-hidden']
     URI = '/rest/course/html_hook'
     XSRF_ACTION = 'html-hook-put'
 

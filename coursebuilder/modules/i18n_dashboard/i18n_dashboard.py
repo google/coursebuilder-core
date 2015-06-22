@@ -550,7 +550,7 @@ class TranslationDeletionRestHandler(utils.BaseRESTHandler):
     XSRF_TOKEN_NAME = 'translation_deletion'
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-hidden',
-        'inputex-checkbox', 'inputex-list', 'inputex-uneditable',
+        'inputex-checkbox', 'inputex-list', 'gcb-uneditable',
         ]
 
     @classmethod
@@ -697,7 +697,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
     XSRF_TOKEN_NAME = 'translation_download'
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-hidden',
-        'inputex-checkbox', 'inputex-list', 'inputex-uneditable',
+        'inputex-checkbox', 'inputex-list', 'gcb-uneditable',
         ]
 
     @classmethod
@@ -1077,7 +1077,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
     XSRF_TOKEN_NAME = 'translation-upload'
     SCHEMA = translation_upload_generate_schema()
     REQUIRED_MODULES = ['inputex-hidden', 'inputex-select', 'inputex-string',
-                        'inputex-uneditable', 'inputex-file',
+                        'gcb-uneditable', 'inputex-file',
                         'io-upload-iframe']
 
     class ProtocolError(Exception):
@@ -2048,7 +2048,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
     REQUIRED_MODULES = [
         'inputex-hidden', 'inputex-list', 'inputex-string', 'inputex-textarea',
-        'inputex-uneditable']
+        'gcb-uneditable']
 
     def get(self):
 
