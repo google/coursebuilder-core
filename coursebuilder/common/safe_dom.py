@@ -10,13 +10,14 @@ def escape(strg):
     return cgi.escape(strg, quote=1).replace("'", '&#39;').replace('`', '&#96;')
 
 
-class Node(object):
+class SafeDom(object):
     """Base class for the sanitizing module."""
 
     def __init__(self):
         self._parent = None
 
     def _set_parent(self, parent):
+        assert self != parent
         self._parent = parent
 
     @property
@@ -31,24 +32,20 @@ class Node(object):
         return self.sanitized
 
 
+class Node(SafeDom):
+    """Represents a single node in the DOM."""
+
+
 # pylint: disable=incomplete-protocol
-class NodeList(object):
+class NodeList(SafeDom):
     """Holds a list of Nodes and can bulk sanitize them."""
 
     def __init__(self):
         self.list = []
-        self._parent = None
+        super(NodeList, self).__init__()
 
     def __len__(self):
         return len(self.list)
-
-    def _set_parent(self, parent):
-        assert self != parent
-        self._parent = parent
-
-    @property
-    def parent(self):
-        return self._parent
 
     def append(self, node):
         assert node is not None, 'Cannot add an empty value to the node list'
@@ -83,9 +80,6 @@ class NodeList(object):
         for node in self.list:
             sanitized_list.append(node.sanitized)
         return ''.join(sanitized_list)
-
-    def __str__(self):
-        return self.sanitized
 
 
 class Text(Node):
@@ -314,3 +308,16 @@ def assemble_text_message(text, link):
         node_list.append(Element(
             'a', href=link, target='_blank').add_text('Learn more...'))
     return node_list
+
+
+class Template(Node):
+    """Enables a Jinja template to be included in a safe_dom.NodeList."""
+
+    def __init__(self, template, **kwargs):
+        self.template = template
+        self.kwargs = kwargs
+        super(Template, self).__init__()
+
+    @property
+    def sanitized(self):
+        return self.template.render(**self.kwargs)

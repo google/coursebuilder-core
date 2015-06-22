@@ -43,7 +43,7 @@ CAN_USE_JINJA2_TEMPLATE_CACHE = config.ConfigProperty(
 
 def finalize(x):
     """A finalize method which will correctly handle safe_dom elements."""
-    if isinstance(x, safe_dom.Node) or isinstance(x, safe_dom.NodeList):
+    if isinstance(x, safe_dom.SafeDom):
         return jinja2.utils.Markup(x.sanitized)
     return x
 

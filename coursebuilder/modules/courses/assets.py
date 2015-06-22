@@ -17,8 +17,10 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import copy
+import os
 import urllib
 
+import appengine_config
 from common import crypto
 from common import safe_dom
 from controllers import sites
@@ -34,6 +36,9 @@ from tools import verify
 # list their assets on the Assets tab. The function will receive an instance
 # of DashboardHandler as an argument.
 contrib_asset_listers = []
+
+TEMPLATE_DIR = os.path.join(
+    appengine_config.BUNDLE_ROOT, 'modules', 'courses', 'views')
 
 
 def _list_and_format_file_list(
@@ -272,38 +277,12 @@ def _list_questions(handler, all_questions, all_question_groups, location_maps):
     if not handler.app_context.is_editable_fs():
         return safe_dom.NodeList()
 
-    output = safe_dom.NodeList(
-    ).append(safe_dom.Element('h3').add_text(
-        'Questions (%s)' % len(all_questions)
-    )).append(
-        safe_dom.Element(
-            'div', className='gcb-button-toolbar'
-        ).append(
-            safe_dom.Element(
-                'a', className='gcb-button',
-                href='dashboard?action=add_mc_question'
-            ).add_text('Add Multiple Choice')
-        ).append(safe_dom.Text(' ')).append(
-            safe_dom.Element(
-                'a', className='gcb-button',
-                href='dashboard?action=add_sa_question'
-            ).add_text('Add Short Answer')
-        ).append(safe_dom.Text(' ')).append(
-            safe_dom.Element(
-                'a', className='gcb-button',
-                href='dashboard?action=import_gift_questions'
-            ).add_text('Add GIFT Questions')
-        ).append(
-            safe_dom.Element(
-                'div', className='filter-container gcb-pull-right',
-                id='question-filter'
-            ).append(
-                safe_dom.Element(
-                    'button', className='gcb-button filter-button'
-                ).add_text('Filter')
-            )
-        )
-    )
+    toolbar_template = handler.get_template(
+        'question_toolbar.html', [TEMPLATE_DIR])
+    toolbar_node = safe_dom.Template(toolbar_template,
+        question_count=len(all_questions))
+
+    output = safe_dom.NodeList().append(toolbar_node)
 
     # Create questions table
     table = _add_assets_table(

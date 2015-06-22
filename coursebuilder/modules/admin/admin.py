@@ -685,8 +685,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
             doc_string = item.doc_string
             if not doc_string:
                 doc_string = 'No documentation available.'
-            if isinstance(doc_string, safe_dom.NodeList) or isinstance(
-                    doc_string, safe_dom.Node):
+            if isinstance(doc_string, safe_dom.SafeDom):
                 return safe_dom.NodeList().append(doc_string).append(
                     safe_dom.Text(' Default: \'%s\'.' % default_value))
             doc_string = ' %s Default: \'%s\'.' % (doc_string, default_value)
