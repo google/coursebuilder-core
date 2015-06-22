@@ -1195,8 +1195,9 @@ class StudentProfileHandler(BaseHandler):
 
         profile_sections = []
         for profile_section_provider in self.EXTRA_PROFILE_SECTION_PROVIDERS:
-            profile_sections.append(profile_section_provider(
-                self, self.app_context, student))
+            section = profile_section_provider(self, self.app_context, student)
+            if section:
+                profile_sections.append(section)
         self.template_value['profile_sections'] = profile_sections
 
         self.render('student_profile.html')
