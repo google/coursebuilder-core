@@ -2102,13 +2102,17 @@ class StudentKeyNameTest(actions.TestBase):
         user1_changed = actions.login_with_specified_user_id(
             'user2@google.com', '123')
         response = self.get('student/home')
-        assert_contains('user2@google.com', response.body)
+        email = self.parse_html_string(response.body).find(
+            './/table[@class="gcb-student-data-table"]//tr[2]//td')
+        assert_contains('user2@google.com', email.text)
         assert_contains('User 1', response.body)
         actions.logout()
 
         user2 = actions.login_with_specified_user_id('user2@google.com', '456')
         response = self.get('student/home')
-        assert_contains('user2@google.com', response.body)
+        email = self.parse_html_string(response.body).find(
+            './/table[@class="gcb-student-data-table"]//tr[2]//td')
+        assert_contains('user2@google.com', email.text)
         assert_contains('User 2', response.body)
         actions.logout()
 
