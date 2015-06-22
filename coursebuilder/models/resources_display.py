@@ -742,9 +742,12 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
         return UnitTools(course).unit_to_dict(unit)
 
     @classmethod
-    def _generate_common_schema(cls, title):
+    def _generate_common_schema(cls, title, hidden_header=False):
+        group_class_name = 'inputEx-Group new-form-layout'
+        if hidden_header:
+            group_class_name += ' hidden-header'
         ret = schema_fields.FieldRegistry(title, extra_schema_dict_values={
-            'className': 'inputEx-Group new-form-layout'})
+            'className': group_class_name})
         ret.add_property(schema_fields.SchemaField(
             'key', 'ID', 'string', editable=False,
             extra_schema_dict_values={'className': 'inputEx-Field keyHolder'},
@@ -821,12 +824,13 @@ class ResourceAssessment(ResourceUnitBase):
 
     @classmethod
     def get_schema(cls, course, key):
-        reg = schema_fields.FieldRegistry('Assessment Entity',
+        reg = schema_fields.FieldRegistry('Assessment',
             extra_schema_dict_values={
                 'className': 'inputEx-Group new-form-layout'})
 
         # Course level settings.
-        course_opts = cls._generate_common_schema('Assessment Config')
+        course_opts = cls._generate_common_schema(
+            'Assessment Config', hidden_header=True)
         course_opts.add_property(schema_fields.SchemaField(
             'weight', 'Weight', 'string',
             description=str(messages.ASSESSMENT_WEIGHT_DESCRIPTION),
