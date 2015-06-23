@@ -205,6 +205,9 @@ function onPageLoad(env) {
   YUI.add("gcb-rte", bindEditorField, '3.1.0', {
     requires: ['inputex-field', 'yui2-editor', 'yui2-resize']
   });
+  YUI.add("gcb-code", bindCodeField, '3.1.0', {
+    requires: ['inputex-field', 'yui2-resize']
+  });
   YUI.add("gcb-uneditable", bindUneditableField, '3.1.0', {
     requires: ['inputex-uneditable']
   });
@@ -783,3 +786,21 @@ TopLevelEditorControls.prototype = {
     cbShowMsg("Server did not respond. Please reload the page to try again.");
   }
 };
+
+function getPotentialHeight(element) {
+  // Calculate a height for an element so that it fills up all remaining
+  // vertical space in the page.
+  var extraSpace = Math.max(200, verticalExtraPageSpace());
+  return $(element).height() + extraSpace;
+}
+
+function verticalExtraPageSpace() {
+  // Find out how much unused space is left on this page right now
+  return $(window).height() - $(document.documentElement).height();
+}
+
+function isNewFormLayout(){
+  var SCHEMA = cb_global.schema;
+  return (SCHEMA._inputex && SCHEMA._inputex.className
+    && SCHEMA._inputex.className.indexOf('new-form-layout') > -1)
+}

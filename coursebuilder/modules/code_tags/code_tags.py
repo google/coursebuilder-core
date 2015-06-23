@@ -130,6 +130,11 @@ class CodeTag(tags.ContextAwareTag):
         return 'gcb'
 
     @classmethod
+    def required_modules(cls):
+        return super(CodeTag, cls).required_modules() + [
+            'gcb-code', 'inputex-select']
+
+    @classmethod
     def extra_js_files(cls):
         if oeditor.CAN_HIGHLIGHT_CODE.value:
             return ['code_tags_popup.js']
@@ -184,8 +189,10 @@ class CodeTag(tags.ContextAwareTag):
         reg.add_property(
             schema_fields.SchemaField(
                 'code', 'Code', 'text',
-                optional=True,
-                description=('The code which will be displayed.')))
+                description=('The code which will be displayed.'),
+                extra_schema_dict_values={
+                    '_type': 'code',
+                }, optional=True))
         return reg
 
 

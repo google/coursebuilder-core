@@ -250,6 +250,16 @@ div.cb-editor-field div.preview-div .ajax-spinner > .spinner {
 }
 
 /*
+ * CSS for the Code field
+ */
+
+.new-form-layout .inputEx-Field.cb-code-field {
+  width: inherit;
+  float: none;
+  margin-left: 150px;
+}
+
+/*
  * CSS for multiple choice question creation.
  */
 
@@ -659,7 +669,6 @@ div.new-form-layout div.inputEx-Form-buttonBar {
   margin: 20px 0 0 0;
 }
 div.new-form-layout div.cb-editor-field {
-  margin-top: 5px;
   width: inherit;
   float: none;
   margin-left: 139px;

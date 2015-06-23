@@ -101,6 +101,13 @@ class FilesRights(object):
 class FileManagerAndEditor(ApplicationHandler):
     """An editor for editing and managing files."""
 
+    _TAB_TO_CODEMIRROR_MODE = {
+        'js':'javascript',
+        'css':'css',
+        'templates':'htmlmixed',
+        'html':'htmlmixed',
+    }
+
     local_fs = vfs.LocalReadOnlyFileSystem(logical_home_folder='/')
 
     def _get_delete_url(self, base_url, key, xsrf_token_name):
@@ -202,6 +209,8 @@ class FileManagerAndEditor(ApplicationHandler):
         assert uri
         tab_name = self.request.get('tab')
 
+        mode = self._TAB_TO_CODEMIRROR_MODE.get(tab_name, '')
+
         asset = self.app_context.fs.impl.get(
             os.path.join(appengine_config.BUNDLE_ROOT, uri))
         assert asset
@@ -235,11 +244,11 @@ class FileManagerAndEditor(ApplicationHandler):
         # Disable the save button if the payload is not text by setting method
         # to ''.
         save_method = 'put' if is_text_payload(asset.read()) else ''
-
+        schema = TextAssetRESTHandler.get_asset_schema(mode)
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
-            TextAssetRESTHandler.SCHEMA.get_json_schema(),
-            TextAssetRESTHandler.SCHEMA.get_schema_dict(),
+            schema.get_json_schema(),
+            schema.get_schema_dict(),
             uri,
             rest_url,
             exit_url,
@@ -292,19 +301,36 @@ class TextAssetRESTHandler(BaseRESTHandler):
     REQUIRED_MODULES = [
         'inputex-hidden',
         'inputex-textarea',
+        'gcb-code',
     ]
-    SCHEMA = schema_fields.FieldRegistry('Edit asset', description='Text Asset')
-    SCHEMA.add_property(schema_fields.SchemaField(
-        'contents', 'Contents', 'text',
-    ))
-    SCHEMA.add_property(schema_fields.SchemaField(
-        'is_text', 'Is Text', 'boolean', hidden=True,
-    ))
-    SCHEMA.add_property(schema_fields.SchemaField(
-        'readonly', 'ReadOnly', 'boolean', hidden=True,
-    ))
     URI = '/rest/assets/text'
     XSRF_TOKEN_NAME = 'manage-text-asset'
+
+    @classmethod
+    def get_asset_schema(cls, mode):
+        schema = schema_fields.FieldRegistry('Edit asset',
+            description='Text Asset',
+            extra_schema_dict_values={
+                'className':'inputEx-Group new-form-layout hidden-header'
+            })
+
+        extra_values = {}
+        if oeditor.CAN_HIGHLIGHT_CODE:
+            extra_values['mode'] = mode
+            extra_values['_type'] = 'code'
+            extra_values['large'] = True
+
+        schema.add_property(schema_fields.SchemaField(
+            'contents', 'Contents', 'text',
+            extra_schema_dict_values=extra_values,
+        ))
+        schema.add_property(schema_fields.SchemaField(
+            'is_text', 'Is Text', 'boolean', hidden=True,
+        ))
+        schema.add_property(schema_fields.SchemaField(
+            'readonly', 'ReadOnly', 'boolean', hidden=True,
+        ))
+        return schema
 
     def delete(self):
         """Handles the delete verb."""

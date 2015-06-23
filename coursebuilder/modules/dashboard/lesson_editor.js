@@ -38,11 +38,8 @@ $(function() {
         .eq(1).css('margin-left', '0');
 
     // Resize the content editor to use all the available height.
-    var extraSpace = Math.max(200,
-        $(window).height() - $(document.documentElement).height());
-    var editorHeight = $('.cb-editor-field .editors-div').height();
     FORM.inputsNames[LESSON_CONTENT_FIELD_NAME]
-        ._resize(null, editorHeight + extraSpace);
+      ._resize(null, getPotentialHeight($('.cb-editor-field .editors-div')));
   }
 
   init();

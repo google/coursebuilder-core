@@ -1,6 +1,5 @@
 function bindEditorField(Y) {
   var RTE_TAG_DATA = cb_global.rte_tag_data;
-  var SCHEMA = cb_global.schema;
   var CAN_HIGHLIGHT_CODE = cb_global.can_highlight_code;
   var PREVIEW_XSRF_TOKEN = cb_global.preview_xsrf_token;
 
@@ -381,11 +380,7 @@ function bindEditorField(Y) {
     this.opts = options.opts || {};
     this.excludedCustomTags = options.excludedCustomTags || [];
     this.supportCustomTags = options.supportCustomTags || false;
-
-    if (SCHEMA._inputex && SCHEMA._inputex.className
-        && SCHEMA._inputex.className.indexOf('new-form-layout') > -1) {
-      this.fixedWidthLayout = true;
-    }
+    this.allowResizeWidth = !isNewFormLayout();
   };
   EditorField.prototype.renderComponent = function() {
     // The basic structure of an InputExField
@@ -507,7 +502,7 @@ function bindEditorField(Y) {
     editor.show();
   };
   EditorField.prototype._resize = function(width, height) {
-    if (this.fixedWidthLayout) {
+    if (!this.allowResizeWidth) {
       this.editorsDiv.style.height = height + 'px';
       this.activeEditor.setSize(null, height);
     } else {

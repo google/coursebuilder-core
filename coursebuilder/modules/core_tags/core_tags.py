@@ -715,12 +715,8 @@ class Markdown(tags.ContextAwareTag, CoreTag):
         return 'Markdown'
 
     @classmethod
-    def extra_js_files(cls):
-        """Returns a list of JS files to be loaded in the editor lightbox."""
-        if oeditor.CAN_HIGHLIGHT_CODE.value:
-            return ['markdown_popup.js']
-        else:
-            return []
+    def required_modules(cls):
+        return super(Markdown, cls).required_modules() + ['gcb-code']
 
     @classmethod
     def additional_dirs(cls):
@@ -750,11 +746,14 @@ class Markdown(tags.ContextAwareTag, CoreTag):
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(Markdown.name())
         reg.add_property(schema_fields.SchemaField(
-            'markdown', 'Markdown', 'text', optional=False,
+            'markdown', 'Markdown', 'text',
             description='Provide '
             '<a target="_blank" '
             'href="http://daringfireball.net/projects/markdown/syntax">'
-            'markdown</a> text'))
+            'markdown</a> text',
+            extra_schema_dict_values={
+                'mode': 'markdown', '_type': 'code',
+            }, optional=False))
         return reg
 
 
