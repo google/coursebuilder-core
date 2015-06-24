@@ -969,7 +969,8 @@ class ResourceLesson(resource.AbstractResourceHandler):
                 'className': 'inputEx-Group new-form-layout'})
         lesson.add_property(schema_fields.SchemaField(
             'key', 'ID', 'string', editable=False,
-             extra_schema_dict_values={'className': 'inputEx-Field keyHolder'}))
+             extra_schema_dict_values={'className': 'inputEx-Field keyHolder'},
+            hidden=True))
         lesson.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string'))
         lesson.add_property(schema_fields.SchemaField(

@@ -32,6 +32,9 @@ div.course-outline ol.course > li.ui-sortable-helper > ol.unit > li {
 div.course-outline ol.unit > li {
   height: 28px;
 }
+.course-outline .add-lesson button {
+  line-height: 28px;
+}
 div.course-outline .placeholder {
   border: solid #ffffc0 1px;
   background-color: #f8f8f0;
@@ -65,6 +68,7 @@ div.course-outline div.left-matter {
   display: inline-block;
   width: 580px;
   border-right: solid #ccc 1px;
+  box-sizing: border-box;
 }
 div.course-outline div.row.custom-unit > div > div.name {
   font-weight: bold;
