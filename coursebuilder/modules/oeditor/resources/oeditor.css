@@ -214,6 +214,13 @@ div.tabbar > button.selected {
 
 div.cb-editor-field div.editors-div {
   z-index: inherit;
+  min-width: 200px;
+  min-height: 200px;
+}
+div.cb-editor-field div.editors-div > div {
+  /* The sub-editors must be positioned absolutely so that their size doesn't
+   * directly affect the size of the editor-div. */
+  position: absolute;
 }
 div.cb-editor-field {
   width: 510px;

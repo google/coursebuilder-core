@@ -446,6 +446,12 @@ function bindEditorField(Y) {
     }).on('resize', function(evt) {
       that._resize(evt.width, evt.height);
     });
+    // The computed size of the editorDiv should determine the size of the
+    // editors. Poll the div to catch all possible changes.
+    setInterval(function() {
+      var rect = that.editorsDiv.getBoundingClientRect();
+      that.activeEditor.setSize(rect.width, rect.height);
+    }, 100);
   };
   EditorField.prototype.setValue = function(value, sendUpdatedEvt) {
     this.activeEditor.setValue(value);
