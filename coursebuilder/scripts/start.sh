@@ -15,6 +15,16 @@ set -e
 
 . "$(dirname "$0")/parse_start_args.sh"
 
+# Maintain this list of arguments in parallel with those in start_in_shell.sh
+start_cb_server="python $GOOGLE_APP_ENGINE_HOME/dev_appserver.py \
+    --host=0.0.0.0 --port=$CB_PORT --admin_port=$ADMIN_PORT \
+    --clear_datastore=$CLEAR_DATASTORE \
+    --datastore_consistency_policy=consistent \
+    --max_module_instances=1 \
+    --skip_sdk_update_check=true \
+    $STORAGE_PATH_ARGUMENT \
+    \"$SOURCE_DIR\""
+
 echo "Starting GAE development server in a new shell"
 
 if [[ $OSTYPE == linux* ]] ; then

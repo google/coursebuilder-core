@@ -39,12 +39,3 @@ if [ "$data_path" ] ; then
 fi
 
 . "$(dirname "$0")/common.sh"
-
-start_cb_server="python $GOOGLE_APP_ENGINE_HOME/dev_appserver.py \
-    --host=0.0.0.0 --port=$CB_PORT --admin_port=$ADMIN_PORT \
-    --clear_datastore=$CLEAR_DATASTORE \
-    --datastore_consistency_policy=consistent \
-    --max_module_instances=1 \
-    --skip_sdk_update_check=true \
-    $STORAGE_PATH_ARGUMENT \
-    \"$SOURCE_DIR\""
