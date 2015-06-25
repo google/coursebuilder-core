@@ -5375,8 +5375,9 @@ var activity = [
         # TODO(nretallack): Make better way to test the oeditor configuration.
         # This test should check that the following fields are hidden:
         # activity_title, activity_listed, activity
-        # `video` is another hidden field that is irrelevant to this test.
-        self.assert_num_hidden_annotations(response.body, 4)
+        # `video` and `id' are other hidden fields that are irrelevant to this
+        # test.
+        self.assert_num_hidden_annotations(response.body, 5)
 
         # add a lesson w. old-style activity
         lesson = course.add_lesson(unit)
@@ -5394,8 +5395,8 @@ var activity = [
         actions.login('admin@foo.com', is_admin=True)
         response = self.get('/test/dashboard?action=edit_lesson&key=3')
         self.assertEqual(200, response.status_int)
-        # the `video` field will still be hidden
-        self.assert_num_hidden_annotations(response.body, 1)
+        # the `video` and `id` fields will still be hidden
+        self.assert_num_hidden_annotations(response.body, 2)
 
         # cleaning up
         sites.reset_courses()
