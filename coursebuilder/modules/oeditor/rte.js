@@ -398,6 +398,7 @@ function bindEditorField(Y) {
 
     Y.one(this.fieldContainer).addClass('cb-editor-field');
     this.fieldContainer.innerHTML =
+        '<div class="buttonbar-div"></div>' +
         '<div class="editors-div">' +
         '  <div class="html-div"></div>' +
         '  <div class="rte-div"></div>' +
@@ -423,18 +424,20 @@ function bindEditorField(Y) {
     this.previewEditor.hide();
 
     // Bind the buttons
-    this.tabbar = new TabBar();
-    this.tabbar.addTab('HTML', function() {
-      that.setEditorType(that.HTML_EDITOR);
-    });
-    this.tabbar.addTab('Rich Text', function() {
-      that.setEditorType(that.RICH_TEXT_EDITOR);
-    });
-    this.tabbar.addTab('Preview', function() {
-      that.setEditorType(that.PREVIEW_EDITOR);
-    });
-    this.tabbar.selectTab(0);
-    this.fieldContainer.insertBefore(this.tabbar.getRoot(), this.editorsDiv);
+    this.htmlToggleButton = new ToggleButton('</>', 'html-button');
+    //this.htmlToggleButton = new ToggleButton('', 'md md-text-format');
+    this.htmlToggleButton.onClick(
+        function() { that.setEditorType(that.HTML_EDITOR) },
+        function() { that.setEditorType(that.RICH_TEXT_EDITOR) });
+
+    this.previewToggleButton = new ToggleButton('', 'md md-visibility');
+    this.previewToggleButton.onClick(
+        function() { that.setEditorType(that.PREVIEW_EDITOR) },
+        function() { that.setEditorType(that.RICH_TEXT_EDITOR) });
+
+    var buttonbarDiv = this.fieldContainer.querySelector('.buttonbar-div');
+    buttonbarDiv.appendChild(this.htmlToggleButton.getRoot());
+    buttonbarDiv.appendChild(this.previewToggleButton.getRoot());
 
     // Bind the resizer
     new Y.YUI2.util.Resize(this.editorsDiv, {
@@ -486,13 +489,16 @@ function bindEditorField(Y) {
     var editor = null;
     if (editorType == this.HTML_EDITOR) {
       editor = this.htmlEditor;
-      this.tabbar.selectTab(0);
+      this.htmlToggleButton.set(true);
+      this.previewToggleButton.set(false);
     } else if (editorType == this.RICH_TEXT_EDITOR) {
       editor = this.richTextEditor;
-      this.tabbar.selectTab(1);
+      this.htmlToggleButton.set(false);
+      this.previewToggleButton.set(false);
     } else if (editorType == this.PREVIEW_EDITOR) {
       editor = this.previewEditor;
-      this.tabbar.selectTab(2);
+      this.htmlToggleButton.set(false);
+      this.previewToggleButton.set(true);
     }
     if (editor !== null) {
       this._select(editor);

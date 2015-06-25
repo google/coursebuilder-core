@@ -581,3 +581,6 @@ div.codemirror-container-readonly div.CodeMirror {
 .title-text {
   vertical-align: middle;
 }
+label.settings.togglebutton {
+  vertical-align: sub;
+}

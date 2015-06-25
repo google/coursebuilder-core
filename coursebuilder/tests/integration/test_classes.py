@@ -409,12 +409,12 @@ class AdminTests(BaseIntegrationTest):
         ).verify_course_outline_contains_unit(
             'Unit 1 - Test Unit 1'
         ).click_add_lesson(
-        ).click_settings_tab(
         ).set_title(
             'Test Lesson'
+        ).select_settings(
         ).set_status(
             'Public'
-        ).click_content_tab(
+        ).select_content(
         ).click_plain_text(
         ).setvalue_codemirror(
             0, 'Lorem ipsum'
@@ -588,16 +588,13 @@ class AdminTests(BaseIntegrationTest):
         ).click_close(
         ).click_edit_lesson(
             0
-        ).assert_editor_selected_tab(
-            'HTML'
+        ).assert_editor_mode_is_html(
         ).click_rich_text(
         ).click_save(
         ).click_close(
         ).click_edit_lesson(
             0
-        ).assert_editor_selected_tab(
-            'Rich Text'
-        )
+        ).assert_editor_mode_is_rich_text()
 
     def test_add_edit_delete_label(self):
         name = self.create_new_course()[0]
@@ -699,13 +696,13 @@ class QuestionsTest(BaseIntegrationTest):
             'Unit 1 - Test Unit 1'
         #---------------------------------------------- Lesson 1 (graded)
         ).click_add_lesson(
-        ).click_settings_tab(
         ).set_title(
             'Question lesson - Graded'
+        ).select_settings(
         ).set_status(
             'Public'
         ).set_questions_are_scored(
-        ).click_content_tab(
+        ).select_content(
         ).click_rich_text(
         ).click_rte_add_custom_tag(
             'Question'
@@ -716,12 +713,12 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_close(
         #---------------------------------------------- Lesson 2 (ungraded)
         ).click_add_lesson(
-        ).click_settings_tab(
         ).set_title(
             'Question lesson - UnGraded'
+        ).select_settings(
         ).set_status(
             'Public'
-        ).click_content_tab(
+        ).select_content(
         ).click_rich_text(
         ).click_rte_add_custom_tag(
             'Question'

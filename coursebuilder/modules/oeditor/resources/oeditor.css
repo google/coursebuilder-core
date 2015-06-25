@@ -209,9 +209,48 @@ div.tabbar > button.selected {
 }
 
 /*
+ * CSS for the ToggleButton class.
+ */
+label.togglebutton {
+  height: 20px;
+  width: 20px;
+  vertical-align: middle;
+  font-size: 20px;
+  padding: 5px;
+  margin: 1px;
+  color: #888;
+}
+label.togglebutton:hover {
+  margin: 0;
+  border-radius: 4px;
+  border: solid #ccc 1px;
+  color: #444;
+}
+label.togglebutton.selected {
+  margin: 0;
+  border-radius: 4px;
+  border: solid #ccc 1px;
+  background-color: #ddd;
+  color: #444;
+}
+label.togglebutton input[type="checkbox"] {
+  display: none;
+}
+
+/*
  * CSS for the GCB Rich Text Editor.
  */
-
+div.cb-editor-field div.buttonbar-div .togglebutton {
+  margin-right: 5px;
+}
+div.cb-editor-field label.togglebutton.html-button {
+  font-size: 16px;
+}
+div.cb-editor-field div.buttonbar-div {
+  height: 35px;
+  margin-bottom: 3px;
+  position: relative;
+}
 div.cb-editor-field div.editors-div {
   z-index: inherit;
   min-width: 200px;
@@ -287,6 +326,14 @@ div.mc-container div.CodeMirror {
 }
 div.mc-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
   width: 80px;
+}
+div.mc-container .cb-editor-field > .buttonbar-div {
+  height: 20px;
+  margin-bottom: 1px;
+}
+div.mc-container .cb-editor-field > .buttonbar-div > label.togglebutton {
+  padding: 2px 5px;
+  line-height: 12px;
 }
 div.mc-question,
 div.mc-description,
@@ -378,6 +425,14 @@ div.sa-container div.tabbar > button {
 }
 div.sa-container div.cb-editor-field {
   width: 510px;
+}
+div.sa-container .cb-editor-field > .buttonbar-div {
+  height: 20px;
+  margin-bottom: 1px;
+}
+div.sa-container .cb-editor-field > .buttonbar-div > label.togglebutton {
+  padding: 2px 5px;
+  line-height: 12px;
 }
 div.sa-question,
 div.sa-hint,

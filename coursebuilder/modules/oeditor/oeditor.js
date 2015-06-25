@@ -4,8 +4,72 @@ var ajaxRpcTimeoutMillis = 45 * 1000;
 var xssiPrefix = ")]}'";
 
 /**
+ * Utility class for an on/off toggle button.
+ *
+ * @class
+ */
+function ToggleButton(label, className) {
+  var that = this;
+
+  this.root = $('<label></label>');
+  this.root.addClass('togglebutton').addClass(className).text(label);
+
+  this.checkbox = $('<input type="checkbox">');
+  this.root.append(this.checkbox);
+  this.checkbox.click(function() {
+    that._updateClass();
+    if (this.checked) {
+      that.onSelect && that.onSelect();
+    } else {
+      that.onDeselect && that.onDeselect();
+    }
+  });
+}
+/**
+ * Return the root element of the togglebutton.
+ *
+ * @method
+ * @return {Element} The root element.
+ */
+ToggleButton.prototype.getRoot = function() {
+  return this.root.get(0);
+};
+/**
+ * Set the handlers for selected and deselected click events.
+ *
+ * @method
+ * @param onSelect {function} Called when the click leaves the button selected.
+ * @param onDeselect {function} Called when the click leaves the button
+ *     deselected.
+ */
+ToggleButton.prototype.onClick = function(onSelect, onDeselect) {
+  this.onSelect = onSelect;
+  this.onDeselect = onDeselect;
+};
+/**
+ * Set the state of the button.
+ *
+ * @method
+ * @param selected {boolean} The selected (deselected) state.
+ */
+ToggleButton.prototype.set = function(selected) {
+  this.checkbox.prop('checked', selected);
+  this._updateClass();
+};
+ToggleButton.prototype._updateClass = function() {
+  if (this.checkbox.prop('checked')) {
+    this.root.addClass('selected');
+  } else {
+    this.root.removeClass('selected');
+  }
+};
+
+/**
  * Utility class to build a very simple tabbar and to fire callback functions
  * on each button press.
+ *
+ * TODO(jorr): This class is not currently used. Consider deleting it and its
+ *     associated CSS classes.
  *
  * @class
  */

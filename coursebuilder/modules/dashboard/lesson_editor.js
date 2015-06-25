@@ -5,22 +5,22 @@ $(function() {
 
   function editContent() {
     $('#cb-oeditor-form div.inputEx-fieldWrapper').hide();
-    $('#cb-oeditor-form div.inputEx-fieldWrapper > .cb-editor-field')
+    $('#cb-oeditor-form div.inputEx-fieldWrapper > .cb-editor-field, ' +
+        '#cb-oeditor-form div.inputEx-fieldWrapper > .title-holder')
         .parent().show();
   }
 
   function editSettings() {
     $('#cb-oeditor-form div.inputEx-fieldWrapper').show();
-    $('#cb-oeditor-form div.inputEx-fieldWrapper > .cb-editor-field')
+    $('#cb-oeditor-form div.inputEx-fieldWrapper > .cb-editor-field, ' +
+        '#cb-oeditor-form div.inputEx-fieldWrapper > .title-holder')
         .parent().hide();
   }
 
   function bind() {
-    var tabbar = new TabBar();
-    tabbar.addTab('Content', editContent);
-    tabbar.addTab('Settings', editSettings);
-    tabbar.selectTab(0);
-    $('#cb-oeditor-form > fieldset > legend').after(tabbar.getRoot());
+    var togglebutton = new ToggleButton('', 'settings md md-settings');
+    togglebutton.onClick(editSettings, editContent);
+    $('#cb-oeditor-form > fieldset > legend').prepend(togglebutton.getRoot());
   }
 
   function init() {
