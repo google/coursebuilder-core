@@ -1189,7 +1189,8 @@ empty datastore namespace.""")
         safe_dom.Element('p').add_text("""
 A line that starts with '#' is ignored. Course entries are applied in the
 order they are defined.""")
-    ), 'course:/:/:', multiline=True, validator=_courses_config_validator)
+    ), 'course:/:/:', label='Course URLs and namespaces', multiline=True,
+    validator=_courses_config_validator)
 
 
 class _Route(object):

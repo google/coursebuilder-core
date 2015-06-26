@@ -69,7 +69,7 @@ CAN_USE_MEMCACHE = config.ConfigProperty(
         'this value should be on to enable maximum performance. For '
         'development this value should be off so you can see your changes to '
         'course content instantaneously.'),
-    appengine_config.PRODUCTION_MODE)
+    default_value=appengine_config.PRODUCTION_MODE, label='Memcache')
 
 # performance counters
 CACHE_PUT = PerfCounter(
@@ -363,7 +363,7 @@ CAN_AGGREGATE_COUNTERS = config.ConfigProperty(
     'for one frontend instance you are connected to right now. Enabling '
     'aggregation improves quality of performance metrics, but adds a small '
     'amount of latency to all your requests.',
-    default_value=False)
+    default_value=False, label='Counters')
 
 
 def incr_counter_global_value(name, delta):
@@ -389,7 +389,7 @@ counters.incr_counter_global_value = incr_counter_global_value
 CAN_SHARE_STUDENT_PROFILE = config.ConfigProperty(
     'gcb_can_share_student_profile', bool, (
         'Whether or not to share student profile between different courses.'),
-    False)
+    default_value=False, label='Shared student profile')
 
 
 class CollisionError(Exception):
@@ -629,6 +629,7 @@ QUEUE_RETRIES_BEFORE_SENDING_MAIL = config.ConfigProperty(
     '32:00, 1:04:00 and every two hours thereafter.  Mail is sent to all '
     'course administrators.',
     default_value=10,
+    label='Number of queue failures before alert',
     validator=config.ValidateIntegerRange(1, 50).validate)
 
 

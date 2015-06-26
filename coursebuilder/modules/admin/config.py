@@ -41,18 +41,21 @@ SCHEMA_JSON_TEMPLATE = """
         "type": "object",
         "description": "Configuration Property Override",
         "properties": {
+            "label" : {"type": "string"},
             "name" : {"type": "string"},
             "value": {"optional": true, "type": "%s"},
             "is_draft": {"type": "boolean"}
-            }
+        }
     }
     """
 
 # This is a template because the doc_string is not yet known.
 SCHEMA_ANNOTATIONS_TEMPLATE = [
     (['title'], 'Configuration Property Override'),
+    (['properties', 'label', '_inputex'], {
+        'label': 'Setting Name', '_type': 'uneditable'}),
     (['properties', 'name', '_inputex'], {
-        'label': 'Name', '_type': 'uneditable'}),
+        'label': 'Internal Name', '_type': 'uneditable'}),
     oeditor.create_bool_select_annotation(
         ['properties', 'is_draft'], 'Status', 'Pending', 'Active',
         description='<strong>Active</strong>: This value is active and '
@@ -354,7 +357,8 @@ class ConfigPropertyItemRESTHandler(BaseRESTHandler):
             transforms.send_json_response(
                 self, 404, 'Object not found.', {'key': key})
         else:
-            entity_dict = {'name': key, 'is_draft': entity.is_draft}
+            entity_dict = {'name': key, 'label': item.label,
+                'is_draft': entity.is_draft}
             entity_dict['value'] = transforms.string_to_value(
                 entity.value, item.value_type)
             json_payload = transforms.dict_to_json(

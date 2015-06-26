@@ -1335,7 +1335,8 @@ CAN_USE_RESOURCE_BUNDLE_IN_PROCESS_CACHE = ConfigProperty(
         'Whether or not to cache I18N translations. For production this value '
         'should be on to enable maximum performance. For development this '
         'value should be off so you can see your changes to course content '
-        'instantaneously.'), default_value=True)
+        'instantaneously.'), default_value=True,
+    label='Cache internationalization')
 
 
 class ProcessScopedResourceBundleCache(caching.ProcessScopedSingleton):

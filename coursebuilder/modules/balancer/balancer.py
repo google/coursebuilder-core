@@ -101,12 +101,13 @@ logging.basicConfig()
 EXTERNAL_TASK_BALANCER_REST_ENABLED = config.ConfigProperty(
     'gcb_external_task_balancer_rest_enabled', bool,
     ('Whether or not to enable the REST endpoints for the external task '
-     'balancer module. You must also set gcb_external_task_balancer_worker_url '
-     'to use this feature.'), default_value=False)
+     'balancer module. You must also set the external task balancer URL '
+     'to use this feature.'), default_value=False,
+    label='Enable task balancer REST endpoints')
 EXTERNAL_TASK_BALANCER_WORKER_URL = config.ConfigProperty(
     'gcb_external_task_balancer_worker_url', str,
     'URL for the worker pool used by the external task balancer module.',
-    default_value='')
+    default_value='', label='External task balancer worker URL')
 
 
 class Error(Exception):

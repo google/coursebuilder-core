@@ -40,7 +40,8 @@ REPORT_ALLOWED = config.ConfigProperty(
         'for the installation and course (to correlate reports) '
         'hour-by-hour data on enrollments/unenrollments, and current number of '
         'students.  This report is sent once a week.',
-        default_value=False, after_change=_on_change_report_allowed)
+        after_change=_on_change_report_allowed, default_value=False,
+        label='Usage reporting')
 
 
 def set_report_allowed(value):

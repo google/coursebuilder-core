@@ -67,7 +67,8 @@ CAN_PUT_DEBUG_INFO_INTO_PAGES = ConfigProperty(
     'gcb_can_put_debug_info_into_pages', bool, (
         'Whether or not to put debugging information into the web pages. '
         'This may be useful for debugging purposes if you develop custom '
-        'Course Builder features or extensions.'), False)
+        'Course Builder features or extensions.'), False,
+    label='Debug information')
 
 # Whether to record page load/unload events in a database.
 CAN_PERSIST_PAGE_EVENTS = ConfigProperty(
@@ -78,7 +79,7 @@ CAN_PERSIST_PAGE_EVENTS = ConfigProperty(
         'the number of datastore operations and minimizes the use of Google '
         'App Engine quota. Turn event recording on if you want to analyze '
         'this data.'),
-    False)
+    False, label='Record page events')
 
 
 # Whether to record tag events in a database.
@@ -90,7 +91,7 @@ CAN_PERSIST_TAG_EVENTS = ConfigProperty(
         'the number of datastore operations and minimizes the use of Google '
         'App Engine quota. Turn event recording on if you want to analyze '
         'this data.'),
-    False)
+    False, label='Record tag events')
 
 
 # Whether to record events in a database.
@@ -102,7 +103,7 @@ CAN_PERSIST_ACTIVITY_EVENTS = ConfigProperty(
         'the number of datastore operations and minimizes the use of Google '
         'App Engine quota. Turn event recording on if you want to analyze '
         'this data.'),
-    False)
+    False, label='Record activities')
 
 
 # Date format string for displaying datetimes in UTC.

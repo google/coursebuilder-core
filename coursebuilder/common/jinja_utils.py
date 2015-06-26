@@ -38,7 +38,7 @@ MAX_GLOBAL_CACHE_SIZE_BYTES = 8 * 1024 * 1024
 CAN_USE_JINJA2_TEMPLATE_CACHE = config.ConfigProperty(
     'gcb_can_use_jinja2_template_cache', bool, safe_dom.Text(
         'Whether jinja2 can cache bytecode of compiled templates in-process.'),
-    default_value=True)
+    default_value=True, label='Cache compiled templates')
 
 
 def finalize(x):

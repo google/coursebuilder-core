@@ -56,7 +56,8 @@ consuming too many resources, but a hazard for naive users.""")
         safe_dom.Element('p').add_child(
         safe_dom.A('/mapreduce/ui/pipeline/list', target='_blank').add_text("""
 See an example page (with this control enabled)"""))
-    ), False, multiline=False, validator=None)
+    ), default_value=False, label='MapReduce details', multiline=False,
+    validator=None)
 
 
 def authorization_wrapper(self, *args, **kwargs):

@@ -54,7 +54,7 @@ CAN_USE_VFS_IN_PROCESS_CACHE = ConfigProperty(
         'Whether or not to cache content objects. For production this value '
         'should be on to enable maximum performance. For development this '
         'value should be off so you can see your changes to course content '
-        'instantaneously.'), default_value=True)
+        'instantaneously.'), default_value=True, label='Content caching')
 
 
 class AbstractFileSystem(object):

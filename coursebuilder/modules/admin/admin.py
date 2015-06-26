@@ -628,7 +628,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
             href='/modules/admin/resources/css/admin.css'))
         table = safe_dom.Element('table', className='gcb-config').add_child(
             safe_dom.Element('tr').add_child(
-                safe_dom.Element('th').add_text('Name')
+                safe_dom.Element('th').add_text('Setting')
             ).add_child(
                 safe_dom.Element('th').add_text('Current Value')
             ).add_child(
@@ -735,7 +735,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
             tr.add_child(
                 safe_dom.Element(
-                    'td', style='white-space: nowrap;').add_text(item.name))
+                    'td', style='white-space: nowrap;',
+                    title=item.name).add_text(item.label))
 
             td_value = safe_dom.Element('td').add_child(get_lines(value))
             if style_current:

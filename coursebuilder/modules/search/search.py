@@ -54,7 +54,7 @@ CAN_INDEX_ALL_COURSES_IN_CRON = config.ConfigProperty(
         'using a cron job. If enabled, this job would index the course '
         'incrementally so that only new items or items which have not been '
         'recently indexed are indexed.'),
-    default_value=False)
+    default_value=False, label='Automatically index search')
 SEARCH_QUERIES_MADE = counters.PerfCounter(
     'gcb-search-queries-made',
     'The number of student queries made to the search module.')

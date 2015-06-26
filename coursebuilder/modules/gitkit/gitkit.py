@@ -159,29 +159,29 @@ _BROWSER_API_KEY = config.ConfigProperty(
     ('Browser API Key from the Google Developer console. This field is found '
      'under Key from browser applications > API key. See %s for instructions') %
         'https://developers.google.com/identity/toolkit/web/configure-service',
-    default_value='')
+    default_value='', label='GITKit module browser API key')
 _CLIENT_ID = config.ConfigProperty(
     'gcb_modules_gitkit_client_id', str,
     ('Client ID from the Google Developer console. This field is found under '
      'Client ID for web application > Client ID. See %s for instructions') %
         'https://developers.google.com/identity/toolkit/web/configure-service',
-    default_value='')
+    default_value='', label='GITKit module client ID')
 _SERVER_API_KEY = config.ConfigProperty(
     'gcb_modules_gitkit_server_api_key', str,
     ('Server API key from the Google Developer console. This field is found '
      'under Key for server applications > API key. See %s for instructions') %
         'https://developers.google.com/identity/toolkit/web/configure-service',
-    default_value='')
+    default_value='', label='GITKit module server API key')
 _SERVICE_ACCOUNT_JSON = config.ConfigProperty(
     'gcb_modules_gitkit_service_account_json', str,
     ('JSON file contents from Google Developer console. To create, click '
      '"Generate new JSON key", and copy the contents in here. See %s for '
      'instructions') %
         'https://developers.google.com/identity/toolkit/web/configure-service',
-    default_value='')
+    default_value='', label='GITKit module service account JSON')
 _TITLE = config.ConfigProperty(
     'gcb_modules_gitkit_title', str, 'Title of accountchooser.com page',
-    default_value='Please sign in')
+    default_value='Please sign in', label='GITKit module widget title')
 
 
 def _make_gitkit_service(

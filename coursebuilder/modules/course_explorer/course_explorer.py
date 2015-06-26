@@ -30,7 +30,8 @@ GCB_ENABLE_COURSE_EXPLORER_PAGE = ConfigProperty(
         safe_dom.Element('p').add_text("""
 If this option is selected, "/" redirects to the course explorer page.
 Otherwise, it redirects to the preview page for the default course.""")
-    ), False, multiline=False, validator=None)
+    ), default_value=False, label='Course explorer', multiline=False,
+    validator=None)
 
 
 custom_module = None

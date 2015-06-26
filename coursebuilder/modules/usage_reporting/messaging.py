@@ -44,7 +44,9 @@ _INSTALLATION_IDENTIFIER = config.ConfigProperty(
         'has no intrinsic meaning, and no relation to any data or '
         'course setting; it is just used to correlate the weekly '
         'reports from this installation.'),
-    'A random value will be picked when the first report is sent.')
+    default_value='A random value will be picked when the first report is '
+    'sent.', label='Usage report ID',
+    )
 
 # Name of the item in the course settings dictionary which contains the
 # randomly-generated identifier for the course.  (This name needs to be

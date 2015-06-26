@@ -71,7 +71,7 @@ XSRF_SECRET = config.ConfigProperty(
         'preferably using 16-64 characters. Once you change this value, the '
         'server rejects all subsequent requests issued using an old value for '
         'this variable.'),
-    'course builder XSRF secret')
+    default_value='course builder XSRF secret', label='CSRF secret')
 
 ENCRYPTION_SECRET_LENGTH = 48
 
@@ -81,7 +81,8 @@ ENCRYPTION_SECRET = config.ConfigProperty(
         'but the value must be exactly ' + str(ENCRYPTION_SECRET_LENGTH) +
         ' characters long.  If you change this value, the server will be '
         'unable to understand items encrypted under the old key.'),
-    'default value of CourseBuilder encryption secret',
+    default_value='default value of CourseBuilder encryption secret',
+    label='Encryption secret',
     validator=config.ValidateLength(ENCRYPTION_SECRET_LENGTH).validator)
 
 

@@ -45,7 +45,7 @@ CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(
         'Whether lesson content can make use of custom HTML tags such as '
         '<gcb-youtube videoid="...">. If this is enabled some legacy content '
         'may be rendered differently. '),
-    default_value=True)
+    default_value=True, label='Dynamic tags')
 
 
 DUPLICATE_INSTANCE_ID_MESSAGE = (

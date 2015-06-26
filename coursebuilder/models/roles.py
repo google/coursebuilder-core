@@ -34,7 +34,7 @@ GCB_ADMIN_LIST = config.ConfigProperty(
         'tabs, spaces, commas, or newlines.  Existing values using "[" and '
         '"]" around email addresses continues to be supported.  '
         'Regular expressions are not supported.'),
-    '', multiline=True)
+    '', label='Admin email addresses', multiline=True)
 
 KEY_COURSE = 'course'
 KEY_ADMIN_USER_EMAILS = 'admin_user_emails'
@@ -51,7 +51,7 @@ GCB_WHITELISTED_USERS = config.ConfigProperty(
         'tabs, spaces, commas, or newlines.  Existing values using "[" and '
         '"]" around email addresses continues to be supported.  '
         'Regular expressions are not supported.'),
-    '', multiline=True)
+    '', label='User whitelist', multiline=True)
 
 Permission = collections.namedtuple('Permission', ['name', 'description'])
 

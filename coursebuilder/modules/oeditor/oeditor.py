@@ -61,7 +61,7 @@ CAN_HIGHLIGHT_CODE = ConfigProperty(
     'gcb_can_highlight_code', bool, (
         'Whether or not to highlight code syntax '
         'in Dashboard editors and displays.'),
-    True)
+    True, label='Highlight code syntax')
 
 
 class ObjectEditor(object):

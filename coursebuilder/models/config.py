@@ -57,7 +57,7 @@ class ConfigProperty(object):
     def __init__(
         self, name, value_type, doc_string,
         default_value=None, multiline=False, validator=None,
-        after_change=None):
+        after_change=None, label=None):
         """Create a new global config property.
 
         These properties are persisted as ConfigPropertyEntity in the default
@@ -84,6 +84,7 @@ class ConfigProperty(object):
               (It is not called when the underlying ConfigPropertyEntity is
               directly modified).  This function takes two one parameters:
               the ConfigProperty instance, and the previous value.
+          label: A friendly display name.
         """
 
         if value_type not in ALLOWED_TYPES:
@@ -92,6 +93,7 @@ class ConfigProperty(object):
         self._validator = validator
         self._multiline = multiline
         self._name = name
+        self._label = label
         self._type = value_type
         self._doc_string = doc_string
         self._default_value = value_type(default_value)
@@ -126,6 +128,10 @@ class ConfigProperty(object):
     @property
     def name(self):
         return self._name
+
+    @property
+    def label(self):
+        return self._label or self._name
 
     @property
     def value_type(self):
@@ -451,6 +457,7 @@ UPDATE_INTERVAL_SEC = ConfigProperty(
         'you can only set the value to 0 by directly modifying the app.yaml '
         'file.' % MAX_UPDATE_INTERVAL_SEC),
     default_value=DEFAULT_UPDATE_INTERVAL_SEC,
+    label='Settings refresh interval',
     validator=ValidateIntegerRange(
         lower_bound_inclusive=0,
         upper_bound_inclusive=MAX_UPDATE_INTERVAL_SEC).validate)
