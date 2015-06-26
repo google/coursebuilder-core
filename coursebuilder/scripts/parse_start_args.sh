@@ -16,16 +16,16 @@ EOF
 }
 
 CLEAR_DATASTORE=true
-STORAGE_PATH_ARGUMENT=''
 ADMIN_PORT=8000
 CB_PORT=8081
+DATA_PATH=''
 while getopts fd:sp:a:h option
 do
     case $option
     in
         f)  CLEAR_DATASTORE=false;;
-        d)  data_path="$OPTARG";;
-        s)  data_path="$HOME/.cb_data";;
+        d)  DATA_PATH="$OPTARG";;
+        s)  DATA_PATH="$HOME/.cb_data";;
         p)  CB_PORT="$OPTARG" ;;
         a)  ADMIN_PORT="$OPTARG" ;;
         h)  usage; exit 0;;
@@ -33,9 +33,36 @@ do
     esac
 done
 
-if [ "$data_path" ] ; then
-    mkdir -p "$data_path"
-    STORAGE_PATH_ARGUMENT=--storage_path="\"$data_path\""
+. "$(dirname "$0")/common.sh"
+
+# This constructs the command so that it can be used in both start.sh and
+# start_in_shell.sh, which each require different quoting of the arguments.
+#
+# If you wish to change this, please ensure that these things still work:
+# start.sh
+# start.sh -sf
+# start.sh -d ~/"foo bar"
+# start_in_shell.sh
+# start_in_shell.sh -sf
+# start_in_shell.sh -d ~/"foo bar"
+#
+# Also, ensure that coursebuilder terminates after running test.sh on a selenium
+# test, or that run_all_tests.sh shuts down gracefully at the end, since these
+# scripts make use of start_in_shell.sh.
+
+start_cb_server=( python $GOOGLE_APP_ENGINE_HOME/dev_appserver.py \
+    --host=0.0.0.0 --port=$CB_PORT --admin_port=$ADMIN_PORT \
+    --clear_datastore=$CLEAR_DATASTORE \
+    --datastore_consistency_policy=consistent \
+    --max_module_instances=1 \
+    --skip_sdk_update_check=true )
+
+if [ "$DATA_PATH" ] ; then
+    mkdir -p "$DATA_PATH"
+    start_cb_server+=("--storage_path=$DATA_PATH")
 fi
 
-. "$(dirname "$0")/common.sh"
+start_cb_server+=("$SOURCE_DIR")
+
+
+
