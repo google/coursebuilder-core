@@ -37,6 +37,7 @@ __author__ = 'Sean Lip'
 import argparse
 import logging
 import os
+import re
 import shutil
 import signal
 import socket
@@ -227,6 +228,27 @@ class AppEngineTestBase(FunctionalTestBase):
         return self.testbed.get_stub(testbed.MAIL_SERVICE_NAME)
 
 
+def _parse_test_name(name):
+    """Attempts to convert the argument to a dotted test name.
+
+    If the test name is provided in the format output by unittest error
+    messages (e.g., "my_test (tests.functional.modules_my.MyModuleTest)")
+    then it is converted to a dotted test name
+    (e.g., "tests.functional.modules_my.MyModuleTest.my_test"). Otherwise
+    it is returned unmodified.
+    """
+
+    match = re.match(r"\s*(?P<method_name>\S+)\s+\((?P<class_name>\S+)\)\s*",
+        name)
+    if match:
+        return "{class_name}.{method_name}".format(
+            class_name=match.group('class_name'),
+            method_name=match.group('method_name'),
+        )
+    else:
+        return name
+
+
 def create_test_suite(parsed_args):
     """Loads all requested test suites.
 
@@ -241,7 +263,8 @@ def create_test_suite(parsed_args):
     """
     loader = unittest.TestLoader()
     if parsed_args.test_class_name:
-        return loader.loadTestsFromName(parsed_args.test_class_name)
+        return loader.loadTestsFromName(
+            _parse_test_name(parsed_args.test_class_name))
     else:
         return loader.discover(
             os.path.dirname(__file__), pattern=parsed_args.pattern)

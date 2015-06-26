@@ -39,12 +39,16 @@ usage () {
   echo "command to your .bashrc file:"
   echo "export complete -o nospace -C scripts/test_completions.py test.sh"
   echo
+  echo "You can also pass the test's name as it is printed in the test output,"
+  echo "like so (single quotes are required):"
+  echo "  $0 'my_test (tests.functional.modules_my.MyModuleTest)'"
+  echo
 }
 
 # Force shell to fail on any errors.
 set -e
 
-if [ -z $1 ]; then
+if [[ -z $1 ]]; then
   usage
   exit 1
 fi
@@ -70,6 +74,6 @@ CB_SERVER_START=$SCRIPTS_DIR/start_in_shell.sh
 echo Running functional tests
 python "$SOURCE_DIR/tests/suite.py" \
   --integration_server_start_cmd="$CB_SERVER_START" \
-  --test_class_name $1
+  --test_class_name "$1"
 
 echo Done!
