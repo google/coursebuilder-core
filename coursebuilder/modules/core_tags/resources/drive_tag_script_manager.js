@@ -7,6 +7,8 @@ window.GoogleApiClientTools = (function(JSON) {
   module = {};
 
   module._typeId = 'google-drive';
+  // TODO(nretallack): This duplicates code in
+  // modules/dashboard/resources/js/view.js.
   // XSSI prefix must be kept in sync with models/transforms.py.
   module._xssiPrefix = ")]}'";
 

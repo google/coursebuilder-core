@@ -9,6 +9,14 @@ function parseJson(s) {
   return JSON.parse(s.replace(XSSI_PREFIX, ""));
 }
 
+/* These functions are reused in various pages */
+window.parseAjaxResponse = parseJson;
+window.parseAjaxResponsePayload = function(text) {
+  var wrapper = parseAjaxResponse(text);
+  wrapper.payload = JSON.parse(wrapper.payload);
+  return wrapper;
+}
+
 function setDraftStatus(padlock, isDraft) {
   if (isDraft) {
     padlock.removeClass("md-lock-open").addClass("md-lock");

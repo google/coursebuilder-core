@@ -38,8 +38,8 @@
   $(function() {
     var xsrfToken = $('div.consent-banner').data('xsrfToken');
 
-    /* TODO(jorr): This duplicates code in skill_tagging.js. Put it function in
-       shared location e.g. view.js */
+    // TODO(nretallack): This duplicates code in
+    // modules/dashboard/resources/js/view.js.
     function parseAjaxResponse(s) {
       // XSSI prefix. Must be kept in sync with models/transforms.py.
       var xssiPrefix = ")]}'";

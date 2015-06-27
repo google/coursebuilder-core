@@ -27,6 +27,7 @@ from controllers import utils as controllers_utils
 from models.analytics import display
 from models.analytics import utils as analytics_utils
 from models import data_sources
+from models import transforms
 
 by_name = {}
 
@@ -204,8 +205,33 @@ class AnalyticsHandler(controllers_utils.ReflectiveRequestHandler,
         self.redirect(str(self.request.get('r')))
 
 
+class AnalyticsStatusRESTHandler(controllers_utils.BaseRESTHandler):
+    def get(self):
+        finished_jobs = [
+            name for name in self.request.get_all('visualization')
+            if self._is_finished(name)
+        ]
+
+        result = {
+            "finished": finished_jobs,
+        }
+
+        transforms.send_json_response(self, 200, "Success.", result)
+
+    def _is_finished(self, name):
+        visualization = by_name[name]
+        for generator_class in visualization.generator_classes:
+            job = generator_class(self.app_context).load()
+            if job and not job.has_finished:
+                return False
+        return True
+
+
 def get_namespaced_handlers():
-    return [('/analytics', AnalyticsHandler)]
+    return [
+        ('/analytics', AnalyticsHandler),
+        ('/analytics/rest/status', AnalyticsStatusRESTHandler),
+    ]
 
 
 def get_global_handlers():

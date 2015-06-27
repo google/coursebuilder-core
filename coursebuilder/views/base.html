@@ -127,6 +127,8 @@
             encodeURIComponent(key));
       }
       $(function() {
+        // TODO(nretallack): This duplicates code in
+        // modules/dashboard/resources/js/view.js.
         function parseJson(s) {
           var xssiPrefix = ")]}'";
           return JSON.parse(s.replace(xssiPrefix, ''));

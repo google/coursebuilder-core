@@ -160,6 +160,7 @@ div#formContainer {
   border: none;
   border-radius: 3px;
   font-size: 12px;
+  font-weight: normal;
 }
 .gcb-button-toolbar {
   margin-top: 5px;
@@ -174,6 +175,8 @@ div#formContainer {
 .gcb-icon-button .icon {
   color: inherit;
   padding:0;
+  background-color: transparent;
+  cursor: inherit;
 }
 .gcb-icon-button span {
   vertical-align: middle;

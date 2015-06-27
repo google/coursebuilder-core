@@ -1,0 +1,40 @@
+<div class="section">
+  <h3>
+    {% if status_messages %}
+      {% if any_generator_still_running %}
+        <form id="gcb-cancel-visualization-{{ visualization }}"
+            action="analytics?action=cancel_visualizations" method="POST">
+          <input type="hidden" name="r" value="{{ r }}">
+          <input type="hidden" name="xsrf_token" value="{{ xsrf_token_cancel }}">
+          <input type="hidden" name="visualization" value="{{ visualization }}">
+          <button class="gcb-button gcb-icon-button" type="submit">
+            <span class="icon spinner md md-settings md-spin"></span>
+            <span>Cancel</span>
+          </button>
+        </form>
+      {% else %}
+        <form id="gcb-run-visualization-{{ visualization }}"
+              action="analytics?action=run_visualizations" method="POST">
+          <input type="hidden" name="r" value="{{ r }}">
+          <input type="hidden" name="xsrf_token" value="{{ xsrf_token_run }}">
+          <input type="hidden" name="visualization" value="{{ visualization }}">
+          <button
+            class="gcb-button gcb-icon-button"
+            type="submit">
+            <span class="icon md-refresh"></span>
+            <span>Update</span>
+          </button>
+        </form>
+      {% endif %}
+    {% endif %}
+    <span class="title-text">{{title}}</span>
+  </h3>
+
+  {% for status_message in status_messages %}
+    <p class="status-message">{{ status_message }}</p>
+  {% endfor %}
+
+  {% if visualization_content %}
+  {{visualization_content}}
+  {% endif %}
+</div>

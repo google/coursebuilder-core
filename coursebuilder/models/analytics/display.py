@@ -121,7 +121,7 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
             visualization, visualization.template_name, template_values)
 
     html_sections.append(template_renderer.render(
-        None, 'models/analytics/common_footer.html',
+        None, 'models/analytics/section.html',
         {
             'title':visualization.title,
             'visualization': visualization.name,

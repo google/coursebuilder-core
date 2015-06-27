@@ -1,14 +1,4 @@
-// XSSI prefix. Must be kept in sync with models/transforms.py.
-var xssiPrefix = ")]}'";
-
 var xsrfToken = $("table.i18n-progress-table").data("isTranslatableXsrfToken");
-
-/**
- * Parses JSON string that starts with an XSSI prefix.
- */
-function parseResponse(s) {
-  return JSON.parse(s.replace(xssiPrefix, ''));
-}
 
 function onTranslatableCheckboxClicked(evt) {
   var target = $(evt.target);
@@ -37,7 +27,7 @@ function onTranslatableCheckboxClicked(evt) {
 }
 
 function onTranslatableCheckboxResponse(data) {
-  data = parseResponse(data);
+  data = parseAjaxResponse(data);
   if (data.status != 200) {
     cbShowAlert(data.message);
     return;
