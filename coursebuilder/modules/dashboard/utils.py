@@ -22,6 +22,7 @@ import appengine_config
 
 from common import safe_dom
 from controllers import sites
+import tabs
 from models import vfs
 
 RESOURCES_PATH = '/modules/dashboard/resources'
@@ -29,8 +30,17 @@ RESOURCES_DIR = os.path.join(appengine_config.BUNDLE_ROOT,
                              RESOURCES_PATH.lstrip('/'))
 
 
+def get_asset_tab_group_name(tab_name):
+    possible_group_names = ['style', 'edit']
+    for group_name in possible_group_names:
+        tab = tabs.Registry.get_tab(group_name, tab_name)
+        if tab:
+            return group_name
+
+
 def build_assets_url(tab_name):
-    return '/dashboard?action=assets&tab=%s' % tab_name
+    return '/dashboard?action={group}&tab={tab}'.format(
+        group=get_asset_tab_group_name(tab_name), tab=tab_name)
 
 
 def list_files(handler, subfolder, merge_local_files=False, all_paths=None):

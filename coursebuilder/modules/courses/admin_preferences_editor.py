@@ -102,4 +102,4 @@ def on_module_enabled():
     tabs.Registry.register(
         'settings', 'admin_prefs', 'Preferences',
         AdminPreferencesEditor.edit_admin_preferences,
-        placement=tabs.Placement.END)
+        placement=9000)

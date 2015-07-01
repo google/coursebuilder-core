@@ -43,7 +43,7 @@ class QuestionDashboardTestCase(actions.TestBase):
     """Tests Assets > Questions."""
     COURSE_NAME = 'question_dashboard'
     ADMIN_EMAIL = 'admin@foo.com'
-    URL = 'dashboard?action=assets&tab=questions'
+    URL = 'dashboard?action=edit&tab=questions'
 
     def setUp(self):
         super(QuestionDashboardTestCase, self).setUp()
@@ -493,7 +493,7 @@ class RoleEditorTestCase(actions.TestBase):
     """Tests the Roles tab and Role Editor."""
     COURSE_NAME = 'role_editor'
     ADMIN_EMAIL = 'admin@foo.com'
-    URL = 'dashboard?action=roles'
+    URL = 'dashboard?action=edit&tab=roles'
 
     def setUp(self):
         super(RoleEditorTestCase, self).setUp()
@@ -611,7 +611,7 @@ class DashboardAccessTestCase(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
     USER_EMAIL = 'user@foo.com'
     ROLE = 'test_role'
-    ACTION = 'outline'
+    ACTION = 'edit'
     PERMISSION = 'can_access_dashboard'
     PERMISSION_DESCRIPTION = 'Can Access Dashboard.'
 
@@ -642,7 +642,8 @@ class DashboardAccessTestCase(actions.TestBase):
         # pylint: disable=W0212
         self.old_nav_mappings = DashboardHandler._custom_nav_mappings
         # pylint: disable=W0212
-        DashboardHandler._custom_nav_mappings = {self.ACTION: 'outline'}
+        action_tab = tabs.NavTab(self.ACTION, self.ACTION)
+        DashboardHandler._custom_nav_mappings = [action_tab]
         DashboardHandler.map_action_to_permission(
             'get_%s' % self.ACTION, self.PERMISSION)
         actions.logout()
@@ -679,7 +680,7 @@ class DashboardAccessTestCase(actions.TestBase):
         picker_options = self._get_all_picker_options()
         self.assertEquals(len(list(picker_options)), 1)
         self.assertEquals(picker_options[0].get(
-            'href'), '/%s/dashboard' % self.ACCESS_COURSE_NAME)
+            'href'), '/%s/dashboard?action=edit' % self.ACCESS_COURSE_NAME)
         actions.logout()
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)
@@ -752,7 +753,7 @@ class DashboardCustomNavTestCase(actions.TestBase):
         dom = self.parse_html_string(self.get('dashboard').body)
         selected_nav_path = ('.//tr[@class="gcb-nav-bar-level-1"]'
                              '//a[@class="selected"]')
-        self.assertEquals('Outline', dom.find(selected_nav_path).text)
+        self.assertEquals('Edit', dom.find(selected_nav_path).text)
         dom = self.parse_html_string(self.get(self.URL).body)
 
         self.assertEquals('CUSTOM_MOD', dom.find(selected_nav_path).text)

@@ -1370,7 +1370,7 @@ class AdminAspectTest(actions.TestBase):
         selected_tabs = dom.findall(
             './/td[@class="gcb-nav-bar-links"]/a[@class="selected"]')
         self.assertEqual(
-            ['Site Admin', 'Courses'], [s.text for s in selected_tabs])
+            ['Administer Site', 'Courses'], [s.text for s in selected_tabs])
 
     def test_appstats(self):
         """Checks that appstats is available when enabled."""
@@ -1753,7 +1753,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             assert_does_not_contain('Add Assessment', response.body)
 
         # Test assets view.
-        response = self.get('dashboard?action=assets&tab=css')
+        response = self.get('dashboard?action=style&tab=css')
         # Verify title does not have link text
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
@@ -1762,9 +1762,9 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains(
             'Google &gt; Dashboard &gt; Assets &gt; CSS', response.body)
         assert_contains('assets/css/main.css', response.body)
-        response = self.get('dashboard?action=assets&tab=images')
+        response = self.get('dashboard?action=edit&tab=images')
         assert_contains('assets/img/Image1.5.png', response.body)
-        response = self.get('dashboard?action=assets&tab=js')
+        response = self.get('dashboard?action=style&tab=js')
         assert_contains('assets/lib/activity-generic-1.3.js', response.body)
 
         # Test settings view.
@@ -3452,7 +3452,7 @@ class I18NTest(MultipleCoursesTestBase):
         assert_page_contains('', [
             title_ru, self.course_ru.unit_title, self.course_ru.lesson_title])
         assert_page_contains(
-            'assets', [self.course_ru.title])
+            'edit&tab=questions', [self.course_ru.title])
         assert_page_contains(
             '', [self.course_ru.title])
         assert_contains(

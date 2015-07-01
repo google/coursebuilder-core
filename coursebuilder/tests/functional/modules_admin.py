@@ -73,5 +73,5 @@ class AdminDashboardTabTests(actions.TestBase):
 
         dom = self.parse_html_string(self.get('admin?action=admin').body)
         self.assertEqual(
-            'Site Admin',
+            'Administer Site',
             self.get_nav_bar(dom).find('.//a[@class="selected"]').text)

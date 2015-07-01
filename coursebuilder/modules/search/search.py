@@ -41,6 +41,7 @@ from models import custom_modules
 from models import jobs
 from models import transforms
 from modules.dashboard import dashboard
+from modules.dashboard import tabs
 
 from google.appengine.api import namespace_manager
 from google.appengine.api import search
@@ -405,7 +406,7 @@ def _get_search(handler):
         'search_dashboard.html', [os.path.dirname(__file__)]
         ).render(mc_template_value, autoescape=True))
 
-    handler.render_page(template_values)
+    return template_values
 
 def _post_index_course(handler):
     """Submits a new indexing operation."""
@@ -559,8 +560,8 @@ def register_module():
     ]
 
     def notify_module_enabled():
-        dashboard.DashboardHandler.add_nav_mapping('search', 'Search')
-        dashboard.DashboardHandler.add_custom_get_action('search', _get_search)
+        tabs.Registry.register(
+            'settings', 'search', 'Search', _get_search, placement=4000)
         dashboard.DashboardHandler.add_custom_post_action(
             'index_course', _post_index_course)
         dashboard.DashboardHandler.add_custom_post_action(

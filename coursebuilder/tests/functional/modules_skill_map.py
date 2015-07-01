@@ -1020,9 +1020,8 @@ class SkillRestHandlerTests(BaseSkillMapTests):
 class SkillMapHandlerTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
     COURSE_NAME = 'skill_map_course'
-    DASHBOARD_SKILL_MAP_URL = 'dashboard?action=skill_map'
-    SKILL_MAP_URL = 'modules/skill_map?action=skill_map&tab=skills_table'
-    GRAPH_URL = 'modules/skill_map?action=skill_map&tab=dependency_graph'
+    SKILL_MAP_URL = 'modules/skill_map?action=edit&tab=skills_table'
+    GRAPH_URL = 'modules/skill_map?action=edit&tab=dependency_graph'
 
     def setUp(self):
         super(SkillMapHandlerTests, self).setUp()
@@ -1046,12 +1045,6 @@ class SkillMapHandlerTests(actions.TestBase):
         del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         namespace_manager.set_namespace(self.old_namespace)
         super(SkillMapHandlerTests, self).tearDown()
-
-    def test_redirect_to_skill_map_handler(self):
-        response = self.get(self.DASHBOARD_SKILL_MAP_URL)
-        self.assertEqual(302, response.status_int)
-        response = self.get(response.location)
-        self.assertEqual(200, response.status_int)
 
     def test_rejected_if_not_authorized(self):
         actions.login('student@foo.com')
@@ -1697,7 +1690,6 @@ class SkillMapMetricTests(BaseSkillMapTests):
 class SkillI18nTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
     COURSE_NAME = 'skill_map_course'
-    DASHBOARD_SKILL_MAP_URL = 'dashboard?action=skill_map'
     SKILL_MAP_URL = 'modules/skill_map?action=skill_map&tab=skills_table'
 
     def setUp(self):

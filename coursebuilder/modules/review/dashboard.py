@@ -63,7 +63,8 @@ def _get_assignment_html(
         'delete_reviewer_action': handler.get_action_url('delete_reviewer'),
         'delete_reviewer_xsrf_token': handler.create_xsrf_token(
             'delete_reviewer'),
-        'edit_assignment_action': 'edit_assignment',
+        'edit_assignment_action': 'settings',
+        'edit_assignment_tab': 'edit_assignment',
         'edit_url': edit_url,
         'error_msg': error_msg,
         'peer_reviewed_units': peer_reviewed_units,
@@ -153,8 +154,7 @@ def get_edit_assignment(handler):
         # No unit has been set yet, so display an empty form.
         template_values['main_content'] = _get_assignment_html(
             handler, peer_reviewed_units)
-        handler.render_page(template_values)
-        return
+        return template_values
 
     reviewee_id = handler.request.get('reviewee_id')
     # This field may be populated due to a redirect from a POST method.
@@ -168,8 +168,7 @@ def get_edit_assignment(handler):
         template_values['main_content'] = _get_assignment_html(
             handler, peer_reviewed_units, unit_id=unit_id,
             reviewee_id=reviewee_id, error_msg=error_msg)
-        handler.render_page(template_values)
-        return
+        return template_values
 
     model_version = course.get_assessment_model_version(unit)
     assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
@@ -195,8 +194,7 @@ def get_edit_assignment(handler):
             reviewee_id=reviewee_id,
             error_msg='412: This student hasn\'t submitted the assignment.'
         )
-        handler.render_page(template_values)
-        return
+        return template_values
 
     readonly_assessment = get_readonly_assessment(
         handler, unit, submission_and_review_steps[0])
@@ -226,7 +224,7 @@ def get_edit_assignment(handler):
         review_steps=review_steps, error_msg=post_error_msg,
         reviewers=reviewers, reviews_params=reviews_params,
         model_version=model_version)
-    handler.render_page(template_values)
+    return template_values
 
 
 def _get_readonly_assessment_1_4(handler, unit, submission_content):
@@ -271,7 +269,8 @@ def post_add_reviewer(handler):
         course, unit_id, reviewee_id, reviewer_id=reviewer_id)
 
     redirect_params = {
-        'action': 'edit_assignment',
+        'action': 'settings',
+        'tab': 'edit_assignment',
         'reviewee_id': reviewee_id,
         'reviewer_id': reviewer_id,
         'unit_id': unit_id,
@@ -314,7 +313,8 @@ def post_delete_reviewer(handler):
         course, unit_id, reviewee_id)
 
     redirect_params = {
-        'action': 'edit_assignment',
+        'action': 'settings',
+        'tab': 'edit_assignment',
         'reviewee_id': reviewee_id,
         'unit_id': unit_id,
     }

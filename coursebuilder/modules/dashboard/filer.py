@@ -200,7 +200,9 @@ class FileManagerAndEditor(ApplicationHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('Manage Asset')
         template_values['main_content'] = form_html
-        self.render_page(template_values, 'assets', tab_name)
+
+        group_name = dashboard_utils.get_asset_tab_group_name(tab_name)
+        self.render_page(template_values, in_action=group_name, in_tab=tab_name)
 
     def get_manage_text_asset(self):
         """Show an edit/save/delete/revert form for a text asset."""
@@ -262,7 +264,7 @@ class FileManagerAndEditor(ApplicationHandler):
         self.render_page({
             'page_title': self.format_title('Edit ' + uri),
             'main_content': form_html,
-        }, 'assets', tab_name)
+        }, in_action='style', in_tab=tab_name)
 
 
 def create_course_file_if_not_exists(handler):

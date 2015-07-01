@@ -16,40 +16,42 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import bisect
 import collections
 import re
 
+class BaseTab(object):
+    def __cmp__(self, obj):
+        assert isinstance(obj, BaseTab)
+        return cmp(self.placement, obj.placement)
 
-class Placement(object):
-    # If needed, can add "FIRST_HALF" and "LAST_HALF" to further subdivide.
-    BEGINNING = 'beginning'
-    MIDDLE = 'middle'
-    END = 'end'
+    @property
+    def name(self):
+        return self._name
 
-    _ORDERED_PLACEMENTS = [
-        BEGINNING,
-        MIDDLE,
-        END,
-    ]
+    @property
+    def title(self):
+        return self._title
 
-    @staticmethod
-    def cmp(a, b):
-        # pylint: disable=protected-access
-        return cmp(Placement._ORDERED_PLACEMENTS.index(a._placement),
-                   Placement._ORDERED_PLACEMENTS.index(b._placement))
+    @property
+    def placement(self):
+        return self._placement
 
-    def __init__(self, *args, **kwargs):
-        # Not really a class; just a namespace.
-        raise NotImplementedError()
+
+class NavTab(BaseTab):
+    def __init__(self, name, title, placement=None):
+        self._name = name
+        self._title = title
+        self._placement = placement or float('inf')
 
 
 class Registry(object):
 
-    class _Tab(object):
+    class _Tab(BaseTab):
 
         def __init__(
-                self, group, name, title, contents, href=None, target=None,
-                placement=None):
+                self, group, name, title, contents, href=None, placement=None,
+                target=None):
             if not re.match('^[a-z0-9_]+$', name):
                 raise ValueError('Sub-tabs under Dashboard must '
                                  'have names consisting only of lowercase '
@@ -60,19 +62,14 @@ class Registry(object):
             self._contents = contents
             self._href = href
             self._target = target
-            self._placement = placement or Placement.MIDDLE
+
+            if placement is None:
+                placement = 1000000
+            self._placement = placement
 
         @property
         def group(self):
             return self._group
-
-        @property
-        def name(self):
-            return self._name
-
-        @property
-        def title(self):
-            return self._title
 
         @property
         def contents(self):
@@ -86,13 +83,16 @@ class Registry(object):
         def href(self):
             return self._href
 
+        def computed_href(self, destination='/dashboard'):
+            if self.href:
+                return '/{}'.format(self._href)
+            else:
+                return "{destination}?action={action}&tab={tab}".format(
+                    action=self.group, destination=destination, tab=self.name)
+
         @property
         def target(self):
             return self._target
-
-        @property
-        def placement(self):
-            return self._placement
 
     _tabs_by_group = collections.defaultdict(list)
 
@@ -104,10 +104,11 @@ class Registry(object):
             raise ValueError(
                 'There is already a sub-tab named "%s" ' % tab_name +
                 'registered in group %s.' % group_name)
-        cls._tabs_by_group[group_name].append(
-            Registry._Tab(group_name, tab_name, tab_title, contents, href,
-                          target, placement))
-        cls._tabs_by_group[group_name].sort(cmp=Placement.cmp)
+
+        tab = Registry._Tab(
+            group_name, tab_name, tab_title, contents=contents, href=href,
+            placement=placement, target=target)
+        bisect.insort(cls._tabs_by_group[group_name], tab)
 
     @classmethod
     def unregister_group(cls, group_name):
@@ -124,3 +125,10 @@ class Registry(object):
     @classmethod
     def get_tab_group(cls, group_name):
         return cls._tabs_by_group.get(group_name, None)
+
+    @classmethod
+    def get_group_name_for_tab(cls, tab_name):
+        for group_name, group in cls._tabs_by_group.iteritems():
+            for tab in group:
+                if tab.name == tab_name:
+                    return group_name

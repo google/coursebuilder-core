@@ -43,15 +43,11 @@ class TabTests(unittest.TestCase):
         tabs.Registry.register('group', 'b', 'B')
         tabs.Registry.register('group', 'c', 'C')
         tabs.Registry.register('group', 'd', 'D')
-        tabs.Registry.register(
-            'group', 'e', 'E',
-            placement=tabs.Placement.BEGINNING)
+        tabs.Registry.register('group', 'e', 'E', placement=0)
         self._assert_name_order(['e', 'a', 'b', 'c', 'd'])
 
     def test_force_last(self):
-        tabs.Registry.register(
-            'group', 'e', 'E',
-            placement=tabs.Placement.END)
+        tabs.Registry.register('group', 'e', 'E', placement=float('inf'))
         tabs.Registry.register('group', 'a', 'A')
         tabs.Registry.register('group', 'b', 'B')
         tabs.Registry.register('group', 'c', 'C')
@@ -59,43 +55,25 @@ class TabTests(unittest.TestCase):
         self._assert_name_order(['a', 'b', 'c', 'd', 'e'])
 
     def test_force_multiple_first(self):
-        tabs.Registry.register(
-            'group', 'a', 'A',
-            placement=tabs.Placement.BEGINNING)
+        tabs.Registry.register('group', 'a', 'A', placement=0)
         tabs.Registry.register('group', 'b', 'B')
         tabs.Registry.register('group', 'c', 'C')
         tabs.Registry.register('group', 'd', 'D')
-        tabs.Registry.register(
-            'group', 'e', 'E',
-            placement=tabs.Placement.BEGINNING)
+        tabs.Registry.register('group', 'e', 'E', placement=0)
         self._assert_name_order(['a', 'e', 'b', 'c', 'd'])
 
     def test_force_multiple_last(self):
-        tabs.Registry.register(
-            'group', 'a', 'A',
-            placement=tabs.Placement.END)
+        tabs.Registry.register('group', 'a', 'A', placement=float('inf'))
         tabs.Registry.register('group', 'b', 'B')
         tabs.Registry.register('group', 'c', 'C')
         tabs.Registry.register('group', 'd', 'D')
-        tabs.Registry.register(
-            'group', 'e', 'E',
-            placement=tabs.Placement.END)
+        tabs.Registry.register('group', 'e', 'E', placement=float('inf'))
         self._assert_name_order(['b', 'c', 'd', 'a', 'e'])
 
-    def test_complex(self):
-        tabs.Registry.register(
-            'group', 'a', 'A',
-            placement=tabs.Placement.END)
-        tabs.Registry.register(
-            'group', 'b', 'B',
-            placement=tabs.Placement.MIDDLE)
-        tabs.Registry.register(
-            'group', 'c', 'C',
-            placement=tabs.Placement.BEGINNING)
-        tabs.Registry.register(
-            'group', 'd', 'D',
-            placement=tabs.Placement.MIDDLE)
-        tabs.Registry.register(
-            'group', 'e', 'E',
-            placement=tabs.Placement.BEGINNING)
+    def test_explicit_placements(self):
+        tabs.Registry.register('group', 'a', 'A', placement=5000)
+        tabs.Registry.register('group', 'b', 'B', placement=3000)
+        tabs.Registry.register('group', 'c', 'C', placement=1000)
+        tabs.Registry.register('group', 'd', 'D', placement=4000)
+        tabs.Registry.register('group', 'e', 'E', placement=2000)
         self._assert_name_order(['c', 'e', 'b', 'd', 'a'])

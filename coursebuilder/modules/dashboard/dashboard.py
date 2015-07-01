@@ -21,6 +21,7 @@ import datetime
 import logging
 import os
 import urllib
+import bisect
 
 import appengine_config
 from filer import AssetItemRESTHandler
@@ -92,7 +93,7 @@ class DashboardHandler(
         'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
         'add_label', 'edit_label', 'question_preview',
-        'roles', 'add_role', 'edit_role', 'edit_custom_unit',
+        'add_role', 'edit_role', 'edit_custom_unit',
         'import_gift_questions', 'in_place_lesson_editor']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
@@ -139,24 +140,26 @@ class DashboardHandler(
     # Dictionary that maps actions to permissions
     _action_to_permission = {}
 
-    _custom_nav_mappings = collections.OrderedDict()
+    _custom_nav_mappings = []
     _custom_get_actions = {}
     _default_get_action = None
     _custom_post_actions = {}
 
     @classmethod
-    def add_nav_mapping(cls, action, nav_title):
+    def add_nav_mapping(cls, action, nav_title, placement=float('inf')):
         """Add a Nav mapping for Dashboard."""
-        cls._custom_nav_mappings[action] = nav_title
+        tab = tabs.NavTab(action, nav_title, placement=placement)
+        bisect.insort(cls._custom_nav_mappings, tab)
 
     @classmethod
     def get_nav_mappings(cls):
-        return cls._custom_nav_mappings.items()
+        return [(tab.name, tab.title) for tab in cls._custom_nav_mappings]
 
     @classmethod
     def get_nav_title(cls, action):
-        if action in cls._custom_nav_mappings:
-            return cls._custom_nav_mappings[action]
+        for tab in cls._custom_nav_mappings:
+            if tab.name == action:
+                return tab.title
         return None
 
     @classmethod
@@ -305,12 +308,6 @@ class DashboardHandler(
                 'a', href=action_href, className=class_name).add_text(
                     title))
 
-        if roles.Roles.is_super_admin():
-            nav.append(safe_dom.Element(
-                'a', href='admin?action=admin',
-                className=('selected' if current_action == 'admin' else '')
-            ).add_text('Site Admin'))
-
         nav.append(safe_dom.Element(
             'a',
             href='https://code.google.com/p/course-builder/wiki/Dashboard',
@@ -326,9 +323,15 @@ class DashboardHandler(
         ).add_text('Support'))
         nav_bars.append(nav)
 
+        if roles.Roles.is_super_admin():
+            nav.append(safe_dom.Element(
+                'a', href='admin?action=admin',
+                className=('selected' if current_action == 'admin' else '')
+            ).add_text('Administer Site'))
+
         tab_group = tabs.Registry.get_tab_group(current_action)
         if tab_group:
-            if current_action == 'assets':
+            if current_action == 'edit':
                 exclude_tabs = []
                 course = self.get_course()
                 if courses.has_only_new_style_assessments(course):
@@ -389,19 +392,19 @@ class DashboardHandler(
         destination = destination or '/dashboard'
         action = self.request.get('action') or self._default_get_action
 
-        # disable picker if we are on the well known page; we dont want picked
-        # on pages where edits or creation of new object can get triggered
+        # disable picker if we are not on a well known page; we dont want picker
+        # on pages where edits or creation of new objects can get triggered
         safe_action = action and action in [
             a for a, _ in self.get_nav_mappings()] + ['admin']
 
-        tab = self.request.get('tab')
-        if action in self.get_actions:
-            tab_group = tabs.Registry.get_tab_group(action)
-            if tab_group and tab in tab_group:
-                tab = '&tab=%s' % tab
-            else:
-                tab = ''
-            destination = '%s?action=%s%s' % (destination, action, tab)
+        full_destination = '{destination}?action={action}'.format(
+            destination=destination, action=action)
+
+        tab_name = self.request.get('tab')
+        if tab_name:
+            tab = tabs.Registry.get_tab(action, tab_name)
+            if tab:
+                full_destination = tab.computed_href(destination)
 
         current_course = sites.get_course_for_current_request()
         options = []
@@ -409,7 +412,7 @@ class DashboardHandler(
             with Namespace(course.namespace):
                 if self.current_user_has_access(course):
                     url = (
-                        course.canonicalize_url(destination) if safe_action
+                        course.canonicalize_url(full_destination) if safe_action
                         else 'javascript:void(0)')
                     title = '%s (%s)' % (course.get_title(), course.get_slug())
                     option = safe_dom.Element('li')
@@ -510,7 +513,7 @@ class DashboardHandler(
 
         return output
 
-    def get_roles(self):
+    def _render_roles_view(self):
         """Renders course roles view."""
         actions = [{
             'id': 'add_role',
@@ -525,7 +528,7 @@ class DashboardHandler(
             'page_title': self.format_title('Roles'),
             'sections': sections,
         }
-        self.render_page(template_values)
+        return template_values
 
     @classmethod
     def map_action_to_permission(cls, action, permission):
@@ -589,9 +592,15 @@ def register_module():
             custom_module, DashboardHandler.permissions_callback)
         ApplicationHandler.RIGHT_LINKS.append(
             DashboardHandler.generate_dashboard_link)
-        DashboardHandler.add_nav_mapping('roles', 'Roles')
-        DashboardHandler.add_nav_mapping('settings', 'Settings')
+
+        DashboardHandler.add_nav_mapping('edit', 'Edit', placement=1000)
+        DashboardHandler.add_nav_mapping('settings', 'Settings', placement=4000)
         DashboardHandler.add_custom_get_action('settings')
+
+        # pylint: disable=protected-access
+        tabs.Registry.register('edit', 'roles', 'Roles',
+            DashboardHandler._render_roles_view, placement=8000)
+        # pylint: enable=protected-access
 
     global_routes = [
         (
