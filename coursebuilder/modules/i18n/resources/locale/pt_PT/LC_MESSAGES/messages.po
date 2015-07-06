@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-04-14 08:04-0700\n"
+"POT-Creation-Date: 2015-07-06 09:30-0700\n"
 "PO-Revision-Date: 2015-04-14 08:04-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: pt_PT <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1048
+#: experimental/coursebuilder/models/resources_display.py:1069
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "Unit %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "Unit %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1068
+#: experimental/coursebuilder/models/resources_display.py:1089
 #, python-format
 msgid "Unit %s"
 msgstr "Unit %s"
@@ -280,8 +280,36 @@ msgstr "Novo Nome"
 msgid "Change Name"
 msgstr "Alterar Nome"
 
+#. Shown when a student is attempting to re-enroll in a
+#. course soon after un-enrolling.  It takes up to several
+#. hours to remove their data, and they are prevented from
+#. re-enrolling during that time to prevent problems.
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:209
+msgid ""
+"You cannot re-register for this course at the current time, because "
+"deletion of your previous data is still in progress.  Please try again in"
+" in a few hours."
+msgstr ""
+
+#. Shown when a student is unenrolling from a course.
+#. Gives the student the option to have all their data
+#. permanently removed.
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:489
+msgid ""
+"Remove all my data from the course.  This is cannot be un-done.  If this "
+"is not checked, you can re-register in the future, and your course "
+"progress will be retained."
+msgstr ""
+
+#. When a user is authenticating with an external identity provider    (e.g.,
+#. Facebook, Twitter), this prompt indicates the user should select    one of
+#. these accounts to use to continue the login process.
+#: experimental/coursebuilder/modules/gitkit/templates/branding.html:4
+msgid "Pick an account to continue."
+msgstr ""
+
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:275
+#: experimental/coursebuilder/modules/invitation/invitation.py:276
 msgid "Error: Empty email list"
 msgstr "Error: Empty email list"
 
@@ -291,7 +319,7 @@ msgstr "Error: Empty email list"
 #. than any single user is allowed to send.  No email addresses
 #. were added to the list to send, and no further email messages
 #. were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:289
+#: experimental/coursebuilder/modules/invitation/invitation.py:290
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -301,66 +329,66 @@ msgstr ""
 "messages sent."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:298
+#: experimental/coursebuilder/modules/invitation/invitation.py:299
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "Error: Invalid email \"%s\""
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:302
+#: experimental/coursebuilder/modules/invitation/invitation.py:303
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "Error: You have already sent an invitation email to \"%s\""
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:319
+#: experimental/coursebuilder/modules/invitation/invitation.py:320
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "Not all messages were sent (%s / %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:327
+#: experimental/coursebuilder/modules/invitation/invitation.py:328
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "OK, %s messages sent"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:380
+#: experimental/coursebuilder/modules/invitation/invitation.py:381
 msgid "Invite Friends"
 msgstr "Invite Friends"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:385
+#: experimental/coursebuilder/modules/invitation/invitation.py:386
 msgid "Click to send invitations to family and friends"
 msgstr "Click to send invitations to family and friends"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:389
+#: experimental/coursebuilder/modules/invitation/invitation.py:390
 msgid "Invitations not currently available"
 msgstr "Invitations not currently available"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:401
+#: experimental/coursebuilder/modules/invitation/invitation.py:402
 msgid "Subscribe/Unsubscribe"
 msgstr "Subscribe/Unsubscribe"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:408
+#: experimental/coursebuilder/modules/invitation/invitation.py:409
 msgid "You are currently unsubscribed from course-related emails."
 msgstr "You are currently unsubscribed from course-related emails."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:412
+#: experimental/coursebuilder/modules/invitation/invitation.py:413
 msgid "Click here to re-subscribe."
 msgstr "Click here to re-subscribe."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:417
+#: experimental/coursebuilder/modules/invitation/invitation.py:418
 msgid "You are currently receiving course-related emails. "
 msgstr "You are currently receiving course-related emails. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:421
+#: experimental/coursebuilder/modules/invitation/invitation.py:422
 msgid "Click here to unsubscribe."
 msgstr "Click here to unsubscribe."
 
@@ -412,14 +440,14 @@ msgstr "Subject:"
 
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
-#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:193
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:194
 #: experimental/coursebuilder/modules/rating/rating.py:96
 msgid "Access denied."
 msgstr "Access denied."
 
 #. Message to acknowledge successful submission of the
 #. questionnaire
-#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:197
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:198
 msgid "Response submitted."
 msgstr "Response submitted."
 
@@ -476,7 +504,7 @@ msgstr "Submit"
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/modules/search/resources.py:361
-#: experimental/coursebuilder/views/unit.html:74
+#: experimental/coursebuilder/views/unit.html:86
 msgid "Lesson"
 msgstr "Lição"
 
@@ -525,44 +553,84 @@ msgid "No results for \"%(query)s\""
 msgstr "Não há resultados para \"%(query)s\""
 
 #. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.py:74
+#: experimental/coursebuilder/modules/search/search.py:77
 msgid "Search is currently unavailable."
 msgstr "De momento, a pesquisa não está disponível."
 
-#. Header for list of links to lessons
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:27
-msgid "Lessons"
-msgstr "Lessons"
-
-#. Text for empty list of lessons
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:40
-msgid "Not taught"
-msgstr "Not taught"
-
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:59
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:30
 msgid "Taught in this lesson:"
 msgstr "Taught in this lesson:"
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:74
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
 msgid "Depends on:"
 msgstr "Depends on:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:78
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:58
 msgid "This lesson doesn't have any prerequisites."
 msgstr "This lesson doesn't have any prerequisites."
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:93
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
 msgid "Leads to:"
 msgstr "Leads to:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:97
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:77
 msgid "This lesson isn't a prerequisite for any other skills."
 msgstr "This lesson isn't a prerequisite for any other skills."
+
+#. Header for list of links to lessons
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:15
+msgid "Lessons"
+msgstr "Lessons"
+
+#. Text for empty list of lessons
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:28
+msgid "Not taught"
+msgstr "Not taught"
+
+#. Header for skill proficiency legend
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:39
+msgid "Proficiency level"
+msgstr ""
+
+#. Label for low skill proficiency
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:44
+msgid "low"
+msgstr ""
+
+#. Label for high skill proficiency
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
+msgid "high"
+msgstr ""
+
+#. Header for skills progress section
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:21
+msgid "Skills Progress"
+msgstr ""
+
+#. List of acquired skills for a student
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:32
+msgid "Achievements"
+msgstr ""
+
+#. Describe an empty set of acquired skills
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:36
+msgid "Currently, no acquired skills."
+msgstr ""
+
+#. List of skills recommended to a student to learn
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:53
+msgid "Recommended Next"
+msgstr ""
+
+#. Describe an empty set of recommended skills
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:57
+msgid "Currently, you have no recommended skills."
+msgstr ""
 
 #. Notification indicating that the user has subscribed to email notifications
 #. from an instructional course.
@@ -645,7 +713,7 @@ msgstr "Currently, there are no announcements."
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/views/assessment.html:32
+#: experimental/coursebuilder/views/assessment.html:34
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -655,12 +723,12 @@ msgstr ""
 "enviado a %(submission_due_date)s."
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:37
+#: experimental/coursebuilder/views/assessment.html:39
 msgid "Due date for this assignment: "
 msgstr "Data para conclusão deste trabalho: "
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:47
+#: experimental/coursebuilder/views/assessment.html:49
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -671,17 +739,17 @@ msgstr ""
 "respostas que aqui enviar serão avaliadas pelos seus pares."
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:61
+#: experimental/coursebuilder/views/assessment.html:63
 msgid "Submitted assignment"
 msgstr "Trabalho enviado"
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:76
+#: experimental/coursebuilder/views/assessment.html:78
 msgid "Reviews received"
 msgstr "Avaliações recebidas"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:83
+#: experimental/coursebuilder/views/assessment.html:85
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -691,14 +759,19 @@ msgstr ""
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:90
+#: experimental/coursebuilder/views/assessment.html:92
 msgid "Go to the review dashboard"
 msgstr "Ir para o painel de comentários"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:95
+#: experimental/coursebuilder/views/assessment.html:97
 msgid "You have not received any peer reviews yet."
 msgstr "Ainda não recebeu qualquer comentário de pares."
+
+#. Text shown for an assessment that has not been made public.
+#: experimental/coursebuilder/views/assessment.html:129
+msgid "This assessment is not available."
+msgstr ""
 
 #. Text on the button for saving a draft answer.
 #: experimental/coursebuilder/views/assessment_html_content.html:32
@@ -810,28 +883,28 @@ msgstr " Após o envio, não será possível editá-lo(a) ou eliminá-lo(a). "
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:233
+#: experimental/coursebuilder/views/base.html:236
 msgid "Not registered"
 msgstr "Não registado/a"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:238
+#: experimental/coursebuilder/views/base.html:242
 msgid "Logout"
 msgstr "Terminar sessão"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:244
+#: experimental/coursebuilder/views/base.html:248
 msgid "Login"
 msgstr "Iniciar sessão"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:281
+#: experimental/coursebuilder/views/base.html:285
 msgid "Privacy & Terms"
 msgstr "Privacidade e Termos"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:287
+#: experimental/coursebuilder/views/base.html:291
 msgid "Locale:"
 msgstr "Locale:"
 
@@ -840,7 +913,7 @@ msgstr "Locale:"
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/base_course.html:7
 #: experimental/coursebuilder/views/base_course.html:43
-#: experimental/coursebuilder/views/unit.html:65
+#: experimental/coursebuilder/views/unit.html:77
 msgid "Course"
 msgstr "Curso"
 
@@ -946,12 +1019,12 @@ msgid "YouTube Video Player"
 msgstr "Leitor de Vídeo do YouTube"
 
 #. Link to a text version of a lesson video.
-#: experimental/coursebuilder/views/lesson_common.html:15
+#: experimental/coursebuilder/views/lesson_common.html:17
 msgid "Text Version"
 msgstr "Versão de Texto"
 
 #. Text shown for a lesson that has not been made public.
-#: experimental/coursebuilder/views/lesson_common.html:31
+#: experimental/coursebuilder/views/lesson_common.html:33
 msgid "This lesson is not available."
 msgstr "Esta lição não está disponível."
 
@@ -993,7 +1066,7 @@ msgstr "Avaliar trabalhos dos pares"
 #: experimental/coursebuilder/views/macros.html:330
 #: experimental/coursebuilder/views/macros.html:334
 #: experimental/coursebuilder/views/macros.html:392
-#: experimental/coursebuilder/views/unit.html:76
+#: experimental/coursebuilder/views/unit.html:88
 msgid "Activity"
 msgstr "Atividade"
 
@@ -1004,13 +1077,13 @@ msgid "Answer:"
 msgstr "Resposta:"
 
 #. A question in the registration form.
-#: experimental/coursebuilder/views/register.html:42
-#: experimental/coursebuilder/views/register.html:48
+#: experimental/coursebuilder/views/register.html:50
+#: experimental/coursebuilder/views/register.html:56
 msgid "What is your name?"
 msgstr "Qual é o seu nome?"
 
 #. Button at the end of the registration form for a course.
-#: experimental/coursebuilder/views/register.html:60
+#: experimental/coursebuilder/views/register.html:68
 msgid "Enroll"
 msgstr "Inscrição"
 
@@ -1289,51 +1362,53 @@ msgstr "Inscrição anulada de "
 msgid "OK"
 msgstr "OK"
 
-#. Shown when a student has asked to unenroll from a course. Followed by a
-#. course name.
-#: experimental/coursebuilder/views/unenroll_confirmation_check.html:24
+#. Shown when a student has asked to unenroll from a course.
+#. Followed by a course name.
+#: experimental/coursebuilder/views/unenroll_confirmation_check.html:25
 msgid "Are you sure you want to unenroll from "
 msgstr "Tem a certeza de que pretende anular a inscrição de "
 
-#. Response option to 'Are you sure you want to unenroll from COURSE_NAME'?
-#: experimental/coursebuilder/views/unenroll_confirmation_check.html:32
+#. Response option to              'Are you sure you want to unenroll from
+#. COURSE_NAME'?
+#: experimental/coursebuilder/views/unenroll_confirmation_check.html:42
 msgid "Yes"
 msgstr "Sim"
 
-#. Response option to 'Are you sure you want to unenroll from COURSE_NAME'?
-#: experimental/coursebuilder/views/unenroll_confirmation_check.html:36
+#. Response option to              'Are you sure you want to unenroll from
+#. COURSE_NAME'?
+#: experimental/coursebuilder/views/unenroll_confirmation_check.html:47
 msgid "No"
 msgstr "Não"
 
 #. Label on a control to show a class syllabus.
-#: experimental/coursebuilder/views/unit.html:38
+#: experimental/coursebuilder/views/unit.html:50
 msgid "Show Syllabus"
 msgstr "Show Syllabus"
 
 #. Label on a control to hide a class syllabus.
-#: experimental/coursebuilder/views/unit.html:42
+#: experimental/coursebuilder/views/unit.html:54
 msgid "Hide Syllabus"
 msgstr "Hide Syllabus"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
-#: experimental/coursebuilder/views/unit.html:102
+#: experimental/coursebuilder/views/unit.html:114
 msgid "This unit has no content."
 msgstr "This unit has no content."
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:123
+#: experimental/coursebuilder/views/unit.html:135
 msgid "Previous Page"
 msgstr "Página Anterior"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:129
+#: experimental/coursebuilder/views/unit.html:141
 msgid "Next Page"
 msgstr "Página Seguinte"
 
 #. Text on the navigation button at the end of a lesson. It signals that the
 #. student has completed a unit (which is a series of lessons).
-#: experimental/coursebuilder/views/unit.html:132
+#: experimental/coursebuilder/views/unit.html:144
 msgid "End"
 msgstr "Fim"
 
