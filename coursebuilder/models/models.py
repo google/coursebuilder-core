@@ -62,6 +62,9 @@ DEFAULT_CACHE_TTL_SECS = 60 * 5
 MEMCACHE_MAX = (1000 * 1000 - 96 - 250)
 MEMCACHE_MULTI_MAX = 32 * 1000 * 1000
 
+# Update frequency for Student.last_seen_on.
+STUDENT_LAST_SEEN_ON_UPDATE_SEC = 24 * 60 * 60  # 1 day.
+
 # Global memcache controls.
 CAN_USE_MEMCACHE = config.ConfigProperty(
     'gcb_can_use_memcache', bool, (
@@ -1296,6 +1299,10 @@ class Student(BaseEntity):
     additional_fields = db.TextProperty(indexed=False)
     is_enrolled = db.BooleanProperty(indexed=False)
 
+    # UTC timestamp of when the user last rendered a page that's aware they've
+    # enrolled in a course.
+    last_seen_on = db.DateTimeProperty(indexed=True)
+
     # Each of the following is a string representation of a JSON dict.
     scores = db.TextProperty(indexed=False)
     labels = db.StringProperty(indexed=False)
@@ -1487,6 +1494,29 @@ class Student(BaseEntity):
         return set([int(label) for label in
                     common_utils.text_to_list(self.labels)
                     if int(label) in label_ids])
+
+    def update_last_seen_on(self, now=None, value=None):
+        """Updates last_seen_on.
+
+        Args:
+            now: datetime.datetime.utcnow or None. Injectable for tests only.
+            value: datetime.datetime.utcnow or None. Injectable for tests only.
+        """
+        now = now if now is not None else datetime.datetime.utcnow()
+        value = value if value is not None else now
+
+        if self._should_update_last_seen_on(value):
+            self.last_seen_on = value
+            self.put()
+            StudentCache.remove(self.user_id)
+
+    def _should_update_last_seen_on(self, value):
+        if self.last_seen_on is None:
+            return True
+
+        return (
+            (value - self.last_seen_on).total_seconds() >
+            STUDENT_LAST_SEEN_ON_UPDATE_SEC)
 
 
 class TransientStudent(object):

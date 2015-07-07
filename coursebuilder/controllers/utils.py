@@ -862,6 +862,10 @@ class BaseHandler(CourseHandler):
                 )['reg_form']['can_register']
 
         if user:
+            student = Student.get_enrolled_student_by_user(user)
+            if student:
+                student.update_last_seen_on()
+
             email = user.email()
             self.template_value['email_no_domain_name'] = (
                 email[:email.find('@')] if '@' in email else email)

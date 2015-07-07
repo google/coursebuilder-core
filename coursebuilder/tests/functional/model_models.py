@@ -574,6 +574,71 @@ class StudentTestCase(actions.ExportTestBase):
             'transformed_name',
             models.Student.safe_key(key, self.transform).name())
 
+    def test_registration_sets_last_seen_on(self):
+        actions.login('test@example.com')
+        actions.register(self, 'User 1')
+        student = models.Student.all().get()
+
+        self.assertTrue(isinstance(student.last_seen_on, datetime.datetime))
+
+    def test_update_last_seen_on_does_not_update_when_last_seen_too_new(self):
+        now = datetime.datetime.utcnow()
+        student = models.Student(last_seen_on=now, user_id='1')
+        key = student.put()
+        too_new = now + datetime.timedelta(
+            seconds=models.STUDENT_LAST_SEEN_ON_UPDATE_SEC)
+
+        self.assertEquals(now, student.last_seen_on)
+
+        student.update_last_seen_on(now=now, value=too_new)
+        student = db.get(key)
+
+        self.assertEquals(now, student.last_seen_on)
+
+    def test_update_last_seen_on_updates_when_last_seen_on_is_none(self):
+        now = datetime.datetime.utcnow()
+        student = models.Student(last_seen_on=None, user_id='1')
+        key = student.put()
+        # Must be too new to otherwise update.
+        too_new = now + datetime.timedelta(
+            seconds=models.STUDENT_LAST_SEEN_ON_UPDATE_SEC)
+
+        self.assertIsNone(student.last_seen_on)
+
+        student.update_last_seen_on(now=now, value=too_new)
+        student = db.get(key)
+
+        self.assertEquals(too_new, student.last_seen_on)
+
+    def test_update_last_seen_on_updates_when_last_seen_on_is_none_noarg(self):
+        now = datetime.datetime.utcnow()
+        student = models.Student(last_seen_on=None, user_id='1')
+        key = student.put()
+        # Must be too new to otherwise update.
+        too_new = now + datetime.timedelta(
+            seconds=models.STUDENT_LAST_SEEN_ON_UPDATE_SEC)
+
+        self.assertIsNone(student.last_seen_on)
+
+        student.update_last_seen_on()
+        student = db.get(key)
+
+        self.assertTrue(isinstance(student.last_seen_on, datetime.datetime))
+
+    def test_update_last_seen_on_updates_when_last_seen_on_is_old_enough(self):
+        now = datetime.datetime.utcnow()
+        student = models.Student(last_seen_on=now, user_id='1')
+        key = student.put()
+        old_enough = now + datetime.timedelta(
+            seconds=models.STUDENT_LAST_SEEN_ON_UPDATE_SEC + 1)
+
+        self.assertEquals(now, student.last_seen_on)
+
+        student.update_last_seen_on(now=now, value=old_enough)
+        student = db.get(key)
+
+        self.assertEquals(old_enough, student.last_seen_on)
+
 
 class StudentProfileDAOTestCase(actions.ExportTestBase):
 
