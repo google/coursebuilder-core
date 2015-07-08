@@ -813,7 +813,7 @@ class CronCleanupTest(actions.TestBase):
         self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
         self.assertEquals(1, self._clean_jobs(datetime.timedelta(seconds=0)))
         paths = self._get_cloudstore_paths(COURSE_ONE)
-        self.assertEquals(6, len(paths))
+        self.assertTrue(len(paths) == 6 or len(paths) == 3)
 
         self.execute_all_deferred_tasks()  # Run deferred deletion task.
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
@@ -828,7 +828,7 @@ class CronCleanupTest(actions.TestBase):
         self.assertEquals(3, self._get_num_root_jobs(COURSE_ONE))
         self.assertEquals(3, self._clean_jobs(datetime.timedelta(seconds=0)))
         paths = self._get_cloudstore_paths(COURSE_ONE)
-        self.assertEquals(18, len(paths))
+        self.assertTrue(len(paths) == 18 or len(paths) == 9)
 
         self.execute_all_deferred_tasks()  # Run deferred deletion task.
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
@@ -865,10 +865,12 @@ class CronCleanupTest(actions.TestBase):
 
         self.assertEquals(2, self._get_num_root_jobs(COURSE_ONE))
         course_one_paths = self._get_cloudstore_paths(COURSE_ONE)
-        self.assertEquals(12, len(course_one_paths))
+        self.assertTrue(len(course_one_paths) == 12 or
+                        len(course_one_paths) == 6)
         self.assertEquals(2, self._get_num_root_jobs(COURSE_TWO))
         course_two_paths = self._get_cloudstore_paths(COURSE_TWO)
-        self.assertEquals(12, len(course_two_paths))
+        self.assertTrue(len(course_two_paths) == 12 or
+                        len(course_two_paths) == 6)
 
         self.assertEquals(4, self._clean_jobs(datetime.timedelta(seconds=0)))
 
@@ -978,14 +980,20 @@ class DummyMapReduceJob(jobs.MapReduceJob):
 
 class MapReduceSimpleTest(actions.TestBase):
 
+    # Reserve a bunch of IDs; it appears that when module registration creates
+    # objects, some ID counts are reserved, globally, such that we cannot
+    # re-use those IDs, even when explicitly set on a different entity type.
+    ID_FUDGE = 50
+
     def setUp(self):
         super(MapReduceSimpleTest, self).setUp()
         admin_email = 'admin@foo.com'
         self.context = actions.simple_add_course('mr_test', admin_email, 'Test')
         actions.login(admin_email, is_admin=True)
         with common_utils.Namespace('ns_mr_test'):
-            # Start range at 1 because 0 is a reserved ID.
-            for key in range(1, DummyEntity.NUM_ENTITIES + 1):
+            # Start range after zero, because of reserved/consumed IDs.
+            for key in range(self.ID_FUDGE,
+                             DummyEntity.NUM_ENTITIES + self.ID_FUDGE):
                 DummyDAO.upsert(key, {})
 
     def test_basic_operation(self):

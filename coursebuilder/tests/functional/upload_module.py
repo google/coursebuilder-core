@@ -18,8 +18,7 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
-import os
-
+from common import users
 from controllers import utils
 from models import models
 from models import student_work
@@ -37,7 +36,10 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         self.email = 'user@example.com'
         self.headers = {'referer': 'http://localhost/path?query=value#fragment'}
         self.unit_id = '1'
-        self.user_id = '2'
+        actions.login(self.email)
+        user = users.get_current_user()
+        actions.logout()
+        self.user_id = user.user_id()
         self.student = models.Student(
             is_enrolled=True, key_name=self.email, user_id=self.user_id)
         self.student.put()
@@ -45,8 +47,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
             upload._XSRF_TOKEN_NAME)
 
     def configure_environ_for_current_user(self):
-        os.environ['USER_EMAIL'] = self.email
-        os.environ['USER_ID'] = self.user_id
+        actions.login(self.email)
 
     def get_submission(self, student_key, unit_id):
         return db.get(student_work.Submission.get_key(unit_id, student_key))

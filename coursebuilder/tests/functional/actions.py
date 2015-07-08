@@ -158,18 +158,23 @@ class OverriddenConfig(object):
             config.Registry.test_overrides[self._name] = self._prev_value
 
 
-class _TestUser(object):
-    """Test user who uses email as his user_id."""
+class PreserveUser(object):
 
-    def __init__(self, email, user_id):
-        self._email = email
-        self._user_id = user_id
+    def __enter__(self):
+        self._user_email = os.environ.get('USER_EMAIL')
+        self._user_id = os.environ.get('USER_ID')
+        self._user_is_admin = os.environ.get('USER_IS_ADMIN')
+        return self
 
-    def user_id(self):
-        return self._user_id
-
-    def email(self):
-        return self._email
+    def __exit__(self, *unused_exception_info):
+        if self._user_email:
+            os.environ['USER_EMAIL'] = self._user_email
+        elif 'USER_EMAIL' in os.environ:
+            del os.environ['USER_EMAIL']
+        elif 'USER_ID' in os.environ:
+            del os.environ['USER_ID']
+        elif 'USER_IS_ADMIN' in os.environ:
+            del os.environ['USER_IS_ADMIN']
 
 
 class PreserveOsEnvironDebugMode(object):
@@ -218,12 +223,6 @@ class TestBase(suite.AppEngineTestBase):
     """Contains methods common to all functional tests."""
 
     last_request_url = None
-
-    @classmethod
-    def make_test_user(cls, email, user_id=None):
-        if not user_id:
-            user_id = str(int(email.encode('hex'), 16))
-        return _TestUser(email, user_id)
 
     def getApp(self):
         main.debug = True
@@ -527,17 +526,18 @@ def get_form_by_action(response, action):
     return form
 
 
-def login(email, is_admin=False, user=None):
-    if not user:
-        assert email
-        user = TestBase.make_test_user(email)
-    os.environ['USER_EMAIL'] = user.email()
-    os.environ['USER_ID'] = user.user_id()
-    is_admin_value = '0'
-    if is_admin:
-        is_admin_value = '1'
-    os.environ['USER_IS_ADMIN'] = is_admin_value
+def login(email, is_admin=False):
+    assert email
+    user_id = str(int(email.encode('hex'), 16))
+    return login_with_specified_user_id(email, user_id, is_admin=is_admin)
 
+def login_with_specified_user_id(email, user_id, is_admin=False):
+    assert email
+    assert user_id
+    os.environ['USER_EMAIL'] = email
+    os.environ['USER_ID'] = user_id
+    os.environ['USER_IS_ADMIN'] = '1' if is_admin else '0'
+    return users.get_current_user()
 
 def get_current_user_email():
     email = os.environ['USER_EMAIL']
@@ -1039,21 +1039,9 @@ def update_course_config(name, settings):
 def update_course_config_as_admin(name, admin_email, settings):
     """Log in as admin and merge settings into course.yaml."""
 
-    prev_user = users.get_current_user()
-    if not prev_user:
+    with PreserveUser():
         login(admin_email, is_admin=True)
-    elif prev_user.email() != admin_email:
-        logout()
-        login(admin_email, is_admin=True)
-
-    ret = update_course_config(name, settings)
-
-    if not prev_user:
-        logout()
-    elif prev_user and prev_user.email() != admin_email:
-        logout()
-        login(prev_user.email())
-    return ret
+        return update_course_config(name, settings)
 
 
 def simple_add_course(name, admin_email, title):

@@ -23,6 +23,7 @@ import actions
 import apiclient
 from common import catch_and_log
 from common import schema_fields
+from common import users
 from common import utils as common_utils
 from models import courses
 from models import data_sources
@@ -388,6 +389,7 @@ class PiiTests(actions.TestBase):
 
     def _test_student_pii_data(self, send_uncensored_pii_data):
         actions.login(USER_EMAIL)
+        user = users.get_current_user()
         actions.register(self, USER_EMAIL, COURSE_NAME)
         actions.logout()
         actions.login(ADMIN_EMAIL)
@@ -401,15 +403,14 @@ class PiiTests(actions.TestBase):
                                                   data_source_context, 0)
         self.assertTrue(is_last_page)
         self.assertEqual(len(data), 1)
-        return data[0]
+        return data[0], user
 
     def test_student_pii_data_obscured(self):
-        student_record = self._test_student_pii_data(
+        student_record, user = self._test_student_pii_data(
             send_uncensored_pii_data=False)
 
         with common_utils.Namespace('ns_' + COURSE_NAME):
-            student = models.Student.get_by_user(
-                self.make_test_user(USER_EMAIL))
+            student = models.Student.get_by_user(user)
             self.assertIsNotNone(student.user_id)
             self.assertIsNotNone(student_record['user_id'])
             self.assertNotEqual(student.user_id, student_record['user_id'])
@@ -418,11 +419,10 @@ class PiiTests(actions.TestBase):
             self.assertNotIn('additional_fields', student_record)
 
     def test_student_pii_data_sent_when_commanded(self):
-        student_record = self._test_student_pii_data(
+        student_record, user = self._test_student_pii_data(
             send_uncensored_pii_data=True)
         with common_utils.Namespace('ns_' + COURSE_NAME):
-            student = models.Student.get_by_user(
-                self.make_test_user(USER_EMAIL))
+            student = models.Student.get_by_user(user)
             self.assertIsNotNone(student.user_id)
             self.assertIsNotNone(student_record['user_id'])
             self.assertEqual(student.user_id, student_record['user_id'])

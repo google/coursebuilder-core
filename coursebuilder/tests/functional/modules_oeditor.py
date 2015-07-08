@@ -18,10 +18,10 @@ __author__ = [
     'John Cox (johncox@google.com)',
 ]
 
-import os
 import re
 
 from common import crypto
+from common import users
 from controllers import sites
 from models import config
 from models import courses
@@ -166,9 +166,9 @@ class EditorPrefsTests(actions.TestBase):
         body = transforms.loads(response.body)
         self.assertEquals(200, body['status'])
 
-        user_id = os.environ['USER_ID']
+        user = users.get_current_user()
         key_name = oeditor.EditorPrefsDao.create_key_name(
-            user_id, self.location, self.key)
+            user.user_id(), self.location, self.key)
         dto = oeditor.EditorPrefsDao.load(key_name)
         self.assertEquals(self.EDITOR_STATE, dto.dict)
 

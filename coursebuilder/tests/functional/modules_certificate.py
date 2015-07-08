@@ -106,9 +106,7 @@ class CertificateHandlerTestCase(actions.TestBase):
         self.assertIn('/Title (Course Builder Certificate)', response.body)
 
     def test_certificate_table_entry(self):
-        user = self.make_test_user('test@example.com')
-
-        actions.login(user.email())
+        user = actions.login('test@example.com')
         models.Student.add_new_student_for_current_user('Test User', None, self)
         student = models.Student.get_by_user(user)
 
@@ -141,14 +139,13 @@ class CertificateCriteriaTestCase(actions.TestBase):
 
     COURSE_NAME = 'certificate_criteria'
     STUDENT_EMAIL = 'foo@foo.com'
-    TEST_USER = actions.TestBase.make_test_user('foo@foo.com')
+    TEST_USER = None
     ADMIN_EMAIL = 'admin@foo.com'
     ANALYTICS_URL = ('/' + COURSE_NAME +
                      '/dashboard?action=analytics&tab=certificates_earned')
 
     def setUp(self):
         super(CertificateCriteriaTestCase, self).setUp()
-
         self.base = '/' + self.COURSE_NAME
         context = actions.simple_add_course(
             self.COURSE_NAME, self.ADMIN_EMAIL, 'Certificate Criteria')
@@ -158,7 +155,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
 
         self.course = courses.Course(None, context)
         self.course.save()
-        actions.login(self.TEST_USER.email())
+        self.TEST_USER = actions.login('foo@foo.com')
         actions.register(self, self.TEST_USER.email())
         self.student = (
             models.StudentProfileDAO.get_enrolled_student_by_user_for(

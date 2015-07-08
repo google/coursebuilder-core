@@ -96,11 +96,10 @@ class CourseExplorerTest(BaseExplorerTest):
 
     def test_single_completed_course(self):
         """Tests when a single completed course is present."""
-        user = self.make_test_user('test_assessments@google.com')
         name = 'Test Assessments'
 
         # Register.
-        actions.login(user.email())
+        user = actions.login('test_assessments@google.com')
         actions.register(self, name)
 
         response = self.get('/explorer')

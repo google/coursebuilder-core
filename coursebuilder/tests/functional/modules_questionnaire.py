@@ -87,10 +87,9 @@ class BaseQuestionnaireTests(actions.TestBase):
         return dom.find('.//button[@class="gcb-button questionnaire-button"]')
 
     def register(self):
-        actions.login(STUDENT_EMAIL, is_admin=False)
+        user = actions.login(STUDENT_EMAIL, is_admin=False)
         actions.register(self, STUDENT_NAME)
-        return models.Student.get_enrolled_student_by_user(
-            self.make_test_user(STUDENT_EMAIL))
+        return models.Student.get_enrolled_student_by_user(user)
 
 
 class QuestionnaireTagTests(BaseQuestionnaireTests):

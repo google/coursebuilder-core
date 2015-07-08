@@ -127,16 +127,28 @@ class PiiObfuscationHmac(actions.TestBase):
     def test_consistent(self):
         message = 'Mary had a little lamb.  Her doctors were astounded'
         secret = 'skoodlydoodah'
+
         h1 = crypto.hmac_sha_2_256_transform(secret, message)
         h2 = crypto.hmac_sha_2_256_transform(secret, message)
+        self.assertEquals(h1, h2)
+        self.assertNotEquals(h1, message)
+
+        h1 = crypto.hmac_sha_2_256_transform_b64(secret, message)
+        h2 = crypto.hmac_sha_2_256_transform_b64(secret, message)
         self.assertEquals(h1, h2)
         self.assertNotEquals(h1, message)
 
     def test_change_secret_changes_hmac(self):
         message = 'Mary had a little lamb.  Her doctors were astounded'
         secret = 'skoodlydoodah'
+
         h1 = crypto.hmac_sha_2_256_transform(secret, message)
         h2 = crypto.hmac_sha_2_256_transform(secret + '.', message)
+        self.assertNotEquals(h1, h2)
+        self.assertNotEquals(h1, message)
+
+        h1 = crypto.hmac_sha_2_256_transform_b64(secret, message)
+        h2 = crypto.hmac_sha_2_256_transform_b64(secret + '.', message)
         self.assertNotEquals(h1, h2)
         self.assertNotEquals(h1, message)
 

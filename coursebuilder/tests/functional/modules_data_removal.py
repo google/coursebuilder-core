@@ -54,13 +54,12 @@ class DataRemovalTests(actions.TestBase):
         self.assertEquals('OK.', response.body)
 
     def test_non_removal_policy(self):
-        user = self.make_test_user(self.STUDENT_EMAIL)
         with actions.OverriddenEnvironment({
             data_removal.DATA_REMOVAL_SETTINGS_SECTION: {
                 data_removal.REMOVAL_POLICY:
                 data_removal.IndefiniteRetentionPolicy.get_name()}}):
 
-            actions.login(self.STUDENT_EMAIL)
+            user = actions.login(self.STUDENT_EMAIL)
             actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
 
             with common_utils.Namespace(self.NAMESPACE):
@@ -93,9 +92,7 @@ class DataRemovalTests(actions.TestBase):
                 self.assertEqual([None], r)
 
     def test_immediate_removal_policy(self):
-        user = self.make_test_user(self.STUDENT_EMAIL)
-
-        actions.login(user.email())
+        user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
         task_count = self.execute_all_deferred_tasks(
             models.StudentLifecycleObserver.QUEUE_NAME)
@@ -195,14 +192,11 @@ class DataRemovalTests(actions.TestBase):
 
 
     def test_multiple_students(self):
-        user = self.make_test_user(self.STUDENT_EMAIL)
-        other_user = self.make_test_user('student002@foo.com')
-
         # Register two students
-        actions.login(user.email())
+        user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, user.email(), course=self.COURSE)
 
-        actions.login(other_user.email())
+        other_user = actions.login('student002@foo.com')
         actions.register(self, other_user.email(), course=self.COURSE)
 
         # Get IDs of those students; make an event for each.
@@ -236,15 +230,13 @@ class DataRemovalTests(actions.TestBase):
             self.assertEquals(student2_id, entities[0].user_id)
 
     def test_multiple_courses(self):
-        user = self.make_test_user(self.STUDENT_EMAIL)
-
         COURSE_TWO = 'course_two'
         COURSE_TWO_NS = 'ns_' + COURSE_TWO
 
         actions.simple_add_course(
             COURSE_TWO, self.ADMIN_EMAIL, 'Data Removal Test Two')
 
-        actions.login(user.email())
+        user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, user.email(), course=self.COURSE)
         actions.register(self, user.email(), course=COURSE_TWO)
         actions.unregister(self, self.COURSE, do_data_removal=True)
@@ -268,11 +260,8 @@ class DataRemovalTests(actions.TestBase):
         Here, indices start with the user ID, but are suffixed with the name
         of a specific property sub-type.  Verify that these are removed.
         """
-        user = self.make_test_user(self.STUDENT_EMAIL)
-
-
         user_id = None
-        actions.login(user.email())
+        user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
 
         # Get IDs of those students; make an event for each.
@@ -319,9 +308,7 @@ class DataRemovalTests(actions.TestBase):
             self.assertEquals(0, len(l))
 
     def test_remove_by_email(self):
-        user = self.make_test_user(self.STUDENT_EMAIL)
-
-        actions.login(user.email())
+        user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, user.email(), course=self.COURSE)
 
         # Get IDs of those students; make an event for each.
@@ -386,10 +373,8 @@ class UserInteractionTests(actions.TestBase):
                           response.body)
             self.assertNotIn('What is your name?', response.body)
 
-        user = self.make_test_user(self.STUDENT_EMAIL)
-
         user_id = None
-        actions.login(user.email())
+        user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, user.email())
         with common_utils.Namespace(self.NAMESPACE):
             # After registration, we should have a student object, and

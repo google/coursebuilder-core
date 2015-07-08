@@ -88,7 +88,7 @@ ENCRYPTION_SECRET = config.ConfigProperty(
 class EncryptionManager(object):
 
     @classmethod
-    def _init_secret_if_none(cls, cfg, length):
+    def init_secret_if_none(cls, cfg, length):
 
         # Any non-default value is fine.
         if cfg.value and cfg.value != cfg.default_value:
@@ -116,13 +116,13 @@ class EncryptionManager(object):
     @classmethod
     def _get_hmac_secret(cls):
         """Verifies that non-default XSRF secret exists; creates one if not."""
-        cls._init_secret_if_none(XSRF_SECRET, XSRF_SECRET_LENGTH)
+        cls.init_secret_if_none(XSRF_SECRET, XSRF_SECRET_LENGTH)
         return XSRF_SECRET.value
 
     @classmethod
     def _get_encryption_secret(cls):
         """Verifies non-default encryption secret exists; creates one if not."""
-        cls._init_secret_if_none(ENCRYPTION_SECRET, ENCRYPTION_SECRET_LENGTH)
+        cls.init_secret_if_none(ENCRYPTION_SECRET, ENCRYPTION_SECRET_LENGTH)
         return ENCRYPTION_SECRET.value
 
     @classmethod
@@ -260,6 +260,34 @@ def hmac_sha_2_256_transform(privacy_secret, value):
     return hmac.new(
         str(privacy_secret), msg=str(value), digestmod=hashlib.sha256
     ).hexdigest()
+
+
+def hmac_sha_2_256_transform_b64(privacy_secret, value):
+    """HMAC-SHA-2-256 for use as a privacy transformation function.
+
+    Operates exactly as hmac_sha_2_256_transform above, but encodes the result
+    under base64, rather than as hexadecimal digits.  This provides a
+    meaningful space savings, in particular when these values are used as
+    entity keys.
+
+    Args:
+      privacy_secret: Hash salt value to use when encoding
+      value: The string to perform a one-way hash upon.
+    Returns:
+      A base64'd version of the SHA2-256 one way hash corresponding to 'value'.
+
+    """
+
+    raw_digest = hmac.new(
+        str(privacy_secret), msg=str(value), digestmod=hashlib.sha256).digest()
+    # Modify standard base64 to use $ and * as the two characters other than
+    # A-Z, a-z, 0-9 for the encoding.  These characters are selected because
+    # 1) These are URL-safe (do not require encoding in case the returned
+    #    value is ever used as a URL GET value)
+    # 2) These do not conflict with characters such as '-', '_', ',', '.'
+    #    which are often used as separators when combining/splitting values into
+    #    packed strings.
+    return base64.b64encode(raw_digest, '$*')
 
 
 def generate_transform_secret_from_xsrf_token(xsrf_token, action):

@@ -17,6 +17,7 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 from common import crypto
+from common import users
 from common import utils as common_utils
 from models import models
 from models import transforms
@@ -225,10 +226,10 @@ class StudentLabelsTest(actions.TestBase):
     def _add_broken_label_references(self):
         # Add some broken references to student's labels list.
         actions.login(REGISTERED_STUDENT_EMAIL)
+        user = users.get_current_user()
         student = (
             models.StudentProfileDAO.get_enrolled_student_by_user_for(
-                self.make_test_user(REGISTERED_STUDENT_EMAIL),
-                FakeContext(NAMESPACE)))
+                user, FakeContext(NAMESPACE)))
         student.labels = '123123123 456456456 %d' % self.foo_id
         student.put()
 
@@ -335,9 +336,9 @@ class StudentLabelsTest(actions.TestBase):
 
     # --------------------------------- Registration
     def test_register_with_labels(self):
-        user = self.make_test_user(LABELS_STUDENT_EMAIL)
         student_name = 'John Smith from Back East'
-        actions.login(user.email())
+        actions.login(LABELS_STUDENT_EMAIL)
+        user = users.get_current_user()
         response = actions.view_registration(self, COURSE_NAME)
         register_form = actions.get_form_by_action(response, 'register')
         self.post('/%s/%s' % (COURSE_NAME, register_form.action), {

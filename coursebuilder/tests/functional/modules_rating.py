@@ -70,6 +70,7 @@ class BaseRatingsTests(actions.TestBase):
     def register_student(self):
         actions.login(STUDENT_EMAIL, is_admin=False)
         actions.register(self, STUDENT_NAME)
+        return users.get_current_user()
 
     def get_lesson_dom(self):
         response = self.get('unit?unit=%s&lesson=%s' % (
@@ -180,9 +181,8 @@ class RatingHandlerTests(BaseRatingsTests):
         self.assertIsNone(payload['rating'])
 
     def test_get_returns_existing_rating(self):
-        self.register_student()
-        student = models.Student.get_enrolled_student_by_user(
-            self.make_test_user(STUDENT_EMAIL))
+        user = self.register_student()
+        student = models.Student.get_enrolled_student_by_user(user)
         prop = rating.StudentRatingProperty.load_or_create(student)
         prop.set_rating(self.key, 3)
         prop.put()
@@ -216,13 +216,12 @@ class RatingHandlerTests(BaseRatingsTests):
         self.assertIn('Access denied', response['message'])
 
     def test_post_records_rating_in_property(self):
-        self.register_student()
+        user = self.register_student()
         response = self.post_data(rating_int=2)
         self.assertEquals(200, response['status'])
         self.assertIn('Thank you for your feedback', response['message'])
 
-        student = models.Student.get_enrolled_student_by_user(
-            self.make_test_user(STUDENT_EMAIL))
+        student = models.Student.get_enrolled_student_by_user(user)
         prop = rating.StudentRatingProperty.load_or_create(student)
         self.assertEquals(2, prop.get_rating(self.key))
 
@@ -271,9 +270,8 @@ class RatingHandlerTests(BaseRatingsTests):
     def test_data_source(self):
 
         # Register a student and give some feedback
-        self.register_student()
-        student = models.Student.get_enrolled_student_by_user(
-            self.make_test_user(STUDENT_EMAIL))
+        user = self.register_student()
+        student = models.Student.get_enrolled_student_by_user(user)
         response = self.post_data(
             rating_int=2, additional_comments='Good lesson')
         self.assertEquals(200, response['status'])

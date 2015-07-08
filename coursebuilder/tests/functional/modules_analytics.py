@@ -24,6 +24,7 @@ import urllib
 import zlib
 
 import actions
+from common import users
 from common import utils as common_utils
 from models import courses
 from models import jobs
@@ -122,8 +123,7 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
 
     def get_aggregated_data_by_email(self, email):
         # email and user_id must match the values listed in Student.json file
-        user = self.make_test_user(
-            'foo@bar.com', user_id='124317316405206137111')
+        user = users.User('foo@bar.com', _user_id='124317316405206137111')
 
         with common_utils.Namespace('ns_' + self.COURSE_NAME):
             student = models.Student.get_by_user(user)
