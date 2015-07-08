@@ -28,12 +28,6 @@ each time they authenticate.
 
 Currently, this implementation is known to work with the Google and Facebook
 providers. Other providers are likely possible but have not been tested.
-Notably, we do not yet support username/password via accountchooser.com, and any
-attempts to use email functionality (either with Google and Facebook, or with
-username/password) will break.
-
-TODO(johncox): add email functionality (forgot password, etc.).
-TODO(johncox): add support for username/password.
 
 The basic authentication flow is
 
@@ -76,9 +70,46 @@ Configuring this system is complex:
    enabled: False.
 4) Provision your keys and secrets with each provider. Enter them via the Course
    Builder admin console. See GITKit's docs (linked above) for pointers to each
-   provider's applications for doing this.
+   provider's applications for doing this. You will also want to add each
+   provider you want to enable to the idps array in templates/widget.html. This
+   only affects whether or not the provider is displayed as a choice in the
+   GITKit UX in some cases. Note, however, that the set of providers in the
+   Google Developer Console is authoritative: if you've enabled Facebook in the
+   Google Developer Console but not in widget.html, users will still be able to
+   sign in with Facebook.
 5) Edit config.yaml and flip enabled to True.
-6) Deploy a new version.
+6) Customize your templates (see below).
+7) Deploy a new version.
+
+When we need to send email (when users change their password or email address,
+for example), we localize contents using the standard template system. The
+built-in templates for these flows are:
+
+    templates/
+        change_email.html: HTML body of change email messages.
+        change_email.txt: plain text body of change email messages.
+        change_email_subject.txt: plain text subject of change email messages.
+        reset_password.html: HTML body of password reset messages.
+        reset_password.txt: plain text body of password reset messages.
+        reset_password_subject.txt: plain text subject of password reset
+            messages.
+
+These templates are localized via gettext(), just like all other Course Builder
+templates. And just like other Course Builder templates, if you customize their
+contents, you should supply translations for those customizations in each of
+the languages you want to support (beyond the language the customizations are
+made in, of course). You should customize these templates with your own language
+and branding; the shipped templates are for example purposes only.
+
+The user's preferred locale is determined by their HTTP headers because we often
+need to localize when a user is not in session. Note that localization is
+honored in our handlers and in accountchooser.com, but not in the Gitkit widget
+UX. This is because, at the time of this writing, the UX created by the Gitkit
+widget code is English-only. Also, there is no communication channel between
+the accountchooser.com language selector and the branding handler, so they are
+not guaranteed to display the same language (if, for example, the user selects
+one language, but their preferred locale is a second language, two different
+languages will display).
 
 Good luck!
 """
@@ -93,20 +124,24 @@ import threading
 import urllib
 
 import httplib2
+import jinja2
 import webapp2
 import yaml
 
 from common import jinja_utils
+from common import locales
 from common import users
 from common import utils
 from controllers import utils as controllers_utils
 from models import config
 from models import custom_modules
 from models import models
+from models import services
 from models import transforms
 
 import appengine_config
 
+from google.appengine.api import app_identity
 from google.appengine.ext import db
 from identitytoolkit import gitkitclient
 from oauth2client import client
@@ -115,11 +150,18 @@ _BAD_CRYPTO_NEEDLE = 'PKCS12 format is not supported by the PyCrypto library'
 _BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 _BASE_URL = '/modules/gitkit'
 _BROWSER_API_KEY_NAME = 'browser_api_key'
+_DEFAULT_TEMPLATE_LOCALE = 'en_US'
 _DEST_URL_NAME = 'dest_url'
 _EMAIL_CHANGE_EVENT_SOURCE = 'gitkit-email-change'
 _EMAIL_URL = '%s/email' % _BASE_URL
 _EMAIL_URL_NAME = 'email_url'
 _GITKIT_DEST_URL_NAME = 'signInSuccessUrl'
+_GITKIT_RESPONSE_KEY_ACTION = 'action'
+_GITKIT_RESPONSE_KEY_EMAIL = 'email'
+_GITKIT_RESPONSE_KEY_NEW_EMAIL = 'new_email'
+_GITKIT_RESPONSE_KEY_OOB_CODE = 'oob_code'
+_GITKIT_RESPONSE_KEY_OOB_LINK = 'oob_link'
+_GITKIT_RESPONSE_KEY_RESPONSE_BODY = 'response_body'
 _GITKIT_TOKEN_COOKIE_NAME = 'gtoken'
 _RESOURCES_DIR = os.path.join(_BASE_PATH, 'resources')
 _SERVICE_ACCOUNT_EMAIL_NAME = 'client_email'
@@ -149,7 +191,14 @@ _CONFIG_YAML_PATH = os.path.join(_RESOURCES_DIR, 'config.yaml')
 
 _TEMPLATES_DIR = os.path.join(_BASE_PATH, 'templates')
 _BRANDING_TEMPLATE_PATH = 'branding.html'
+_CHANGE_EMAIL_NOTIFICATIONS_INTENT = 'gitkit_change_email'
+_CHANGE_EMAIL_TEMPLATE_PREFIX = 'change_email'
+_EXTENSION_HTML = '.html'
+_EXTENSION_TXT = '.txt'
+_RESET_PASSWORD_NOTIFICATIONS_INTENT = 'gitkit_reset_password'
+_RESET_PASSWORD_TEMPLATE_PREFIX = 'reset_password'
 _SIGN_OUT_TEMPLATE_PATH = 'signout.html'
+_SUBJECT_INFIX = '_subject'
 _WIDGET_TEMPLATE_PATH = 'widget.html'
 
 _LOG = logging.getLogger('modules.gitkit.gitkit')
@@ -181,7 +230,7 @@ _SERVICE_ACCOUNT_JSON = config.ConfigProperty(
     default_value='', label='GITKit module service account JSON')
 _TITLE = config.ConfigProperty(
     'gcb_modules_gitkit_title', str, 'Title of accountchooser.com page',
-    default_value='Please sign in', label='GITKit module widget title')
+    default_value='Please sign in', label='GITKit module account chooser title')
 
 
 def _make_gitkit_service(
@@ -270,12 +319,161 @@ class FederatedEmailResolver(users.FederatedEmailResolver):
         return entity.email if entity else None
 
 
+class AbstractOobResponse(object):
+    """Abstract return value base for GitkitService.get_oob_response()."""
+
+    def __init__(self, response_body):
+        self.response_body = response_body
+
+    @classmethod
+    def _get_expected_response_keys(cls):
+        """Gets keys from gitkit response that are fed to __init__.
+
+        GITKit responses are plain dicts. This returns a sorted list of string
+        containing the keys that can be accepted by this particular child class.
+        If that sorted key list exactly matches the sorted key list of a GITKit
+        response dict, that dict can be cast to the particular child class type.
+
+        Returns:
+            Lexicographically-ordered list of string.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def make(cls, gitkit_response):
+        """Casts gitkit_response dict to OobResponse or throws ValueError."""
+        gitkit_response = dict(gitkit_response)  # Make a copy for mutations.
+        matches, error = cls.match(gitkit_response)
+        if not matches:
+            raise ValueError(
+                'Unable to create %s; error: %s' % (cls.__name__, error))
+
+        # response_body must be present. It contains a json string we must
+        # convert to plain old Python values.
+        response_body = gitkit_response.get(_GITKIT_RESPONSE_KEY_RESPONSE_BODY)
+        if response_body is None:
+            raise ValueError(
+                'Unable to parse GITKit OOB response: response_body missing')
+
+        try:
+            gitkit_response[_GITKIT_RESPONSE_KEY_RESPONSE_BODY] = (
+                transforms.loads(response_body))
+        except Exception, e:
+            raise ValueError(
+                'Unable to parse %s from GITKit OOB response: got %s' % (
+                    _GITKIT_RESPONSE_KEY_RESPONSE_BODY, response_body))
+
+        return cls(**gitkit_response)
+
+    @classmethod
+    def match(cls, gitkit_response):
+        """Checks if a gitkit_response dict can be made into instance of cls.
+
+        Args:
+            gitkit_reponse: dict. Raw gitkitclient.GitkitClient.GetOobResult
+                result.
+
+        Returns:
+            bool, string. bool is True if gitkit_response can be cast to cls and
+                False otherwise. string is empty if bool is True and contains a
+                descriptive error message otherwise.
+        """
+        actual_keys = set(gitkit_response.keys())
+        expected_keys = set(cls._get_expected_response_keys())
+        matches = actual_keys == expected_keys
+        fmt = lambda keys: ', '.join(sorted(keys))
+        error = None if matches else 'Expected: "%s", got: "%s"' % (
+            fmt(expected_keys), fmt(actual_keys))
+        return matches, error
+
+    def __str__(self):
+        return str(vars(self))
+
+
+class AbstractOobEmailResponse(AbstractOobResponse):
+    """Abstract base for all OobResponses that involve sending a user email."""
+
+    def get_target_emails(self):
+        """Gets the addresses messages about this response should be sent to."""
+        # Seam in case GITKit changes their requirements about where mails
+        # should be sent. This is necessary because they may elect to send email
+        # to new_email rather than email when email changes, or they may elect
+        # to send to both.
+        return [self.email]
+
+
+class OobFailureResponse(AbstractOobResponse):
+    """OOB response indicating failure (but the request completed)."""
+
+    @classmethod
+    def _get_expected_response_keys(cls):
+        return sorted([_GITKIT_RESPONSE_KEY_RESPONSE_BODY])
+
+    @classmethod
+    def from_error_message(cls, error_message):
+        return cls(response_body={'error': error_message})
+
+
+class OobChangeEmailResponse(AbstractOobEmailResponse):
+    """OOB response for an email change request; requires email to user."""
+
+    def __init__(
+            self, action, email, new_email, oob_code, oob_link, response_body):
+        super(OobChangeEmailResponse, self).__init__(response_body)
+
+        if not GitkitService.is_change_email(action):
+            raise ValueError(
+                'Unable to parse change email response with action: %s' % (
+                    action))
+
+        self.action = action
+        self.email = email
+        self.new_email = new_email
+        self.oob_code = oob_code
+        self.oob_link = oob_link
+
+    @classmethod
+    def _get_expected_response_keys(cls):
+        return sorted([
+            _GITKIT_RESPONSE_KEY_ACTION, _GITKIT_RESPONSE_KEY_EMAIL,
+            _GITKIT_RESPONSE_KEY_NEW_EMAIL, _GITKIT_RESPONSE_KEY_OOB_CODE,
+            _GITKIT_RESPONSE_KEY_OOB_LINK, _GITKIT_RESPONSE_KEY_RESPONSE_BODY])
+
+
+class OobResetPasswordResponse(AbstractOobEmailResponse):
+    """OOB response for a password reset request; requires email to user."""
+
+    def __init__(self, action, email, oob_code, oob_link, response_body):
+        super(OobResetPasswordResponse, self).__init__(response_body)
+
+        if not GitkitService.is_reset_password(action):
+            raise ValueError(
+                'Unable to parse reset password response with action: %s' % (
+                    action))
+
+        self.action = action
+        self.email = email
+        self.oob_code = oob_code
+        self.oob_link = oob_link
+
+    @classmethod
+    def _get_expected_response_keys(cls):
+        return sorted([
+            _GITKIT_RESPONSE_KEY_ACTION, _GITKIT_RESPONSE_KEY_EMAIL,
+            _GITKIT_RESPONSE_KEY_OOB_CODE, _GITKIT_RESPONSE_KEY_OOB_LINK,
+            _GITKIT_RESPONSE_KEY_RESPONSE_BODY])
+
+
 class GitkitService(object):
 
     # Wire ops cause nonintuitive numbers of RPCs that can make operation slow
     # (for example, the first call often gets public certs). Cache these results
     # and share them across all instances within a process.
     _CACHE = client.MemoryCache()
+    # Known OobResponse types we can cast raw Gitkit responses into.
+    _OOB_RESPONSE_TYPES = [
+        OobChangeEmailResponse, OobFailureResponse, OobResetPasswordResponse,
+    ]
 
     def __init__(self,
             client_id, server_api_key, service_account_email,
@@ -284,6 +482,83 @@ class GitkitService(object):
             client_id, service_account_email, service_account_key,
             http=http if http is not None else httplib2.Http(self._CACHE),
             server_api_key=server_api_key, widget_url=widget_url)
+
+    @classmethod
+    def get_intent(cls, action):
+        """Gets intent for notifications."""
+        return {
+            gitkitclient.GitkitClient.CHANGE_EMAIL_ACTION: (
+                _CHANGE_EMAIL_NOTIFICATIONS_INTENT),
+            gitkitclient.GitkitClient.RESET_PASSWORD_ACTION: (
+                _RESET_PASSWORD_NOTIFICATIONS_INTENT),
+        }[action]
+
+    @classmethod
+    def is_change_email(cls, action):
+        return action == gitkitclient.GitkitClient.CHANGE_EMAIL_ACTION
+
+    @classmethod
+    def is_reset_password(cls, action):
+        return action == gitkitclient.GitkitClient.RESET_PASSWORD_ACTION
+
+    @classmethod
+    def _make_oob_response(cls, gitkit_response):
+        """Cast gitkit_response dict to OobResponse or throw ValueError."""
+        # Gitkit OOB responses are plain dicts. Many, but not all, of them
+        # contain type information under the same key. Because some responses do
+        # not have this type information, the best we can do is match types by
+        # looking at the set of provided keys and checking it for compatibility
+        # against each of our types. Individual OobResponse types can and should
+        # do further validation in their initializers.
+        response = None
+
+        for oob_response_type in cls._OOB_RESPONSE_TYPES:
+            match, error = oob_response_type.match(gitkit_response)
+            if match:
+                response = oob_response_type.make(gitkit_response)
+                break
+
+        if response is None:
+            raise ValueError(
+                'Unable to map GITKit OOB response to known type: %s' % (
+                    gitkit_response))
+
+        return response
+
+    def get_oob_response(self, request_post, request_remote_addr, token=None):
+        """Gets OobResponse from GITKit (or None if unexpected response type).
+
+        Out-of-band (OOB) responses happen when a user going through a GITKit
+        flow clicks a control that requires our involvement. An example of this
+        is clicking the 'problems logging in?' link.
+
+        These cause a POST to our email hander because we need to send an email
+        containing GITKit data for the user to act on. Our email handler needs
+        to decode the POST and respond appropriately. We do this by calling
+        GITKit with the post information. GITKit responds with a dict of
+        response data that can indicate an error, or a response. We cast these
+        to our own types so callers can handle the different out-of-band cases
+        appropriately.
+
+        Args:
+            request_post: dict or dict-like. webapp2.Response POST data.
+            requst_remote_addr: string. IP address of the webapp2.Response.
+            token: string or None. Optional GITKit token; will be string if the
+                user is in session and None otherwise.
+
+        Raises:
+            Exception: if there is an error communicating with GITKit (if the
+                service is down, for example).
+            ValueError: if we got a response back we could not parse into a
+                known type.
+
+        Returns:
+            OobResponse: GITKit response data, cast if the response completed
+                (even if 'completed' means 'returned a failed state').
+        """
+        gitkit_oob_response = self._instance.GetOobResult(
+            request_post, request_remote_addr, gitkit_token=token)
+        return self._make_oob_response(gitkit_oob_response)
 
     def get_provider_id(self, token):
         """Returns the provider id string if token is valid, else None.
@@ -314,7 +589,8 @@ class GitkitService(object):
         If having a valid user is important to you, always call this method
         rather than re-using a previously-returned value. Note that it may
         cause an RPC in order to get public certs, but unless you pass your own
-        http object to __init__, responses are cached across _Gitkit intances.
+        http object to __init__, responses are cached across GitkitService
+        intances.
 
         Args:
             token: string. Raw GITKit response token.
@@ -328,7 +604,7 @@ class GitkitService(object):
             users.User if token is valid else None.
         """
         gitkit_user = self._get_gitkit_user(token)
-        return self._get_users_user(gitkit_user) if gitkit_user else None
+        return self._make_users_user(gitkit_user) if gitkit_user else None
 
     def _get_gitkit_user(self, token):
         try:
@@ -347,7 +623,7 @@ class GitkitService(object):
                     'Unable to communicate with users service. Please check '
                     'your configuration values and try again.')
 
-    def _get_users_user(self, gitkit_user):
+    def _make_users_user(self, gitkit_user):
         """Gets a users.User given a gitkitclient.GitkitUser."""
         # Note that we do not attempt to set federated provider information on
         # the user. Their general-sounding names notwithstanding, these are
@@ -364,6 +640,62 @@ class GitkitService(object):
         # must obtain it on their own. The user_id is PII.
         return users.User(
             email=gitkit_user.email, _user_id=gitkit_user.user_id)
+
+
+class Mailer(object):
+    """Sends email messages."""
+
+    @classmethod
+    def get_sender(cls):
+        """Email address of the sender.
+
+        Must conform to the restrictions in
+        https://cloud.google.com/appengine/docs/python/mail/sendingmail.
+        """
+        return 'noreply@%s.appspotmail.com' % app_identity.get_application_id()
+
+    @classmethod
+    def send_async(cls, locale, oob_email_response):
+        """Sends email notification(s) asynchronously.
+
+        Args:
+            locale: string. The user's preferred locale code (e.g. 'en_US').
+            oob_email_response: OobEmailResponse. GITKit response object
+                containing information to be mailed to user.
+
+        Returns:
+            (notification_key, payload_key). A 2-tuple of datastore keys for the
+                created notification and payload.
+
+        Raises:
+            Exception: if values delegated to model initializers are invalid.
+            ValueError: if to or sender are malformed according to App Engine
+                (note that well-formed values do not guarantee success).
+        """
+        users_service = users.UsersServiceManager.get()
+        template_resolver = users_service.get_template_resolver_class()
+
+        intent = GitkitService.get_intent(oob_email_response.action)
+        sender = cls.get_sender()
+        target_emails = oob_email_response.get_target_emails()
+
+        # Allow all template resolution to throw. If action is valid and
+        # mappings are correct, mappings will resolve correctly here. Any errors
+        # here are most likely due to bad mappings in user-supplied code
+        # customizations; we want loud errors so people writing customizations
+        # can find and fix problems.
+        oob_dict = vars(oob_email_response)
+        body_html_template, body_text_template, subject_text_template = (
+            template_resolver.get_email_templates(
+                oob_email_response.action, locale=locale))
+        body = body_text_template.render(oob_dict)
+        html = body_html_template.render(oob_dict)
+        subject = subject_text_template.render(oob_dict)
+
+        for to in target_emails:
+            services.notifications.send_async(
+                to, sender, intent, body, subject, audit_trail=oob_dict,
+                html=html)
 
 
 class RequestContext(webapp2.RequestContext):
@@ -556,6 +888,68 @@ class RuntimeConfig(object):
         return isinstance(self.enabled, bool)
 
 
+class TemplateResolver(object):
+    """Gets templates."""
+
+    @classmethod
+    def get(cls, path, locale=None):
+        """Gets the template at path (rooted in _TEMPLATES_DIR)."""
+        return cls._get_env(locale=locale).get_template(path)
+
+    @classmethod
+    def get_email_templates(cls, action, locale=None):
+        """Returns templates used to compose an email.
+
+        Args:
+            action: string. AbstractOobEmailResponse action string.
+            locale: string or None. The user's requested locale code.
+
+        Returns:
+            3-tuple of
+            (body_html_template, body_text_template, subject_text_template).
+
+        Raises:
+            Exception: if the template system encoutered a problem.
+            ValueError: if the action is invalid.
+        """
+        env = cls._get_env(locale=locale)
+        body_html_template = env.get_template(
+            cls._get_email_template_path(action, extension='.html'))
+        body_text_template = env.get_template(
+            cls._get_email_template_path(action, extension='.txt'))
+        subject_text_template = env.get_template(
+            cls._get_email_template_path(
+                action, extension='.txt', subject=True))
+
+        return (
+            body_html_template, body_text_template, subject_text_template)
+
+    @classmethod
+    def _get_env(cls, locale=None):
+        return jinja_utils.create_jinja_environment(
+            jinja2.FileSystemLoader([_TEMPLATES_DIR]),
+            locale=locale if locale else _DEFAULT_TEMPLATE_LOCALE,
+            autoescape=True)
+
+    @classmethod
+    def _get_email_template_path(
+            cls, action, extension=_EXTENSION_HTML, subject=False):
+        assert extension in [_EXTENSION_HTML, _EXTENSION_TXT]
+
+        prefix = None
+        if GitkitService.is_change_email(action):
+            prefix = _CHANGE_EMAIL_TEMPLATE_PREFIX
+        elif GitkitService.is_reset_password(action):
+            prefix = _RESET_PASSWORD_TEMPLATE_PREFIX
+        else:
+            raise ValueError(
+                'Unable to resolve templates for action: %s' % action)
+
+        infix = _SUBJECT_INFIX if subject else ''
+
+        return '%s%s%s' % (prefix, infix, extension)
+
+
 class UsersService(users.AbstractUsersService):
 
     @classmethod
@@ -621,8 +1015,16 @@ class UsersService(users.AbstractUsersService):
         return FederatedEmailResolver
 
     @classmethod
+    def get_mailer_class(cls):
+        return Mailer
+
+    @classmethod
     def get_request_context_class(cls):
         return RequestContext
+
+    @classmethod
+    def get_template_resolver_class(cls):
+        return TemplateResolver
 
     @classmethod
     def is_current_user_admin(cls):
@@ -651,6 +1053,35 @@ class UsersService(users.AbstractUsersService):
 
 
 class BaseHandler(controllers_utils.BaseHandler):
+
+    @classmethod
+    def _get_locale(cls, accept_language_header=None):
+        # The Accept-Language header is set to whatever the user's browser or
+        # computer ordinarily wants to consume. This makes it a good bet for the
+        # authoritative best locale to use, absent a database of user
+        # preferences (which we do not always have because users are often not
+        # signed in when going through this flow -- after all, this is where you
+        # recover a lost password). We take the highest-priority locale if a
+        # value is present, and chauvinistically default to en_US otherwise.
+        #
+        # We cannot use the normal CB locale mechanism because auth is scoped to
+        # the deployment, not the course.
+        locale = _DEFAULT_TEMPLATE_LOCALE
+
+        pairs = []
+        if accept_language_header:
+            pairs = locales.parse_accept_language(accept_language_header)
+
+        if pairs:
+            locale = sorted(pairs, key=lambda t: t[1], reverse=True)[0][0]
+
+        return locale
+
+    def _format_exception(self, exception):
+        return '%s: %s' % (exception.__class__.__name__, exception.message)
+
+    def _get_accept_language_header(self):
+        return self.request.headers.get('Accept-Language')
 
     def _get_next_url(self, prefix, url_param_name):
         dest_url = self.request.get(url_param_name)
@@ -692,16 +1123,83 @@ class BrandingHandler(AccountChooserCustomizationBaseHandler):
         # accountchooser.com before render; see
         # https://developers.google.com/identity/toolkit/web/setup-frontend for
         # details.
-        template = jinja_utils.get_template(
-            _BRANDING_TEMPLATE_PATH, [_TEMPLATES_DIR])
+        locale = self._get_locale(self._get_accept_language_header())
+        users_service = users.UsersServiceManager.get()
+        template = users_service.get_template_resolver_class().get(
+            _BRANDING_TEMPLATE_PATH, locale=locale)
         self.response.out.write(template.render({}))
 
 
-class EmailHandler(BaseHandler):
+class EmailRestHandler(BaseHandler):
+    """Rest handler that communicates with GITKit clients we do not control.
 
-    def get(self):
-        # TODO(johncox): implement.
-        raise NotImplementedError
+    Their requirements are slightly different than standard CB rest clients (for
+    example, they do not support XSSI prefixing, and they have their own
+    requirements about response formatting).
+
+    We never want to 500 here when handling errors -- instead, we want to
+    compose failure json responses. If we 500, the Gitkit clients will hang in a
+    spinner state; if we return json responses, they will display an error
+    message and their UX will still be usable. We do, however, want to 500 iff
+    there is an unexpected error, since that likely indicates a new problem that
+    needs programmer attention.
+    """
+
+    def post(self):
+        users_service = users.UsersServiceManager.get()
+        runtime_config = Runtime.get_current_runtime_config()
+        try:
+            runtime_config.validate()
+        except RuntimeError as e:
+            _LOG.error(self._format_exception(e))
+            self._write_failure_json_response('Server misconfigured')
+            return
+
+        token = Runtime.get_current_token()
+        service = _make_gitkit_service(
+            runtime_config.client_id, runtime_config.server_api_key,
+            runtime_config.service_account_email,
+            runtime_config.service_account_key,
+            widget_url=runtime_config.widget_url)
+
+        try:
+            oob_response = service.get_oob_response(
+                self.request.POST, self.request.remote_addr, token=token)
+        # Treat all errors the same. pylint: disable=broad-except
+        except Exception, e:
+            _LOG.error('Error getting OOB response from GITKit: %s', e)
+            self._write_failure_json_response('Communication error')
+            return
+
+        if isinstance(oob_response, OobFailureResponse):
+            self._write_json_response(oob_response.response_body)
+            return
+
+        locale = self._get_locale(self._get_accept_language_header())
+        try:
+            users_service.get_mailer_class().send_async(locale, oob_response)
+        # Treat all errors the same. pylint: disable=broad-except
+        except Exception, e:
+            _LOG.error(
+                'Unable to send mail; error: %s', self._format_exception(e))
+            self._write_failure_json_response('Mailer error')
+            return
+
+        self._write_json_response(oob_response.response_body)
+
+    def _write_json_response(self, response_body):
+        # GITKit requires slightly different formatting of the response compared
+        # to normal CB JS clients, so we set our ordinary headers but do not
+        # send the XSSI prefix.
+        self.response.headers['Content-Disposition'] = 'attachment'
+        self.response.headers[
+            'Content-Type'] = 'application/javascript; charset=utf-8'
+        self.response.headers['X-Content-Type-Options'] = 'nosniff'
+        self.response.out.write(transforms.dumps(response_body))
+
+    def _write_failure_json_response(self, error_message):
+        oob_response = OobFailureResponse.from_error_message(error_message)
+        self._write_json_response(oob_response.response_body)
 
 
 class FaviconHandler(AccountChooserCustomizationBaseHandler):
@@ -732,7 +1230,7 @@ class SignInHandler(BaseHandler):
         try:
             runtime_config.validate()
         except RuntimeError as e:
-            _LOG.error(e.message)
+            _LOG.error(self._format_exception(e))
             self.error(500)
             return
 
@@ -787,38 +1285,42 @@ class SignOutContinueHandler(BaseHandler):
         self.redirect(self._get_redirect_url_from_dest_url())
 
 
-class SignOutHandler(controllers_utils.BaseHandler):
+class SignOutHandler(BaseHandler):
 
     def get(self):
+        users_service = users.UsersServiceManager.get()
         runtime_config = Runtime.get_current_runtime_config()
         try:
             runtime_config.validate()
         except RuntimeError as e:
-            _LOG.error(e.message)
+            _LOG.error(self._format_exception(e))
             self.error(500)
             return
 
-        template = jinja_utils.get_template(
-            _SIGN_OUT_TEMPLATE_PATH, [_TEMPLATES_DIR])
+        locale = self._get_locale(self._get_accept_language_header())
+        template = users_service.get_template_resolver_class().get(
+            _SIGN_OUT_TEMPLATE_PATH, locale=locale)
         self.response.out.write(template.render({
             _BROWSER_API_KEY_NAME: runtime_config.browser_api_key,
             _DEST_URL_NAME: _DEST_URL_NAME,
         }))
 
 
-class WidgetHandler(controllers_utils.BaseHandler):
+class WidgetHandler(BaseHandler):
 
     def get(self):
+        users_service = users.UsersServiceManager.get()
         runtime_config = Runtime.get_current_runtime_config()
         try:
             runtime_config.validate()
         except RuntimeError as e:
-            _LOG.error(e.message)
+            _LOG.error(self._format_exception(e))
             self.error(500)
             return
 
-        template = jinja_utils.get_template(
-            _WIDGET_TEMPLATE_PATH, [_TEMPLATES_DIR])
+        locale = self._get_locale(self._get_accept_language_header())
+        template = users_service.get_template_resolver_class().get(
+            _WIDGET_TEMPLATE_PATH, locale=locale)
         self.response.out.write(template.render({
             _BRANDING_URL_NAME: self._get_branding_url(),
             _BROWSER_API_KEY_NAME: runtime_config.browser_api_key,
@@ -838,7 +1340,7 @@ class WidgetHandler(controllers_utils.BaseHandler):
 custom_module = None
 GLOBAL_HANDLERS = [
     (_BRANDING_URL, BrandingHandler),
-    (_EMAIL_URL, EmailHandler),
+    (_EMAIL_URL, EmailRestHandler),
     (_FAVICON_URL, FaviconHandler),
     (_SIGN_IN_URL, SignInHandler),
     (_SIGN_IN_CONTINUE_URL, SignInContinueHandler),

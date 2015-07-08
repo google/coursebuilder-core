@@ -41,7 +41,15 @@ class _GitkitFake(object):
     def __init__(self, value):
         self.value = value
 
+    def GetOobResult(
+            self, unused_request_post, unused_request_remote_addr,
+            gitkit_token=None):
+        return self._get_or_raise()
+
     def VerifyGitkitToken(self, unused_token):
+        return self._get_or_raise()
+
+    def _get_or_raise(self):
         if isinstance(self.value, Exception):
             raise self.value
         else:
@@ -96,8 +104,12 @@ class _TestBase(actions.TestBase):
         self.email = 'test@example.com'
         self.host = 'localhost:80'
         self.photo_url = 'http://photo'
+        self.new_email = 'new_email@example.com'
         self.provider_id = 'provider_id_value'
         self.old_users_service = users.UsersServiceManager.get()
+        self.oob_code = '1234'
+        self.oob_link = 'http://example.com/oob_link?foo=bar&baz=quux'
+        self.response_body_success = True
         self.scheme = 'http'
         self.serializer = securecookie.SecureCookieSerializer('notasecret')
         self.server_api_key = 'server_api_key_value'
@@ -159,6 +171,44 @@ class _TestBase(actions.TestBase):
         service = gitkit.GitkitService(None, None, None, None, None)
         service._instance = _GitkitFake(value)
         return service
+
+    def _make_oob_change_email_gitkit_response(
+            self, action=None, email=None, new_email=None, oob_code=None,
+            oob_link=None, response_body_success=None):
+        if action is None:
+            action = gitkitclient.GitkitClient.CHANGE_EMAIL_ACTION
+
+        response = self._make_oob_reset_password_gitkit_response(
+            action=action, email=email, oob_code=oob_code, oob_link=oob_link,
+            response_body_success=response_body_success)
+        response['new_email'] = (
+            new_email if new_email is not None else self.new_email)
+
+        return response
+
+    def _make_oob_reset_password_gitkit_response(
+            self, action=None, email=None, oob_code=None, oob_link=None,
+            response_body_success=None):
+        if action is None:
+            action = gitkitclient.GitkitClient.RESET_PASSWORD_ACTION
+
+        if response_body_success is None:
+            response_body_success = self.response_body_success
+
+        return {
+            'action': action,
+            'email': email if email is not None else self.email,
+            'oob_code': oob_code if oob_code is not None else self.oob_code,
+            'oob_link': oob_link if oob_link is not None else self.oob_link,
+            'response_body': transforms.dumps({
+                'success': response_body_success,
+            }),
+        }
+
+    def _make_oob_failure_gitkit_response(self, response_body_error):
+        return {
+            'response_body': transforms.dumps({'error': response_body_error}),
+        }
 
     def _make_token_headers(self, value):
         # The value is garbage, but we can't validate it anyway in tests unless
@@ -267,6 +317,53 @@ class EmailMappingTest(_TestBase):
 
 class GitkitServiceTest(_TestBase):
 
+    def test_get_oob_response_raises_value_error_if_no_type_match(self):
+        service = self._get_gitkit_service({})
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                'Unable to map GITKit OOB response to known type: {}'):
+            oob_response = service.get_oob_response('unused', 'unused')
+
+    def test_get_oob_response_returns_oob_change_email_response(self):
+        gitkit_response = self._make_oob_change_email_gitkit_response()
+        service = self._get_gitkit_service(gitkit_response)
+        oob_response = service.get_oob_response('unused', 'unused')
+
+        self.assertTrue(isinstance(oob_response, gitkit.OobChangeEmailResponse))
+        self.assertEquals(
+            gitkitclient.GitkitClient.CHANGE_EMAIL_ACTION, oob_response.action)
+        self.assertEquals(self.email, oob_response.email)
+        self.assertEquals(self.new_email, oob_response.new_email)
+        self.assertEquals(self.oob_code, oob_response.oob_code)
+        self.assertEquals(self.oob_link, oob_response.oob_link)
+        self.assertEquals({'success': True}, oob_response.response_body)
+
+    def test_get_oob_response_returns_oob_failure_response(self):
+        error_message = 'error_message'
+        service = self._get_gitkit_service(
+            self._make_oob_failure_gitkit_response(error_message))
+        oob_response = service.get_oob_response('unused', 'unused')
+
+        self.assertTrue(isinstance(oob_response, gitkit.OobFailureResponse))
+        self.assertEquals(
+            {'error': error_message}, oob_response.response_body)
+
+    def test_get_oob_response_returns_oob_reset_password_response(self):
+        gitkit_response = self._make_oob_reset_password_gitkit_response()
+        service = self._get_gitkit_service(gitkit_response)
+        oob_response = service.get_oob_response('unused', 'unused')
+
+        self.assertTrue(
+            isinstance(oob_response, gitkit.OobResetPasswordResponse))
+        self.assertEquals(
+            gitkitclient.GitkitClient.RESET_PASSWORD_ACTION,
+            oob_response.action)
+        self.assertEquals(self.email, oob_response.email)
+        self.assertEquals(self.oob_code, oob_response.oob_code)
+        self.assertEquals(self.oob_link, oob_response.oob_link)
+        self.assertEquals({'success': True}, oob_response.response_body)
+
     def test_get_provider_id_raises_runtime_error_if_misconfigured(self):
         service = self._get_gitkit_service(
             NotImplementedError(gitkit._BAD_CRYPTO_NEEDLE))
@@ -306,6 +403,323 @@ class GitkitServiceTest(_TestBase):
         self.assertIs(
             service1._instance.rpc_helper.http.cache,
             service2._instance.rpc_helper.http.cache)
+
+
+class OobChangeEmailResponseTest(_TestBase):
+
+    def test_make_raises_value_error_if_mismatch(self):
+        message = (
+            'Expected: "action, email, new_email, oob_code, oob_link, '
+            'response_body", got: ""')
+
+        with self.assertRaisesRegexp(ValueError, message):
+            gitkit.OobChangeEmailResponse.make({})
+
+    def test_make_raises_value_error_if_action_wrong(self):
+        gitkit_response = self._make_oob_change_email_gitkit_response()
+        gitkit_response['action'] = 'unknown'
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                'Unable to parse change email response with action: unknown'):
+            gitkit.OobChangeEmailResponse.make(gitkit_response)
+
+    def test_make_raises_value_error_if_response_body_is_none(self):
+        gitkit_response = self._make_oob_change_email_gitkit_response()
+        gitkit_response['response_body'] = None
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                'Unable to parse GITKit OOB response: response_body missing'):
+            gitkit.OobChangeEmailResponse.make(gitkit_response)
+
+    def test_make_raises_value_error_if_response_body_unparseable(self):
+        gitkit_response = self._make_oob_change_email_gitkit_response()
+        gitkit_response['response_body'] = 1
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                ('Unable to parse response_body from GITKit OOB response: got '
+                 '1')):
+            gitkit.OobChangeEmailResponse.make(gitkit_response)
+
+    def test_make_succeeds(self):
+        gitkit_response = self._make_oob_change_email_gitkit_response()
+        oob_response = gitkit.OobChangeEmailResponse.make(gitkit_response)
+
+        self.assertTrue(isinstance(oob_response, gitkit.OobChangeEmailResponse))
+        self.assertEquals(
+            gitkitclient.GitkitClient.CHANGE_EMAIL_ACTION, oob_response.action)
+        self.assertEquals(self.email, oob_response.email)
+        self.assertEquals(self.new_email, oob_response.new_email)
+        self.assertEquals(self.oob_code, oob_response.oob_code)
+        self.assertEquals(self.oob_link, oob_response.oob_link)
+        self.assertEquals(
+            {'success': self.response_body_success}, oob_response.response_body)
+
+    def test_match_on_match(self):
+        match, errors = gitkit.OobChangeEmailResponse.match(
+            self._make_oob_change_email_gitkit_response())
+
+        self.assertTrue(match)
+        self.assertIsNone(errors)
+
+    def test_match_on_mismatch(self):
+        match, errors = gitkit.OobChangeEmailResponse.match(
+            self._make_oob_reset_password_gitkit_response())
+
+        self.assertFalse(match)
+        self.assertEquals(
+            ('Expected: "action, email, new_email, oob_code, oob_link, '
+             'response_body", '
+             'got: "action, email, oob_code, oob_link, response_body"'), errors)
+
+
+class OobFailureResponseTest(_TestBase):
+
+    def test_make_raises_value_error_if_mismatch(self):
+        message = (
+            'Unable to create OobFailureResponse; error: Expected: '
+            '"response_body", got: ""')
+
+        with self.assertRaisesRegexp(ValueError, message):
+            gitkit.OobFailureResponse.make({})
+
+    def test_make_raises_value_error_if_response_body_is_none(self):
+        with self.assertRaisesRegexp(
+                ValueError,
+                'Unable to parse GITKit OOB response: response_body missing'):
+            gitkit.OobFailureResponse.make({'response_body': None})
+
+    def test_make_raises_value_error_if_response_body_unparseable(self):
+        with self.assertRaisesRegexp(
+                ValueError,
+                ('Unable to parse response_body from GITKit OOB response: got '
+                 '1')):
+            gitkit.OobFailureResponse.make({'response_body': 1})
+
+    def test_make_succeeds(self):
+        oob_response = gitkit.OobFailureResponse.make(
+            self._make_oob_failure_gitkit_response('error_message'))
+
+        self.assertTrue(isinstance(oob_response, gitkit.OobFailureResponse))
+        self.assertEquals(
+            {'error': 'error_message'}, oob_response.response_body)
+
+    def test_match_on_match(self):
+        match, errors = gitkit.OobFailureResponse.match(
+            self._make_oob_failure_gitkit_response('error_message'))
+
+        self.assertTrue(match)
+        self.assertIsNone(errors)
+
+    def test_match_on_mismatch(self):
+        match, errors = gitkit.OobFailureResponse.match({})
+
+        self.assertFalse(match)
+        self.assertEquals('Expected: "response_body", got: ""', errors)
+
+
+class OobResetPasswordResponseTest(_TestBase):
+
+    def test_make_raises_value_error_if_mismatch(self):
+        message = (
+            'Expected: "action, email, oob_code, oob_link, response_body", '
+            'got: ""')
+
+        with self.assertRaisesRegexp(ValueError, message):
+            gitkit.OobResetPasswordResponse.make({})
+
+    def test_make_raises_value_error_if_action_wrong(self):
+        gitkit_response = self._make_oob_reset_password_gitkit_response()
+        gitkit_response['action'] = 'unknown'
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                'Unable to parse reset password response with action: unknown'):
+            gitkit.OobResetPasswordResponse.make(gitkit_response)
+
+    def test_make_raises_value_error_if_response_body_is_none(self):
+        gitkit_response = self._make_oob_reset_password_gitkit_response()
+        gitkit_response['response_body'] = None
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                'Unable to parse GITKit OOB response: response_body missing'):
+            gitkit.OobResetPasswordResponse.make(gitkit_response)
+
+    def test_make_raises_value_error_if_response_body_unparseable(self):
+        gitkit_response = self._make_oob_reset_password_gitkit_response()
+        gitkit_response['response_body'] = 1
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                ('Unable to parse response_body from GITKit OOB response: got '
+                 '1')):
+            gitkit.OobResetPasswordResponse.make(gitkit_response)
+
+    def test_make_succeeds(self):
+        gitkit_response = self._make_oob_reset_password_gitkit_response()
+        oob_response = gitkit.OobResetPasswordResponse.make(gitkit_response)
+
+        self.assertTrue(
+            isinstance(oob_response, gitkit.OobResetPasswordResponse))
+        self.assertEquals(
+            gitkitclient.GitkitClient.RESET_PASSWORD_ACTION,
+            oob_response.action)
+        self.assertEquals(self.email, oob_response.email)
+        self.assertEquals(self.oob_code, oob_response.oob_code)
+        self.assertEquals(self.oob_link, oob_response.oob_link)
+        self.assertEquals(
+            {'success': self.response_body_success}, oob_response.response_body)
+
+    def test_match_on_match(self):
+        match, errors = gitkit.OobResetPasswordResponse.match(
+            self._make_oob_reset_password_gitkit_response())
+
+        self.assertTrue(match)
+        self.assertIsNone(errors)
+
+    def test_match_on_mismatch(self):
+        match, errors = gitkit.OobResetPasswordResponse.match(
+            self._make_oob_change_email_gitkit_response())
+
+        self.assertFalse(match)
+        self.assertEquals(
+            ('Expected: "action, email, oob_code, oob_link, response_body", '
+             'got: "action, email, new_email, oob_code, oob_link, '
+             'response_body"'), errors)
+
+
+class BaseHandlerTest(_TestBase):
+
+    def test_get_locale_defaults_if_no_header(self):
+        self.assertEquals(
+            gitkit._DEFAULT_TEMPLATE_LOCALE,
+            gitkit.BaseHandler._get_locale(None))
+        self.assertEquals(
+            gitkit._DEFAULT_TEMPLATE_LOCALE, gitkit.BaseHandler._get_locale(''))
+
+    def test_get_locale_takes_header_value(self):
+        self.assertEquals('foo', gitkit.BaseHandler._get_locale('foo;q=1'))
+
+    def test_get_locale_takes_highest_q_value_if_multiple_specified(self):
+        self.assertEquals(
+            'bar', gitkit.BaseHandler._get_locale('foo;q=0.5,bar;q=0.6'))
+
+
+class EmailRestHandlerTest(_TestBase):
+
+    def assert_emails_sent(
+            self, gitkit_oob_response, html_body_needle, text_body_needle,
+            subject_needle):
+        oob_response = gitkit.GitkitService._make_oob_response(
+            gitkit_oob_response)
+        messages = self.mail_stub.get_sent_messages(to=oob_response.email)
+
+        self.assertTrue(1, len(messages))
+
+        message = messages[0]
+
+        self.assertEquals(
+            'noreply@testbed-test.appspotmail.com', message.sender)
+        self.assertEquals(oob_response.email, message.to)
+
+        # Ideally we'd render the templates and compare against them, but
+        # rendering translation-aware templates outside a request is not
+        # straightforward. Probe for substrings (and the absence of gettext,
+        # indicating the render went through internationalization) instead.
+        self.assertNotIn('gettext', message.html.payload)
+        self.assertIn(html_body_needle, message.html.payload)
+        self.assertNotIn('gettext', message.body.payload)
+        self.assertIn(text_body_needle, message.body.payload)
+        self.assertNotIn('gettext', message.subject)
+        self.assertIn(subject_needle, message.subject)
+
+    def assert_failure_json_response(self, error_message, response):
+        self.assertEquals(200, response.status_code)
+        self.assert_json_headers_correct(response.headers)
+        self.assertEquals(
+            {'error': error_message}, transforms.loads(response.body))
+
+    def assert_json_headers_correct(self, headers):
+        self.assertEquals('attachment', headers.get('Content-Disposition'))
+        self.assertEquals(
+            'application/javascript; charset=utf-8',
+            headers.get('Content-Type'))
+        self.assertEquals('nosniff', headers.get('X-Content-Type-Options'))
+
+    def assert_success_json_response(self, response):
+        self.assertEquals(200, response.status_code)
+        self.assert_json_headers_correct(response.headers)
+        self.assertEquals({'success': True}, transforms.loads(response.body))
+
+    def test_returns_failure_json_if_get_oob_response_is_failure_response(self):
+        service = self._get_gitkit_service(
+            self._make_oob_failure_gitkit_response('payload from gitkit'))
+
+        with _Environment(self.config_yaml, self.properties, service=service):
+            response = self.testapp.post(gitkit._EMAIL_URL)
+
+            self.assert_failure_json_response('payload from gitkit', response)
+
+    def test_returns_failure_json_if_get_oob_response_rpc_fails(self):
+        service = self._get_gitkit_service(ValueError('Some GITKit problem'))
+
+        with _Environment(self.config_yaml, self.properties, service=service):
+            response = self.testapp.post(gitkit._EMAIL_URL)
+
+            self.assert_failure_json_response('Communication error', response)
+            self.assertLogContains(
+                'Error getting OOB response from GITKit: Some GITKit problem')
+
+    def test_returns_failure_json_if_runtime_config_invalid(self):
+        self.config_yaml.pop(gitkit._CONFIG_YAML_ADMINS_NAME)
+
+        with _Environment(self.config_yaml, self.properties):
+            response = self.testapp.post(gitkit._EMAIL_URL)
+
+            self.assert_failure_json_response('Server misconfigured', response)
+            self.assertLogContains(
+                'RuntimeError: GITKit integration misconfigured')
+
+    def test_sends_mail_for_change_email_response(self):
+        change_email_response = self._make_oob_change_email_gitkit_response()
+        service = self._get_gitkit_service(change_email_response)
+        html_needle = (
+            '<p>An email change has been requested from test@example.com'
+            '\n  \n  to new_email@example.com.</p>')
+        text_needle = (
+            'An email change has been requested from test@example.com to '
+            'new_email@example.com.')
+        subject_needle = '(SAMPLE) Please confirm your email change'
+
+        with _Environment(self.config_yaml, self.properties, service=service):
+            response = self.testapp.post(gitkit._EMAIL_URL)
+            self.execute_all_deferred_tasks()
+
+            self.assert_success_json_response(response)
+            self.assert_emails_sent(
+                change_email_response, html_needle, text_needle, subject_needle)
+
+    def test_sends_mail_for_reset_password_response(self):
+        reset_password_response = (
+            self._make_oob_reset_password_gitkit_response())
+        service = self._get_gitkit_service(reset_password_response)
+        html_needle = (
+            '<p>A password change has been requested for test@example.com.</p>')
+        text_needle = (
+            'A password reset has been requested for test@example.com.')
+        subject_needle = '(SAMPLE) Password reset confirmation'
+
+        with _Environment(self.config_yaml, self.properties, service=service):
+            response = self.testapp.post(gitkit._EMAIL_URL)
+            self.execute_all_deferred_tasks()
+
+            self.assert_success_json_response(response)
+            self.assert_emails_sent(
+                reset_password_response, html_needle, text_needle,
+                subject_needle)
 
 
 class SignInContinueHandlerTest(_TestBase):
@@ -458,7 +872,8 @@ class SignInHandlerTest(_TestBase):
             response = self.testapp.get(gitkit._SIGN_IN_URL, expect_errors=True)
 
             self.assertEquals(500, response.status_code)
-            self.assertLogContains('GITKit integration misconfigured')
+            self.assertLogContains(
+                'RuntimeError: GITKit integration misconfigured')
 
 
 class RuntimeAndRuntimeConfigTest(_TestBase):

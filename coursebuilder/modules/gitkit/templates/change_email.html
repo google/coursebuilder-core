@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    {# I18N: Page title for the email confirmation HTML message, starting with
+             a parenthesized note that this is an example implementation. #}
+    <title>{{ gettext('(SAMPLE) Please confirm your email change') }}</title>
+  </head>
+  <body>
+
+  {# I18N: Page header text indicating that this is an example
+           implementation. #}
+  <h1>{{ gettext('SAMPLE') }}</h1>
+
+  {# II18N: sentence fragment beginning the message that an email address
+            has changed from one value to another. #}
+  <p>{{ gettext('An email change has been requested from') }} {{ email }}
+  {# I18N: sentence fragment connecting the old email address and the new email
+           address. #}
+  {{ gettext('to') }} {{ new_email }}.</p>
+  {# I18N: sentence fragment beginning the text of the sentence providing the
+           link for users to confirm email change. #}
+  <p>{{ gettext('Please visit') }}
+  <a href="{{ oob_link }}">{{ oob_link }}</a>
+  {# I18N: sentence fragment concluding the text of the sentence providing the
+           link for users to confirm email change. #}
+  {{ gettext('to confirm this change.') }}</p>
+
+  <hr />
+
+  {# I18N: message introducing the list of available diagnostic pieces of
+           information. #}
+  <p>{{ gettext('Diagnostic information:') }}</p>
+
+  <ul>
+    <li><strong>action</strong>: {{ action }}</li>
+    <li><strong>email</strong>: {{ email }}</li>
+    <li><strong>new_email</strong>: {{ new_email }}</li>
+    <li><strong>oob_code</strong>: {{ oob_code }}</li>
+    <li><strong>oob_link</strong>:
+        <a href="{{ oob_link }}">{{ oob_link }}</a></li>
+    <li><strong>response_body</strong>:<pre>{{ response_body }}</pre></li>
+  </ul>
+
+  </body>
+</html>

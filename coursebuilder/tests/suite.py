@@ -220,6 +220,9 @@ class AppEngineTestBase(FunctionalTestBase):
         self.task_dispatcher = task_queue.TaskQueueHandlerDispatcher(
             self.testapp, self.taskq)
 
+        # Handle for testing sent mail.
+        self.mail_stub = self.testbed.get_stub(testbed.MAIL_SERVICE_NAME)
+
     def tearDown(self):
         self.testbed.deactivate()
         super(AppEngineTestBase, self).tearDown()

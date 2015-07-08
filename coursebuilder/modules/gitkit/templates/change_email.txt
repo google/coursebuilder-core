@@ -1,0 +1,16 @@
+SAMPLE
+
+An email change has been requested from {{ email }} to {{ new_email }}.
+
+Please visit {{ oob_link|safe }} to confirm this change.
+
+--
+
+Diagnostic information:
+
+  * action: {{ action }}
+  * email: {{ email }}
+  * new_email: {{ new_email }}
+  * oob_code: {{ oob_code }}
+  * oob_link: {{ oob_link|safe }}
+  * response_body: {{ response_body }}
