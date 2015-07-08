@@ -356,8 +356,12 @@ class Registry(object):
         name = item.key().name()
         target = cls.registered.get(name, None)
         if not target:
-            logging.warning(
-                'Property is not registered (skipped): %s', name)
+            if appengine_config.MODULE_REGISTRATION_IN_PROGRESS:
+                log_level = logging.INFO
+            else:
+                log_level = logging.WARNING
+            logging.log(log_level, 'Property is not registered (skipped): %s',
+                        name)
             return
 
         if item.is_draft:

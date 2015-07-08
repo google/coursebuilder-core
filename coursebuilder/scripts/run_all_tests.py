@@ -60,6 +60,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_analytics.MapReduceSimpleTest': 1,
     'tests.functional.model_analytics.ProgressAnalyticsTest': 9,
     'tests.functional.model_analytics.QuestionAnalyticsTest': 3,
+    'tests.functional.model_config.ValueLoadingTests': 2,
     'tests.functional.model_courses.CourseCachingTest': 5,
     'tests.functional.model_data_sources.PaginatedTableTest': 17,
     'tests.functional.model_data_sources.PiiExportTest': 4,

@@ -256,16 +256,20 @@ class TestBase(suite.AppEngineTestBase):
 
         self._log = cStringIO.StringIO()
         self._stream_handler = logging.StreamHandler(self._log)
+        self._stream_handler.setFormatter(
+            logging.Formatter(fmt='%(levelname)s: %(message)s'))
         self._logger = logging.getLogger()
         self._logger.addHandler(self._stream_handler)
+        self._logger.setLevel(logging.NOTSET)  # Log all messages.
 
     def tearDown(self):
         self.assert_default_namespace()
         sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = self.auto_deploy
-        super(TestBase, self).tearDown()
 
         self._logger.removeHandler(self._stream_handler)
         self._log.close()
+
+        super(TestBase, self).tearDown()
 
     def assertLogContains(self, message):
         self.assertIn(message, self._log.getvalue())

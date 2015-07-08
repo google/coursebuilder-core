@@ -137,7 +137,10 @@ class AuthInterceptorAndRequestHooksTest(TestBase):
     def test_request_context_hooks_bracket_request_methods(self):
         self.testapp.get('/')
 
-        self.assertLogContains('In __enter__\nIn get\nIn __exit__')
+        self.assertLogContains(
+            'WARNING: In __enter__\n'
+            'WARNING: In get\n'
+            'WARNING: In __exit__\n')
 
     def test_requests_raise_descriptive_exception_if_users_service_unset(self):
         users.UsersServiceManager.set(None)

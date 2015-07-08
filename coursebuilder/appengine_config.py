@@ -42,6 +42,12 @@ CODE_ROOT = BUNDLE_ROOT
 # Default namespace name is '' and not None.
 DEFAULT_NAMESPACE_NAME = ''
 
+# Flag to indicate whether module importation is in progress.  Some modules
+# and core items may wish to be a little flexible about warnings and
+# exceptions due to some, but not all, modules being imported yet at module
+# registration time.
+MODULE_REGISTRATION_IN_PROGRESS = False
+
 
 class _Library(object):
     """DDO that represents a Python library contained in a .zip file."""
@@ -156,9 +162,12 @@ def _import_and_enable_modules(env_var, reraise=False):
 
 
 def import_and_enable_modules():
+    global MODULE_REGISTRATION_IN_PROGRESS  # pylint: disable=global-statement
+    MODULE_REGISTRATION_IN_PROGRESS = True
     _import_and_enable_modules('GCB_REGISTERED_MODULES')
     _import_and_enable_modules('GCB_REGISTERED_MODULES_CUSTOM')
     _import_and_enable_modules('GCB_THIRD_PARTY_MODULES')
+    MODULE_REGISTRATION_IN_PROGRESS = False
 
 
 def time_delta_to_millis(delta):
