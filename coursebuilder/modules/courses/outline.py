@@ -26,7 +26,6 @@ from models import courses
 from models import custom_units
 from models import resources_display
 from modules.dashboard import dashboard
-from modules.dashboard import tabs
 from modules.dashboard import unit_lesson_editor
 from modules.dashboard import utils as dashboard_utils
 from tools import verify
@@ -281,11 +280,10 @@ def _get_outline(handler):
         'sections': sections,
         }
 
-    return template_values
+    handler.render_page(template_values)
 
 
 def on_module_enabled():
-    tabs.Registry.register(
-        'edit', 'outline', 'Outline', _get_outline, placement=1000)
     dashboard.DashboardHandler.add_custom_get_action(
-        'edit', _get_outline, is_default=True)
+        'outline', _get_outline, is_default=True)
+    dashboard.DashboardHandler.add_nav_mapping('outline', 'Outline')

@@ -28,7 +28,6 @@ from models import student_work
 from models import utils
 import models.review
 from modules.dashboard import dashboard
-from modules.dashboard import tabs
 from modules.review import dashboard as review_dashboard
 from modules.review import domain
 from modules.review import peer
@@ -1078,9 +1077,10 @@ def register_module():
         cron.ExpireOldAssignedReviewsHandler)]
 
     def notify_module_enabled():
-        tabs.Registry.register('settings', 'edit_assignment', 'Peer Review',
-            review_dashboard.get_edit_assignment, placement=6000)
-
+        dashboard.DashboardHandler.add_nav_mapping(
+            'edit_assignment', 'Peer Review')
+        dashboard.DashboardHandler.add_custom_get_action(
+            'edit_assignment', review_dashboard.get_edit_assignment)
         dashboard.DashboardHandler.add_custom_post_action(
             'add_reviewer', review_dashboard.post_add_reviewer)
         dashboard.DashboardHandler.add_custom_post_action(

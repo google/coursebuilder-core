@@ -1116,8 +1116,7 @@ class DashboardExtension(object):
             'data_pumps', 'Data Pumps', 'data_pump.html',
             data_source_classes=[DataPumpJobsDataSource])
         tabs.Registry.register('analytics', 'data_pump', 'Data Pump',
-                               analytics.TabRenderer([data_pump_visualization]),
-                               placement=9000)
+                               analytics.TabRenderer([data_pump_visualization]))
 
         def post_action(handler):
             cls(handler).post_data_pump()
@@ -1276,8 +1275,7 @@ def register_module():
         tabs.Registry.register(
             'settings', 'data_pump', 'Data Pump',
             lambda handler: settings.CourseSettingsHandler.show_settings_tab(
-                handler, DATA_PUMP_SETTINGS_SCHEMA_SECTION),
-            placement=7000)
+                handler, DATA_PUMP_SETTINGS_SCHEMA_SECTION))
         DashboardExtension.register()
 
     def on_module_disabled():

@@ -1019,7 +1019,7 @@ class GlobalAdminHandler(
 
         nav.append(safe_dom.Element(
             'a', href=self.URL, className='selected'
-        ).add_text('Administer Site'))
+        ).add_text('Site Admin'))
 
         nav.append(safe_dom.Element(
             'a',
@@ -1157,7 +1157,7 @@ def register_module():
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
-        'Administer Site',
+        'Site Admin',
         'A set of pages for Course Builder site administrator.',
         global_handlers, namespaced_handlers,
         notify_module_enabled=notify_module_enabled,

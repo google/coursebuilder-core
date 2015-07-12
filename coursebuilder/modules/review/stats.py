@@ -110,5 +110,4 @@ def register_analytic():
         name, title, 'stats.html',
         data_source_classes=[PeerReviewStatsSource])
     tabs.Registry.register('analytics', name, title,
-                           analytics.TabRenderer([peer_review]),
-                           placement=7000)
+                           analytics.TabRenderer([peer_review]))

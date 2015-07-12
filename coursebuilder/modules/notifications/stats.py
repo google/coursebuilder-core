@@ -141,5 +141,4 @@ def register_analytic():
         name, title, 'stats.html',
         data_source_classes=[NotificationsDataSource])
     tabs.Registry.register('analytics', name, title,
-                           analytics.TabRenderer([visualization]),
-                           placement=10000)
+                           analytics.TabRenderer([visualization]))

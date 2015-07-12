@@ -557,11 +557,13 @@ def _get_assets_contrib(handler, items, name, all_paths):
         for asset_lister in contrib_asset_listers:
             items.append(asset_lister(handler))
 
-def _get_tab_content(tab, handler, add_assets):
+def _get_assets(handler, add_assets):
     """Renders course assets view."""
 
     all_paths = handler.app_context.fs.list(
         sites.abspath(handler.app_context.get_home_folder(), '/'))
+    tab = tabs.Registry.get_tab(
+        'assets', handler.request.get('tab') or 'questions')
     items = safe_dom.NodeList()
     add_assets(handler, items, tab.name, all_paths)
     title_text = 'Assets > %s' % tab.title
@@ -571,49 +573,27 @@ def _get_tab_content(tab, handler, add_assets):
     }
     return template_values
 
-def _get_style_tab(handler, add_assets):
-    tab = tabs.Registry.get_tab(
-        'style', handler.request.get('tab') or 'css')
-    return _get_tab_content(tab, handler, add_assets)
-
-def _get_edit_tab(handler, add_assets):
-    tab = tabs.Registry.get_tab(
-        'edit', handler.request.get('tab') or 'questions')
-    return _get_tab_content(tab, handler, add_assets)
-
 def on_module_enabled():
-    tabs.Registry.register('edit', 'questions', 'Questions',
-                           lambda h: _get_edit_tab(h, _get_assets_questions),
-                           placement=2000)
-    tabs.Registry.register('edit', 'images', 'Images & Documents',
-                           lambda h: _get_edit_tab(h, _get_assets_images),
-                           placement=6000)
-    tabs.Registry.register('edit', 'labels', 'Labels',
-                           lambda h: _get_edit_tab(h, _get_assets_labels),
-                           placement=7000)
+    tabs.Registry.register('assets', 'questions', 'Questions',
+                           lambda h: _get_assets(h, _get_assets_questions))
+    tabs.Registry.register('assets', 'labels', 'Labels',
+                           lambda h: _get_assets(h, _get_assets_labels))
+    tabs.Registry.register('assets', 'assessments', 'Assessments',
+                           lambda h: _get_assets(h, _get_assets_assessments))
+    tabs.Registry.register('assets', 'activities', 'Activities',
+                           lambda h: _get_assets(h, _get_assets_activities))
+    tabs.Registry.register('assets', 'images', 'Images & Documents',
+                           lambda h: _get_assets(h, _get_assets_images))
+    tabs.Registry.register('assets', 'css', 'CSS',
+                           lambda h: _get_assets(h, _get_assets_css))
+    tabs.Registry.register('assets', 'js', 'JavaScript',
+                           lambda h: _get_assets(h, _get_assets_js))
+    tabs.Registry.register('assets', 'html', 'HTML',
+                           lambda h: _get_assets(h, _get_assets_html))
+    tabs.Registry.register('assets', 'templates', 'Templates',
+                           lambda h: _get_assets(h, _get_assets_templates))
+    tabs.Registry.register('assets', 'contrib', 'Extensions',
+                           lambda h: _get_assets(h, _get_assets_contrib))
 
-    # These tabs only show up if your schema is old
-    tabs.Registry.register('edit', 'assessments', 'Assessments',
-                           lambda h: _get_edit_tab(h, _get_assets_assessments))
-    tabs.Registry.register('edit', 'activities', 'Activities',
-                           lambda h: _get_edit_tab(h, _get_assets_activities))
-
-    dashboard.DashboardHandler.add_nav_mapping('style', 'Style', placement=3000)
-    dashboard.DashboardHandler.add_custom_get_action('style', _get_style_tab)
-
-    tabs.Registry.register('style', 'css', 'CSS',
-                           lambda h: _get_style_tab(h, _get_assets_css),
-                           placement=1000)
-    tabs.Registry.register('style', 'js', 'JavaScript',
-                           lambda h: _get_style_tab(h, _get_assets_js),
-                           placement=2000)
-    tabs.Registry.register('style', 'html', 'HTML',
-                           lambda h: _get_style_tab(h, _get_assets_html),
-                           placement=3000)
-    tabs.Registry.register('style', 'templates', 'Templates',
-                           lambda h: _get_style_tab(h, _get_assets_templates),
-                           placement=4000)
-    tabs.Registry.register('style', 'contrib', 'Extensions',
-                           lambda h: _get_style_tab(h, _get_assets_contrib),
-                           placement=5000)
-
+    dashboard.DashboardHandler.add_custom_get_action('assets', _get_assets)
+    dashboard.DashboardHandler.add_nav_mapping('assets', 'Assets')

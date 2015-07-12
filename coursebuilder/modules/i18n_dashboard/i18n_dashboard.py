@@ -59,7 +59,6 @@ from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from modules.dashboard import dashboard
-from modules.dashboard import tabs
 from modules.dashboard import unit_lesson_editor
 from modules.oeditor import oeditor
 from tools import verify
@@ -2856,9 +2855,8 @@ def notify_module_enabled():
     TranslatableResourceRegistry.register(TranslatableResourceQuestionGroups)
     TranslatableResourceRegistry.register(TranslatableResourceHtmlHooks)
 
-    tabs.Registry.register('edit', 'translations', 'Translations',
-        lambda h: I18nDashboardHandler(h).render(), placement=9000)
-
+    dashboard.DashboardHandler.add_nav_mapping(
+        I18nDashboardHandler.ACTION, 'I18N')
     dashboard.DashboardHandler.add_external_permission(
         ACCESS_PERMISSION, ACCESS_PERMISSION_DESCRIPTION)
     roles.Roles.register_permissions(

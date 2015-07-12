@@ -309,7 +309,7 @@ class DashboardPage(PageObject):
         return self
 
     def click_admin(self):
-        self.find_element_by_link_text('Administer Site').click()
+        self.find_element_by_link_text('Site Admin').click()
         return AdminPage(self._tester)
 
     def click_import(self):
@@ -343,12 +343,8 @@ class DashboardPage(PageObject):
             'div.row.lesson a.md-mode-edit', index=lesson_index).click()
         return AddLesson(self._tester, expected_message='')
 
-    def click_style(self):
-        self.find_element_by_link_text('Style').click()
-        return AssetsPage(self._tester)
-
-    def click_edit(self):
-        self.find_element_by_link_text('Edit').click()
+    def click_assets(self):
+        self.find_element_by_link_text('Assets').click()
         return AssetsPage(self._tester)
 
     def click_settings(self):
@@ -365,7 +361,7 @@ class DashboardPage(PageObject):
         return LessonPage(self._tester)
 
     def click_analytics(self, name):
-        self.find_element_by_link_text('Analyze').click()
+        self.find_element_by_link_text('Analytics').click()
         self.find_element_by_link_text(name).click()
         return AnalyticsPage(self._tester)
 
@@ -375,8 +371,7 @@ class DashboardPage(PageObject):
         return RootPage(self._tester)
 
     def click_i18n(self):
-        self.find_element_by_link_text('Edit').click()
-        self.find_element_by_link_text('Translations').click()
+        self.find_element_by_link_text('I18N').click()
         return self
 
 

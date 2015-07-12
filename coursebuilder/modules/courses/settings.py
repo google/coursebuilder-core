@@ -115,8 +115,8 @@ class CourseSettingsHandler(object):
             })
 
     @staticmethod
-    def show_settings_tab(handler, section_names, tab_group='settings'):
-        tab = tabs.Registry.get_tab(tab_group,
+    def show_settings_tab(handler, section_names):
+        tab = tabs.Registry.get_tab('settings',
                                     handler.request.get('tab') or 'course')
         template_values = {
             'page_title': handler.format_title('Settings > %s' % tab.title),
@@ -593,33 +593,25 @@ def on_module_enabled():
     # Default item in tab group should be dead first in list for good UX.
     tabs.Registry.register(
         'settings', 'course', 'Course',
-        (lambda h: CourseSettingsHandler.show_settings_tab(h, 'course')),
-        placement=1000)
+        lambda h: CourseSettingsHandler.show_settings_tab(h, 'course'),
+        placement=tabs.Placement.BEGINNING)
     tabs.Registry.register(
-        'settings', 'units', 'Units and Lessons',
-        (lambda h: CourseSettingsHandler.show_settings_tab(
-            h, 'unit,assessment')),
-        placement=2000)
+        'settings', 'homepage', 'Homepage',
+        lambda h: CourseSettingsHandler.show_settings_tab(h, 'homepage'))
     # TODO(jorr): Remove the dependency on the invitations module in this line
     tabs.Registry.register(
         'settings', 'registration', 'Registration',
-        (lambda h: CourseSettingsHandler.show_settings_tab(
-            h, 'registration,invitation')),
-        placement=3000)
+        lambda h: CourseSettingsHandler.show_settings_tab(
+            h, 'registration,invitation'))
     tabs.Registry.register(
-        'settings', 'i18n', 'Translations',
-        (lambda h: CourseSettingsHandler.show_settings_tab(h, 'i18n')),
-        placement=5000)
-
+        'settings', 'units', 'Units and Lessons',
+        lambda h: CourseSettingsHandler.show_settings_tab(h, 'unit,assessment'))
+    tabs.Registry.register(
+        'settings', 'i18n', 'I18N',
+        lambda h: CourseSettingsHandler.show_settings_tab(h, 'i18n'))
     tabs.Registry.register(
         'settings', 'advanced', 'Advanced',
-        _get_settings_advanced, placement=10000)
+        _get_settings_advanced, placement=tabs.Placement.END)
     tabs.Registry.register(
         'settings', 'about', 'About',
-        _get_about_course, placement=11000)
-
-    tabs.Registry.register(
-        'edit', 'homepage', 'Homepage',
-        (lambda h: CourseSettingsHandler.show_settings_tab(
-            h, 'homepage', tab_group='edit')),
-        placement=3000)
+        _get_about_course, placement=tabs.Placement.END)

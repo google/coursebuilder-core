@@ -877,8 +877,7 @@ def submit_review(
 def add_reviewer(browser, unit_id, reviewee_email, reviewer_email):
     """Adds a reviewer to a submission."""
     url_params = {
-        'action': 'settings',
-        'tab': 'edit_assignment',
+        'action': 'edit_assignment',
         'reviewee_id': reviewee_email,
         'unit_id': unit_id,
     }

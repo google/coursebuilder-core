@@ -1060,13 +1060,13 @@ class SkillRestHandler(utils.BaseRESTHandler):
 
 class SkillMapHandler(dashboard.DashboardHandler):
 
+    ACTION = 'skill_map'
+
     URL = '/modules/skill_map'
 
-    def get(self):
-        if not self.can_view('skill_map'):
-            self.redirect(self.app_context.get_slug())
-            return
+    NAV_BAR_TAB = 'Skill Map'
 
+    def get_skill_map(self):
         self.course = courses.Course(self)
         if not self.course.app_context.is_editable_fs():
             self.render_page({
@@ -1096,8 +1096,7 @@ class SkillMapHandler(dashboard.DashboardHandler):
 
         self.render_page({
             'page_title': self.format_title('Skills Table'),
-            'main_content': jinja2.utils.Markup(main_content),
-        }, in_action='edit')
+            'main_content': jinja2.utils.Markup(main_content)})
 
     def get_dependency_graph(self):
         skill_map = SkillMap.load(self.course)
@@ -1120,8 +1119,8 @@ class SkillMapHandler(dashboard.DashboardHandler):
             'dependency_graph.html', [TEMPLATES_DIR]).render(template_values)
         self.render_page({
             'page_title': self.format_title('Dependencies Graph'),
-            'main_content': jinja2.utils.Markup(main_content),
-        }, in_action='edit')
+            'main_content': jinja2.utils.Markup(main_content)
+        })
 
 
 class SkillCompletionAggregate(models.BaseEntity):
@@ -1546,13 +1545,11 @@ def post_update_progress(course, student, lprogress, event_entity, event_key):
 
 def register_tabs():
     tabs.Registry.register(
-        'edit', 'skills_table', 'Skills Table',
-        href='modules/skill_map?action=edit&tab=skills_table',
-        placement=4000)
+        'skill_map', 'skills_table', 'Skills Table',
+        href='modules/skill_map?action=skill_map&tab=skills_table')
     tabs.Registry.register(
-        'edit', 'dependency_graph', 'Skills Graph',
-        href='modules/skill_map?action=edit&tab=dependency_graph',
-        placement=4500)
+        'skill_map', 'dependency_graph', 'Skills Graph',
+        href='modules/skill_map?action=skill_map&tab=dependency_graph')
 
     skill_map_visualization = analytics.Visualization(
         'skill_map',
@@ -1560,8 +1557,7 @@ def register_tabs():
         'templates/skill_map_analytics.html',
         data_source_classes=[SkillMapDataSource])
     tabs.Registry.register('analytics', 'skill_map', 'Skill Map',
-                           analytics.TabRenderer([skill_map_visualization]),
-                           placement=4000)
+                           analytics.TabRenderer([skill_map_visualization]))
 
 
 def lesson_rest_handler_schema_load_hook(lesson_field_registry):
@@ -1797,9 +1793,16 @@ def skills_progress_provider(handler, app_context, student):
 
 
 def notify_module_enabled():
+    def get_action(handler):
+        handler.redirect('/modules/skill_map?action=skill_map&tab=skills_table')
+
     outline.COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS.append(
         course_outline_extra_info_decorator)
     outline.COURSE_OUTLINE_EXTRA_INFO_TITLES.append('Skills')
+    dashboard.DashboardHandler.add_nav_mapping(
+        SkillMapHandler.ACTION, SkillMapHandler.NAV_BAR_TAB)
+    dashboard.DashboardHandler.get_actions.append('skill_map')
+    setattr(dashboard.DashboardHandler, 'get_skill_map', get_action)
     dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
         '/modules/skill_map/resources/css/common.css')
     dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(

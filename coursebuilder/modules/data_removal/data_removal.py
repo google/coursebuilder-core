@@ -559,8 +559,7 @@ def register_module():
         tabs.Registry.register(
             'settings', DATA_REMOVAL_SETTINGS_SECTION, 'Data Removal',
             lambda handler: settings.CourseSettingsHandler.show_settings_tab(
-                handler, DATA_REMOVAL_SETTINGS_SECTION),
-            placement=8000)
+                handler, DATA_REMOVAL_SETTINGS_SECTION))
 
         # Register available cleanup policies.
         DataRemovalPolicyRegistry.register(IndefiniteRetentionPolicy)

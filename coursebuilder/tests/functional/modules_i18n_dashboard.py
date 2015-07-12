@@ -3844,8 +3844,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                 _profile('sample/admin', 'Admin home')
                 _profile('sample/admin?action=settings', 'Settings')
                 _profile('sample/dashboard', 'Dashboard', quota=(150, 60))
-                _profile('sample/dashboard?action=edit&tab=questions',
-                    'Questions')
+                _profile('sample/dashboard?action=assets', 'Questions')
                 _profile(
                     'sample/dashboard?action=i18n_dashboard', 'I18N Dashboard')
                 _profile('sample/dashboard?action=i18n_download', 'I18N Export')

@@ -415,13 +415,12 @@ class CertificatesEarnedDataSource(data_sources.SynchronousQuery):
 def register_analytic():
     data_sources.Registry.register(CertificatesEarnedDataSource)
     name = 'certificates_earned'
-    title = 'Certificates'
+    title = 'Certificates Earned'
     certificates_earned = analytics.Visualization(
         name, title, 'certificates_earned.html',
         data_source_classes=[CertificatesEarnedDataSource])
     tabs.Registry.register('analytics', name, title,
-                           analytics.TabRenderer([certificates_earned]),
-                           placement=6000)
+                           analytics.TabRenderer([certificates_earned]))
 
 
 class CertificateAggregator(

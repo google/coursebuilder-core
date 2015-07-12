@@ -103,26 +103,22 @@ def register_tabs():
                                labels_on_students,
                                student_progress,
                                enrollment_assessment]),
-                           placement=1000)
+                           placement=tabs.Placement.BEGINNING)
     tabs.Registry.register(ANALYTICS, 'questions', 'Questions',
                            analytics.TabRenderer([
                                multiple_choice_question,
                                question_answers]),
-                           placement=2000)
+                           placement=tabs.Placement.BEGINNING)
     tabs.Registry.register(ANALYTICS, 'assessments', 'Assessments',
-                           analytics.TabRenderer([assessment_difficulty]),
-                           placement=3000)
+                           analytics.TabRenderer([assessment_difficulty]))
     tabs.Registry.register(ANALYTICS, 'gradebook', 'Gradebook',
-                           analytics.TabRenderer([gradebook]),
-                           placement=5000)
+                           analytics.TabRenderer([gradebook]))
     tabs.Registry.register(ANALYTICS, 'clustering', 'Clustering',
                            analytics.TabRenderer([
                                clusters_visualization,
                                student_vectors_visualization,
-                               stats_visualization]),
-                           placement=8000)
-    dashboard.DashboardHandler.add_nav_mapping(
-        ANALYTICS, 'Analyze', placement=2000)
+                               stats_visualization]))
+    dashboard.DashboardHandler.add_nav_mapping(ANALYTICS, 'Analytics')
 
 
 def add_actions():

@@ -26,6 +26,7 @@ from common import utils as common_utils
 from controllers import sites
 from models import courses
 from models import resources_display
+from models import custom_modules
 from models import models
 from models import transforms
 from modules.announcements import announcements
@@ -41,6 +42,13 @@ from google.appengine.api import namespace_manager
 class SearchTest(search_unit_test.SearchTestBase):
     """Tests the search module."""
 
+
+    @classmethod
+    def enable_module(cls):
+        custom_modules.Registry.registered_modules[
+            search.MODULE_NAME].enable()
+        assert search.custom_module.enabled
+
     @classmethod
     def get_xsrf_token(cls, body, form_name):
         match = re.search(form_name + r'.+[\n\r].+value="([^"]+)"', body)
@@ -50,7 +58,7 @@ class SearchTest(search_unit_test.SearchTestBase):
     def index_test_course(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('/test/dashboard?action=settings&tab=search')
+        response = self.get('/test/dashboard?action=search')
         index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
         response = self.post('/test/dashboard?action=index_course',
                              {'xsrf_token': index_token})
@@ -58,7 +66,7 @@ class SearchTest(search_unit_test.SearchTestBase):
 
     def setUp(self):
         super(SearchTest, self).setUp()
-        assert search.custom_module.enabled
+        self.enable_module()
 
         self.logged_error = ''
         def error_report(string, *args, **unused_kwargs):
@@ -75,7 +83,7 @@ class SearchTest(search_unit_test.SearchTestBase):
         response = self.get('/search?query=lorem')
         self.assertEqual(response.status_code, 200)
 
-        response = self.get('dashboard?action=settings&tab=search')
+        response = self.get('dashboard?action=search')
         self.assertIn('Google &gt; Dashboard &gt; Search', response.body)
         self.assertIn('Index Course', response.body)
         self.assertIn('Clear Index', response.body)
@@ -84,7 +92,7 @@ class SearchTest(search_unit_test.SearchTestBase):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
 
-        response = self.get('dashboard?action=settings&tab=search')
+        response = self.get('dashboard?action=search')
 
         index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
         clear_token = self.get_xsrf_token(response.body, 'gcb-clear-index')
@@ -108,7 +116,7 @@ class SearchTest(search_unit_test.SearchTestBase):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
 
-        response = self.get('dashboard?action=settings&tab=search')
+        response = self.get('dashboard?action=search')
         index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
         clear_token = self.get_xsrf_token(response.body, 'gcb-clear-index')
         response = self.post('dashboard?action=index_course',
@@ -289,7 +297,7 @@ class SearchTest(search_unit_test.SearchTestBase):
             'html': 'Standing beneath this serene sky, overlooking these',
             })
 
-        response = self.get('dashboard?action=settings&tab=search')
+        response = self.get('dashboard?action=search')
         index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
         response = self.post('dashboard?action=index_course',
                              {'xsrf_token': index_token})
