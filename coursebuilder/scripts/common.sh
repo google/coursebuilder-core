@@ -65,10 +65,10 @@ echo Using GAE from $GOOGLE_APP_ENGINE_HOME
 if [ ! -d "$GOOGLE_APP_ENGINE_HOME" ]; then
   echo Installing GAE
   mkdir -p $RUNTIME_HOME
-  curl --location --silent https://storage.googleapis.com/appengine-sdks/deprecated/1917/google_appengine_1.9.17.zip -o google_appengine_1.9.17.zip
-  unzip google_appengine_1.9.17.zip -d $RUNTIME_HOME/
+  curl --location --silent https://storage.googleapis.com/appengine-sdks/deprecated/1921/google_appengine_1.9.21.zip -o google_appengine_1.9.21.zip
+  unzip google_appengine_1.9.21.zip -d $RUNTIME_HOME/
   mv $RUNTIME_HOME/google_appengine $GOOGLE_APP_ENGINE_HOME
-  rm google_appengine_1.9.17.zip
+  rm google_appengine_1.9.21.zip
 fi
 
 function need_install() {
