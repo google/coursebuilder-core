@@ -99,7 +99,6 @@ PRODUCT_NAME = 'coursebuilder'
 # keep in sync with the same value in controllers/sites.py
 GCB_HANDLER_CLASS_HEADER_NAME = 'gcb-handler-class'
 
-
 # a lists of tests URL's that can be served statically or dynamically
 STATIC_SERV_URLS = [
     ('/modules/oeditor/_static/js/butterbar.js', None),  # always static
@@ -1319,10 +1318,13 @@ def _prepare_filesystem(
 
     remove_dir(build_dir_name)
     shutil.copytree(source_dir_name, build_dir_name, symlinks=True)
+    shell_env = _get_config_sh_shell_env()
 
     if deep_clean:
         dirs_to_remove = [
-            os.path.join(os.path.expanduser("~"), 'coursebuilder_resources'),
+            os.path.join(
+                os.path.expanduser("~"),
+                _get_coursebuilder_resources_path(shell_env)),
             os.path.join(build_dir_name, 'lib')
             ]
         log('Deep cleaning %s' % ', '.join(dirs_to_remove))
@@ -1442,6 +1444,26 @@ def _test_and_release(parsed_args):
     return _do_a_release(
         os.path.abspath(os.path.join(os.path.dirname(__file__), '..')),
         os.getcwd(), release_label)
+
+
+def _get_config_sh_shell_env():
+    config_sh = os.path.join(os.path.dirname(__file__), 'config.sh')
+    output = subprocess.check_output(
+        'source %s; env -0' % config_sh, executable='/bin/bash', shell=True)
+
+    env = {}
+    for line in output.split('\0'):
+        parts = line.split('=')
+        env[parts[0]] = parts[-1]
+
+    return env
+
+
+def _get_coursebuilder_resources_path(shell_env):
+    coursebuilder_resources_path = shell_env.get('COURSEBUILDER_RESOURCES')
+    assert coursebuilder_resources_path
+
+    return coursebuilder_resources_path
 
 
 def main():

@@ -8,12 +8,17 @@
 
 # Paths for project source and Google App Engine SDK
 export SOURCE_DIR="$( cd "$( dirname "${BASH_ARGV[0]}" )" && cd .. && pwd )"
+export PRODUCT_VERSION=`cat $SOURCE_DIR/app.yaml | \
+    grep GCB_PRODUCT_VERSION | \
+    awk -F ':' '{print $2}' | \
+    tr -d "'"`
+export _VERSION_SUFFIX=`echo $PRODUCT_VERSION | sed 's/\./_/g'`
 export COURSEBUILDER_HOME=$SOURCE_DIR
 export TOOLS_DIR=$SOURCE_DIR/tools
 export SCRIPTS_DIR=$SOURCE_DIR/scripts
 export INTERNAL_SCRIPTS_DIR=$SOURCE_DIR/internal/scripts
 export DISTRIBUTED_LIBS_DIR=$SOURCE_DIR/lib
-export COURSEBUILDER_RESOURCES=~/coursebuilder_resources
+export COURSEBUILDER_RESOURCES=~/coursebuilder_resources_$_VERSION_SUFFIX
 export MODULES_HOME=$COURSEBUILDER_RESOURCES/modules
 export RUNTIME_HOME=$COURSEBUILDER_RESOURCES/runtime
 export RELEASE_HOME=$COURSEBUILDER_RESOURCES/releases

@@ -265,7 +265,7 @@ def _download_if_needed(name, location, module_install_dir):
             location = '/' + location
         # Location may be relative, and if so, is relative to CB dir from
         # which we are running modules.sh.  Make absolute so it will also
-        # work when softlinked at $HOME/coursebuilder_resources/modules
+        # work when softlinked at $HOME/$COURSEBUILDER_RESOURCES/modules
         location = os.path.abspath(location)
         _run_process(['ln', '--symbolic', location, module_install_dir])
     else:

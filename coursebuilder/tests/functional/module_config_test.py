@@ -286,7 +286,8 @@ class ModuleIncorporationTest(TestWithTempDir):
         self.scripts_dir = os.path.join(self.cb_dir, 'scripts')
         self.lib_dir = os.path.join(self.cb_dir, 'lib')
         self.modules_dir = os.path.join(self._tmpdir,
-                                        'coursebuilder_resources', 'modules')
+                                        self._get_resources_path_fragment(),
+                                        'modules')
         for dirname in (self.foo_dir, self.foo_src_dir, self.foo_scripts_dir,
                         self.bar_dir, self.bar_src_dir, self.bar_scripts_dir,
                         self.cb_dir, self.scripts_dir, self.lib_dir,
@@ -385,6 +386,10 @@ class ModuleIncorporationTest(TestWithTempDir):
         ret = self.log_stream.getvalue()
         self.log_stream.reset()
         return ret
+
+    def _get_resources_path_fragment(self):
+        return 'coursebuilder_resources_%s' % (
+            os.environ['GCB_PRODUCT_VERSION'].replace('.', '_'))
 
     def _expect_logs(self, expected_lines):
         actual_lines = self._get_log().split('\n')

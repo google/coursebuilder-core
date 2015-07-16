@@ -56,13 +56,9 @@ _PARSER.add_argument(
     '--test_class_name',
     help='optional dotted module name of the test(s) to run', type=str)
 
-# Base filesystem location for test data.
-if 'COURSEBUILDER_RESOURCES' in os.environ:
-    TEST_DATA_BASE = os.path.join(
-        os.environ['COURSEBUILDER_RESOURCES'], 'test-data/')
-else:
-    TEST_DATA_BASE = os.path.join(
-        os.environ['HOME'], 'coursebuilder_resources/test-data/')
+# Direct key access so we'll throw if os.environ is misconfigured.
+TEST_DATA_BASE = os.path.join(
+    os.environ['COURSEBUILDER_RESOURCES'], 'test-data')
 
 
 def empty_environ():

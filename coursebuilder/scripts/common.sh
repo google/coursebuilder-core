@@ -29,7 +29,7 @@ else
   exit -1
 fi
 
-# Ensure that ~/coursebuilder_resources is available to write
+# Ensure that $COURSEBUILDER_RESOURCES is available to write
 if [[ -e $COURSEBUILDER_RESOURCES && \
     ( ! -d $COURSEBUILDER_RESOURCES || ! -w $COURSEBUILDER_RESOURCES ) ]]; then
   echo ERROR: These scripts need to be able to create or write to a folder
