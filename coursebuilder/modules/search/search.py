@@ -405,7 +405,7 @@ def _get_search(handler):
         'search_dashboard.html', [os.path.dirname(__file__)]
         ).render(mc_template_value, autoescape=True))
 
-    handler.render_page(template_values)
+    return template_values
 
 def _post_index_course(handler):
     """Submits a new indexing operation."""
@@ -416,7 +416,7 @@ def _post_index_course(handler):
     except db.TransactionFailedError:
         # Double submission from multiple browsers, just pass
         pass
-    handler.redirect('/dashboard?action=search')
+    handler.redirect('/dashboard?action=settings_search')
 
 def _post_clear_index(handler):
     """Submits a new indexing operation."""
@@ -426,7 +426,7 @@ def _post_clear_index(handler):
     except db.TransactionFailedError:
         # Double submission from multiple browsers, just pass
         pass
-    handler.redirect('/dashboard?action=search')
+    handler.redirect('/dashboard?action=settings_search')
 
 
 class CronHandler(utils.BaseHandler):
@@ -559,8 +559,9 @@ def register_module():
     ]
 
     def notify_module_enabled():
-        dashboard.DashboardHandler.add_nav_mapping('search', 'Search')
-        dashboard.DashboardHandler.add_custom_get_action('search', _get_search)
+        dashboard.DashboardHandler.add_sub_nav_mapping(
+            'settings', 'search', 'Search', action='settings_search',
+            contents=_get_search, placement=4000)
         dashboard.DashboardHandler.add_custom_post_action(
             'index_course', _post_index_course)
         dashboard.DashboardHandler.add_custom_post_action(

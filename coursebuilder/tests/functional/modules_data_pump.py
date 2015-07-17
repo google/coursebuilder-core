@@ -135,7 +135,7 @@ class StudentSchemaValidationTests(actions.TestBase):
     def setUp(self):
         super(StudentSchemaValidationTests, self).setUp()
         self.app_context = actions.simple_add_course(
-            COURSE_NAME, ADMIN_EMAIL, 'Data Pump')
+            COURSE_NAME, ADMIN_EMAIL, 'Data pump')
         actions.login(USER_EMAIL, is_admin=False)
         actions.register(self, USER_NAME, COURSE_NAME)
         actions.login(ADMIN_EMAIL, is_admin=True)
@@ -173,7 +173,7 @@ class SchemaConversionTests(actions.TestBase):
         super(SchemaConversionTests, self).setUp()
         actions.login(ADMIN_EMAIL, is_admin=True)
         self.app_context = actions.simple_add_course(
-            COURSE_NAME, ADMIN_EMAIL, 'Data Pump')
+            COURSE_NAME, ADMIN_EMAIL, 'Data pump')
         data_sources.Registry.register(TrivialDataSource)
         self.job = data_pump.DataPumpJob(self.app_context,
                                          TrivialDataSource.__name__)
@@ -315,7 +315,7 @@ class PiiTests(actions.TestBase):
         super(PiiTests, self).setUp()
         actions.login(ADMIN_EMAIL, is_admin=True)
         self.app_context = actions.simple_add_course(
-            COURSE_NAME, ADMIN_EMAIL, 'Data Pump')
+            COURSE_NAME, ADMIN_EMAIL, 'Data pump')
         data_sources.Registry.register(TrivialDataSource)
         self.job = data_pump.DataPumpJob(self.app_context,
                                          TrivialDataSource.__name__)
@@ -515,7 +515,7 @@ class InteractionTests(actions.TestBase):
         super(InteractionTests, self).setUp()
         actions.login(ADMIN_EMAIL, is_admin=True)
         self.app_context = actions.simple_add_course(
-            COURSE_NAME, ADMIN_EMAIL, 'Data Pump')
+            COURSE_NAME, ADMIN_EMAIL, 'Data pump')
 
         # Configure data pump settings.
         course_settings = self.app_context.get_environ()
@@ -1184,7 +1184,7 @@ class BigQueryInteractionTests(InteractionTests):
 
 class UserInteractionTests(InteractionTests):
 
-    URL = '/data_pump/dashboard?action=analytics&tab=data_pump'
+    URL = '/data_pump/dashboard?action=analytics_data_pump'
 
     def test_no_data_pump_settings(self):
         course_settings = self.app_context.get_environ()

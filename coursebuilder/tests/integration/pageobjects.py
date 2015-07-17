@@ -159,11 +159,11 @@ class RootPage(PageObject):
 
         # deploy it
         LoginPage(self._tester).login('test@example.com', admin=True)
-        self.get(base_url + '/admin/global?tab=settings')
+        self.get(base_url + '/admin/global?action=settings')
         AdminSettingsPage(self._tester).click_override(
             'gcb_courses_config'
         ).set_status('Active').click_save()
-        self.get(base_url + '/admin/global?tab=courses')
+        self.get(base_url + '/admin/global?action=courses')
         self.find_element_by_link_text('Logout').click()
 
     def load(self, base_url):
@@ -309,7 +309,7 @@ class DashboardPage(PageObject):
         return self
 
     def click_admin(self):
-        self.find_element_by_link_text('Site Admin').click()
+        self.find_element_by_link_text('Site admin').click()
         return AdminPage(self._tester)
 
     def click_import(self):
@@ -343,8 +343,12 @@ class DashboardPage(PageObject):
             'div.row.lesson a.md-mode-edit', index=lesson_index).click()
         return AddLesson(self._tester, expected_message='')
 
-    def click_assets(self):
-        self.find_element_by_link_text('Assets').click()
+    def click_style(self):
+        self.find_element_by_link_text('Style').click()
+        return AssetsPage(self._tester)
+
+    def click_edit(self):
+        self.find_element_by_link_text('Edit').click()
         return AssetsPage(self._tester)
 
     def click_settings(self):
@@ -371,7 +375,8 @@ class DashboardPage(PageObject):
         return RootPage(self._tester)
 
     def click_i18n(self):
-        self.find_element_by_link_text('I18N').click()
+        self.find_element_by_link_text('Edit').click()
+        self.find_element_by_link_text('Translations').click()
         return self
 
 
@@ -1125,7 +1130,7 @@ class AdminPage(PageObject):
     def click_settings(self):
         sub_nav_bar = self._tester.driver.find_element_by_css_selector(
             '.gcb-nav-bar-level-2')
-        sub_nav_bar.find_element_by_link_text('Site Settings').click()
+        sub_nav_bar.find_element_by_link_text('Site settings').click()
         return AdminSettingsPage(self._tester)
 
 

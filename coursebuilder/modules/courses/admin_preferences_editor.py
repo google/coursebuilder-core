@@ -22,7 +22,6 @@ from models import models
 from models import roles
 from modules.dashboard import dashboard
 from modules.dashboard import dto_editor
-from modules.dashboard import tabs
 
 
 class AdminPreferencesEditor(dto_editor.BaseDatastoreAssetEditor):
@@ -106,7 +105,7 @@ def on_module_enabled():
         'admin_prefs', AdminPreferencesEditor.edit_admin_preferences)
 
     # Keep [Admin] Preferences, About, Advanced at very end of list.
-    tabs.Registry.register(
-        'settings', 'admin_prefs', 'Preferences',
-        AdminPreferencesEditor.edit_admin_preferences,
-        placement=tabs.Placement.END)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'settings', 'admin_prefs', 'Preferences', action='settings_admin_prefs',
+        contents=AdminPreferencesEditor.edit_admin_preferences,
+        placement=9000)

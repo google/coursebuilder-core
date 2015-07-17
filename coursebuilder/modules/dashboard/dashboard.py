@@ -59,11 +59,10 @@ from controllers.utils import ApplicationHandler
 from controllers.utils import CourseHandler
 from controllers.utils import ReflectiveRequestHandler
 from models import config
-from models import courses
 from models import custom_modules
 from models import roles
 from models.models import RoleDAO
-from modules.dashboard import tabs
+from common import menus
 from modules.oeditor import oeditor
 
 from google.appengine.api import app_identity
@@ -92,7 +91,7 @@ class DashboardHandler(
         'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
         'add_label', 'edit_label', 'question_preview',
-        'roles', 'add_role', 'edit_role', 'edit_custom_unit',
+        'add_role', 'edit_role', 'edit_custom_unit',
         'import_gift_questions', 'in_place_lesson_editor']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
@@ -139,51 +138,107 @@ class DashboardHandler(
     # Dictionary that maps actions to permissions
     _action_to_permission = {}
 
-    _custom_nav_mappings = collections.OrderedDict()
+    default_action = None
     _custom_get_actions = {}
-    _default_get_action = None
     _custom_post_actions = {}
 
-    @classmethod
-    def add_nav_mapping(cls, action, nav_title):
-        """Add a Nav mapping for Dashboard."""
-        cls._custom_nav_mappings[action] = nav_title
+    # Create top level menu groups which other modules can register against.
+    # I would do this in "register", but other modules register first.
+    actions_to_menu_items = {}
+    root_menu_group = menus.MenuGroup('dashboard', 'Dashboard')
 
     @classmethod
-    def get_nav_mappings(cls):
-        return cls._custom_nav_mappings.items()
+    def add_nav_mapping(cls, name, title, **kwargs):
+        """Create a top level nav item."""
+        group = cls.root_menu_group.get_child(name)
+        if group is None:
+            menu_cls = menus.MenuItem if kwargs.get('href') else menus.MenuGroup
+            menu_cls(name, title, group=cls.root_menu_group, **kwargs)
 
     @classmethod
     def get_nav_title(cls, action):
-        if action in cls._custom_nav_mappings:
-            return cls._custom_nav_mappings[action]
-        return None
+        item = cls.actions_to_menu_items.get(action)
+        if item:
+            return item.group.title + " > " + item.title
+        else:
+            return None
+
+    @classmethod
+    def has_action_permission(cls, app_context, action):
+        return roles.Roles.is_user_allowed(
+            app_context, custom_module,
+            cls._action_to_permission.get('get_%s' % action, ''))
+
+    @classmethod
+    def add_sub_nav_mapping(
+            cls, group_name, item_name, title, action=None, contents=None,
+            can_view=None, href=None, **kwargs):
+        """Create a second level nav item.
+
+        Args:
+            group_name: Name of an existing top level nav item to use as the
+                parent
+            item_name: A unique key for this item
+            title: Human-readable label
+            action: A unique operation ID for
+            contents: A handler which will be added as a custom get-action on
+                DashboardHandler
+
+        """
+
+        group = cls.root_menu_group.get_child(group_name)
+        if group is None:
+            logging.critical('The group %s does not exist', group_name)
+            return
+
+        item = group.get_child(item_name)
+        if item:
+            logging.critical(
+                'There is already a sub-menu item named "%s" registered in '
+                'group %s.', item_name, group_name)
+            return
+
+        if contents:
+            action = action or group_name + '_' + item_name
+
+        if action and not href:
+            href = "dashboard?action={}".format(action)
+
+        def combined_can_view(app_context):
+            if action and not cls.has_action_permission(
+                    app_context, action):
+                return False
+
+            if can_view and not can_view(app_context):
+                return False
+
+            return True
+
+        item = menus.MenuItem(
+            item_name, title, action=action, group=group,
+            can_view=combined_can_view, href=href, **kwargs)
+        cls.actions_to_menu_items[action] = item
+
+        if contents:
+            cls.add_custom_get_action(action, handler=contents)
 
     @classmethod
     def add_custom_get_action(cls, action, handler=None, in_action=None,
-                              overwrite=False, is_default=False):
+                              overwrite=False):
         if not action:
             logging.critical('Action not specified. Ignoring.')
             return
 
-        if is_default:
-            if cls._default_get_action:
-                raise ValueError(
-                    'Cannnot make action "%s" the default - %s already is.' %
-                    (action, cls._default_get_action))
-            cls._default_get_action = action
-
         if not handler:
-            tab_list = tabs.Registry.get_tab_group(action)
-            if not tab_list:
-                logging.critical('For action : ' + action +
-                    ' handler can not be null.')
-                return
+            logging.critical(
+                'For action : %s handler can not be null.', action)
+            return
 
         if ((action in cls._custom_get_actions or action in cls.get_actions)
             and not overwrite):
-            logging.critical('action : ' + action +
-                             ' already exists. Ignoring the custom get action.')
+            logging.critical(
+                'action : %s already exists. Ignoring the custom get action.',
+                action)
             return
 
         cls._custom_get_actions[action] = (handler, in_action)
@@ -201,8 +256,9 @@ class DashboardHandler(
 
         if ((action in cls._custom_post_actions or action in cls.post_actions)
             and not overwrite):
-            logging.critical('action : ' + action +
-                             ' already exists. Ignoring the custom get action.')
+            logging.critical(
+                'action : %s already exists. Ignoring the custom get action.',
+                action)
             return
 
         cls._custom_post_actions[action] = handler
@@ -219,34 +275,23 @@ class DashboardHandler(
 
     def can_view(self, action):
         """Checks if current user has viewing rights."""
-        return roles.Roles.is_user_allowed(
-            self.app_context, custom_module,
-            self._action_to_permission.get('get_%s' % action, '')
-        )
+        return self.has_action_permission(self.app_context, action)
 
     def can_edit(self):
         """Checks if current user has editing rights."""
         return roles.Roles.is_course_admin(self.app_context)
 
-    def get_default_tab_action(self):
-        return self._default_get_action
-
-    def _default_action_for_current_permissions(self):
+    def default_action_for_current_permissions(self):
         """Set the default or first active navigation tab as default action."""
-        action = self.get_default_tab_action()
-        if self.can_view(action):
-            return action
-        for nav in self.get_nav_mappings():
-            if self.can_view(nav[0]):
-                return nav[0]
-
-        return ''
+        item = self.root_menu_group.first_visible_item(self.app_context)
+        if item:
+            return item.action
 
     def get(self):
         """Enforces rights to all GET operations."""
         action = self.request.get('action')
         if not action:
-            self.default_action = self._default_action_for_current_permissions()
+            self.default_action = self.default_action_for_current_permissions()
             action = self.default_action
 
         if not self.can_view(action):
@@ -254,7 +299,24 @@ class DashboardHandler(
             return
 
         if action in self._custom_get_actions:
-            return self._custom_get_handler(action)
+            result = self._custom_get_actions[action][0](self)
+            if result is None:
+                return
+
+            # The following code handles pages for actions that do not write out
+            # their responses.
+
+            template_values = {
+                'page_title': self.format_title(self.get_nav_title(action)),
+            }
+            if isinstance(result, dict):
+                template_values.update(result)
+            else:
+                template_values['main_content'] = result
+
+            self.render_page(template_values)
+            return
+
 
         # Force reload of properties. It is expensive, but admin deserves it!
         config.Registry.get_overrides(force_update=True)
@@ -291,77 +353,16 @@ class DashboardHandler(
             alerts.append('The course is not publicly available.')
         return '\n'.join(alerts)
 
-    def _get_top_nav(self, in_action, in_tab):
-        current_action = in_action or self.request.get(
-            'action') or self.default_action
-        nav_bars = []
-        nav = safe_dom.NodeList()
-        for action, title in self.get_nav_mappings():
-            if not self.can_view(action):
-                continue
-            class_name = 'selected' if action == current_action else ''
-            action_href = 'dashboard?action=%s' % action
-            nav.append(safe_dom.Element(
-                'a', href=action_href, className=class_name).add_text(
-                    title))
 
-        if roles.Roles.is_super_admin():
-            nav.append(safe_dom.Element(
-                'a', href='admin?action=admin',
-                className=('selected' if current_action == 'admin' else '')
-            ).add_text('Site Admin'))
-
-        nav.append(safe_dom.Element(
-            'a',
-            href='https://code.google.com/p/course-builder/wiki/Dashboard',
-            target='_blank'
-        ).add_text('Help'))
-
-        nav.append(safe_dom.Element(
-            'a',
-            href=(
-                'https://groups.google.com/forum/?fromgroups#!categories/'
-                'course-builder-forum/general-troubleshooting'),
-            target='_blank'
-        ).add_text('Support'))
-        nav_bars.append(nav)
-
-        tab_group = tabs.Registry.get_tab_group(current_action)
-        if tab_group:
-            if current_action == 'assets':
-                exclude_tabs = []
-                course = self.get_course()
-                if courses.has_only_new_style_assessments(course):
-                    exclude_tabs.append('Assessments')
-                if courses.has_only_new_style_activities(course):
-                    exclude_tabs.append('Activities')
-                    tab_group = [
-                        t for t in tab_group if t.title not in exclude_tabs]
-            tab_name = (in_tab or self.request.get('tab') or
-                        self.default_subtab_action[current_action]
-                        or tab_group[0].name)
-            sub_nav = safe_dom.NodeList()
-            for tab in tab_group:
-                href = tab.href or 'dashboard?action=%s&tab=%s' % (
-                        current_action, tab.name)
-                target = tab.target or '_self'
-                sub_nav.append(
-                    safe_dom.A(
-                        href,
-                        className=('selected' if tab.name == tab_name else ''),
-                        target=target)
-                    .add_text(tab.title))
-            nav_bars.append(sub_nav)
-        return nav_bars
-
-    def render_page(self, template_values, in_action=None, in_tab=None):
+    def render_page(self, template_values, in_action=None):
         """Renders a page using provided template values."""
         template_values['header_title'] = template_values['page_title']
         template_values['page_headers'] = [
             hook(self) for hook in self.PAGE_HEADER_HOOKS]
-        template_values['course_picker'] = self.get_course_picker()
+        template_values['course_picker'] = self.get_course_picker(
+            in_action=in_action)
         template_values['course_title'] = self.app_context.get_title()
-        template_values['top_nav'] = self._get_top_nav(in_action, in_tab)
+        template_values['top_nav'] = get_top_nav(self, in_action)
         template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = safe_dom.NodeList().append(
             safe_dom.Text('%s | ' % users.get_current_user().email())
@@ -385,23 +386,17 @@ class DashboardHandler(
         self.response.write(
             self.get_template('view.html', []).render(template_values))
 
-    def get_course_picker(self, destination=None):
+    def get_course_picker(self, destination=None, in_action=None):
         destination = destination or '/dashboard'
-        action = self.request.get('action') or self._default_get_action
+        action = (in_action or self.request.get('action')
+            or self.default_action_for_current_permissions())
 
-        # disable picker if we are on the well known page; we dont want picked
-        # on pages where edits or creation of new object can get triggered
-        safe_action = action and action in [
-            a for a, _ in self.get_nav_mappings()] + ['admin']
+        # disable picker if we are not on a well known page; we dont want picker
+        # on pages where edits or creation of new objects can get triggered
+        safe_action = action and action in self.actions_to_menu_items
 
-        tab = self.request.get('tab')
-        if action in self.get_actions:
-            tab_group = tabs.Registry.get_tab_group(action)
-            if tab_group and tab in tab_group:
-                tab = '&tab=%s' % tab
-            else:
-                tab = ''
-            destination = '%s?action=%s%s' % (destination, action, tab)
+        full_destination = '{destination}?action={action}'.format(
+            destination=destination, action=action)
 
         current_course = sites.get_course_for_current_request()
         options = []
@@ -409,7 +404,7 @@ class DashboardHandler(
             with Namespace(course.namespace):
                 if self.current_user_has_access(course):
                     url = (
-                        course.canonicalize_url(destination) if safe_action
+                        course.canonicalize_url(full_destination) if safe_action
                         else 'javascript:void(0)')
                     title = '%s (%s)' % (course.get_title(), course.get_slug())
                     option = safe_dom.Element('li')
@@ -453,30 +448,6 @@ class DashboardHandler(
         self.response.write(self.get_template(
             'question_preview.html', []).render(template_values))
 
-    def _custom_get_handler(self, action):
-        """Renders Enabled Custom Units view."""
-        in_action = self._custom_get_actions[action][1]
-        tab = tabs.Registry.get_tab(action, self.request.get('tab'))
-        if not tab:
-            tab_list = tabs.Registry.get_tab_group(action)
-            if not tab_list:
-                self._custom_get_actions[action][0](self)
-                return
-            tab = tab_list[0]
-
-        template_values = {
-            'page_title': self.format_title(
-                '%s > %s' % (action.title(), tab.title)),
-            }
-
-        tab_result = tab.contents(self)
-        if isinstance(tab_result, dict):
-            template_values.update(tab_result)
-        else:
-            template_values['main_content'] = tab_result
-
-        self.render_page(template_values, in_action=in_action)
-
     def custom_post_handler(self):
         """Edit Custom Unit Settings view."""
         action = self.request.get('action')
@@ -510,7 +481,7 @@ class DashboardHandler(
 
         return output
 
-    def get_roles(self):
+    def _render_roles_view(self):
         """Renders course roles view."""
         actions = [{
             'id': 'add_role',
@@ -525,7 +496,7 @@ class DashboardHandler(
             'page_title': self.format_title('Roles'),
             'sections': sections,
         }
-        self.render_page(template_values)
+        return template_values
 
     @classmethod
     def map_action_to_permission(cls, action, permission):
@@ -566,13 +537,7 @@ class DashboardHandler(
 
     @classmethod
     def current_user_has_access(cls, app_context):
-        for action, _ in cls.get_nav_mappings():
-            if roles.Roles.is_user_allowed(
-                app_context, custom_module,
-                cls._action_to_permission.get('get_%s' % action, '')
-            ):
-                return True
-        return False
+        return cls.root_menu_group.can_view(app_context, exclude_links=True)
 
     @classmethod
     def generate_dashboard_link(cls, app_context):
@@ -581,17 +546,94 @@ class DashboardHandler(
         return []
 
 
+def get_top_nav(handler, in_action):
+    # The GlobalAdminHandler reuses this function but has no app context
+    app_context = getattr(handler, 'app_context', None)
+
+    current_action = (in_action or handler.request.get('action')
+        or handler.default_action_for_current_permissions())
+    current_menu_item = handler.actions_to_menu_items.get(current_action)
+
+    nav_bars = []
+    nav = safe_dom.NodeList()
+    for group in handler.root_menu_group.children:
+        if not group.can_view(app_context):
+            continue
+        class_name = ('selected' if current_menu_item
+            and current_menu_item.group == group else '')
+        nav.append(safe_dom.Element(
+            'a', href=group.computed_href(app_context), className=class_name
+        ).add_text(group.title))
+    nav_bars.append(nav)
+
+    if current_menu_item:
+        sub_nav = safe_dom.NodeList()
+        for tab in current_menu_item.group.children:
+            if tab.can_view(app_context):
+                href = tab.computed_href(app_context)
+                target = tab.target or '_self'
+                sub_nav.append(
+                    safe_dom.A(
+                        href,
+                        className=(
+                            'selected' if tab.action == current_action
+                            else ''),
+                        target=target)
+                    .add_text(tab.title))
+        nav_bars.append(sub_nav)
+    return nav_bars
+
+
+def make_help_menu(root_group):
+    anyone_can_view = lambda x: True
+
+    group = menus.MenuGroup('help', 'Help', group=root_group, placement=5000)
+
+    menus.MenuItem(
+        'documentation', 'Documentation',
+        href='https://www.google.com/edu/openonline/tech/index.html',
+        can_view=anyone_can_view, group=group, placement=1000, target='_blank')
+
+    menus.MenuItem(
+        'videos', 'Demo videos',
+        href='https://www.youtube.com/playlist?list=PLFB_aGY5EfxeltJfJZwkjqDLAW'
+        'dMfSpES',
+        can_view=anyone_can_view, group=group, placement=2000, target='_blank')
+
+    menus.MenuItem(
+        'showcase', 'Showcase courses',
+        href='https://www.google.com/edu/openonline/index.html',
+        can_view=anyone_can_view, group=group, placement=3000, target='_blank')
+
+    menus.MenuItem(
+        'forum', 'Support forum',
+        href=(
+            'https://groups.google.com/forum/?fromgroups#!categories/'
+            'course-builder-forum/general-troubleshooting'),
+        can_view=anyone_can_view, group=group, placement=4000, target='_blank')
+
+
 def register_module():
     """Registers this module in the registry."""
+
+    DashboardHandler.add_nav_mapping('edit', 'Edit', placement=1000)
+    DashboardHandler.add_nav_mapping('style', 'Style', placement=2000)
+    DashboardHandler.add_nav_mapping('analytics', 'Analytics', placement=3000)
+    DashboardHandler.add_nav_mapping('settings', 'Settings', placement=4000)
+
+    make_help_menu(DashboardHandler.root_menu_group)
+
+    # pylint: disable=protected-access
+    DashboardHandler.add_sub_nav_mapping(
+        'edit', 'roles', 'Roles', action='edit_roles',
+        contents=DashboardHandler._render_roles_view, placement=8000)
+    # pylint: enable=protected-access
 
     def on_module_enabled():
         roles.Roles.register_permissions(
             custom_module, DashboardHandler.permissions_callback)
         ApplicationHandler.RIGHT_LINKS.append(
             DashboardHandler.generate_dashboard_link)
-        DashboardHandler.add_nav_mapping('roles', 'Roles')
-        DashboardHandler.add_nav_mapping('settings', 'Settings')
-        DashboardHandler.add_custom_get_action('settings')
 
     global_routes = [
         (

@@ -1078,10 +1078,12 @@ def register_module():
         cron.ExpireOldAssignedReviewsHandler)]
 
     def notify_module_enabled():
-        dashboard.DashboardHandler.add_nav_mapping(
-            'edit_assignment', 'Peer Review')
-        dashboard.DashboardHandler.add_custom_get_action(
-            'edit_assignment', review_dashboard.get_edit_assignment)
+        dashboard.DashboardHandler.add_sub_nav_mapping(
+            'settings', 'edit_assignment', 'Peer review',
+            action='edit_assignment',
+            contents=review_dashboard.get_edit_assignment,
+            placement=6000)
+
         dashboard.DashboardHandler.add_custom_post_action(
             'add_reviewer', review_dashboard.post_add_reviewer)
         dashboard.DashboardHandler.add_custom_post_action(

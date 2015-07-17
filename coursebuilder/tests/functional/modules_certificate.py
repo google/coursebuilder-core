@@ -142,7 +142,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
     TEST_USER = None
     ADMIN_EMAIL = 'admin@foo.com'
     ANALYTICS_URL = ('/' + COURSE_NAME +
-                     '/dashboard?action=analytics&tab=certificates_earned')
+                     '/dashboard?action=analytics_certificates_earned')
 
     def setUp(self):
         super(CertificateCriteriaTestCase, self).setUp()

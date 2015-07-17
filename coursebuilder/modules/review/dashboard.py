@@ -143,7 +143,7 @@ def get_edit_assignment(handler):
     course = courses.Course(handler)
     peer_reviewed_units = course.get_peer_reviewed_units()
 
-    page_title = 'Peer Review'
+    page_title = 'Peer review'
 
     template_values = {}
     template_values['page_title'] = handler.format_title(page_title)

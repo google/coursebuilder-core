@@ -36,8 +36,8 @@ PUBLISHED_TEXT = 'Public'
 # Allowed graders. Keys of this dict represent internal keys for the grader
 # type, and the value represents the corresponding string that will appear in
 # the dashboard UI.
-AUTO_GRADER_NAME = 'Automatic Grading'
-HUMAN_GRADER_NAME = 'Peer Review'
+AUTO_GRADER_NAME = 'Automatic grading'
+HUMAN_GRADER_NAME = 'Peer review'
 ALLOWED_GRADERS_NAMES = {
     courses.AUTO_GRADER: AUTO_GRADER_NAME,
     courses.HUMAN_GRADER: HUMAN_GRADER_NAME,
@@ -347,7 +347,7 @@ class ResourceCourseSettings(resource.AbstractResourceHandler):
 
     @classmethod
     def get_edit_url(cls, key):
-        return 'dashboard?action=settings&tab=%s' % key
+        return 'dashboard?action=settings_%s' % key
 
 
 def workflow_key(key):
@@ -861,7 +861,7 @@ class ResourceAssessment(ResourceUnitBase):
         reg.add_sub_registry('assessment', 'Assessment Config',
                              registry=course_opts)
 
-        review_opts = reg.add_sub_registry('review_opts', 'Peer Review',
+        review_opts = reg.add_sub_registry('review_opts', 'Peer review',
             description=str(messages.ASSESSMENT_DETAILS_DESCRIPTION),
             extra_schema_dict_values={'id': 'peer-review-group'})
 

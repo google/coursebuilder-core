@@ -39,6 +39,7 @@ from models import roles
 from models import transforms
 from models.models import MemcacheManager
 from models.models import Student
+from modules.dashboard import dashboard
 from modules.oeditor import oeditor
 
 from google.appengine.ext import db
@@ -386,6 +387,10 @@ def register_module():
     """Registers this module in the registry."""
 
     announcement_handlers = [('/announcements', AnnouncementsHandler)]
+
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'announcements', 'Announcements', action='edit_announcements',
+        href='announcements', placement=5000)
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

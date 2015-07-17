@@ -29,7 +29,6 @@ from models import models
 from models import transforms
 from modules.dashboard import dashboard
 from modules.dashboard import utils as dashboard_utils
-from modules.dashboard import tabs
 from tools import verify
 
 # Other modules which manage editable assets can add functions here to
@@ -77,7 +76,7 @@ def _list_and_format_file_list(
 
             li.add_child(safe_dom.Entity('&nbsp;'))
             edit_url = edit_url_template % (
-                tab_name, urllib.quote(filename))
+                tab_name, urllib.quote(filename), handler.request.get('action'))
             # show [overridden] + edit button if override exists
             if (filename in unmerged_files) or (not merge_local_files):
                 li.add_text('[Overridden]').add_child(
@@ -97,7 +96,8 @@ def _list_and_format_file_list(
                 'a', className='gcb-button gcb-icon-button',
                 href='dashboard?%s' % urllib.urlencode(
                     {'action': 'manage_asset',
-                     'tab': tab_name,
+                     'from_action': handler.request.get('action'),
+                     'type': tab_name,
                      'key': subfolder}),
                 id='upload-button',
             ).append(
@@ -488,7 +488,7 @@ def _list_labels(handler):
 
 
 def _filer_url_template():
-    return 'dashboard?action=manage_text_asset&tab=%s&uri=%s'
+    return 'dashboard?action=manage_text_asset&type=%s&uri=%s&from_action=%s'
 
 def _get_assets_questions(handler, items, name, all_paths):
     all_questions = models.QuestionDAO.get_all()
@@ -514,10 +514,10 @@ def _get_assets_activities(handler, items, name, all_paths):
 
 def _get_assets_images(handler, items, name, all_paths):
     items.append(_list_and_format_file_list(
-        handler, 'Images & Documents', '/assets/img/', name, links=True,
+        handler, 'Images & documents', '/assets/img/', name, links=True,
         upload=True, merge_local_files=True,
         edit_url_template=(
-            'dashboard?action=manage_asset&tab=%s&key=%s'),
+            'dashboard?action=manage_asset&type=%s&key=%s&from_action=%s'),
         caption_if_empty='< inherited from /assets/img/ >',
         all_paths=all_paths))
 
@@ -557,13 +557,11 @@ def _get_assets_contrib(handler, items, name, all_paths):
         for asset_lister in contrib_asset_listers:
             items.append(asset_lister(handler))
 
-def _get_assets(handler, add_assets):
+def _get_tab_content(tab, handler, add_assets):
     """Renders course assets view."""
 
     all_paths = handler.app_context.fs.list(
         sites.abspath(handler.app_context.get_home_folder(), '/'))
-    tab = tabs.Registry.get_tab(
-        'assets', handler.request.get('tab') or 'questions')
     items = safe_dom.NodeList()
     add_assets(handler, items, tab.name, all_paths)
     title_text = 'Assets > %s' % tab.title
@@ -573,27 +571,68 @@ def _get_assets(handler, add_assets):
     }
     return template_values
 
-def on_module_enabled():
-    tabs.Registry.register('assets', 'questions', 'Questions',
-                           lambda h: _get_assets(h, _get_assets_questions))
-    tabs.Registry.register('assets', 'labels', 'Labels',
-                           lambda h: _get_assets(h, _get_assets_labels))
-    tabs.Registry.register('assets', 'assessments', 'Assessments',
-                           lambda h: _get_assets(h, _get_assets_assessments))
-    tabs.Registry.register('assets', 'activities', 'Activities',
-                           lambda h: _get_assets(h, _get_assets_activities))
-    tabs.Registry.register('assets', 'images', 'Images & Documents',
-                           lambda h: _get_assets(h, _get_assets_images))
-    tabs.Registry.register('assets', 'css', 'CSS',
-                           lambda h: _get_assets(h, _get_assets_css))
-    tabs.Registry.register('assets', 'js', 'JavaScript',
-                           lambda h: _get_assets(h, _get_assets_js))
-    tabs.Registry.register('assets', 'html', 'HTML',
-                           lambda h: _get_assets(h, _get_assets_html))
-    tabs.Registry.register('assets', 'templates', 'Templates',
-                           lambda h: _get_assets(h, _get_assets_templates))
-    tabs.Registry.register('assets', 'contrib', 'Extensions',
-                           lambda h: _get_assets(h, _get_assets_contrib))
+def _get_style_tab(handler, add_assets):
+    tab = dashboard.DashboardHandler.actions_to_menu_items[
+        handler.request.get('action') or 'style_css']
+    return _get_tab_content(tab, handler, add_assets)
 
-    dashboard.DashboardHandler.add_custom_get_action('assets', _get_assets)
-    dashboard.DashboardHandler.add_nav_mapping('assets', 'Assets')
+def _get_edit_tab(handler, add_assets):
+    tab = dashboard.DashboardHandler.actions_to_menu_items[
+        handler.request.get('action') or 'edit_questions']
+    return _get_tab_content(tab, handler, add_assets)
+
+def can_view_assessments(app_context):
+    return not courses.has_only_new_style_assessments(
+        courses.Course(None, app_context=app_context))
+
+def can_view_activities(app_context):
+    return not courses.has_only_new_style_activities(
+        courses.Course(None, app_context=app_context))
+
+def on_module_enabled():
+    # Content tabs
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'questions', 'Questions', action='edit_questions',
+        contents=lambda h: _get_edit_tab(h, _get_assets_questions),
+        placement=2000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'images', 'Images & documents', action='edit_images',
+        contents=lambda h: _get_edit_tab(h, _get_assets_images),
+        placement=6000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'labels', 'Labels', action='edit_labels',
+        contents=lambda h: _get_edit_tab(h, _get_assets_labels),
+        placement=7000)
+
+    # These tabs only show up if your schema is old
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'assessments', 'Assessments', action='edit_assessments',
+        contents=lambda h: _get_edit_tab(h, _get_assets_assessments),
+        can_view=can_view_assessments)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'activities', 'Activities', action='edit_activities',
+        contents=lambda h: _get_edit_tab(h, _get_assets_activities),
+        can_view=can_view_activities)
+
+    # Style tabs
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'style', 'css', 'CSS', action='style_css',
+        contents=lambda h: _get_style_tab(h, _get_assets_css),
+        placement=1000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'style', 'js', 'JavaScript', action='style_js',
+        contents=lambda h: _get_style_tab(h, _get_assets_js),
+        placement=2000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'style', 'html', 'HTML', action='style_html',
+        contents=lambda h: _get_style_tab(h, _get_assets_html),
+        placement=3000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'style', 'templates', 'Templates', action='style_templates',
+        contents=lambda h: _get_style_tab(h, _get_assets_templates),
+        placement=4000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'style', 'contrib', 'Extensions', action='style_contrib',
+        contents=lambda h: _get_style_tab(h, _get_assets_contrib),
+        placement=5000)
+

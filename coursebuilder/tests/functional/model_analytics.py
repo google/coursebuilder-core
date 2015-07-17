@@ -57,50 +57,50 @@ class AnalyticsTabsWithNoJobs(actions.TestBase):
     def test_blank_students_tab_no_mr(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics&tab=students')
+        self.get('dashboard?action=analytics_students')
 
     def test_blank_questions_tab_no_mr(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics&tab=questions')
+        self.get('dashboard?action=analytics_questions')
 
     def test_blank_assessments_tab_no_mr(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics&tab=assessments')
+        self.get('dashboard?action=analytics_assessments')
 
     def test_blank_peer_review_tab_no_mr(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics&tab=peer_review')
+        self.get('dashboard?action=analytics_peer_review')
 
     def test_blank_students_tab_with_mr(self):
         config.Registry.test_overrides[
             mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.name] = True
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics&tab=students')
+        self.get('dashboard?action=analytics_students')
 
     def test_blank_questions_tab_with_mr(self):
         config.Registry.test_overrides[
             mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.name] = True
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics&tab=questions')
+        self.get('dashboard?action=analytics_questions')
 
     def test_blank_assessments_tab_with_mr(self):
         config.Registry.test_overrides[
             mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.name] = True
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics&tab=assessments')
+        self.get('dashboard?action=analytics_assessments')
 
     def test_blank_peer_review_tab_with_mr(self):
         config.Registry.test_overrides[
             mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.name] = True
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics&tab=peer_review')
+        self.get('dashboard?action=analytics_peer_review')
 
 
 class ProgressAnalyticsTest(actions.TestBase):
@@ -120,7 +120,7 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics&tab=students')
+        response = self.get('dashboard?action=analytics_students')
         assert_contains(
             'Google &gt; Dashboard &gt; Analytics &gt; Students', response.body)
         assert_contains('have not been calculated yet', response.body)
@@ -170,7 +170,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         # Admin logs back in and checks if progress exists.
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics&tab=students')
+        response = self.get('dashboard?action=analytics_students')
         assert_contains(
             'Google &gt; Dashboard &gt; Analytics &gt; Students', response.body)
         assert_contains('have not been calculated yet', response.body)
@@ -180,12 +180,12 @@ class ProgressAnalyticsTest(actions.TestBase):
         assert len(self.taskq.GetTasks('default')) == (
             ProgressAnalyticsTest.EXPECTED_TASK_COUNT)
 
-        response = self.get('dashboard?action=analytics')
+        response = self.get('dashboard?action=analytics_students')
         assert_contains('is running', response.body)
 
         self.execute_all_deferred_tasks()
 
-        response = self.get('dashboard?action=analytics')
+        response = self.get('dashboard?action=analytics_students')
         assert_contains('were last updated at', response.body)
         assert_contains('currently enrolled: 2', response.body)
         assert_contains('total: 2', response.body)
@@ -208,7 +208,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         # Submit all analytics.
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics&tab=peer_review')
+        response = self.get('dashboard?action=analytics_peer_review')
         response = response.forms[
             'gcb-generate-analytics-data'].submit().follow()
 
@@ -243,7 +243,7 @@ class ProgressAnalyticsTest(actions.TestBase):
     def test_cancel_map_reduce(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics&tab=peer_review')
+        response = self.get('dashboard?action=analytics_peer_review')
         response = response.forms[
             'gcb-run-visualization-peer_review'].submit().follow()
 

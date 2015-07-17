@@ -1370,7 +1370,7 @@ class AdminAspectTest(actions.TestBase):
         selected_tabs = dom.findall(
             './/td[@class="gcb-nav-bar-links"]/a[@class="selected"]')
         self.assertEqual(
-            ['Site Admin', 'Courses'], [s.text for s in selected_tabs])
+            ['Site admin', 'Courses'], [s.text for s in selected_tabs])
 
     def test_appstats(self):
         """Checks that appstats is available when enabled."""
@@ -1457,21 +1457,21 @@ class AdminAspectTest(actions.TestBase):
 
         # Check normal user has no access.
         actions.login(email)
-        response = self.testapp.get('/admin/global?tab=console')
+        response = self.testapp.get('/admin/global?action=console')
         assert_equals(response.status_int, 302)
 
-        response = self.testapp.post('/admin/global?tab=console')
+        response = self.testapp.post('/admin/global?action=console')
         assert_equals(response.status_int, 302)
 
         # Check delegated admin has no access.
         os.environ['gcb_admin_user_emails'] = '[%s]' % email
         actions.login(email)
-        response = self.testapp.get('/admin/global?tab=console')
+        response = self.testapp.get('/admin/global?action=console')
         assert_equals(response.status_int, 200)
         assert_contains(
             'You must be an actual admin user to continue.', response.body)
 
-        response = self.testapp.get('/admin/global?tab=console')
+        response = self.testapp.get('/admin/global?action=console')
         assert_equals(response.status_int, 200)
         assert_contains(
             'You must be an actual admin user to continue.', response.body)
@@ -1480,7 +1480,7 @@ class AdminAspectTest(actions.TestBase):
 
         # Check actual admin has access.
         actions.login(email, is_admin=True)
-        response = self.testapp.get('/admin/global?tab=console')
+        response = self.testapp.get('/admin/global?action=console')
         assert_equals(response.status_int, 200)
 
         response.forms[0].set('code', 'print "foo" + "bar"')
@@ -1493,8 +1493,8 @@ class AdminAspectTest(actions.TestBase):
         modules.admin.admin.notify_module_enabled()
 
         actions.login(email, is_admin=True)
-        self.testapp.get('/admin/global?tab=console', status=404)
-        self.testapp.post('/admin/global?tab=console_run', status=404)
+        self.testapp.get('/admin/global?action=console', status=404)
+        self.testapp.post('/admin/global?action=console_run', status=404)
 
     def test_non_admin_has_no_access(self):
         """Test non admin has no access to pages or REST endpoints."""
@@ -1510,7 +1510,7 @@ class AdminAspectTest(actions.TestBase):
         prop.put()
 
         # Check user has no access to specific pages and actions.
-        response = self.testapp.get('/admin/global?tab=settings')
+        response = self.testapp.get('/admin/global?action=settings')
         assert_equals(response.status_int, 302)
 
         response = self.testapp.get(
@@ -1576,7 +1576,7 @@ class AdminAspectTest(actions.TestBase):
         prop.put()
 
         # Check user has access now.
-        response = self.testapp.get('/admin/global?tab=settings')
+        response = self.testapp.get('/admin/global?action=settings')
         assert_equals(response.status_int, 200)
 
         # Check overrides are active and have proper management actions.
@@ -1603,14 +1603,14 @@ class AdminAspectTest(actions.TestBase):
         del os.environ['gcb_admin_user_emails']
 
         # Check user has no access.
-        response = self.testapp.get('/admin/global?tab=settings')
+        response = self.testapp.get('/admin/global?action=settings')
         assert_equals(response.status_int, 302)
 
     def test_access_to_admin_pages(self):
         """Test access to admin pages."""
 
         # assert anonymous user has no access
-        response = self.testapp.get('/admin/global?tab=settings')
+        response = self.testapp.get('/admin/global?action=settings')
         assert_equals(response.status_int, 302)
 
         # assert admin user has access
@@ -1623,15 +1623,15 @@ class AdminAspectTest(actions.TestBase):
         response = self.testapp.get('/admin/global')
         assert_contains('Power Searching with Google', response.body)
 
-        response = self.testapp.get('/admin/global?tab=settings')
+        response = self.testapp.get('/admin/global?action=settings')
         assert_contains('gcb_admin_user_emails', response.body)
         assert_contains('gcb_config_update_interval_sec', response.body)
 
-        response = self.testapp.get('/admin/global?tab=perf')
+        response = self.testapp.get('/admin/global?action=perf')
         assert_contains('gcb-admin-uptime-sec:', response.body)
         assert_contains('In-process Performance Counters', response.body)
 
-        response = self.testapp.get('/admin/global?tab=deployment')
+        response = self.testapp.get('/admin/global?action=deployment')
         assert_contains('application_id: testbed-test', response.body)
         assert_contains('About the Application', response.body)
 
@@ -1641,7 +1641,7 @@ class AdminAspectTest(actions.TestBase):
         # assert not-admin user has no access
         actions.login(email)
         actions.register(self, name)
-        response = self.testapp.get('/admin/global?tab=settings')
+        response = self.testapp.get('/admin/global?action=settings')
         assert_equals(response.status_int, 302)
 
     def test_multiple_courses(self):
@@ -1753,7 +1753,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             assert_does_not_contain('Add Assessment', response.body)
 
         # Test assets view.
-        response = self.get('dashboard?action=assets&tab=css')
+        response = self.get('dashboard?action=style_css')
         # Verify title does not have link text
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
@@ -1762,13 +1762,13 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains(
             'Google &gt; Dashboard &gt; Assets &gt; CSS', response.body)
         assert_contains('assets/css/main.css', response.body)
-        response = self.get('dashboard?action=assets&tab=images')
+        response = self.get('dashboard?action=edit_images')
         assert_contains('assets/img/Image1.5.png', response.body)
-        response = self.get('dashboard?action=assets&tab=js')
+        response = self.get('dashboard?action=style_js')
         assert_contains('assets/lib/activity-generic-1.3.js', response.body)
 
         # Test settings view.
-        response = self.get('dashboard?action=settings&tab=advanced')
+        response = self.get('dashboard?action=settings_advanced')
         # Verify title does not have link text
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
@@ -1787,7 +1787,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             assert_does_not_contain('create_or_edit_settings', response.body)
 
         # Tests student statistics view.
-        response = self.get('dashboard?action=analytics&tab=students')
+        response = self.get('dashboard?action=analytics_students')
         # Verify title does not have link text
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
@@ -3452,12 +3452,12 @@ class I18NTest(MultipleCoursesTestBase):
         assert_page_contains('', [
             title_ru, self.course_ru.unit_title, self.course_ru.lesson_title])
         assert_page_contains(
-            'assets', [self.course_ru.title])
+            'edit_questions', [self.course_ru.title])
         assert_page_contains(
             '', [self.course_ru.title])
         assert_contains(
                 vfs.AbstractFileSystem.normpath(self.course_ru.home),
-                self.get('%s?action=settings&tab=about' % dashboard_url).body)
+                self.get('%s?action=settings_about' % dashboard_url).body)
 
         # Clean up.
         actions.logout()
@@ -3751,15 +3751,15 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         email = 'test_get_put_file@google.com'
 
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=settings&tab=advanced')
+        response = self.get('dashboard?action=settings_advanced')
 
         # Check course.yaml edit form.
         compute_form = response.forms['edit_course_yaml']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
         assert_contains(
-            'dashboard?action=edit_settings&tab_title=Advanced'
-            '&tab=advanced&key=%2Fcourse.yaml',
+            'dashboard?action=edit_settings&from_action=settings_advanced&'
+            'key=%2Fcourse.yaml',
             response.location)
         response = self.get(response.location)
         assert_contains('rest/files/item?key=%2Fcourse.yaml', response.body)

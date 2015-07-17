@@ -540,7 +540,8 @@ class I18nDeletionHandler(BaseDashboardExtension):
         self.handler.render_page({
             'page_title': self.handler.format_title(
                 'I18n Translation Deletion'),
-            'main_content': main_content})
+            'main_content': main_content,
+            }, in_action=I18nDashboardHandler.ACTION)
 
 
 class TranslationDeletionRestHandler(utils.BaseRESTHandler):
@@ -687,7 +688,8 @@ class I18nDownloadHandler(BaseDashboardExtension):
         self.handler.render_page({
             'page_title': self.handler.format_title(
                 'I18n Translation Download'),
-            'main_content': main_content})
+            'main_content': main_content,
+            }, in_action=I18nDashboardHandler.ACTION)
 
 
 class TranslationDownloadRestHandler(utils.BaseRESTHandler):
@@ -1052,7 +1054,7 @@ class I18nUploadHandler(BaseDashboardExtension):
         self.handler.render_page({
             'page_title': self.handler.format_title('I18n Translation Upload'),
             'main_content': main_content,
-            })
+            }, in_action=I18nDashboardHandler.ACTION)
 
 
 def translation_upload_generate_schema():
@@ -1936,17 +1938,18 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 del action['href']
                 action['action'] = disabled_alert
 
-        actions += [
-            {
-                'id': 'edit_18n_settings',
-                'caption': 'Edit I18N Settings',
-                'href': self.handler.get_action_url(
-                    'settings', extra_args={
-                        'tab': 'i18n',
-                        'exit_url': 'dashboard?action=i18n_dashboard',
-                    })
-                },
-            ]
+        if self.handler.can_view('settings_i18n'):
+            actions += [
+                {
+                    'id': 'edit_18n_settings',
+                    'caption': 'Edit I18N Settings',
+                    'href': self.handler.get_action_url(
+                        'settings_i18n', extra_args={
+                            'exit_url': 'dashboard?action=' + self.ACTION,
+                        })
+                    },
+                ]
+
         self.handler.render_page({
             'page_title': self.handler.format_title('I18n Workflow'),
             'main_content': jinja2.utils.Markup(main_content),
@@ -1985,7 +1988,8 @@ class TranslationConsole(BaseDashboardExtension):
 
         self.handler.render_page({
             'page_title': self.handler.format_title('I18n Workflow'),
-            'main_content': main_content})
+            'main_content': main_content,
+            }, in_action=I18nDashboardHandler.ACTION)
 
 
 def tc_generate_schema():
@@ -2854,8 +2858,10 @@ def notify_module_enabled():
     TranslatableResourceRegistry.register(TranslatableResourceQuestionGroups)
     TranslatableResourceRegistry.register(TranslatableResourceHtmlHooks)
 
-    dashboard.DashboardHandler.add_nav_mapping(
-        I18nDashboardHandler.ACTION, 'I18N')
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'translations', 'Translations',
+        action=I18nDashboardHandler.ACTION, placement=9000)
+
     dashboard.DashboardHandler.add_external_permission(
         ACCESS_PERMISSION, ACCESS_PERMISSION_DESCRIPTION)
     roles.Roles.register_permissions(

@@ -119,7 +119,7 @@ class AbstractResourceHandler(object):
 
           resource: Whatever is returned from get_resource() (q.v.)
         Returns:
-          A *relative* URL.  E.g., dashboard?action=foo&tab=bar Such a
+          A *relative* URL.  E.g., dashboard?action=foo_bar Such a
           URL can be placed unmmodified on a page which has been set
           up with the default URL prefix pointing to the namespace for
           the current course.
@@ -138,7 +138,7 @@ class AbstractResourceHandler(object):
           key: A small fact (string or integer, typically) representing
               the primary key for the desired instance.
         Returns:
-          A *relative* URL.  E.g., dashboard?action=foo&tab=bar Such a
+          A *relative* URL.  E.g., dashboard?action=foo_bar Such a
           URL can be placed unmmodified on a page which has been set
           up with the default URL prefix pointing to the namespace for
           the current course.

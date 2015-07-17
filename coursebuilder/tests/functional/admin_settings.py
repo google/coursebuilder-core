@@ -45,7 +45,7 @@ ADMIN_SETTINGS_URL = '/%s%s' % (
 TEXT_ASSET_URL = '/%s%s' % (
     COURSE_NAME, filer.TextAssetRESTHandler.URI)
 STUDENT_EMAIL = 'student@foo.com'
-SETTINGS_URL = '/%s/dashboard?action=settings&tab=admin_prefs' % COURSE_NAME
+SETTINGS_URL = '/%s/dashboard?action=settings_admin_prefs' % COURSE_NAME
 
 
 class AdminSettingsTests(actions.TestBase):
@@ -564,13 +564,11 @@ class ExitUrlTest(actions.TestBase):
         actions.login(ADMIN_EMAIL, is_admin=True)
 
     def test_exit_url(self):
-        base_url = '/%s/dashboard?action=settings&tab=data_pump' % COURSE_NAME
+        base_url = '/%s/dashboard?action=settings_data_pump' % COURSE_NAME
         url = base_url + '&' + urllib.urlencode({
             'exit_url': 'dashboard?%s' % urllib.urlencode({
-                'action': 'analytics',
-                'tab': 'data_pump'})})
+                'action': 'analytics_data_pump'})})
         response = self.get(url)
         self.assertIn(
-            'cb_global.exit_url = \'dashboard?action=analytics'
-            '\\u0026tab=data_pump\'',
+            'cb_global.exit_url = \'dashboard?action=analytics_data_pump',
             response.body)

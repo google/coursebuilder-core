@@ -58,7 +58,7 @@ from models import models
 from modules.analytics import student_aggregate
 from modules.certificate import custom_criteria
 from modules.courses import settings
-from modules.dashboard import tabs
+from modules.dashboard import dashboard
 
 CERTIFICATE_HANDLER_PATH = 'certificate'
 CERTIFICATE_PDF_HANDLER_PATH = 'certificate.pdf'
@@ -415,12 +415,14 @@ class CertificatesEarnedDataSource(data_sources.SynchronousQuery):
 def register_analytic():
     data_sources.Registry.register(CertificatesEarnedDataSource)
     name = 'certificates_earned'
-    title = 'Certificates Earned'
+    title = 'Certificates'
     certificates_earned = analytics.Visualization(
         name, title, 'certificates_earned.html',
         data_source_classes=[CertificatesEarnedDataSource])
-    tabs.Registry.register('analytics', name, title,
-                           analytics.TabRenderer([certificates_earned]))
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'analytics', name, title, action='analytics_certificates_earned',
+        contents=analytics.TabRenderer([certificates_earned]),
+        placement=6000)
 
 
 class CertificateAggregator(

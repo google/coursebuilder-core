@@ -253,7 +253,7 @@ class UnitLessonEditor(ApplicationHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('Edit %s' % title)
         template_values['main_content'] = form_html
-        self.render_page(template_values)
+        self.render_page(template_values, in_action='outline')
 
     def get_edit_unit(self):
         """Shows unit editor."""

@@ -31,15 +31,17 @@ class QuestionGroupManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         template_values['page_title'] = self.format_title('Edit Question Group')
         template_values['main_content'] = self.get_form(
             QuestionGroupRESTHandler, key,
-            dashboard_utils.build_assets_url('questions'))
+            dashboard_utils.build_assets_url('edit_questions'))
         return template_values
 
     def get_add_question_group(self):
-        self.render_page(self.qgmae_prepare_template(''), 'assets', 'questions')
+        self.render_page(
+            self.qgmae_prepare_template(''), in_action='edit_questions')
 
     def get_edit_question_group(self):
-        self.render_page(self.qgmae_prepare_template(self.request.get('key')),
-                         'assets', 'questions')
+        self.render_page(
+            self.qgmae_prepare_template(self.request.get('key')),
+            in_action='edit_questions')
 
     def post_add_to_question_group(self):
         try:

@@ -32,7 +32,7 @@ REGISTERED_STUDENT_NAME = 'John Smith'
 UNREGISTERED_STUDENT_EMAIL = 'bar@bar.com'
 STUDENT_LABELS_URL = '/%s/rest/student/labels' % COURSE_NAME
 STUDENT_SETTRACKS_URL = '/%s/student/settracks' % COURSE_NAME
-ANALYTICS_URL = '/%s/dashboard?action=analytics&tab=students' % COURSE_NAME
+ANALYTICS_URL = '/%s/dashboard?action=analytics_students' % COURSE_NAME
 LABELS_STUDENT_EMAIL = 'labels@bar.com'
 
 

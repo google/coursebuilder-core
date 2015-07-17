@@ -101,7 +101,7 @@ class FilesRights(object):
 class FileManagerAndEditor(ApplicationHandler):
     """An editor for editing and managing files."""
 
-    _TAB_TO_CODEMIRROR_MODE = {
+    _ASSET_TYPE_TO_CODEMIRROR_MODE = {
         'js':'javascript',
         'css':'css',
         'templates':'htmlmixed',
@@ -123,10 +123,9 @@ class FileManagerAndEditor(ApplicationHandler):
         """Handles creation or/and editing of course.yaml."""
         create_course_file_if_not_exists(self)
         extra_args = {}
-        for name in ('tab', 'tab_title'):
-            value = self.request.get(name)
-            if value:
-                extra_args[name] = value
+        from_action = self.request.get('from_action')
+        if from_action:
+            extra_args['from_action'] = from_action
         self.redirect(self.get_action_url('edit_settings', key='/course.yaml',
                                           extra_args=extra_args))
 
@@ -134,9 +133,9 @@ class FileManagerAndEditor(ApplicationHandler):
         """Shows editor for course.yaml."""
 
         key = self.request.get('key')
-        tab = self.request.get('tab')
-        exit_url = self.canonicalize_url('/dashboard?action=settings&tab=%s' %
-                                         tab)
+        from_action = self.request.get('from_action')
+        exit_url = self.canonicalize_url(
+            '/dashboard?action={}'.format(from_action))
         rest_url = self.canonicalize_url('/rest/files/item')
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
@@ -148,7 +147,7 @@ class FileManagerAndEditor(ApplicationHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Settings')
         template_values['main_content'] = form_html
-        self.render_page(template_values, in_action='settings')
+        self.render_page(template_values, in_action=from_action)
 
     def _is_displayable_asset(self, path):
         return any([path.startswith(name) for name in DISPLAYABLE_ASSET_BASES])
@@ -184,9 +183,9 @@ class FileManagerAndEditor(ApplicationHandler):
             json = AssetItemRESTHandler.UNDISPLAYABLE_SCHEMA_JSON
             ann = AssetItemRESTHandler.UNDISPLAYABLE_SCHEMA_ANNOTATIONS_DICT
 
-        tab_name = self.request.get('tab')
+        from_action = self.request.get('from_action')
         exit_url = self.canonicalize_url(
-            dashboard_utils.build_assets_url(tab_name))
+            dashboard_utils.build_assets_url(from_action))
         rest_url = self.canonicalize_url(AssetItemRESTHandler.URI)
 
         form_html = oeditor.ObjectEditor.get_html_for(
@@ -200,16 +199,18 @@ class FileManagerAndEditor(ApplicationHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('Manage Asset')
         template_values['main_content'] = form_html
-        self.render_page(template_values, 'assets', tab_name)
+
+        self.render_page(template_values, in_action=from_action)
 
     def get_manage_text_asset(self):
         """Show an edit/save/delete/revert form for a text asset."""
         assert self.app_context.is_editable_fs()
         uri = self.request.get('uri')
         assert uri
-        tab_name = self.request.get('tab')
+        asset_type = self.request.get('type')
+        from_action = self.request.get('from_action')
 
-        mode = self._TAB_TO_CODEMIRROR_MODE.get(tab_name, '')
+        mode = self._ASSET_TYPE_TO_CODEMIRROR_MODE.get(asset_type, '')
 
         asset = self.app_context.fs.impl.get(
             os.path.join(appengine_config.BUNDLE_ROOT, uri))
@@ -221,8 +222,7 @@ class FileManagerAndEditor(ApplicationHandler):
         except IOError:
             asset_in_local_fs = False
 
-        exit_url = self.canonicalize_url(
-            dashboard_utils.build_assets_url(tab_name))
+        exit_url = self.get_action_url(from_action)
         rest_url = self.canonicalize_url(TextAssetRESTHandler.URI)
 
         delete_button_caption = 'Delete'
@@ -262,7 +262,7 @@ class FileManagerAndEditor(ApplicationHandler):
         self.render_page({
             'page_title': self.format_title('Edit ' + uri),
             'main_content': form_html,
-        }, 'assets', tab_name)
+        }, in_action=from_action)
 
 
 def create_course_file_if_not_exists(handler):

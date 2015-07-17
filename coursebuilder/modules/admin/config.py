@@ -121,7 +121,7 @@ class ConfigPropertyEditor(object):
         """Handles 'add_course' action and renders new course entry editor."""
 
         if roles.Roles.is_super_admin():
-            exit_url = '%s?tab=courses' % self.LINK_URL
+            exit_url = '{}?action=courses'.format(self.LINK_URL)
         else:
             exit_url = self.request.referer
         rest_url = CoursesItemRESTHandler.URI
@@ -151,7 +151,8 @@ class ConfigPropertyEditor(object):
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Settings')
 
-        exit_url = '%s?tab=settings#%s' % (self.LINK_URL, cgi.escape(key))
+        exit_url = '%s?action=settings#%s' % (
+            self.LINK_URL, cgi.escape(key))
         rest_url = '/rest/config/item'
         delete_url = '%s?%s' % (
             self.LINK_URL,
@@ -166,7 +167,7 @@ class ConfigPropertyEditor(object):
             ConfigPropertyEditor.get_schema_annotations(item),
             key, rest_url, exit_url, delete_url=delete_url)
 
-        self.render_page(template_values, in_tab='settings')
+        self.render_page(template_values, in_action='settings')
 
     def post_config_override(self):
         """Handles 'override' property action."""
@@ -177,7 +178,7 @@ class ConfigPropertyEditor(object):
         if name and name in config.Registry.registered.keys():
             item = config.Registry.registered[name]
         if not item:
-            self.redirect('?tab=settings' % self.LINK_URL)
+            self.redirect('?action=settings' % self.LINK_URL)
 
         with Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
             # Add new entity if does not exist.
@@ -208,7 +209,7 @@ class ConfigPropertyEditor(object):
         if name and name in config.Registry.registered.keys():
             item = config.Registry.registered[name]
         if not item:
-            self.redirect('%s?tab=settings' % self.LINK_URL)
+            self.redirect('%s?action=settings' % self.LINK_URL)
 
         with Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
             # Delete if exists.
@@ -226,7 +227,7 @@ class ConfigPropertyEditor(object):
             except db.BadKeyError:
                 pass
 
-        self.redirect('%s?tab=settings' % self.URL)
+        self.redirect('%s?action=settings' % self.URL)
 
 
 class CoursesPropertyRights(object):

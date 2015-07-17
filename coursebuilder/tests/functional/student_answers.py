@@ -324,7 +324,7 @@ class StudentAnswersAnalyticsTest(actions.TestBase):
 
         # Start map/reduce analysis job.
         response = self.get(
-            '/test_course/dashboard?action=analytics&tab=questions')
+            '/test_course/dashboard?action=analytics_questions')
         form = response.forms['gcb-run-visualization-question_answers']
         self.submit(form, response)
 

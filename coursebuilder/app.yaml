@@ -13,8 +13,8 @@ env_variables:
   # https://cloud.google.com/appengine/docs/python/tools/appstats
   GCB_APPSTATS_ENABLED: false
 
-  # Regsitering 'certificate' after 'dashboard' for correct tab ordering.
   GCB_REGISTERED_MODULES:
+    modules.dashboard.dashboard
     modules.activity_tag.activity_tag
     modules.admin.admin
     modules.announcements.announcements
@@ -25,7 +25,6 @@ env_variables:
     modules.course_explorer.course_explorer
     modules.courses.courses
     modules.analytics.analytics
-    modules.dashboard.dashboard
     modules.certificate.certificate
     modules.data_pump.data_pump
     modules.data_removal.data_removal

@@ -50,7 +50,6 @@ from models import roles
 from models import transforms
 from modules.courses import settings
 from modules.dashboard import dashboard
-from modules.dashboard import tabs
 
 from google.appengine.ext import db
 from google.appengine.ext import deferred
@@ -1071,8 +1070,7 @@ class DataPumpJobsDataSource(data_sources.SynchronousQuery):
             crypto.XsrfTokenManager.create_xsrf_token(XSRF_ACTION_NAME))
         template_values['exit_url'] = urllib.urlencode({
             'exit_url': 'dashboard?%s' % urllib.urlencode({
-                'action': 'analytics',
-                'tab': 'data_pump'})})
+                'action': 'analytics_data_pump'})})
         source_classes = [
           ds for ds in data_sources.Registry.get_rest_data_source_classes()
           if ds.exportable()]
@@ -1115,8 +1113,10 @@ class DashboardExtension(object):
         data_pump_visualization = analytics.Visualization(
             'data_pumps', 'Data Pumps', 'data_pump.html',
             data_source_classes=[DataPumpJobsDataSource])
-        tabs.Registry.register('analytics', 'data_pump', 'Data Pump',
-                               analytics.TabRenderer([data_pump_visualization]))
+        dashboard.DashboardHandler.add_sub_nav_mapping(
+            'analytics', 'data_pump', 'Data pump', action='analytics_data_pump',
+            contents=analytics.TabRenderer([data_pump_visualization]),
+            placement=9000)
 
         def post_action(handler):
             cls(handler).post_data_pump()
@@ -1156,7 +1156,7 @@ class DashboardExtension(object):
                 for generator_class in data_source_class.required_generators():
                     generator_class(self.handler.app_context).cancel()
         self.handler.redirect(self.handler.get_action_url(
-            'analytics', extra_args={'tab': 'data_pump'}, fragment=source_name))
+            'analytics_data_pump', fragment=source_name))
 
     def __init__(self, handler):
         self.handler = handler
@@ -1272,10 +1272,12 @@ def register_module():
         data_sources.Registry.register(DataPumpJobsDataSource)
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             DATA_PUMP_SETTINGS_SCHEMA_SECTION] += course_settings_fields
-        tabs.Registry.register(
-            'settings', 'data_pump', 'Data Pump',
-            lambda handler: settings.CourseSettingsHandler.show_settings_tab(
-                handler, DATA_PUMP_SETTINGS_SCHEMA_SECTION))
+        dashboard.DashboardHandler.add_sub_nav_mapping(
+            'settings', 'data_pump', 'Data pump', action='settings_data_pump',
+            contents=lambda handler:
+                settings.CourseSettingsHandler.show_settings_tab(
+                    handler, DATA_PUMP_SETTINGS_SCHEMA_SECTION),
+            placement=7000)
         DashboardExtension.register()
 
     def on_module_disabled():
@@ -1286,7 +1288,7 @@ def register_module():
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
-        'Data Pump', 'Pushes DB and generated content to a BigQuery project',
+        'Data pump', 'Pushes DB and generated content to a BigQuery project',
         [], [],
         notify_module_enabled=on_module_enabled,
         notify_module_disabled=on_module_disabled)

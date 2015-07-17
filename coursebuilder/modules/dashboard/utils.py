@@ -29,8 +29,8 @@ RESOURCES_DIR = os.path.join(appengine_config.BUNDLE_ROOT,
                              RESOURCES_PATH.lstrip('/'))
 
 
-def build_assets_url(tab_name):
-    return '/dashboard?action=assets&tab=%s' % tab_name
+def build_assets_url(action):
+    return '/dashboard?action={action}'.format(action=action)
 
 
 def list_files(handler, subfolder, merge_local_files=False, all_paths=None):

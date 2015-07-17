@@ -29,12 +29,12 @@ class LabelManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
             'page_title': self.format_title('Edit Label'),
             'main_content': self.get_form(
                 LabelRestHandler, key,
-                dashboard_utils.build_assets_url('labels'))
+                dashboard_utils.build_assets_url('edit_labels'))
         }
 
     def get_add_label(self):
         self.render_page(self.lme_prepare_template(''),
-                         'assets', 'labels')
+                         in_action='edit_labels')
 
     def get_edit_label(self):
         key = self.request.get('key')
@@ -43,7 +43,7 @@ class LabelManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         if not label:
             raise Exception('No label found')
         self.render_page(self.lme_prepare_template(key=key),
-                         'assets', 'labels')
+                         in_action='edit_labels')
 
 
 class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):

@@ -31,15 +31,17 @@ class RoleManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         template_values['page_title'] = self.format_title('Edit Role')
         template_values['main_content'] = self.get_form(
             RoleRESTHandler, key,
-            self.get_action_url('roles'))
+            self.get_action_url('edit_roles'))
         return template_values
 
     def get_add_role(self):
-        self.render_page(self._prepare_template(''), 'roles')
+        self.render_page(
+            self._prepare_template(''), in_action='edit_roles')
 
     def get_edit_role(self):
         self.render_page(
-            self._prepare_template(self.request.get('key')), 'roles')
+            self._prepare_template(self.request.get('key')),
+            in_action='edit_roles')
 
 
 class RoleRESTHandler(dto_editor.BaseDatastoreRestHandler):

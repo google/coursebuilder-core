@@ -38,24 +38,24 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         template_values['page_title'] = self.format_title('Edit Question')
         template_values['main_content'] = self.get_form(
             rest_handler, key,
-            dashboard_utils.build_assets_url('questions'),
+            dashboard_utils.build_assets_url('edit_questions'),
             auto_return=auto_return)
 
         return template_values
 
     def get_add_mc_question(self):
         self.render_page(self.qmae_prepare_template(McQuestionRESTHandler),
-                         'assets', 'questions')
+                         in_action='edit_questions')
 
     def get_add_sa_question(self):
         self.render_page(self.qmae_prepare_template(SaQuestionRESTHandler),
-                         'assets', 'questions')
+                         in_action='edit_questions')
 
     def get_import_gift_questions(self):
         self.render_page(
             self.qmae_prepare_template(
                 GiftQuestionRESTHandler, auto_return=True),
-            'assets', 'questions')
+            in_action='edit_questions')
 
     def get_edit_question(self):
         key = self.request.get('key')
@@ -67,11 +67,11 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         if question.type == models.QuestionDTO.MULTIPLE_CHOICE:
             self.render_page(
                 self.qmae_prepare_template(McQuestionRESTHandler, key=key),
-                'assets', 'questions')
+                in_action='edit_questions')
         elif question.type == models.QuestionDTO.SHORT_ANSWER:
             self.render_page(
                 self.qmae_prepare_template(SaQuestionRESTHandler, key=key),
-                'assets', 'questions')
+                in_action='edit_questions')
         else:
             raise Exception('Unknown question type: %s' % question.type)
 

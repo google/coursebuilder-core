@@ -284,6 +284,6 @@ def _get_outline(handler):
 
 
 def on_module_enabled():
-    dashboard.DashboardHandler.add_custom_get_action(
-        'outline', _get_outline, is_default=True)
-    dashboard.DashboardHandler.add_nav_mapping('outline', 'Outline')
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'outline', 'Outline', action='outline', contents=_get_outline,
+        placement=1000)

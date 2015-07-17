@@ -31,7 +31,6 @@ from modules.analytics import synchronous_providers
 from modules.analytics import user_agent_aggregator
 from modules.analytics import youtube_event_aggregator
 from modules.dashboard import dashboard
-from modules.dashboard import tabs
 
 ANALYTICS = 'analytics'
 
@@ -98,27 +97,34 @@ def register_tabs():
         'cluster_stats.html',
         data_source_classes=[clustering.ClusterStatisticsDataSource])
 
-    tabs.Registry.register(ANALYTICS, 'students', 'Students',
-                           analytics.TabRenderer([
-                               labels_on_students,
-                               student_progress,
-                               enrollment_assessment]),
-                           placement=tabs.Placement.BEGINNING)
-    tabs.Registry.register(ANALYTICS, 'questions', 'Questions',
-                           analytics.TabRenderer([
-                               multiple_choice_question,
-                               question_answers]),
-                           placement=tabs.Placement.BEGINNING)
-    tabs.Registry.register(ANALYTICS, 'assessments', 'Assessments',
-                           analytics.TabRenderer([assessment_difficulty]))
-    tabs.Registry.register(ANALYTICS, 'gradebook', 'Gradebook',
-                           analytics.TabRenderer([gradebook]))
-    tabs.Registry.register(ANALYTICS, 'clustering', 'Clustering',
-                           analytics.TabRenderer([
-                               clusters_visualization,
-                               student_vectors_visualization,
-                               stats_visualization]))
-    dashboard.DashboardHandler.add_nav_mapping(ANALYTICS, 'Analytics')
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        ANALYTICS, 'students', 'Students', action='analytics_students',
+        contents=analytics.TabRenderer([
+            labels_on_students,
+            student_progress,
+            enrollment_assessment]),
+        placement=1000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        ANALYTICS, 'questions', 'Questions', action='analytics_questions',
+        contents=analytics.TabRenderer([
+            multiple_choice_question,
+            question_answers]),
+        placement=2000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        ANALYTICS, 'assessments', 'Assessments', action='analytics_assessments',
+        contents=analytics.TabRenderer([assessment_difficulty]),
+        placement=3000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        ANALYTICS, 'gradebook', 'Gradebook', action='analytics_gradebook',
+        contents=analytics.TabRenderer([gradebook]),
+        placement=5000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        ANALYTICS, 'clustering', 'Clustering', action='analytics_clustering',
+        contents=analytics.TabRenderer([
+            clusters_visualization,
+            student_vectors_visualization,
+            stats_visualization]),
+        placement=8000)
 
 
 def add_actions():
@@ -126,8 +132,7 @@ def add_actions():
         if not clustering.ClusterDataSource.any_clusterable_objects_exist(
             dashboard_instance.app_context):
             dashboard_instance.redirect(
-                dashboard_instance.get_action_url(
-                    'analytics', extra_args={'tab': 'clustering'}))
+                dashboard_instance.get_action_url('analytics_clustering'))
             return
 
         key = dashboard_instance.request.get('key')
@@ -136,15 +141,15 @@ def add_actions():
             'Edit Cluster')
         template_values['main_content'] = dashboard_instance.get_form(
             clustering.ClusterRESTHandler, key,
-            '/dashboard?action=analytics&tab=clustering',
+            '/dashboard?action=analytics_clustering',
             auto_return=True, app_context=dashboard_instance.app_context)
-        dashboard_instance.render_page(template_values, 'clusters')
+        dashboard_instance.render_page(
+            template_values, in_action='analytics_clustering')
 
     dashboard.DashboardHandler.add_custom_get_action(
         'add_cluster', cluster_prepare_template)
     dashboard.DashboardHandler.add_custom_get_action(
         'edit_cluster', cluster_prepare_template)
-    dashboard.DashboardHandler.add_custom_get_action(ANALYTICS)
 
 
 def get_namespaced_handlers():

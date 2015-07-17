@@ -48,7 +48,6 @@ from models import transforms
 from modules.admin.admin import WelcomeHandler
 from modules.courses import outline
 from modules.dashboard import dashboard
-from modules.dashboard import tabs
 from modules.dashboard.question_editor import BaseQuestionRESTHandler
 from modules.dashboard.question_editor import McQuestionRESTHandler
 from modules.dashboard.question_editor import SaQuestionRESTHandler
@@ -1060,30 +1059,23 @@ class SkillRestHandler(utils.BaseRESTHandler):
 
 class SkillMapHandler(dashboard.DashboardHandler):
 
-    ACTION = 'skill_map'
-
     URL = '/modules/skill_map'
 
-    NAV_BAR_TAB = 'Skill Map'
+    get_actions = ['edit_skills_table', 'edit_dependency_graph']
 
-    def get_skill_map(self):
+    def render_read_only(self):
+        self.render_page({
+            'page_title': self.format_title('Skills Map'),
+            'main_content': jinja2.utils.Markup(
+                '<h1>Read-only course.</h1>')
+        })
+
+    def get_edit_skills_table(self):
         self.course = courses.Course(self)
         if not self.course.app_context.is_editable_fs():
-            self.render_page({
-                'page_title': self.format_title('Skills Map'),
-                'main_content': jinja2.utils.Markup(
-                    '<h1>Read-only course.</h1>')
-            })
+            self.render_read_only()
             return
 
-        tab = self.request.get('tab')
-
-        if tab == 'skills_table':
-            self.get_skills_table()
-        elif tab == 'dependency_graph':
-            self.get_dependency_graph()
-
-    def get_skills_table(self):
         skill_map = SkillMap.load(self.course)
         skills = skill_map.skills() or []
 
@@ -1095,10 +1087,15 @@ class SkillMapHandler(dashboard.DashboardHandler):
             'skills_table.html', [TEMPLATES_DIR]).render(template_values)
 
         self.render_page({
-            'page_title': self.format_title('Skills Table'),
+            'page_title': self.format_title('Skills table'),
             'main_content': jinja2.utils.Markup(main_content)})
 
-    def get_dependency_graph(self):
+    def get_edit_dependency_graph(self):
+        self.course = courses.Course(self)
+        if not self.course.app_context.is_editable_fs():
+            self.render_read_only()
+            return
+
         skill_map = SkillMap.load(self.course)
 
         nodes = []
@@ -1544,20 +1541,23 @@ def post_update_progress(course, student, lprogress, event_entity, event_key):
 
 
 def register_tabs():
-    tabs.Registry.register(
-        'skill_map', 'skills_table', 'Skills Table',
-        href='modules/skill_map?action=skill_map&tab=skills_table')
-    tabs.Registry.register(
-        'skill_map', 'dependency_graph', 'Skills Graph',
-        href='modules/skill_map?action=skill_map&tab=dependency_graph')
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'skills_table', 'Skills table', action='edit_skills_table',
+        href='modules/skill_map?action=edit_skills_table', placement=4000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'dependency_graph', 'Skills graph',
+        action='edit_dependency_graph',
+        href='modules/skill_map?action=edit_dependency_graph', placement=4500)
 
     skill_map_visualization = analytics.Visualization(
         'skill_map',
         'Skill Map Analytics',
         'templates/skill_map_analytics.html',
         data_source_classes=[SkillMapDataSource])
-    tabs.Registry.register('analytics', 'skill_map', 'Skill Map',
-                           analytics.TabRenderer([skill_map_visualization]))
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'analytics', 'skill_map', 'Skill map', action='analytics_skill_map',
+        contents=analytics.TabRenderer([skill_map_visualization]),
+        placement=4000)
 
 
 def lesson_rest_handler_schema_load_hook(lesson_field_registry):
@@ -1793,16 +1793,9 @@ def skills_progress_provider(handler, app_context, student):
 
 
 def notify_module_enabled():
-    def get_action(handler):
-        handler.redirect('/modules/skill_map?action=skill_map&tab=skills_table')
-
     outline.COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS.append(
         course_outline_extra_info_decorator)
     outline.COURSE_OUTLINE_EXTRA_INFO_TITLES.append('Skills')
-    dashboard.DashboardHandler.add_nav_mapping(
-        SkillMapHandler.ACTION, SkillMapHandler.NAV_BAR_TAB)
-    dashboard.DashboardHandler.get_actions.append('skill_map')
-    setattr(dashboard.DashboardHandler, 'get_skill_map', get_action)
     dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
         '/modules/skill_map/resources/css/common.css')
     dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(

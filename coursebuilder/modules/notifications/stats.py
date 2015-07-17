@@ -23,7 +23,7 @@ import datetime
 from models import analytics
 from models import data_sources
 from models import jobs
-from modules.dashboard import tabs
+from modules.dashboard import dashboard
 from modules.notifications import notifications
 
 
@@ -140,5 +140,7 @@ def register_analytic():
     visualization = analytics.Visualization(
         name, title, 'stats.html',
         data_source_classes=[NotificationsDataSource])
-    tabs.Registry.register('analytics', name, title,
-                           analytics.TabRenderer([visualization]))
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'analytics', name, title, action='analytics_notifications',
+        contents=analytics.TabRenderer([visualization]),
+        placement=10000)

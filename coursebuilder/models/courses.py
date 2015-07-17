@@ -2441,7 +2441,7 @@ class Course(object):
 
         # Unit level settings.
         unit_opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_UNITS_AND_LESSONS, 'Units and Lessons',
+            Course.SCHEMA_SECTION_UNITS_AND_LESSONS, 'Units & lessons',
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })

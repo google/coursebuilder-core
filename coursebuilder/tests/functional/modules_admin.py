@@ -51,17 +51,17 @@ class AdminDashboardTabTests(actions.TestBase):
     def test_admin_tab_not_present_for_non_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=False)
         dom = self.parse_html_string(self.get('/dashboard').body)
-        self.assertIsNone(dom.find('.//a[@href="admin?action=admin"]'))
+        self.assertIsNone(dom.find('.//a[@href="admin?action=courses"]'))
 
     def test_admin_tab_is_present_for_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         dom = self.parse_html_string(self.get('/dashboard').body)
-        self.assertIsNotNone(dom.find('.//a[@href="admin?action=admin"]'))
+        self.assertIsNotNone(dom.find('.//a[@href="admin?action=courses"]'))
 
     def test_admin_actions_unavailable_for_non_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=False)
 
-        response = self.get('admin?action=admin')
+        response = self.get('admin?action=courses')
         self.assertEqual(302, response.status_int)
 
         response = self.post(
@@ -71,7 +71,7 @@ class AdminDashboardTabTests(actions.TestBase):
     def test_admin_actions_available_for_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
 
-        dom = self.parse_html_string(self.get('admin?action=admin').body)
+        dom = self.parse_html_string(self.get('admin').body)
         self.assertEqual(
-            'Site Admin',
+            'Site admin',
             self.get_nav_bar(dom).find('.//a[@class="selected"]').text)

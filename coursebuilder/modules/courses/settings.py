@@ -33,7 +33,6 @@ from models import vfs
 from modules.courses import messages
 from modules.dashboard import dashboard
 from modules.dashboard import filer
-from modules.dashboard import tabs
 from modules.dashboard import utils as dashboard_utils
 from modules.oeditor import oeditor
 
@@ -87,8 +86,8 @@ class CourseSettingsHandler(object):
         handler.redirect('/dashboard')
 
     @staticmethod
-    def show_edit_settings_section(handler, template_values, key,
-                                   tab_title, section_names=None, exit_url=''):
+    def show_edit_settings_section(
+            handler, template_values, key, section_names=None, exit_url=''):
 
         # The editor for all course settings is getting rather large.  Here,
         # prune out all sections except the one named.  Names can name either
@@ -108,24 +107,22 @@ class CourseSettingsHandler(object):
             additional_dirs=CourseSettingsHandler.ADDITIONAL_DIRS,
             required_modules=CourseSettingsRESTHandler.REQUIRED_MODULES)
         template_values.update({
-            'page_title': handler.format_title(
-                'Settings > %s' %
-                urllib.unquote(tab_title)),
             'main_content': form_html,
-            })
+        })
 
     @staticmethod
     def show_settings_tab(handler, section_names):
-        tab = tabs.Registry.get_tab('settings',
-                                    handler.request.get('tab') or 'course')
+        menu_item = dashboard.DashboardHandler.actions_to_menu_items[
+            handler.request.get('action') or 'settings_course']
         template_values = {
-            'page_title': handler.format_title('Settings > %s' % tab.title),
+            'page_title': handler.format_title(
+                'Settings > {}'.format(urllib.unquote(menu_item.title))),
         }
         exit_url = handler.request.get('exit_url')
 
         CourseSettingsHandler.show_edit_settings_section(
-            handler, template_values, '/course.yaml', tab.title,
-            section_names, exit_url)
+            handler, template_values, '/course.yaml', exit_url=exit_url,
+            section_names=section_names)
         return template_values
 
 
@@ -538,8 +535,7 @@ def _get_settings_advanced(handler):
             'action': handler.get_action_url(
                 'create_or_edit_settings',
                 extra_args={
-                    'tab': 'advanced',
-                    'tab_title': 'Advanced',
+                    'from_action': 'settings_advanced',
                     }),
             'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 'create_or_edit_settings')})
@@ -591,27 +587,37 @@ def on_module_enabled():
         'edit_html_hook', HtmlHookHandler.get_edit_html_hook)
 
     # Default item in tab group should be dead first in list for good UX.
-    tabs.Registry.register(
-        'settings', 'course', 'Course',
-        lambda h: CourseSettingsHandler.show_settings_tab(h, 'course'),
-        placement=tabs.Placement.BEGINNING)
-    tabs.Registry.register(
-        'settings', 'homepage', 'Homepage',
-        lambda h: CourseSettingsHandler.show_settings_tab(h, 'homepage'))
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'settings', 'course', 'Course', action='settings_course',
+        contents=(lambda h: CourseSettingsHandler.show_settings_tab(
+            h, 'course')),
+        placement=1000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'settings', 'units', 'Units & lessons', action='settings_units',
+        contents=(lambda h: CourseSettingsHandler.show_settings_tab(
+            h, 'unit,assessment')),
+        placement=2000)
     # TODO(jorr): Remove the dependency on the invitations module in this line
-    tabs.Registry.register(
+    dashboard.DashboardHandler.add_sub_nav_mapping(
         'settings', 'registration', 'Registration',
-        lambda h: CourseSettingsHandler.show_settings_tab(
-            h, 'registration,invitation'))
-    tabs.Registry.register(
-        'settings', 'units', 'Units and Lessons',
-        lambda h: CourseSettingsHandler.show_settings_tab(h, 'unit,assessment'))
-    tabs.Registry.register(
-        'settings', 'i18n', 'I18N',
-        lambda h: CourseSettingsHandler.show_settings_tab(h, 'i18n'))
-    tabs.Registry.register(
-        'settings', 'advanced', 'Advanced',
-        _get_settings_advanced, placement=tabs.Placement.END)
-    tabs.Registry.register(
-        'settings', 'about', 'About',
-        _get_about_course, placement=tabs.Placement.END)
+        action='settings_registration',
+        contents=(lambda h: CourseSettingsHandler.show_settings_tab(
+            h, 'registration,invitation')),
+        placement=3000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'settings', 'i18n', 'Translations', action='settings_i18n',
+        contents=(lambda h: CourseSettingsHandler.show_settings_tab(h, 'i18n')),
+        placement=5000)
+
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'settings', 'advanced', 'Advanced', action='settings_advanced',
+        contents=_get_settings_advanced, placement=10000)
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'settings', 'about', 'Debug info', action='settings_about',
+        contents=_get_about_course, placement=11000)
+
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'homepage', 'Homepage', action='edit_homepage',
+        contents=(lambda h: CourseSettingsHandler.show_settings_tab(
+            h, 'homepage')),
+        placement=3000)

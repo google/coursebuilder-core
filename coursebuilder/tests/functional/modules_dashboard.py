@@ -31,7 +31,7 @@ from models.custom_modules import Module
 from models.roles import Permission
 from models.roles import Roles
 from modules.dashboard import dashboard
-from modules.dashboard import tabs
+from common import menus
 from modules.dashboard.dashboard import DashboardHandler
 from modules.dashboard.question_group_editor import QuestionGroupRESTHandler
 from modules.dashboard.role_editor import RoleRESTHandler
@@ -43,7 +43,7 @@ class QuestionDashboardTestCase(actions.TestBase):
     """Tests Assets > Questions."""
     COURSE_NAME = 'question_dashboard'
     ADMIN_EMAIL = 'admin@foo.com'
-    URL = 'dashboard?action=assets&tab=questions'
+    URL = 'dashboard?action=edit_questions'
 
     def setUp(self):
         super(QuestionDashboardTestCase, self).setUp()
@@ -493,7 +493,7 @@ class RoleEditorTestCase(actions.TestBase):
     """Tests the Roles tab and Role Editor."""
     COURSE_NAME = 'role_editor'
     ADMIN_EMAIL = 'admin@foo.com'
-    URL = 'dashboard?action=roles'
+    URL = 'dashboard?action=edit_roles'
 
     def setUp(self):
         super(RoleEditorTestCase, self).setUp()
@@ -611,7 +611,7 @@ class DashboardAccessTestCase(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
     USER_EMAIL = 'user@foo.com'
     ROLE = 'test_role'
-    ACTION = 'outline'
+    ACTION = 'test_action'
     PERMISSION = 'can_access_dashboard'
     PERMISSION_DESCRIPTION = 'Can Access Dashboard.'
 
@@ -639,17 +639,34 @@ class DashboardAccessTestCase(actions.TestBase):
 
         self.course_without_access = courses.Course(None, context)
 
+        def test_content(self):
+            return self.render_page(
+                {'main_content': 'test', 'page_title': 'test'})
+
+        # save properties
+        self.old_menu_group = DashboardHandler.root_menu_group
         # pylint: disable=W0212
-        self.old_nav_mappings = DashboardHandler._custom_nav_mappings
-        # pylint: disable=W0212
-        DashboardHandler._custom_nav_mappings = {self.ACTION: 'outline'}
+        self.old_get_acitons = DashboardHandler._custom_get_actions
+        # pylint: enable=W0212
+
+        # put a dummy method in
+        menu_group = menus.MenuGroup('test', 'Test Dashboard')
+        DashboardHandler.root_menu_group = menu_group
+        DashboardHandler.default_action = self.ACTION
+        DashboardHandler.add_nav_mapping(self.ACTION, self.ACTION)
+        DashboardHandler.add_sub_nav_mapping(self.ACTION, self.ACTION,
+            self.ACTION, action=self.ACTION, contents=test_content)
         DashboardHandler.map_action_to_permission(
             'get_%s' % self.ACTION, self.PERMISSION)
         actions.logout()
 
     def tearDown(self):
+        # restore properties
         # pylint: disable=W0212
-        DashboardHandler._custom_nav_mappings = self.old_nav_mappings
+        DashboardHandler.root_menu_group = self.old_menu_group
+        DashboardHandler._custom_get_actions = self.old_get_acitons
+        # pylint: enable=W0212
+
         super(DashboardAccessTestCase, self).tearDown()
 
     def test_dashboard_access_method(self):
@@ -678,8 +695,9 @@ class DashboardAccessTestCase(actions.TestBase):
         actions.login(self.USER_EMAIL, is_admin=False)
         picker_options = self._get_all_picker_options()
         self.assertEquals(len(list(picker_options)), 1)
-        self.assertEquals(picker_options[0].get(
-            'href'), '/%s/dashboard' % self.ACCESS_COURSE_NAME)
+        self.assertEquals(picker_options[0].get('href'),
+            '/{}/dashboard?action={}'.format(
+                self.ACCESS_COURSE_NAME, self.ACTION))
         actions.logout()
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)
@@ -752,7 +770,7 @@ class DashboardCustomNavTestCase(actions.TestBase):
         dom = self.parse_html_string(self.get('dashboard').body)
         selected_nav_path = ('.//tr[@class="gcb-nav-bar-level-1"]'
                              '//a[@class="selected"]')
-        self.assertEquals('Outline', dom.find(selected_nav_path).text)
+        self.assertEquals('Edit', dom.find(selected_nav_path).text)
         dom = self.parse_html_string(self.get(self.URL).body)
 
         self.assertEquals('CUSTOM_MOD', dom.find(selected_nav_path).text)
@@ -768,9 +786,9 @@ class DashboardCustomNavTestCase(actions.TestBase):
             def display_html(cls, unused_dashboard_handler):
                 return 'MainTabContent'
 
-        tabs.Registry.register(
-            self.ACTION, 'cu_tab', 'CustomTab', CustomTabHandler)
-        DashboardHandler.add_custom_get_action(self.ACTION, None)
+        dashboard.DashboardHandler.add_sub_nav_mapping(
+            self.ACTION, 'cu_tab', 'CustomTab', action=self.ACTION,
+            contents=CustomTabHandler)
         dom = self.parse_html_string(self.get(self.URL).body)
         self.assertEquals('CUSTOM_MOD', dom.find(selected_nav_path).text)
         self.assertEquals(
@@ -781,7 +799,7 @@ class DashboardCustomNavTestCase(actions.TestBase):
         self.assertEquals('CustomTab', dom.find(selected_tab_path).text)
 
     def test_first_tab(self):
-        url = 'dashboard?action=analytics'
+        url = 'dashboard?action=analytics_students'
         dom = self.parse_html_string(self.get(url).body)
         selected_tab_path = ('.//*[@class="gcb-nav-bar-level-2"]'
                              '//a[@class="selected"]')

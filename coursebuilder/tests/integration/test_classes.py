@@ -456,12 +456,12 @@ class AdminTests(BaseIntegrationTest):
         ).verify_not_publicly_available()  # confirm that we're on the dashboard
 
         # Test Upload asset
-        self.load_dashboard(name).click_assets(
+        self.load_dashboard(name).click_edit(
         ).click_sub_tab(
-            'Images & Documents'
+            'Images & documents'
         ).click_upload(
         ).click_close(
-        ).verify_selected_tab('Assets')
+        ).verify_selected_tab('Edit')
 
     def test_leave_page_with_changes_triggers_alert(self):
         """Opens an editor page, make changes and tries to leave.
@@ -490,11 +490,11 @@ class AdminTests(BaseIntegrationTest):
         # Test click navigation bar button
         dashboard = self.load_dashboard(name)
         dashboard.click_add_unit().set_contents_on_one_page(True)
-        dashboard.click_assets()
+        dashboard.click_edit()
         alert = browser.switch_to_alert()
         self.assertEqual(confirm_message, alert.text)
         alert.accept()
-        self.assertEqual(browser.where_am_i(), 'dashboard?action=assets')
+        self.assertEqual(browser.where_am_i(), 'dashboard?action=outline')
 
         # Test cancel the alert
         browser = self.load_dashboard(name).click_add_unit(
@@ -511,9 +511,9 @@ class AdminTests(BaseIntegrationTest):
 
         self.load_dashboard(
             name
-        ).click_assets(
+        ).click_edit(
         ).click_sub_tab(
-            'Images & Documents'
+            'Images & documents'
         ).click_upload(
         ).select_file(
             image_file
@@ -601,7 +601,7 @@ class AdminTests(BaseIntegrationTest):
 
         self.load_dashboard(
             name
-        ).click_assets(
+        ).click_edit(
         ).click_sub_tab(
             'Labels'
         ).click_add_label(
@@ -657,7 +657,7 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_dashboard(
 
         #---------------------------------------------- Question
-        ).click_assets(
+        ).click_edit(
         ).click_sub_tab(
             'Questions'
         ).click_add_multiple_choice(

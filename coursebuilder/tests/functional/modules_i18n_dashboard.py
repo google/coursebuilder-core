@@ -254,7 +254,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'I18N',
             'Invitation',
             'Registration',
-            'Units and Lessons',
+            'Units & lessons',
             '',
             'Course Outline',
             'Unit 1 - Test Unit',
@@ -3844,9 +3844,11 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                 _profile('sample/admin', 'Admin home')
                 _profile('sample/admin?action=settings', 'Settings')
                 _profile('sample/dashboard', 'Dashboard', quota=(150, 60))
-                _profile('sample/dashboard?action=assets', 'Questions')
+                _profile('sample/dashboard?action=edit_questions',
+                    'Questions')
                 _profile(
-                    'sample/dashboard?action=i18n_dashboard', 'I18N Dashboard')
+                    'sample/dashboard?action=i18n_dashboard',
+                    'I18N Dashboard')
                 _profile('sample/dashboard?action=i18n_download', 'I18N Export')
 
             print '\n', '\n'.join(lines)

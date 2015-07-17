@@ -304,7 +304,7 @@ class ClusteringTabTests(actions.TestBase):
     ADMIN_EMAIL = 'test@example.com'
     NON_ADMIN_EMAIL = 'test2@example.com'
     CLUSTER_TAB_URL = (
-        '/{}/dashboard?action=analytics&tab=clustering'.format(COURSE_NAME))
+        '/{}/dashboard?action=analytics_clustering'.format(COURSE_NAME))
 
     def setUp(self):
         super(ClusteringTabTests, self).setUp()
@@ -397,7 +397,7 @@ class ClusteringTabTests(actions.TestBase):
                             self.COURSE_NAME)
         self.assertEquals(302, response.status_int)
         self.assertEquals(
-            'http://localhost/%s/dashboard?action=analytics&tab=clustering' %
+            'http://localhost/%s/dashboard?action=analytics_clustering' %
             self.COURSE_NAME, response.location)
 
     def test_edit_cluster_redirects_when_no_clusterables(self):
@@ -405,7 +405,7 @@ class ClusteringTabTests(actions.TestBase):
                             self.COURSE_NAME)
         self.assertEquals(302, response.status_int)
         self.assertEquals(
-            'http://localhost/%s/dashboard?action=analytics&tab=clustering' %
+            'http://localhost/%s/dashboard?action=analytics_clustering' %
             self.COURSE_NAME, response.location)
 
 class ClusterRESTHandlerTest(actions.TestBase):

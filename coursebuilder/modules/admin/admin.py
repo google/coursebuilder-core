@@ -44,7 +44,7 @@ from models.config import ConfigProperty
 import modules.admin.config
 from modules.admin.config import ConfigPropertyEditor
 from modules.dashboard import dashboard
-from modules.dashboard import tabs
+from common import menus
 from modules.oeditor import oeditor
 
 import google.appengine.api.app_identity as app
@@ -224,11 +224,16 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
         self.redirect('/admin/global')
 
 
+def can_view_admin_action(action):
+    if action == 'add_course':
+        return modules.admin.config.CoursesPropertyRights.can_add()
+    return roles.Roles.is_super_admin()
+
+
 class BaseAdminHandler(ConfigPropertyEditor):
     """Base class holding methods required for administration of site."""
 
-    ACTION = 'admin'
-    DEFAULT_TAB = 'courses'
+    default_action = 'courses'
 
     class AbstractDbTypeDescriber(object):
 
@@ -313,25 +318,32 @@ class BaseAdminHandler(ConfigPropertyEditor):
         'oauth2client.appengine',
     ])
 
-    def get_default_tab_action(self):
-        return 'admin'
-
     @classmethod
-    def bind_tabs(cls):
+    def make_site_menu(cls, root_menu_group, placement):
+
+        group = menus.MenuGroup(
+            'admin', 'Site admin', group=root_menu_group, placement=placement)
 
         def bind(key, label, handler, href=None):
             if href:
                 target = '_blank'
             else:
-                href = 'admin?action=admin&tab=%s' % key
                 target = None
+                href = "{}?action={}".format(cls.LINK_URL, key)
 
-            tabs.Registry.register(
-                cls.ACTION, key, label, contents=handler, href=href,
-                target=target)
+            def can_view(app_context):
+                return can_view_admin_action(key)
+
+            menu_item = menus.MenuItem(
+                key, label, action=key, can_view=can_view, group=group,
+                href=href, target=target)
+
+            if handler:
+                cls.get_actions.append(key)
+                cls.actions_to_menu_items[key] = menu_item
 
         bind('courses', 'Courses', cls.get_courses)
-        bind('settings', 'Site Settings', cls.get_settings)
+        bind('settings', 'Site settings', cls.get_settings)
         bind('perf', 'Metrics', cls.get_perf)
         bind('deployment', 'Deployment', cls.get_deployment)
 
@@ -353,7 +365,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
                  href='http://localhost:8000/')
         bind('welcome', 'Welcome', None, href='/admin/welcome')
         bind(
-             'help', 'Site Help', None,
+             'help', 'Site help', None,
              href='https://code.google.com/p/course-builder/wiki/AdminPage')
         bind(
              'news', 'News', None,
@@ -362,20 +374,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 '?fromgroups#!forum/course-builder-announce'))
 
     @classmethod
-    def unbind_tabs(cls):
-        tabs.Registry.unregister_group(cls.ACTION)
-
-    @classmethod
     def bind_get_actions(cls):
-        cls.get_actions.append(cls.ACTION)
         cls.get_actions.append('add_course')
         cls.get_actions.append('config_edit')
-
-    @classmethod
-    def unbind_get_actions(cls):
-        cls.get_actions.remove(cls.ACTION)
-        cls.get_actions.remove('add_course')
-        cls.get_actions.remove('config_edit')
 
     @classmethod
     def bind_post_actions(cls):
@@ -385,39 +386,16 @@ class BaseAdminHandler(ConfigPropertyEditor):
         if DIRECT_CODE_EXECUTION_UI_ENABLED:
             cls.post_actions.append('console_run')
 
-    @classmethod
-    def unbind_post_actions(cls):
-        cls.post_actions.remove('config_override')
-        cls.post_actions.remove('config_reset')
-
-        if DIRECT_CODE_EXECUTION_UI_ENABLED:
-            cls.post_actions.remove('console_run')
-
-    def can_view(self, unused_action):
+    def can_view(self, action):
         """Checks if current user has viewing rights."""
         # Overrides method in DashboardHandler
-        action = self.request.get('action')
-        if action == 'add_course':
-            return modules.admin.config.CoursesPropertyRights.can_add()
-        return roles.Roles.is_super_admin()
+        return can_view_admin_action(action)
 
     def can_edit(self):
         """Checks if current user has editing rights."""
         # Overrides method in DashboardHandler
-        return self.can_view(self.ACTION)
-
-    def get_course_picker(self, destination=None):
-        return super(BaseAdminHandler, self).get_course_picker(
-            destination='/admin')
-
-    def get_admin(self):
-        """The main entry point to the admin console."""
-        tab = tabs.Registry.get_tab(
-            self.ACTION, self.request.get('tab') or self.DEFAULT_TAB)
-        if tab:
-            tab.contents(self)
-        else:
-            self.error(404)
+        action = self.request.get('action')
+        return self.can_view(action)
 
     def render_dict(self, source_dict, title):
         """Renders a dictionary ordered by keys."""
@@ -581,7 +559,6 @@ class BaseAdminHandler(ConfigPropertyEditor):
             sys_path_content
         )
         self.render_page(template_values)
-
 
     def _recurse_subclasses(self, entity_type, entity_types):
         for subclass in entity_type.__subclasses__():
@@ -861,7 +838,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
                     'Total: %s item(s)' % count)))
         template_values['main_content'] = content
 
-        self.render_page(template_values)
+        self.render_page(template_values, in_action='courses')
 
     def get_console(self):
         """Shows interactive Python console page."""
@@ -960,7 +937,27 @@ Input your Python code below and press "Run Program" to execute.""")
         )
 
         template_values['main_content'] = content
-        self.render_page(template_values, in_tab='console')
+        self.render_page(template_values, in_action='console')
+
+    @classmethod
+    def enable(cls):
+        cls.bind_get_actions()
+        cls.bind_post_actions()
+        cls.make_menu()
+
+    @classmethod
+    def disable(cls):
+        cls.post_actions = []
+        cls.get_actions = []
+
+    def default_action_for_current_permissions(self):
+        """Set the default or first active navigation tab as default action."""
+        item = self.root_menu_group.get_child(
+            'admin').first_visible_item(self.app_context)
+        if item:
+            return item.action
+        else:
+            return None
 
 
 class AdminHandler(BaseAdminHandler, dashboard.DashboardHandler):
@@ -972,6 +969,10 @@ class AdminHandler(BaseAdminHandler, dashboard.DashboardHandler):
     # The URL used in relative addreses of this handler
     LINK_URL = 'admin'
 
+    # Isolate this class's actions list from its parents
+    get_actions = []
+    post_actions = []
+
     def format_title(self, text):
         return super(AdminHandler, self).format_title(
             'Admin > %s' % text)
@@ -980,12 +981,20 @@ class AdminHandler(BaseAdminHandler, dashboard.DashboardHandler):
         return super(AdminHandler, self).get_template(
             template_name, [TEMPLATE_DIR] + dirs)
 
-    def render_page(self, template_values, in_action=None, in_tab=None):
-        in_action = in_action or self.ACTION
-        in_tab = in_tab or self.request.get('tab') or self.DEFAULT_TAB
+    def get_course_picker(self, destination=None, in_action=None):
+        return super(AdminHandler, self).get_course_picker(
+            destination='/admin', in_action=in_action)
 
-        super(AdminHandler, self).render_page(
-            template_values, in_action=in_action, in_tab=in_tab)
+    @classmethod
+    def make_menu(cls):
+        cls.make_site_menu(
+            dashboard.DashboardHandler.root_menu_group, placement=7000)
+
+    @classmethod
+    def disable(cls):
+        super(AdminHandler, cls).disable()
+        group = dashboard.DashboardHandler.root_menu_group
+        group.remove_child(group.get_child('admin'))
 
 
 class GlobalAdminHandler(
@@ -1005,61 +1014,32 @@ class GlobalAdminHandler(
     # Node or NodeList, or a jinja2.Markup).
     PAGE_HEADER_HOOKS = []
 
-    default_action = 'admin'
-    get_actions = [default_action]
+    # Isolate this class's actions list from its parents
+    get_actions = []
     post_actions = []
+
+    actions_to_menu_items = {}
+    root_menu_group = menus.MenuGroup('admin', 'Global Admin')
 
     def format_title(self, text):
         return 'Course Builder > Admin > %s' % text
 
-    def _get_top_nav(self, in_action, in_tab):
-        nav_bars = []
+    @classmethod
+    def make_menu(cls):
+        cls.make_site_menu(cls.root_menu_group, placement=1000)
+        dashboard.make_help_menu(cls.root_menu_group)
 
-        nav = safe_dom.NodeList()
-
-        nav.append(safe_dom.Element(
-            'a', href=self.URL, className='selected'
-        ).add_text('Site Admin'))
-
-        nav.append(safe_dom.Element(
-            'a',
-            href='https://code.google.com/p/course-builder/wiki/Dashboard',
-            target='_blank'
-        ).add_text('Help'))
-
-        nav.append(safe_dom.Element(
-            'a',
-            href=(
-                'https://groups.google.com/forum/?fromgroups#!categories/'
-                'course-builder-forum/general-troubleshooting'),
-            target='_blank'
-        ).add_text('Support'))
-        nav_bars.append(nav)
-
-        tab_name = in_tab or self.request.get('tab') or self.DEFAULT_TAB
-        sub_nav = safe_dom.NodeList()
-        tab_group = tabs.Registry.get_tab_group(self.default_action)
-        for tab in tab_group:
-            if tab.contents:
-                href = '%s?tab=%s' % (self.LINK_URL, tab.name)
-            else:
-                href = tab.href
-            target = tab.target or '_self'
-            sub_nav.append(
-                safe_dom.A(
-                    href,
-                    className=('selected' if tab.name == tab_name else ''),
-                    target=target)
-                .add_text(tab.title))
-        nav_bars.append(sub_nav)
-
-        return nav_bars
+    @classmethod
+    def disable(cls):
+        super(GlobalAdminHandler, cls).disable()
+        cls.root_menu_group.remove_all()
+        cls.actions_to_menu_items = {}
 
     def get(self):
-        tab = self.request.get('tab')
+        action = self.request.get('action')
 
-        if tab:
-            destination = '%s?tab=%s' % (self.LINK_URL, tab)
+        if action:
+            destination = '%s?action=%s' % (self.LINK_URL, action)
         else:
             destination = self.LINK_URL
 
@@ -1067,7 +1047,7 @@ class GlobalAdminHandler(
         if not user:
             self.redirect(users.create_login_url(destination), normalize=False)
             return
-        if not self.can_view(self.ACTION):
+        if not can_view_admin_action(action):
             if appengine_config.PRODUCTION_MODE:
                 self.error(403)
             else:
@@ -1093,14 +1073,14 @@ class GlobalAdminHandler(
         return jinja_utils.get_template(
             template_name, dirs + [dashboard_template_dir], handler=self)
 
-    def render_page(self, template_values, in_action=None, in_tab=None):
+    def render_page(self, template_values, in_action=None):
         page_title = template_values['page_title']
         template_values['header_title'] = page_title
         template_values['page_headers'] = [
             hook(self) for hook in self.PAGE_HEADER_HOOKS]
         template_values['breadcrumbs'] = page_title
 
-        template_values['top_nav'] = self._get_top_nav(in_action, in_tab)
+        template_values['top_nav'] = dashboard.get_top_nav(self, in_action)
         template_values['gcb_course_base'] = '/'
         template_values['user_nav'] = safe_dom.NodeList().append(
             safe_dom.Text('%s | ' % users.get_current_user().email())
@@ -1124,19 +1104,13 @@ class GlobalAdminHandler(
 
 
 def notify_module_enabled():
-    BaseAdminHandler.bind_tabs()
-    AdminHandler.bind_get_actions()
-    AdminHandler.bind_post_actions()
-    GlobalAdminHandler.bind_get_actions()
-    GlobalAdminHandler.bind_post_actions()
+    AdminHandler.enable()
+    GlobalAdminHandler.enable()
 
 
 def notify_module_disabled():
-    BaseAdminHandler.unbind_tabs()
-    AdminHandler.unbind_get_actions()
-    AdminHandler.unbind_post_actions()
-    GlobalAdminHandler.unbind_get_actions()
-    GlobalAdminHandler.unbind_post_actions()
+    AdminHandler.disable()
+    GlobalAdminHandler.disable()
 
 
 custom_module = None
@@ -1157,7 +1131,7 @@ def register_module():
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
-        'Site Admin',
+        'Site admin',
         'A set of pages for Course Builder site administrator.',
         global_handlers, namespaced_handlers,
         notify_module_enabled=notify_module_enabled,
