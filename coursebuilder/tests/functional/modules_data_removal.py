@@ -17,18 +17,55 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 from common import utils as common_utils
+from common import users
 from models import data_removal as models_data_removal
 from models import models
+from models import student_work
+from modules.analytics import student_aggregate
 from modules.data_removal import data_removal
 from modules.data_removal import removal_models
 from modules.invitation import invitation
 from modules.questionnaire import questionnaire
+from modules.review import domain
+from modules.review import peer
 from modules.skill_map import competency
 from modules.unsubscribe import unsubscribe
 from tests.functional import actions
 
+from google.appengine.ext import db
 
-class DataRemovalTests(actions.TestBase):
+class DataRemovalTestBase(actions.TestBase):
+
+    def _unregister_and_request_data_removal(self, course):
+        response = self.get('/%s/student/home' % course)
+        response = self.click(response, 'Unenroll')
+        self.assertIn('to unenroll from', response.body)
+        form = response.form
+        form['data_removal'].checked = True
+        form.action = self.canonicalize(form.action, response)
+        response = form.submit()
+        form = response.form
+        form.action = self.canonicalize(form.action, response)
+        response = form.submit('data_removal')
+        self.assertIn('You have been unenrolled', response.body)
+
+    def _complete_removal(self):
+        # Remove indexed items, add to-do items for map/reduce.
+        task_count = self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
+        # Add map/reduce jobs on default queue
+        response = self.get(
+            data_removal.DataRemovalCronHandler.URL,
+            headers={'X-AppEngine-Cron': 'True'})
+        # Run map/reduce jobs
+        self.execute_all_deferred_tasks()
+        # Final call to cron to do cleanup once map/reduce work items done.
+        response = self.get(
+            data_removal.DataRemovalCronHandler.URL,
+            headers={'X-AppEngine-Cron': 'True'})
+
+
+class DataRemovalTests(DataRemovalTestBase):
 
     COURSE = 'data_removal_test'
     NAMESPACE = 'ns_' + COURSE
@@ -74,12 +111,16 @@ class DataRemovalTests(actions.TestBase):
                     [student.user_id])
                 self.assertEqual([None], r)
 
-            actions.unregister(self, self.COURSE, do_data_removal=True)
+            actions.unregister(self, course=self.COURSE)
 
             # Expect to see register, unregister events on queue.
             task_count = self.execute_all_deferred_tasks(
                 models.StudentLifecycleObserver.QUEUE_NAME)
             self.assertEquals(2, task_count)
+
+            # Running deletion cycle should have no effect.  Verify that.
+            self._complete_removal()
+
             with common_utils.Namespace(self.NAMESPACE):
                 # After unregister, we should still have a student object.
                 student = models.Student.get_by_user(user)
@@ -101,7 +142,7 @@ class DataRemovalTests(actions.TestBase):
 
         with common_utils.Namespace(self.NAMESPACE):
             # After registration, we should have a student object, and
-            # a ImmediateRemovalState instance.
+            # a ImmediateRemovalState instance, and no to-do deletion work.
             student = models.Student.get_by_user(user)
             self.assertIsNotNone(student)
             user_id = student.user_id
@@ -118,7 +159,7 @@ class DataRemovalTests(actions.TestBase):
             event = models.EventEntity(user_id=user_id, source='test')
             event.put()
 
-        actions.unregister(self, self.COURSE, do_data_removal=True)
+        self._unregister_and_request_data_removal(self.COURSE)
 
         with common_utils.Namespace(self.NAMESPACE):
             # Immediately upon unregistration, we should still have the student
@@ -178,8 +219,44 @@ class DataRemovalTests(actions.TestBase):
         # Run the map/reduce jobs to completion.
         self.execute_all_deferred_tasks()
 
-        # We should now be completely clean; the M/R job that finishes last
-        # should also clean up the to-do tracking item.
+        # We should now be nearly clean; in the normal course of events, only
+        # the ImmediateRemovalState should still be present.  However, due to
+        # race conditions, an analysis map/reduce job may have finished in the
+        # meantime, and written a per-student record.  Add such a record.
+        with common_utils.Namespace(self.NAMESPACE):
+            student = models.Student.get_by_user(user)
+            self.assertIsNone(student)
+            removal_state = removal_models.ImmediateRemovalState.get_by_user_id(
+                user_id)
+            self.assertIsNotNone(removal_state)
+            # Events should now be gone.
+            events = list(models.EventEntity.all().run())
+            self.assertEquals(0, len(events))
+
+            # Cron batch cleanup record should be present, but now empty.
+            r = removal_models.BatchRemovalState.get_by_user_ids([user_id])
+            self.assertEquals(1, len(r))
+            removal_record = r[0]
+            self.assertEquals([], removal_record.resource_types)
+
+            # Simulate map/reduce finishing asychronously & adding a per-student
+            # item.  Verify that the record is present so we know the test
+            # below that checks for it being gone is correct.
+            student_aggregate.StudentAggregateEntity(key_name=user_id).put()
+            a = student_aggregate.StudentAggregateEntity.get_by_key_name(
+                user_id)
+            self.assertIsNotNone(a)
+
+        # Call the cron handler one more time.  Because the batch work item
+        # is empty, this should do one more round of cleanup on items indexed
+        # by user id.
+        response = self.get(
+            data_removal.DataRemovalCronHandler.URL,
+            headers={'X-AppEngine-Cron': 'True'})
+        self.assertEquals(200, response.status_int)
+        self.assertEquals('OK.', response.body)
+
+        # We should now have zero data about the user.
         with common_utils.Namespace(self.NAMESPACE):
             student = models.Student.get_by_user(user)
             self.assertIsNone(student)
@@ -189,6 +266,13 @@ class DataRemovalTests(actions.TestBase):
             # Events should now be gone.
             events = list(models.EventEntity.all().run())
             self.assertEquals(0, len(events))
+            # Cron batch cleanup record should be gone.
+            r = removal_models.BatchRemovalState.get_by_user_ids([user_id])
+            self.assertEqual([None], r)
+            # Map/reduce results should be gone.
+            a = student_aggregate.StudentAggregateEntity.get_by_key_name(
+                user_id)
+            self.assertIsNone(a)
 
 
     def test_multiple_students(self):
@@ -210,15 +294,8 @@ class DataRemovalTests(actions.TestBase):
 
         # Unregister one of them.
         actions.login(self.STUDENT_EMAIL)
-        actions.unregister(self, self.COURSE, do_data_removal=True)
-
-        # Complete all data removal tasks.
-        self.execute_all_deferred_tasks(
-            models.StudentLifecycleObserver.QUEUE_NAME)
-        self.get(
-            data_removal.DataRemovalCronHandler.URL,
-            headers={'X-AppEngine-Cron': 'True'})
-        self.execute_all_deferred_tasks()
+        self._unregister_and_request_data_removal(self.COURSE)
+        self._complete_removal()
 
         # Unregistered student and his data are gone; still-registered
         # student's data is still present.
@@ -235,31 +312,48 @@ class DataRemovalTests(actions.TestBase):
 
         actions.simple_add_course(
             COURSE_TWO, self.ADMIN_EMAIL, 'Data Removal Test Two')
-
         user = actions.login(self.STUDENT_EMAIL)
-        actions.register(self, user.email(), course=self.COURSE)
-        actions.register(self, user.email(), course=COURSE_TWO)
-        actions.unregister(self, self.COURSE, do_data_removal=True)
+        with actions.OverriddenConfig(models.CAN_SHARE_STUDENT_PROFILE.name,
+                                      True):
+            actions.register(self, user.email(), course=self.COURSE)
+            actions.register(self, user.email(), course=COURSE_TWO)
 
-        self.execute_all_deferred_tasks(
-            models.StudentLifecycleObserver.QUEUE_NAME)
-        self.get(
-            data_removal.DataRemovalCronHandler.URL,
-            headers={'X-AppEngine-Cron': 'True'})
-        self.execute_all_deferred_tasks()
+        # Global profile object should now exist.
+        with common_utils.Namespace(''):
+            profile = models.PersonalProfile.get_by_key_name(user.user_id())
+            self.assertIsNotNone(profile)
 
+        # Unregister from 'data_removal_test' course.
+        self._unregister_and_request_data_removal(self.COURSE)
+        self._complete_removal()
+
+        # Student object should be gone from data_removal_test course, but
+        # not from course_two.
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(models.Student.get_by_user(user))
         with common_utils.Namespace(COURSE_TWO_NS):
-            self.assertIsNotNone(
-                models.Student.get_by_user(user))
+            self.assertIsNotNone(models.Student.get_by_user(user))
 
-    def test_student_property_removed(self):
-        """Test a sampling of types whose index contains user ID.
+        # Global profile object should still exist.
+        profile = models.PersonalProfile.get_by_key_name(user.user_id())
+        self.assertIsNotNone(profile)
 
-        Here, indices start with the user ID, but are suffixed with the name
-        of a specific property sub-type.  Verify that these are removed.
-        """
+        # Unregister from other course.
+        self._unregister_and_request_data_removal(COURSE_TWO)
+        self._complete_removal()
+
+        # Both Student objects should now be gone.
+        with common_utils.Namespace(self.NAMESPACE):
+            self.assertIsNone(models.Student.get_by_user(user))
+        with common_utils.Namespace(COURSE_TWO_NS):
+            self.assertIsNone(models.Student.get_by_user(user))
+
+        # Global profile object should also be gone.
+        profile = models.PersonalProfile.get_by_key_name(user.user_id())
+        self.assertIsNone(profile)
+
+    def test_records_indexed_by_user_id_removed(self):
+        """Test a sampling of types whose index is or contains the user ID."""
         user_id = None
         user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
@@ -268,15 +362,35 @@ class DataRemovalTests(actions.TestBase):
         with common_utils.Namespace(self.NAMESPACE):
             student = models.Student.get_by_user(user)
             user_id = student.user_id
+
+            # Indexed by user ID suffixed with a string.
             p = models.StudentPropertyEntity.create(student, 'foo')
             p.value = 'foo'
             p.put()
-            invitation.InvitationStudentProperty.load_or_create(student)
-            questionnaire.StudentFormEntity.load_or_create(student, 'a_form')
+            invitation.InvitationStudentProperty.load_or_default(student).put()
+            questionnaire.StudentFormEntity.load_or_default(
+                student, 'a_form').put()
+
+            # User ID plus skill name.
             cm = competency.BaseCompetencyMeasure.load(user_id, 1)
             cm.save()
 
-        # Assure ourselves that we have exactly one of the items we just added.
+            # models.student_work.KeyProperty - a foreign key to Student.
+            reviewee_key = db.Key.from_path(models.Student.kind(), user_id)
+            reviewer_key = db.Key.from_path(models.Student.kind(), 'xyzzy')
+            student_work.Review(contents='abcdef', reviewee_key=reviewee_key,
+                                reviewer_key=reviewer_key, unit_id='7').put()
+            submission_key = student_work.Submission(
+                unit_id='7', reviewee_key=reviewee_key).put()
+            peer.ReviewSummary(submission_key=submission_key,
+                               reviewee_key=reviewee_key, unit_id='7').put()
+            peer.ReviewStep(
+                submission_key=submission_key, reviewee_key=reviewee_key,
+                reviewer_key=reviewer_key, unit_id='7',
+                state=domain.REVIEW_STATE_ASSIGNED,
+                assigner_kind=domain.ASSIGNER_KIND_AUTO).put()
+
+        # Assure ourselves that we have all of the items we just added.
         with common_utils.Namespace(self.NAMESPACE):
             l = list(models.StudentPropertyEntity.all().run())
             self.assertEquals(2, len(l))  # 'foo', 'linear-course-completion'
@@ -286,15 +400,18 @@ class DataRemovalTests(actions.TestBase):
             self.assertEquals(1, len(l))
             l = list(competency.CompetencyMeasureEntity.all().run())
             self.assertEquals(1, len(l))
+            l = list(student_work.Review.all().run())
+            self.assertEquals(1, len(l))
+            l = list(student_work.Submission.all().run())
+            self.assertEquals(1, len(l))
+            l = list(peer.ReviewSummary.all().run())
+            self.assertEquals(1, len(l))
+            l = list(peer.ReviewStep.all().run())
+            self.assertEquals(1, len(l))
 
 
-        actions.unregister(self, self.COURSE, do_data_removal=True)
-        self.execute_all_deferred_tasks(
-            models.StudentLifecycleObserver.QUEUE_NAME)
-        self.get(
-            data_removal.DataRemovalCronHandler.URL,
-            headers={'X-AppEngine-Cron': 'True'})
-        self.execute_all_deferred_tasks()
+        self._unregister_and_request_data_removal(self.COURSE)
+        self._complete_removal()
 
         # Assure ourselves that all added items are now gone.
         with common_utils.Namespace(self.NAMESPACE):
@@ -305,6 +422,14 @@ class DataRemovalTests(actions.TestBase):
             l = list(questionnaire.StudentFormEntity.all().run())
             self.assertEquals(0, len(l))
             l = list(competency.CompetencyMeasureEntity.all().run())
+            self.assertEquals(0, len(l))
+            l = list(student_work.Review.all().run())
+            self.assertEquals(0, len(l))
+            l = list(student_work.Submission.all().run())
+            self.assertEquals(0, len(l))
+            l = list(peer.ReviewSummary.all().run())
+            self.assertEquals(0, len(l))
+            l = list(peer.ReviewStep.all().run())
             self.assertEquals(0, len(l))
 
     def test_remove_by_email(self):
@@ -317,20 +442,15 @@ class DataRemovalTests(actions.TestBase):
                 key_name=user.email())
             sse.save()
 
-        actions.unregister(self, self.COURSE, do_data_removal=True)
-        self.execute_all_deferred_tasks(
-            models.StudentLifecycleObserver.QUEUE_NAME)
-        self.get(
-            data_removal.DataRemovalCronHandler.URL,
-            headers={'X-AppEngine-Cron': 'True'})
-        self.execute_all_deferred_tasks()
+        self._unregister_and_request_data_removal(self.COURSE)
+        self._complete_removal()
 
         with common_utils.Namespace(self.NAMESPACE):
             l = list(unsubscribe.SubscriptionStateEntity.all().run())
             self.assertEquals(0, len(l))
 
 
-class UserInteractionTests(actions.TestBase):
+class UserInteractionTests(DataRemovalTestBase):
 
     COURSE = 'data_removal_test'
     NAMESPACE = 'ns_' + COURSE
@@ -357,13 +477,202 @@ class UserInteractionTests(actions.TestBase):
         actions.login(self.STUDENT_EMAIL)
         actions.register(self, self.STUDENT_EMAIL)
         response = self.get('student/unenroll')
-        self.assertIn('Remove all my data from the course', response.body)
+        self.assertIn('Delete all associated data', response.body)
 
     def test_unregister_without_deletion_permits_reregistration(self):
         actions.login(self.STUDENT_EMAIL)
         actions.register(self, self.STUDENT_EMAIL)
         actions.unregister(self)
         actions.register(self, self.STUDENT_EMAIL)
+
+    def _unregister_flow(self, response,
+                         with_deletion_checked=False,
+                         cancel_on_unregister=False,
+                         cancel_on_deletion=False):
+        unregistration_expected = (not cancel_on_unregister and
+                                   not cancel_on_deletion)
+        data_deletion_expected = (unregistration_expected and
+                                  with_deletion_checked)
+
+        # Caller should have arranged for us to be at the unregister form.
+        form = response.form
+        if with_deletion_checked:
+            form['data_removal'].checked = True
+        if cancel_on_unregister:
+            response = self.click(response, "No")
+            return response
+
+        # Submit unregister form.
+        response = form.submit()
+
+        if with_deletion_checked:
+            self.assertIn(
+                'Once you delete your data, there is no way to recover it.',
+                response.body)
+            form = response.form
+            form.action = self.canonicalize(form.action, response)
+            if cancel_on_deletion:
+                response = form.submit('cancel_removal').follow()
+                self.assertIn(
+                    'To leave the course permanently, click on Unenroll',
+                    response.body)
+            else:
+                response = form.submit('data_removal')
+                self.assertIn('You have been unenrolled', response.body)
+
+        # Try to visit student's profile - verify can or can't depending
+        # on whether we unregistered the student.
+        response = self.get('student/home')
+        if unregistration_expected:
+            self.assertEquals(response.status_int, 302)
+            self.assertEquals(response.location,
+                              'http://localhost/%s/preview' % self.COURSE)
+            response = response.follow()
+            self.assertEquals(response.status_int, 302)
+            self.assertEquals(response.location,
+                              'http://localhost/%s/course' % self.COURSE)
+            response = response.follow()
+            self.assertEquals(response.status_int, 200)
+        else:
+            self.assertEquals(response.status_int, 200)  # not 302 to /course
+
+        # Run pipeline which might do deletion to ensure we are really
+        # giving the code the opportunity to do the deletion before we
+        # check whether the Student is not gone.
+        self._complete_removal()
+        with common_utils.Namespace(self.NAMESPACE):
+            user = users.get_current_user()
+            if data_deletion_expected:
+                self.assertIsNone(models.Student.get_by_user(user))
+            else:
+                self.assertIsNotNone(models.Student.get_by_user(user))
+
+    def _deletion_flow_for_unregistered_student(self, response, cancel):
+        self.assertIn(
+            'Once you delete your data, there is no way to recover it.',
+            response.body)
+        form = response.form
+        form.action = self.canonicalize(form.action, response)
+
+        if cancel:
+            response = form.submit('cancel_removal')
+
+            # Verify redirected back to /course page in either case.
+            self.assertEquals(response.status_int, 302)
+            self.assertEquals(response.location,
+                              'http://localhost/%s/student/home' % self.COURSE)
+            response = response.follow()
+            self.assertEquals(response.status_int, 302)
+            self.assertEquals(response.location,
+                              'http://localhost/%s/preview' % self.COURSE)
+            response = response.follow()
+            self.assertEquals(response.status_int, 302)
+            self.assertEquals(response.location,
+                              'http://localhost/%s/course' % self.COURSE)
+            response = response.follow()
+            self.assertEquals(response.status_int, 200)
+        else:
+            response = form.submit('data_removal')
+
+            self.assertEquals(response.status_int, 302)
+            self.assertEquals(response.location,
+                              'http://localhost/%s/' % self.COURSE)
+            response = response.follow()
+            self.assertEquals(response.status_int, 200)
+
+        # Run pipeline which might do deletion to ensure we are really
+        # giving the code the opportunity to do the deletion before we
+        # check whether the Student is not gone.
+        self._complete_removal()
+        with common_utils.Namespace(self.NAMESPACE):
+            user = users.get_current_user()
+            if cancel:
+                self.assertIsNotNone(models.Student.get_by_user(user))
+            else:
+                self.assertIsNone(models.Student.get_by_user(user))
+
+    def test_unregister_then_cancel_does_not_unregister_or_delete(self):
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        response = self.get('student/unenroll')
+        self._unregister_flow(response, cancel_on_unregister=True)
+
+    def test_unregister_without_deletion_unregisters_but_does_not_delete(self):
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        response = self.get('student/unenroll')
+        self._unregister_flow(response)
+
+    def test_unregister_with_deletion_then_cancel_does_not_unregister(self):
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        response = self.get('student/unenroll')
+        self._unregister_flow(response, with_deletion_checked=True,
+                              cancel_on_deletion=True)
+
+    def test_unregister_with_deletion_does_deletion(self):
+        user = actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        response = self.get('student/unenroll')
+        self._unregister_flow(response, with_deletion_checked=True)
+
+    def test_delete_link_in_footer_not_present_when_not_logged_in(self):
+        response = self.get('course')
+        self.assertNotIn('Delete My Data', response.body)
+
+    def test_delete_link_in_footer_not_present_when_not_registered(self):
+        actions.login(self.STUDENT_EMAIL)
+        response = self.get('course')
+        self.assertNotIn('Delete My Data', response.body)
+
+    def test_delete_link_when_registered_then_cancel_unregister(self):
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        response = self.get('course')
+        response = self.click(response, 'Delete My Data')
+        self._unregister_flow(response, cancel_on_unregister=True)
+
+    def test_delete_link_when_registered_then_cancel_deletion(self):
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        response = self.get('course')
+        response = self.click(response, 'Delete My Data')
+        self._unregister_flow(response, with_deletion_checked=True,
+                              cancel_on_deletion=True)
+
+    def test_delete_link_when_registered_then_unregister_without_deletion(self):
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        response = self.get('course')
+        response = self.click(response, 'Delete My Data')
+        self._unregister_flow(response)
+
+    def test_delete_link_when_registered_then_proceed_and_delete(self):
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        response = self.get('course')
+        response = self.click(response, 'Delete My Data')
+        self._unregister_flow(response, with_deletion_checked=True)
+
+    def test_delete_link_when_unregistered_then_cancel(self):
+        user = actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        actions.unregister(self)
+        response = self.get('course')
+        response = self.click(response, 'Delete My Data')
+        self._deletion_flow_for_unregistered_student(response, cancel=True)
+        response = self.get('course')
+        self.assertIn('Delete My Data', response.body)
+
+    def test_delete_link_when_unregistered_then_proceed(self):
+        user = actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        actions.unregister(self)
+        response = self.get('course')
+        response = self.click(response, 'Delete My Data')
+        self._deletion_flow_for_unregistered_student(response, cancel=False)
+        response = self.get('course')
+        self.assertNotIn('Delete My Data', response.body)
 
     def test_reregistration_blocked_during_deletion(self):
 
@@ -383,20 +692,42 @@ class UserInteractionTests(actions.TestBase):
             self.assertIsNotNone(student)
             user_id = student.user_id
 
-        actions.unregister(self, do_data_removal=True)
+        self._unregister_and_request_data_removal(self.COURSE)
+
+        # On submitting the unregister form, the user's ImmediateRemovalState
+        # will have been marked as deltion-in-progress, and so user cannot
+        # re-register yet.
         assert_cannot_register()
 
+        # Run the queue to do the cleanup of indexed items, and add the
+        # work-to-do items for batched cleanup.
         self.execute_all_deferred_tasks(
             models.StudentLifecycleObserver.QUEUE_NAME)
         assert_cannot_register()
 
+        # Run the cron job that launches the map/reduce jobs to clean up
+        # bulk items.  Still not able to re-register.
         self.get(
             data_removal.DataRemovalCronHandler.URL,
             headers={'X-AppEngine-Cron': 'True'})
         assert_cannot_register()
 
-        # Can re-register after all items are cleaned.
+        # Run the map/reduce jobs.  Bulk items should now be cleaned.
         self.execute_all_deferred_tasks()
+        with common_utils.Namespace(self.NAMESPACE):
+            student = models.Student.get_by_user(user)
+            self.assertIsNone(student)
+            removal_state = removal_models.ImmediateRemovalState.get_by_user_id(
+                user_id)
+            self.assertIsNotNone(removal_state)
+        assert_cannot_register()
+
+        # Run the cron job one more time.  When no bulk to-do items remain,
+        # we then clean up the ImmediateRemovalState.  Re-registration should
+        # now be possible.
+        self.get(
+            data_removal.DataRemovalCronHandler.URL,
+            headers={'X-AppEngine-Cron': 'True'})
         with common_utils.Namespace(self.NAMESPACE):
             student = models.Student.get_by_user(user)
             self.assertIsNone(student)

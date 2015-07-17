@@ -1861,7 +1861,7 @@ class SkillI18nTests(actions.TestBase):
         self.assertEqual(skill.name, skill_text)
 
         # Set pref to see translated version
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs = models.StudentPreferencesDAO.load_or_default()
         prefs.locale = 'el'
         models.StudentPreferencesDAO.save(prefs)
 

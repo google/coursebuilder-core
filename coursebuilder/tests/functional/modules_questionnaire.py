@@ -136,7 +136,7 @@ class QuestionnaireRESTHandlerTests(BaseQuestionnaireTests):
         }
 
     def _put_data_in_datastore(self, student):
-        data = StudentFormEntity.load_or_create(student, UNIQUE_FORM_ID)
+        data = StudentFormEntity.load_or_default(student, UNIQUE_FORM_ID)
         data.value = transforms.dumps(self.PAYLOAD_DICT)
         data.put()
         return data.value
@@ -162,7 +162,7 @@ class QuestionnaireRESTHandlerTests(BaseQuestionnaireTests):
     def test_form_data_in_datastore(self):
         student = self.register()
         self._put_data_in_datastore(student)
-        response = StudentFormEntity.load_or_create(student, UNIQUE_FORM_ID)
+        response = StudentFormEntity.load_or_default(student, UNIQUE_FORM_ID)
         self.assertNotEqual(None, response)
 
     def test_form_data_can_be_retrieved(self):
@@ -197,17 +197,17 @@ class QuestionnaireDataSourceTests(BaseQuestionnaireTests):
         # Register a student and save some form values for that student
         student = self.register()
 
-        entity = StudentFormEntity.load_or_create(student, 'form-0')
+        entity = StudentFormEntity.load_or_default(student, 'form-0')
         entity.value = transforms.dumps({
             u'form_data': self.FORM_0_DATA})
         entity.put()
 
-        entity = StudentFormEntity.load_or_create(student, u'form-1')
+        entity = StudentFormEntity.load_or_default(student, u'form-1')
         entity.value = transforms.dumps({
             u'form_data': self.FORM_1_DATA})
         entity.put()
 
-        entity = StudentFormEntity.load_or_create(student, u'form-2')
+        entity = StudentFormEntity.load_or_default(student, u'form-2')
         entity.value = transforms.dumps({
             u'form_data': self.FORM_2_DATA})
         entity.put()

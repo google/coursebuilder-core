@@ -1,0 +1,70 @@
+{% extends 'base_course.html' %}
+
+{% block gcb_page_info %}
+  if ('gcbSetPageInfo' in window) {
+    gcbSetPageInfo({
+      'page_type': 'delete_data_confirmation',
+    });
+  }
+{% endblock %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block navbar %}
+{% endblock %}
+
+{% block main_content %}
+<div id="gcb-main">
+  <div class="gcb-article tab-content">
+    <div class="gcb-aside">
+
+      <h3>
+        <p>
+          {# I18N: Warns a student that they are about to remove all of
+             data collected from this student during the course.  This
+             deletion cannot be un-done. #}
+          {{ gettext('Once you delete your data, there is no way to recover it.') }}
+        </p><p>
+          {# I18N: When a student deletes their data, this warning appears
+             indicating that the deletion applies only to the current course,
+             not anything else. #}
+          {{ gettext('Deleting your content in this course will not delete your content from other courses.  You must delete your content for each course separately.') }}
+        </p><p>
+          {# I18N: When a student deletes their data from a course, this
+             warning appears to indicate that data is removed only for that
+             specific course, not other courses and not other Google
+             products or services. #}
+          {{ gettext('This will also not delete your content in other products and services.  For example, if you made a post in Google Groups or shared a Google Drive document, you may wish to delete those posts or update your sharing settings in those products.') }}
+        </p>
+
+      </h3>
+      <form action='student/data_removal' method='POST'>
+        <input
+           type="hidden"
+           name="unenroll_parameters"
+           value="{{ unenroll_parameters }}">
+        <input
+           type="hidden"
+           name="xsrf_token"
+           value="{{ data_removal_xsrf_token }}">
+        <button
+           class="gcb-button"
+           name="data_removal"
+           type="submit"
+           value="True">
+          {# I18N: Confirmation button, indicating that the student does
+             want to have all data about them removed from the course. #}
+          {{ gettext('OK') }}
+        </button>
+        <button class="gcb-button" type="submit" name="cancel_removal">
+          {# I18N: Cancellation button, indicating that the student does not
+             want to have all data about them removed from the course. #}
+          {{ gettext('Cancel') }}
+        </button>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

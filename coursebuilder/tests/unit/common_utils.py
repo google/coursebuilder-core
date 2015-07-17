@@ -211,7 +211,7 @@ class ParseTimedeltaTests(unittest.TestCase):
     def test_parse_trailing_valid_partial_gibberish(self):
         self.assertEquals(
             utils.parse_timedelta_string('we will leave in 5 days'),
-            datetime.timedelta(days=0))
+            datetime.timedelta(days=5))
 
     def test_parse_units(self):
         for unit in ('week', 'day', 'hour', 'minute', 'second'):
@@ -263,3 +263,58 @@ class ParseTimedeltaTests(unittest.TestCase):
         self.assertEquals(
             utils.parse_timedelta_string('3 weeks, 1 day, 3 minutes'),
             datetime.timedelta(weeks=3, days=1, minutes=3))
+
+
+class ValidateTimedeltaTests(unittest.TestCase):
+
+    def test_blank_is_allowed(self):
+        errors = []
+        utils.ValidateTimedelta.validate('', errors)
+        self.assertEquals(0, len(errors))
+
+    def test_none_is_allowed(self):
+        errors = []
+        utils.ValidateTimedelta.validate(None, errors)
+        self.assertEquals(0, len(errors))
+
+    def test_bare_numbers_not_allowed(self):
+        errors = []
+        utils.ValidateTimedelta.validate('0', errors)
+        self.assertEquals(1, len(errors))
+
+        errors = []
+        utils.ValidateTimedelta.validate('1', errors)
+        self.assertEquals(1, len(errors))
+
+        errors = []
+        utils.ValidateTimedelta.validate('-1', errors)
+        self.assertEquals(1, len(errors))
+
+        errors = []
+        utils.ValidateTimedelta.validate('100', errors)
+        self.assertEquals(1, len(errors))
+
+    def test_valid_items_allowed(self):
+        errors = []
+        utils.ValidateTimedelta.validate('1s', errors)
+        utils.ValidateTimedelta.validate('2m', errors)
+        utils.ValidateTimedelta.validate('3h', errors)
+        utils.ValidateTimedelta.validate('4d', errors)
+        utils.ValidateTimedelta.validate('5w', errors)
+        utils.ValidateTimedelta.validate('5 Weeks, 1D,2HOURS   3    seconds',
+                                          errors)
+        self.assertEquals(0, len(errors))
+
+    def test_invalid_items_disallowed(self):
+        errors = []
+        utils.ValidateTimedelta.validate('1t', errors)
+        self.assertEquals(1, len(errors))
+
+        errors = []
+        utils.ValidateTimedelta.validate('1 year', errors)
+        self.assertEquals(1, len(errors))
+
+    def test_parse_months_gives_error(self):
+        errors = []
+        utils.ValidateTimedelta.validate('3 months', errors)
+        self.assertEquals(1, len(errors))

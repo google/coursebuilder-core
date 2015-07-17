@@ -139,12 +139,11 @@ class QuestionnaireTag(tags.ContextAwareTag):
 class StudentFormEntity(models.StudentPropertyEntity):
 
     @classmethod
-    def load_or_create(cls, student, form_id):
+    def load_or_default(cls, student, form_id):
         entity = cls.get(student, form_id)
         if entity is None:
             entity = cls.create(student, form_id)
             entity.value = '{}'
-            entity.put()
         return entity
 
 
@@ -177,7 +176,7 @@ class QuestionnaireHandler(BaseRESTHandler):
         if student is None:
             return
 
-        entity = StudentFormEntity.load_or_create(student, key)
+        entity = StudentFormEntity.load_or_default(student, key)
         if entity.value is None:
             return
 
@@ -218,7 +217,7 @@ class QuestionnaireHandler(BaseRESTHandler):
         payload_json = request.get('payload')
         payload_dict = transforms.json_to_dict(payload_json, self.SCHEMA)
 
-        form_data = StudentFormEntity.load_or_create(student, key)
+        form_data = StudentFormEntity.load_or_default(student, key)
         form_data.value = transforms.dumps(payload_dict)
         form_data.put()
 

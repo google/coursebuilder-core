@@ -18,4 +18,4 @@ cron:
   url: /cron/data_removal/batch_delete
   # Compromise between keeping costs due to batch run down versus preventing
   # user re-registration while deletion is not yet complete.
-  schedule: every 6 hours
+  schedule: every sunday 05:30

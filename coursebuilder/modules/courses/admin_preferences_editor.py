@@ -40,7 +40,14 @@ class AdminPreferencesEditor(dto_editor.BaseDatastoreAssetEditor):
         if not roles.Roles.is_course_admin(handler.app_context):
             handler.error(401)
             return
-        models.StudentPreferencesDAO.load_or_create()  # Prefs must exist.
+
+        # Admin's prefs must exist as real DB row for REST handler to operate.
+        user_id = users.get_current_user().user_id()
+        prefs = models.StudentPreferencesDAO.load(user_id)
+        if not prefs:
+            prefs = models.StudentPreferencesDAO.load_or_default()
+            models.StudentPreferencesDAO.save(prefs)
+
         return {
             'page_title': handler.format_title('Edit Preferences'),
             'main_content': handler.get_form(

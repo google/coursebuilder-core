@@ -796,6 +796,13 @@ class StudentProfileDAO(object):
             namespace_manager.set_namespace(old_namespace)
 
     @classmethod
+    def delete_profile_by_user_id(cls, user_id):
+        with common_utils.Namespace(cls.TARGET_NAMESPACE):
+            PersonalProfile.delete_by_key(user_id)
+            MemcacheManager.delete(
+                cls._memcache_key(user_id), namespace=cls.TARGET_NAMESPACE)
+
+    @classmethod
     def _add_new_profile(cls, user_id, email):
         """Adds new profile for a user_id and returns Entity object."""
         if not CAN_SHARE_STUDENT_PROFILE.value:
@@ -804,7 +811,6 @@ class StudentProfileDAO(object):
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(cls.TARGET_NAMESPACE)
-
             profile = PersonalProfile(key_name=user_id)
             profile.email = email
             profile.enrollment_info = '{}'
@@ -2559,7 +2565,7 @@ class StudentPreferencesDAO(BaseJsonDao):
     CURRENT_VERSION = '1.0'
 
     @classmethod
-    def load_or_create(cls):
+    def load_or_default(cls):
         user = users.get_current_user()
         if not user:
             return None
@@ -2572,7 +2578,6 @@ class StudentPreferencesDAO(BaseJsonDao):
                     'show_hooks': False,
                     'show_jinja_context': False
                 })
-            cls.save(prefs)
         return prefs
 
 
@@ -2617,7 +2622,6 @@ def get_global_handlers():
 
 def register_for_data_removal():
     removers = [
-        PersonalProfile.delete_by_key,
         Student.delete_by_user_id,
         StudentAnswersEntity.delete_by_key,
         StudentPropertyEntity.delete_by_user_id_prefix,

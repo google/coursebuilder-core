@@ -17,10 +17,15 @@
 __author__ = 'Mike gainer (mgainer@google.com)'
 
 import logging
+import os
+
+from webob import multidict
 
 from common import utils as common_utils
+from common import crypto
 from common import safe_dom
 from common import schema_fields
+from common import users
 from controllers import sites
 from controllers import utils
 from mapreduce import context
@@ -29,6 +34,7 @@ from models import custom_modules
 from models import data_removal as models_data_removal
 from models import jobs
 from models import models
+from models import transforms
 from modules.admin import admin
 from modules.courses import settings
 from modules.dashboard import tabs
@@ -118,17 +124,13 @@ class AbstractDataRemovalPolicy(object):
         raise NotImplementedError()
 
     @classmethod
-    def on_user_removal_intent(cls, user_id):
-        """Notify policy user unenroll form says user wishes deletion."""
-        raise NotImplementedError()
-
-    @classmethod
     def on_user_unenroll(cls, user_id):
         """User is now unenrolled, and deletion can begin.
 
         This is called back repeatedly from the user lifecycle queue.
         As such, this function must be idempotent.
         """
+        raise NotImplementedError()
 
     @classmethod
     def on_all_data_removed(cls, user_id):
@@ -154,6 +156,48 @@ class AbstractDataRemovalPolicy(object):
         """
         raise NotImplementedError()
 
+    @classmethod
+    def add_delete_data_footer(cls, app_context):
+        """Return list of items to add to page footer (if any).
+
+        For discoverability, some removal policies may wish to add items
+        (such as links to pages to initiate data deletion or check on the
+        progress of deletion, etc.)
+
+        Args:
+          app_context: Standard CB application context object
+        Returns:
+          A list, possibly empty, of SafeDom items to add to the page footer.
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def add_unenroll_additional_fields(cls, app_context):
+        """Add fields to the unenroll form submission.
+
+        When the unenroll form is displayed to the user, this function can,
+        if it wishes, add items to be included within the form.  The user's
+        interaction with these form fields can be noted in
+
+        TODO(mgainer): Fix up discussion when implementing form hijacking.
+
+        Args:
+          app_context: Standard CB application context object
+        Returns:
+          A list, possibly empty, of SafeDom items to add to the unenroll form.
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def on_unenroll_submit(cls, student, handler, parameters_list):
+        """Take any appropriate action upon submit of unenroll form.
+
+        This is called from utils.StudentUnenrollHandler.post() as part
+        of the POST_HOOKS (see registration function in this file for that
+        association).  Look at the documentation there for a description of
+        the rights and duties of an unenroll post-hook.
+        """
+        raise NotImplementedError()
 
 class IndefiniteRetentionPolicy(AbstractDataRemovalPolicy):
 
@@ -174,10 +218,6 @@ class IndefiniteRetentionPolicy(AbstractDataRemovalPolicy):
         pass
 
     @classmethod
-    def on_user_removal_intent(cls, user_id):
-        pass
-
-    @classmethod
     def on_user_unenroll(cls, user_id):
         pass
 
@@ -185,8 +225,22 @@ class IndefiniteRetentionPolicy(AbstractDataRemovalPolicy):
     def on_all_data_removed(cls, user_id):
         pass
 
+    @classmethod
+    def add_delete_data_footer(cls, app_context):
+        return []
+
+    @classmethod
+    def add_unenroll_additional_fields(cls, app_context):
+        return []
+
+    @classmethod
+    def on_unenroll_submit(cls, student, handler, parameters_list):
+        return False
+
 
 class ImmediateRemovalPolicy(AbstractDataRemovalPolicy):
+
+    DATA_REMOVAL_FIELD_NAME = 'data_removal'
 
     @classmethod
     def get_name(cls):
@@ -239,20 +293,10 @@ class ImmediateRemovalPolicy(AbstractDataRemovalPolicy):
         removal_models.ImmediateRemovalState.create(user_id)
 
     @classmethod
-    def on_user_removal_intent(cls, user_id):
-        # It doesn't look like this is enough to get the work done, and it's
-        # not.  Here, we are just recording the user's intention to have
-        # their stuff removed.  In theory, we will be called back Very Soon
-        # from the user lifecycle notification queue, at which point we will
-        # check their deletion-desire status, and start clobbering.
-        # That callback is delivered at on_user_unenroll().
-        removal_models.ImmediateRemovalState.set_deletion_pending(user_id)
-
-    @classmethod
     def on_user_unenroll(cls, user_id):
         if removal_models.ImmediateRemovalState.is_deletion_pending(user_id):
-            # Allow exceptions to propagate out, which will cause the lifecycle
-            # queue to do retries.
+            # Allow exceptions to propagate out, which will cause the
+            # StudentLifecycleObserver queue to do retries.
             cls._remove_indexed_items(user_id)
             cls._initiate_unindexed_deletion(user_id)
 
@@ -309,8 +353,147 @@ class ImmediateRemovalPolicy(AbstractDataRemovalPolicy):
 
     @classmethod
     def on_all_data_removed(cls, user_id):
-        """Called back from DataRemovalJob started by cron handler when done."""
-        removal_models.ImmediateRemovalState.delete_by_user_id(user_id)
+        """Called back from DataRemovalCronHandler when batch deletion done."""
+
+        # Any user_id we are called for has had all wipeout batch jobs run.
+        # This means that all un-indexed items have been removed for that
+        # user.  However, analysis map/reduce jobs may have been running in
+        # parallel with wipeout and re-added items indexed by user ID.  Do one
+        # more pass of removing indexed items before we declare the user to be
+        # done.
+        cls._remove_indexed_items(user_id)
+
+        # Look through peer courses to see if the user is registered in any.
+        # If not, we can also remove the global settings item.
+        in_other_courses = False
+        for app_context in sites.get_course_index().get_all_courses():
+            with common_utils.Namespace(app_context.get_namespace_name()):
+                student = models.Student.get_by_user_id(user_id)
+                if student is not None:
+                    in_other_courses = True
+        if not in_other_courses:
+            models.StudentProfileDAO.delete_profile_by_user_id(user_id)
+
+        # When the foregoing deletion has completed w/o raising any
+        # exceptions, clean up the final two items that have any user-related
+        # PII.  If this fails, the BatchRemovalState record will not be
+        # removed, and the next call to the cron handler will again see the
+        # user has no more batch items to remove, and call us again.
+        @db.transactional(xg=True)
+        def remove_deletion_state_records(user_id):
+            removal_models.ImmediateRemovalState.delete_by_user_id(user_id)
+            removal_models.BatchRemovalState.delete_by_user_id(user_id)
+        remove_deletion_state_records(user_id)
+
+    @classmethod
+    def add_delete_data_footer(cls, app_context):
+        user = users.get_current_user()
+        if not user:
+            return []
+
+        # No need for link if user has no PII in the course.  Here, we are
+        # using the presence of a Student record as a marker for that, and
+        # that's reasonable.  If there is no Student record, then either
+        # there is no PII, or deletion is already in progress, and
+        # re-requesting deletion would be pointless.
+        student = models.Student.get_by_user(user)
+        if not student or student.is_transient:
+            return []
+        if student.is_enrolled:
+            link = 'student/unenroll'
+        else:
+            link = DataRemovalConfirmationHandler.URL.lstrip('/')
+
+        # I18N: Gives a link on the footer of the page to permit the user
+        # to delete their personal data.  This link only appears for users
+        # who are currently enrolled in the course or who were enrolled
+        # but still have personal data present in the course.
+        text = app_context.gettext('Delete My Data')
+        return [
+            safe_dom.Element('li').add_child(safe_dom.A(link).add_text(text))]
+
+    @classmethod
+    def add_unenroll_additional_fields(cls, app_context):
+        # Add a checkbox to the unenroll page to permit users to also have
+        # their data deleted.  This form field is checked in
+        # on_unenroll_submit(), directly below.
+        return [
+            safe_dom.Element('p')
+                .add_child(safe_dom.Element('input', type='checkbox',
+                                            value='True',
+                                            name=cls.DATA_REMOVAL_FIELD_NAME)
+                    .add_text(' ')
+                    .add_text(
+                        # I18N: Shown when a student is unenrolling from a
+                        # course.  Gives the student the option to have all
+                        # their data permanently removed.
+                        app_context.gettext('Delete all associated data')
+                    )
+                ),
+            ]
+
+    @classmethod
+    def on_unenroll_submit(cls, student, handler, parameters_list):
+        parameters = multidict.MultiDict(parameters_list)
+        if parameters.get(cls.DATA_REMOVAL_FIELD_NAME, 'False') != 'True':
+            return False
+
+        # Paint first page of our hijacking flow.
+        handler.template_value['unenroll_parameters'] = transforms.dumps(
+            parameters_list)
+        DataRemovalConfirmationHandler.class_get(handler)
+
+        # Tell unenroll_post_continue that we are hijacking the page flow,
+        # so it should not render its own page.
+        return True
+
+
+class DataRemovalConfirmationHandler(utils.BaseHandler):
+
+    URL = '/student/data_removal'
+    ACTION = 'data_removal_confirmation'
+    DATA_REMOVAL_FIELD_NAME = 'data_removal'
+
+
+    def get(self):
+        self.class_get(self)
+
+    @classmethod
+    def class_get(cls, handler):
+        handler.template_value['data_removal_xsrf_token'] = (
+            crypto.XsrfTokenManager.create_xsrf_token(
+                DataRemovalConfirmationHandler.ACTION))
+        handler.render('delete_confirmation.html', [os.path.dirname(__file__)])
+
+    def post(self):
+        student = self.get_student()
+        if (student and not student.is_transient and
+            self.request.get(self.DATA_REMOVAL_FIELD_NAME) == 'True'):
+            if not self.assert_xsrf_token_or_fail(self.request, self.ACTION):
+                return
+            removal_models.ImmediateRemovalState.set_deletion_pending(
+                student.user_id)
+
+            json_parameters = self.request.get('unenroll_parameters')
+            if json_parameters:
+                # We may have gotten to this form from the unenroll flow.  If
+                # so, continue on with any other unenroll POST_HOOKS, and/or
+                # finish up the unenroll.  When the unenroll is done, that will
+                # call us back on _user_unenroll_callback() to trigger the
+                # actual removal.
+                parameters = transforms.loads(json_parameters)
+                utils.StudentUnenrollHandler.unenroll_post_continue(
+                    self, parameters)
+            else:
+                # If the user is already unenrolled, we get to this form
+                # directly, not from the unenroll flow.  In that case, we
+                # immediately perform indexed deletion, and mark batch
+                # deletions as needing to occur.
+                removal_policy = _get_removal_policy()
+                removal_policy.on_user_unenroll(student.user_id)
+                self.redirect('/')
+        else:
+            self.redirect('/student/home')
 
 
 class DataRemovalCronHandler(utils.AbstractAllCoursesCronHandler):
@@ -328,6 +511,23 @@ class DataRemovalCronHandler(utils.AbstractAllCoursesCronHandler):
 
     def cron_action(self, app_context, global_state):
         pending_work = removal_models.BatchRemovalState.get_all_work()
+
+        # Handle users with no remaining batch deletions to do separately.
+        if None in pending_work:
+            removal_policy = _get_removal_policy(app_context)
+            final_removal_user_ids = pending_work[None]
+            for user_id in final_removal_user_ids:
+                try:
+                    removal_policy.on_all_data_removed(user_id)
+                except Exception, ex:  # pylint: disable=broad-except
+                    logging.warning(
+                        'Error trying to do final cleanup for user %s: %s',
+                        user_id, str(ex))
+                    common_utils.log_exception_origin()
+            del pending_work[None]
+
+        # Start map/reduce jobs to do batch cleanup for all tables that still
+        # have any user marked as needing deletion from that entity type.
         entity_classes = models_data_removal.Registry.get_unindexed_classes()
         for name, user_ids in pending_work.iteritems():
             if name not in entity_classes:
@@ -432,16 +632,7 @@ class DataRemovalJob(jobs.AbstractCountingMapReduceJob):
                 continue
 
             item.resource_types.remove(entity_class_name)
-            if item.resource_types:
-                # Other types still have work pending; just save.
-                item.put()
-            else:
-                # That's all, folks!  Tell the policy we're done.
-                @db.transactional(xg=True)
-                def user_removal_complete(removal_policy, item, user_id):
-                    item.delete()
-                    removal_policy.on_all_data_removed(user_id)
-                user_removal_complete(removal_policy, item, user_id)
+            item.put()
 
 
 def _get_current_context():
@@ -466,6 +657,7 @@ def _user_added_callback(user_id, timestamp):
     removal_policy = _get_removal_policy()
     removal_policy.on_user_add(user_id)
 
+
 def _prevent_registration_hook(app_context, user_id):
     """Removal policy may forbid re-enroll while deletion is pending."""
     removal_policy = _get_removal_policy(app_context)
@@ -475,36 +667,17 @@ def _prevent_registration_hook(app_context, user_id):
 def _unenroll_get_hook(app_context):
     """Add field to unenroll form offering data removal, if policy supports."""
     removal_policy = _get_removal_policy(app_context)
-    if removal_policy == IndefiniteRetentionPolicy:
-        return []
-    return [
-        safe_dom.Element('p')
-            .add_child(safe_dom.Element(
-                'input', type='checkbox', name='data_removal', value='True')
-                .add_text(' ')
-                .add_text(
-                    # I18N: Shown when a student is unenrolling from a course.
-                    # Gives the student the option to have all their data
-                    # permanently removed.
-                    app_context.gettext(
-                        'Remove all my data from the course.  This is cannot '
-                        'be un-done.  If this is not checked, you can '
-                        're-register in the future, and your course progress '
-                        'will be retained.'
-                    )
-                )
-            ),
-        ]
+    return removal_policy.add_unenroll_additional_fields(app_context)
 
 
-def _unenroll_post_hook(student, request):
+def _unenroll_post_hook(student, handler, parameters_list):
     """Called back on user unenroll form submit; check if they want deletion."""
-    if request.get('data_removal'):
-        removal_policy = _get_removal_policy()
-        removal_policy.on_user_removal_intent(student.user_id)
+    removal_policy = _get_removal_policy()
+    return removal_policy.on_unenroll_submit(student, handler, parameters_list)
 
 
 def _user_unenroll_callback(user_id, timestamp):
+    """Called back from StudentLifecycleObserver when user is unenrolled."""
     removal_policy = _get_removal_policy()
     removal_policy.on_user_unenroll(user_id)
 
@@ -545,6 +718,11 @@ class IsRegisteredForDataRemovalDescriber(
             return safe_dom.Text('Map/Reduce job')
 
 
+def _add_delete_data_footer(handler):
+    removal_policy = _get_removal_policy(handler.app_context)
+    return removal_policy.add_delete_data_footer(handler)
+
+
 custom_module = None
 
 def register_module():
@@ -580,16 +758,23 @@ def register_module():
         utils.RegisterHandler.PREVENT_REGISTRATION_HOOKS.append(
             _prevent_registration_hook)
         utils.StudentUnenrollHandler.GET_HOOKS.append(_unenroll_get_hook)
-        utils.StudentUnenrollHandler.POST_HOOKS.append(_unenroll_post_hook)
+        utils.StudentUnenrollHandler.POST_HOOKS[MODULE_NAME] = (
+            _unenroll_post_hook)
 
         admin.BaseAdminHandler.DB_TYPE_DESCRIBERS.append(
             IsRegisteredForDataRemovalDescriber)
+
+        # Add footer item to course pages to permit direct removal of user
+        # data.  (Makes removal of data much more discoverable than having to
+        # Just Know that you can unregister, especially if the student is
+        # already unregistered.
+        utils.CourseHandler.FOOTER_ITEMS.append(_add_delete_data_footer)
 
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Data Removal', 'Remove user data on un-registration',
         [(DataRemovalCronHandler.URL, DataRemovalCronHandler)],
-        [],
+        [(DataRemovalConfirmationHandler.URL, DataRemovalConfirmationHandler)],
         notify_module_enabled=notify_module_enabled)
     return custom_module

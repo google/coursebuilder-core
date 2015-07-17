@@ -129,8 +129,7 @@ class InvitationEmail(object):
             self.sender_email,
             INVITATION_INTENT,
             self.body,
-            self.subject,
-            audit_trail=self.email_vars
+            self.subject
         )
 
 
@@ -141,12 +140,11 @@ class InvitationStudentProperty(models.StudentPropertyEntity):
     EMAIL_LIST_KEY = 'email_list'
 
     @classmethod
-    def load_or_create(cls, student):
+    def load_or_default(cls, student):
         entity = cls.get(student, cls.PROPERTY_NAME)
         if entity is None:
             entity = cls.create(student, cls.PROPERTY_NAME)
             entity.value = '{}'
-            entity.put()
         return entity
 
     def is_in_invited_list(self, email):
@@ -276,7 +274,7 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
                 self, 400, self.gettext('Error: Empty email list'))
             return
 
-        invitation_data = InvitationStudentProperty.load_or_create(student)
+        invitation_data = InvitationStudentProperty.load_or_default(student)
 
         # Limit the number of emails a user can send, to prevent spamming
         if invitation_data.invited_list_size() + len(email_set) > MAX_EMAILS:

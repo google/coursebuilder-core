@@ -16,6 +16,11 @@
 
 import collections
 
+# DO NOT import any modules from Course Builder here; this module is used in
+# common with a Google-specific tool for Google-provided courses.  That tool
+# doesn't need the extra work of picking up any dependencies (besides this
+# file) from CB.
+
 from google.appengine.ext import db
 
 
@@ -92,6 +97,10 @@ class BatchRemovalState(db.Model):
         instance.put()
 
     @classmethod
+    def delete_by_user_id(cls, user_id):
+        db.delete(db.Key.from_path(cls.kind(), user_id))
+
+    @classmethod
     def get_all_work(cls):
         """Gets pending work organized as dict of entity name -> user_ids."""
 
@@ -99,8 +108,16 @@ class BatchRemovalState(db.Model):
         ret = collections.defaultdict(list)
         for item in items:
             user_id = item.key().name()
+
+            # Note user as needing batch work for all batch items that have
+            # not yet marked themselves as completed by removing their names
+            # from this list of resource_types needing cleanup.
             for resource_type in item.resource_types:
                 ret[resource_type].append(user_id)
+
+            # Save users with no more batch work to do in a special list.
+            if not item.resource_types:
+                ret[None].append(user_id)
         return ret
 
     @classmethod

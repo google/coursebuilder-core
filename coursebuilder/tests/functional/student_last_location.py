@@ -57,7 +57,7 @@ class StudentRedirectTestBase(actions.TestBase):
         actions.register(self, REGISTERED_STUDENT_NAME, COURSE_NAME)
         # Actions.register views the student's profile page; clear this out.
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.last_location = None
             models.StudentPreferencesDAO.save(prefs)
 

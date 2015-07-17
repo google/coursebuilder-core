@@ -916,7 +916,7 @@ def change_name(browser, new_name):
     check_profile(browser, new_name)
 
 
-def unregister(browser, course=None, do_data_removal=False):
+def unregister(browser, course=None):
     """Unregister a student."""
     if course:
         response = browser.get('/%s/student/home' % course)
@@ -926,8 +926,6 @@ def unregister(browser, course=None, do_data_removal=False):
 
     assert_contains('to unenroll from', response.body)
     unregister_form = get_form_by_action(response, 'student/unenroll')
-    if do_data_removal and 'data_removal' in unregister_form.fields:
-        unregister_form['data_removal'] = True
     browser.submit(unregister_form, response)
 
 

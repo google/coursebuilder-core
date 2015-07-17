@@ -1316,7 +1316,7 @@ class CourseContentTranslationTests(actions.TestBase):
             resources_display.ResourceLesson.TYPE, self.lesson.lesson_id, 'el')
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs = models.StudentPreferencesDAO.load_or_default()
         prefs.locale = 'el'
         models.StudentPreferencesDAO.save(prefs)
 
@@ -1514,7 +1514,7 @@ class CourseContentTranslationTests(actions.TestBase):
         # A student should see the partial translation but no error message
         actions.logout()
         actions.login(self.STUDENT_EMAIL, is_admin=False)
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs = models.StudentPreferencesDAO.load_or_default()
         prefs.locale = 'el'
         models.StudentPreferencesDAO.save(prefs)
 
@@ -1825,7 +1825,7 @@ class CourseContentTranslationTests(actions.TestBase):
         # if this call to get_current_locale takes place inside the translation
         # callback from loading the course settings, there will be infinite
         # recursion. This test checks that this case is defended.
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs = models.StudentPreferencesDAO.load_or_default()
         models.StudentPreferencesDAO.delete(prefs)
 
         page_html = self.get('course').body
@@ -1878,7 +1878,7 @@ class CourseContentTranslationTests(actions.TestBase):
             actions.register(self, student_name)
 
             # Set locale prefs
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.locale = 'el'
             models.StudentPreferencesDAO.save(prefs)
 
@@ -2005,7 +2005,7 @@ class TranslationImportExportTests(actions.TestBase):
              'description': 'question group description'}))
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs = models.StudentPreferencesDAO.load_or_default()
         prefs.locale = 'el'
         models.StudentPreferencesDAO.save(prefs)
 
@@ -2258,7 +2258,7 @@ class TranslationImportExportTests(actions.TestBase):
 
         # Verify uploaded translation makes it to lesson page when
         # viewed with appropriate language preference.
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs = models.StudentPreferencesDAO.load_or_default()
         prefs.locale = 'de'
         models.StudentPreferencesDAO.save(prefs)
         response = self.get(
@@ -2690,7 +2690,7 @@ class TranslationImportExportTests(actions.TestBase):
 
     def test_reverse_case(self):
         response = self.get('dashboard?action=i18n_reverse_case')
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs = models.StudentPreferencesDAO.load_or_default()
         prefs.locale = 'ln'
         models.StudentPreferencesDAO.save(prefs)
         response = self.get('unit?unit=%s' % self.unit.unit_id)
@@ -3057,7 +3057,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
     def _set_prefs_locale(self, locale, course='first'):
         with Namespace('ns_%s' % course):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             if prefs:
                 prefs.locale = locale
                 models.StudentPreferencesDAO.save(prefs)

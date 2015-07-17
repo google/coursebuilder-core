@@ -56,7 +56,7 @@ class AdminSettingsTests(actions.TestBase):
         actions.login(ADMIN_EMAIL)
 
     def test_defaults(self):
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs = models.StudentPreferencesDAO.load_or_default()
         self.assertEquals(False, prefs.show_hooks)
 
 
@@ -169,7 +169,7 @@ class HtmlHookTest(actions.TestBase):
 
         # Turn preference on; expect to see hook editor button
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.show_hooks = True
             models.StudentPreferencesDAO.save(prefs)
         response = self.get(BASE_URL)
@@ -177,7 +177,7 @@ class HtmlHookTest(actions.TestBase):
 
         # Turn preference off; expect editor button not present.
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.show_hooks = False
             models.StudentPreferencesDAO.save(prefs)
 
@@ -392,7 +392,7 @@ class HtmlHookTest(actions.TestBase):
     def test_student_admin_hook_visibility(self):
         actions.login(STUDENT_EMAIL, is_admin=False)
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.show_hooks = True
             models.StudentPreferencesDAO.save(prefs)
 
@@ -401,7 +401,7 @@ class HtmlHookTest(actions.TestBase):
 
         actions.login(ADMIN_EMAIL, is_admin=True)
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.show_hooks = True
             models.StudentPreferencesDAO.save(prefs)
         response = self.get(BASE_URL)
@@ -441,7 +441,7 @@ class HtmlHookTest(actions.TestBase):
 
         # Set preference to translated language, and check that that's there.
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.locale = 'de'
             models.StudentPreferencesDAO.save(prefs)
 
@@ -531,7 +531,7 @@ class JinjaContextTest(actions.TestBase):
 
         # Turn preference on; expect to see context dump.
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.show_jinja_context = True
             models.StudentPreferencesDAO.save(prefs)
         self.assertIn('is_read_write_course:',
@@ -539,7 +539,7 @@ class JinjaContextTest(actions.TestBase):
 
         # Turn preference off; expect context dump not present.
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.show_jinja_context = False
             models.StudentPreferencesDAO.save(prefs)
         self.assertNotIn('is_read_write_course:',
@@ -549,7 +549,7 @@ class JinjaContextTest(actions.TestBase):
 
         actions.login(STUDENT_EMAIL, is_admin=False)
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs = models.StudentPreferencesDAO.load_or_default()
             prefs.show_jinja_context = True
             models.StudentPreferencesDAO.save(prefs)
         self.assertNotIn('is_read_write_course:',

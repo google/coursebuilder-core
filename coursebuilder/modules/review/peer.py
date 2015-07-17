@@ -70,6 +70,8 @@ class ReviewSummary(student_work.BaseEntity):
             'Setting key_name manually not supported')
         submission_key = kwargs.get('submission_key')
         assert submission_key, 'Missing required submission_key property'
+        reviewee_key = kwargs.get('reviewee_key')
+        assert reviewee_key, 'Missing required reviewee_key property'
         kwargs['key_name'] = self.key_name(submission_key)
         super(ReviewSummary, self).__init__(*args, **kwargs)
 
@@ -149,6 +151,17 @@ class ReviewSummary(student_work.BaseEntity):
             model.submission_key, transform_fn)
         return model
 
+    @classmethod
+    def _get_student_key(cls, value):
+        return db.Key.from_path(models.Student.kind(), value)
+
+    @classmethod
+    def delete_by_reviewee_id(cls, user_id):
+        student_key = cls._get_student_key(user_id)
+        query = ReviewSummary.all(keys_only=True).filter(
+            'reviewee_key =', student_key)
+        db.delete(query.run())
+
 
 class ReviewStep(student_work.BaseEntity):
     """Object that represents a single state of a review."""
@@ -197,8 +210,10 @@ class ReviewStep(student_work.BaseEntity):
         assert not kwargs.get('key_name'), (
             'Setting key_name manually not supported')
         reviewer_key = kwargs.get('reviewer_key')
+        reviewee_key = kwargs.get('reviewee_key')
         submission_key = kwargs.get('submission_key')
         assert reviewer_key, 'Missing required reviewer_key property'
+        assert reviewee_key, 'Missing required reviewee_key property'
         assert submission_key, 'Missing required submission_key property'
         kwargs['key_name'] = self.key_name(submission_key, reviewer_key)
         super(ReviewStep, self).__init__(*args, **kwargs)
@@ -248,3 +263,14 @@ class ReviewStep(student_work.BaseEntity):
         model.submission_key = student_work.Submission.safe_key(
             model.submission_key, transform_fn)
         return model
+
+    @classmethod
+    def _get_student_key(cls, value):
+        return db.Key.from_path(models.Student.kind(), value)
+
+    @classmethod
+    def delete_by_reviewee_id(cls, user_id):
+        student_key = cls._get_student_key(user_id)
+        query = ReviewStep.all(keys_only=True).filter(
+            'reviewee_key =', student_key)
+        db.delete(query.run())

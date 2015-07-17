@@ -136,11 +136,10 @@ class NamedJsonDAO(models.BaseJsonDao):
     ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeName
 
     @classmethod
-    def load_or_create(cls, resource_key):
+    def load_or_default(cls, resource_key):
         dto = cls.load(str(resource_key))
         if not dto:
             dto = cls.create_blank(resource_key)
-            cls.save(dto)
         return dto
 
     @classmethod
@@ -432,7 +431,7 @@ class IsTranslatableRestHandler(utils.BaseRESTHandler):
             return
 
         payload = request.get('payload')
-        i18n_progress_dto = I18nProgressDAO.load_or_create(
+        i18n_progress_dto = I18nProgressDAO.load_or_default(
             payload['resource_key'])
         i18n_progress_dto.is_translatable = payload['value']
         I18nProgressDAO.save(i18n_progress_dto)
@@ -2127,8 +2126,8 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
             payload, self.SCHEMA.get_json_schema_dict())
 
         # Update the resource bundle
-        resource_bundle_dto = ResourceBundleDAO.load_or_create(key)
-        i18n_progress_dto = I18nProgressDAO.load_or_create(key.resource_key)
+        resource_bundle_dto = ResourceBundleDAO.load_or_default(key)
+        i18n_progress_dto = I18nProgressDAO.load_or_default(key.resource_key)
         self.update_dtos_with_section_data(
             key, payload_dict['sections'], resource_bundle_dto,
             i18n_progress_dto)
@@ -2454,7 +2453,7 @@ class I18nProgressDeferredUpdater(jobs.DurableJob):
             sites.unset_path_info()
 
     def _update_progress_for_resource(self, resource_key):
-        i18n_progress_dto = I18nProgressDAO.load_or_create(str(resource_key))
+        i18n_progress_dto = I18nProgressDAO.load_or_default(str(resource_key))
         for locale in self._app_context.get_all_locales():
             if locale != self._app_context.default_locale:
                 key = ResourceBundleKey.from_resource_key(resource_key, locale)

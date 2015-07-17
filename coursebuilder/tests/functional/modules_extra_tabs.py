@@ -112,7 +112,7 @@ class ExtraTabsTests(actions.TestBase):
         courses.Course.ENVIRON_TEST_OVERRIDES['extra_locales'] = {
             'availability': 'available', 'locale': 'el'}
 
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs = models.StudentPreferencesDAO.load_or_default()
         prefs.locale = 'el'
         models.StudentPreferencesDAO.save(prefs)
 

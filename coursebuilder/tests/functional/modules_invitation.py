@@ -255,15 +255,6 @@ class InvitationHandlerTests(BaseInvitationTests):
             args[3])
         self.assertEquals('Email from A. Student', args[4])
 
-        audit_trail = kwargs['audit_trail']
-        self.assertEquals('A. Student', audit_trail['sender_name'])
-
-        unsubscribe_url = urlparse.urlparse(audit_trail['unsubscribe_url'])
-        self.assertEquals(
-            '/invitation_course/modules/unsubscribe', unsubscribe_url.path)
-        query = urlparse.parse_qs(unsubscribe_url.query)
-        self.assertEquals('recipient@foo.com', query['email'][0])
-
     def test_rest_handler_can_send_multiple_invitations(self):
         email_list = ['a@foo.com', 'b@foo.com', 'c@foo.com']
         response = self._do_valid_email_list_post(email_list)
@@ -392,7 +383,7 @@ class SantitationTests(BaseInvitationTests):
         return 'tr_' + x
 
     def test_for_export_transforms_value_for_invitation_student_property(self):
-        orig_model = invitation.InvitationStudentProperty.load_or_create(
+        orig_model = invitation.InvitationStudentProperty.load_or_default(
             models.Student())
         orig_model.append_to_invited_list(['a@foo.com'])
         safe_model = orig_model.for_export(self.transform)

@@ -254,7 +254,6 @@ class ValidateIntegerRange(object):
             lower_bound_inclusive > upper_bound_inclusive):
             raise ValueError('Bounds do not permit any valid values.')
 
-
     def validate(self, value, errors):
         try:
             value = int(value)
@@ -278,8 +277,6 @@ class ValidateIntegerRange(object):
             value >= self._upper_bound_exclusive):
             errors.append('This value must be less than %d' %
                           self._upper_bound_exclusive)
-
-
 
 
 class Registry(object):

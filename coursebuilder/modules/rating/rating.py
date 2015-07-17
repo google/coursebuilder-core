@@ -54,12 +54,11 @@ class StudentRatingProperty(models.StudentPropertyEntity):
     PROPERTY_NAME = 'student-rating-property'
 
     @classmethod
-    def load_or_create(cls, student):
+    def load_or_default(cls, student):
         entity = cls.get(student, cls.PROPERTY_NAME)
         if entity is None:
             entity = cls.create(student, cls.PROPERTY_NAME)
             entity.value = '{}'
-            entity.put()
         return entity
 
     def get_rating(self, key):
@@ -122,7 +121,7 @@ class RatingHandler(utils.BaseRESTHandler):
             return
 
         key = payload.get('key')
-        prop = StudentRatingProperty.load_or_create(student)
+        prop = StudentRatingProperty.load_or_default(student)
         rating = prop.get_rating(key)
 
         payload_dict = {
@@ -142,7 +141,7 @@ class RatingHandler(utils.BaseRESTHandler):
         additional_comments = payload.get('additional_comments')
 
         if rating is not None:
-            prop = StudentRatingProperty.load_or_create(student)
+            prop = StudentRatingProperty.load_or_default(student)
             prop.set_rating(key, rating)
             prop.put()
 

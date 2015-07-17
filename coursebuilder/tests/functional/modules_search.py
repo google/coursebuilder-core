@@ -475,7 +475,7 @@ class SearchTest(search_unit_test.SearchTestBase):
 
             # Switch locale to 'fr'
             with common_utils.Namespace('ns_test'):
-                prefs = models.StudentPreferencesDAO.load_or_create()
+                prefs = models.StudentPreferencesDAO.load_or_default()
                 prefs.locale = 'fr'
                 models.StudentPreferencesDAO.save(prefs)
 

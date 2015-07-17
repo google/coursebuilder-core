@@ -19,6 +19,7 @@ __author__ = [
     'sll@google.com (Sean Lip)',
 ]
 
+import data_removal
 import entities
 import transforms
 
@@ -164,6 +165,16 @@ class Review(BaseEntity):
             model.reviewer_key, transform_fn)
         return model
 
+    @classmethod
+    def _get_student_key(cls, value):
+        return db.Key.from_path(models.Student.kind(), value)
+
+    @classmethod
+    def delete_by_reviewee_id(cls, user_id):
+        student_key = cls._get_student_key(user_id)
+        query = Review.all(keys_only=True).filter('reviewee_key =', student_key)
+        db.delete(query.run())
+
 
 class Submission(BaseEntity):
     """Datastore model for a student work submission."""
@@ -190,6 +201,13 @@ class Submission(BaseEntity):
     @classmethod
     def _get_student_key(cls, value):
         return db.Key.from_path(models.Student.kind(), value)
+
+    @classmethod
+    def delete_by_reviewee_id(cls, user_id):
+        student_key = cls._get_student_key(user_id)
+        query = Submission.all(keys_only=True).filter('reviewee_key =',
+                                                      student_key)
+        db.delete(query.run())
 
     @classmethod
     def key_name(cls, unit_id, reviewee_key):
@@ -278,8 +296,7 @@ class StudentWorkUtils(object):
 
 
 def register_for_data_removal():
-    pass
-    # TODO(mgainer): Follow up with legal on how aggressive we need to be
-    # about cleaning up peer reviews on data_removal.  Cleaning these will
-    # mean possibly significant extra work cleaning up to preserve
-    # referential invariants.
+    data_removal.Registry.register_indexed_by_user_id_remover(
+        Review.delete_by_reviewee_id)
+    data_removal.Registry.register_indexed_by_user_id_remover(
+        Submission.delete_by_reviewee_id)

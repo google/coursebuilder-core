@@ -235,12 +235,43 @@ class ZipAwareOpen(object):
         return False  # Don't suppress exceptions.
 
 
-def parse_timedelta_string(timedelta_string):
+def _parse_timedelta_string(timedelta_string):
     keys = ['weeks', 'days', 'hours', 'minutes', 'seconds']
-    regex = r'\s*,?\s*'.join([r'((?P<%s>\d+)\s*%s(%s)?s?)?' %
-                        (k, k[0], k[1:-1]) for k in keys])
     kwargs = {}
-    for k, v in re.match(regex,
-                         timedelta_string).groupdict(default='0').items():
-        kwargs[k] = int(v)
-    return datetime.timedelta(**kwargs)
+    for key in keys:
+        # Expect exact match to 'weeks', 'week', or 'w' (for all unit type
+        # names, not just "weeks") and then either a separator, a number, or
+        # end-of-string.  This prevents 'months' from being recognized as
+        # valid, when actually 'm' -> 'minutes'.
+        pattern = r'([0-9]+)\s*(%s|%s|%s)(\s|,|$|[0-9])' % (
+            key, key[:-1], key[0])  # 'weeks', 'week', 'w'
+        matches = re.search(pattern, timedelta_string, re.IGNORECASE)
+        if matches:
+            quantity = int(matches.group(1))
+            if quantity:
+                kwargs[key] = quantity
+    return kwargs
+
+
+def parse_timedelta_string(timedelta_string):
+    return datetime.timedelta(**_parse_timedelta_string(timedelta_string))
+
+
+class ValidateTimedelta(object):
+
+    @classmethod
+    def validate(cls, value, errors):
+        if value is None or value == '':
+            return  # Blank is OK.
+        value = value.strip()
+        kwargs = _parse_timedelta_string(value)
+        if not kwargs:
+            errors.append(
+                'The string "%s" ' % value + 'has some problems. '
+                'Supported units are: '
+                '"weeks", "days", "hours", "minutes", "seconds".  Units may '
+                'be specified as their first letter, singular, or plural.  '
+                'Spaces and commas may be used or omitted.  E.g., both of '
+                'the following are equivalent: "3w1d7h", '
+                '"3 weeks, 1 day, 7 hours"')
+        return datetime.timedelta(**kwargs).total_seconds()

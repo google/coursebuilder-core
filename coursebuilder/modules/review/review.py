@@ -23,6 +23,7 @@ import random
 
 from models import counters
 from models import custom_modules
+from models import data_removal
 from models import entities
 from models import student_work
 from models import utils
@@ -1085,6 +1086,10 @@ def register_module():
             'add_reviewer', review_dashboard.post_add_reviewer)
         dashboard.DashboardHandler.add_custom_post_action(
             'delete_reviewer', review_dashboard.post_delete_reviewer)
+        data_removal.Registry.register_indexed_by_user_id_remover(
+            peer.ReviewSummary.delete_by_reviewee_id)
+        data_removal.Registry.register_indexed_by_user_id_remover(
+            peer.ReviewStep.delete_by_reviewee_id)
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
