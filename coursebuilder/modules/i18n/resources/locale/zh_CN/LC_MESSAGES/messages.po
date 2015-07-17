@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-07-06 09:30-0700\n"
-"PO-Revision-Date: 2015-04-14 08:04-0700\n"
+"POT-Creation-Date: 2015-07-13 08:59-0700\n"
+"PO-Revision-Date: 2015-07-13 08:59-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: zh_CN <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -287,7 +287,7 @@ msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
 " in a few hours."
-msgstr ""
+msgstr "由于系统仍在删除您之前的数据，因此目前您无法重新注册此课程。请过几小时后再试。"
 
 #. Shown when a student is unenrolling from a course.
 #. Gives the student the option to have all their data
@@ -297,13 +297,73 @@ msgid ""
 "Remove all my data from the course.  This is cannot be un-done.  If this "
 "is not checked, you can re-register in the future, and your course "
 "progress will be retained."
-msgstr ""
+msgstr "从该课程中移除我的所有数据。此操作无法撤消。如果不勾选此项，日后您将可以重新注册，而且系统会保留您的课程进度。"
 
 #. When a user is authenticating with an external identity provider    (e.g.,
 #. Facebook, Twitter), this prompt indicates the user should select    one of
 #. these accounts to use to continue the login process.
 #: experimental/coursebuilder/modules/gitkit/templates/branding.html:4
 msgid "Pick an account to continue."
+msgstr "请选择一个帐户以继续。"
+
+#. Page title for the email confirmation HTML message, starting with
+#. a parenthesized note that this is an example implementation.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:6
+msgid "(SAMPLE) Please confirm your email change"
+msgstr ""
+
+#. Page header text indicating that this is an example
+#. implementation.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:12
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:12
+msgid "SAMPLE"
+msgstr ""
+
+#. sentence fragment beginning the message that an email address
+#. has changed from one value to another.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:16
+msgid "An email change has been requested from"
+msgstr ""
+
+#. sentence fragment connecting the old email address and the new email
+#. address.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:19
+msgid "to"
+msgstr ""
+
+#. sentence fragment beginning the text of the sentence providing the
+#. link for users to confirm email change.
+#. link for users to confirm the password change.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:22
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:19
+msgid "Please visit"
+msgstr ""
+
+#. sentence fragment concluding the text of the sentence providing the
+#. link for users to confirm email change.
+#. link for users to confirm the password change.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:26
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:23
+msgid "to confirm this change."
+msgstr ""
+
+#. message introducing the list of available diagnostic pieces of
+#. information.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:32
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:29
+msgid "Diagnostic information:"
+msgstr ""
+
+#. Page title for the password reset HTML message, starting with a
+#. parenthesized note that this is an example implementation.
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:6
+msgid "(SAMPLE) Password reset confirmation"
+msgstr ""
+
+#. sentence fragment beginning the message that a password reset has
+#. been requested.
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:16
+msgid "A password change has been requested for"
 msgstr ""
 
 #. Error indicating no email addresses were submitted.
@@ -544,7 +604,7 @@ msgid "No results for \"%(query)s\""
 msgstr "没有符合“%(query)s”的搜索结果"
 
 #. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.py:77
+#: experimental/coursebuilder/modules/search/search.py:76
 msgid "Search is currently unavailable."
 msgstr "目前无法进行搜索。"
 
@@ -586,42 +646,42 @@ msgstr "未开授课程"
 #. Header for skill proficiency legend
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:39
 msgid "Proficiency level"
-msgstr ""
+msgstr "熟练程度"
 
 #. Label for low skill proficiency
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:44
 msgid "low"
-msgstr ""
+msgstr "低"
 
 #. Label for high skill proficiency
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
 msgid "high"
-msgstr ""
+msgstr "高"
 
 #. Header for skills progress section
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:21
 msgid "Skills Progress"
-msgstr ""
+msgstr "技能进度"
 
 #. List of acquired skills for a student
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:32
 msgid "Achievements"
-msgstr ""
+msgstr "成绩"
 
 #. Describe an empty set of acquired skills
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:36
 msgid "Currently, no acquired skills."
-msgstr ""
+msgstr "目前尚未掌握任何技能。"
 
 #. List of skills recommended to a student to learn
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:53
 msgid "Recommended Next"
-msgstr ""
+msgstr "推荐的后续技能"
 
 #. Describe an empty set of recommended skills
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:57
 msgid "Currently, you have no recommended skills."
-msgstr ""
+msgstr "目前未向您推荐任何技能。"
 
 #. Notification indicating that the user has subscribed to email notifications
 #. from an instructional course.
@@ -749,7 +809,7 @@ msgstr "您尚未收到任何同学评价。"
 #. Text shown for an assessment that has not been made public.
 #: experimental/coursebuilder/views/assessment.html:129
 msgid "This assessment is not available."
-msgstr ""
+msgstr "无法查看此项评估。"
 
 #. Text on the button for saving a draft answer.
 #: experimental/coursebuilder/views/assessment_html_content.html:32

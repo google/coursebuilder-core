@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-07-06 09:30-0700\n"
-"PO-Revision-Date: 2015-04-14 08:04-0700\n"
+"POT-Creation-Date: 2015-07-13 08:59-0700\n"
+"PO-Revision-Date: 2015-07-13 08:59-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: hi <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -290,6 +290,8 @@ msgid ""
 "deletion of your previous data is still in progress.  Please try again in"
 " in a few hours."
 msgstr ""
+"आप इस पाठ्यक्रम के लिए पुनः पंजीकरण नहीं कर सकते, क्योंकि आपके पुराने "
+"डेटा को अभी भी हटाया जा रहा है.  कृपया कुछ घंटे बाद पुनः प्रयास करें."
 
 #. Shown when a student is unenrolling from a course.
 #. Gives the student the option to have all their data
@@ -300,12 +302,75 @@ msgid ""
 "is not checked, you can re-register in the future, and your course "
 "progress will be retained."
 msgstr ""
+"पाठ्यक्रम से मेरा पूरा डेटा हटाएं.  इसे पूर्ववत नहीं किया जा सकता.  यदि "
+"इसे चेक नहीं किया जाता है, तो आप भविष्य में पुनः पंजीकृत कर सकते हैं, और "
+"पाठ्यक्रम की आपकी प्रगति बनाई रखी जाएगी."
 
 #. When a user is authenticating with an external identity provider    (e.g.,
 #. Facebook, Twitter), this prompt indicates the user should select    one of
 #. these accounts to use to continue the login process.
 #: experimental/coursebuilder/modules/gitkit/templates/branding.html:4
 msgid "Pick an account to continue."
+msgstr "जारी रखने के लिए कोई खाता चुनें."
+
+#. Page title for the email confirmation HTML message, starting with
+#. a parenthesized note that this is an example implementation.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:6
+msgid "(SAMPLE) Please confirm your email change"
+msgstr ""
+
+#. Page header text indicating that this is an example
+#. implementation.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:12
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:12
+msgid "SAMPLE"
+msgstr ""
+
+#. sentence fragment beginning the message that an email address
+#. has changed from one value to another.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:16
+msgid "An email change has been requested from"
+msgstr ""
+
+#. sentence fragment connecting the old email address and the new email
+#. address.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:19
+msgid "to"
+msgstr ""
+
+#. sentence fragment beginning the text of the sentence providing the
+#. link for users to confirm email change.
+#. link for users to confirm the password change.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:22
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:19
+msgid "Please visit"
+msgstr ""
+
+#. sentence fragment concluding the text of the sentence providing the
+#. link for users to confirm email change.
+#. link for users to confirm the password change.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:26
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:23
+msgid "to confirm this change."
+msgstr ""
+
+#. message introducing the list of available diagnostic pieces of
+#. information.
+#: experimental/coursebuilder/modules/gitkit/templates/change_email.html:32
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:29
+msgid "Diagnostic information:"
+msgstr ""
+
+#. Page title for the password reset HTML message, starting with a
+#. parenthesized note that this is an example implementation.
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:6
+msgid "(SAMPLE) Password reset confirmation"
+msgstr ""
+
+#. sentence fragment beginning the message that a password reset has
+#. been requested.
+#: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:16
+msgid "A password change has been requested for"
 msgstr ""
 
 #. Error indicating no email addresses were submitted.
@@ -555,7 +620,7 @@ msgid "No results for \"%(query)s\""
 msgstr "\"%(query)s\" के लिए कोई परिणाम नहीं"
 
 #. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.py:77
+#: experimental/coursebuilder/modules/search/search.py:76
 msgid "Search is currently unavailable."
 msgstr "खोज वर्तमान में अनुपलब्ध है."
 
@@ -597,42 +662,42 @@ msgstr "सिखाया नहीं गया"
 #. Header for skill proficiency legend
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:39
 msgid "Proficiency level"
-msgstr ""
+msgstr "दक्षता स्तर"
 
 #. Label for low skill proficiency
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:44
 msgid "low"
-msgstr ""
+msgstr "निम्‍न"
 
 #. Label for high skill proficiency
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
 msgid "high"
-msgstr ""
+msgstr "उच्च"
 
 #. Header for skills progress section
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:21
 msgid "Skills Progress"
-msgstr ""
+msgstr "कौशल प्रगति"
 
 #. List of acquired skills for a student
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:32
 msgid "Achievements"
-msgstr ""
+msgstr "उपलब्धियां"
 
 #. Describe an empty set of acquired skills
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:36
 msgid "Currently, no acquired skills."
-msgstr ""
+msgstr "वर्तमान में, कोई प्राप्त कौशल नहीं है."
 
 #. List of skills recommended to a student to learn
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:53
 msgid "Recommended Next"
-msgstr ""
+msgstr "आगे के लिए अनुशंसित"
 
 #. Describe an empty set of recommended skills
 #: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:57
 msgid "Currently, you have no recommended skills."
-msgstr ""
+msgstr "वर्तमान में, आपके लिए कोई अनुशंसित कौशल नहीं है."
 
 #. Notification indicating that the user has subscribed to email notifications
 #. from an instructional course.
@@ -776,7 +841,7 @@ msgstr "आपने अभी तक कोई मित्र समीक्�
 #. Text shown for an assessment that has not been made public.
 #: experimental/coursebuilder/views/assessment.html:129
 msgid "This assessment is not available."
-msgstr ""
+msgstr "यह आंकलन उपलब्ध नहीं है."
 
 #. Text on the button for saving a draft answer.
 #: experimental/coursebuilder/views/assessment_html_content.html:32
