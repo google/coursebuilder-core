@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-07-13 08:59-0700\n"
+"POT-Creation-Date: 2015-07-17 09:02-0700\n"
 "PO-Revision-Date: 2015-07-13 08:59-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: el <LL@li.org>\n"
@@ -286,7 +286,7 @@ msgstr "Αλλαγή ονόματος"
 #. course soon after un-enrolling.  It takes up to several
 #. hours to remove their data, and they are prevented from
 #. re-enrolling during that time to prevent problems.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:209
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:263
 msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
@@ -296,19 +296,62 @@ msgstr ""
 " διαγραφή των προηγούμενων δεδομένων είναι ακόμα σε εξέλιξη.  Δοκιμάστε "
 "ξανά σε μερικές ώρες"
 
-#. Shown when a student is unenrolling from a course.
-#. Gives the student the option to have all their data
-#. permanently removed.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:489
-msgid ""
-"Remove all my data from the course.  This is cannot be un-done.  If this "
-"is not checked, you can re-register in the future, and your course "
-"progress will be retained."
+#. Gives a link on the footer of the page to permit the user
+#. to delete their personal data.  This link only appears for users
+#. who are currently enrolled in the course or who were enrolled
+#. but still have personal data present in the course.
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:411
+msgid "Delete My Data"
 msgstr ""
-"Κατάργηση όλων των δεδομένων μου από το μάθημα.  Αυτή η ενέργεια δεν "
-"μπορεί να αναιρεθεί.  Αν δεν έχετε επιλέξει αυτή την ενέργεια, μπορείτε "
-"να εγγραφείτε ξανά στο μέλλον διατηρώντας την κατάσταση της προόδου σας "
-"στο μάθημα."
+
+#. Shown when a student is unenrolling from a
+#. course.  Gives the student the option to have all
+#. their data permanently removed.
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:430
+msgid "Delete all associated data"
+msgstr ""
+
+#. Warns a student that they are about to remove all of              data
+#. collected from this student during the course.  This              deletion
+#. cannot be un-done.
+#: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:27
+msgid "Once you delete your data, there is no way to recover it."
+msgstr ""
+
+#. When a student deletes their data, this warning appears
+#. indicating that the deletion applies only to the current course,
+#. not anything else.
+#: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:32
+msgid ""
+"Deleting your content in this course will not delete your content from "
+"other courses.  You must delete your content for each course separately."
+msgstr ""
+
+#. When a student deletes their data from a course, this              warning
+#. appears to indicate that data is removed only for that              specific
+#. course, not other courses and not other Google              products or
+#. services.
+#: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:38
+msgid ""
+"This will also not delete your content in other products and services.  "
+"For example, if you made a post in Google Groups or shared a Google Drive"
+" document, you may wish to delete those posts or update your sharing "
+"settings in those products."
+msgstr ""
+
+#. Confirmation button, indicating that the student does              want to
+#. have all data about them removed from the course.
+#. Confirmation button, shown when a student has unenrolled from a course.
+#: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:58
+#: experimental/coursebuilder/views/unenroll_confirmation.html:30
+msgid "OK"
+msgstr "OK"
+
+#. Cancellation button, indicating that the student does not              want
+#. to have all data about them removed from the course.
+#: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:63
+msgid "Cancel"
+msgstr ""
 
 #. When a user is authenticating with an external identity provider    (e.g.,
 #. Facebook, Twitter), this prompt indicates the user should select    one of
@@ -378,7 +421,7 @@ msgid "A password change has been requested for"
 msgstr ""
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:276
+#: experimental/coursebuilder/modules/invitation/invitation.py:274
 msgid "Error: Empty email list"
 msgstr "Σφάλμα: Κενή λίστα διευθύνσεων ηλεκτρονικού ταχυδρομείου"
 
@@ -388,7 +431,7 @@ msgstr "Σφάλμα: Κενή λίστα διευθύνσεων ηλεκτρο�
 #. than any single user is allowed to send.  No email addresses
 #. were added to the list to send, and no further email messages
 #. were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:290
+#: experimental/coursebuilder/modules/invitation/invitation.py:288
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -398,13 +441,13 @@ msgstr ""
 "προσκλήσεων που απομένουν: %s. Δεν εστάλησαν μηνύματα."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:299
+#: experimental/coursebuilder/modules/invitation/invitation.py:297
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "Σφάλμα: Μη έγκυρη διεύθυνση ηλεκτρονικού ταχυδρομείου \"%s\""
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:303
+#: experimental/coursebuilder/modules/invitation/invitation.py:301
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr ""
@@ -412,58 +455,58 @@ msgstr ""
 "χρήστη \"%s\""
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:320
+#: experimental/coursebuilder/modules/invitation/invitation.py:318
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "Δεν εστάλησαν όλα τα μηνύματα (%s / %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:328
+#: experimental/coursebuilder/modules/invitation/invitation.py:326
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "OK, εστάλησαν %s μηνύματα"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:381
+#: experimental/coursebuilder/modules/invitation/invitation.py:379
 msgid "Invite Friends"
 msgstr "Προσκαλέστε φίλους"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:386
+#: experimental/coursebuilder/modules/invitation/invitation.py:384
 msgid "Click to send invitations to family and friends"
 msgstr "Κάντε κλικ για να στείλετε προσκλήσεις στην οικογένεια και τους φίλους σας"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:390
+#: experimental/coursebuilder/modules/invitation/invitation.py:388
 msgid "Invitations not currently available"
 msgstr "Οι προσκλήσεις δεν είναι διαθέσιμες αυτήν τη στιγμή"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:402
+#: experimental/coursebuilder/modules/invitation/invitation.py:400
 msgid "Subscribe/Unsubscribe"
 msgstr "Εγγραφή/Κατάργηση εγγραφής"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:409
+#: experimental/coursebuilder/modules/invitation/invitation.py:407
 msgid "You are currently unsubscribed from course-related emails."
 msgstr ""
 "Αυτήν τη στιγμή δεν είστε εγγεγραμμένοι για τη λήψη μηνυμάτων "
 "ηλεκτρονικού ταχυδρομείου σχετικά με το μάθημα."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:413
+#: experimental/coursebuilder/modules/invitation/invitation.py:411
 msgid "Click here to re-subscribe."
 msgstr "Κάντε κλικ εδώ για να εγγραφείτε εκ νέου."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:418
+#: experimental/coursebuilder/modules/invitation/invitation.py:416
 msgid "You are currently receiving course-related emails. "
 msgstr ""
 "Αυτήν τη στιγμή λαμβάνετε μηνύματα ηλεκτρονικού ταχυδρομείου σχετικά με "
 "το μάθημα. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:422
+#: experimental/coursebuilder/modules/invitation/invitation.py:420
 msgid "Click here to unsubscribe."
 msgstr "Κάντε κλικ εδώ για να καταργήσετε την εγγραφή σας."
 
@@ -518,14 +561,14 @@ msgstr "Θέμα:"
 
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
-#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:194
-#: experimental/coursebuilder/modules/rating/rating.py:96
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:193
+#: experimental/coursebuilder/modules/rating/rating.py:95
 msgid "Access denied."
 msgstr "Δεν επιτρέπεται η πρόσβαση."
 
 #. Message to acknowledge successful submission of the
 #. questionnaire
-#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:198
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:197
 msgid "Response submitted."
 msgstr "Η απάντηση υποβλήθηκε."
 
@@ -535,7 +578,7 @@ msgid "Submit answers"
 msgstr "Υποβολή απαντήσεων"
 
 #. Message displayed when user submits written comments
-#: experimental/coursebuilder/modules/rating/rating.py:156
+#: experimental/coursebuilder/modules/rating/rating.py:155
 msgid "Thank you for your feedback."
 msgstr "Ευχαριστούμε για τα σχόλιά σας."
 
@@ -1459,11 +1502,6 @@ msgstr "Σύνολο κομματιών"
 msgid "You have been unenrolled from "
 msgstr "Έχετε καταργήσει την εγγραφή σας από "
 
-#. Confirmation button, shown when a student has unenrolled from a course.
-#: experimental/coursebuilder/views/unenroll_confirmation.html:30
-msgid "OK"
-msgstr "OK"
-
 #. Shown when a student has asked to unenroll from a course.
 #. Followed by a course name.
 #: experimental/coursebuilder/views/unenroll_confirmation_check.html:25
@@ -1513,4 +1551,5 @@ msgstr "Επόμενη σελίδα"
 #: experimental/coursebuilder/views/unit.html:144
 msgid "End"
 msgstr "Λήξη"
+
 
