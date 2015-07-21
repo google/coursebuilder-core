@@ -263,6 +263,15 @@ function getEditCustomTagUrl(env, tagName) {
 }
 
 function onPageLoad(env) {
+  if (!isFramed()) {
+    // Kick of early asynchronous loading of the editor content while the rest
+    // of the JS is initializing.
+    env.get_url_promise = $.ajax({
+      type: 'GET',
+      url: env.get_url,
+      dataType: 'text'
+    });
+  }
   /**
    * Define a rich text editor widget in the module "gcb-rte".
    */
@@ -772,20 +781,19 @@ TopLevelEditorControls.prototype = {
   },
 
   populateForm: function() {
-    // async request data for the object being edited
-    this._Y.io(this._env.get_url, {
-      method: 'GET',
-      timeout : ajaxRpcTimeoutMillis,
-      on: {
-        success: this._onPopulateFormSuccess,
-        failure : this._onPopulateFormFailure
-      },
-      context: this
-    });
+    var that = this;
+    // Retrieve editor content from the asynchronous load started in onPageLoad.
+    this._env.get_url_promise
+        .done(function(responseText) {
+          that._onPopulateFormSuccess(responseText);
+        })
+        .error(function() {
+          that._onPopulateFormFailure();
+        });
   },
 
-  _onPopulateFormSuccess: function(id, o, args) {
-    var json = parseJson(o.responseText);
+  _onPopulateFormSuccess: function(responseText) {
+    var json = parseJson(responseText);
 
     // check status code
     if (json.status != 200) {
@@ -846,7 +854,7 @@ TopLevelEditorControls.prototype = {
     this._env.onFormLoad(this._Y);
   },
 
-  _onPopulateFormFailure: function (x,o) {
+  _onPopulateFormFailure: function () {
     cbShowMsg("Server did not respond. Please reload the page to try again.");
   }
 };

@@ -160,7 +160,9 @@ function bindEditorField(Y) {
     this._disableHtmlCleaning();
 
     this.editorIsRendered = $.Deferred(function(def) {
-      that.editor.on('afterRender', function() {
+      // See:
+      //   http://yui.github.io/yui2/docs/yui_2.9.0_full/docs/YAHOO.widget.SimpleEditor.html#event_editorContentLoaded
+      that.editor.on('editorContentLoaded', function() {
         def.resolve();
       });
     });
@@ -478,30 +480,24 @@ function bindEditorField(Y) {
   };
   EditorField.prototype.setEditorType = function(editorType) {
     var that = this;
-    $.when(this.htmlEditor.isReady(),
-        this.richTextEditor.isReady(),
-        this.previewEditor.isReady()
-    ).then(function() {
-      that._deferredSetEditorType(editorType)
-    });
-  };
-  EditorField.prototype._deferredSetEditorType = function(editorType) {
-    var editor = null;
     if (editorType == this.HTML_EDITOR) {
-      editor = this.htmlEditor;
-      this.htmlToggleButton.set(true);
-      this.previewToggleButton.set(false);
+      $.when(this.htmlEditor.isReady()).then(function() {
+        that.htmlToggleButton.set(true);
+        that.previewToggleButton.set(false);
+        that._select(that.htmlEditor);
+      });
     } else if (editorType == this.RICH_TEXT_EDITOR) {
-      editor = this.richTextEditor;
-      this.htmlToggleButton.set(false);
-      this.previewToggleButton.set(false);
+      $.when(this.richTextEditor.isReady()).then(function() {
+        that.htmlToggleButton.set(false);
+        that.previewToggleButton.set(false);
+        that._select(that.richTextEditor);
+      });
     } else if (editorType == this.PREVIEW_EDITOR) {
-      editor = this.previewEditor;
-      this.htmlToggleButton.set(false);
-      this.previewToggleButton.set(true);
-    }
-    if (editor !== null) {
-      this._select(editor);
+      $.when(this.previewEditor.isReady()).then(function() {
+        that.htmlToggleButton.set(false);
+        that.previewToggleButton.set(true);
+        that._select(that.previewEditor);
+      });
     }
   };
   EditorField.prototype._select = function (editor) {
