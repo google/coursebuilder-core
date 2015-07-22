@@ -292,7 +292,7 @@ class EmailMapping(models.BaseEntity):
             return cls(key_name=user_id, email=email)
 
 
-class EmailUpdatePolicy(object):
+class EmailUpdatePolicy(users.EmailUpdatePolicy):
     """Policy that updates email mappings based on auth provider state."""
 
     @classmethod
@@ -642,7 +642,7 @@ class GitkitService(object):
             email=gitkit_user.email, _user_id=gitkit_user.user_id)
 
 
-class Mailer(object):
+class Mailer(users.Mailer):
     """Sends email messages."""
 
     @classmethod
@@ -888,7 +888,7 @@ class RuntimeConfig(object):
         return isinstance(self.enabled, bool)
 
 
-class TemplateResolver(object):
+class TemplateResolver(users.TemplateResolver):
     """Gets templates."""
 
     @classmethod

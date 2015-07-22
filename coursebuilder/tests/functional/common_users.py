@@ -111,6 +111,38 @@ class AppEnginePassthroughUsersServiceTest(TestBase):
         self.assert_service_results_equal_and_not_none(
             users_result, gae_users_result)
 
+    def test_get_email_update_policy_class_returns_noop_impl(self):
+        service = users.UsersServiceManager.get()
+        email_update_policy = service.get_email_update_policy_class()
+
+        self.assertIsNone(email_update_policy.apply('unused'))
+        self.assertIs(users.EmailUpdatePolicy, email_update_policy)
+
+    def test_get_federated_email_resolver_class_returns_noop_impl(self):
+        service = users.UsersServiceManager.get()
+        email_resolver = service.get_federated_email_resolver_class()
+
+        self.assertIsNone(email_resolver.get('unused'))
+        self.assertIs(users.FederatedEmailResolver, email_resolver)
+
+    def test_get_mailer_returns_noop_impl(self):
+        service = users.UsersServiceManager.get()
+        mailer = service.get_mailer_class()
+
+        self.assertEquals((None, None), mailer.send_async('unused', 'unused'))
+        self.assertIs(users.Mailer, mailer)
+
+    def test_get_template_resolver_class_returns_noop_impl(self):
+        service = users.UsersServiceManager.get()
+        template_resolver = service.get_template_resolver_class()
+
+        self.assertIsNone(
+            template_resolver.get('unused', unused_locale='unused'))
+        self.assertEquals(
+            (None, None, None),
+            template_resolver.get_email_templates(
+                'unused', unused_locale='unused'))
+
     def test_get_service_name(self):
         self.assertEqual(
             'common.users.AppEnginePassthroughUsersService',

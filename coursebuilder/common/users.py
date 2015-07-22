@@ -166,8 +166,16 @@ class AbstractUsersService(object):
     # in the system.
 
     @classmethod
+    def get_email_update_policy_class(cls):
+        return EmailUpdatePolicy
+
+    @classmethod
     def get_federated_email_resolver_class(cls):
         return FederatedEmailResolver
+
+    @classmethod
+    def get_mailer_class(cls):
+        return Mailer
 
     @classmethod
     def get_request_context_class(cls):
@@ -178,6 +186,10 @@ class AbstractUsersService(object):
     def get_service_name(cls):
         """Returns the name of the auth service for display in admin site."""
         return '%s.%s' % (cls.__module__, cls.__name__)
+
+    @classmethod
+    def get_template_resolver_class(cls):
+        return TemplateResolver
 
 
 class AppEnginePassthroughUsersService(AbstractUsersService):
@@ -203,6 +215,23 @@ class AppEnginePassthroughUsersService(AbstractUsersService):
         return users.is_current_user_admin()
 
 
+class EmailUpdatePolicy(object):
+    """Policy that updates email mappings based on auth provider state.
+
+    Default implementation is a noop since default auth doesn't use email
+    mappings.
+    """
+
+    @classmethod
+    def apply(cls, unused_user):
+        """Applies the policy.
+
+        Args:
+            unused_user: users.User. The user to apply the policy to.
+        """
+        pass
+
+
 class FederatedEmailResolver(object):
     """Resolves federated emails for users.
 
@@ -212,6 +241,73 @@ class FederatedEmailResolver(object):
     @classmethod
     def get(cls, unused_user_id):
         return None
+
+
+class Mailer(object):
+    """Sender for auth-related notifications.
+
+    Default auth sends no auth-related notifications, so implementation is a
+    noop.
+    """
+
+    @classmethod
+    def send_async(cls, unused_locale, unused_context):
+        """Sends email notification(s) asynchronously.
+
+        Args:
+            locale: string. The user's preferred locale code (e.g. 'en_US').
+            oob_email_response: object. Response object from auth service
+                containing template values used to compose mails to user.
+
+        Returns:
+            (notification_key, payload_key). A 2-tuple of datastore keys for the
+                created notification and payload.
+
+        Raises:
+            Exception: if values delegated to model initializers are invalid.
+            ValueError: if to or sender are malformed according to App Engine
+                (note that well-formed values do not guarantee success).
+        """
+        return (None, None)
+
+
+class TemplateResolver(object):
+    """Gets templates used to send auth-related notifications.
+
+    By default there are no auth-related notifications, so the implementation
+    returns no templates.
+    """
+
+    @classmethod
+    def get(cls, unused_path, unused_locale=None):
+        """Gets a single template (None in default implementation).
+
+        Args:
+            unused_path: string. Name of template.
+            unused_locale: string. The user's requested locale code.
+
+        Returns:
+            Template instance (or None in the default implementation).
+        """
+        return None
+
+    @classmethod
+    def get_email_templates(cls, unused_action, unused_locale=None):
+        """Returns templates used to compose an email (Nones by default).
+
+        Args:
+            unused_action: string. Identifier for the kind of email.
+            unused_locale: string or None. The user's requested locale code.
+
+        Returns:
+            3-tuple of
+            (body_html_template, body_text_template, subject_text_template).
+
+        Raises:
+            Exception: if the template system encoutered a problem.
+            ValueError: if the action is invalid.
+        """
+        return (None, None, None)
 
 
 class UsersServiceManager(object):
