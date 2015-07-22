@@ -1333,6 +1333,7 @@ class StudentUnenrollHandler(BaseHandler):
         # First time into the POST handling, add all the names of the hooks
         # we need to do.  As these are done, we will remove them one-by-one.
 
+        # pylint: disable=abstract-class-instantiated
         parameters = multidict.MultiDict(self.request.params.items())
         for post_hook_name in self.POST_HOOKS.iterkeys():
             parameters.add(self._POST_HOOK_NAMES_PARAM, post_hook_name)
@@ -1343,6 +1344,7 @@ class StudentUnenrollHandler(BaseHandler):
         student = handler.personalize_page_and_get_enrolled()
         if not student:
             return
+        # pylint: disable=abstract-class-instantiated
         parameters = multidict.MultiDict(parameters_list)
         if not handler.assert_xsrf_token_or_fail(parameters,
                                                  'student-unenroll'):

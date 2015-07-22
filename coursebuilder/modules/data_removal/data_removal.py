@@ -434,6 +434,7 @@ class ImmediateRemovalPolicy(AbstractDataRemovalPolicy):
 
     @classmethod
     def on_unenroll_submit(cls, student, handler, parameters_list):
+        # pylint: disable=abstract-class-instantiated
         parameters = multidict.MultiDict(parameters_list)
         if parameters.get(cls.DATA_REMOVAL_FIELD_NAME, 'False') != 'True':
             return False
