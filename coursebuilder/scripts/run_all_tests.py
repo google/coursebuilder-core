@@ -47,7 +47,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.common_users.AppEnginePassthroughUsersServiceTest': 10,
     'tests.functional.common_users.AuthInterceptorAndRequestHooksTest': 2,
     'tests.functional.common_users.PublicExceptionsAndClassesIdentityTests': 2,
-    'tests.functional.explorer_module.CourseExplorerTest': 3,
+    'tests.functional.explorer_module.CourseExplorerTest': 5,
     'tests.functional.explorer_module.CourseExplorerDisabledTest': 3,
     'tests.functional.explorer_module.GlobalProfileTest': 1,
     'tests.functional.controllers_review.PeerReviewControllerTest': 7,

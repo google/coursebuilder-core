@@ -20,7 +20,7 @@
                 {# I18N: Text for a button on the 'list of courses' page that takes students to the page for that course. #}
                 {{ gettext('Go to course') }}
               </a>
-            {% else %}
+            {% elif course.course.can_register %}
               <a href="{{course.course.slug}}/register" class="gcb-button gcb-explorer-button">
                 {# I18N: Registration button on the main course page. #}
                 {{ gettext('Register') }}

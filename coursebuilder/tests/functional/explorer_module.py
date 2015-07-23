@@ -23,6 +23,7 @@ from actions import assert_does_not_contain
 from actions import assert_equals
 from controllers import sites
 from models import config
+from models import courses
 from models import models
 from models import transforms
 from models.models import PersonalProfile
@@ -151,6 +152,30 @@ class CourseExplorerTest(BaseExplorerTest):
         # Clean up app_context.
         sites.ApplicationContext.get_environ = get_environ_old
         sites.reset_courses()
+
+    def test_can_register_true(self):
+        courses.Course.ENVIRON_TEST_OVERRIDES = {
+            'reg_form': {'can_register': True}}
+
+        dom = self.parse_html_string(self.get('/explorer').body)
+        item = dom.find('.//li[@class="gcb-explorer-list-item"]')
+        self.assertEquals(
+            'Power Searching with Google',
+            item.find('.//a[@class="gcb-explorer-course-title"]').text)
+        # Registration button present
+        self.assertIsNotNone(item.find('.//a[@href="/register"]'))
+
+    def test_can_register_false(self):
+        courses.Course.ENVIRON_TEST_OVERRIDES = {
+            'reg_form': {'can_register': False}}
+
+        dom = self.parse_html_string(self.get('/explorer').body)
+        item = dom.find('.//li[@class="gcb-explorer-list-item"]')
+        self.assertEquals(
+            'Power Searching with Google',
+            item.find('.//a[@class="gcb-explorer-course-title"]').text)
+        # No registration button present
+        self.assertIsNone(item.find('.//a[@href="/register"]'))
 
 
 class CourseExplorerDisabledTest(actions.TestBase):

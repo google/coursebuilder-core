@@ -123,6 +123,9 @@ class BaseStudentHandler(webapp2.RequestHandler):
             return True
         return False
 
+    def can_register(self, course):
+        return course.get_environ()['reg_form']['can_register']
+
     def get_course_info(self, course):
         """Returns course info required in views."""
         info = sites.ApplicationContext.get_environ(course)
@@ -135,6 +138,7 @@ class BaseStudentHandler(webapp2.RequestHandler):
         info['course']['course_preview_url'] = course_preview_url
         info['course']['is_registered'] = self.is_enrolled(course)
         info['course']['is_completed'] = self.is_completed(course)
+        info['course']['can_register'] = self.can_register(course)
         return info
 
     def get_enrolled_courses(self, courses):
