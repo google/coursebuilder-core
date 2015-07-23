@@ -36,6 +36,7 @@ function gcbGetAndClearLogSection(section) {
    from previous visualization, and telling visualization to repaint.
 */
 function gcbAcceptSource(error, stringifiedData) {
+  cbHideMsg();
 
   // Cope with severe errors in which we don't get nicely formatted
   // error/warning messages within the encoded data itself.

@@ -114,13 +114,22 @@ function assessment_difficulty(data) {
   // the REST data source).  Each position on the X-axis corresponds to one
   // student, uniquely identified by that student's class rank.
   var num_students = scores_by_student_rank.group().size();
+  var constrained_num_students = Math.max(num_students - 1, 1);
   var dc_chart = dc.lineChart('#assessment_difficulty_ranked_students')
+      .renderArea(true)
       .width(400)
       .height(200)
       .dimension(scores_by_student_rank)
-      .x(d3.scale.linear().domain([0, num_students - 0.999999]))
-      .xAxisLabel('Student Rank')
-      .yAxisLabel('Score per Assessment');
+      .x(d3.scale.linear().domain([0, constrained_num_students]))
+      .xAxisLabel('Students by Rank')
+      .yAxisLabel('Score');
+
+  // Prevent it from subdividing ticks when the data is small.
+  // This should be possible with dc_chart.xAxis().tickSubdivide(false)
+  // but that isn't working.
+  if (constrained_num_students <= 10) {
+    dc_chart.xAxis().tickFormat(d3.format('d')).ticks(constrained_num_students);
+  }
 
   // Now, give the graph its data.  We're going to add one line to the
   // graph for each assessment, and they'll stack up to amount to the
@@ -130,19 +139,25 @@ function assessment_difficulty(data) {
   // score is for that particular assessment (otherwise it returns 0.)
   var first = true;
   var all_assessments = score_counts_by_assessment.all();
-  for (var i = 0; i < all_assessments.length; i++) {
-    var title = all_assessments[i].key;
-    var grouping = scores_by_student_rank.group().reduceSum(
-        assessment_selection_function_factory(title));
+  if (all_assessments.length >= 1) {
+    for (var i = 0; i < all_assessments.length; i++) {
+      var title = all_assessments[i].key;
+      var grouping = scores_by_student_rank.group().reduceSum(
+          assessment_selection_function_factory(title));
 
-    // Dc is weird; on stacked charts, we have to identify the first
-    // item differently than the others.
-    if (first) {
-      dc_chart.group(grouping, title);
-      first = false;
-    } else {
-      dc_chart.stack(grouping, title);
+      // Dc is weird; on stacked charts, we have to identify the first
+      // item differently than the others.
+      if (first) {
+        dc_chart.group(grouping, title);
+        first = false;
+      } else {
+        dc_chart.stack(grouping, title);
+      }
     }
+  } else {
+    // Any empty group will suffice. We need to pass something when there are
+    // no assessments.
+    dc_chart.group(scores_by_student_rank.group(), "No assessments");
   }
   dc.renderAll();
 }
