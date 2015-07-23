@@ -32,7 +32,7 @@
   </li>
 {%- endmacro %}
 
-{% macro display_proficiency_legend() -%}
+{% macro display_proficiency_legend(include_not_started=True) -%}
   <div class='proficiency-legend'>
     <div class='legend-title'>
       {# I18N: Header for skill proficiency legend #}
@@ -41,8 +41,12 @@
     <div class='legend-scale'>
       <ul class='legend-labels'>
         {# I18N: Label for low skill proficiency #}
-        <li><span class="not-started"></span>{{ gettext('low') }}</li>
-        <li><span class="low-competency"></span></li>
+        {% if include_not_started %}
+          <li><span class="not-started"></span>{{ gettext('low') }}</li>
+          <li><span class="low-competency"></span></li>
+        {% else %}
+          <li><span class="low-competency"></span>{{ gettext('low') }}</li>
+        {% endif %}
         <li><span class="med-competency"></span></li>
         {# I18N: Label for high skill proficiency #}
         <li><span class="high-competency"></span>{{ gettext('high') }}</li>

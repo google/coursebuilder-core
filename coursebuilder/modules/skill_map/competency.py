@@ -18,6 +18,7 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import collections
 
+from models import jobs
 from models import models
 from models import transforms
 from models import data_removal
@@ -178,6 +179,9 @@ class CompetencyMeasureEntity(models.BaseEntity):
             cls.kind(),
             cls.create_key_name(transform_fn(user_id), skill_id, class_name))
 
+    def get_user_id_skill_id_and_class_name(self):
+        return self.key().name().split(':')
+
 
 class CompetencyMeasureDao(models.LastModfiedJsonDao):
     DTO = CompetencyMeasureDto
@@ -207,21 +211,24 @@ class SuccessRateCompetencyMeasure(BaseCompetencyMeasure):
         count = self.competency_dto.get_data(self.COUNT_KEY) or 0
         return float(correct) / count if count else 0.0
 
+    @classmethod
+    def calc_score_level(cls, score):
+        if score < 0.0 or score > 1.0:
+            raise ValueError('Unexpected skill score: %s.' % score)
+        if score <= 0.33:
+            return cls.LOW_PROFICIENCY
+        if score <= 0.66:
+            return cls.MED_PROFICIENCY
+        if score <= 1.0:
+            return cls.HIGH_PROFICIENCY
+
     @property
     def score_level(self):
         """Returns encoded competency labels used as css classes."""
 
         if not self.competency_dto.get_data(self.COUNT_KEY):
             return self.NOT_STARTED
-        score = self.score
-        if score < 0.0 or score > 1.0:
-            raise ValueError('Unexpected skill score: %s.' % score)
-        if score <= 0.33:
-            return self.LOW_PROFICIENCY
-        if score <= 0.66:
-            return self.MED_PROFICIENCY
-        if score <= 1.0:
-            return self.HIGH_PROFICIENCY
+        return self.calc_score_level(self.score)
 
     @property
     def proficient(self):
@@ -332,6 +339,65 @@ def record_event_listener(source, user, data):
         for score in scores:
             updater.add_score(score)
         updater.save()
+
+
+class GenerateSkillCompetencyHistograms(jobs.MapReduceJob):
+    """Aggregates student competencies for each skill."""
+
+    @classmethod
+    def entity_class(cls):
+        return CompetencyMeasureEntity
+
+    @staticmethod
+    def get_description():
+        return 'skill competency distributions'
+
+    @staticmethod
+    def map(entity):
+        """Gets the score level from the skill competency measure.
+
+        Yields:
+            A tuple of (skill_id, competency_level).
+        """
+        key = entity.key().name()
+        user_id, skill_id, type_name = (
+            entity.get_user_id_skill_id_and_class_name())
+        if type_name == 'SuccessRateCompetencyMeasure':
+            data = transforms.loads(entity.data)
+            skill_dto = CompetencyMeasureDao.DTO(key, data)
+            measure = SuccessRateCompetencyMeasure(
+                user_id, skill_id, skill_dto)
+            yield skill_id, measure.score
+
+    @staticmethod
+    def reduce(skill_id, scores):
+        """Creates a histogram of competencies for each skill.
+
+        Args:
+            skill_id: skill id
+            levels: list of competency levels
+
+        Yields:
+            A tuple (id, competency_histogram):
+                (2, {'high-competency': 0, 'low-competency': 0,
+                     'med-competency': 1, 'avg': 0.12})
+        """
+        hist = {
+            BaseCompetencyMeasure.LOW_PROFICIENCY: 0,
+            BaseCompetencyMeasure.MED_PROFICIENCY: 0,
+            BaseCompetencyMeasure.HIGH_PROFICIENCY: 0
+        }
+
+        # aggregate values per competency level
+        total = 0
+        for x in scores:
+            score = float(x)
+            level = (
+                SuccessRateCompetencyMeasure.calc_score_level(score))
+            hist[level] += 1
+            total += score
+        hist['avg'] = total / len(scores) if scores else 0
+        yield int(skill_id), hist
 
 
 def notify_module_enabled():

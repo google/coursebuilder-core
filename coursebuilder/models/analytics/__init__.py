@@ -129,12 +129,13 @@ class _TemplateRenderer(object):
         self._handler = handler
 
     def render(self, visualization, template_name, template_values):
+        # pylint: disable=protected-access
+        template_dirs = analytics_utils._get_template_dir_names(visualization)
+        if hasattr(self._handler, 'ADDITIONAL_DIRS'):
+            template_dirs.extend(self._handler.ADDITIONAL_DIRS)
         return jinja2.utils.Markup(
-            self._handler.get_template(
-                template_name,
-                # pylint: disable=protected-access
-                analytics_utils._get_template_dir_names(visualization)
-            ).render(template_values, autoescape=True))
+            self._handler.get_template(template_name, template_dirs).render(
+                template_values, autoescape=True))
 
     def get_base_href(self):
         return controllers_utils.ApplicationHandler.get_base_href(self._handler)

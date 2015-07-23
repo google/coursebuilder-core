@@ -133,6 +133,9 @@ class DashboardHandler(
     # Files listed here by URL will be available on every Dashboard page.
     EXTRA_JS_HREF_LIST = []
 
+    # A list of template locations to be included in dashboard pages
+    ADDITIONAL_DIRS = []
+
     # Dictionary that maps external permissions to their descriptions
     _external_permissions = {}
     # Dictionary that maps actions to permissions

@@ -20,6 +20,7 @@ import json
 import jinja2
 import logging
 import os
+import random
 import time
 
 from collections import defaultdict
@@ -69,6 +70,9 @@ TEMPLATES_DIR = os.path.join(
 
 # URI for skill map css, js, amd img assets.
 RESOURCES_URI = '/modules/skill_map/resources'
+
+# Flag turning faker on
+_USE_FAKE_DATA_IN_SKILL_COMPETENCY_ANALYTICS = False
 
 def _assert(condition, message, errors):
     """Assert a condition and either log exceptions or raise AssertionError."""
@@ -457,6 +461,11 @@ class LocationInfo(object):
         self._href = None
         self._edit_href = None
         self._sort_key = None
+        self._lesson_title = None
+        self._lesson_index = None
+        self._unit_id = None
+        self._unit_title = None
+        self._unit_index = None
 
         if isinstance(res, courses.Lesson13):
             self.build_lesson_location()
@@ -486,7 +495,14 @@ class LocationInfo(object):
         lesson = self._resource
         self._key = resources_display.ResourceLesson.get_key(lesson)
         self._id = lesson.lesson_id
+        self._lesson_index = lesson.index
+        self._lesson_title = lesson.title
         unit = self._course.find_unit_by_id(lesson.unit_id)
+        self._unit_title = unit.title
+        self._unit_id = unit.unit_id
+        # pylint: disable=protected-access
+        self._unit_index = unit._index
+        # pylint: enable=protected-access
         if lesson.index is None:
             self._label = '%s.' % unit.index
         else:
@@ -530,6 +546,26 @@ class LocationInfo(object):
     def sort_key(self):
         return self._sort_key
 
+    @property
+    def lesson_index(self):
+        return self._lesson_index
+
+    @property
+    def lesson_title(self):
+        return self._lesson_title
+
+    @property
+    def unit_id(self):
+        return self._unit_id
+
+    @property
+    def unit_index(self):
+        return self._unit_index
+
+    @property
+    def unit_title(self):
+        return self._unit_title
+
     @classmethod
     def json_encoder(cls, obj):
         if isinstance(obj, cls):
@@ -539,7 +575,12 @@ class LocationInfo(object):
                 'description': obj.description,
                 'href': obj.href,
                 'edit_href': obj.edit_href,
-                'sort_key': obj.sort_key
+                'sort_key': obj.sort_key,
+                'lesson_index': obj.lesson_index,
+                'lesson_title': obj.lesson_title,
+                'unit_id': obj.unit_id,
+                'unit_title': obj.unit_title,
+                'unit_index': obj.unit_index
             }
         return None
 
@@ -634,8 +675,10 @@ class SkillInfo(object):
 
     @property
     def proficient(self):
-        assert self.competency_measure
-        return self.competency_measure.proficient
+        if self.competency_measure:
+            return self.competency_measure.proficient
+        else:
+            return None
 
     @classmethod
     def json_encoder(cls, obj):
@@ -824,6 +867,102 @@ class SkillMap(caching.RequestScopedSingleton):
         else:
             raise ValueError('Invalid sort option.')
 
+    def is_empty(self):
+        return len(self._skill_infos) == 0
+
+    @classmethod
+    def create_hist_buckets(cls, hist):
+        """Transforms a competency histogram into crossfilter buckets."""
+
+        buckets = [
+            {'c': 0, 'l': 'low', 'v': 0},
+            {'c': 1, 'l': 'med', 'v': 0},
+            {'c': 2, 'l': 'high', 'v': 0}]
+        if not hist:
+            return buckets, 0.0
+        buckets[0]['v'] = hist.get(
+            competency.BaseCompetencyMeasure.LOW_PROFICIENCY, 0.0)
+        buckets[1]['v'] = hist.get(
+                competency.BaseCompetencyMeasure.MED_PROFICIENCY, 0.0)
+        buckets[2]['v'] = hist.get(
+                competency.BaseCompetencyMeasure.HIGH_PROFICIENCY, 0.0)
+        return buckets, hist.get('avg', 0.0)
+
+    @classmethod
+    def gen_fake_competency_histogram(cls):
+        """Faker for crossfilter table data."""
+
+        histogram = [
+            {'c': 0, 'v': random.randint(0, 25), 'l': 'low'},
+            {'c': 1, 'v': random.randint(0, 10), 'l': 'med'},
+            {'c': 2, 'v': random.randint(0, 10), 'l': 'high'}
+        ]
+        count = (
+            histogram[0]['v'] +
+            histogram[1]['v'] +
+            histogram[2]['v'])
+        if count:
+            avg = (
+                histogram[0]['v'] * 0.33 +
+                histogram[1]['v'] * 0.66 +
+                histogram[2]['v'] * 1.0) / count
+        else:
+            avg = 0.0
+        return histogram, avg
+
+    def gen_skills_xf_data(self, competencies):
+        """Generate cross-filter table for skills competencies dashboard.
+
+        Args:
+            competencies: a list of (id, dict) pairs emitted by
+            competency.GenerateSkillCompetencyHistograms.reduce.
+        """
+
+        competencies = dict(competencies)
+        rows = []
+        for skill in self._skill_infos.values():
+            hist = competencies.get(skill.id)
+            if _USE_FAKE_DATA_IN_SKILL_COMPETENCY_ANALYTICS:
+                hist, avg = self.gen_fake_competency_histogram()
+            else:
+                hist, avg = self.create_hist_buckets(hist)
+
+            row = {
+                'skill_id': skill.id,
+                'skill_name': skill.name,
+                'skill_description': skill.description,
+                'lesson_id': None,
+                'lesson_index': None,
+                'lesson_title': None,
+                'unit_id': None,
+                'unit_index': None,
+                'unit_title': None,
+                'final': True if skill.successors else False,
+                'initial': True if skill.prerequisites else False,
+                'histogram': hist,
+                'avg': avg
+            }
+
+            if skill.lessons:
+                # use one location per unit
+                unit_ids = set()
+                for loc in skill.lessons:
+                    if loc.unit_id in unit_ids:
+                        continue
+                    unit_ids.add(loc.unit_id)
+
+                    next_row = row.copy()
+                    next_row['lesson_id'] = loc.id
+                    next_row['lesson_index'] = loc.lesson_index
+                    next_row['lesson_title'] = loc.lesson_title
+                    next_row['unit_id'] = loc.unit_id
+                    next_row['unit_index'] = loc.unit_index
+                    next_row['unit_title'] = loc.unit_title
+                    rows.append(next_row)
+            else:
+                rows.append(row)
+        return rows
+
     def get_skill(self, skill_id):
         return self._skill_infos[skill_id]
 
@@ -872,7 +1011,7 @@ class SkillMap(caching.RequestScopedSingleton):
         assert models.QuestionDAO.save_all(questions)
         # pylint: disable=protected-access
         skill._questions.extend(
-            [LocationInfo(self._course, question.id) for question in questions])
+            [LocationInfo(self._course, question) for question in questions])
         self._questions_by_skill.setdefault(skill.id, []).extend(questions)
         # pylint: enable=protected-access
 
@@ -1072,7 +1211,7 @@ class SkillMapHandler(dashboard.DashboardHandler):
 
     def get_edit_skills_table(self):
         self.course = courses.Course(self)
-        if not self.course.app_context.is_editable_fs():
+        if not self.app_context.is_editable_fs():
             self.render_read_only()
             return
 
@@ -1092,7 +1231,7 @@ class SkillMapHandler(dashboard.DashboardHandler):
 
     def get_edit_dependency_graph(self):
         self.course = courses.Course(self)
-        if not self.course.app_context.is_editable_fs():
+        if not self.app_context.is_editable_fs():
             self.render_read_only()
             return
 
@@ -1118,6 +1257,37 @@ class SkillMapHandler(dashboard.DashboardHandler):
             'page_title': self.format_title('Dependencies Graph'),
             'main_content': jinja2.utils.Markup(main_content)
         })
+
+
+class SkillCompetencyDataSource(data_sources.SynchronousQuery):
+
+    @staticmethod
+    def required_generators():
+        return [competency.GenerateSkillCompetencyHistograms]
+
+    @classmethod
+    def get_name(cls):
+        return 'skills_competency_histograms'
+
+    @staticmethod
+    def fill_values(
+            app_context, template_values, competency_histograms_generator):
+        """Provides template values from the map-reduce job.
+
+        Works with the skills_competencies_analytics.html jinja template.
+
+        Stores in the key 'counts' of template_values a table with the
+        following format:
+            skill name, count of completions, counts of 'in progress'
+        Adds a row for each skill in the output of CountSkillCompletion job.
+        """
+        job_result = jobs.MapReduceJob.get_results(
+            competency_histograms_generator)
+        course = courses.Course.get(app_context)
+        skill_map = SkillMap.load(course)
+        xf_data = skill_map.gen_skills_xf_data(job_result)
+        template_values['skill_map_is_empty'] = skill_map.is_empty()
+        template_values['xf_data'] = transforms.dumps(xf_data)
 
 
 class SkillCompletionAggregate(models.BaseEntity):
@@ -1544,16 +1714,31 @@ def register_tabs():
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'skills_table', 'Skills table', action='edit_skills_table',
         href='modules/skill_map?action=edit_skills_table', placement=4000)
+
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'dependency_graph', 'Skills graph',
         action='edit_dependency_graph',
         href='modules/skill_map?action=edit_dependency_graph', placement=4500)
+
+    # analytics tab for skill competency histograms grouped by unit
+    skill_competencies = analytics.Visualization(
+        'skill_competencies',
+        'Skill Competencies',
+        'templates/skill_competencies_analytics.html',
+        data_source_classes=[SkillCompetencyDataSource])
+
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'analytics', 'skill_competencies', 'Skill competencies',
+        action='analytics_skill_competencies',
+        contents=analytics.TabRenderer([skill_competencies]),
+        placement=3500)
 
     skill_map_visualization = analytics.Visualization(
         'skill_map',
         'Skill Map Analytics',
         'templates/skill_map_analytics.html',
         data_source_classes=[SkillMapDataSource])
+
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'analytics', 'skill_map', 'Skill map', action='analytics_skill_map',
         contents=analytics.TabRenderer([skill_map_visualization]),
@@ -1806,6 +1991,9 @@ def notify_module_enabled():
         '/modules/skill_map/resources/js/course_outline.js')
     dashboard.DashboardHandler.EXTRA_JS_HREF_LIST.append(
         '/modules/skill_map/resources/js/skill_tagging_lib.js')
+    dashboard.DashboardHandler.EXTRA_JS_HREF_LIST.append(
+        '/modules/skill_map/resources/js/skills_competencies_analytics.js')
+    dashboard.DashboardHandler.ADDITIONAL_DIRS.append(TEMPLATES_DIR)
 
     lessons_controller.UnitHandler.set_lesson_title_provider(
         lesson_title_provider)
@@ -1854,6 +2042,8 @@ def notify_module_enabled():
 
     data_sources.Registry.register(SkillMapDataSource)
 
+    data_sources.Registry.register(SkillCompetencyDataSource)
+
     resource.Registry.register(ResourceSkill)
     i18n_dashboard.TranslatableResourceRegistry.register(
         TranslatableResourceSkill)
@@ -1880,7 +2070,9 @@ def register_module():
         (RESOURCES_URI + '/js/course_outline.js', tags.JQueryHandler),
         (RESOURCES_URI + '/js/lesson_header.js', tags.JQueryHandler),
         (RESOURCES_URI + '/js/skills_progress.js', tags.JQueryHandler),
-        (RESOURCES_URI + '/js/skill_tagging_lib.js', tags.IifeHandler),
+        (RESOURCES_URI + '/js/skill_tagging_lib.js', tags.JQueryHandler),
+        (RESOURCES_URI + '/js/skills_competencies_analytics.js',
+         tags.JQueryHandler),
         (RESOURCES_URI + '/d3-3.4.3/(d3.min.js)', d3_js_handler),
         (RESOURCES_URI + '/underscore-1.4.3/(underscore.min.js)',
          underscore_js_handler),

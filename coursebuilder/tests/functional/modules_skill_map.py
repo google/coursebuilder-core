@@ -119,6 +119,10 @@ class BaseSkillMapTests(actions.TestBase):
         self.lesson2.title = 'Test Lesson 2'
         self.lesson3 = self.course.add_lesson(self.unit)
         self.lesson3.title = 'Test Lesson 3'
+        self.unit2 = self.course.add_unit()
+        self.unit.title = 'Test Unit 2'
+        self.lesson4 = self.course.add_lesson(self.unit2)
+        self.lesson4.title = 'Test Lesson 4'
 
     def _create_mc_question(self, description):
         """Create a multi-choice question."""
@@ -535,7 +539,12 @@ class LocationListRestHandlerTests(BaseSkillMapTests):
                 'label': '1.1',
                 'href': 'unit?unit=1&lesson=2',
                 'key': 'lesson:2',
-                'description': lesson1.title
+                'description': lesson1.title,
+                'lesson_index': 1,
+                'lesson_title': 'Test Lesson 1',
+                'unit_index': 1,
+                'unit_title': 'Test Unit',
+                'unit_id': 1
             },
             {
                 'edit_href': 'dashboard?action=edit_lesson&key=3',
@@ -543,7 +552,12 @@ class LocationListRestHandlerTests(BaseSkillMapTests):
                 'label': '1.2',
                 'href': 'unit?unit=1&lesson=3',
                 'key': 'lesson:3',
-                'description': lesson2.title
+                'description': lesson2.title,
+                'lesson_index': 2,
+                'lesson_title': 'Test Lesson 2',
+                'unit_index': 1,
+                'unit_title': 'Test Unit',
+                'unit_id': 1
             }]
         self.assertEqual(expected_lessons, lessons)
 
@@ -1314,6 +1328,50 @@ class SkillMapAnalyticsTabTests(BaseSkillMapTests):
         self.assertEquals(302, response.status_int)
 
 
+class GenerateCompetencyHistogramsTests(BaseSkillMapTests):
+    """Tests the result of the map reduce job CountSkillCompetencies."""
+
+    def setUp(self):
+        super(GenerateCompetencyHistogramsTests, self).setUp()
+
+        # create three success rate measures
+        # student-11:skill-1:competency:1
+        measure1 = competency.SuccessRateCompetencyMeasure.load(11, 1)
+        measure1.add_score(1.0)
+        measure1.save()
+
+        # student-11:skill-2:competency:0.5
+        measure2 = competency.SuccessRateCompetencyMeasure.load(11, 2)
+        measure2.add_score(0.0)
+        measure2.add_score(1.0)
+        measure2.save()
+
+        # student-22:skill-1:competency:0
+        measure3 = competency.SuccessRateCompetencyMeasure.load(22, 1)
+        measure3.add_score(0.0)
+        measure3.save()
+
+        actions.login(ADMIN_EMAIL, is_admin=True)
+
+    def run_map_reduce_job(self):
+        job = competency.GenerateSkillCompetencyHistograms(self.app_context)
+        job.submit()
+        self.execute_all_deferred_tasks()
+
+    def test_map_reduce_job_output(self):
+        self.run_map_reduce_job()
+        job = competency.GenerateSkillCompetencyHistograms(
+            self.app_context).load()
+        job_result = sorted(
+            jobs.MapReduceJob.get_results(job), key=lambda x: x[0])
+        expected = [
+            [1, {'low-competency': 1, 'med-competency': 0, 'high-competency': 1,
+                 'avg': 0.5}],
+            [2, {'low-competency': 0, 'med-competency': 1, 'high-competency': 0,
+                 'avg': 0.5}]]
+        self.assertEqual(expected, sorted(job_result))
+
+
 class CountSkillCompletionsTests(BaseSkillMapTests):
     """Tests the result of the map reduce job CountSkillCompletions."""
 
@@ -1353,7 +1411,7 @@ class CountSkillCompletionsTests(BaseSkillMapTests):
             comp.put()
 
     def _create_skills(self):
-        """Creates 2 skills."""
+        """Creates 3 skills."""
         skill_graph = SkillGraph.load()
         self.skill1 = skill_graph.add(Skill.build('a', ''))
         self.skill2 = skill_graph.add(Skill.build('b', ''))

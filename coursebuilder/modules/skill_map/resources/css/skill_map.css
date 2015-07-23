@@ -73,13 +73,10 @@ table.skill-map-table tr td span.related-skills {
   padding: 0.1em 0.4em;
   margin: 0 0.2em !important;"
 }
-table.skill-map-table a {
+.skill-map-table a {
   text-decoration: none;
 }
-table.skill-map-table th span.skill-count {
-  font-size: smaller;
-}
-table.skill-map-table button:focus {
+.skill-map-table button:focus {
   outline: none;
 }
 .skill-map-table .row-hover.icon {
@@ -121,4 +118,79 @@ table.skill-map-table ol.comma-list li:last-child:after {
 
 .chart-container {
   margin: 50px;
+}
+
+/*
+ * Skill competency analytics styles.
+ */
+.empty-skill-map {
+  font-size: large;
+  color: #888;
+}
+.competencies {
+  overflow: hidden;
+}
+.units-filter {
+  line-height: 30px;
+  height: 300px;
+  width: 200px;
+  float: left;
+  padding: 5px;
+}
+.units-filter .units .unit-label .skill-count {
+  font-size: smaller;
+  color: #444444;
+}
+.container {
+  float: left;
+  padding: 10px;
+}
+.legend {
+  float: right;
+  margin-bottom: 10px;
+  margin-right: 20px;
+}
+#competencies-container {
+  clear: both;
+}
+.skill-competency-table {
+  border: none;
+  max-width: 900px;
+  table-layout: auto;
+}
+.skill-competency-table td.hist {
+  background-color: #fdfdfd;
+  width: 250px;
+  border-color: #bbb;
+  padding: 0px;
+  margin: 0px;
+}
+.skill-competency-table td.hist div.name {
+  padding: 12px 9px 6px 9px;
+  background-color: #fafafa;
+  border-bottom: 1px solid #f7f7f7;
+  color: #333;
+  font-weight: bold;
+  text-align: center;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.skill-competency-table .hist div.description {
+  padding: 6px 12px 6px 12px;
+  margin: 0 0 6px 0;
+  line-height: 16px;
+  height: 40px;
+  position: relative;
+  overflow-y: hidden;
+  text-overflow: ellipsis;
+}
+.skill-competency-table .hist .histogram {
+  float: none;
+}
+.skill-competency-table .hist .histogram svg {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
