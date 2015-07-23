@@ -3,10 +3,12 @@
  * is available.
  */
 
+div.in-place-lesson-editor {
+  margin: 20px 0;
+}
 div.in-place-lesson-editor > iframe {
   width: 100%;
   height: 100%;
-  margin: 20px 0;
   border: none;
 }
 div.in-place-lesson-editor > div.ajax-spinner {
