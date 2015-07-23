@@ -1367,10 +1367,11 @@ class AdminAspectTest(actions.TestBase):
         actions.login('test_appstats@google.com', is_admin=True)
         response = self.testapp.get('/admin/global')
         dom = self.parse_html_string(self.testapp.get('/admin/global').body)
-        selected_tabs = dom.findall(
-            './/td[@class="gcb-nav-bar-links"]/a[@class="selected"]')
-        self.assertEqual(
-            ['Site admin', 'Courses'], [s.text for s in selected_tabs])
+
+        group = dom.find('.//*[@id="menu-group__admin"]')
+        item = dom.find('.//*[@id="menu-item__admin__courses"]')
+        self.assertIn('gcb-active-group', group.get('class'))
+        self.assertIn('gcb-active', item.get('class'))
 
     def test_appstats(self):
         """Checks that appstats is available when enabled."""
@@ -1389,8 +1390,10 @@ class AdminAspectTest(actions.TestBase):
         modules.admin.admin.notify_module_enabled()
         response = self.testapp.get('/admin/global')
         assert_equals(response.status_int, 200)
-        assert_contains('>Appstats</a>', response.body)
-        assert_contains('/admin/stats/', response.body)
+        dom = self.parse_html_string(response.body)
+        stats_menu_item = dom.find('.//*[@id="menu-item__admin__stats"]')
+        self.assertIsNotNone(stats_menu_item)
+        self.assertEqual(stats_menu_item.get('href'), '/admin/stats/')
 
         modules.admin.admin.notify_module_disabled()
         del os.environ['GCB_APPSTATS_ENABLED']

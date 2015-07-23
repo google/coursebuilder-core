@@ -44,10 +44,6 @@ class AdminDashboardTabTests(actions.TestBase):
         namespace_manager.set_namespace(self.old_namespace)
         super(AdminDashboardTabTests, self).tearDown()
 
-    def get_nav_bar(self, dom, level=1):
-        return dom.find(
-            './/tr[@class="gcb-nav-bar-level-%s"]' % level)
-
     def test_admin_tab_not_present_for_non_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=False)
         dom = self.parse_html_string(self.get('/dashboard').body)
@@ -72,6 +68,5 @@ class AdminDashboardTabTests(actions.TestBase):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
 
         dom = self.parse_html_string(self.get('admin').body)
-        self.assertEqual(
-            'Site admin',
-            self.get_nav_bar(dom).find('.//a[@class="selected"]').text)
+        group = dom.find('.//*[@id="menu-group__admin"]')
+        self.assertIsNotNone(group)

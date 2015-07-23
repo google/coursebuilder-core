@@ -160,8 +160,9 @@ def get_generator_status_message(generator_class, job):
             error_message = jobs.MapReduceJob.get_error_message(job)
         else:
             error_message = job.output
-        message.append(safe_dom.Element('blockquote').add_child(
-            safe_dom.Element('pre').add_text(error_message)))
+        message.append(
+            safe_dom.Element('div', className='gcb-message').add_child(
+                safe_dom.Element('pre').add_text(error_message)))
     else:
         message.append(safe_dom.Text(
             'Job for %s statistics started at %s and is running now.' % (

@@ -932,7 +932,7 @@ Input your Python code below and press "Run Program" to execute.""")
         ).append(
             safe_dom.Element('h3').add_text('Program Output')
         ).append(
-            safe_dom.Element('blockquote').add_child(
+            safe_dom.Element('div', className='gcb-message').add_child(
                 safe_dom.Element('pre').add_text(output))
         )
 
@@ -1080,7 +1080,14 @@ class GlobalAdminHandler(
             hook(self) for hook in self.PAGE_HEADER_HOOKS]
         template_values['breadcrumbs'] = page_title
 
-        template_values['top_nav'] = dashboard.get_top_nav(self, in_action)
+        current_action = (in_action or self.request.get('action')
+            or self.default_action_for_current_permissions())
+        current_menu_item = self.actions_to_menu_items.get(current_action)
+        template_values['root_menu_group'] = self.root_menu_group
+        template_values['current_menu_item'] = current_menu_item
+        template_values['is_global_admin'] = True
+        template_values['course_app_contexts'] = dashboard.get_visible_courses()
+
         template_values['gcb_course_base'] = '/'
         template_values['user_nav'] = safe_dom.NodeList().append(
             safe_dom.Text('%s | ' % users.get_current_user().email())

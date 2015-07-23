@@ -95,6 +95,9 @@ class MenuGroup(BaseMenu):
     def is_link(self):
         return False
 
+    def is_group(self):
+        return True
+
 
 class MenuItem(BaseMenu):
     def __init__(
@@ -112,3 +115,6 @@ class MenuItem(BaseMenu):
 
     def is_link(self):
         return not self.action
+
+    def is_group(self):
+        return False

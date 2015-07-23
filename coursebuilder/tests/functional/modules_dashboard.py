@@ -688,22 +688,18 @@ class DashboardAccessTestCase(actions.TestBase):
     def _get_all_picker_options(self):
         return self.parse_html_string(
             self.get('/%s/dashboard' % self.ACCESS_COURSE_NAME).body
-        ).findall(
-            './/ol[@id="gcb-course-picker-menu"]/li/a')
+        ).findall('.//*[@id="gcb-course-picker-menu"]//a')
 
     def test_course_picker(self):
         actions.login(self.USER_EMAIL, is_admin=False)
         picker_options = self._get_all_picker_options()
-        self.assertEquals(len(list(picker_options)), 1)
-        self.assertEquals(picker_options[0].get('href'),
-            '/{}/dashboard?action={}'.format(
-                self.ACCESS_COURSE_NAME, self.ACTION))
+        self.assertEquals(len(list(picker_options)), 0)
         actions.logout()
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         picker_options = self._get_all_picker_options()
         # Expect 3 courses, as the default one is also considered for the picker
-        self.assertEquals(len(picker_options), 3)
+        self.assertEquals(len(picker_options), 2)
         actions.logout()
 
     def _get_right_nav_links(self):

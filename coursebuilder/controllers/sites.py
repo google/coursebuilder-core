@@ -1172,7 +1172,7 @@ Note: this value cannot be changed after the course is created."""))
         safe_dom.Text(
             'For example, consider the following two course entries:')
     ).append(safe_dom.Element('br')).append(
-        safe_dom.Element('blockquote').add_text(
+        safe_dom.Element('div', className='gcb-message').add_text(
             'course:/cs101::ns_cs101'
         ).add_child(
             safe_dom.Element('br')

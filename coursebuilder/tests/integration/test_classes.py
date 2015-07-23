@@ -461,7 +461,7 @@ class AdminTests(BaseIntegrationTest):
             'Images & documents'
         ).click_upload(
         ).click_close(
-        ).verify_selected_tab('Edit')
+        ).verify_selected_group('edit')
 
     def test_leave_page_with_changes_triggers_alert(self):
         """Opens an editor page, make changes and tries to leave.

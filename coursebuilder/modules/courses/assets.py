@@ -107,13 +107,15 @@ def _list_and_format_file_list(
             )
         )
     if sub_title:
-        output.append(safe_dom.Element('blockquote').add_text(sub_title))
+        output.append(safe_dom.Element(
+            'div', className='gcb-message').add_text(sub_title))
     if items:
         output.append(safe_dom.Element('ol').add_children(items))
     else:
         if caption_if_empty:
             output.append(
-                safe_dom.Element('blockquote').add_text(caption_if_empty))
+                safe_dom.Element(
+                    'div', className='gcb-message').add_text(caption_if_empty))
     return output
 
 def _attach_filter_data(handler, element):
@@ -483,7 +485,9 @@ def _list_labels(handler):
                                 ).add_attribute(
                                     id='label_%s' % label.title))
     else:
-        output.append(safe_dom.Element('blockquote').add_text('< none >'))
+        output.append(
+            safe_dom.Element(
+                'div', className='gcb-message').add_text('< none >'))
     return output
 
 

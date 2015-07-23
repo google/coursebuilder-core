@@ -298,9 +298,9 @@ class DashboardPage(PageObject):
             self.find_element_by_id('gcb-butterbar-message').text)
         return self
 
-    def verify_selected_tab(self, tab_text):
-        tab = self.find_element_by_link_text(tab_text)
-        self._tester.assertEquals('selected', tab.get_attribute('class'))
+    def verify_selected_group(self, group_name):
+        group = self.find_element_by_id('menu-group__edit')
+        self._tester.assertIn('gcb-active-group', group.get_attribute('class'))
 
     def verify_not_publicly_available(self):
         self._tester.assertEquals(
@@ -308,8 +308,21 @@ class DashboardPage(PageObject):
             self.find_element_by_id('gcb-butterbar-message').text)
         return self
 
+    def find_menu_group(self, name):
+        return self.find_element_by_css_selector('#menu-group__{}'.format(name))
+
+    def ensure_menu_group_is_open(self, name):
+        menu_group = self.find_menu_group(name)
+        if 'gcb-active-group' not in menu_group.get_attribute('class'):
+            menu_group.find_element_by_css_selector(
+                '.gcb-collapse__button').click()
+            content = menu_group.find_element_by_css_selector(
+                '.gcb-collapse__content a')
+            self.wait(1000).until(lambda s: content.is_displayed())
+
     def click_admin(self):
-        self.find_element_by_link_text('Site admin').click()
+        self.ensure_menu_group_is_open('admin')
+        self.find_element_by_link_text('Courses').click()
         return AdminPage(self._tester)
 
     def click_import(self):
@@ -344,15 +357,17 @@ class DashboardPage(PageObject):
         return AddLesson(self._tester, expected_message='')
 
     def click_style(self):
-        self.find_element_by_link_text('Style').click()
+        self.ensure_menu_group_is_open('style')
+        self.find_element_by_link_text('CSS').click()
         return AssetsPage(self._tester)
 
     def click_edit(self):
-        self.find_element_by_link_text('Edit').click()
+        self.ensure_menu_group_is_open('edit')
+        self.find_element_by_link_text('Outline').click()
         return AssetsPage(self._tester)
 
     def click_settings(self):
-        self.find_element_by_link_text('Settings').click()
+        self.ensure_menu_group_is_open('settings')
         self.find_element_by_link_text('Homepage').click()
         return SettingsPage(self._tester)
 
@@ -365,7 +380,7 @@ class DashboardPage(PageObject):
         return LessonPage(self._tester)
 
     def click_analytics(self, name):
-        self.find_element_by_link_text('Analytics').click()
+        self.ensure_menu_group_is_open('analytics')
         self.find_element_by_link_text(name).click()
         return AnalyticsPage(self._tester)
 
@@ -375,7 +390,7 @@ class DashboardPage(PageObject):
         return RootPage(self._tester)
 
     def click_i18n(self):
-        self.find_element_by_link_text('Edit').click()
+        self.ensure_menu_group_is_open('edit')
         self.find_element_by_link_text('Translations').click()
         return self
 
@@ -1120,17 +1135,16 @@ class AddLesson(CourseContentElement):
         return self
 
 
-class AdminPage(PageObject):
-    """Page object to model the interactions with the admimn landing page."""
+class AdminPage(DashboardPage):
+    """Page object to model the interactions with the admin landing page."""
 
     def click_add_course(self):
         self.find_element_by_id('add_course').click()
         return AddCourseEditorPage(self._tester)
 
     def click_settings(self):
-        sub_nav_bar = self._tester.driver.find_element_by_css_selector(
-            '.gcb-nav-bar-level-2')
-        sub_nav_bar.find_element_by_link_text('Site settings').click()
+        self.ensure_menu_group_is_open('admin')
+        self.find_element_by_link_text('Site settings').click()
         return AdminSettingsPage(self._tester)
 
 

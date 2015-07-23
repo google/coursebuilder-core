@@ -1,17 +1,53 @@
-body, h3 {
-  margin: 0px;
-  padding: 0px;
-}
 body {
   background-color: #f5f5f5;
 }
 form {
   display: inline;
 }
-html, body, table, td, th {
+
+/* Undo MDL typography module styles.
+When we decide to use their typography rules, we may be able to remove some of
+these rules.
+ */
+
+html, body, table, td, th, p {
   font-family: arial,sans-serif;
   font-size: 13px;
 }
+html, body {
+  font-weight: inherit;
+  line-height: inherit;
+}
+body, h3 {
+  margin: 0px;
+  padding: 0px;
+}
+ul,ol {
+  font-weight: inherit;
+  letter-spacing: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+h1,h2,h3,h4,h5 {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: bold;
+}
+h3 {
+  font-size: 1.17em;;
+}
+h2 {
+  font-size: 1.5em;
+}
+a {
+  color: rgb(0, 0, 238);
+}
+iframe {
+  border: 2px inset;
+}
+
+/* end MDL overrides */
+
 table {
   width: 100%;
   border-width: 1px;
@@ -34,78 +70,6 @@ table td {
   border-style: inset;
   border-color: gray;
 }
-table.gcb-nav-bar {
-  border: none;
-}
-table.gcb-nav-bar td {
-  border: none;
-  white-space: nowrap;
-  padding: 0;
-  font-family: "open sans",arial,sans-serif;
-  font-size: 100%;
-  font-weight: normal;
-  color: #FFFFFF;
-}
-table.gcb-nav-bar td a {
-  color: inherit;
-  font: inherit;
-  text-decoration: none;
-}
-table.gcb-nav-bar td a:focus,
-table.gcb-nav-bar td a:hover,
-table.gcb-nav-bar td a:active {
-  text-decoration: underline;
-}
-.gcb-nav-bar-level-1 {
-  background-color: #455A64;
-}
-.gcb-nav-bar-level-2 {
-  background-color: #607D8B;
-}
-td.gcb-nav-bar-links {
-  width: 100%;
-}
-table.gcb-nav-bar td.gcb-nav-bar-extras {
-  padding: 0 10px;
-}
-td.gcb-nav-bar-links a {
-  display: inline-block;
-  padding: 10px 16px;
-}
-.gcb-nav-bar-level-1 a.selected {
-  color: #222;
-  background-color: #FFAB40;
-}
-.gcb-nav-bar-level-2 a.selected {
-  color: #222;
-  background-color: #FFAB40;
-}
-
-/* Start styles for the navbar overflow dropdown */
-td.gcb-nav-bar-links button.gcb-nav-bar-more {
-  background-color: #607d8b;
-  position: relative;
-}
-td.gcb-nav-bar-links button.gcb-nav-bar-more.selected {
-  color: #222;
-  background-color: #FFAB40;
-}
-td.gcb-nav-bar-links .gcb-nav-bar-more-content {
-  position: absolute;
-  z-index: 5;
-  top: -6px;
-  left: -5px;
-  padding: 5px 0px;
-  background-color: #455A64;
-  color: #ffffff;
-  border: solid #404040 1px;
-  border-radius: 3px;
-  text-align: left;
-}
-td.gcb-nav-bar-links .gcb-nav-bar-more-content button.gcb-button {
-  margin-bottom: 5px;
-}
-/* end styles for the navbar overflow dropdown */
 
 div#gcb-main-area {
   background-color: #FFFFFF;
@@ -433,49 +397,6 @@ div#formContainer div.settings-list-item fieldset legend span {
 li.activity-item {
   list-style-type: square;
 }
-#gcb-course-picker-menu {
-  position: absolute;
-  background-color: #FFF;
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-  border-bottom-right-radius: 3px;
-  z-index: 10;
-}
-#gcb-course-picker-menu.hidden {
-  display:none;
-}
-#gcb-course-picker-menu > li {
-  background-color: #ECEFF1;
-  border-right: solid 1px #aaa;
-  border-bottom: solid 1px #aaa;
-  border-left: solid 1px #aaa;
-}
-#gcb-course-picker-menu > li:last-child {
-  border-bottom-right-radius: 3px;
-}
-#gcb-course-picker-menu > li:hover {
-  background-color: #CFD8DC;
-}
-#gcb-course-picker-menu.disabled > li:hover {
-  background-color: #ECEFF1;
-}
-#gcb-course-picker-menu > li > a {
-  display: block;
-  padding: 10px 10px;
-  color: #444;
-  text-decoration: none;
-}
-#gcb-course-picker-menu.disabled > li > a {
-  color: #777;
-  text-decoration: none;
-}
-#gcb-course-picker-menu > li > a.selected {
-  font-weight: bold;
-}
-a#gcb-course-picker {
-  text-decoration: none;
-}
 span.course-title {
   display: inline-block;
   font-weight: bold;
@@ -483,9 +404,6 @@ span.course-title {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-a#gcb-course-picker > span {
-  vertical-align: bottom;
 }
 span.down-arrow {
   margin: 0 0 3px 5px;
@@ -586,4 +504,188 @@ div.codemirror-container-readonly div.CodeMirror {
 }
 label.settings.togglebutton {
   vertical-align: sub;
+}
+.gcb-message {
+  margin-left: 40px;
+  margin-right: 40px;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+/* Collapse component
+
+Use this to build "zippy" menus.  Some JavaScript in view.js is required to
+calculate element heights on startup.  Re-run updateCollapse to recalculate it
+any time you create or modify some collapsible content.
+
+.gcb-collapse: Container
+.gcb-collapse--opened: Makes the contents visible
+.gcb-collapse__content: The contents that can be hidden
+.gcb-collapse__content-wrapper: Wraps and hides the contents
+.gcb-collapse__icon: An icon that will rotate on open and close
+.gcb-collapse__button: The clickable element
+.gcb-accordion: Wrap multiple collapses in this and they'll collapse their
+  neighbors when you open them.
+
+Minimal Example:
+<div class="gcb-collapse">
+  <a class="gcb-collapse__button">
+    <i class="gcb-collapse__icon material-icons mdl-animation--default">expand_more</i>
+    Click me to see the content
+  </a>
+  <div class="gcb-collapse__content-wrapper">
+    <div class="gcb-collapse__content mdl-animation--default">
+      This is the content
+    </div>
+  </div>
+</div>
+
+*/
+
+.gcb-collapse--opened {
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  margin-top: -1px;
+}
+
+.gcb-collapse--opened + .gcb-collapse--opened {
+  border-top: none;
+  margin-top: 0;
+}
+
+.gcb-collapse__content-wrapper {
+  overflow: hidden;
+}
+
+.gcb-collapse__content {
+  transition-property: margin-top;
+  transition-duration: 0.2s;
+}
+
+.gcb-collapse__button {
+  font-weight: bold;
+}
+
+.gcb-collapse__icon {
+  transition-property: transform;
+  transition-duration: 0.2s;
+  color: rgba(0,0,0,0.3);
+
+  /* TODO(nretallack): Some day, MDL should provide some facility for
+  positioning icons inside list items so we don't have to do this */
+  position: absolute;
+  right: 6px;
+  margin-top: -3px;
+}
+
+.gcb-collapse--opened .gcb-collapse__icon {
+  transform: rotate(-180deg);
+}
+
+.gcb-collapse--opened .gcb-collapse__content {
+  /* Overrides the inline style calculated by the JavaScript on startup */
+  margin-top: 0 !important;
+}
+
+/* end of collapse component */
+
+/* Drawer menu adjustments */
+.mdl-layout__drawer .mdl-navigation.gcb-menu .mdl-navigation__link {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 30px;
+  padding-right: 30px;
+  cursor: pointer;
+  position: relative;
+  font-size: 15px;
+  color: inherit;
+}
+
+.mdl-layout__drawer .mdl-navigation .mdl-navigation__link:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* current page indication */
+.mdl-layout__drawer .mdl-navigation.gcb-menu .mdl-navigation__link.gcb-active,
+.mdl-layout__drawer .mdl-navigation.gcb-menu .mdl-navigation__link.gcb-active:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.mdl-navigation.gcb-menu .gcb-active-group .gcb-collapse__button {
+  color: rgb(0, 150, 136);
+}
+
+/* adjustments for the header */
+.mdl-layout__header .mdl-navigation .mdl-navigation__link,
+.mdl-layout__header a {
+  color: inherit;
+}
+
+.mdl-layout__drawer .mdl-layout-title {
+  padding-left: 30px;
+  border-bottom: 1px solid #e0e0e0;
+  margin: 0;
+  padding-top: 22px;
+  padding-bottom: 22px;
+}
+
+@media screen and (max-width: 850px) {
+  .mdl-layout__drawer .mdl-layout-title {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+}
+
+.gcb-drawer-header {
+  background:  white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* indent sub-menus */
+.mdl-layout__drawer .mdl-navigation.gcb-menu .gcb-menu .mdl-navigation__link {
+  padding-left: 45px;
+}
+
+/* Course Picker stuff */
+.gcb-course-picker.mdl-navigation.gcb-menu {
+  padding-top: 0;
+}
+
+.gcb-course-picker.gcb-collapse.gcb-collapse--opened {
+  border-bottom: none;
+  border-top: none;
+  margin-top: 0;
+}
+
+/* eliminate extra borders in the menu */
+
+#nav-menu .gcb-collapse:first-of-type {
+  border-top: 0;
+  margin-top: 0;
+}
+
+#nav-menu .gcb-collapse:last-of-type {
+  border-bottom: 0;
+}
+
+/* Call out the Site Admin menu */
+
+.gcb-page--dashboard #menu-group__admin {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.gcb-page--dashboard #menu-group__help {
+  border-bottom: 0;
+}
+
+/* Stuff on the site-admin page */
+
+.gcb-page--admin .mdl-layout__header {
+  background-color: rgb(103, 58, 183);
+}
+
+.gcb-page--admin .mdl-navigation.gcb-menu .gcb-active-group .gcb-collapse__button {
+  color: rgb(103, 58, 183);
 }

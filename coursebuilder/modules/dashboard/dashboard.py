@@ -353,16 +353,22 @@ class DashboardHandler(
             alerts.append('The course is not publicly available.')
         return '\n'.join(alerts)
 
-
     def render_page(self, template_values, in_action=None):
         """Renders a page using provided template values."""
         template_values['header_title'] = template_values['page_title']
         template_values['page_headers'] = [
             hook(self) for hook in self.PAGE_HEADER_HOOKS]
-        template_values['course_picker'] = self.get_course_picker(
-            in_action=in_action)
         template_values['course_title'] = self.app_context.get_title()
-        template_values['top_nav'] = get_top_nav(self, in_action)
+
+        current_action = (in_action or self.request.get('action')
+            or self.default_action_for_current_permissions())
+        current_menu_item = self.actions_to_menu_items.get(current_action)
+        template_values['root_menu_group'] = self.root_menu_group
+        template_values['current_menu_item'] = current_menu_item
+        template_values['app_context'] = self.app_context
+        template_values['course_app_contexts'] = get_visible_courses()
+        template_values['current_course'] = self.get_course()
+
         template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = safe_dom.NodeList().append(
             safe_dom.Text('%s | ' % users.get_current_user().email())
@@ -385,46 +391,6 @@ class DashboardHandler(
 
         self.response.write(
             self.get_template('view.html', []).render(template_values))
-
-    def get_course_picker(self, destination=None, in_action=None):
-        destination = destination or '/dashboard'
-        action = (in_action or self.request.get('action')
-            or self.default_action_for_current_permissions())
-
-        # disable picker if we are not on a well known page; we dont want picker
-        # on pages where edits or creation of new objects can get triggered
-        safe_action = action and action in self.actions_to_menu_items
-
-        full_destination = '{destination}?action={action}'.format(
-            destination=destination, action=action)
-
-        current_course = sites.get_course_for_current_request()
-        options = []
-        for course in sorted(sites.get_all_courses()):
-            with Namespace(course.namespace):
-                if self.current_user_has_access(course):
-                    url = (
-                        course.canonicalize_url(full_destination) if safe_action
-                        else 'javascript:void(0)')
-                    title = '%s (%s)' % (course.get_title(), course.get_slug())
-                    option = safe_dom.Element('li')
-                    link = safe_dom.A(url).add_text(title)
-                    if current_course == course:
-                        link.set_attribute('class', 'selected')
-                    option.add_child(link)
-                    options.append((course.get_title(), option))
-
-        picker_class_name = 'hidden'
-        if not safe_action:
-            picker_class_name += ' disabled'
-
-        picker = safe_dom.Element(
-            'ol', id='gcb-course-picker-menu', className=picker_class_name)
-
-        for title, option in sorted(
-            options, key=lambda item: item[0].lower()):
-            picker.append(option)
-        return picker
 
     def format_title(self, text):
         """Formats standard title with or without course picker."""
@@ -477,7 +443,8 @@ class DashboardHandler(
                     'dashboard?action=edit_role&key=%s' % (role.id)
                 ))
         else:
-            output = safe_dom.Element('blockquote').add_text('< none >')
+            output = safe_dom.Element('div', className='gcb-message').add_text(
+                '< none >')
 
         return output
 
@@ -546,44 +513,6 @@ class DashboardHandler(
         return []
 
 
-def get_top_nav(handler, in_action):
-    # The GlobalAdminHandler reuses this function but has no app context
-    app_context = getattr(handler, 'app_context', None)
-
-    current_action = (in_action or handler.request.get('action')
-        or handler.default_action_for_current_permissions())
-    current_menu_item = handler.actions_to_menu_items.get(current_action)
-
-    nav_bars = []
-    nav = safe_dom.NodeList()
-    for group in handler.root_menu_group.children:
-        if not group.can_view(app_context):
-            continue
-        class_name = ('selected' if current_menu_item
-            and current_menu_item.group == group else '')
-        nav.append(safe_dom.Element(
-            'a', href=group.computed_href(app_context), className=class_name
-        ).add_text(group.title))
-    nav_bars.append(nav)
-
-    if current_menu_item:
-        sub_nav = safe_dom.NodeList()
-        for tab in current_menu_item.group.children:
-            if tab.can_view(app_context):
-                href = tab.computed_href(app_context)
-                target = tab.target or '_self'
-                sub_nav.append(
-                    safe_dom.A(
-                        href,
-                        className=(
-                            'selected' if tab.action == current_action
-                            else ''),
-                        target=target)
-                    .add_text(tab.title))
-        nav_bars.append(sub_nav)
-    return nav_bars
-
-
 def make_help_menu(root_group):
     anyone_can_view = lambda x: True
 
@@ -611,6 +540,15 @@ def make_help_menu(root_group):
             'https://groups.google.com/forum/?fromgroups#!categories/'
             'course-builder-forum/general-troubleshooting'),
         can_view=anyone_can_view, group=group, placement=4000, target='_blank')
+
+
+def get_visible_courses():
+    result = []
+    for app_context in sorted(sites.get_all_courses()):
+        with Namespace(app_context.namespace):
+            if DashboardHandler.current_user_has_access(app_context):
+                result.append(app_context)
+    return result
 
 
 def register_module():
