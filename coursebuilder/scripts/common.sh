@@ -16,7 +16,7 @@ shopt -s nullglob
 # Set shell variables common to CB scripts.
 . "$(dirname "$0")/config.sh"
 
-CHROMEDRIVER_VERSION=2.10
+CHROMEDRIVER_VERSION=2.16
 CHROMEDRIVER_DIR=$RUNTIME_HOME/chromedriver-$CHROMEDRIVER_VERSION
 if [[ $OSTYPE == linux* ]] ; then
   NODE_DOWNLOAD_FOLDER=node-v0.12.4-linux-x64
@@ -27,6 +27,29 @@ elif [[ $OSTYPE == darwin* ]] ; then
 else
   echo "Target OS '$TARGET_OS' must start with 'linux' or 'darwin'."
   exit -1
+fi
+
+CHROMIUM_TARGET_VERSION=43.0.2357.130
+set +e
+cb_chromium_browser=`which chromium-browser`
+set -e
+if [[ -z "$cb_chromium_browser" ]] ; then
+  echo
+  echo "==================================================================="
+  echo "WARNING: No Chromium browser found, integration tests will not run."
+  echo "==================================================================="
+  echo
+else
+  export CB_CHROMIUM_BROWSER="$cb_chromium_browser"
+  chromium_version=`chromium-browser --product-version`
+  if [[ "$chromium_version" != "$CHROMIUM_TARGET_VERSION" ]] ; then
+    echo
+    echo "=============================================================="
+    echo "WARNING: Running Chromium version $chromium_version for tests."
+    echo "The target version is $CHROMIUM_TARGET_VERSION."
+    echo "=============================================================="
+    echo
+  fi
 fi
 
 # Ensure that ~/coursebuilder_resources is available to write
@@ -121,12 +144,12 @@ if need_install beautifulsoup4 PKG-INFO Version: 4.3.2 ; then
   mv $RUNTIME_HOME/beautifulsoup4-4.3.2 $RUNTIME_HOME/beautifulsoup4
 fi
 
-if need_install selenium PKG-INFO Version: 2.35.0 ; then
+if need_install selenium PKG-INFO Version: 2.46.1 ; then
   echo Installing Selenium
-  curl --location --silent https://pypi.python.org/packages/source/s/selenium/selenium-2.35.0.tar.gz -o selenium-download.tgz
+  curl --location --silent https://pypi.python.org/packages/source/s/selenium/selenium-2.46.1.tar.gz -o selenium-download.tgz
   tar xzf selenium-download.tgz --directory $RUNTIME_HOME
   rm selenium-download.tgz
-  mv $RUNTIME_HOME/selenium-2.35.0 $RUNTIME_HOME/selenium
+  mv $RUNTIME_HOME/selenium-2.46.1 $RUNTIME_HOME/selenium
 fi
 
 if [ ! -x $CHROMEDRIVER_DIR/chromedriver ] ; then

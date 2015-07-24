@@ -396,6 +396,8 @@ def main():
 
     server = None
     if TestBase.REQUIRES_INTEGRATION_SERVER in all_tags:
+        assert os.environ.get('CB_CHROMIUM_BROWSER'), (
+            'Integration tests require Chromium browser to be installed.')
         ensure_port_available(8081)
         ensure_port_available(8000)
         server = start_integration_server(

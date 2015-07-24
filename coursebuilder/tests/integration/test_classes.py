@@ -55,6 +55,7 @@ class BaseIntegrationTest(suite.TestBase):
         super(BaseIntegrationTest, self).setUp()
         chrome_options = options.Options()
         chrome_options.add_argument('--disable-extensions')
+        chrome_options.binary_location = os.environ.get('CB_CHROMIUM_BROWSER')
 
         # Sadly, the max wait for the driver to become ready is hard-coded at
         # 30 seconds.  However, that seems like it'd be enough for our
