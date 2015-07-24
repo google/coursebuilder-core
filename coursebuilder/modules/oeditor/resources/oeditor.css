@@ -243,6 +243,9 @@ label.togglebutton input[type="checkbox"] {
 div.cb-editor-field div.buttonbar-div .togglebutton {
   margin-right: 5px;
 }
+div.cb-editor-field div.buttonbar-div .togglebutton:hover {
+  margin-right: 4px;
+}
 div.cb-editor-field label.togglebutton.html-button {
   font-size: 16px;
 }
