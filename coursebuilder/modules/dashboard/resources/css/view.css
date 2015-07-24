@@ -75,6 +75,7 @@ div#gcb-main-area {
   background-color: #FFFFFF;
   text-align: center;
   padding-top: 12px;
+  position: relative;
 }
 div#gcb-section {
   padding-bottom: 4px;

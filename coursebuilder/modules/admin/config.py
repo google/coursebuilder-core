@@ -135,7 +135,7 @@ class ConfigPropertyEditor(object):
             auto_return=True,
             save_button_caption='Add New Course')
 
-        self.render_page(template_values)
+        self.render_page(template_values, in_action='courses')
 
     def get_config_edit(self):
         """Handles 'edit' property action."""
