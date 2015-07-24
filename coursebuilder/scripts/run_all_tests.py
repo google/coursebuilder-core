@@ -254,7 +254,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 18,
     'tests.functional.unit_description.UnitDescriptionsTest': 1,
     'tests.functional.unit_header_footer.UnitHeaderFooterTest': 11,
-    'tests.functional.unit_on_one_page.UnitOnOnePageTest': 3,
+    'tests.functional.unit_on_one_page.UnitOnOnePageTest': 4,
     'tests.functional.whitelist.WhitelistTest': 12,
     'tests.integration.test_classes': 20,
     'tests.unit.etl_mapreduce.HistogramTests': 5,

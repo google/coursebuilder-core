@@ -1875,6 +1875,8 @@ def lesson_title_provider(handler, app_context, lesson, student):
     template_values = {
         'lesson': lesson,
         'can_see_drafts': custom_modules.can_see_drafts(app_context),
+        'is_course_admin': roles.Roles.is_course_admin(app_context),
+        'is_read_write_course': app_context.fs.is_read_write(),
         'skills': skills,
         'depends_on_skills': not_in_this_lesson(
             handler, lesson, student, depends_on_skills),

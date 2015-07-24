@@ -1,0 +1,14 @@
+<h1 class="gcb-lesson-title">
+  {{ lesson.title }}
+  {% if not lesson.now_available and can_see_drafts %}
+    <span id="lesson-title-private">
+      (Private)
+    </span>
+  {% endif %}
+  {% if is_read_write_course and is_course_admin %}
+    <button
+        data-lesson-id="{{ lesson.lesson_id }}"
+        class="icon md-mode-edit gcb-edit-lesson-button gcb-edit-resource-button">
+    </button>
+  {% endif %}
+</h1>

@@ -139,3 +139,16 @@ class UnitOnOnePageTest(actions.TestBase):
     def test_submit_assessments(self):
         self._test_submit_assessment(self.top_assessment)
         self._test_submit_assessment(self.bottom_assessment)
+
+    def test_edit_lesson_buttons_for_each_lesson(self):
+        actions.logout()
+        actions.login(ADMIN_EMAIL)
+        dom = self.parse_html_string(
+            self.get(UNIT_URL_PREFIX + str(self.unit.unit_id)).body)
+        # The Edit Lesson buttons all have a data-lesson-id attribute set
+        buttons = dom.findall('.//*[@data-lesson-id]')
+        self.assertEquals(2, len(buttons))
+        self.assertEquals(
+            str(self.lesson_one.lesson_id), buttons[0].get('data-lesson-id'))
+        self.assertEquals(
+            str(self.lesson_two.lesson_id), buttons[1].get('data-lesson-id'))

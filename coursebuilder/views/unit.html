@@ -90,14 +90,14 @@
     {% endif %}
   </ul>
 
-  {% if is_read_write_course and is_course_admin %}
-    <a id="gcb-edit-unit-button" href="dashboard?action=edit_unit&key={{ unit.unit_id }}"
-       class="gcb-button gcb-button-action gcb-button-author">Edit Unit</a>
-  {% endif %}
-
   <div id="gcb-unit-header">
     <h1 class="gcb-unit-header">
       {{ display_unit_title(unit) }}
+      {% if is_read_write_course and is_course_admin %}
+        <a id="gcb-edit-unit-button" href="dashboard?action=edit_unit&key={{ unit.unit_id }}"
+           class="icon md-mode-edit gcb-edit-resource-button">
+        </a>
+      {% endif %}
     </h1>
   </div>
 

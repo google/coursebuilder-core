@@ -14,14 +14,7 @@
 
 {% import 'skill_card.html' as skill_card %}
 
-<h1 class="gcb-lesson-title">
-  {{ lesson.title }}
-  {% if not lesson.now_available and can_see_drafts %}
-    <span id="lesson-title-private">
-      (Private)
-    </span>
-  {% endif %}
-</h1>
+{% include 'lesson_title.html' %}
 
 {% if skills %}
   <div class="skill-panel" data-dependency-map="{{ dependency_map }}">

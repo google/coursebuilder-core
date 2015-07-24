@@ -335,7 +335,7 @@ class DashboardPage(PageObject):
 
     def click_edit_unit(self, unit_title):
         self.find_element_by_link_text(unit_title).click()
-        self.find_element_by_link_text('Edit Unit').click()
+        self.find_element_by_id('gcb-edit-unit-button').click()
         return AddUnit(self._tester, AddUnit.LOADED_MESSAGE)
 
     def click_add_assessment(self):

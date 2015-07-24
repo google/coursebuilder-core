@@ -35,6 +35,7 @@ from common import safe_dom
 from models import courses
 from models import custom_modules
 from models import models
+from models import roles
 from models import student_work
 from models import transforms
 from models.counters import PerfCounter
@@ -387,16 +388,13 @@ class UnitHandler(BaseHandler):
         cls._LESSON_TITLE_PROVIDER = lesson_title_provider
 
     def _default_lesson_title_provider(
-            self, app_context, unit, lesson, unused_student):
-        title_h1 = safe_dom.Element(
-            'h1', className='gcb-lesson-title').add_text(lesson.title)
-        can_see_drafts = custom_modules.can_see_drafts(self.app_context)
-        if not lesson.now_available and can_see_drafts:
-            title_h1.add_text(' ').add_child(
-                safe_dom.Element('span', id='lesson-title-private').add_text(
-                    '(Private)'))
-        return safe_dom.Element('div', className='lesson-title').add_child(
-            title_h1)
+            self, app_context, unused_unit, lesson, unused_student):
+        return safe_dom.Template(
+            self.get_template('lesson_title.html'),
+            lesson=lesson,
+            can_see_drafts=custom_modules.can_see_drafts(app_context),
+            is_course_admin=roles.Roles.is_course_admin(app_context),
+            is_read_write_course=app_context.fs.is_read_write())
 
     def get(self):
         """Handles GET requests."""
@@ -475,6 +473,8 @@ class UnitHandler(BaseHandler):
 
     def _show_all_contents(self, student, unit):
         course = self.get_course()
+        self.init_template_values(self.app_context.get_environ())
+
         display_content = []
         left_nav_elements = UnitHandler.UnitLeftNavElements(
             self.get_course(), unit)
