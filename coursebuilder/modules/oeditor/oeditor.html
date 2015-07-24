@@ -111,6 +111,8 @@
     {% include 'code.js' %}
     {% include 'uneditable.js' %}
 
-    onPageLoad(cb_global);
+    window.addEventListener('load', function(){
+      onPageLoad(cb_global);
+    });
   })();
 </script>
