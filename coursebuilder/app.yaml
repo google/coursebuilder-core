@@ -4,6 +4,8 @@ runtime: python27
 api_version: 1
 threadsafe: false
 
+instance_class: F1
+
 env_variables:
   GCB_PRODUCT_VERSION: '1.8.0'
 
