@@ -709,6 +709,11 @@ function EditSkillPopup(skillList, locationList, skillId) {
   this._skillId = skillId;
   this._skillList = skillList;
   this._locations = locationList;
+  this._prerequisiteIds = $.map(this._skillList, function(skill) {
+    return $.inArray(that._skillId, skill.successor_ids) >= 0
+      ? skill.id : null
+  });
+
   this._documentBody = $(document.body);
   this._lightbox = new Lightbox();
   this._form = $(
@@ -817,23 +822,38 @@ EditSkillPopup.prototype = {
     return this;
   },
 
+  _resetPrereqSelector: function() {
+    var that = this;
+    this._prereqSelector.clear();
+    this._skillList.eachSkill(function(skill) {
+      if (that._skillId != skill.id &&
+          $.inArray(skill.id, that._prerequisiteIds) == -1) {
+        that._prereqSelector.add(skill.id, skill.name);
+      }
+    });
+  },
+
   _initPrereqDisplay: function() {
-    // Set up a display and a chooser for the preqrequisites and bind them
+    // Set up a display and a chooser for the prerequisites and bind them
     // together
     var that = this;
-    this._prereqDisplay = new ListDisplay('skill-display-root', 'skill');
+    this._prereqDisplay = new ListDisplay(
+      'skill-display-root', 'skill', function(sid) {
+        that._prerequisiteIds = $.grep(that._prerequisiteIds, function(val) {
+          return val != sid;
+        });
+        that._resetPrereqSelector();
+      }
+    );
     this._prereqSelector = new ItemSelector(function(selectedSkillIds) {
       $.each(selectedSkillIds, function() {
         var skill = that._skillList.getSkillById(this);
         that._prereqDisplay.add(skill.id, skill.name);
+        that._prerequisiteIds.push(skill.id);
       });
+      that._resetPrereqSelector();
     }, '+ Add Skill');
-    this._skillList.eachSkill(function(skill) {
-      if ($.inArray(that._skillId, skill.successor_ids) == -1 &&
-          that._skillId != skill.id) {
-        that._prereqSelector.add(skill.id, skill.name);
-      }
-    });
+    this._resetPrereqSelector();
 
     this._form.find('.skill-prerequisites')
         .append(this._prereqDisplay.element())
@@ -886,7 +906,7 @@ EditSkillPopup.prototype = {
     var that = this;
     var name = this._nameInput.val();
     var description = this._descriptionInput.val();
-    var prerequisiteIds = this._prereqDisplay.items();
+    var prerequisiteIds = this._prerequisiteIds;
     var locationKeys = this._lessonDisplay ?
         this._lessonDisplay.items() : [];
     var questionIds = this._questionDisplay ?
@@ -1034,6 +1054,7 @@ ItemSelector.prototype = {
   element: function() {
     return this._rootDiv[0];
   },
+
   /**
    * Add an item to the selector.
    *
@@ -1065,10 +1086,12 @@ ItemSelector.prototype = {
 
     this._addItemButton.prop('disabled', false);
   },
+
   clear: function() {
     this._selectItemListOl.empty();
     this._addItemButton.prop('disabled', true);
   },
+
   _bind: function() {
     var that = this;
 
@@ -1094,6 +1117,7 @@ ItemSelector.prototype = {
       return false;
     });
   },
+
   /**
    * Choose an optimal position for the addItemWidgetDiv.
    */
@@ -1111,6 +1135,7 @@ ItemSelector.prototype = {
       this._addItemWidgetDiv.css('top', top);
     }
   },
+
   _close: function() {
     this._addItemWidgetDiv.hide();
     this._searchTextInput.val('');
@@ -1145,11 +1170,13 @@ function SkillEditorForOeditor(env) {
 
   this._env = env;
   this._skillList = new SkillList();
+  this._prerequisiteIds = [];
 
   this._prereqDisplay = new ListDisplay('skill-display-root', 'skill',
-        function(skillId) {
-          that._onRemoveCallback(skillId);
-        });
+    function(skillId) {
+      that._onRemoveCallback(skillId);
+    }
+  );
   this._prereqSelector = new ItemSelector(function(selectedSkillIds) {
     that._onSkillsSelectedCallback(selectedSkillIds);
   }, '+ Add Skill');
@@ -1185,13 +1212,17 @@ SkillEditorForOeditor.prototype = {
       that._populatePrereqSelector();
     });
   },
+
   _populatePrereqSelector: function() {
     var that = this;
     this._prereqSelector.clear();
     this._skillList.eachSkill(function(skill) {
-      that._prereqSelector.add(skill.id, skill.name);
+      if ($.inArray(skill.id, that._prerequisiteIds) == -1) {
+        that._prereqSelector.add(skill.id, skill.name);
+      }
     });
   },
+
   _onSkillsSelectedCallback: function(selectedSkillIds) {
     // When new skills are selected in the SkillSelector, update the OEditor
     // form and repopulate the SkillDisplay.
@@ -1199,10 +1230,13 @@ SkillEditorForOeditor.prototype = {
     $.each(selectedSkillIds, function() {
       if (! that._formContainsSkillId(this)) {
         that._env.form.inputsNames.skills.addElement({'skill': this});
+        that._prerequisiteIds.push(parseInt(this));
       }
     });
     this._populateSkillList();
+    this._populatePrereqSelector();
   },
+
   _onRemoveCallback: function (skillId) {
     // When a skill is removed from the SkillDisplay, also remove it from the
     // OEditor form.
@@ -1211,10 +1245,15 @@ SkillEditorForOeditor.prototype = {
       var id = this.inputsNames.skill.getValue();
       if (id === skillId) {
         that._env.form.inputsNames.skills.removeElement(i);
+        that._prerequisiteIds = $.grep(that._prerequisiteIds, function(val) {
+          return val != skillId;
+        });
+        that._populatePrereqSelector();
         return false;
       }
     });
   },
+
   _populateSkillList: function() {
     // Populate the SkillDisplay with the skills in the OEditor form.
     var that = this;
@@ -1224,9 +1263,11 @@ SkillEditorForOeditor.prototype = {
       var skill = that._skillList.getSkillById(id);
       if (skill) {
         that._prereqDisplay.add(skill.id, skill.name);
+        that._prerequisiteIds.push(skill.id);
       }
     });
   },
+
   _formContainsSkillId: function(skillId) {
     var fields = this._env.form.inputsNames.skills.subFields;
     for(var i = 0; i < fields.length; i++) {
