@@ -72,7 +72,6 @@ table td {
 }
 
 div#gcb-main-area {
-  background-color: #FFFFFF;
   text-align: center;
   padding-top: 12px;
   position: relative;
@@ -92,6 +91,7 @@ div#gcb-footer {
   font-size: smaller;
   padding: 4px;
   border-top: solid 1px #607D8B;
+  background-color: #f5f5f5;
 }
 h2 {
   margin-left: 32px;
@@ -589,6 +589,11 @@ Minimal Example:
 }
 
 /* end of collapse component */
+
+.mdl-layout__content {
+  overflow: auto;
+  background: #fff;
+}
 
 /* Drawer menu adjustments */
 .mdl-layout__drawer .mdl-navigation.gcb-menu .mdl-navigation__link {
