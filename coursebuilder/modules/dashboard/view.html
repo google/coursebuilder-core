@@ -171,113 +171,113 @@
       </nav>
 
       <div class="mdl-layout__content">
-        <div class="page-content">
-
-          <div id='gcb-main-area'>
-            <!-- ButterBar -->
-            <div class="gcb-butterbar-container">
-              <div id="gcb-butterbar-top" class="gcb-butterbar gcb-butterbar-dashboard">
-                <p id="gcb-butterbar-message"></p>
-                <a id="gcb-butterbar-close">X</a>
-              </div>
+        <div id='gcb-main-area'>
+          <!-- ButterBar -->
+          <div class="gcb-butterbar-container">
+            <div id="gcb-butterbar-top" class="gcb-butterbar gcb-butterbar-dashboard">
+              <p id="gcb-butterbar-message"></p>
+              <a id="gcb-butterbar-close">X</a>
             </div>
-
-            <div id='gcb-main-content'>
-              {% if sections %}
-                {% for section in sections %}
-                <div id='gcb-section'>
-                  <div class='gcb-button-toolbar'>
-                    {% for action in section.actions %}
-                      {% if action.href %}
-                      <a id='{{ action.id }}' class="gcb-button" role="button"
-                          href="{{ action.href }}" >{{ action.caption }}</a>
-                      {% else %}
-                      <form id='{{ action.id }}' action='{{ action.action }}' method='POST'>
-                        <input type="hidden" name="xsrf_token" value="{{ action.xsrf_token }}">
-                        {% if action.params %}
-                          {% for name, value in action.params.iteritems() %}
-                            <input type="hidden" name="{{ name }}" value="{{ value }}">
-                          {% endfor %}
-                        {% endif %}
-                        <button class="gcb-button" type="submit">{{ action.caption }}</button>
-                      </form>
-                      {% endif %}
-                    {% endfor %}
-                  </div>
-                  {% if section.title %}
-                  <h3>{{ section.title }}</h3>
-                  {% endif %}
-                  {% if section.description %}
-                    <p class="description">
-                      {{ section.description }}
-                    </p>
-                  {% endif %}
-                  {% if section.pre %}
-                    {{ section.pre }}
-                  {% elif can_highlight_code and section.code %}
-                    <code class="codemirror-container-readonly" mode={{section.mode}}>{{ section.code }}</code>
-                  {% else %}
-                    <ol>
-                      {% if not section.children %}
-                      &lt; none &gt;
-                      {% endif %}
-                      {% for item in section.children %}
-                      <li>{{ item }}</li>
-                      {% endfor %}
-                    </ol>
-                  {% endif %}
-                </div>
-                {% endfor %}
-              {% endif %}
-
-              {% if main_content %}
-                  {{ main_content }}
-              {% endif %}
-            </div>
-
-            {% if sections and can_highlight_code %}
-              <script>
-                CodeMirror.modeURL = "/static/codemirror/mode/%N/%N.js";
-                $('.codemirror-container-readonly').each(function() {
-                  var code = $(this).text();
-                  $(this).empty();
-                  var cmInstance = CodeMirror(this, {
-                    value: code,
-                    lineNumbers: true,
-                    readOnly: true
-                  });
-                  var mode = this.getAttribute('mode');
-                  cmInstance.setOption("mode", mode);
-                  CodeMirror.autoLoadMode(cmInstance, mode);
-                });
-              </script>
-            {% endif %}
-            <div id='modal-window'>
-              <div id='modal-background'></div>
-              <div id="modal-container">
-                <button class="close-button">X</button>
-                <div id='question-preview'></div>
-                <div id="add-to-group">{% include 'add_to_group.html' %}</div>
-              </div>
-            </div>
-            {% include 'question_filter.html' %}
           </div>
-          <div id='gcb-footer'>
-            Application {{ application_id }} version {{ application_version }}
-            &nbsp;|&nbsp;
-            Powered by
-            <a target='_blank' href="https://code.google.com/p/course-builder/">
-              Course Builder</a> {{ coursebuilder_version }}
-            as distributed under
-            <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank">
-              Apache License Version 2.0
-            </a>
-            &nbsp;|&nbsp;
-            {{ page_footer }}
+
+          <div id='gcb-main-content'>
+            {% if sections %}
+              {% for section in sections %}
+              <div id='gcb-section'>
+                <div class='gcb-button-toolbar'>
+                  {% for action in section.actions %}
+                    {% if action.href %}
+                    <a id='{{ action.id }}' class="gcb-button" role="button"
+                        href="{{ action.href }}" >{{ action.caption }}</a>
+                    {% else %}
+                    <form id='{{ action.id }}' action='{{ action.action }}' method='POST'>
+                      <input type="hidden" name="xsrf_token" value="{{ action.xsrf_token }}">
+                      {% if action.params %}
+                        {% for name, value in action.params.iteritems() %}
+                          <input type="hidden" name="{{ name }}" value="{{ value }}">
+                        {% endfor %}
+                      {% endif %}
+                      <button class="gcb-button" type="submit">{{ action.caption }}</button>
+                    </form>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+                {% if section.title %}
+                <h3>{{ section.title }}</h3>
+                {% endif %}
+                {% if section.description %}
+                  <p class="description">
+                    {{ section.description }}
+                  </p>
+                {% endif %}
+                {% if section.pre %}
+                  {{ section.pre }}
+                {% elif can_highlight_code and section.code %}
+                  <code class="codemirror-container-readonly" mode={{section.mode}}>{{ section.code }}</code>
+                {% else %}
+                  <ol>
+                    {% if not section.children %}
+                    &lt; none &gt;
+                    {% endif %}
+                    {% for item in section.children %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                  </ol>
+                {% endif %}
+              </div>
+              {% endfor %}
+            {% endif %}
+
+            {% if main_content %}
+                {{ main_content }}
+            {% endif %}
           </div>
 
         </div>
+        <div id='gcb-footer'>
+          Application {{ application_id }} version {{ application_version }}
+          &nbsp;|&nbsp;
+          Powered by
+          <a target='_blank' href="https://code.google.com/p/course-builder/">
+            Course Builder</a> {{ coursebuilder_version }}
+          as distributed under
+          <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank">
+            Apache License Version 2.0
+          </a>
+          &nbsp;|&nbsp;
+          {{ page_footer }}
+        </div>
       </div>
     </div>
+
+    <div id='modal-window'>
+      <div id='modal-background'></div>
+      <div id="modal-container">
+        <button class="close-button">X</button>
+        <div id='question-preview'></div>
+        <div id="add-to-group">{% include 'add_to_group.html' %}</div>
+      </div>
+    </div>
+
+    {%- include 'question_filter.html' -%}
+
+    {%- if sections and can_highlight_code -%}
+      <script>
+        CodeMirror.modeURL = "/static/codemirror/mode/%N/%N.js";
+        $('.codemirror-container-readonly').each(function() {
+          var code = $(this).text();
+          $(this).empty();
+          var cmInstance = CodeMirror(this, {
+            value: code,
+            lineNumbers: true,
+            readOnly: true
+          });
+          var mode = this.getAttribute('mode');
+          cmInstance.setOption("mode", mode);
+          CodeMirror.autoLoadMode(cmInstance, mode);
+        });
+      </script>
+    {%- endif -%}
+
   </body>
 </html>
