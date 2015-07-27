@@ -6,14 +6,16 @@ function ButterBar(popup, message, close) {
 ButterBar.prototype.showMessage = function(text) {
   this.message.textContent = text;  // FF, Chrome
   this.message.innerText = text;    // IE
-  ButterBar.keepInView();
   if (! $(this.popup).hasClass("shown")) {
     $(this.popup).addClass("shown");
   }
   if (this.close != null) {
     this.close.onclick = cbHideMsg;
   }
-  window.onscroll = ButterBar.keepInView;
+  if (!$('.gcb-butterbar-dashboard').length) {
+    ButterBar.keepInView();
+    window.onscroll = ButterBar.keepInView;
+  }
 };
 ButterBar.prototype.hide = function() {
   if ($(this.popup).hasClass("shown")) {

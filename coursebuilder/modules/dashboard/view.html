@@ -80,6 +80,15 @@
           <div class="mdl-layout-spacer"></div>
 
           <div class="gcb-nav-bar-extras">{{ user_nav }}</div>
+
+          <!-- ButterBar -->
+          <div class="gcb-butterbar-container gcb-butterbar-dashboard">
+            <div id="gcb-butterbar-top" class="gcb-butterbar">
+              <p id="gcb-butterbar-message"></p>
+              <a id="gcb-butterbar-close">X</a>
+            </div>
+          </div>
+
         </div>
       </header>
       <nav class="mdl-layout__drawer">
@@ -172,14 +181,6 @@
 
       <div class="mdl-layout__content">
         <div id='gcb-main-area'>
-          <!-- ButterBar -->
-          <div class="gcb-butterbar-container">
-            <div id="gcb-butterbar-top" class="gcb-butterbar gcb-butterbar-dashboard">
-              <p id="gcb-butterbar-message"></p>
-              <a id="gcb-butterbar-close">X</a>
-            </div>
-          </div>
-
           <div id='gcb-main-content'>
             {% if sections %}
               {% for section in sections %}
