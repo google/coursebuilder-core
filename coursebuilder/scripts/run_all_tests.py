@@ -233,6 +233,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.DatastoreBackedSampleCourseTest': 44,
     'tests.functional.test_classes.EtlMainTestCase': 42,
     'tests.functional.test_classes.EtlRemoteEnvironmentTestCase': 0,
+    'tests.functional.test_classes.ExtensionSwitcherTests': 2,
     'tests.functional.test_classes.InfrastructureTest': 21,
     'tests.functional.test_classes.I18NTest': 2,
     'tests.functional.test_classes.LegacyEMailAsKeyNameTest': 44,

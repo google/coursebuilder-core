@@ -19,6 +19,7 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 import collections
 import datetime
 import HTMLParser
+import functools
 import logging
 import os
 import re
@@ -614,6 +615,69 @@ class ApplicationHandler(webapp2.RequestHandler):
         if normalize:
             location = self.canonicalize_url(location)
         super(ApplicationHandler, self).redirect(location)
+
+
+class _ExtensionSwitcher(ApplicationHandler):
+    """Facade class used by ApplicationHandlerSwitcher."""
+
+    def __init__(
+            self, switch_on_course_schema_key,
+            orig_handler_factory, new_handler_factory, *args, **kwargs):
+        self._switch_on_course_schema_key = switch_on_course_schema_key
+        self._orig_handler_factory = orig_handler_factory
+        self._new_handler_factory = new_handler_factory
+        super(_ExtensionSwitcher, self).__init__(*args, **kwargs)
+
+    def _get_handler(self):
+        env = self.app_context.get_environ()
+        if env.get('course', {}).get(self._switch_on_course_schema_key):
+            handler = self._new_handler_factory()
+        else:
+            handler = self._orig_handler_factory()
+
+        handler.app_context = self.app_context
+        handler.request = self.request
+        handler.response = self.response
+        handler.path_translated = self.path_translated
+
+        return handler
+
+    def _invoke_http_verb(self, verb):
+        path = sites.get_path_info()
+        handler = self._get_handler()
+        sites.set_default_response_headers(handler)
+
+        if hasattr(handler, 'before_method'):
+            handler.before_method(verb, path)
+        try:
+            getattr(handler, verb.lower())()
+        finally:
+            if hasattr(handler, 'after_method'):
+                handler.after_method(verb, path)
+
+    def get(self):
+        self._invoke_http_verb('GET')
+
+    def post(self):
+        self._invoke_http_verb('POST')
+
+    def put(self):
+        self._invoke_http_verb('PUT')
+
+    def delete(self):
+        self._invoke_http_verb('DELETE')
+
+
+class ApplicationHandlerSwitcher(object):
+    """A utility which allows URI bindings to be switched dynamically."""
+
+    def __init__(self, switch_on_course_schema_key):
+        self._switch_on_course_schema_key = switch_on_course_schema_key
+
+    def switch(self, orig_handler_factory, new_handler_factory):
+        return functools.partial(
+            _ExtensionSwitcher, self._switch_on_course_schema_key,
+            orig_handler_factory, new_handler_factory)
 
 
 class CourseHandler(ApplicationHandler):

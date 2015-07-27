@@ -334,6 +334,49 @@ class WSGIRoutingTest(actions.TestBase):
         self.assertEqual('Failure', response.body)
 
 
+class ExtensionSwitcherTests(actions.TestBase):
+    _ADMIN_EMAIL = 'admin@foo.com'
+    _COURSE_NAME = 'extension_class'
+    _KEY = 'test_switcher_key'
+    _URI = 'test/switcher'
+
+    class _Handler_1(utils.ApplicationHandler):
+        def get(self):
+            self.response.out.write('handler 1')
+
+    class _Handler_2(utils.ApplicationHandler):
+        def get(self):
+            self.response.out.write('handler 2')
+
+    def setUp(self):
+        super(ExtensionSwitcherTests, self).setUp()
+
+        self.base = '/' + self._COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self._COURSE_NAME, self._ADMIN_EMAIL, 'Extension Switcher')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self._COURSE_NAME)
+
+        switcher = utils.ApplicationHandlerSwitcher(self._KEY)
+        sites.ApplicationRequestHandler.urls_map['/' + self._URI] = (
+            switcher.switch(self._Handler_1, self._Handler_2))
+
+    def tearDown(self):
+        courses.Course.ENVIRON_TEST_OVERRIDES = {}
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        del sites.ApplicationRequestHandler.urls_map['/' + self._URI]
+        namespace_manager.set_namespace(self.old_namespace)
+        super(ExtensionSwitcherTests, self).tearDown()
+
+    def test_extension_enabled(self):
+        courses.Course.ENVIRON_TEST_OVERRIDES = {'course': {self._KEY: False}}
+        self.assertEquals('handler 1', self.get(self._URI).body)
+
+    def test_extension_disabled(self):
+        courses.Course.ENVIRON_TEST_OVERRIDES = {'course': {self._KEY: True}}
+        self.assertEquals('handler 2', self.get(self._URI).body)
+
+
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
