@@ -514,7 +514,10 @@ class AbstractAllCoursesCronHandler(CronHandler):
         raise NotImplementedError()
 
     def get(self):
-        if self.is_not_from_appengine_cron():
+        # Allow AppEngine owner to manually force cron jobs to run, but
+        # otherwise insist that we are being run from AppEngine's cron engine.
+        if (not Roles.is_direct_super_admin() and
+            self.is_not_from_appengine_cron()):
             return
         self._internal_get()
 

@@ -812,6 +812,15 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
             models.StudentLifecycleObserver.EVENT_REENROLL]['raises'] = (
                 self._raise_exceptions)
 
+        event_callbacks = models.StudentLifecycleObserver.EVENT_CALLBACKS
+        for event_type in event_callbacks:
+            if 'wipeout' in event_callbacks[event_type]:
+                del event_callbacks[event_type]['wipeout']
+        enqueue_callbacks = models.StudentLifecycleObserver.EVENT_CALLBACKS
+        for event_type in enqueue_callbacks:
+            if 'wipeout' in enqueue_callbacks[event_type]:
+                del enqueue_callbacks[event_type]['wipeout']
+
     def _add_callback(self, user_id, timestamp):
         self._user_id = user_id
         self._timestamp = timestamp
@@ -871,11 +880,6 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
             models.StudentLifecycleObserver.enqueue(
                 models.StudentLifecycleObserver.EVENT_ADD, None)
 
-    def test_bad_callback(self):
-        with self.assertRaises(ValueError):
-            models.StudentLifecycleObserver.enqueue(
-                models.StudentLifecycleObserver.EVENT_ADD, 123, ['foo'])
-
     def test_bad_post_not_from_appengine_queue_internals(self):
         response = self.post(models.StudentLifecycleObserver.URL, {},
                              expect_errors=True)
@@ -924,6 +928,7 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
             models.StudentLifecycleObserver.URL,
             {'user_id': user_id,
              'event': 'add',
+             'extra_data': '{}',
              'timestamp': timestamp,
              'callbacks': self.COURSE},
             headers={'X-AppEngine-QueueName':
@@ -938,6 +943,7 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
             models.StudentLifecycleObserver.URL,
             {'user_id': '123',
              'event': 'add',
+             'extra_data': '{}',
              'timestamp': '2015-05-14T10:02:09.758704Z'},
             headers={'X-AppEngine-QueueName':
                      models.StudentLifecycleObserver.QUEUE_NAME})
@@ -949,6 +955,7 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
             models.StudentLifecycleObserver.URL,
             {'user_id': '123',
              'event': 'add',
+             'extra_data': '{}',
              'timestamp': '2015-05-14T10:02:09.758704Z',
              'callbacks': 'fred'},
             headers={'X-AppEngine-QueueName':
@@ -969,3 +976,45 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
         self.assertEquals(0, self._num_unenroll_calls)
         self.assertEquals(0, self._num_reenroll_calls)
         self.assertEquals(num_exceptions + 1, self._num_exception_calls)
+
+    def test_extra_data_callback(self):
+        user = actions.login(self.STUDENT_EMAIL)
+        extra_data = {
+            'this': 'that',
+            'these': ['those']
+            }
+
+        def _no_extra_callback(user_id, timestamp):
+            self.assertEquals(user_id, user.user_id())
+
+        def _generate_extra_data_callback(user_id):
+            self._generate_extra_data_callback_called = True
+            self.assertEqual(user_id, user.user_id())
+            return extra_data
+
+        def _with_extra_data_callback(user_id, timestamp, actual_extra_data):
+            self._with_extra_data_callback_called = True
+            self.assertEquals(actual_extra_data, extra_data)
+
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD]['no_extra'] = (
+                _no_extra_callback)
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD]['with_extra'] = (
+                _with_extra_data_callback)
+        models.StudentLifecycleObserver.ENQUEUE_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD]['with_extra'] = (
+                _generate_extra_data_callback)
+
+        actions.register(self, self.STUDENT_EMAIL)
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
+        self.assertTrue(self._generate_extra_data_callback_called)
+        self.assertTrue(self._with_extra_data_callback_called)
+
+        del (models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD]['no_extra'])
+        del (models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD]['with_extra'])
+        del (models.StudentLifecycleObserver.ENQUEUE_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD]['with_extra'])

@@ -119,8 +119,16 @@ class AbstractDataRemovalPolicy(object):
         raise NotImplementedError()
 
     @classmethod
-    def on_user_add(cls, user_id):
-        """Notify policy of new user."""
+    def on_user_add(cls, user_id, extra_data):
+        """Notify policy of new user.
+
+        Args:
+          user_id: User ID as discovered via
+              common.users.get_current_user().user_id().  Note that this value
+              may have been modified from the basic App Engine value due to
+              any overrides installed via common.users.UsersServiceManager.
+        Returns: Return value is ignored.
+        """
         raise NotImplementedError()
 
     @classmethod
@@ -512,12 +520,17 @@ class DataRemovalCronHandler(utils.AbstractAllCoursesCronHandler):
 
     def cron_action(self, app_context, global_state):
         pending_work = removal_models.BatchRemovalState.get_all_work()
+        logging.info(
+            'Data removal cron handler for namespace %s: %d items to do',
+            app_context.get_namespace_name(), len(pending_work))
 
         # Handle users with no remaining batch deletions to do separately.
         if None in pending_work:
             removal_policy = _get_removal_policy(app_context)
             final_removal_user_ids = pending_work[None]
             for user_id in final_removal_user_ids:
+                logging.info('Data removal cron handler: final removal for %s',
+                             user_id)
                 try:
                     removal_policy.on_all_data_removed(user_id)
                 except Exception, ex:  # pylint: disable=broad-except
@@ -531,6 +544,8 @@ class DataRemovalCronHandler(utils.AbstractAllCoursesCronHandler):
         # have any user marked as needing deletion from that entity type.
         entity_classes = models_data_removal.Registry.get_unindexed_classes()
         for name, user_ids in pending_work.iteritems():
+            logging.info('Data removal cron handler: Starting removal for %s',
+                         name)
             if name not in entity_classes:
                 logging.critical(
                     'Resource name "%s" no longer has a registered function '

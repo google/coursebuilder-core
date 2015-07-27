@@ -48,6 +48,13 @@ DEFAULT_NAMESPACE_NAME = ''
 # registration time.
 MODULE_REGISTRATION_IN_PROGRESS = False
 
+# Name for the core module.  We don't actually have any code in modules/core,
+# since having a core module is pretty well a contradiction in terms.  However,
+# there are a few things that want module and module-like-things to register
+# themselves by name, and so here we provide a name for the un-module that is
+# the immutable core functionality.
+CORE_MODULE_NAME = 'core'
+
 
 class _Library(object):
     """DDO that represents a Python library contained in a .zip file."""

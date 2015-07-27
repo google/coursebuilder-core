@@ -88,6 +88,18 @@ class UsageReportingTestBase(actions.TestBase):
         messaging.ENABLED_IN_DEV_FOR_TESTING = True
         actions.login(ADMIN_EMAIL, is_admin=True)
 
+        # If the optional wipeout module is present, it will enforce some
+        # requirements that we're not prepared to construct in core
+        # Course Builder.  Unilaterally remove its registrations.
+        event_callbacks = models.StudentLifecycleObserver.EVENT_CALLBACKS
+        for event_type in event_callbacks:
+            if 'wipeout' in event_callbacks[event_type]:
+                del event_callbacks[event_type]['wipeout']
+        enqueue_callbacks = models.StudentLifecycleObserver.EVENT_CALLBACKS
+        for event_type in enqueue_callbacks:
+            if 'wipeout' in enqueue_callbacks[event_type]:
+                del enqueue_callbacks[event_type]['wipeout']
+
     def tearDown(self):
         MockSender.clear_sent()
         messaging.ENABLED_IN_DEV_FOR_TESTING = False
@@ -482,12 +494,20 @@ class UsageReportingTests(UsageReportingTestBase):
         self.assertEquals(200, response.status_int)
         self.assertEquals('Disabled.', response.body)
 
-    def test_not_from_cron(self):
+    def test_not_from_cron_and_not_admin(self):
         config.set_report_allowed(True)
+        actions.logout()
         response = self.get(usage_reporting.StartReportingJobs.URL,
                             expect_errors=True)
         self.assertEquals(403, response.status_int)
         self.assertEquals('Forbidden.', response.body)
+
+    def test_not_from_cron_but_is_admin(self):
+        config.set_report_allowed(True)
+        response = self.get(usage_reporting.StartReportingJobs.URL,
+                            expect_errors=True)
+        self.assertEquals(200, response.status_int)
+        self.assertEquals('OK.', response.body)
 
     def test_jobs_run(self):
         COURSE = 'test'

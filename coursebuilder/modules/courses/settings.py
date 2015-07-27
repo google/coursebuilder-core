@@ -242,7 +242,7 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
     REQUIRED_MODULES = [
         'inputex-date', 'inputex-string', 'inputex-textarea', 'inputex-url',
         'inputex-checkbox', 'inputex-select', 'gcb-uneditable', 'gcb-rte',
-        'inputex-hidden',
+        'inputex-hidden', 'inputex-integer',
     ]
 
     URI = '/rest/course/settings'

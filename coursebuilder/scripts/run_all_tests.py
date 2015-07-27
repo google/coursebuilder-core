@@ -210,7 +210,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_usage_reporting.DevServerTests': 2,
     'tests.functional.modules_usage_reporting.EnrollmentTests': 3,
     'tests.functional.modules_usage_reporting.MessagingTests': 8,
-    'tests.functional.modules_usage_reporting.UsageReportingTests': 3,
+    'tests.functional.modules_usage_reporting.UsageReportingTests': 4,
     'tests.functional.progress_percent.ProgressPercent': 4,
     'tests.functional.review_module.ManagerTest': 55,
     'tests.functional.review_peer.ReviewStepTest': 3,

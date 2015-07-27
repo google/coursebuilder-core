@@ -637,20 +637,73 @@ QUEUE_RETRIES_BEFORE_SENDING_MAIL = config.ConfigProperty(
 
 
 class StudentLifecycleObserver(webapp2.RequestHandler):
+    """Provides notification on major events to Students for interested modules.
+
+    Notification is done from an App Engine deferred work queue.  This is done
+    so that observers who _absolutely_ _positively_ _have_ _to_ _be_ _notified_
+    are either going to be notified, or a site administrator is going to get
+    an ongoing sequence of email notifications that Something Is Wrong, and
+    will then address the problem manually.
+
+    Modules can register to be called back for the lifecycle events listed
+    below.  Callbacks should be registered like this:
+
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD]['my_module'] = my_handler
+
+    If a callback function needs to have extra information passed to it that
+    needs to be collected in the context where the lifecycle event is actually
+    happening, modules can register a function in the ENQUEUE_CALLBACKS.  Add
+    one of those in the same way as for event callbacks:
+
+        models.StudentLifecycleObserver.ENQUEUE_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD]['my_module'] = a_function
+
+    Event notification callbacks are called repeatedly until they return
+    without raising an exception.  Note that due to retries having an
+    exponential backoff (to a maximum of two hours), you cannot rely on
+    notifications being delivered in any particular order relative to one
+    another.
+
+    Event notification callbacks must take two or three parameters:
+    - the user_id (a string)
+    - the timestamp when the event originally occured, as a string formatted
+      using transforms.ISO_8601_DATETIME_FORMAT.
+    - If-and-only-if the the enqueue callback was registered and returned a
+      non-None value, this argument is passed.  If this value is mutable, any
+      changes made by the event callback will be retained in any future
+      re-tries.
+
+    Enqueue callback functions must take exactly one parameter:
+    - the user_id of the user to which the event pertains.
+    The function may return any data type which is convertible to a JSON
+    string using transforms.dumps().  This value is passed to the event
+    notification callback.
+
+    """
 
     QUEUE_NAME = 'user-lifecycle'
     URL = '/_ah/queue/' + QUEUE_NAME
     EVENT_ADD = 'add'
     EVENT_UNENROLL = 'unenroll'
+    EVENT_UNENROLL_COMMANDED = 'unenroll_commanded'
     EVENT_REENROLL = 'reenroll'
+
     EVENT_CALLBACKS = {
         EVENT_ADD: {},
         EVENT_UNENROLL: {},
+        EVENT_UNENROLL_COMMANDED: {},
+        EVENT_REENROLL: {},
+    }
+    ENQUEUE_CALLBACKS = {
+        EVENT_ADD: {},
+        EVENT_UNENROLL: {},
+        EVENT_UNENROLL_COMMANDED: {},
         EVENT_REENROLL: {},
     }
 
     @classmethod
-    def enqueue(cls, event, user_id, callbacks=None, transactional=True):
+    def enqueue(cls, event, user_id):
         if event not in cls.EVENT_CALLBACKS:
             raise ValueError('Event "%s" not in allowed list: %s' % (
                 event, ' '.join(cls.EVENT_CALLBACKS)))
@@ -658,15 +711,21 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
             raise ValueError('User ID must be non-blank')
         if not cls.EVENT_CALLBACKS[event]:
             return  # No callbacks registered for event -> nothing to do; skip.
+        extra_data = {}
+        for name, callback in cls.ENQUEUE_CALLBACKS[event].iteritems():
+            extra_data[name] = callback(user_id)
+        cls._internal_enqueue(
+            event, user_id, cls.EVENT_CALLBACKS[event].keys(), extra_data,
+            transactional=True)
 
-        if callbacks:
-            for callback in callbacks:
-                if callback not in cls.EVENT_CALLBACKS[event]:
-                    raise ValueError(
-                        'Callback "%s" not in callbacks registered for event %s'
-                        % (callback, event))
-        else:
-            callbacks = cls.EVENT_CALLBACKS[event]
+    @classmethod
+    def _internal_enqueue(cls, event, user_id, callbacks, extra_data,
+                          transactional):
+        for callback in callbacks:
+            if callback not in cls.EVENT_CALLBACKS[event]:
+                raise ValueError(
+                    'Callback "%s" not in callbacks registered for event %s'
+                    % (callback, event))
 
         task = taskqueue.Task(params={
             'event': event,
@@ -674,6 +733,7 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
             'callbacks': ' '.join(callbacks),
             'timestamp': datetime.datetime.now().strftime(
                 transforms.ISO_8601_DATETIME_FORMAT),
+            'extra_data': transforms.dumps(extra_data),
         })
         task.add(cls.QUEUE_NAME, transactional=transactional)
 
@@ -700,6 +760,7 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
                              timestamp_str)
             self.response.set_status(200)
             return
+        extra_data = transforms.loads(self.request.get('extra_data'))
 
         callbacks = self.request.get('callbacks')
         if not callbacks:
@@ -720,7 +781,12 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
                 logging.info(
                     '-- Student lifecycle callback %s for event %s starting --',
                     callback, event)
-                self.EVENT_CALLBACKS[event][callback](user_id, timestamp)
+                callback_extra_data = extra_data.get(callback)
+                if callback_extra_data is None:
+                    self.EVENT_CALLBACKS[event][callback](user_id, timestamp)
+                else:
+                    self.EVENT_CALLBACKS[event][callback](user_id, timestamp,
+                                                          callback_extra_data)
                 logging.info(
                     '-- Student lifecycle callback %s for event %s success --',
                     callback, event)
@@ -733,23 +799,25 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
 
         if remaining_callbacks == callbacks:
             # If we have made _no_ progress, emit error and get queue backoff.
-            num_tries = int(
+            num_tries = 1 + int(
                 self.request.headers.get('X-AppEngine-TaskExecutionCount', '0'))
             complaint = (
                 'Student lifecycle callback in namespace %s for '
                 'event %s enqueued at %s made no progress on any of the '
-                'callbacks %s for user %s after %d attempts',
+                'callbacks %s for user %s after %d attempts' % (
                 namespace_manager.get_namespace() or '<blank>',
-                event, timestamp_str, callbacks, user_id, num_tries)
+                event, timestamp_str, callbacks, user_id, num_tries))
             logging.warning(complaint)
 
             if num_tries >= QUEUE_RETRIES_BEFORE_SENDING_MAIL.value:
-                app_id = app_identity.get_application_id
+                app_id = app_identity.get_application_id()
                 sender = 'queue_admin@%s.appspotmail.com' % app_id
                 subject = ('Queue processing: Excessive retries '
                            'on student lifecycle queue')
                 body = complaint + ' in application ' + app_id
                 mail.send_mail_to_admins(sender, subject, body)
+            raise RuntimeError(
+                'Queued work incomplete; raising error to force retries.')
         else:
             # If we made some progress, but still have work to do, re-enqueue
             # remaining work.
@@ -758,8 +826,9 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
                     'Student lifecycle callback for event %s enqueued at %s '
                     'made some progress, but needs retries for the following '
                     'callbacks: %s', event, timestamp_str, callbacks)
-                self.enqueue(event, user_id, callbacks=remaining_callbacks,
-                             transactional=False)
+                self._internal_enqueue(
+                    event, user_id, remaining_callbacks, extra_data,
+                    transactional=False)
             # Claim success if any work done, whether or not any work remains.
             self.response.set_status(200)
 
@@ -1065,6 +1134,10 @@ class StudentProfileDAO(object):
             return Student.get_enrolled_student_by_user(user)
         finally:
             namespace_manager.set_namespace(old_namespace)
+
+    @classmethod
+    def unregister_user(cls, user_id, unused_timestamp):
+        cls.update(user_id, None, is_enrolled=False)
 
     @classmethod
     def update(

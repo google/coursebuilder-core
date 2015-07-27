@@ -47,6 +47,12 @@ custom_modules.register_core_module(
 models.register_for_data_removal()
 student_work.register_for_data_removal()
 
+# Register core handler for user-unregister commanded from add-on modules.
+models.StudentLifecycleObserver.EVENT_CALLBACKS[
+    models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED][
+        appengine_config.CORE_MODULE_NAME] = (
+            models.StudentProfileDAO.unregister_user)
+
 # Collect routes (URL-matching regexes -> handler classes) for modules.
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
 

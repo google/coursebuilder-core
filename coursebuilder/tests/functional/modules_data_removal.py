@@ -36,6 +36,21 @@ from google.appengine.ext import db
 
 class DataRemovalTestBase(actions.TestBase):
 
+    def setUp(self):
+        super(DataRemovalTestBase, self).setUp()
+
+        # If the optional wipeout module is present, it will enforce some
+        # requirements that we're not prepared to construct in core
+        # Course Builder.  Unilaterally remove its registrations.
+        event_callbacks = models.StudentLifecycleObserver.EVENT_CALLBACKS
+        for event_type in event_callbacks:
+            if 'wipeout' in event_callbacks[event_type]:
+                del event_callbacks[event_type]['wipeout']
+        enqueue_callbacks = models.StudentLifecycleObserver.EVENT_CALLBACKS
+        for event_type in enqueue_callbacks:
+            if 'wipeout' in enqueue_callbacks[event_type]:
+                del enqueue_callbacks[event_type]['wipeout']
+
     def _unregister_and_request_data_removal(self, course):
         response = self.get('/%s/student/home' % course)
         response = self.click(response, 'Unenroll')
