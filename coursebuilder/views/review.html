@@ -18,12 +18,14 @@
 {% block top_content %}
 {% endblock %}
 
-{% block main_content %}
+{% block assets %}
+  {{ super() }}
+  <link rel="stylesheet" type="text/css"
+      href="/modules/dashboard/resources/material-design-icons/css/material-design-iconic-font.min.css">
+{% endblock %}
 
-{% if is_read_write_course and is_course_admin %}
-  <a href="dashboard?action=edit_assessment&key={{ unit_id }}"
-    class="gcb-button gcb-button-action gcb-button-author">Edit Assessment</a>
-{% endif %}
+
+{% block main_content %}
 
 {% if model_version == '1.5' %}
   {% import 'assessment_html_content.html' as html_assessment %}
@@ -78,13 +80,21 @@
 
     <hr>
 
-    {% if readonly_review_form is defined %}
-      {# I18N: Header text for a reviewed assignment. #}
-      <h3>{{ gettext('Reviewed assignment') }}</h3>
-    {% else %}
-      {# I18N: Header text for an assignment that a student still needs to review. #}
-      <h3>{{ gettext('Assignment to review') }}</h3>
-    {% endif %}
+    <h3>
+      {% if readonly_review_form is defined %}
+        {# I18N: Header text for a reviewed assignment. #}
+        {{ gettext('Reviewed assignment') }}
+      {% else %}
+        {# I18N: Header text for an assignment that a student still needs to review. #}
+        {{ gettext('Assignment to review') }}
+      {% endif %}
+
+      {% if is_read_write_course and is_course_admin %}
+        <a href="dashboard?action=edit_assessment&key={{ unit_id }}"
+          class="icon md-mode-edit gcb-edit-resource-button">
+        </a>
+      {% endif %}
+    </h3>
 
     {% import 'readonly_assessment.html' as readonly_assessment %}
 
