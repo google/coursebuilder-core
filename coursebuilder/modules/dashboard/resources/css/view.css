@@ -627,6 +627,10 @@ Minimal Example:
   color: inherit;
 }
 
+.mdl-layout__content {
+  z-index: auto;
+}
+
 @media screen and (min-width: 851px) {
   .mdl-layout__drawer-button {
     display: none;
