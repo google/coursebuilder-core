@@ -627,6 +627,15 @@ Minimal Example:
   color: inherit;
 }
 
+@media screen and (min-width: 851px) {
+  .mdl-layout__drawer-button {
+    display: none;
+  }
+  .mdl-layout__header-row {
+    padding-left: 40px;
+  }
+}
+
 .mdl-layout__header {
   position: relative;
 }
