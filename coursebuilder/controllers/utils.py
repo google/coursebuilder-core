@@ -617,6 +617,16 @@ class ApplicationHandler(webapp2.RequestHandler):
         super(ApplicationHandler, self).redirect(location)
 
 
+class NoopInstanceLifecycleRequestHandler(webapp2.RequestHandler):
+    """Noop Handler for internal App Engine instance lifecycle requests.
+
+    See https://cloud.google.com/appengine/docs/python/modules/.
+    """
+
+    def get(self):
+        self.response.status_code = 200
+
+
 class _ExtensionSwitcher(ApplicationHandler):
     """Facade class used by ApplicationHandlerSwitcher."""
 

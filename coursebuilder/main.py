@@ -23,6 +23,7 @@ import appengine_config  # pylint: disable=unused-import
 
 from common import users
 from controllers import sites
+from controllers import utils
 from models import analytics
 from models import custom_modules
 from models import data_sources
@@ -53,6 +54,9 @@ models.StudentLifecycleObserver.EVENT_CALLBACKS[
         appengine_config.CORE_MODULE_NAME] = (
             models.StudentProfileDAO.unregister_user)
 
+# Routes used by App Engine internals.
+lifecycle_routes = [('/_ah/start', utils.NoopInstanceLifecycleRequestHandler)]
+
 # Collect routes (URL-matching regexes -> handler classes) for modules.
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
 
@@ -79,5 +83,6 @@ app = users.AuthInterceptorWSGIApplication(
     None,
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=not appengine_config.PRODUCTION_MODE)
-app.router = sites.WSGIRouter(global_routes + appstats_routes + app_routes)
+app.router = sites.WSGIRouter(
+    lifecycle_routes + global_routes + appstats_routes + app_routes)
 app.handle_exception = sites.ApplicationRequestHandler.handle_exception
