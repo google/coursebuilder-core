@@ -593,7 +593,7 @@ def on_module_enabled():
             h, 'course')),
         placement=1000)
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'settings', 'units', 'Units & lessons', action='settings_units',
+        'settings', 'units', 'Units & lessons', action='settings_unit',
         contents=(lambda h: CourseSettingsHandler.show_settings_tab(
             h, 'unit,assessment')),
         placement=2000)

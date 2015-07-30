@@ -77,7 +77,7 @@ class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):
             'id', '', 'string', optional=True, hidden=True))
         ret.add_property(schema_fields.SchemaField(
             'show_hooks', 'Show Hook Edit Buttons', 'boolean',
-            description='Whether to show controls on course pages to permit'
+            description='Whether to show controls on course pages to permit '
             'editing of HTML inclusions (hook points) at that location on '
             'the page.  Turn this setting off to see the course as the '
             'student would see it, and on to enable the edit controls.',
