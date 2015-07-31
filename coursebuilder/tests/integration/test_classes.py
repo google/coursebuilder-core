@@ -34,6 +34,7 @@ from selenium.webdriver.chrome import options
 
 from models import models
 from models import transforms
+from modules.embed import embed
 from tests import suite
 from tests.integration import fake_visualizations
 
@@ -104,6 +105,22 @@ class BaseIntegrationTest(suite.TestBase):
         return pageobjects.AppengineAdminPage(
             self, suite.TestBase.ADMIN_SERVER_BASE_URL, course_name)
 
+    def load_sample_course(self):
+        # Be careful using this method. Multiple clicks against the 'explore
+        # sample course' button create multiple courses with different slugs, in
+        # different namespaces. Because integration tests are not well isolated,
+        # this can lead to a number of subtle collisions between tests that do
+        # not manifest when the tests are run individually, but *do* manifest
+        # when run en bloc. Prefer create_new_course() whenever possible.
+        return self.load_root_page(
+        ).load_welcome_page(
+            self.INTEGRATION_SERVER_BASE_URL
+        ).click_explore_sample_course()
+
+    def get_slug_for_current_course(self):
+        """Returns the slug for the current course based on the current URL."""
+        return '/' + self.driver.current_url.split('/')[3]
+
     def get_uid(self):
         """Generate a unique id string."""
         uid = ''
@@ -155,6 +172,182 @@ class BaseIntegrationTest(suite.TestBase):
         ).click_close()
 
 
+class EmbedModuleTest(BaseIntegrationTest):
+
+    def setUp(self):
+        super(EmbedModuleTest, self).setUp()
+        self.email = 'test@example.com'
+        self.last_window_handle = None
+
+    def assert_cb_embed_contains_error(self, page, index, message):
+        text = page.get_cb_embed_text(index)
+        self.assertIn(message, text)
+
+    def assert_cb_embed_srcs_sane(self, cb_embed_srcs):
+        self.assertEquals(3, len(cb_embed_srcs))
+
+        for src in cb_embed_srcs:
+            self.assertIn('/sample/modules/embed/v1/resource/example', src)
+
+    def assert_cb_embed_iframes_present(self, demo_page):
+        self.assertTrue(demo_page.get_cb_embed_iframe_elements())
+
+    def assert_cb_embed_iframes_not_present(self, demo_page):
+        self.assertFalse(demo_page.get_cb_embed_iframe_elements())
+
+    def assert_example_embed_page_contents_match_src(self, embed_page, src):
+        expected_course_title_needle = 'Power Searching with Google'
+        expected_id_or_name = embed.UrlParser.get_id_or_name(src)
+        expected_kind = embed.UrlParser.get_kind(src)
+        main_text = embed_page.get_data_paragraph_text()
+
+        self.assertIn(expected_course_title_needle, main_text)
+        self.assertIn(self.email, main_text)
+        self.assertIn(expected_id_or_name, main_text)
+        self.assertIn(expected_kind, main_text)
+
+    def assert_embeds_loaded_in_iframes(self, demo_page, cb_embed_srcs):
+        for src in cb_embed_srcs:
+            iframe = demo_page.get_iframe(src)
+
+            self.assertIsNotNone(iframe)
+
+            example_embed_page = self.switch_to_iframe_window(iframe)
+
+            self.assert_example_embed_page_contents_match_src(
+                example_embed_page, src)
+
+            self.switch_to_demo_window()
+
+    def assert_on_demo_page(self):
+        self.assertIn('/modules/embed/v1/demo', self.driver.current_url)
+
+    def assert_on_login_page(self):
+        self.assertEquals('Login', self.driver.title)
+
+    def get_demo_url(self):
+        return (
+            suite.TestBase.INTEGRATION_SERVER_BASE_URL + embed._DEMO_URL)
+
+    def get_global_errors_url(self):
+        return (
+            suite.TestBase.INTEGRATION_SERVER_BASE_URL +
+            embed._GLOBAL_ERRORS_DEMO_URL)
+
+    def get_local_errors_url(self):
+        return (
+            suite.TestBase.INTEGRATION_SERVER_BASE_URL +
+            embed._LOCAL_ERRORS_DEMO_URL)
+
+    def switch_to_demo_window(self):
+        self.switch_to_previous_window()
+        self.assert_on_demo_page()
+
+        return pageobjects.EmbedModuleDemoPage(self)
+
+    def switch_to_iframe_window(self, iframe):
+        self.last_window_handle = self.driver.current_window_handle
+        self.driver.switch_to_frame(iframe)
+
+        return pageobjects.EmbedModuleExampleEmbedPage(self)
+
+    def switch_to_login_window(self):
+        self.switch_to_most_recently_opened_window()
+        self.assert_on_login_page()
+
+        return pageobjects.LoginPage(self)
+
+    def switch_to_most_recently_opened_window(self):
+        self.last_window_handle = self.driver.current_window_handle
+        self.driver.switch_to_window(self.driver.window_handles[-1])
+
+    def switch_to_previous_window(self):
+        self.driver.switch_to_window(self.last_window_handle)
+
+    def test_embed_global_errors(self):
+        self.load_sample_course()
+        pageobjects.RootPage(self).click_logout()
+
+        global_error_page = pageobjects.EmbedModuleDemoPage(self).load(
+            self.get_global_errors_url())
+
+        # Error caused by deployment not matching page origin -- a global error.
+        first_embed_error_message = (
+            'Embed src '
+            '"http://other:8081/sample/modules/embed/v1/resource/example/1" '
+            'does not match origin "http://localhost:8081"')
+
+        self.assert_cb_embed_contains_error(
+            global_error_page, 0, first_embed_error_message)
+
+        # Error caused by deployment not matching page origin -- a global error.
+        second_embed_global_error = (
+            'Embed src '
+            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
+            '2" does not match origin "http://localhost:8081"')
+        # Error caused by src not matching src of 0th embed -- a local error.
+        second_embed_local_error = (
+            'Embed src '
+            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
+            '2" does not match first cb-embed src found, which is from the '
+            'deployment at "http://other:8081/sample/modules/embed/v1". All '
+            'cb-embeds in a single page must be from the same Course Builder '
+            'deployment.')
+
+        self.assert_cb_embed_contains_error(
+            global_error_page, 1, second_embed_global_error)
+        self.assert_cb_embed_contains_error(
+            global_error_page, 1, second_embed_local_error)
+
+    def test_embed_local_errors(self):
+        # Broken into its own test because we need to make sure that you can
+        # have embeds in a success state and embeds in a failed state. This
+        # cannot happen if there are any global errors, since global errors put
+        # all embeds in a failed state.
+        self.load_sample_course()
+        pageobjects.RootPage(self).click_logout()
+
+        local_error_page = pageobjects.EmbedModuleDemoPage(self).load(
+            self.get_local_errors_url())
+        local_error_page.click_sign_in()
+        self.switch_to_login_window().login(self.email)
+        local_error_page = self.switch_to_demo_window()
+
+        # The first embed renders successfully.
+        embed_srcs = local_error_page.get_cb_embed_srcs()
+        self.assert_embeds_loaded_in_iframes(local_error_page, [embed_srcs[0]])
+
+        # The second contains a global and a local error.
+        global_error_message = (
+            'Embed src '
+            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
+            '2" does not match origin "http://localhost:8081"')
+        local_error_message = (
+            'Embed src '
+            '"http://localhost:8082/sample/modules/embed/v1/resource/example/ '
+            '2" does not match first cb-embed src found, which is from the '
+            'deployment at "http://localhost:8081/sample/modules/embed/v1". '
+            'All cb-embeds in a single page must be from the same Course '
+            'Builder deployment.')
+
+    def test_embed_render_lifecycle(self):
+        self.load_sample_course()
+        pageobjects.RootPage(self).click_logout()
+
+        demo_page = pageobjects.EmbedModuleDemoPage(self).load(
+            self.get_demo_url())
+
+        self.assert_cb_embed_iframes_not_present(demo_page)
+
+        cb_embed_srcs = demo_page.get_cb_embed_srcs()
+        demo_page.click_sign_in()
+        self.switch_to_login_window().login(self.email)
+        demo_page = self.switch_to_demo_window()
+
+        self.assert_cb_embed_iframes_present(demo_page)
+        self.assert_embeds_loaded_in_iframes(demo_page, cb_embed_srcs)
+
+
 class EtlTranslationRoundTripTest(BaseIntegrationTest):
 
     def setUp(self):
@@ -181,47 +374,47 @@ class EtlTranslationRoundTripTest(BaseIntegrationTest):
         except exceptions.NoSuchElementException:
             return None
 
-    def _load_sample_course(self):
-        return self.load_root_page(
-        ).load_welcome_page(
-            self.INTEGRATION_SERVER_BASE_URL
-        ).click_explore_sample_course()
-
+    # For these _run* methods: Integration tests are not well isolated. When
+    # multiple tests click the button to create a sample course, they may end up
+    # with different slugs. The slug is used to create the ETL command lines, so
+    # we must always parse the slug out of the driver's URL so the ETL commands
+    # target the correct namespace.
     def _run_download_course(self):
         etl_command = [
-            'download', 'course', '/sample', 'mycourse', 'localhost:8081',
-            '--archive_path', self.archive_path]
+            'download', 'course', self.get_slug_for_current_course(),
+            'mycourse', 'localhost:8081', '--archive_path', self.archive_path]
         self._run_etl_command(etl_command)
 
     def _run_download_datastore(self):
         etl_command = [
-            'download', 'datastore', '/sample', 'mycourse', 'localhost:8081',
-            '--archive_path', self.archive_path]
+            'download', 'datastore', self.get_slug_for_current_course(),
+            'mycourse', 'localhost:8081', '--archive_path', self.archive_path]
         self._run_etl_command(etl_command)
 
     def _run_delete_job(self):
         etl_command = [
-            'run', 'modules.i18n_dashboard.jobs.DeleteTranslations', '/sample',
-            'mycourse', 'localhost:8081']
+            'run', 'modules.i18n_dashboard.jobs.DeleteTranslations',
+            self.get_slug_for_current_course(), 'mycourse', 'localhost:8081']
         self._run_etl_command(etl_command)
 
     def _run_download_job(self):
         etl_command = [
             'run', 'modules.i18n_dashboard.jobs.DownloadTranslations',
-            '/sample', 'mycourse', 'localhost:8081',
+            self.get_slug_for_current_course(), 'mycourse', 'localhost:8081',
             '--job_args=' + self.archive_path]
         self._run_etl_command(etl_command)
 
     def _run_translate_job(self):
         etl_command = [
             'run', 'modules.i18n_dashboard.jobs.TranslateToReversedCase',
-            '/sample', 'mycourse', 'localhost:8081']
+            self.get_slug_for_current_course(), 'mycourse', 'localhost:8081']
         self._run_etl_command(etl_command)
 
     def _run_upload_job(self):
         etl_command = [
-            'run', 'modules.i18n_dashboard.jobs.UploadTranslations', '/sample',
-            'mycourse', 'localhost:8081', '--job_args=' + self.archive_path]
+            'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
+            self.get_slug_for_current_course(), 'mycourse', 'localhost:8081',
+            '--job_args=' + self.archive_path]
         self._run_etl_command(etl_command)
 
     def _run_etl_command(self, etl_command):
@@ -257,7 +450,7 @@ class EtlTranslationRoundTripTest(BaseIntegrationTest):
                 [f.filename for f in files])
 
     def test_full_round_trip_of_data_via_i18n_dashboard_module_jobs(self):
-        page = self._load_sample_course().click_i18n()
+        page = self.load_sample_course().click_i18n()
         self.assert_ln_locale_not_in_course(page)
 
         self._run_translate_job()

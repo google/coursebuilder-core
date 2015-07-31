@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Embed demo</title>
+  <head>
+  <body>
+
+    <h1>Embed demo</h1>
+
+    <p>This is an entirely static web page that uses CB embeds. Embeds allow
+       people to put pieces of content from Course Builder into other web
+       pages&mdash;even if those pages are entirely static.</p>
+    <p>This page shows how you can insert embeds into your own pages. You will
+       need to create the sample course in your instance's
+       <a href="/admin/welcome">admin panel</a> before these embeds will
+       display. If you have not done this, you will see error messages in this
+       page. You may also see error messages if you are starting your
+       development appserver on a customized hostname and port. This page is not
+       visible in production.</p>
+    <p>Assuming you're running the development appserver the standard way, once
+       you've created the sample course, you will see a fully-rendered embed
+       below:</p>
+
+    <script src='http://localhost:8081/modules/embed/v1/embed.js'></script>
+    <cb-embed
+      src='http://localhost:8081/sample/modules/embed/v1/resource/example/1'>
+    </cb-embed>
+
+    <p>The HTML for this embed is:</p>
+
+    <pre>
+    &lt;script src='http://localhost:8081/modules/embed/v1/embed.js'&gt;&lt;/script&gt;
+    &lt;cb-embed
+      src='http://localhost:8081/sample/modules/embed/v1/resource/example/1'&gt;
+    &lt;/cb-embed&gt;</pre>
+
+    <p>You can also see this HTML by looking at the page's source (though note
+       that, because our JavaScript rewrites the page's DOM, you will not see it
+       in a Chrome or Firefox debugger). As you notice, there are two parts of
+       this code: a <code>&lt;cb-embed&gt;</code> tag that identifies the
+       resource you want to embed, and a <code>&lt;script&gt;</code> tag that
+       brings in our code, which loads the embed into your page.</p>
+    <p>The reason you have to start the development appserver the standard way
+       is that the URLs in this HTML snippet must be exact. Ordinarily, we'd
+       calculate the right values for you and insert them into this page, but
+       that would require that this page be dynamic. We wanted to give you an
+       example of an entirely static page containing embeds, since that is one
+       of the use cases where embeds are most valuable: embeds can contain
+       dynamic content, and they can live in static pages, meaning that people
+       can interact with your Course Builder content <em>without</em> running
+       servers of their own.</p>
+    <p>As you'll notice, even though this page is entirely static and stateless,
+       the embed contains dynamic content (it knows the email address of the
+       user that's currently signed in).</p>
+    <p>Speaking of dynamic content, even though this page is static: as you may
+       have seen when loading this page, the user is first prompted to
+       authenticate. This is necessary so the embed can be stateful and have
+       content customized to the current user.
+    <p>Each user only needs to authenticate with each embed once. If you were
+       not prompted to sign in when viewing this page, you already had
+       credentials with Course Builder. If you would like to see the sign-in
+       flows, load this page in a browser where you have not signed in (for
+       example, in a new Chrome incognito window).</p>
+    <p>Authentication is done in a popup or new tab (whichever your browser
+       prefers). The authentication page communicates with your page once the
+       user has signed in, and lets your page know to load content into each of
+       your <code>&lt;cb-embed&gt;</code>s. This content is inserted into an
+       <code>&lt;iframe&gt;</code> on your page, and the resulting frame is
+       resized, all by the program you loaded with the
+       <code>&lt;script&gt;</code>. All of this happens without reloading your
+       page.</p>
+    <p>You can insert as many embeds into a page as you want. Here are two more;
+       this time, they are for the same resource:</p>
+
+    <script src='http://localhost:8081/modules/embed/v1/embed.js'></script>
+    <cb-embed
+      src='http://localhost:8081/sample/modules/embed/v1/resource/example/2'>
+    </cb-embed>
+
+    <script src='http://localhost:8081/modules/embed/v1/embed.js'></script>
+    <cb-embed
+      src='http://localhost:8081/sample/modules/embed/v1/resource/example/2'>
+    </cb-embed>
+
+    <p>You can have as many embeds in one page as you want, as long as they are
+       all loaded from the same deployment of Course Builder (in this case, the
+       one running at <code>http://localhost:8081</code>). You can embed many
+       different pieces of content, or the same piece of content many times.</p>
+    <p>These demo embeds just print out what kind of embed they are, as well as
+       their distinct identifier. Other kinds of embeds will have different
+       behavior, and may be interactive.</p>
+    <p>Each embed has unique HTML that you will need to put in your page. To
+       find the right HTML, see the Course Builder Admin console. If a piece of
+       content can be embedded, you will see the HTML in the editor for it.</p>
+    <p>If you want to add a new embeddable type, you will need to write some
+       code. See <code>modules/embed/embed.py</code> for details.
+    <p>Good luck, and happy embedding!</p>
+
+  </body>
+</html>

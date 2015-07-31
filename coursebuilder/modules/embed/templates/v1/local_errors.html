@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Local errors demo</title>
+  <head>
+  <body>
+
+    <h1>Local errors demo</h1>
+
+    <p>This page gives an example of global embed errors. The first embed below
+       has a <code>src</code> that does not match the origin of the page
+       (<code>http://localhost:8081</code>, by default). This error displays in
+       the first embed, and carries over to the one beneath it.</p>
+
+    <script src='http://localhost:8081/modules/embed/v1/embed.js'></script>
+    <cb-embed
+      src='http://localhost:8081/sample/modules/embed/v1/resource/example/1'>
+    </cb-embed>
+
+    <p>This embed has two errors. The first is global: it, too, does not match
+       the page's origin. The second is local to this embed only; its
+       <code>src</code> is for a deployment of CB other than the one specified
+       by the <code>src</code> of the first embed on the page. All embeds in a
+       single page must be from one CB deployment.</p>
+
+    <script src='http://localhost:8081/modules/embed/v1/embed.js'></script>
+    <cb-embed
+      src='http://localhost:8082/sample/modules/embed/v1/resource/example/2'>
+    </cb-embed>
+
+  </body>
+</html>

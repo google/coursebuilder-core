@@ -183,6 +183,10 @@ class RootPage(PageObject):
         self.find_element_by_link_text('Login').click()
         return LoginPage(self._tester)
 
+    def click_logout(self):
+        self.find_element_by_link_text('Logout').click()
+        return self
+
     def click_dashboard(self):
         self.find_element_by_link_text('Dashboard').click()
         return DashboardPage(self._tester)
@@ -1327,3 +1331,54 @@ class DatastorePage(PageObject):
             self._tester.driver.back()
 
         return data
+
+
+class EmbedModuleDemoPage(PageObject):
+
+    def load(self, url):
+        self.get(url)
+        return self
+
+    def click_sign_in(self):
+        needle = 'Click here to sign in and use this widget.'
+
+        def js_libs_loaded_and_widgets_displayed(unused_driver):
+            return self.find_element_by_link_text(needle)
+
+        self.wait().until(js_libs_loaded_and_widgets_displayed)
+        self.find_element_by_link_text(needle).click()
+        return LoginPage(self._tester)
+
+    def get_cb_embed_elements(self):
+        return self._tester.driver.find_elements_by_tag_name('cb-embed')
+
+    def get_cb_embed_iframe_elements(self):
+        return self._tester.driver.find_elements_by_css_selector(
+            'cb-embed > iframe')
+
+    def get_cb_embed_srcs(self):
+        return [e.get_attribute('src') for e in self.get_cb_embed_elements()]
+
+    def get_cb_embed_text(self, index):
+        """Gets text from a <cb-embed> that isn't an iframe."""
+        embed = self.get_cb_embed_elements()[index]
+
+        def embed_rendered(unused_driver):
+            return bool(embed.text)
+
+        self.wait().until(embed_rendered)
+        return embed.text
+
+    def get_iframe(self, url):
+        iframes = self._tester.driver.find_elements_by_tag_name('iframe')
+        for iframe in iframes:
+            if iframe.get_attribute('src') == url:
+                return iframe
+
+        return None
+
+
+class EmbedModuleExampleEmbedPage(PageObject):
+
+    def get_data_paragraph_text(self):
+        return self._tester.driver.find_elements_by_tag_name('p')[-1].text

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript">
+      window.opener.postMessage({action: 'login'}, '*');
+      // If we close the window immediately, breakpoints in the receiver never
+      // get hit. If we force a dequeue before the close, though, they will.
+      window.setTimeout(window.close, 0);
+    </script>
+  </head>
+  <body>
+    <p>Signing you in...</p>
+  </body>
+</html>

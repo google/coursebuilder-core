@@ -1,0 +1,13 @@
+.cb-embed-error {
+  color: red;
+}
+.cb-embed-frame {
+  border: none;
+  overflow: hidden;
+  width: 100%;
+}
+cb-embed {
+  background-color: #ccc;
+  border: 1px solid black;
+  display: block;
+}
