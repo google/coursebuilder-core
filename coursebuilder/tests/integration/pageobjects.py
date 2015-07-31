@@ -741,7 +741,8 @@ class QuestionEditorPage(EditorPageObject):
 
     def set_question(self, question):
         # Click the first tabbar button to select plain text
-        self.find_element_by_css_selector('.mc-question .html-button').click()
+        self._tester.driver.find_elements_by_css_selector(
+            '.mc-question .editor-field-tabbar button')[1].click()
 
         question_el = self.find_element_by_css_selector(
             'div.cb-editor-field div.html-div textarea')
@@ -769,7 +770,8 @@ class MultipleChoiceEditorPage(QuestionEditorPage):
     def set_answer(self, n, answer):
         # Click the first button on the n'th tabbar to select plain text extry
         self.find_element_by_css_selector(
-            '.mc-choice-text .html-button', index=n).click()
+            '.mc-choice-text .editor-field-tabbar', index=n
+        ).find_elements_by_tag_name('button')[1].click()
         answer_el = self.find_element_by_css_selector(
             'div.cb-editor-field div.html-div textarea',
             index=2 * n + 1)
@@ -886,52 +888,40 @@ class CourseContentElement(DashboardEditor):
         title_el.send_keys(title)
         return self
 
-    def _toggle_button(self, field_index=None, button_index=0, selected=True):
+    def _click_tab(self, field_index=None, button_index=0, selected=True):
         self.wait_until_status_message_hidden()
         buttonbar = self.find_element_by_css_selector(
             'div.cb-editor-field div.buttonbar-div', index=field_index)
-        button = buttonbar.find_elements_by_css_selector(
-            'label.togglebutton')[button_index]
-        checkbox = button.find_element_by_css_selector('input[type="checkbox"]')
-        if checkbox.is_selected() != selected:
-            button.click()
+        button = buttonbar.find_elements_by_tag_name('button')[button_index]
+        button.click()
 
     def click_rich_text(self, index=None):
-        self._toggle_button(field_index=index, button_index=0, selected=False)
+        self._click_tab(field_index=index, button_index=0, selected=False)
         self.wait().until(ec.element_to_be_clickable(
             (by.By.CLASS_NAME, 'yui-editor-editable')))
         return self
 
     def click_plain_text(self, index=None):
-        self._toggle_button(field_index=index, button_index=0, selected=True)
+        self._click_tab(field_index=index, button_index=1, selected=True)
         return self
 
     def click_preview(self, index=None):
-        self._toggle_button(field_index=index, button_index=1, selected=True)
+        self._click_tab(field_index=index, button_index=2, selected=True)
         return self
 
-    def _assert_editor_toggle_button_state(
-            self, field_index=None, button_index=0, selected=True):
+    def _assert_tab_selected(self, field_index=None, button_index=0):
         self.wait_until_status_message_hidden()
         buttonbar = self.find_element_by_css_selector(
             'div.cb-editor-field div.buttonbar-div', index=field_index)
-        button = buttonbar.find_elements_by_css_selector(
-            'label.togglebutton')[button_index]
-        checkbox = button.find_element_by_css_selector('input[type="checkbox"]')
-        self._tester.assertEquals(selected, checkbox.is_selected())
+        button = buttonbar.find_elements_by_tag_name('button')[button_index]
+        self._tester.assertIn('selected', button.get_attribute('class'))
 
     def assert_editor_mode_is_html(self, index=None):
-        self._assert_editor_toggle_button_state(
-            field_index=index, button_index=0, selected=True)
-        self._assert_editor_toggle_button_state(
-            field_index=index, button_index=1, selected=False)
+        self._assert_tab_selected(field_index=index, button_index=1)
         return self
 
     def assert_editor_mode_is_rich_text(self, index=None):
-        self._assert_editor_toggle_button_state(
-            field_index=index, button_index=0, selected=False)
-        self._assert_editor_toggle_button_state(
-            field_index=index, button_index=1, selected=False)
+        self._assert_tab_selected(field_index=index, button_index=0)
         return self
 
     def click_rte_add_custom_tag(self, button_text, index=0):

@@ -377,6 +377,10 @@ function bindEditorField(Y) {
   EditorField.prototype.RICH_TEXT_EDITOR = 'rte';
   EditorField.prototype.PREVIEW_EDITOR = 'preview';
 
+  EditorField.prototype.HTML_EDITOR_LABEL = 'code';
+  EditorField.prototype.RICH_TEXT_EDITOR_LABEL = 'text_format';
+  EditorField.prototype.PREVIEW_EDITOR_LABEL = 'visibility';
+
   EditorField.prototype.setOptions = function(options) {
     EditorField.superclass.setOptions.call(this, options);
     this.opts = options.opts || {};
@@ -420,26 +424,29 @@ function bindEditorField(Y) {
         this.supportCustomTags, this.excludedCustomTags);
     this.previewEditor = new PreviewEditor(this.previewDiv);
 
+    // Bind the buttons
+    this.tabbar = new TabBar('editor-field-tabbar');
+    this.tabbar.addTab(this.RICH_TEXT_EDITOR_LABEL, 'material-icons',
+        function() {
+          that.setEditorType(that.RICH_TEXT_EDITOR);
+        });
+    this.tabbar.addTab(this.HTML_EDITOR_LABEL, 'material-icons',
+        function() {
+          that.setEditorType(that.HTML_EDITOR);
+        });
+    this.tabbar.addTab(this.PREVIEW_EDITOR_LABEL, 'material-icons',
+        function() {
+          that.setEditorType(that.PREVIEW_EDITOR);
+        });
+    var buttonbarDiv = this.fieldContainer.querySelector('.buttonbar-div');
+    buttonbarDiv.appendChild(this.tabbar.getRoot());
+
     // Default mode is HTML editing
+    // TODO(jorr): Make the default mode Rich Text
     this.activeEditor = this.htmlEditor;
+    this.tabbar.selectTabByLabel(this.HTML_EDITOR_LABEL);
     this.richTextEditor.hide();
     this.previewEditor.hide();
-
-    // Bind the buttons
-    this.htmlToggleButton = new ToggleButton('</>', 'html-button');
-    //this.htmlToggleButton = new ToggleButton('', 'md md-text-format');
-    this.htmlToggleButton.onClick(
-        function() { that.setEditorType(that.HTML_EDITOR) },
-        function() { that.setEditorType(that.RICH_TEXT_EDITOR) });
-
-    this.previewToggleButton = new ToggleButton('', 'md md-visibility');
-    this.previewToggleButton.onClick(
-        function() { that.setEditorType(that.PREVIEW_EDITOR) },
-        function() { that.setEditorType(that.RICH_TEXT_EDITOR) });
-
-    var buttonbarDiv = this.fieldContainer.querySelector('.buttonbar-div');
-    buttonbarDiv.appendChild(this.htmlToggleButton.getRoot());
-    buttonbarDiv.appendChild(this.previewToggleButton.getRoot());
 
     // Bind the resizer
     new Y.YUI2.util.Resize(this.editorsDiv, {
@@ -482,21 +489,18 @@ function bindEditorField(Y) {
     var that = this;
     if (editorType == this.HTML_EDITOR) {
       $.when(this.htmlEditor.isReady()).then(function() {
-        that.htmlToggleButton.set(true);
-        that.previewToggleButton.set(false);
         that._select(that.htmlEditor);
+        that.tabbar.selectTabByLabel(that.HTML_EDITOR_LABEL);
       });
     } else if (editorType == this.RICH_TEXT_EDITOR) {
       $.when(this.richTextEditor.isReady()).then(function() {
-        that.htmlToggleButton.set(false);
-        that.previewToggleButton.set(false);
         that._select(that.richTextEditor);
+        that.tabbar.selectTabByLabel(that.RICH_TEXT_EDITOR_LABEL);
       });
     } else if (editorType == this.PREVIEW_EDITOR) {
       $.when(this.previewEditor.isReady()).then(function() {
-        that.htmlToggleButton.set(false);
-        that.previewToggleButton.set(true);
         that._select(that.previewEditor);
+        that.tabbar.selectTabByLabel(that.PREVIEW_EDITOR_LABEL);
       });
     }
   };

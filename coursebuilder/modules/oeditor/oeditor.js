@@ -68,9 +68,6 @@ ToggleButton.prototype._updateClass = function() {
  * Utility class to build a very simple tabbar and to fire callback functions
  * on each button press.
  *
- * TODO(jorr): This class is not currently used. Consider deleting it and its
- *     associated CSS classes.
- *
  * @class
  */
 function TabBar(className) {
@@ -86,7 +83,7 @@ function TabBar(className) {
  * @param onclick {function} A zero-args callback which is called when the
  *     button is clicked.
  */
-TabBar.prototype.addTab = function(label, onclick) {
+TabBar.prototype.addTab = function(label, className, onclick) {
   var that = this;
   var button = $('<button></button>');
   button.click(function() {
@@ -94,7 +91,7 @@ TabBar.prototype.addTab = function(label, onclick) {
     onclick();
     return false;
   });
-  button.text(label);
+  button.addClass(className).text(label);
   this.root.append(button);
 };
 /**
@@ -112,8 +109,19 @@ TabBar.prototype.getRoot = function() {
  * @method
  * @param index {number} Zero-based index of the button.
  */
-TabBar.prototype.selectTab = function(index) {
+TabBar.prototype.selectTabByIndex = function(index) {
   this._select(this.root.find('> button').eq(index));
+};
+/**
+ * Select the button with given label. Note the callback function will not fire.
+ *
+ * @method
+ * @param label {string} The label of the button to be selected.
+ */
+TabBar.prototype.selectTabByLabel = function(label) {
+  this._select(this.root.find('> button').filter(function() {
+    return $(this).text() === label;
+  }));
 };
 TabBar.prototype._select = function(button) {
   this.root.find('> button').removeClass('selected');

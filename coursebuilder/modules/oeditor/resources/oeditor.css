@@ -208,6 +208,24 @@ div.tabbar > button.selected {
   background-color: #ccc;
 }
 
+.editor-field-tabbar > button {
+  border-radius: 4px;
+  border: solid #000 1px;
+  border-color: transparent;
+  margin-right:4px;
+  background-color: inherit;
+  color: #888;
+  outline: 0;
+}
+.editor-field-tabbar > button:hover,
+.editor-field-tabbar > button.selected {
+  border-color: #ccc;
+  color: #444;
+}
+.editor-field-tabbar > button.selected {
+  background-color: #ddd;
+}
+
 /*
  * CSS for the ToggleButton class.
  */
