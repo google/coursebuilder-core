@@ -2184,7 +2184,7 @@ class QuestionImporter(object):
             question_list.append(question)
         qid_list = QuestionDAO.save_all(question_list)
         question_group_dict['items'] = [{
-            'question': str(quid),
+            'question': quid,
             'weight': 1.0} for quid in qid_list]
         return question_group_dict
 
