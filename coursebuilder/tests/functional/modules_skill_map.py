@@ -82,11 +82,18 @@ class BaseSkillMapTests(actions.TestBase):
         namespace_manager.set_namespace('ns_%s' % COURSE_NAME)
 
         self.course = courses.Course(None, self.app_context)
+        self.setSkillWidgetSetting(on=True)
 
     def tearDown(self):
+        self.setSkillWidgetSetting(on=False)
         del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         namespace_manager.set_namespace(self.old_namespace)
         super(BaseSkillMapTests, self).tearDown()
+
+    def setSkillWidgetSetting(self, on=True):
+        settings = self.course.get_environ(self.app_context)
+        settings['course']['display_skill_widget'] = on
+        self.course.save_settings(settings)
 
     def _build_sample_graph(self):
         # a
@@ -1754,12 +1761,12 @@ class SkillI18nTests(actions.TestBase):
         super(SkillI18nTests, self).setUp()
 
         self.base = '/' + self.COURSE_NAME
-        context = actions.simple_add_course(
+        self.app_context = actions.simple_add_course(
             self.COURSE_NAME, self.ADMIN_EMAIL, 'Skill Map Course')
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
 
-        self.course = courses.Course(None, context)
+        self.course = courses.Course(None, self.app_context)
         self.unit = self.course.add_unit()
         self.unit.title = 'Unit 1'
         self.lesson = self.course.add_lesson(self.unit)
@@ -1772,12 +1779,19 @@ class SkillI18nTests(actions.TestBase):
                 {'locale': 'el', 'availability': 'available'},
                 {'locale': 'ru', 'availability': 'available'}]
             })
+        self.setSkillWidgetSetting(on=True)
 
     def tearDown(self):
+        self.setSkillWidgetSetting(on=False)
         del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         namespace_manager.set_namespace(self.old_namespace)
         courses.Course.ENVIRON_TEST_OVERRIDES.clear()
         super(SkillI18nTests, self).tearDown()
+
+    def setSkillWidgetSetting(self, on=True):
+        settings = self.course.get_environ(self.app_context)
+        settings['course']['display_skill_widget'] = on
+        self.course.save_settings(settings)
 
     def _put_payload(self, url, xsrf_name, key, payload):
         request_dict = {
@@ -1903,7 +1917,7 @@ class SkillI18nTests(actions.TestBase):
         # Verify that we get the untranslated (lowercased) version when we
         # do not want to see the translated language.
         response = self.get('unit?unit=%s&lesson=%s' %
-                 (self.unit.unit_id, self.lesson.lesson_id))
+                (self.unit.unit_id, self.lesson.lesson_id))
         dom = self.parse_html_string(response.body)
         skill_li = dom.find('.//li[@data-skill-description="%s"]' %
                             skill.description)

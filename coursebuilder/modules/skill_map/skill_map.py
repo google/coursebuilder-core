@@ -1848,7 +1848,7 @@ def lesson_title_provider(handler, app_context, lesson, student):
         return None
 
     env = courses.Course.get_environ(app_context)
-    if env['course'].get('display_skill_widget') is False:
+    if not env['course'].get('display_skill_widget'):
         return None
 
     if isinstance(student, models.TransientStudent):
@@ -1958,7 +1958,7 @@ def skills_progress_provider(handler, app_context, student):
         return None
 
     env = courses.Course.get_environ(app_context)
-    if env['course'].get('display_skill_widget') is False:
+    if not env['course'].get('display_skill_widget'):
         return None
 
     course = handler.get_course()
