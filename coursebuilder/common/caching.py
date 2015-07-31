@@ -92,6 +92,15 @@ class AbstractScopedSingleton(object):
                 _instance.clear()
             del cls.CONTAINER['instances']
 
+    @classmethod
+    def clear_instance(cls):
+        """Destroys the instance of this cls."""
+        appengine_config.log_appstats_event(
+            '%s.destroy' % cls.__name__, {})
+        _instance = cls._instances().get(cls)
+        if _instance:
+            del cls._instances()[cls]
+
     def clear(self):
         """Destroys this object and its content."""
         appengine_config.log_appstats_event(

@@ -273,7 +273,7 @@ class SkillGraph(caching.RequestScopedSingleton):
 
     def _rebuild(self):
         self.build_successors()
-        SkillMap.clear_all()
+        SkillMap.clear_instance()
 
     def build_successors(self):
         self._successors = {}
