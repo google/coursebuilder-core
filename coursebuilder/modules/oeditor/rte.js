@@ -23,14 +23,11 @@ function bindEditorField(Y) {
       foldGutter: true,
       gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
     });
-
-    this.ready = $.Deferred();
-    this.codeMirrorInstance.on('update', function() {
-      that.ready.resolve();
-    });
   }
   HtmlEditor.prototype.isReady = function() {
-    return this.ready;
+    var ready = $.Deferred();
+    ready.resolve();
+    return ready;
   };
   HtmlEditor.prototype.hide = function() {
     this.root.style.display = 'none';
@@ -370,6 +367,8 @@ function bindEditorField(Y) {
    */
   function EditorField(options) {
     EditorField.superclass.constructor.call(this, options);
+    this.lastValueSet = '';
+    this.richTextEditorHasBeenSelected = false;
   }
   Y.extend(EditorField, Y.inputEx.Field);
 
@@ -442,10 +441,9 @@ function bindEditorField(Y) {
     buttonbarDiv.appendChild(this.tabbar.getRoot());
 
     // Default mode is HTML editing
-    // TODO(jorr): Make the default mode Rich Text
-    this.activeEditor = this.htmlEditor;
-    this.tabbar.selectTabByLabel(this.HTML_EDITOR_LABEL);
-    this.richTextEditor.hide();
+    this.activeEditor = this.richTextEditor;
+    this.tabbar.selectTabByLabel(this.RICH_TEXT_EDITOR_LABEL);
+    this.htmlEditor.hide();
     this.previewEditor.hide();
 
     // Bind the resizer
@@ -466,6 +464,7 @@ function bindEditorField(Y) {
     }, 100);
   };
   EditorField.prototype.setValue = function(value, sendUpdatedEvt) {
+    this.lastValueSet = value;
     this.activeEditor.setValue(value);
     if(sendUpdatedEvt !== false) {
       this.fireUpdatedEvt();
@@ -487,25 +486,40 @@ function bindEditorField(Y) {
   };
   EditorField.prototype.setEditorType = function(editorType) {
     var that = this;
+
+    var originEditor = this.activeEditor;
+    var targetEditor;
+    var targetLabel;
+
     if (editorType == this.HTML_EDITOR) {
-      $.when(this.htmlEditor.isReady()).then(function() {
-        that._select(that.htmlEditor);
-        that.tabbar.selectTabByLabel(that.HTML_EDITOR_LABEL);
-      });
+      targetEditor = this.htmlEditor;
+      targetLabel = this.HTML_EDITOR_LABEL;
     } else if (editorType == this.RICH_TEXT_EDITOR) {
-      $.when(this.richTextEditor.isReady()).then(function() {
-        that._select(that.richTextEditor);
-        that.tabbar.selectTabByLabel(that.RICH_TEXT_EDITOR_LABEL);
-      });
+      targetEditor = this.richTextEditor;
+      targetLabel = this.RICH_TEXT_EDITOR_LABEL;
+      this.richTextEditorHasBeenSelected = true;
     } else if (editorType == this.PREVIEW_EDITOR) {
-      $.when(this.previewEditor.isReady()).then(function() {
-        that._select(that.previewEditor);
-        that.tabbar.selectTabByLabel(that.PREVIEW_EDITOR_LABEL);
-      });
+      targetEditor = this.previewEditor;
+      targetLabel = this.PREVIEW_EDITOR_LABEL;
     }
+
+    $.when(originEditor.isReady(), targetEditor.isReady()).then(function() {
+      that._select(targetEditor);
+      that.tabbar.selectTabByLabel(targetLabel);
+    });
   };
   EditorField.prototype._select = function (editor) {
-    var value = this.activeEditor.getValue();
+    var value;
+    if (this.activeEditor === this.richTextEditor &&
+        editor !== this.richTextEditor &&
+        ! this.richTextEditorHasBeenSelected) {
+      // In order to avoid automatically round-tripping content through the
+      // RTE, we refuse to copy values from the RTE into another editor until
+      // the RTE has been actively chosen by the user at least once.
+      value = this.lastValueSet;
+    } else {
+      value = this.activeEditor.getValue();
+    }
     var rect = this.editorsDiv.getBoundingClientRect();
     this.activeEditor.hide();
     this.activeEditor = editor;

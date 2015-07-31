@@ -266,6 +266,10 @@ class AnnouncementsEditorPage(EditorPageObject):
             date_el.clear()
             date_el.send_keys(date)
         if body:
+            # Select HTML entry
+            self.find_element_by_css_selector(
+                'div.cb-editor-field div.buttonbar-div button', index=1
+            ).click()
             body_el = self.find_element_by_css_selector(
                 'div.cb-editor-field div.html-div textarea')
             body_el.clear()
