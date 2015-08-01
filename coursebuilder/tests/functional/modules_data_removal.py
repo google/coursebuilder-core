@@ -24,6 +24,7 @@ from models import student_work
 from modules.analytics import student_aggregate
 from modules.data_removal import data_removal
 from modules.data_removal import removal_models
+from modules.gitkit import gitkit
 from modules.invitation import invitation
 from modules.questionnaire import questionnaire
 from modules.review import domain
@@ -325,18 +326,29 @@ class DataRemovalTests(DataRemovalTestBase):
         COURSE_TWO = 'course_two'
         COURSE_TWO_NS = 'ns_' + COURSE_TWO
 
+        # Slight cheat: Register gitkit data remover manually, rather than
+        # enabling the entire module, which disrupts normal functional test
+        # user login handling
+        gitkit.EmailMapping.register_for_data_removal()
+
         actions.simple_add_course(
             COURSE_TWO, self.ADMIN_EMAIL, 'Data Removal Test Two')
         user = actions.login(self.STUDENT_EMAIL)
+
         with actions.OverriddenConfig(models.CAN_SHARE_STUDENT_PROFILE.name,
                                       True):
             actions.register(self, user.email(), course=self.COURSE)
             actions.register(self, user.email(), course=COURSE_TWO)
+            # Slight cheat: Rather than enabling gitkit module, just call
+            # the method that will insert the EmailMapping row.
+            gitkit.EmailUpdatePolicy.apply(user)
 
-        # Global profile object should now exist.
-        with common_utils.Namespace(''):
-            profile = models.PersonalProfile.get_by_key_name(user.user_id())
-            self.assertIsNotNone(profile)
+        # Global profile object(s) should now exist.
+        profile = models.StudentProfileDAO.get_profile_by_user_id(
+            user.user_id())
+        self.assertIsNotNone(profile)
+        email_policy = gitkit.EmailMapping.get_by_user_id(user.user_id())
+        self.assertIsNotNone(email_policy)
 
         # Unregister from 'data_removal_test' course.
         self._unregister_and_request_data_removal(self.COURSE)
@@ -349,9 +361,12 @@ class DataRemovalTests(DataRemovalTestBase):
         with common_utils.Namespace(COURSE_TWO_NS):
             self.assertIsNotNone(models.Student.get_by_user(user))
 
-        # Global profile object should still exist.
-        profile = models.PersonalProfile.get_by_key_name(user.user_id())
+        # Global profile object(s) should still exist.
+        profile = models.StudentProfileDAO.get_profile_by_user_id(
+            user.user_id())
         self.assertIsNotNone(profile)
+        email_policy = gitkit.EmailMapping.get_by_user_id(user.user_id())
+        self.assertIsNotNone(email_policy)
 
         # Unregister from other course.
         self._unregister_and_request_data_removal(COURSE_TWO)
@@ -363,9 +378,12 @@ class DataRemovalTests(DataRemovalTestBase):
         with common_utils.Namespace(COURSE_TWO_NS):
             self.assertIsNone(models.Student.get_by_user(user))
 
-        # Global profile object should also be gone.
-        profile = models.PersonalProfile.get_by_key_name(user.user_id())
+        # Global profile object(s) should also be gone.
+        profile = models.StudentProfileDAO.get_profile_by_user_id(
+            user.user_id())
         self.assertIsNone(profile)
+        email_policy = gitkit.EmailMapping.get_by_user_id(user.user_id())
+        self.assertIsNone(email_policy)
 
     def test_records_indexed_by_user_id_removed(self):
         """Test a sampling of types whose index is or contains the user ID."""

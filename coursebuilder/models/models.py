@@ -2694,6 +2694,8 @@ def get_global_handlers():
     ]
 
 def register_for_data_removal():
+    data_removal.Registry.register_sitewide_indexed_by_user_id_remover(
+        StudentProfileDAO.delete_profile_by_user_id)
     removers = [
         Student.delete_by_user_id,
         StudentAnswersEntity.delete_by_key,

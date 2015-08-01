@@ -21,6 +21,7 @@ import os
 
 from webob import multidict
 
+import appengine_config
 from common import utils as common_utils
 from common import crypto
 from common import safe_dom
@@ -305,11 +306,18 @@ class ImmediateRemovalPolicy(AbstractDataRemovalPolicy):
         if removal_models.ImmediateRemovalState.is_deletion_pending(user_id):
             # Allow exceptions to propagate out, which will cause the
             # StudentLifecycleObserver queue to do retries.
-            cls._remove_indexed_items(user_id)
+            cls._remove_per_course_indexed_items(user_id)
             cls._initiate_unindexed_deletion(user_id)
 
     @classmethod
-    def _remove_indexed_items(cls, user_id):
+    def _remove_sitewide_indexed_items(cls, user_id):
+        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            cls._remove_indexed_items(
+                user_id,
+                models_data_removal.Registry.get_sitewide_user_id_removers())
+
+    @classmethod
+    def _remove_per_course_indexed_items(cls, user_id):
         # We expect that there are comparatively few items indexed by user_id
         # or email address.  Further, since we're running from a task queue,
         # we have 10 minutes to get this done.  We could do these deletions in
@@ -332,20 +340,19 @@ class ImmediateRemovalPolicy(AbstractDataRemovalPolicy):
             # user_id even though we cannot remove by email address.
 
         if student and student.email:
-            for remover in models_data_removal.Registry.get_email_removers():
-                try:
-                    remover(student.email)
-                except Exception, ex:
-                    logging.critical('Failed to wipe out user data via %s',
-                                     str(remover))
-                    common_utils.log_exception_origin()
-                    raise  # Propagate exception so POST returns 500 status.
+            cls._remove_indexed_items(
+                student.email,
+                models_data_removal.Registry.get_email_removers())
+        # Do these last, so that we're not removing stuff that email-indexed
+        # removal steps might depend on.
+        cls._remove_indexed_items(
+            user_id, models_data_removal.Registry.get_user_id_removers())
 
-        # Do removals which depend only on user_id.  Do these last, so that
-        # we're not removing stuff that earlier steps might depend on.
-        for remover in models_data_removal.Registry.get_user_id_removers():
+    @classmethod
+    def _remove_indexed_items(cls, indexed_value, removers):
+        for remover in removers:
             try:
-                remover(user_id)
+                remover(indexed_value)
             except Exception, ex:
                 logging.critical('Failed to wipe out user data via %s',
                                  str(remover))
@@ -369,10 +376,10 @@ class ImmediateRemovalPolicy(AbstractDataRemovalPolicy):
         # parallel with wipeout and re-added items indexed by user ID.  Do one
         # more pass of removing indexed items before we declare the user to be
         # done.
-        cls._remove_indexed_items(user_id)
+        cls._remove_per_course_indexed_items(user_id)
 
         # Look through peer courses to see if the user is registered in any.
-        # If not, we can also remove the global settings item.
+        # If not, we can also remove any global settings items.
         in_other_courses = False
         for app_context in sites.get_course_index().get_all_courses():
             with common_utils.Namespace(app_context.get_namespace_name()):
@@ -380,7 +387,7 @@ class ImmediateRemovalPolicy(AbstractDataRemovalPolicy):
                 if student is not None:
                     in_other_courses = True
         if not in_other_courses:
-            models.StudentProfileDAO.delete_profile_by_user_id(user_id)
+            cls._remove_sitewide_indexed_items(user_id)
 
         # When the foregoing deletion has completed w/o raising any
         # exceptions, clean up the final two items that have any user-related

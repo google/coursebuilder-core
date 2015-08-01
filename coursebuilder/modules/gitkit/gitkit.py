@@ -135,6 +135,7 @@ from common import utils
 from controllers import utils as controllers_utils
 from models import config
 from models import custom_modules
+from models import data_removal
 from models import models
 from models import services
 from models import transforms
@@ -290,6 +291,11 @@ class EmailMapping(models.BaseEntity):
     def _new(cls, email, user_id):
         with utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
             return cls(key_name=user_id, email=email)
+
+    @classmethod
+    def register_for_data_removal(cls):
+        data_removal.Registry.register_sitewide_indexed_by_user_id_remover(
+            cls.delete_by_key)
 
 
 class EmailUpdatePolicy(users.EmailUpdatePolicy):
@@ -1357,6 +1363,7 @@ def register_module():
 
     def on_module_enabled():
         users.UsersServiceManager.set(UsersService)
+        EmailMapping.register_for_data_removal()
 
     custom_module = custom_modules.Module(
         'GITKit Module', 'GITKit Federated Authentication Module',

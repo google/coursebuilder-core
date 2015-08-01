@@ -22,9 +22,28 @@ from google.appengine.ext import db
 class Registry(object):
     """Register classes with data that can be linked to an individual user."""
 
+    _remove_sitewide_by_user_id_functions = []
     _remove_by_user_id_functions = []
     _remove_by_email_functions = []
     _unindexed_entity_classes = {}
+
+    @classmethod
+    def register_sitewide_indexed_by_user_id_remover(cls, remover):
+        """Register a remover for per-instance data indexed by user_id.
+
+        Callbacks registered here are called only when the user has been
+        removed from every individual course in the App Engine instance.
+        This is useful for things that are not course-specific, such
+        as StudentProfile.
+
+        Args:
+          remover: A function to remove DB instances that are indexable by
+              user ID.  The function must take exactly one parameter: The
+              string constituting the user_id.  (This is the string
+              returned from users.get_current_user().user_id()).
+        """
+        cls._remove_sitewide_by_user_id_functions.append(remover)
+
 
     @classmethod
     def register_indexed_by_user_id_remover(cls, remover):
@@ -44,7 +63,7 @@ class Registry(object):
           remover: A function to remove DB instances that are indexable by
               user ID.  The function must take exactly one parameter: The
               string constituting the user_id.  (This is the string
-              returned from users.get_current_user().user_id().
+              returned from users.get_current_user().user_id()).
         """
         cls._remove_by_user_id_functions.append(remover)
 
@@ -84,6 +103,10 @@ class Registry(object):
                              entity_class)
         getattr(entity_class, 'get_user_ids')  # AttributeError if not present.
         cls._unindexed_entity_classes[entity_class.kind()] = entity_class
+
+    @classmethod
+    def get_sitewide_user_id_removers(cls):
+        return cls._remove_sitewide_by_user_id_functions
 
     @classmethod
     def get_user_id_removers(cls):
