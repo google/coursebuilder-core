@@ -45,11 +45,6 @@ BROWSER_HEIGHT = 1000
 class BaseIntegrationTest(suite.TestBase):
     """Base class for all integration tests."""
 
-    TAGS = {
-        suite.TestBase.REQUIRES_INTEGRATION_SERVER: True,
-        suite.TestBase.REQUIRES_TESTING_MODULES: set([fake_visualizations]),
-        }
-
     LOGIN = 'test@example.com'
 
     def setUp(self):
@@ -346,6 +341,15 @@ class EmbedModuleTest(BaseIntegrationTest):
 
         self.assert_cb_embed_iframes_present(demo_page)
         self.assert_embeds_loaded_in_iframes(demo_page, cb_embed_srcs)
+
+
+class IntegrationServerInitializationTask(BaseIntegrationTest):
+
+    def test_setup_defaut_course(self):
+        assert os.environ.get('CB_CHROMIUM_BROWSER'), (
+            'Integration tests require Chromium browser to be installed.')
+        self.load_root_page()._add_default_course_if_needed(
+            suite.TestBase.INTEGRATION_SERVER_BASE_URL)
 
 
 class EtlTranslationRoundTripTest(BaseIntegrationTest):
@@ -1308,3 +1312,10 @@ class EventsTest(BaseIntegrationTest):
                 self.assertNotEquals(end_position, event['position'])
             elif expected.position == 'end':
                 self.assertEquals(end_position, event['position'])
+
+
+class IntegrationTestBundle1(
+    AdminTests, EventsTest, EtlTranslationRoundTripTest, QuestionsTest,
+    SampleCourseTests):
+    """Test bundle that forces serial execution of all containing tests."""
+    pass

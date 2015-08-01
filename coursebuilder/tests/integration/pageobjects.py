@@ -167,7 +167,6 @@ class RootPage(PageObject):
         self.find_element_by_link_text('Logout').click()
 
     def load(self, base_url):
-        self._add_default_course_if_needed(base_url)
         self.get(base_url + '/')
         return self
 

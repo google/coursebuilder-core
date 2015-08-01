@@ -23,8 +23,6 @@ Here is how to use the script:
       google_appengine/lib/jinja2-2.6, google_appengine/lib/webapp2-2.5.1 and
       the 'coursebuilder' directory itself
     - invoke this test suite from the command line:
-          # Automatically find and run all Python tests in tests/*.
-          python tests/suite.py  --pattern test*.py
           # Run test method baz in unittest.TestCase Bar found in tests/foo.py.
           python tests/suite.py --test_class_name tests.foo.Bar.baz
     - review the output to make sure there are no errors or warnings
@@ -35,16 +33,10 @@ Good luck!
 __author__ = 'Sean Lip'
 
 import argparse
-import logging
 import os
 import re
 import shutil
-import signal
-import socket
-import stat
-import subprocess
 import sys
-import time
 import unittest
 
 import task_queue
@@ -60,14 +52,8 @@ from google.appengine.ext import testbed
 
 _PARSER = argparse.ArgumentParser()
 _PARSER.add_argument(
-    '--pattern', default='*.py',
-    help='shell pattern for discovering files containing tests', type=str)
-_PARSER.add_argument(
     '--test_class_name',
     help='optional dotted module name of the test(s) to run', type=str)
-_PARSER.add_argument(
-    '--integration_server_start_cmd',
-    help='script to start an external CB server', type=str)
 
 # Base filesystem location for test data.
 if 'COURSEBUILDER_RESOURCES' in os.environ:
@@ -104,8 +90,6 @@ def iterate_tests(test_suite_or_case):
 class TestBase(unittest.TestCase):
     """Base class for all Course Builder tests."""
 
-    REQUIRES_INTEGRATION_SERVER = 'REQUIRES_INTEGRATION_SERVER'
-    REQUIRES_TESTING_MODULES = 'REQUIRES_TESTING_MODULES'
     INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
     ADMIN_SERVER_BASE_URL = 'http://localhost:8000'
 
@@ -265,85 +249,10 @@ def create_test_suite(parsed_args):
         unittest.TestSuite. The test suite populated with all tests to run.
     """
     loader = unittest.TestLoader()
-    if parsed_args.test_class_name:
-        return loader.loadTestsFromName(
-            _parse_test_name(parsed_args.test_class_name))
-    else:
-        return loader.discover(
-            os.path.dirname(__file__), pattern=parsed_args.pattern)
-
-
-def ensure_port_available(port_number):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    try:
-        s.bind(('localhost', port_number))
-    except socket.error, ex:
-        logging.error(
-            '''==========================================================
-            Failed to bind to port %d.
-            This probably means another CourseBuilder server is
-            already running.  Be sure to shut down any manually
-            started servers before running tests.
-            ==========================================================''',
-            port_number)
-        raise ex
-    s.close()
-
-
-def start_integration_server(integration_server_start_cmd, modules):
-    if modules:
-        _fn = os.path.join(appengine_config.BUNDLE_ROOT, 'custom.yaml')
-        _st = os.stat(_fn)
-        os.chmod(_fn, _st.st_mode | stat.S_IWUSR)
-        fp = open(_fn, 'w')
-        fp.writelines([
-            'env_variables:\n',
-            '  GCB_REGISTERED_MODULES_CUSTOM:\n'])
-        fp.writelines(['    %s\n' % module.__name__ for module in modules])
-        fp.close()
-
-    logging.info('Starting external server: %s', integration_server_start_cmd)
-    server = subprocess.Popen(integration_server_start_cmd)
-    time.sleep(3)  # Wait for server to start up
-    return server
-
-
-def stop_integration_server(server, modules):
-    server.kill()  # dev_appserver.py itself.
-
-    # The new dev appserver starts a _python_runtime.py process that isn't
-    # captured by start_integration_server and so doesn't get killed. Until it's
-    # done, our tests will never complete so we kill it manually.
-    (stdout, unused_stderr) = subprocess.Popen(
-        ['pgrep', '-f', '_python_runtime.py'], stdout=subprocess.PIPE
-    ).communicate()
-
-    # If tests are killed partway through, runtimes can build up; send kill
-    # signals to all of them, JIC.
-    pids = [int(pid.strip()) for pid in stdout.split('\n') if pid.strip()]
-    for pid in pids:
-        os.kill(pid, signal.SIGKILL)
-
-    if modules:
-        fp = open(
-            os.path.join(appengine_config.BUNDLE_ROOT, 'custom.yaml'), 'w')
-        fp.writelines([
-            '# Add configuration for your application here to avoid\n'
-            '# potential merge conflicts with new releases of the main\n'
-            '# app.yaml file.  Modules registered here should support the\n'
-            '# standard CourseBuilder module config.  (Specifically, the\n'
-            '# imported Python module should provide a method\n'
-            '# "register_module()", taking no parameters and returning a\n'
-            '# models.custom_modules.Module instance.\n'
-            '#\n'
-            'env_variables:\n'
-            '#  GCB_REGISTERED_MODULES_CUSTOM:\n'
-            '#    modules.my_extension_module\n'
-            '#    my_extension.modules.widgets\n'
-            '#    my_extension.modules.blivets\n'
-            ])
-        fp.close()
+    if not parsed_args.test_class_name:
+        raise Exception('Expected --test_class_name to be specified.')
+    return loader.loadTestsFromName(
+        _parse_test_name(parsed_args.test_class_name))
 
 
 def fix_sys_path():
@@ -381,35 +290,12 @@ def fix_sys_path():
 def main():
     """Starts in-process server and runs all test cases in this module."""
     fix_sys_path()
+
     etl._set_env_vars_from_app_yaml()
     parsed_args = _PARSER.parse_args()
     test_suite = create_test_suite(parsed_args)
 
-    all_tags = {}
-    for test in iterate_tests(test_suite):
-        if hasattr(test, 'TAGS'):
-            for tag in test.TAGS:
-                if isinstance(test.TAGS[tag], set) and tag in all_tags:
-                    all_tags[tag].update(test.TAGS[tag])
-                else:
-                    all_tags[tag] = test.TAGS[tag]
-
-    server = None
-    if TestBase.REQUIRES_INTEGRATION_SERVER in all_tags:
-        assert os.environ.get('CB_CHROMIUM_BROWSER'), (
-            'Integration tests require Chromium browser to be installed.')
-        ensure_port_available(8081)
-        ensure_port_available(8000)
-        server = start_integration_server(
-            parsed_args.integration_server_start_cmd,
-            all_tags.get(TestBase.REQUIRES_TESTING_MODULES, set()))
-
     result = unittest.TextTestRunner(verbosity=2).run(test_suite)
-
-    if server:
-        stop_integration_server(
-            server, all_tags.get(TestBase.REQUIRES_TESTING_MODULES, set()))
-
     if result.errors or result.failures:
         raise Exception(
             'Test suite failed: %s errors, %s failures of '

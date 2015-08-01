@@ -56,24 +56,11 @@ fi
 # Reinstall AE runtime environment and CB-distributed libs if necessary.
 . "$(dirname "$0")/common.sh"
 
-export PYTHONPATH=\
-$SOURCE_DIR:\
-$GOOGLE_APP_ENGINE_HOME:\
-$JINJA_PATH:\
-$WEBAPP_PATH:\
-$WEBOB_PATH:\
-$BEAUTIFULSOUP_PATH:\
-$SELENIUM_PATH:\
-$YAML_PATH:\
-$SIX_PATH:\
-$WEBTEST_PATH
-export PHANTOMJS_BIN=$RUNTIME_HOME/phantomjs/bin/phantomjs
-
-CB_SERVER_START=$SCRIPTS_DIR/start_in_shell.sh
+. "$(dirname "$0")/test_config.sh"
 
 echo Running functional tests
-python "$SOURCE_DIR/tests/suite.py" \
-  --integration_server_start_cmd="$CB_SERVER_START" \
+python "$SOURCE_DIR/scripts/run_all_tests.py" \
+  --skip_pylint True\
   --test_class_name "$1"
 
 echo Done!

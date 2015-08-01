@@ -23,15 +23,46 @@ Execute this script from the Course Builder folder as:
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
+import argparse
 import datetime
+import logging
+import multiprocessing
 import os
+import signal
+import socket
+import stat
 import subprocess
 import sys
 import threading
 import time
 import yaml
 
-# all test classes with a total count of tests in each
+
+# WARNING !!!
+#
+# by convention, all entries in the ALL_*_TEST_CLASSES dicts, including
+# integration test entries, are executed in separate threads concurrently;
+# be very careful with it; use it when you are confident that the tests do
+# not interfere with each other at runtime; they do interfere in a couple of
+# ways, for example: due to edits to a shared course content, due to changes
+# to the shared configuration properties or course settings and so on;
+#
+# when needed, force groups of tests to execute serially; simply don't list
+# them here individually, but do create a new empty test class that inherits
+# the individual tests from all desired test classes via multiple inheritance;
+# list each bundle class below individually and all tests within it will run
+# serially, while all the entries themselves continue to run concurrently
+#
+# WARNING !!!
+
+# here we list all integration tests that require an integration server
+ALL_INTEGRATION_TEST_CLASSES = {
+    'tests.integration.test_classes.IntegrationTestBundle1': 15,
+    'tests.integration.test_classes.VisualizationsTest': 5,
+    'tests.integration.test_classes.EmbedModuleTest': 3,
+}
+
+# here we list all functional and unit tests that run in-process
 ALL_TEST_CLASSES = {
     'tests.functional.admin_settings.AdminSettingsTests': 1,
     'tests.functional.admin_settings.ExitUrlTest': 1,
@@ -266,7 +297,6 @@ ALL_TEST_CLASSES = {
     'tests.functional.unit_header_footer.UnitHeaderFooterTest': 11,
     'tests.functional.unit_on_one_page.UnitOnOnePageTest': 4,
     'tests.functional.whitelist.WhitelistTest': 12,
-    'tests.integration.test_classes': 23,
     'tests.unit.etl_mapreduce.HistogramTests': 5,
     'tests.unit.etl_mapreduce.FlattenJsonTests': 4,
     'tests.unit.common_catch_and_log.CatchAndLogTests': 6,
@@ -311,10 +341,125 @@ ALL_TEST_CLASSES = {
     'tests.unit.gift_parser_tests.TestMultiChoiceQuestion': 5,
     'tests.unit.gift_parser_tests.TestCreateManyGiftQuestion': 1
 }
-EXPENSIVE_TESTS = ['tests.integration.test_classes']
+
+INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
 
 LOG_LINES = []
 LOG_LOCK = threading.Lock()
+
+
+def make_default_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--test_class_name',
+        help='required dotted module name of the test(s) to run',
+        type=str, default=None)
+    parser.add_argument(
+        '--skip_integration', help='Whether to run integration tests',
+        type=bool, default=False)
+    parser.add_argument(
+        '--skip_non_integration',
+        help='Whether to run functional and unit tests',
+        type=bool, default=False)
+    parser.add_argument(
+        '--skip_pylint', help='Whether to run pylint tests',
+        type=bool, default=False)
+    parser.add_argument(
+        '--ignore_pylint_failures',
+        help='Whether to ignore pylint test failures',
+        type=bool, default=False)
+    parser.add_argument(
+        '--verbose',
+        help='Print more verbose output to help diagnose problems',
+        type=bool, default=False)
+    return parser
+
+
+def ensure_port_available(port_number):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind(('localhost', port_number))
+    except socket.error, ex:
+        logging.error('''
+            ==========================================================
+            Failed to bind to port %d.
+            This probably means another CourseBuilder server is
+            already running.  Be sure to shut down any manually
+            started servers before running tests.
+            ==========================================================''',
+            port_number)
+        raise ex
+    s.close()
+
+
+def start_integration_server():
+    ensure_port_available(8081)
+    ensure_port_available(8000)
+    server_cmd = os.path.join(
+        os.path.dirname(__file__), 'start_in_shell.sh')
+    server = start_integration_server_process(
+        server_cmd,
+        set(['tests.integration.fake_visualizations']))
+    return server
+
+
+def start_integration_server_process(integration_server_start_cmd, modules):
+    if modules:
+        _fn = os.path.join(os.path.dirname(__file__), '..', 'custom.yaml')
+        _st = os.stat(_fn)
+        os.chmod(_fn, _st.st_mode | stat.S_IWUSR)
+        fp = open(_fn, 'w')
+        fp.writelines([
+            'env_variables:\n',
+            '  GCB_REGISTERED_MODULES_CUSTOM:\n'])
+        fp.writelines(['    %s\n' % module for module in modules])
+        fp.close()
+
+    logging.info('Starting external server: %s', integration_server_start_cmd)
+    devnull = open(os.devnull, 'w')
+    server = subprocess.Popen(
+        integration_server_start_cmd, stdout=devnull, stderr=devnull)
+    time.sleep(3)  # Wait for server to start up
+
+    return server
+
+
+def stop_integration_server(server, modules):
+    server.kill()  # dev_appserver.py itself.
+
+    # The new dev appserver starts a _python_runtime.py process that isn't
+    # captured by start_integration_server and so doesn't get killed. Until it's
+    # done, our tests will never complete so we kill it manually.
+    (stdout, unused_stderr) = subprocess.Popen(
+        ['pgrep', '-f', '_python_runtime.py'], stdout=subprocess.PIPE
+    ).communicate()
+
+    # If tests are killed partway through, runtimes can build up; send kill
+    # signals to all of them, JIC.
+    pids = [int(pid.strip()) for pid in stdout.split('\n') if pid.strip()]
+    for pid in pids:
+        os.kill(pid, signal.SIGKILL)
+
+    if modules:
+        fp = open(
+            os.path.join(os.path.dirname(__file__), '..', 'custom.yaml'), 'w')
+        fp.writelines([
+            '# Add configuration for your application here to avoid\n'
+            '# potential merge conflicts with new releases of the main\n'
+            '# app.yaml file.  Modules registered here should support the\n'
+            '# standard CourseBuilder module config.  (Specifically, the\n'
+            '# imported Python module should provide a method\n'
+            '# "register_module()", taking no parameters and returning a\n'
+            '# models.custom_modules.Module instance.\n'
+            '#\n'
+            'env_variables:\n'
+            '#  GCB_REGISTERED_MODULES_CUSTOM:\n'
+            '#    modules.my_extension_module\n'
+            '#    my_extension.modules.widgets\n'
+            '#    my_extension.modules.blivets\n'
+            ])
+        fp.close()
 
 
 def log(message):
@@ -410,7 +555,7 @@ class TaskThread(threading.Thread):
 
             # update progress
             now = time.time()
-            update_frequency_sec = 15
+            update_frequency_sec = 30
             if now - last_update_on > update_frequency_sec:
                 last_update_on = now
                 update_progress()
@@ -469,9 +614,9 @@ class FunctionalTestTask(object):
     def run(self):
         if self.verbose:
             log('Running all tests in: %s.' % (self.test_class_name))
-        test_sh = os.path.join(os.path.dirname(__file__), 'test.sh')
+        suite_sh = os.path.join(os.path.dirname(__file__), 'suite.sh')
         result, self.output = run(
-            ['sh', test_sh, self.test_class_name],
+            ['sh', suite_sh, self.test_class_name],
             verbose=self.verbose)
         if result != 0:
             raise Exception()
@@ -484,6 +629,7 @@ def setup_all_dependencies():
     result, output = run(['sh', common_sh], strict=True)
     if result != 0:
         raise Exception()
+
     for line in output.split('\n'):
         if not line:
             continue
@@ -500,23 +646,108 @@ def chunk_list(l, n):
         yield l[i:i + n]
 
 
-def run_all_tests(skip_expensive_tests, verbose, setup_deps=True):
-    """Runs all functional tests concurrently."""
+def is_a_member_of(test_class_name, set_of_tests):
+    for name in set_of_tests.keys():
 
+        # try matching on the class name
+        if name.find(test_class_name) == 0:
+            return True
+
+        # try matching on the method name
+        if test_class_name.find(name) == 0:
+            return True
+
+    return False
+
+
+def select_tests_to_run(test_class_name):
     test_classes = {}
     test_classes.update(ALL_TEST_CLASSES)
+    test_classes.update(ALL_INTEGRATION_TEST_CLASSES)
     test_classes.update(all_third_party_tests())
-    run_tests(test_classes, skip_expensive_tests, verbose, setup_deps)
 
-def run_tests(test_classes, skip_expensive_tests, verbose, setup_deps=True):
+    if test_class_name:
+        _test_classes = {}
+
+        for name in test_classes.keys():
+            # try matching on the class name
+            if name.find(test_class_name) == 0:
+                _test_classes.update({name: test_classes[name]})
+                continue
+
+            # try matching on the method name
+            if test_class_name.find(name) == 0:
+                _test_classes.update({test_class_name: 1})
+                continue
+
+        if not _test_classes:
+            raise Exception('No tests found for "%s".' % test_class_name)
+        test_classes = _test_classes
+
+        sorted_names = sorted(test_classes, key=lambda key: test_classes[key])
+
+    return test_classes
+
+
+def run_all_tests(parsed_args, setup_deps=True):
+    # get all applicable tests
+    test_classes = select_tests_to_run(parsed_args.test_class_name)
+
+    # separate out integration and non-integration tests
+    integration_tests = {}
+    non_integration_tests = {}
+    for test_class_name in test_classes.keys():
+        if is_a_member_of(
+            test_class_name, ALL_INTEGRATION_TEST_CLASSES):
+            target = integration_tests
+        else:
+            target = non_integration_tests
+        target.update(
+                {test_class_name: test_classes[test_class_name]})
+
+    if parsed_args.skip_non_integration:
+        log('Skipping non-integration tests at user request')
+        non_integration_tests = {}
+    if parsed_args.skip_integration:
+        log('Skipping integration test at user request')
+        integration_tests = {}
+
+    all_tests = {}
+    all_tests.update(non_integration_tests)
+    all_tests.update(integration_tests)
+
+    server = None
+    if integration_tests:
+        server = start_integration_server()
+        run_tests({
+            'tests.integration.test_classes.'
+            'IntegrationServerInitializationTask': 1},
+            False, setup_deps=False, chunk_size=1, hint='setup')
+    try:
+        if all_tests:
+            try:
+                chunk_size = 2 * multiprocessing.cpu_count()
+            except:  # pylint: disable=bare-except
+                chunk_size = 8
+            run_tests(
+                all_tests, parsed_args.verbose,
+                setup_deps=setup_deps, chunk_size=chunk_size)
+    finally:
+        if server:
+            stop_integration_server(
+                server,
+                set(['tests.integration.fake_visualizations']))
+
+
+def run_tests(
+    test_classes, verbose, setup_deps=True, chunk_size=16, hint='generic'):
     start = time.time()
     task_to_test = {}
     tasks = []
+    integration_tasks = []
 
     # Prepare tasks
     for test_class_name in test_classes:
-        if skip_expensive_tests and test_class_name in EXPENSIVE_TESTS:
-            continue
         test = FunctionalTestTask(test_class_name, verbose)
         task = TaskThread(test.run, name='testing %s' % test_class_name)
         task_to_test[task] = test
@@ -533,10 +764,10 @@ def run_tests(test_classes, skip_expensive_tests, verbose, setup_deps=True):
         setup_all_dependencies()
 
     # execute all tasks
-    log('Executing all %s test suites' % len(tasks))
+    log('Executing %s "%s" test suites' % (len(tasks), hint))
     runtimes_sec = []
     TaskThread.execute_task_list(
-        tasks, chunk_size=16, runtimes_sec=runtimes_sec)
+        tasks, chunk_size=chunk_size, runtimes_sec=runtimes_sec)
 
     # map durations to names
     name_durations = []
@@ -574,21 +805,29 @@ def run_tests(test_classes, skip_expensive_tests, verbose, setup_deps=True):
         total_count, len(tasks), int(time.time() - start)))
 
 
-def run_lint(source_dir=None):
+def run_lint():
     # Wire outputs to our own stdout/stderr so messages appear immediately,
     # rather than batching up and waiting for the end (linting takes a while)
-    path = 'scripts/pylint.sh'
-    if source_dir:
-        path = os.path.join(source_dir, path)
+    path = os.path.join(os.path.dirname(__file__), 'pylint.sh')
     status = subprocess.call(path, stdin=None, stdout=sys.stdout,
                              stderr=sys.stderr)
     return status == 0
 
 
 def main():
-    if not run_lint():
-        raise RuntimeError('Lint checks failed; tests not run.')
-    run_all_tests(False, True)
+    parser = make_default_parser()
+    parsed_args = parser.parse_args()
+
+    if parsed_args.skip_pylint:
+        log('Skipping pylint at user request')
+    else:
+        if not run_lint():
+            if parsed_args.ignore_pylint_failures:
+                log('Ignoring pylint test errors.')
+            else:
+                raise RuntimeError('Pylint tests failed.')
+
+    run_all_tests(parsed_args)
 
 
 if __name__ == '__main__':
