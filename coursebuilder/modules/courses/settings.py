@@ -32,7 +32,6 @@ from models import transforms
 from models import vfs
 from modules.courses import messages
 from modules.dashboard import dashboard
-from modules.dashboard import filer
 from modules.dashboard import utils as dashboard_utils
 from modules.oeditor import oeditor
 
@@ -344,34 +343,31 @@ class HtmlHookHandler(controllers_utils.ApplicationHandler):
     hook values into the course.yaml settings.
     """
 
-    def post_edit_html_hook(self):
-        filer.create_course_file_if_not_exists(self)
-        self.redirect(self.get_action_url(
-            'edit_html_hook', key=self.request.get('html_hook')))
-
-    def get_edit_html_hook(self):
-        key = self.request.get('key')
+    @classmethod
+    def get_edit_html_hook(cls, handler):
+        key = handler.request.get('key')
 
         registry = HtmlHookRESTHandler.REGISTRY
-        exit_url = self.canonicalize_url(self.request.referer)
-        rest_url = self.canonicalize_url(HtmlHookRESTHandler.URI)
+        exit_url = handler.canonicalize_url(handler.request.referer)
+        rest_url = handler.canonicalize_url(HtmlHookRESTHandler.URI)
         delete_url = '%s?%s' % (
-            self.canonicalize_url(HtmlHookRESTHandler.URI),
+            handler.canonicalize_url(HtmlHookRESTHandler.URI),
             urllib.urlencode({
                 'key': key,
                 'xsrf_token': cgi.escape(
-                        self.create_xsrf_token(HtmlHookRESTHandler.XSRF_ACTION))
+                    handler.create_xsrf_token(
+                        HtmlHookRESTHandler.XSRF_ACTION))
             }))
         form_html = oeditor.ObjectEditor.get_html_for(
-            self, registry.get_json_schema(), registry.get_schema_dict(),
+            handler, registry.get_json_schema(), registry.get_schema_dict(),
             key, rest_url, exit_url,
             delete_url=delete_url, delete_method='delete',
             required_modules=HtmlHookRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
-        template_values['page_title'] = self.format_title('Edit Hook HTML')
+        template_values['page_title'] = handler.format_title('Edit Hook HTML')
         template_values['main_content'] = form_html
-        self.render_page(template_values)
+        handler.render_page(template_values)
 
 
 def _create_hook_registry():
@@ -581,8 +577,6 @@ def on_module_enabled():
         'course_availability', CourseSettingsHandler.post_course_availability)
     dashboard.DashboardHandler.add_custom_post_action(
         'course_browsability', CourseSettingsHandler.post_course_browsability)
-    dashboard.DashboardHandler.add_custom_post_action(
-        'edit_html_hook', HtmlHookHandler.post_edit_html_hook)
     dashboard.DashboardHandler.add_custom_get_action(
         'edit_html_hook', HtmlHookHandler.get_edit_html_hook)
 
