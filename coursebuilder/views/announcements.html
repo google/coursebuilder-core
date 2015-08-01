@@ -5,6 +5,11 @@
   - {{ gettext('Announcements') }}
 {% endblock subtitle %}
 
+{% block assets %}
+  {{ super() }}
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+{% endblock %}
+
 {% block top_content %}
 {% endblock %}
 
