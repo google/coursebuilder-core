@@ -76,11 +76,13 @@ a.inputEx-Button,
 div.inputEx-Button,
 button.inputEx-Button,
 div.inputEx-Field input.inputEx-Button,
+/* all of the following are matched by a.inputEx-List-link */
 div.mc-choice + a,
 div.mc-choice-container > a,
 div.sa-grader + a,
 div.sa-grader-container > a,
 div.question-group-items a {
+  display: inline-block;
   width: auto;
   background-color: #666;
   color: #FFFFFF;
@@ -268,8 +270,7 @@ div.cb-editor-field label.togglebutton.html-button {
   font-size: 16px;
 }
 div.cb-editor-field div.buttonbar-div {
-  height: 35px;
-  margin-bottom: 3px;
+  margin-bottom: 10px;
   position: relative;
 }
 div.cb-editor-field div.editors-div {
@@ -327,6 +328,37 @@ div.cb-editor-field div.preview-div .ajax-spinner > .spinner {
 }
 
 /*
+ * Common CSS for multiple choice and short answer
+ */
+
+.mc-choice-container,
+.sa-grader-container {
+  clear: both;
+}
+
+.mc-choice-container > .inputEx-ListField-childContainer > div,
+.sa-grader-container > .inputEx-ListField-childContainer > div {
+  position: relative;
+  margin-bottom: 25px;
+}
+
+#formContainer .mc-choice > fieldset,
+#formContainer .sa-grader > fieldset {
+  margin-bottom: 5px;
+  padding-bottom: 0;
+}
+
+.mc-choice-container > .inputEx-ListField-childContainer,
+.sa-grader-container > .inputEx-ListField-childContainer {
+  margin-bottom: 20px;
+}
+
+.sa-container fieldset > .inputEx-fieldWrapper,
+.mc-container fieldset > .inputEx-fieldWrapper {
+  margin-top: 14px;
+}
+
+/*
  * CSS for multiple choice question creation.
  */
 
@@ -348,23 +380,19 @@ div.mc-container div.CodeMirror {
 div.mc-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
   width: 80px;
 }
-div.mc-container .cb-editor-field > .buttonbar-div {
-  height: 20px;
-  margin-bottom: 1px;
-}
-div.mc-container .cb-editor-field > .buttonbar-div > label.togglebutton {
-  padding: 2px 5px;
-  line-height: 12px;
-}
 div.mc-question,
 div.mc-description,
 div.mc-selection,
-div.set-scores-toggle {
+div.set-scores-toggle,
+.toggle-feedback {
   margin-left: 87px;
 }
-form.mc-container div.tabbar > button {
-  padding: 0;
+
+.mc-choice > fieldset > .inputEx-fieldWrapper {
+  /* Fieldset contributes 10px so this is really the same as above */
+  margin-left: 77px;
 }
+
 div.mc-description input {
   width: 546px;  /* allow for 2px padding */
   margin: 0;
@@ -372,42 +400,32 @@ div.mc-description input {
 div.set-scores-toggle {
   margin-top: 10px;
 }
-div.mc-choice-container > div.inputEx-ListField-childContainer > div {
-  width: 650px;
-  position: relative;
-}
+
 div.mc-choice {
   float: none;
   margin: 0;
 }
-div.mc-choice > fieldset {
-  width: 627px; /* hack to make the width of the first element match the rest */
-  border-top: none !important;
-}
-div.mc-choice > fieldset > legend {
+
+.mc-choice > fieldset > .inputEx-fieldWrapper > .inputEx-label {
+  /* Score label */
   display: none;
 }
-div.mc-choice > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
-  display: none;
-}
-div.mc-choice > fieldset > legend + div {
-  /* The score input. */
+
+.mc-choice-score {
   position: absolute;
-  top: 22px;
-  left: 20px;
+  top: 39px;
+  left: -50px; /* Counteracts the fieldWrapper's margin */
 }
-div.mc-choice > fieldset > legend + div + div,
-div.mc-choice > fieldset > legend + div + div + div {
-  /* The choice text and the feedback text. */
-  margin-left: 50px;
+
+.mc-choice-score input {
+  width: 25px;
 }
-div.mc-choice > div.toggle-feedback {
-  /* The show-feedback button. */
-  position: absolute;
-  top: 34px;
-  left: 620px;
-  width: 150px;
+
+.mc-choice > fieldset > legend + div + div + div {
+  /* The feedback editor */
+  margin-top: 15px;
 }
+
 div.mc-choice > div.toggle-feedback > button,
 div.mc-choice + a {
   /* The show-feedback and the delete-choice button */
@@ -417,27 +435,13 @@ div.mc-choice + a {
   padding: 3px;
   font-weight: bold;
   font-size: 10px;
-}
-div.mc-choice + a {
-  /* The delete-choice button */
-  position: absolute;
-  bottom: -10px;
-  left: 58px;
-}
-div.mc-choice-score input {
-  width: 25px;
-}
-div.mc-choice-container > div.inputEx-ListField-childContainer {
-  margin-bottom: 40px;
+  float: left;
 }
 
 /*
  * CSS for short answer question creation.
  */
 
-div.sa-container fieldset > div.inputEx-fieldWrapper {
-  margin-top: 14px;
-}
 div.sa-container a:hover {
   text-decoration: none;
 }
@@ -446,14 +450,6 @@ div.sa-container div.tabbar > button {
 }
 div.sa-container div.cb-editor-field {
   width: 510px;
-}
-div.sa-container .cb-editor-field > .buttonbar-div {
-  height: 20px;
-  margin-bottom: 1px;
-}
-div.sa-container .cb-editor-field > .buttonbar-div > label.togglebutton {
-  padding: 2px 5px;
-  line-height: 12px;
 }
 div.sa-question,
 div.sa-hint,

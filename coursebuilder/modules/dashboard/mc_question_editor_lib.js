@@ -19,7 +19,7 @@ function ToggleButton(divNode, aText, bText, aCallback, bCallback) {
   this.aCallback = aCallback;
   this.bCallback = bCallback;
 
-  this.button = divNode.create('<button></button>');
+  this.button = divNode.create('<button class="gcb-button"></button>');
   this.button.set('text', aText);
   this.button.on('click', function(ev) {
     ev.preventDefault();

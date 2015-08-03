@@ -110,15 +110,15 @@ class ResourceSAQuestion(ResourceQuestionBase):
         sa_question.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         sa_question.add_property(schema_fields.SchemaField(
+            'description', 'Description', 'string', optional=True,
+            extra_schema_dict_values={'className': 'sa-description'},
+            description=messages.QUESTION_DESCRIPTION))
+        sa_question.add_property(schema_fields.SchemaField(
             'question', 'Question', 'html', optional=True,
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'sa-question'}))
-        sa_question.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True,
-            extra_schema_dict_values={'className': 'sa-description'},
-            description=messages.QUESTION_DESCRIPTION))
         sa_question.add_property(schema_fields.SchemaField(
             'hint', 'Hint', 'html', optional=True,
             extra_schema_dict_values={'className': 'sa-hint'}))
@@ -194,6 +194,10 @@ class ResourceMCQuestion(ResourceQuestionBase):
             extra_schema_dict_values={'className': 'mc-container'})
 
         mc_question.add_property(schema_fields.SchemaField(
+            'description', 'Description', 'string', optional=True,
+            extra_schema_dict_values={'className': 'mc-description'},
+            description=messages.QUESTION_DESCRIPTION))
+        mc_question.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         mc_question.add_property(schema_fields.SchemaField(
             'question', 'Question', 'html', optional=True,
@@ -201,10 +205,6 @@ class ResourceMCQuestion(ResourceQuestionBase):
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'mc-question'}))
-        mc_question.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True,
-            extra_schema_dict_values={'className': 'mc-description'},
-            description=messages.QUESTION_DESCRIPTION))
         mc_question.add_property(schema_fields.SchemaField(
             'multiple_selections', 'Selection', 'boolean',
             optional=True,
