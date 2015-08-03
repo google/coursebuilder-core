@@ -6,8 +6,63 @@
   overflow: hidden;
   width: 100%;
 }
+.cb-embed-icon {
+  padding-right: 6px;
+  vertical-align: middle;
+}
+/* The containing page could have a .material-icon class. Use our own instead.
+   Styles sourced from https://google.github.io/material-design-icons.
+   TODO(johncox): iframe all embed content so we no longer need this reset. */
+.cb-embed-material-icon {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-family: 'Material Icons';
+  font-feature-settings: 'liga';
+  font-size: 24px;
+  font-style: normal;
+  font-weight: normal;
+  height: 1em;
+  letter-spacing: normal;
+  line-height: 1;
+  text-rendering: optimizeLegibility;
+  text-transform: none;
+  width: 1em;
+  word-wrap: normal;
+}
+.cb-embed-sign-in-button {
+  -webkit-font-smoothing: antialiased;
+  background-color: rgb(0, 150, 136);
+  border-radius: 3px;
+  border: 0;
+  box-shadow: 0 2px 5px 0 rgba(0,0,0,.26);
+  box-sizing: border-box;
+  color: rgba(255, 255, 255, 0.87);
+  display: inline-block;
+  font-weight: 500;
+  font: 14px RobotoDraft, Roboto, 'Helvetica Neue', sans-serif;
+  line-height: 36px;
+  margin: 6px 8px;
+  min-height: 36px;
+  min-width: 64px;
+  outline: 0;
+  overflow: hidden;
+  padding: 0 14px 0 8px;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.cb-embed-sign-in-container {
+  cursor: pointer;
+  display: inline-block;
+  min-height: 48px;
+}
+.cb-embed-sign-in-content {
+  font-weight: 700;
+}
 cb-embed {
-  background-color: #ccc;
-  border: 1px solid black;
   display: block;
 }

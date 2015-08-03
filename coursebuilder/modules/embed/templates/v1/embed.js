@@ -1,13 +1,16 @@
 if (typeof window._GCB_EMBED === 'undefined') {
   window._GCB_EMBED = {
+    embedCssLinkAdded: false,
     embedLibScriptAdded: false,
     jqueryScriptAdded: false,
-    stylesheetLinkAdded: false,
+    materialIconsCssLinkAdded: false,
+    robotoCssLinkAdded: false,
 
     isReady: function() {
       return (
-        this.embedLibScriptAdded && this.jqueryScriptAdded &&
-        this.stylesheetLinkAdded);
+        this.embedCssLinkAdded && this.embedLibScriptAdded &&
+        this.jqueryScriptAdded && this.materialIconsCssLinkAdded &&
+        this.robotoCssLinkAdded);
     }
   };
 }
@@ -17,6 +20,8 @@ if (typeof window._GCB_EMBED === 'undefined') {
   var EMBED_CSS_URL = ENV['EMBED_CSS_URL'];
   var EMBED_LIB_JS_URL =  ENV['EMBED_LIB_JS_URL'];
   var JQUERY_URL = ENV['JQUERY_URL'];
+  var MATERIAL_ICONS_URL = ENV['MATERIAL_ICONS_URL'];
+  var ROBOTO_URL = ENV['ROBOTO_URL'];
 
   function addOnLoadEventListener(f) {
     // TODO(johncox): this breaks in IE8. Need to think about cross-browser
@@ -50,21 +55,49 @@ if (typeof window._GCB_EMBED === 'undefined') {
     document.body.appendChild(scriptTag);
   }
 
-  function appendStylesheetLink() {
+  function appendEmbedCssLink() {
+    if (pageState.embedCssLinkAdded) {
+      return;
+    }
+
+    appendStylesheetLink(EMBED_CSS_URL);
+    pageState.embedCssLinkAdded = true;
+  }
+
+  function appendMaterialIconsCssLink() {
+    if (pageState.materialIconsCssLinkAdded) {
+      return;
+    }
+
+    appendStylesheetLink(MATERIAL_ICONS_URL);
+    pageState.materialIconsCssLinkAdded = true;
+  }
+
+  function appendRobotoCssLink() {
+    if (pageState.robotoCssLinkAdded) {
+      return;
+    }
+
+    appendStylesheetLink(ROBOTO_URL);
+    pageState.robotoCssLinkAdded = true;
+  }
+
+  function appendStylesheetLink(linkUrl) {
     if (pageState.stylesheetLinkAdded) {
       return;
     }
 
     var linkTag = document.createElement('link');
-    linkTag.setAttribute('href', EMBED_CSS_URL);
+    linkTag.setAttribute('href', linkUrl);
     linkTag.setAttribute('rel', 'stylesheet');
     linkTag.setAttribute('type', 'text/css');
     document.head.appendChild(linkTag);
-    pageState.stylesheetLinkAdded = true;
   }
 
   function onLoadHandler() {
-    appendStylesheetLink();
+    appendEmbedCssLink();
+    appendMaterialIconsCssLink();
+    appendRobotoCssLink();
     appendJqueryScript();
     appendEmbedLibScript();  // Requires jQuery.
   }

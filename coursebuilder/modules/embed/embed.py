@@ -105,6 +105,8 @@ _KIND_NAME = 'kind'
 _FINISH_AUTH_NAME = 'finish_auth.html'
 _FINISH_AUTH_URL = '%s/%s' % (_BASE_URL_V1, 'auth')
 _JQUERY_URL = 'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js'
+_MATERIAL_ICONS_URL = 'https://fonts.googleapis.com/icon?family=Material+Icons'
+_ROBOTO_URL = 'http://fonts.googleapis.com/css?family=Roboto'
 
 _LOG = logging.getLogger('modules.embed.embed')
 
@@ -308,6 +310,8 @@ class _EmbedJsHandler(_AbstractJsHandler):
             'EMBED_CSS_URL': self._get_absolute_embed_css_url(),
             'EMBED_LIB_JS_URL': self._get_absolute_embed_lib_js_url(),
             'JQUERY_URL': _JQUERY_URL,
+            'MATERIAL_ICONS_URL': _MATERIAL_ICONS_URL,
+            'ROBOTO_URL': _ROBOTO_URL,
         }
 
 

@@ -304,7 +304,7 @@ class EmbedModuleTest(BaseIntegrationTest):
 
         local_error_page = pageobjects.EmbedModuleDemoPage(self).load(
             self.get_local_errors_url())
-        local_error_page.click_sign_in()
+        local_error_page.click_first_sign_in_control()
         self.switch_to_login_window().login(self.email)
         local_error_page = self.switch_to_demo_window()
 
@@ -335,7 +335,7 @@ class EmbedModuleTest(BaseIntegrationTest):
         self.assert_cb_embed_iframes_not_present(demo_page)
 
         cb_embed_srcs = demo_page.get_cb_embed_srcs()
-        demo_page.click_sign_in()
+        demo_page.click_first_sign_in_control()
         self.switch_to_login_window().login(self.email)
         demo_page = self.switch_to_demo_window()
 

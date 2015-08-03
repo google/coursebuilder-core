@@ -11,7 +11,12 @@
   var EMBED_TAG_NAME = 'cb-embed';
   var ERROR_CLASS = EMBED_TAG_NAME + '-error';
   var IFRAME_CLASS = EMBED_TAG_NAME + '-frame';
-  var SIGN_IN_CLASS = EMBED_TAG_NAME + '-sign-in';
+  var SIGN_IN_BUTTON_CLASS = EMBED_TAG_NAME + '-sign-in-button';
+  var SIGN_IN_CONTAINER_CLASS = EMBED_TAG_NAME + '-sign-in-container';
+  var SIGN_IN_CONTENT_CLASS = EMBED_TAG_NAME + '-sign-in-content';
+
+  var MATERIAL_ICONS_CLASS = EMBED_TAG_NAME + '-material-icon';
+  var SIGN_IN_ICON_CLASS = EMBED_TAG_NAME + '-icon';
 
   function debounce(fn, timeoutMillis) {
     var timeoutId;
@@ -175,16 +180,24 @@
       this._parentElement.empty().append(div);
     },
     showUnauthenticated: function() {
-      var a = $('<a>')
-        .attr('href', SIGN_IN_URL)
-        .attr('target', '_blank')
-        .text('Click here to sign in and use this widget.');
-      var p = $('<p>').append(a);
-      var div = $('<div>')
-        .attr('class', SIGN_IN_CLASS)
-        .append(p);
+      var container = $(
+        '<div>' +
+        '  <button>' +
+        '    <i>play_arrow</i>' +
+        '    <span>Start</span>' +
+        '  </button>' +
+        '</div>'
+      );
+      container.addClass(SIGN_IN_CONTAINER_CLASS);
+      container.click(function() {
+        window.open(SIGN_IN_URL);
+      });
+      container.find('button').addClass(SIGN_IN_BUTTON_CLASS);
+      container.find('i')
+        .addClass(MATERIAL_ICONS_CLASS + ' ' + SIGN_IN_ICON_CLASS);
+      container.find('span').addClass(SIGN_IN_CONTENT_CLASS);
 
-      this._parentElement.empty().append(div);
+      this._parentElement.empty().append(container);
     },
     validate: function(allowedCbEmbedSrcPrefix) {
       if (!this._srcMatchesOrigin()) {

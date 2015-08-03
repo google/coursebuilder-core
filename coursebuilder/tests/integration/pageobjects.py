@@ -1342,15 +1342,19 @@ class EmbedModuleDemoPage(PageObject):
         self.get(url)
         return self
 
-    def click_sign_in(self):
-        needle = 'Click here to sign in and use this widget.'
-
-        def js_libs_loaded_and_widgets_displayed(unused_driver):
-            return self.find_element_by_link_text(needle)
-
-        self.wait().until(js_libs_loaded_and_widgets_displayed)
-        self.find_element_by_link_text(needle).click()
+    def click_first_sign_in_control(self):
+        embed = self.get_cb_embed_and_wait_until_rendered(0)
+        embed.find_element_by_css_selector('.cb-embed-sign-in-button').click()
         return LoginPage(self._tester)
+
+    def get_cb_embed_and_wait_until_rendered(self, index):
+        embed = self.get_cb_embed_elements()[index]
+
+        def embed_rendered(unused_driver):
+            return bool(embed.text)
+
+        self.wait().until(embed_rendered)
+        return embed
 
     def get_cb_embed_elements(self):
         return self._tester.driver.find_elements_by_tag_name('cb-embed')
@@ -1364,12 +1368,7 @@ class EmbedModuleDemoPage(PageObject):
 
     def get_cb_embed_text(self, index):
         """Gets text from a <cb-embed> that isn't an iframe."""
-        embed = self.get_cb_embed_elements()[index]
-
-        def embed_rendered(unused_driver):
-            return bool(embed.text)
-
-        self.wait().until(embed_rendered)
+        embed = self.get_cb_embed_and_wait_until_rendered(index)
         return embed.text
 
     def get_iframe(self, url):
