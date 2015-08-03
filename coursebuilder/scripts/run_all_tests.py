@@ -28,6 +28,7 @@ import datetime
 import logging
 import multiprocessing
 import os
+import re
 import signal
 import socket
 import stat
@@ -375,6 +376,31 @@ def make_default_parser():
     return parser
 
 
+
+def _parse_test_name(name):
+    """Attempts to convert the argument to a dotted test name.
+
+    If the test name is provided in the format output by unittest error
+    messages (e.g., "my_test (tests.functional.modules_my.MyModuleTest)")
+    then it is converted to a dotted test name
+    (e.g., "tests.functional.modules_my.MyModuleTest.my_test"). Otherwise
+    it is returned unmodified.
+    """
+
+    if not name:
+        return name
+
+    match = re.match(r"\s*(?P<method_name>\S+)\s+\((?P<class_name>\S+)\)\s*",
+        name)
+    if match:
+        return "{class_name}.{method_name}".format(
+            class_name=match.group('class_name'),
+            method_name=match.group('method_name'),
+        )
+    else:
+        return name
+
+
 def ensure_port_available(port_number):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -691,7 +717,8 @@ def select_tests_to_run(test_class_name):
 
 def run_all_tests(parsed_args, setup_deps=True):
     # get all applicable tests
-    test_classes = select_tests_to_run(parsed_args.test_class_name)
+    test_classes = select_tests_to_run(
+        _parse_test_name(parsed_args.test_class_name))
 
     # separate out integration and non-integration tests
     integration_tests = {}
