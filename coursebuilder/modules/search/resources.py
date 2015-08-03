@@ -318,7 +318,8 @@ class LessonResource(Resource):
         self.lesson_id = lesson.lesson_id
         self.title = unicode(lesson.title)
         if lesson.notes:
-            self.notes = urlparse.urljoin(PROTOCOL_PREFIX, lesson.notes)
+            self.notes = urlparse.urljoin(
+                PROTOCOL_PREFIX, unicode(lesson.notes))
         else:
             self.notes = ''
         if lesson.objectives:
