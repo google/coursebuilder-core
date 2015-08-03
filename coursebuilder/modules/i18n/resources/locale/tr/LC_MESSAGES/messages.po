@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-07-17 09:02-0700\n"
-"PO-Revision-Date: 2015-07-13 08:59-0700\n"
+"POT-Creation-Date: 2015-08-03 07:24-0700\n"
+"PO-Revision-Date: 2015-08-03 07:25-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: tr <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -282,7 +282,7 @@ msgstr "Adı Değiştir"
 #. course soon after un-enrolling.  It takes up to several
 #. hours to remove their data, and they are prevented from
 #. re-enrolling during that time to prevent problems.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:263
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:272
 msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
@@ -295,23 +295,23 @@ msgstr ""
 #. to delete their personal data.  This link only appears for users
 #. who are currently enrolled in the course or who were enrolled
 #. but still have personal data present in the course.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:411
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:426
 msgid "Delete My Data"
-msgstr ""
+msgstr "Verilerimi Sil"
 
 #. Shown when a student is unenrolling from a
 #. course.  Gives the student the option to have all
 #. their data permanently removed.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:430
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:445
 msgid "Delete all associated data"
-msgstr ""
+msgstr "İlişkilendirilmiş tüm verileri sil"
 
 #. Warns a student that they are about to remove all of              data
 #. collected from this student during the course.  This              deletion
 #. cannot be un-done.
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:27
 msgid "Once you delete your data, there is no way to recover it."
-msgstr ""
+msgstr "Verilerinizi sildiğinizde bunları kurtarmanızın yolu yoktur."
 
 #. When a student deletes their data, this warning appears
 #. indicating that the deletion applies only to the current course,
@@ -321,6 +321,8 @@ msgid ""
 "Deleting your content in this course will not delete your content from "
 "other courses.  You must delete your content for each course separately."
 msgstr ""
+"Bu kurstaki içeriğinizi sildiğinizde diğer kurslardaki içerikleriniz "
+"silinmez. Her bir kursa ait içeriğinizi ayrı ayrı silmeniz gerekir."
 
 #. When a student deletes their data from a course, this              warning
 #. appears to indicate that data is removed only for that              specific
@@ -333,6 +335,10 @@ msgid ""
 " document, you may wish to delete those posts or update your sharing "
 "settings in those products."
 msgstr ""
+"Bu işlem, diğer ürünlerdeki ve hizmetlerdeki içeriklerinizi de silmez. "
+"Örneğin, Google Grupları'nda bir yayın oluşturduysanız veya Google "
+"Drive'da bir doküman paylaştıysanız söz konusu ürünlerdeki bu yayınları "
+"silmek veya paylaşım ayarlarınızı güncellemek isteyebilirsiniz."
 
 #. Confirmation button, indicating that the student does              want to
 #. have all data about them removed from the course.
@@ -346,7 +352,7 @@ msgstr "Tamam"
 #. to have all data about them removed from the course.
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:63
 msgid "Cancel"
-msgstr ""
+msgstr "İptal"
 
 #. When a user is authenticating with an external identity provider    (e.g.,
 #. Facebook, Twitter), this prompt indicates the user should select    one of
@@ -359,26 +365,26 @@ msgstr "Devam etmek için bir hesap seçin."
 #. a parenthesized note that this is an example implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:6
 msgid "(SAMPLE) Please confirm your email change"
-msgstr ""
+msgstr "(ÖRNEK) Lütfen e-posta değişikliğinizi onaylayın"
 
 #. Page header text indicating that this is an example
 #. implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:12
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:12
 msgid "SAMPLE"
-msgstr ""
+msgstr "ÖRNEK"
 
 #. sentence fragment beginning the message that an email address
 #. has changed from one value to another.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:16
 msgid "An email change has been requested from"
-msgstr ""
+msgstr "E-posta adresi değişikliği için istekte bulunuldu. Eski adres:"
 
 #. sentence fragment connecting the old email address and the new email
 #. address.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:19
 msgid "to"
-msgstr ""
+msgstr "yeni adres:"
 
 #. sentence fragment beginning the text of the sentence providing the
 #. link for users to confirm email change.
@@ -386,7 +392,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:22
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:19
 msgid "Please visit"
-msgstr ""
+msgstr "Bu değişikliği onaylamak için lütfen"
 
 #. sentence fragment concluding the text of the sentence providing the
 #. link for users to confirm email change.
@@ -394,26 +400,26 @@ msgstr ""
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:26
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:23
 msgid "to confirm this change."
-msgstr ""
+msgstr "adresini ziyaret edin."
 
 #. message introducing the list of available diagnostic pieces of
 #. information.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:32
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:29
 msgid "Diagnostic information:"
-msgstr ""
+msgstr "Teşhis bilgileri:"
 
 #. Page title for the password reset HTML message, starting with a
 #. parenthesized note that this is an example implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:6
 msgid "(SAMPLE) Password reset confirmation"
-msgstr ""
+msgstr "(ÖRNEK) Şifre sıfırlama onayı"
 
 #. sentence fragment beginning the message that a password reset has
 #. been requested.
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:16
 msgid "A password change has been requested for"
-msgstr ""
+msgstr "Şu hesap için şifre değişikliği isteğinde bulunuldu:"
 
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:274
@@ -665,27 +671,27 @@ msgid "Search is currently unavailable."
 msgstr "Arama işlemi şu anda kullanılamıyor."
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:30
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:23
 msgid "Taught in this lesson:"
 msgstr "Bu derste öğretilenler:"
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:47
 msgid "Depends on:"
 msgstr "Gereken beceriler:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:58
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:51
 msgid "This lesson doesn't have any prerequisites."
 msgstr "Bu dersin herhangi bir önkoşulu yok."
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:66
 msgid "Leads to:"
 msgstr "Sağladığı beceriler:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:77
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:70
 msgid "This lesson isn't a prerequisite for any other skills."
 msgstr "Bu ders başka herhangi bir beceri için ön koşul değildir."
 
@@ -705,12 +711,13 @@ msgid "Proficiency level"
 msgstr "Yeterlilik seviyesi"
 
 #. Label for low skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:44
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:45
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
 msgid "low"
 msgstr "düşük"
 
 #. Label for high skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:52
 msgid "high"
 msgstr "yüksek"
 
@@ -810,13 +817,13 @@ msgid "Announcements"
 msgstr "Duyurular"
 
 #. Shown if the list of announcements is empty.
-#: experimental/coursebuilder/views/announcements.html:25
+#: experimental/coursebuilder/views/announcements.html:30
 msgid "Currently, there are no announcements."
 msgstr "Şu an için hiçbir duyuru yok."
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/views/assessment.html:34
+#: experimental/coursebuilder/views/assessment.html:38
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -826,12 +833,12 @@ msgstr ""
 "%(submission_due_date)s idi."
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:39
+#: experimental/coursebuilder/views/assessment.html:43
 msgid "Due date for this assignment: "
 msgstr "Bu ödevin teslim tarihi: "
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:49
+#: experimental/coursebuilder/views/assessment.html:53
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -842,17 +849,17 @@ msgstr ""
 "gönderdiğiniz yanıtlar, arkadaşlarınız tarafından incelenir."
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:63
+#: experimental/coursebuilder/views/assessment.html:67
 msgid "Submitted assignment"
 msgstr "Gönderilen ödev"
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:78
+#: experimental/coursebuilder/views/assessment.html:82
 msgid "Reviews received"
 msgstr "Alınan incelemeler"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:85
+#: experimental/coursebuilder/views/assessment.html:89
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -862,17 +869,17 @@ msgstr ""
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:92
+#: experimental/coursebuilder/views/assessment.html:96
 msgid "Go to the review dashboard"
 msgstr "İnceleme kontrol paneline git"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:97
+#: experimental/coursebuilder/views/assessment.html:101
 msgid "You have not received any peer reviews yet."
 msgstr "Henüz hiçbir arkadaş incelemesi almadınız."
 
 #. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/views/assessment.html:129
+#: experimental/coursebuilder/views/assessment.html:133
 msgid "This assessment is not available."
 msgstr "Bu değerlendirme kullanılamıyor."
 
@@ -1124,12 +1131,12 @@ msgid "YouTube Video Player"
 msgstr "YouTube Video Player"
 
 #. Link to a text version of a lesson video.
-#: experimental/coursebuilder/views/lesson_common.html:17
+#: experimental/coursebuilder/views/lesson_common.html:10
 msgid "Text Version"
 msgstr "Metin Sürümü"
 
 #. Text shown for a lesson that has not been made public.
-#: experimental/coursebuilder/views/lesson_common.html:33
+#: experimental/coursebuilder/views/lesson_common.html:26
 msgid "This lesson is not available."
 msgstr "Bu ders kullanılamıyor."
 
@@ -1198,13 +1205,13 @@ msgid "Review"
 msgstr "İnceleme"
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:53
+#: experimental/coursebuilder/views/review.html:55
 msgid "Back to the review dashboard."
 msgstr "İnceleme kontrol paneline dön."
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:61
+#: experimental/coursebuilder/views/review.html:63
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -1215,13 +1222,13 @@ msgstr ""
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:66
+#: experimental/coursebuilder/views/review.html:68
 msgid "Due date for this review: "
 msgstr "Bu incelemenin teslim tarihi: "
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:75
+#: experimental/coursebuilder/views/review.html:77
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
@@ -1231,23 +1238,23 @@ msgstr ""
 "yapamazsınız."
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:83
+#: experimental/coursebuilder/views/review.html:86
 msgid "Reviewed assignment"
 msgstr "İncelenen ödev"
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:86
+#: experimental/coursebuilder/views/review.html:89
 msgid "Assignment to review"
 msgstr "İncelenecek ödev"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:106
+#: experimental/coursebuilder/views/review.html:116
 msgid "Submitted review"
 msgstr "Gönderilen inceleme"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:121
+#: experimental/coursebuilder/views/review.html:131
 msgid "Review form"
 msgstr "İnceleme formu"
 
@@ -1512,5 +1519,4 @@ msgstr "Sonraki Sayfa"
 #: experimental/coursebuilder/views/unit.html:144
 msgid "End"
 msgstr "Son"
-
 

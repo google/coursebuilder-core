@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-07-17 09:02-0700\n"
-"PO-Revision-Date: 2015-07-13 08:59-0700\n"
+"POT-Creation-Date: 2015-08-03 07:24-0700\n"
+"PO-Revision-Date: 2015-08-03 07:24-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: hi <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -284,7 +284,7 @@ msgstr "नाम बदलें"
 #. course soon after un-enrolling.  It takes up to several
 #. hours to remove their data, and they are prevented from
 #. re-enrolling during that time to prevent problems.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:263
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:272
 msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
@@ -297,23 +297,23 @@ msgstr ""
 #. to delete their personal data.  This link only appears for users
 #. who are currently enrolled in the course or who were enrolled
 #. but still have personal data present in the course.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:411
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:426
 msgid "Delete My Data"
-msgstr ""
+msgstr "मेरा डेटा हटाएं"
 
 #. Shown when a student is unenrolling from a
 #. course.  Gives the student the option to have all
 #. their data permanently removed.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:430
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:445
 msgid "Delete all associated data"
-msgstr ""
+msgstr "सभी संबद्ध डेटा हटाएं"
 
 #. Warns a student that they are about to remove all of              data
 #. collected from this student during the course.  This              deletion
 #. cannot be un-done.
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:27
 msgid "Once you delete your data, there is no way to recover it."
-msgstr ""
+msgstr "अपना डेटा हटाने के बाद, इसे पुनर्प्राप्त करने का कोई तरीका नहीं है."
 
 #. When a student deletes their data, this warning appears
 #. indicating that the deletion applies only to the current course,
@@ -323,6 +323,9 @@ msgid ""
 "Deleting your content in this course will not delete your content from "
 "other courses.  You must delete your content for each course separately."
 msgstr ""
+"इस पाठ्यक्रम से अपनी सामग्री हटाने से अन्य पाठ्यक्रमों से आपकी सामग्री "
+"नहीं हटेगी. आपको अपने हर पाठ्यक्रम के लिए अपनी सामग्री अलग–अलग हटानी "
+"होगी."
 
 #. When a student deletes their data from a course, this              warning
 #. appears to indicate that data is removed only for that              specific
@@ -335,6 +338,10 @@ msgid ""
 " document, you may wish to delete those posts or update your sharing "
 "settings in those products."
 msgstr ""
+"इससे आपकी सामग्री अन्य उत्पादों और सेवाओं से भी नहीं हटेगी.  उदाहरण के "
+"लिए, यदि आपने Google समूह में कोई पोस्ट की है या कोई Google डिस्क "
+"दस्तावेज़ साझा किया है, तो आप वह पोस्ट हटाना या उन उत्पादों में अपनी "
+"साझाकरण सेटिंग अपडेट करना चाह सकते हैं."
 
 #. Confirmation button, indicating that the student does              want to
 #. have all data about them removed from the course.
@@ -348,7 +355,7 @@ msgstr "ठीक"
 #. to have all data about them removed from the course.
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:63
 msgid "Cancel"
-msgstr ""
+msgstr "अभी नहीं"
 
 #. When a user is authenticating with an external identity provider    (e.g.,
 #. Facebook, Twitter), this prompt indicates the user should select    one of
@@ -361,26 +368,26 @@ msgstr "जारी रखने के लिए कोई खाता चु
 #. a parenthesized note that this is an example implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:6
 msgid "(SAMPLE) Please confirm your email change"
-msgstr ""
+msgstr "(नमूना) कृपया अपने ईमेल परिवर्तन की पुष्टि करें"
 
 #. Page header text indicating that this is an example
 #. implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:12
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:12
 msgid "SAMPLE"
-msgstr ""
+msgstr "नमूना"
 
 #. sentence fragment beginning the message that an email address
 #. has changed from one value to another.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:16
 msgid "An email change has been requested from"
-msgstr ""
+msgstr "ईमेल बदलने का अनुरोध. इससे:"
 
 #. sentence fragment connecting the old email address and the new email
 #. address.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:19
 msgid "to"
-msgstr ""
+msgstr "इसमें:"
 
 #. sentence fragment beginning the text of the sentence providing the
 #. link for users to confirm email change.
@@ -388,7 +395,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:22
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:19
 msgid "Please visit"
-msgstr ""
+msgstr "इस बदलाव की पुष्टि के लिए कृपया"
 
 #. sentence fragment concluding the text of the sentence providing the
 #. link for users to confirm email change.
@@ -396,26 +403,26 @@ msgstr ""
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:26
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:23
 msgid "to confirm this change."
-msgstr ""
+msgstr "देखें."
 
 #. message introducing the list of available diagnostic pieces of
 #. information.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:32
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:29
 msgid "Diagnostic information:"
-msgstr ""
+msgstr "नैदानिक जानकारी:"
 
 #. Page title for the password reset HTML message, starting with a
 #. parenthesized note that this is an example implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:6
 msgid "(SAMPLE) Password reset confirmation"
-msgstr ""
+msgstr "(नमूना) पासवर्ड रीसेट करने की पुष्टि"
 
 #. sentence fragment beginning the message that a password reset has
 #. been requested.
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:16
 msgid "A password change has been requested for"
-msgstr ""
+msgstr "इसके लिए पासवर्ड बदलने का अनुरोध किया गया है:"
 
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:274
@@ -669,27 +676,27 @@ msgid "Search is currently unavailable."
 msgstr "खोज वर्तमान में अनुपलब्ध है."
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:30
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:23
 msgid "Taught in this lesson:"
 msgstr "इस अध्याय में सिखाए गए:"
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:47
 msgid "Depends on:"
 msgstr "इस पर निर्भर करता है:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:58
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:51
 msgid "This lesson doesn't have any prerequisites."
 msgstr "इस अध्याय में कोई पूर्वापेक्षा नहीं है."
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:66
 msgid "Leads to:"
 msgstr "इससे यह शिक्षा मिलती है:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:77
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:70
 msgid "This lesson isn't a prerequisite for any other skills."
 msgstr "यह पाठ किसी भी अन्य कौशल के लिए पूर्वापेक्षित नहीं है."
 
@@ -709,12 +716,13 @@ msgid "Proficiency level"
 msgstr "दक्षता स्तर"
 
 #. Label for low skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:44
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:45
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
 msgid "low"
 msgstr "निम्‍न"
 
 #. Label for high skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:52
 msgid "high"
 msgstr "उच्च"
 
@@ -820,13 +828,13 @@ msgid "Announcements"
 msgstr "घोषणाएं"
 
 #. Shown if the list of announcements is empty.
-#: experimental/coursebuilder/views/announcements.html:25
+#: experimental/coursebuilder/views/announcements.html:30
 msgid "Currently, there are no announcements."
 msgstr "वर्तमान में कोई घोषणा नहीं है."
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/views/assessment.html:34
+#: experimental/coursebuilder/views/assessment.html:38
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -836,12 +844,12 @@ msgstr ""
 "%(submission_due_date)s था."
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:39
+#: experimental/coursebuilder/views/assessment.html:43
 msgid "Due date for this assignment: "
 msgstr "इस असाइनमेंट का नियत दिनांक: "
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:49
+#: experimental/coursebuilder/views/assessment.html:53
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -853,17 +861,17 @@ msgstr ""
 "आपके मित्रों द्वारा समीक्षा की जाएगी."
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:63
+#: experimental/coursebuilder/views/assessment.html:67
 msgid "Submitted assignment"
 msgstr "सबमिट किया गया असाइनमेंट"
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:78
+#: experimental/coursebuilder/views/assessment.html:82
 msgid "Reviews received"
 msgstr "समीक्षाएं प्राप्त हुईं"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:85
+#: experimental/coursebuilder/views/assessment.html:89
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -873,17 +881,17 @@ msgstr ""
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:92
+#: experimental/coursebuilder/views/assessment.html:96
 msgid "Go to the review dashboard"
 msgstr "समीक्षा डैशबोर्ड पर जाएं"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:97
+#: experimental/coursebuilder/views/assessment.html:101
 msgid "You have not received any peer reviews yet."
 msgstr "आपने अभी तक कोई मित्र समीक्षा प्राप्त नहीं की है."
 
 #. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/views/assessment.html:129
+#: experimental/coursebuilder/views/assessment.html:133
 msgid "This assessment is not available."
 msgstr "यह आंकलन उपलब्ध नहीं है."
 
@@ -1135,12 +1143,12 @@ msgid "YouTube Video Player"
 msgstr "YouTube Video Player"
 
 #. Link to a text version of a lesson video.
-#: experimental/coursebuilder/views/lesson_common.html:17
+#: experimental/coursebuilder/views/lesson_common.html:10
 msgid "Text Version"
 msgstr "लेख वर्शन"
 
 #. Text shown for a lesson that has not been made public.
-#: experimental/coursebuilder/views/lesson_common.html:33
+#: experimental/coursebuilder/views/lesson_common.html:26
 msgid "This lesson is not available."
 msgstr "यह लेख उपलब्ध नहीं है."
 
@@ -1209,13 +1217,13 @@ msgid "Review"
 msgstr "समीक्षा करें"
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:53
+#: experimental/coursebuilder/views/review.html:55
 msgid "Back to the review dashboard."
 msgstr "समीक्षा डैशबोर्ड पर वापस जाएं."
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:61
+#: experimental/coursebuilder/views/review.html:63
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -1226,13 +1234,13 @@ msgstr ""
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:66
+#: experimental/coursebuilder/views/review.html:68
 msgid "Due date for this review: "
 msgstr "इस समीक्षा का नियत दिनांक: "
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:75
+#: experimental/coursebuilder/views/review.html:77
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
@@ -1242,23 +1250,23 @@ msgstr ""
 "कर सकते."
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:83
+#: experimental/coursebuilder/views/review.html:86
 msgid "Reviewed assignment"
 msgstr "समीक्षा किया गया असाइनमेंट"
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:86
+#: experimental/coursebuilder/views/review.html:89
 msgid "Assignment to review"
 msgstr "समीक्षा के लिए असाइनमेंट"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:106
+#: experimental/coursebuilder/views/review.html:116
 msgid "Submitted review"
 msgstr "सबमिट की गई समीक्षा"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:121
+#: experimental/coursebuilder/views/review.html:131
 msgid "Review form"
 msgstr "फ़ॉर्म की समीक्षा करें"
 
@@ -1527,5 +1535,4 @@ msgstr "अगला पृष्ठ"
 #: experimental/coursebuilder/views/unit.html:144
 msgid "End"
 msgstr "समाप्त"
-
 

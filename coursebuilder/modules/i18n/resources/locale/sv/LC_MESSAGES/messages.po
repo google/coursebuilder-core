@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-07-17 09:02-0700\n"
-"PO-Revision-Date: 2015-07-13 08:59-0700\n"
+"POT-Creation-Date: 2015-08-03 07:24-0700\n"
+"PO-Revision-Date: 2015-08-03 07:25-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sv <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -282,7 +282,7 @@ msgstr "Ändra namn"
 #. course soon after un-enrolling.  It takes up to several
 #. hours to remove their data, and they are prevented from
 #. re-enrolling during that time to prevent problems.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:263
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:272
 msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
@@ -296,23 +296,23 @@ msgstr ""
 #. to delete their personal data.  This link only appears for users
 #. who are currently enrolled in the course or who were enrolled
 #. but still have personal data present in the course.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:411
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:426
 msgid "Delete My Data"
-msgstr ""
+msgstr "Radera min data"
 
 #. Shown when a student is unenrolling from a
 #. course.  Gives the student the option to have all
 #. their data permanently removed.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:430
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:445
 msgid "Delete all associated data"
-msgstr ""
+msgstr "Radera all kopplad data"
 
 #. Warns a student that they are about to remove all of              data
 #. collected from this student during the course.  This              deletion
 #. cannot be un-done.
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:27
 msgid "Once you delete your data, there is no way to recover it."
-msgstr ""
+msgstr "Raderad data kan inte återställas."
 
 #. When a student deletes their data, this warning appears
 #. indicating that the deletion applies only to the current course,
@@ -322,6 +322,8 @@ msgid ""
 "Deleting your content in this course will not delete your content from "
 "other courses.  You must delete your content for each course separately."
 msgstr ""
+"Data som hör till andra kurser påverkas inte av att du raderar innehållet"
+" för den här kursen. Du måste radera data för varje kurs för sig."
 
 #. When a student deletes their data from a course, this              warning
 #. appears to indicate that data is removed only for that              specific
@@ -334,6 +336,10 @@ msgid ""
 " document, you may wish to delete those posts or update your sharing "
 "settings in those products."
 msgstr ""
+"Innehåll i andra produkter och tjänster raderas inte heller. Om du t.ex. "
+"har skrivit ett inlägg i Google Grupper eller delat ett dokument på "
+"Google Drive kanske du vill radera de inläggen eller uppdatera "
+"delningsinställningarna i de produkterna."
 
 #. Confirmation button, indicating that the student does              want to
 #. have all data about them removed from the course.
@@ -347,7 +353,7 @@ msgstr "OK"
 #. to have all data about them removed from the course.
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:63
 msgid "Cancel"
-msgstr ""
+msgstr "Avbryt"
 
 #. When a user is authenticating with an external identity provider    (e.g.,
 #. Facebook, Twitter), this prompt indicates the user should select    one of
@@ -360,26 +366,26 @@ msgstr "Välj ett konto om du vill fortsätta."
 #. a parenthesized note that this is an example implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:6
 msgid "(SAMPLE) Please confirm your email change"
-msgstr ""
+msgstr "(EXEMPEL) Bekräfta ändrad e-postadress"
 
 #. Page header text indicating that this is an example
 #. implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:12
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:12
 msgid "SAMPLE"
-msgstr ""
+msgstr "EXEMPEL"
 
 #. sentence fragment beginning the message that an email address
 #. has changed from one value to another.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:16
 msgid "An email change has been requested from"
-msgstr ""
+msgstr "En begäran har skickats om att ändra e-postadress från"
 
 #. sentence fragment connecting the old email address and the new email
 #. address.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:19
 msgid "to"
-msgstr ""
+msgstr "till"
 
 #. sentence fragment beginning the text of the sentence providing the
 #. link for users to confirm email change.
@@ -387,7 +393,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:22
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:19
 msgid "Please visit"
-msgstr ""
+msgstr "Besök"
 
 #. sentence fragment concluding the text of the sentence providing the
 #. link for users to confirm email change.
@@ -395,26 +401,26 @@ msgstr ""
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:26
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:23
 msgid "to confirm this change."
-msgstr ""
+msgstr "och bekräfta ändringen."
 
 #. message introducing the list of available diagnostic pieces of
 #. information.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:32
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:29
 msgid "Diagnostic information:"
-msgstr ""
+msgstr "Diagnostisk information:"
 
 #. Page title for the password reset HTML message, starting with a
 #. parenthesized note that this is an example implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:6
 msgid "(SAMPLE) Password reset confirmation"
-msgstr ""
+msgstr "(EXEMPEL) Bekräfta återställning av lösenord"
 
 #. sentence fragment beginning the message that a password reset has
 #. been requested.
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:16
 msgid "A password change has been requested for"
-msgstr ""
+msgstr "En begäran om nytt lösenord har skickats för"
 
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:274
@@ -666,27 +672,27 @@ msgid "Search is currently unavailable."
 msgstr "Sök är för närvarande inte tillgängligt."
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:30
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:23
 msgid "Taught in this lesson:"
 msgstr "Det som lärs ut under den här lektionen:"
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:47
 msgid "Depends on:"
 msgstr "Krav:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:58
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:51
 msgid "This lesson doesn't have any prerequisites."
 msgstr "Det finns inga förkunskapskrav för den här lektionen."
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:66
 msgid "Leads to:"
 msgstr "Leder till:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:77
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:70
 msgid "This lesson isn't a prerequisite for any other skills."
 msgstr "Lektionen är inte en förutsättning för andra färdigheter."
 
@@ -706,12 +712,13 @@ msgid "Proficiency level"
 msgstr "Kunskapsnivå"
 
 #. Label for low skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:44
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:45
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
 msgid "low"
 msgstr "låg"
 
 #. Label for high skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:52
 msgid "high"
 msgstr "hög"
 
@@ -815,13 +822,13 @@ msgid "Announcements"
 msgstr "Meddelanden"
 
 #. Shown if the list of announcements is empty.
-#: experimental/coursebuilder/views/announcements.html:25
+#: experimental/coursebuilder/views/announcements.html:30
 msgid "Currently, there are no announcements."
 msgstr "För närvarande finns det inga meddelanden."
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/views/assessment.html:34
+#: experimental/coursebuilder/views/assessment.html:38
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -831,12 +838,12 @@ msgstr ""
 "Uppgiften skulle ha skickats in senast %(submission_due_date)s."
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:39
+#: experimental/coursebuilder/views/assessment.html:43
 msgid "Due date for this assignment: "
 msgstr "Inlämningsdatum för den här uppgiften: "
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:49
+#: experimental/coursebuilder/views/assessment.html:53
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -847,17 +854,17 @@ msgstr ""
 "Svaren som du skickar in här granskas av andra studenter."
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:63
+#: experimental/coursebuilder/views/assessment.html:67
 msgid "Submitted assignment"
 msgstr "Skickad uppgift"
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:78
+#: experimental/coursebuilder/views/assessment.html:82
 msgid "Reviews received"
 msgstr "Granskningar av uppgiften"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:85
+#: experimental/coursebuilder/views/assessment.html:89
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -867,17 +874,17 @@ msgstr ""
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:92
+#: experimental/coursebuilder/views/assessment.html:96
 msgid "Go to the review dashboard"
 msgstr "Visa granskningsöversikten"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:97
+#: experimental/coursebuilder/views/assessment.html:101
 msgid "You have not received any peer reviews yet."
 msgstr "Du har inte fått några granskningar av andra studenters uppgifter ännu."
 
 #. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/views/assessment.html:129
+#: experimental/coursebuilder/views/assessment.html:133
 msgid "This assessment is not available."
 msgstr "Bedömningen är inte tillgänglig."
 
@@ -1130,12 +1137,12 @@ msgid "YouTube Video Player"
 msgstr "YouTubes videospelare"
 
 #. Link to a text version of a lesson video.
-#: experimental/coursebuilder/views/lesson_common.html:17
+#: experimental/coursebuilder/views/lesson_common.html:10
 msgid "Text Version"
 msgstr "Textversion"
 
 #. Text shown for a lesson that has not been made public.
-#: experimental/coursebuilder/views/lesson_common.html:33
+#: experimental/coursebuilder/views/lesson_common.html:26
 msgid "This lesson is not available."
 msgstr "Den här lektionen är inte tillgänglig."
 
@@ -1204,13 +1211,13 @@ msgid "Review"
 msgstr "Granskning"
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:53
+#: experimental/coursebuilder/views/review.html:55
 msgid "Back to the review dashboard."
 msgstr "Tillbaka till granskningsöversikten."
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:61
+#: experimental/coursebuilder/views/review.html:63
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -1221,13 +1228,13 @@ msgstr ""
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:66
+#: experimental/coursebuilder/views/review.html:68
 msgid "Due date for this review: "
 msgstr "Granskningen måste slutföras innan det här datumet: "
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:75
+#: experimental/coursebuilder/views/review.html:77
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
@@ -1236,23 +1243,23 @@ msgstr ""
 "Du kan inte ändra granskningen när du har skickat in den."
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:83
+#: experimental/coursebuilder/views/review.html:86
 msgid "Reviewed assignment"
 msgstr "Granskad uppgift"
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:86
+#: experimental/coursebuilder/views/review.html:89
 msgid "Assignment to review"
 msgstr "Uppgift som måste granskas"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:106
+#: experimental/coursebuilder/views/review.html:116
 msgid "Submitted review"
 msgstr "Skickad granskning"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:121
+#: experimental/coursebuilder/views/review.html:131
 msgid "Review form"
 msgstr "Granskningsformulär"
 
@@ -1514,5 +1521,4 @@ msgstr "Nästa sida"
 #: experimental/coursebuilder/views/unit.html:144
 msgid "End"
 msgstr "Slut"
-
 

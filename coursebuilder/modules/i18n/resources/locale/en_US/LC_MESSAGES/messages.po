@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-07-17 09:02-0700\n"
+"POT-Creation-Date: 2015-08-03 07:24-0700\n"
 "PO-Revision-Date: 2012-12-12 15:10-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en_US <LL@li.org>\n"
@@ -282,7 +282,7 @@ msgstr ""
 #. course soon after un-enrolling.  It takes up to several
 #. hours to remove their data, and they are prevented from
 #. re-enrolling during that time to prevent problems.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:263
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:272
 msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
@@ -293,14 +293,14 @@ msgstr ""
 #. to delete their personal data.  This link only appears for users
 #. who are currently enrolled in the course or who were enrolled
 #. but still have personal data present in the course.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:411
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:426
 msgid "Delete My Data"
 msgstr ""
 
 #. Shown when a student is unenrolling from a
 #. course.  Gives the student the option to have all
 #. their data permanently removed.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:430
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:445
 msgid "Delete all associated data"
 msgstr ""
 
@@ -656,27 +656,27 @@ msgid "Search is currently unavailable."
 msgstr ""
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:30
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:23
 msgid "Taught in this lesson:"
 msgstr ""
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:47
 msgid "Depends on:"
 msgstr ""
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:58
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:51
 msgid "This lesson doesn't have any prerequisites."
 msgstr ""
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:66
 msgid "Leads to:"
 msgstr ""
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:77
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:70
 msgid "This lesson isn't a prerequisite for any other skills."
 msgstr ""
 
@@ -696,12 +696,13 @@ msgid "Proficiency level"
 msgstr ""
 
 #. Label for low skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:44
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:45
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
 msgid "low"
 msgstr ""
 
 #. Label for high skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:52
 msgid "high"
 msgstr ""
 
@@ -799,13 +800,13 @@ msgid "Announcements"
 msgstr ""
 
 #. Shown if the list of announcements is empty.
-#: experimental/coursebuilder/views/announcements.html:25
+#: experimental/coursebuilder/views/announcements.html:30
 msgid "Currently, there are no announcements."
 msgstr ""
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/views/assessment.html:34
+#: experimental/coursebuilder/views/assessment.html:38
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -813,12 +814,12 @@ msgid ""
 msgstr ""
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:39
+#: experimental/coursebuilder/views/assessment.html:43
 msgid "Due date for this assignment: "
 msgstr ""
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:49
+#: experimental/coursebuilder/views/assessment.html:53
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -826,17 +827,17 @@ msgid ""
 msgstr ""
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:63
+#: experimental/coursebuilder/views/assessment.html:67
 msgid "Submitted assignment"
 msgstr ""
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:78
+#: experimental/coursebuilder/views/assessment.html:82
 msgid "Reviews received"
 msgstr ""
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:85
+#: experimental/coursebuilder/views/assessment.html:89
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -844,17 +845,17 @@ msgstr ""
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:92
+#: experimental/coursebuilder/views/assessment.html:96
 msgid "Go to the review dashboard"
 msgstr ""
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:97
+#: experimental/coursebuilder/views/assessment.html:101
 msgid "You have not received any peer reviews yet."
 msgstr ""
 
 #. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/views/assessment.html:129
+#: experimental/coursebuilder/views/assessment.html:133
 msgid "This assessment is not available."
 msgstr ""
 
@@ -1089,12 +1090,12 @@ msgid "YouTube Video Player"
 msgstr ""
 
 #. Link to a text version of a lesson video.
-#: experimental/coursebuilder/views/lesson_common.html:17
+#: experimental/coursebuilder/views/lesson_common.html:10
 msgid "Text Version"
 msgstr ""
 
 #. Text shown for a lesson that has not been made public.
-#: experimental/coursebuilder/views/lesson_common.html:33
+#: experimental/coursebuilder/views/lesson_common.html:26
 msgid "This lesson is not available."
 msgstr ""
 
@@ -1163,13 +1164,13 @@ msgid "Review"
 msgstr ""
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:53
+#: experimental/coursebuilder/views/review.html:55
 msgid "Back to the review dashboard."
 msgstr ""
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:61
+#: experimental/coursebuilder/views/review.html:63
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -1178,36 +1179,36 @@ msgstr ""
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:66
+#: experimental/coursebuilder/views/review.html:68
 msgid "Due date for this review: "
 msgstr ""
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:75
+#: experimental/coursebuilder/views/review.html:77
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
 msgstr ""
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:83
+#: experimental/coursebuilder/views/review.html:86
 msgid "Reviewed assignment"
 msgstr ""
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:86
+#: experimental/coursebuilder/views/review.html:89
 msgid "Assignment to review"
 msgstr ""
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:106
+#: experimental/coursebuilder/views/review.html:116
 msgid "Submitted review"
 msgstr ""
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:121
+#: experimental/coursebuilder/views/review.html:131
 msgid "Review form"
 msgstr ""
 
@@ -1463,5 +1464,4 @@ msgstr ""
 #: experimental/coursebuilder/views/unit.html:144
 msgid "End"
 msgstr ""
-
 

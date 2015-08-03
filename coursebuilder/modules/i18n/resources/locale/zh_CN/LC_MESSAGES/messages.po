@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-07-17 09:02-0700\n"
-"PO-Revision-Date: 2015-07-13 08:59-0700\n"
+"POT-Creation-Date: 2015-08-03 07:24-0700\n"
+"PO-Revision-Date: 2015-08-03 07:25-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: zh_CN <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -282,7 +282,7 @@ msgstr "更改名称"
 #. course soon after un-enrolling.  It takes up to several
 #. hours to remove their data, and they are prevented from
 #. re-enrolling during that time to prevent problems.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:263
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:272
 msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
@@ -293,23 +293,23 @@ msgstr "由于系统仍在删除您之前的数据，因此目前您无法重新
 #. to delete their personal data.  This link only appears for users
 #. who are currently enrolled in the course or who were enrolled
 #. but still have personal data present in the course.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:411
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:426
 msgid "Delete My Data"
-msgstr ""
+msgstr "删除我的数据"
 
 #. Shown when a student is unenrolling from a
 #. course.  Gives the student the option to have all
 #. their data permanently removed.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:430
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:445
 msgid "Delete all associated data"
-msgstr ""
+msgstr "删除所有相关数据"
 
 #. Warns a student that they are about to remove all of              data
 #. collected from this student during the course.  This              deletion
 #. cannot be un-done.
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:27
 msgid "Once you delete your data, there is no way to recover it."
-msgstr ""
+msgstr "您的数据一旦删除，便无法再恢复。"
 
 #. When a student deletes their data, this warning appears
 #. indicating that the deletion applies only to the current course,
@@ -318,7 +318,7 @@ msgstr ""
 msgid ""
 "Deleting your content in this course will not delete your content from "
 "other courses.  You must delete your content for each course separately."
-msgstr ""
+msgstr "删除此课程中的内容不会一并删除其他课程中的内容。您必须分别删除每门课程的内容。"
 
 #. When a student deletes their data from a course, this              warning
 #. appears to indicate that data is removed only for that              specific
@@ -331,6 +331,8 @@ msgid ""
 " document, you may wish to delete those posts or update your sharing "
 "settings in those products."
 msgstr ""
+"此操作不会删除您在其他产品和服务中的内容。例如，如果您在 Google 网上论坛中发过帖子，或者共享过 Google "
+"云端硬盘文档，您需要在这些产品中删除相应帖子或更新共享设置。"
 
 #. Confirmation button, indicating that the student does              want to
 #. have all data about them removed from the course.
@@ -344,7 +346,7 @@ msgstr "确定"
 #. to have all data about them removed from the course.
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:63
 msgid "Cancel"
-msgstr ""
+msgstr "取消"
 
 #. When a user is authenticating with an external identity provider    (e.g.,
 #. Facebook, Twitter), this prompt indicates the user should select    one of
@@ -357,26 +359,26 @@ msgstr "请选择一个帐户以继续。"
 #. a parenthesized note that this is an example implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:6
 msgid "(SAMPLE) Please confirm your email change"
-msgstr ""
+msgstr "（示例）请确认您的电子邮件地址更改内容"
 
 #. Page header text indicating that this is an example
 #. implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:12
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:12
 msgid "SAMPLE"
-msgstr ""
+msgstr "示例"
 
 #. sentence fragment beginning the message that an email address
 #. has changed from one value to another.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:16
 msgid "An email change has been requested from"
-msgstr ""
+msgstr "已请求将电子邮件地址从"
 
 #. sentence fragment connecting the old email address and the new email
 #. address.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:19
 msgid "to"
-msgstr ""
+msgstr "更改为"
 
 #. sentence fragment beginning the text of the sentence providing the
 #. link for users to confirm email change.
@@ -384,7 +386,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:22
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:19
 msgid "Please visit"
-msgstr ""
+msgstr "请访问"
 
 #. sentence fragment concluding the text of the sentence providing the
 #. link for users to confirm email change.
@@ -392,26 +394,26 @@ msgstr ""
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:26
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:23
 msgid "to confirm this change."
-msgstr ""
+msgstr "以确认此更改。"
 
 #. message introducing the list of available diagnostic pieces of
 #. information.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:32
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:29
 msgid "Diagnostic information:"
-msgstr ""
+msgstr "诊断信息："
 
 #. Page title for the password reset HTML message, starting with a
 #. parenthesized note that this is an example implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:6
 msgid "(SAMPLE) Password reset confirmation"
-msgstr ""
+msgstr "（示例）重设密码确认信息"
 
 #. sentence fragment beginning the message that a password reset has
 #. been requested.
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:16
 msgid "A password change has been requested for"
-msgstr ""
+msgstr "已请求更改以下内容的密码："
 
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:274
@@ -656,27 +658,27 @@ msgid "Search is currently unavailable."
 msgstr "目前无法进行搜索。"
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:30
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:23
 msgid "Taught in this lesson:"
 msgstr "本课程所授技能："
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:54
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:47
 msgid "Depends on:"
 msgstr "学习本课程前的必备技能："
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:58
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:51
 msgid "This lesson doesn't have any prerequisites."
 msgstr "本课程无需任何先修技能。"
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:73
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:66
 msgid "Leads to:"
 msgstr "学习本课程后可获得的技能："
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:77
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:70
 msgid "This lesson isn't a prerequisite for any other skills."
 msgstr "本课程并非掌握其他技能必须先完成的课程。"
 
@@ -696,12 +698,13 @@ msgid "Proficiency level"
 msgstr "熟练程度"
 
 #. Label for low skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:44
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:45
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
 msgid "low"
 msgstr "低"
 
 #. Label for high skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:52
 msgid "high"
 msgstr "高"
 
@@ -799,13 +802,13 @@ msgid "Announcements"
 msgstr "公告"
 
 #. Shown if the list of announcements is empty.
-#: experimental/coursebuilder/views/announcements.html:25
+#: experimental/coursebuilder/views/announcements.html:30
 msgid "Currently, there are no announcements."
 msgstr "目前没有任何通告。"
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/views/assessment.html:34
+#: experimental/coursebuilder/views/assessment.html:38
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -813,12 +816,12 @@ msgid ""
 msgstr "提交此作业的截止日期已过。截止日期为%(submission_due_date)s。"
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:39
+#: experimental/coursebuilder/views/assessment.html:43
 msgid "Due date for this assignment: "
 msgstr "本次作业的截止日期： "
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:49
+#: experimental/coursebuilder/views/assessment.html:53
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -826,17 +829,17 @@ msgid ""
 msgstr "您的作业只能提交一次。提交后，作业会变为只读格式，您将无法修改自己的答案。在此处提交的答案会由您的同学来评价。"
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:63
+#: experimental/coursebuilder/views/assessment.html:67
 msgid "Submitted assignment"
 msgstr "已提交的作业"
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:78
+#: experimental/coursebuilder/views/assessment.html:82
 msgid "Reviews received"
 msgstr "收到的评价"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:85
+#: experimental/coursebuilder/views/assessment.html:89
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -844,17 +847,17 @@ msgstr "在您完成此作业所需数量的同学评价后，系统会在此处
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:92
+#: experimental/coursebuilder/views/assessment.html:96
 msgid "Go to the review dashboard"
 msgstr "转至评价信息中心"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:97
+#: experimental/coursebuilder/views/assessment.html:101
 msgid "You have not received any peer reviews yet."
 msgstr "您尚未收到任何同学评价。"
 
 #. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/views/assessment.html:129
+#: experimental/coursebuilder/views/assessment.html:133
 msgid "This assessment is not available."
 msgstr "无法查看此项评估。"
 
@@ -1089,12 +1092,12 @@ msgid "YouTube Video Player"
 msgstr "YouTube 视频播放器"
 
 #. Link to a text version of a lesson video.
-#: experimental/coursebuilder/views/lesson_common.html:17
+#: experimental/coursebuilder/views/lesson_common.html:10
 msgid "Text Version"
 msgstr "文字版本"
 
 #. Text shown for a lesson that has not been made public.
-#: experimental/coursebuilder/views/lesson_common.html:33
+#: experimental/coursebuilder/views/lesson_common.html:26
 msgid "This lesson is not available."
 msgstr "本课程尚未对外发布。"
 
@@ -1163,13 +1166,13 @@ msgid "Review"
 msgstr "评价"
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:53
+#: experimental/coursebuilder/views/review.html:55
 msgid "Back to the review dashboard."
 msgstr "返回评价信息中心。"
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:61
+#: experimental/coursebuilder/views/review.html:63
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -1178,36 +1181,36 @@ msgstr "提交此评价的截止日期已过。截止日期为%(review_due_date)
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:66
+#: experimental/coursebuilder/views/review.html:68
 msgid "Due date for this review: "
 msgstr "本次评价的截止日期： "
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:75
+#: experimental/coursebuilder/views/review.html:77
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
 msgstr "您的同学将会看到您在此处提交的得分和评论。提交评价后，您将无法再进行修改。"
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:83
+#: experimental/coursebuilder/views/review.html:86
 msgid "Reviewed assignment"
 msgstr "已评价的作业"
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:86
+#: experimental/coursebuilder/views/review.html:89
 msgid "Assignment to review"
 msgstr "待评价的作业"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:106
+#: experimental/coursebuilder/views/review.html:116
 msgid "Submitted review"
 msgstr "已提交的评价"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:121
+#: experimental/coursebuilder/views/review.html:131
 msgid "Review form"
 msgstr "评价表单"
 
@@ -1463,5 +1466,4 @@ msgstr "下一页"
 #: experimental/coursebuilder/views/unit.html:144
 msgid "End"
 msgstr "结束"
-
 
