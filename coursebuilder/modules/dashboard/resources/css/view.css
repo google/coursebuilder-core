@@ -126,6 +126,7 @@ div#formContainer {
   border-radius: 3px;
   font-size: 12px;
   font-weight: normal;
+  cursor: default;
 }
 .gcb-button-toolbar {
   margin-top: 5px;
