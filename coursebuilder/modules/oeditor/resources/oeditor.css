@@ -634,13 +634,6 @@ div.CodeMirror {
 
 /* Styling for YUI and InputEx components. */
 
-.hidden {
-  visibility: hidden;
-  top: -9999px;
-  left: -9999px;
-  position: absolute;
-}
-
 .yui-resize .yui-resize-handle-br {
   z-index: 10;
 }

@@ -939,9 +939,13 @@ class CourseContentElement(DashboardEditor):
         self.wait().until(
             ec.frame_to_be_available_and_switch_to_it('modal-editor-iframe'))
         # Ensure inputEx has initialized too
-        self.wait().until(
-            ec.element_to_be_clickable(
-                (by.By.PARTIAL_LINK_TEXT, 'Close')))
+        close_clickable = ec.element_to_be_clickable(
+            (by.By.PARTIAL_LINK_TEXT, 'Close'))
+        save_clickable = ec.element_to_be_clickable(
+            (by.By.PARTIAL_LINK_TEXT, 'Save'))
+        def both_clickable(driver):
+            return close_clickable(driver) and save_clickable(driver)
+        self.wait().until(both_clickable)
 
     def set_rte_lightbox_field(self, field_css_selector, value):
         self._ensure_rte_iframe_ready_and_switch_to_it()
@@ -955,6 +959,10 @@ class CourseContentElement(DashboardEditor):
         self._ensure_rte_iframe_ready_and_switch_to_it()
         self.find_element_by_link_text('Save').click()
         self._tester.driver.switch_to_default_content()
+        def is_hidden(driver):
+            return 'hidden' in driver.find_element_by_id(
+                'modal-editor').get_attribute('class')
+        self.wait().until(is_hidden)
         return self
 
     def send_rte_text(self, text):
