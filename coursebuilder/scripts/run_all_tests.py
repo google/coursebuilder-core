@@ -356,22 +356,22 @@ def make_default_parser():
         type=str, default=None)
     parser.add_argument(
         '--skip_integration', help='Whether to run integration tests',
-        type=bool, default=False)
+        action='store_true')
     parser.add_argument(
         '--skip_non_integration',
         help='Whether to run functional and unit tests',
-        type=bool, default=False)
+        action='store_true')
     parser.add_argument(
         '--skip_pylint', help='Whether to run pylint tests',
-        type=bool, default=False)
+        action='store_true')
     parser.add_argument(
         '--ignore_pylint_failures',
         help='Whether to ignore pylint test failures',
-        type=bool, default=False)
+        action='store_true')
     parser.add_argument(
         '--verbose',
         help='Print more verbose output to help diagnose problems',
-        type=bool, default=False)
+        action='store_true')
     return parser
 
 
