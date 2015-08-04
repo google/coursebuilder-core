@@ -772,6 +772,7 @@ class AssessmentHandler(BaseHandler):
 
         self.template_value['unit_id'] = unit.unit_id
         self.template_value['now_available'] = unit.now_available
+        self.template_value['transient_student'] = student.is_transient
         self.template_value['as_lesson'] = as_lesson
         self.template_value['assessment_title'] = unit.title
         self.template_value['assessment_xsrf_token'] = (
