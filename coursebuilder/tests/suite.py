@@ -33,6 +33,8 @@ Good luck!
 __author__ = 'Sean Lip'
 
 import argparse
+import cStringIO
+import logging
 import os
 import shutil
 import sys
@@ -95,16 +97,51 @@ class TestBase(unittest.TestCase):
     STOP_AFTER_FIRST_FAILURE = False
     HAS_PENDING_FAILURE = False
 
+    # Log level for all tests in this test case. Override if you need to test
+    # against different logging levels. Be very careful when setting this to
+    # logging.DEBUG: downstream code is sometimes very chatty at logging.DEBUG,
+    # and can generate enough logging data that tests run out of memory.
+    LOG_LEVEL = logging.ERROR
+
     def setUp(self):
         if TestBase.STOP_AFTER_FIRST_FAILURE:
             assert not TestBase.HAS_PENDING_FAILURE
         super(TestBase, self).setUp()
+        self._set_up_logging()
         # e.g. TEST_DATA_BASE/tests/functional/tests/MyTestCase.
         self.test_tempdir = os.path.join(
             TEST_DATA_BASE, self.__class__.__module__.replace('.', os.sep),
             self.__class__.__name__)
         self.reset_filesystem()
         self._originals = {}  # Map of object -> {symbol_string: original_value}
+
+    def _set_up_logging(self):
+        self._log = cStringIO.StringIO()
+        self._stream_handler = logging.StreamHandler(self._log)
+        self._stream_handler.setFormatter(
+            logging.Formatter(fmt='%(levelname)s: %(message)s'))
+        self._logger = logging.getLogger()
+        self._logger.addHandler(self._stream_handler)
+        self._logger.setLevel(self.LOG_LEVEL)
+
+    def tearDown(self):
+        self._unswap_all()
+        self.reset_filesystem(remove_only=True)
+        self._tear_down_logging()
+        super(TestBase, self).tearDown()
+
+    def _tear_down_logging(self):
+        self._logger.removeHandler(self._stream_handler)
+        self._log.close()
+
+    def assertLogContains(self, message):
+        self.assertIn(message, self._log.getvalue())
+
+    def reset_filesystem(self, remove_only=False):
+        if os.path.exists(self.test_tempdir):
+            shutil.rmtree(self.test_tempdir)
+        if not remove_only:
+            os.makedirs(self.test_tempdir)
 
     def run(self, result=None):
         if not result:
@@ -113,16 +150,10 @@ class TestBase(unittest.TestCase):
         if not result.wasSuccessful():
             TestBase.HAS_PENDING_FAILURE = True
 
-    def tearDown(self):
-        self._unswap_all()
-        self.reset_filesystem(remove_only=True)
-        super(TestBase, self).tearDown()
-
-    def reset_filesystem(self, remove_only=False):
-        if os.path.exists(self.test_tempdir):
-            shutil.rmtree(self.test_tempdir)
-        if not remove_only:
-            os.makedirs(self.test_tempdir)
+    def shortDescription(self):
+        """Additional information logged during unittest invocation."""
+        # Suppress default logging of docstrings. Instead log name/status only.
+        return None
 
     def swap(self, source, symbol, new):  # pylint: disable=invalid-name
         """Swaps out source.symbol for a new value.
@@ -153,11 +184,6 @@ class TestBase(unittest.TestCase):
         for source, symbol_to_value in self._originals.iteritems():
             for symbol, value in symbol_to_value.iteritems():
                 setattr(source, symbol, value)
-
-    def shortDescription(self):
-        """Additional information logged during unittest invocation."""
-        # Suppress default logging of docstrings. Instead log name/status only.
-        return None
 
 
 class FunctionalTestBase(TestBase):

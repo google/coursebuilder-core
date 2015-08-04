@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 import copy
+import logging
 
 from common import users
 from models import config
@@ -1102,6 +1103,8 @@ class StudentFederatedEmailTest(_TestBase):
 
 
 class UsersServiceTest(_TestBase):
+
+    LOG_LEVEL = logging.INFO
 
     def setUp(self):
         super(UsersServiceTest, self).setUp()

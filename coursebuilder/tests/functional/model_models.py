@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 import datetime
+import logging
 
 from common import users
 from common import utils as common_utils
@@ -780,6 +781,7 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
     NAMESPACE = 'ns_' + COURSE
     ADMIN_EMAIL = 'admin@foo.com'
     STUDENT_EMAIL = 'student@foo.com'
+    LOG_LEVEL = logging.WARNING
 
     def setUp(self):
         super(StudentLifecycleObserverTestCase, self).setUp()
@@ -868,7 +870,6 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
         self.assertEquals(1, self._num_add_calls)
         self.assertEquals(1, self._num_unenroll_calls)
         self.assertEquals(1, self._num_reenroll_calls)
-
 
     def test_bad_event_name(self):
         with self.assertRaises(ValueError):

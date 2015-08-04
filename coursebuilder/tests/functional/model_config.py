@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 import appengine_config
+import logging
 
 from models import config
 from models import models
@@ -26,6 +27,8 @@ from tests.functional import actions
 
 
 class ValueLoadingTests(actions.TestBase):
+
+    LOG_LEVEL = logging.INFO
 
     def test_in_db_but_not_registered_not_registering_modules(self):
         config.ConfigPropertyEntity(key_name='foo', value='foo_value').put()

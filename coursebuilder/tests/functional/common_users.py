@@ -159,6 +159,8 @@ class AppEnginePassthroughUsersServiceTest(TestBase):
 
 class AuthInterceptorAndRequestHooksTest(TestBase):
 
+    LOG_LEVEL = logging.WARNING
+
     def getApp(self):
         return users.AuthInterceptorWSGIApplication([('/', TestHandler)])
 
