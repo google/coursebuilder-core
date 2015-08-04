@@ -22,6 +22,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import cgi
 import collections
 import cStringIO
+import logging
 import StringIO
 import traceback
 import unittest
@@ -3851,7 +3852,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                     'I18N Dashboard')
                 _profile('sample/dashboard?action=i18n_download', 'I18N Export')
 
-            print '\n', '\n'.join(lines)
+            logging.info('\n'.join(lines))
             self.assertFalse(over_quota[0], msg='Some items exceed quota.')
 
         finally:

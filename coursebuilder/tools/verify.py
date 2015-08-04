@@ -34,6 +34,7 @@ Good luck!
 
 import csv
 import json
+import logging
 import os
 import re
 from StringIO import StringIO
@@ -732,12 +733,12 @@ class Activity(object):
             'activity', SCHEMA['activity'], self.scope)
 
 
-def silent_echo(unused_message):
+def silent_echo(unused_level, unused_message):
     pass
 
 
-def echo(message):
-    print message
+def echo(level, message):
+    logging.log(level, message)
 
 
 def is_integer_list(s):
@@ -937,7 +938,7 @@ def convert_javascript_file_to_python(fname, root_name):
 def legacy_eval_python_expression_for_test(content, scope, unused_root_name):
     """Legacy content parsing function using compile/exec."""
 
-    print 'WARNING! This code is unsafe and uses compile/exec!'
+    logging.warning('WARNING! This code is unsafe and uses compile/exec!')
 
     # First compiles and then evaluates a Python script text in a restricted
     # environment using provided bindings. Returns the resulting bindings if
@@ -1305,18 +1306,18 @@ class Verifier(object):
 
     def fine(self, x):
         if OUTPUT_FINE_LOG:
-            self.echo_func('FINE: ' + x)
+            self.echo_func(20, 'FINE: ' + x)
 
     def info(self, x):
-        self.echo_func('INFO: ' + x)
+        self.echo_func(20, 'INFO: ' + x)
 
     def warn(self, x):
         self.warnings += 1
-        self.echo_func('WARNING: ' + x)
+        self.echo_func(30, 'WARNING: ' + x)
 
     def error(self, x):
         self.errors += 1
-        self.echo_func('ERROR: ' + x)
+        self.echo_func(40, 'ERROR: ' + x)
 
     def load_and_verify_model(self, echo_func):
         """Loads, parses and verifies all content for a course."""

@@ -4,10 +4,10 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import os
 
-import subprocess
 import unittest
 
 import appengine_config
+from scripts import run_all_tests
 
 
 class AllJavaScriptTests(unittest.TestCase):
@@ -16,7 +16,10 @@ class AllJavaScriptTests(unittest.TestCase):
         karma_conf = os.path.join(
             appengine_config.BUNDLE_ROOT, 'tests', 'unit',
             'javascript_tests', test_folder, 'karma.conf.js')
-        self.assertEqual(0, subprocess.call(['karma', 'start', karma_conf]))
+        result, out = run_all_tests.run([
+            'karma', 'start', karma_conf], verbose=False)
+        if result != 0:
+            raise Exception('Test failed: %s', out)
 
     def test_activity_generic(self):
         self.karma_test('assets_lib_activity_generic')

@@ -11,8 +11,5 @@ fi
 
 . "$(dirname "$0")/test_config.sh"
 
-echo Running functional tests
 python "$SOURCE_DIR/tests/suite.py" \
   --test_class_name "$1"
-
-echo Done!
