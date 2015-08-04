@@ -220,6 +220,20 @@ class EmbedModuleTest(BaseIntegrationTest):
     def assert_on_login_page(self):
         self.assertEquals('Login', self.driver.title)
 
+    def enable_module_handlers(self):
+        # TODO(johncox): remove after security audit of embed module.
+        self.load_root_page(
+        ).click_dashboard(
+        ).click_admin(
+        ).click_settings(
+        ).click_override(
+            'gcb_modules_embed_handlers_enabled'
+        ).set_value(
+            True
+        ).set_status(
+            'Active'
+        ).click_save()
+
     def get_demo_url(self):
         return (
             suite.TestBase.INTEGRATION_SERVER_BASE_URL + embed._DEMO_URL)
@@ -261,6 +275,7 @@ class EmbedModuleTest(BaseIntegrationTest):
 
     def test_embed_global_errors(self):
         self.load_sample_course()
+        self.enable_module_handlers()
         pageobjects.RootPage(self).click_logout()
 
         global_error_page = pageobjects.EmbedModuleDemoPage(self).load(
@@ -300,6 +315,7 @@ class EmbedModuleTest(BaseIntegrationTest):
         # cannot happen if there are any global errors, since global errors put
         # all embeds in a failed state.
         self.load_sample_course()
+        self.enable_module_handlers()
         pageobjects.RootPage(self).click_logout()
 
         local_error_page = pageobjects.EmbedModuleDemoPage(self).load(
@@ -327,6 +343,7 @@ class EmbedModuleTest(BaseIntegrationTest):
 
     def test_embed_render_lifecycle(self):
         self.load_sample_course()
+        self.enable_module_handlers()
         pageobjects.RootPage(self).click_logout()
 
         demo_page = pageobjects.EmbedModuleDemoPage(self).load(
