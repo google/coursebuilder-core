@@ -1609,6 +1609,10 @@ class TransientStudent(object):
     def is_enrolled(self):
         return False
 
+    @property
+    def scores(self):
+        return {}
+
 
 class EventEntity(BaseEntity):
     """Generic events.
