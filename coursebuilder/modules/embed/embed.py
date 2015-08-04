@@ -282,9 +282,8 @@ class _EmbedLibJsHandler(_AbstractJsHandler):
     _TEMPLATE_NAME = _EMBED_LIB_JS_NAME
 
     def _get_absolute_sign_in_url(self):
-        return (
-            self.request.host_url + users.create_login_url(
-                dest_url=_FINISH_AUTH_URL))
+        return users.create_login_url(
+            self.request.host_url + _FINISH_AUTH_URL)
 
     def _get_env(self):
         return {
