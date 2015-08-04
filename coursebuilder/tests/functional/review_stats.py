@@ -56,7 +56,7 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         actions.login(email, is_admin=True)
         response = self.get('dashboard?action=analytics_peer_review')
         assert_contains(
-            'Google &gt; Dashboard &gt; Analytics &gt; Peer review',
+            'Google &gt; Dashboard &gt; Manage &gt; Peer review',
             response.body)
         assert_contains('have not been calculated yet', response.body)
 
@@ -93,7 +93,7 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         actions.login(email, is_admin=True)
         response = self.get('dashboard?action=analytics_peer_review')
         assert_contains(
-            'Google &gt; Dashboard &gt; Analytics &gt; Peer review',
+            'Google &gt; Dashboard &gt; Manage &gt; Peer review',
             response.body)
 
         response = response.forms[

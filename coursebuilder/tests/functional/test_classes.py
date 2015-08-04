@@ -1840,7 +1840,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             response.body)
         # Verify body has breadcrumb trail.
         assert_contains(
-            'Google &gt; Dashboard &gt; Analytics &gt; Students',
+            'Google &gt; Dashboard &gt; Manage &gt; Students',
             response.body)
         assert_contains('have not been calculated yet', response.body)
 

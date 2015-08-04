@@ -519,7 +519,7 @@ class DashboardHandler(
 def make_help_menu(root_group):
     anyone_can_view = lambda x: True
 
-    group = menus.MenuGroup('help', 'Help', group=root_group, placement=5000)
+    group = menus.MenuGroup('help', 'Help', group=root_group, placement=6000)
 
     menus.MenuItem(
         'documentation', 'Documentation',
@@ -557,10 +557,11 @@ def get_visible_courses():
 def register_module():
     """Registers this module in the registry."""
 
-    DashboardHandler.add_nav_mapping('edit', 'Edit', placement=1000)
+    DashboardHandler.add_nav_mapping('edit', 'Create', placement=1000)
     DashboardHandler.add_nav_mapping('style', 'Style', placement=2000)
-    DashboardHandler.add_nav_mapping('analytics', 'Analytics', placement=3000)
-    DashboardHandler.add_nav_mapping('settings', 'Settings', placement=4000)
+    DashboardHandler.add_nav_mapping('publish', 'Publish', placement=3000)
+    DashboardHandler.add_nav_mapping('analytics', 'Manage', placement=4000)
+    DashboardHandler.add_nav_mapping('settings', 'Settings', placement=5000)
 
     make_help_menu(DashboardHandler.root_menu_group)
 

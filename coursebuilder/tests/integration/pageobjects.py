@@ -375,7 +375,7 @@ class DashboardPage(PageObject):
 
     def click_settings(self):
         self.ensure_menu_group_is_open('settings')
-        self.find_element_by_link_text('Homepage').click()
+        self.find_element_by_link_text('Course').click()
         return SettingsPage(self._tester)
 
     def verify_course_outline_contains_unit(self, unit_title):
@@ -397,7 +397,7 @@ class DashboardPage(PageObject):
         return RootPage(self._tester)
 
     def click_i18n(self):
-        self.ensure_menu_group_is_open('edit')
+        self.ensure_menu_group_is_open('publish')
         self.find_element_by_link_text('Translations').click()
         return self
 

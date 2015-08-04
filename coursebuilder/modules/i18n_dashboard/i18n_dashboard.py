@@ -2859,8 +2859,8 @@ def notify_module_enabled():
     TranslatableResourceRegistry.register(TranslatableResourceHtmlHooks)
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'edit', 'translations', 'Translations',
-        action=I18nDashboardHandler.ACTION, placement=9000)
+        'publish', 'translations', 'Translations',
+        action=I18nDashboardHandler.ACTION, placement=2000)
 
     dashboard.DashboardHandler.add_external_permission(
         ACCESS_PERMISSION, ACCESS_PERMISSION_DESCRIPTION)

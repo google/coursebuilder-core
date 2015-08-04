@@ -560,8 +560,8 @@ def register_module():
 
     def notify_module_enabled():
         dashboard.DashboardHandler.add_sub_nav_mapping(
-            'settings', 'search', 'Search', action='settings_search',
-            contents=_get_search, placement=4000)
+            'publish', 'search', 'Search', action='settings_search',
+            contents=_get_search, placement=1000)
         dashboard.DashboardHandler.add_custom_post_action(
             'index_course', _post_index_course)
         dashboard.DashboardHandler.add_custom_post_action(

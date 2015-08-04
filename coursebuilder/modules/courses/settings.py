@@ -611,7 +611,7 @@ def on_module_enabled():
         contents=_get_about_course, placement=11000)
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'edit', 'homepage', 'Homepage', action='edit_homepage',
+        'settings', 'homepage', 'Homepage', action='edit_homepage',
         contents=(lambda h: CourseSettingsHandler.show_settings_tab(
             h, 'homepage')),
-        placement=3000)
+        placement=1500)
