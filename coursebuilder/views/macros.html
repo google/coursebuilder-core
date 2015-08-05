@@ -16,7 +16,11 @@
       {% set css_class = '' %}
     {% endif %}
 
-    {% if unit.now_available or can_see_drafts %}
+    {% if not unit.now_available and unit.shown_when_unavailable %}
+      {% set include_link = False %}
+    {% endif %}
+
+    {% if unit.now_available or unit.shown_when_unavailable or can_see_drafts %}
       {% if unit.type == 'A' %}
         {% if (student_preferences and student_preferences.last_location and
                student_preferences.last_location.endswith(target_url)) %}

@@ -249,15 +249,14 @@ function enableAllControlButtons(form) {
  * and the button bar.
  */
 function moveMarkedFormElementsOutOfFieldset(Y) {
-  var splitFromMainGroup = Y.one('div.split-from-main-group');
-  if (splitFromMainGroup != null) {
+  var splits = Y.all('div.split-from-main-group').each(function(splitItem){
     // InputEx puts the class name on the div which contains the input element
     // but we really want to work with the parent.
-    var splitFromMainGroupParent = splitFromMainGroup.get('parentNode');
+    var splitFromMainGroupParent = splitItem.get('parentNode');
     splitFromMainGroupParent.addClass('split-from-main-group-parent');
     Y.one('#cb-oeditor-form').insertBefore(splitFromMainGroupParent,
       Y.one('#cb-oeditor-form > div.inputEx-Form-buttonBar'));
-  }
+  });
 }
 
 function getEditCustomTagUrl(env, tagName) {

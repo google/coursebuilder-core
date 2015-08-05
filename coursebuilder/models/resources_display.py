@@ -33,6 +33,9 @@ from tools import verify
 DRAFT_TEXT = 'Private'
 PUBLISHED_TEXT = 'Public'
 
+SHOWN_WHEN_UNAVAILABLE_TEXT = 'Shown When Private'
+HIDDEN_WHEN_UNAVAILABLE_TEXT = 'Hidden When Private'
+
 # Allowed graders. Keys of this dict represent internal keys for the grader
 # type, and the value represents the corresponding string that will appear in
 # the dashboard UI.
@@ -475,6 +478,8 @@ class UnitTools(object):
         unit.title = updated_unit_dict.get('title')
         unit.description = updated_unit_dict.get('description')
         unit.now_available = not updated_unit_dict.get('is_draft')
+        unit.shown_when_unavailable = updated_unit_dict.get(
+            'shown_when_unavailable')
 
         labels = LabelGroupsHelper.decode_labels_group(
             updated_unit_dict['label_groups'])
@@ -615,6 +620,7 @@ class UnitTools(object):
             'title': unit.title,
             'description': unit.description or '',
             'is_draft': not unit.now_available,
+            'shown_when_unavailable': unit.shown_when_unavailable,
             'label_groups': LabelGroupsHelper.unit_labels_to_dict(
                 self._course, unit)}
 
@@ -769,6 +775,17 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
             'is_draft', 'Status', 'boolean',
             select_data=[(True, DRAFT_TEXT),
                          (False, PUBLISHED_TEXT)],
+            extra_schema_dict_values={
+                'className': 'split-from-main-group'}))
+        ret.add_property(schema_fields.SchemaField(
+            'shown_when_unavailable', 'Syllabus Visibility', 'boolean',
+            optional=True,
+            select_data=[(True, SHOWN_WHEN_UNAVAILABLE_TEXT),
+                         (False, HIDDEN_WHEN_UNAVAILABLE_TEXT)],
+            description='When a unit is marked as %s, ' % DRAFT_TEXT +
+            'this setting controls whether the title is still shown '
+            'to students on the syllabus overview page when this item '
+            'is marked as private.',
             extra_schema_dict_values={
                 'className': 'split-from-main-group'}))
         return ret

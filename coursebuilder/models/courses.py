@@ -513,6 +513,10 @@ class Unit12(object):
     def is_custom_unit(self):
         return None
 
+    @property
+    def shown_when_unavailable(self):
+        return False
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
@@ -737,6 +741,7 @@ class Unit13(object):
         'unit_header': None,
         'unit_footer': None,
         'custom_unit_type': None,
+        'shown_when_unavailable': False,
         }
 
     def __init__(self):
@@ -745,6 +750,7 @@ class Unit13(object):
         self.title = ''
         self.release_date = ''
         self.now_available = False
+        self.shown_when_unavailable = False
 
         # custom properties
         self.properties = {}
@@ -1339,6 +1345,7 @@ class CourseModel13(object):
         unit.unit_id = self._get_next_id()
         unit.title = title
         unit.now_available = False
+        unit.shown_when_unavailable = False
         if verify.UNIT_TYPE_CUSTOM == unit_type:
             unit.custom_unit_type = custom_unit_type
 
@@ -1452,6 +1459,7 @@ class CourseModel13(object):
         existing_unit.title = unit.title
         existing_unit.release_date = unit.release_date
         existing_unit.now_available = unit.now_available
+        existing_unit.shown_when_unavailable = unit.shown_when_unavailable
         existing_unit.labels = unit.labels
         existing_unit.pre_assessment = unit.pre_assessment
         existing_unit.post_assessment = unit.post_assessment
@@ -1737,6 +1745,7 @@ class CourseModel13(object):
 
             dst_unit.release_date = src_unit.release_date
             dst_unit.now_available = src_unit.now_available
+            dst_unit.shown_when_unavailable = src_unit.shown_when_unavailable
 
             if verify.UNIT_TYPE_LINK == dst_unit.type:
                 dst_unit.href = src_unit.href
@@ -1749,6 +1758,7 @@ class CourseModel13(object):
             """Copies unit13 attributes to a new unit."""
             dst_unit.release_date = src_unit.release_date
             dst_unit.now_available = src_unit.now_available
+            dst_unit.shown_when_unavailable = src_unit.shown_when_unavailable
             dst_unit.workflow_yaml = src_unit.workflow_yaml
 
             if dst_unit.is_assessment():

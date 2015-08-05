@@ -17,6 +17,7 @@
 __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 
 import cgi
+import itertools
 import time
 import json
 
@@ -370,6 +371,7 @@ class CourseOutlineTestCase(actions.TestBase):
     """Tests the Course Outline."""
     COURSE_NAME = 'outline'
     ADMIN_EMAIL = 'admin@foo.com'
+    STUDENT_EMAIL = 'user@foo.com'
     URL = 'dashboard'
 
     def setUp(self):
@@ -381,112 +383,125 @@ class CourseOutlineTestCase(actions.TestBase):
             self.COURSE_NAME, self.ADMIN_EMAIL, 'Outline Testing')
 
         self.course = courses.Course(None, context)
+        self.assessment = self.course.add_assessment()
+        self.assessment.title = 'Test Assessment'
+        self.link = self.course.add_link()
+        self.link.title = 'Test Link'
+        self.unit = self.course.add_unit()
+        self.unit.title = 'Test Unit'
+        self.lesson = self.course.add_lesson(self.unit)
+        self.lesson.title = 'Test Lesson'
+        self.course.save()
 
-    def _set_draft_status(self, key, component_type, xsrf_token, set_draft):
-        return self.post(self.URL, {
-            'action': 'set_draft_status',
-            'key': key,
-            'type': component_type,
-            'xsrf_token': xsrf_token,
-            'set_draft': set_draft
-        }, True)
-
-    def _check_list_item(self, li, href, title, ctype, key, lock_class):
-        a = li.find('./div/div/div[@class="name"]/a')
-        self.assertEquals(a.get('href', ''), href)
-        self.assertEquals(a.text, title)
+    def _check_private_setting(self, li, ctype, key, is_private):
         padlock = li.find('./div/div/div[2]')
         self.assertEquals(padlock.get('data-component-type', ''), ctype)
         self.assertEquals(padlock.get('data-key', ''), str(key))
+        lock_class = 'md-lock' if is_private else 'md-lock-open'
         self.assertIn(lock_class, padlock.get('class', ''))
 
-    def test_action_icons(self):
-        assessment = self.course.add_assessment()
-        assessment.title = 'Test Assessment'
-        assessment.now_available = True
-        link = self.course.add_link()
-        link.title = 'Test Link'
-        link.now_available = False
-        unit = self.course.add_unit()
-        unit.title = 'Test Unit'
-        unit.now_available = True
-        lesson = self.course.add_lesson(unit)
-        lesson.title = 'Test Lesson'
-        lesson.now_available = False
-        self.course.save()
-
+    def _get_item_for(self, get_what):
         dom = self.parse_html_string(self.get(self.URL).body)
         course_outline = dom.find('.//div[@class="course-outline editable"]')
-        xsrf_token = course_outline.get('data-status-xsrf-token', '')
         lis = course_outline.findall('.//ol[@class="course"]/li')
         self.assertEquals(len(lis), 3)
 
-        # Test Assessment
-        self._check_list_item(
-            lis[0], 'assessment?name=%s' % assessment.unit_id,
-            assessment.title, 'unit', assessment.unit_id, 'md-lock-open'
-        )
+        if get_what == 'assessment':
+            return lis[0]
+        elif get_what == 'link':
+            return lis[1]
+        elif get_what == 'unit':
+            return lis[2]
+        elif get_what == 'lesson':
+            return lis[2].find('ol/li')
+        else:
+            self.fail('Test trying to find item we do not have')
 
-        # Test Link
-        self._check_list_item(
-            lis[1], '', link.title, 'unit', link.unit_id, 'md-lock')
+    def _check_syllabus_for_admin(self, private, title):
+        response = self.get('/%s/course' % self.COURSE_NAME)
+        dom = self.parse_html_string(response.body)
+        units = dom.findall('.//div[@id="gcb-main"]//li')
+        for unit in units:
+            text = ' '.join(''.join(unit.itertext()).split())
+            if title in text:
+                if private:
+                    self.assertIn('(Private)', text)
+                else:
+                    self.assertNotIn('(Private)', text)
 
-        # Test Unit
-        unit_li = lis[2]
-        self._check_list_item(
-            unit_li, 'unit?unit=%s' % unit.unit_id,
-            'Test Unit', 'unit',
-            unit.unit_id, 'md-lock-open'
-        )
+    def _check_syllabus_for_student(self, private, shown, title):
+        actions.login(self.STUDENT_EMAIL, is_admin=False)
+        response = self.get('/%s/course' % self.COURSE_NAME)
+        dom = self.parse_html_string(response.body)
+        units = dom.findall('.//div[@id="gcb-main"]//li')
 
-        # Test Lesson
-        self._check_list_item(
-            unit_li.find('ol/li'),
-            'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id),
-            lesson.title, 'lesson', lesson.lesson_id, 'md-lock'
-        )
+        found = False
+        for unit in units:
+            text = ' '.join(''.join(unit.itertext()).split())
+            if title in text:
+                found = True
+                if private:
+                    if shown:
+                        self.assertIsNone(unit.find('.//a'))
+                    else:
+                        self.fail('private hidden items should not be found.')
+                else:
+                    self.assertIsNotNone(unit.find('.//a'))
 
-        # Send POST without xsrf token, should give 403
-        response = self._set_draft_status(
-            assessment.unit_id, 'unit', 'xyz', '1')
-        self.assertEquals(response.status_int, 403)
+        if private and not shown:
+            self.assertFalse(found)
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
 
-        # Set assessment to private
-        response = self._set_draft_status(
-            assessment.unit_id, 'unit', xsrf_token, '1')
-        self.assertEquals(response.status_int, 200)
-        payload = transforms.loads(transforms.loads(response.body)['payload'])
-        self.assertEquals(payload['is_draft'], True)
+    def test_setting_combinations(self):
+        cases = ((self.unit, 'unit',),
+                 (self.link, 'link'),
+                 (self.assessment, 'assessment'))
+        for unit, kind in cases:
+            for private, shown in itertools.product([True, False], repeat=2):
+                unit.now_available = not private
+                unit.shown_when_unavailable = shown
+                self.course.save()
+                item = self._get_item_for(kind)
+                self._check_private_setting(item, 'unit', unit.unit_id, private)
+                self._check_syllabus_for_admin(private, unit.title)
+                self._check_syllabus_for_student(private, shown, unit.title)
 
-        # Set lesson to public
-        response = self._set_draft_status(
-            lesson.lesson_id, 'lesson', xsrf_token, '0')
-        self.assertEquals(response.status_int, 200)
-        payload = transforms.loads(transforms.loads(response.body)['payload'])
-        self.assertEquals(payload['is_draft'], False)
+    def test_lesson_public_private(self):
+        self.lesson.now_available = True
+        self.course.save()
+        item = self._get_item_for('lesson')
+        self._check_private_setting(
+            item, 'lesson', self.lesson.lesson_id, False)
 
-        # Refresh page, check results
-        lis = self.parse_html_string(
-            self.get(self.URL).body).findall('.//ol[@class="course"]/li')
-        self.assertIn(
-            'md-lock', lis[0].find('./div/div/div[2]').get('class', ''))
-        self.assertIn(
-            'md-lock-open',
-            lis[2].find('ol/li/div/div/div[2]').get('class', ''))
+        self.lesson.now_available = False
+        self.course.save()
+        item = self._get_item_for('lesson')
+        self._check_private_setting(
+            item, 'lesson', self.lesson.lesson_id, True)
 
-        # Repeat but set assessment to public and lesson to private
-        response = self._set_draft_status(
-            assessment.unit_id, 'unit', xsrf_token, '0')
-        response = self._set_draft_status(
-            lesson.lesson_id, 'lesson', xsrf_token, '1')
+    def _check_item_label(self, li, href, title):
+        a = li.find('./div/div/div[@class="name"]/a')
+        self.assertEquals(a.get('href', ''), href)
+        self.assertEquals(a.text, title)
 
-        # Refresh page, check results
-        lis = self.parse_html_string(
-            self.get(self.URL).body).findall('.//ol[@class="course"]/li')
-        self.assertIn(
-            'md-lock-open', lis[0].find('./div/div/div[2]').get('class', ''))
-        self.assertIn(
-            'md-lock', lis[2].find('ol/li/div/div/div[2]').get('class', ''))
+    def test_title(self):
+        item = self._get_item_for('link')
+        self._check_item_label(item, '', self.link.title)
+
+        item = self._get_item_for('assessment')
+        self._check_item_label(
+            item, 'assessment?name=%s' % self.assessment.unit_id,
+            self.assessment.title)
+
+        item = self._get_item_for('unit')
+        self._check_item_label(
+            item, 'unit?unit=%s' % self.unit.unit_id, self.unit.title)
+
+        item = self._get_item_for('lesson')
+        self._check_item_label(
+            item, 'unit?unit=%s&lesson=%s' % (
+                self.unit.unit_id, self.lesson.lesson_id),
+            self.lesson.title)
 
 
 class RoleEditorTestCase(actions.TestBase):
@@ -850,4 +865,3 @@ def find_schema_field(schema, key):
     for field, options in schema:
         if field == key:
             return options
-
