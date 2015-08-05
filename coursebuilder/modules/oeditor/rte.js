@@ -471,6 +471,9 @@ function bindEditorField(Y) {
     }
   };
   EditorField.prototype.getValue = function() {
+    if (this.activeEditor.isReady().state() !== 'resolved') {
+      return this.lastValueSet;
+    }
     return this.activeEditor.getValue();
   };
   EditorField.prototype.getEditorType = function() {
