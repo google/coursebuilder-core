@@ -209,7 +209,7 @@ function bindEditorField(Y) {
   RichTextEditor.prototype.setValue = function(value) {
     var that = this;
     $.when(this.editorIsRendered).then(function() {
-      that.editor.setEditorHTML(value);
+      that.editor.setEditorHTML(value || '');
       that._customTagManager.insertMarkerTags();
     });
   };
