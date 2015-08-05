@@ -52,7 +52,7 @@ ALL_MODULES = [
     'inputex-radio', 'inputex-date', 'inputex-datepicker', 'inputex-checkbox',
     'inputex-list', 'inputex-color', 'gcb-rte', 'inputex-textarea',
     'inputex-url', 'gcb-uneditable', 'inputex-integer', 'inputex-hidden',
-    'inputex-file', 'io-upload-iframe']
+    'inputex-file', 'io-upload-iframe', 'inputex-number', 'array-extras']
 
 RESOURCES_URI = '/modules/oeditor/resources'
 
@@ -119,7 +119,13 @@ class ObjectEditor(object):
         Returns:
             The HTML, JS and CSS text that will instantiate an object editor.
         """
-        required_modules = required_modules or ALL_MODULES
+        if required_modules:
+            if not set(required_modules).issubset(set(ALL_MODULES)):
+                import pdb; pdb.set_trace()
+                raise ValueError(
+                    "One of the required inputEx modules is unsupported")
+        else:
+            required_modules = ALL_MODULES
 
         if not delete_message:
             kind = transforms.loads(schema_json).get('description')
