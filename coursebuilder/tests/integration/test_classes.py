@@ -585,6 +585,7 @@ class AdminTests(BaseIntegrationTest):
         """Test that CodeMirror is working properly with rte."""
 
         name = self.create_new_course()[0]
+        self.set_admin_setting('gcb_can_highlight_code', True)
 
         unit_title = 'Test Unit 1'
         unit_header_html = '<h1> header </h1> <p> paragraph </p>'
@@ -612,6 +613,7 @@ class AdminTests(BaseIntegrationTest):
 
     def test_in_place_lesson_editing(self):
         name = self.create_new_course()[0]
+        self.set_admin_setting('gcb_can_highlight_code', True)
         self.load_dashboard(
             name
         ).click_add_unit(
