@@ -121,7 +121,6 @@ class ObjectEditor(object):
         """
         if required_modules:
             if not set(required_modules).issubset(set(ALL_MODULES)):
-                import pdb; pdb.set_trace()
                 raise ValueError(
                     "One of the required inputEx modules is unsupported")
         else:
