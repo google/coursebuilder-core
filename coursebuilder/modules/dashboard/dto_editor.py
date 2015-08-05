@@ -209,7 +209,7 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
             else:
                 python_dict = self.transform_after_editor_hook(python_dict)
                 self.validate(python_dict, key, version, errors)
-        except ValueError as err:
+        except (TypeError, ValueError) as err:
             errors.append(str(err))
         if errors:
             self.validation_error('\n'.join(errors), key=key)

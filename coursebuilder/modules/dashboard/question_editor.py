@@ -202,7 +202,7 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
 
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list',
-        'inputex-hidden', 'inputex-integer']
+        'inputex-hidden', 'inputex-integer', 'inputex-number']
 
     EXTRA_JS_FILES = []
 

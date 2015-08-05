@@ -183,7 +183,7 @@ class QuestionTag(tags.BaseTag):
                 select_data=question_list))
         reg.add_property(
             schema_fields.SchemaField(
-                'weight', 'Weight', 'string', optional=True, i18n=False,
+                'weight', 'Weight', 'number', optional=True, i18n=False,
                 extra_schema_dict_values={'value': '1'},
                 description='The number of points for a correct answer.'))
         return reg

@@ -276,7 +276,7 @@ class ResourceQuestionGroup(resource.AbstractResourceHandler):
             'Item',
             extra_schema_dict_values={'className': 'question-group-item'})
         item_type.add_property(schema_fields.SchemaField(
-            'weight', 'Weight', 'string', optional=True, i18n=False,
+            'weight', 'Weight', 'number', optional=True, i18n=False,
             extra_schema_dict_values={'className': 'question-group-weight'}))
 
         question_select_data = [(q.id, q.description) for q in sorted(
@@ -832,7 +832,7 @@ class ResourceAssessment(ResourceUnitBase):
         course_opts = cls._generate_common_schema(
             'Assessment Config', hidden_header=True)
         course_opts.add_property(schema_fields.SchemaField(
-            'weight', 'Weight', 'string',
+            'weight', 'Weight', 'number',
             description=str(messages.ASSESSMENT_WEIGHT_DESCRIPTION),
             i18n=False, optional=True))
         course_opts.add_property(schema_fields.SchemaField(

@@ -406,11 +406,15 @@ class CommonUnitRESTHandler(BaseRESTHandler):
             return
 
         payload = request.get('payload')
-        updated_unit_dict = transforms.json_to_dict(
-            transforms.loads(payload), self.SCHEMA_DICT)
-
         errors = []
-        self.apply_updates(unit, updated_unit_dict, errors)
+
+        try:
+            updated_unit_dict = transforms.json_to_dict(
+                transforms.loads(payload), self.SCHEMA_DICT)
+            self.apply_updates(unit, updated_unit_dict, errors)
+        except (TypeError, ValueError), ex:
+            errors.append(str(ex))
+
         if not errors:
             course = courses.Course(self)
             assert course.update_unit(unit)
@@ -637,7 +641,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
 
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-textarea',
-        'gcb-uneditable', 'inputex-integer', 'inputex-hidden',
+        'gcb-uneditable', 'inputex-integer', 'inputex-number', 'inputex-hidden',
         'inputex-checkbox', 'inputex-list']
 
 
