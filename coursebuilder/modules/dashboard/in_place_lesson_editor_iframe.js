@@ -14,7 +14,7 @@ $(function() {
   }
 
   function maybeResize() {
-    var height = $('#oeditor-container').height();
+    var height = $('html').height();
     if (height != currentHeight) {
       postMessage('in-place-lesson-editor-height-changed', {
         height: height
