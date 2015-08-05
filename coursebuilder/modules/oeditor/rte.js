@@ -443,6 +443,7 @@ function bindEditorField(Y) {
     // Default mode is HTML editing
     this.activeEditor = this.richTextEditor;
     this.tabbar.selectTabByLabel(this.RICH_TEXT_EDITOR_LABEL);
+    this.richTextEditor.show();
     this.htmlEditor.hide();
     this.previewEditor.hide();
 
