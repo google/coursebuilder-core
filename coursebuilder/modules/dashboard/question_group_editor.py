@@ -68,7 +68,7 @@ class QuestionGroupManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
             )
             return
 
-        weight = self.request.get('weight')
+        weight = self.request.get('weight', '1')
         try:
             float(weight)
         except ValueError:
@@ -119,6 +119,11 @@ class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     def get_default_content(self):
         return {'version': self.SCHEMA_VERSIONS[0]}
+
+    def sanitize_input_dict(self, json_dict):
+        for item in json_dict['items']:
+            if len(item['weight'].strip()) == 0:
+                item['weight'] = '1'
 
     def validate(self, question_group_dict, key, schema_version, errors):
         """Validate the question group data sent from the form."""
