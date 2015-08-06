@@ -45,7 +45,6 @@ import modules.admin.config
 from modules.admin.config import ConfigPropertyEditor
 from modules.dashboard import dashboard
 from common import menus
-from modules.oeditor import oeditor
 
 import google.appengine.api.app_identity as app
 from google.appengine.ext import db
@@ -1102,7 +1101,6 @@ class GlobalAdminHandler(
         template_values['application_id'] = app.get_application_id()
         template_values['application_version'] = (
             os.environ['CURRENT_VERSION_ID'])
-        template_values['can_highlight_code'] = oeditor.CAN_HIGHLIGHT_CODE.value
         if not template_values.get('sections'):
             template_values['sections'] = []
 

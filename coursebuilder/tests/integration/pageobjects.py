@@ -138,6 +138,18 @@ class EditorPageObject(PageObject):
         self.find_element_by_link_text('Close').click()
         return continue_page(self._tester)
 
+    def setvalue_codemirror(self, nth_instance, code_body):
+        self._tester.driver.execute_script(
+            "$('.CodeMirror')[%s].CodeMirror.setValue('%s');" % (
+                nth_instance, code_body))
+        return self
+
+    def assert_equal_codemirror(self, nth_instance, expected_code_body):
+        actual_code_body = self._tester.driver.execute_script(
+            "return $('.CodeMirror')[%s].CodeMirror.getValue();" % nth_instance)
+        self._tester.assertEqual(expected_code_body, actual_code_body)
+        return self
+
 
 class DashboardEditor(EditorPageObject):
     """A base class for the editors accessed from the Dashboard."""
@@ -269,10 +281,7 @@ class AnnouncementsEditorPage(EditorPageObject):
             self.find_element_by_css_selector(
                 'div.cb-editor-field div.buttonbar-div button', index=1
             ).click()
-            body_el = self.find_element_by_css_selector(
-                'div.cb-editor-field div.html-div textarea')
-            body_el.clear()
-            body_el.send_keys(body)
+            self.setvalue_codemirror(0, body)
         return self
 
     def click_close(self):
@@ -751,10 +760,7 @@ class QuestionEditorPage(EditorPageObject):
         self._tester.driver.find_elements_by_css_selector(
             '.mc-question .editor-field-tabbar button')[1].click()
 
-        question_el = self.find_element_by_css_selector(
-            'div.cb-editor-field div.html-div textarea')
-        question_el.clear()
-        question_el.send_keys(question)
+        self.setvalue_codemirror(0, question)
         return self
 
     def set_description(self, description):
@@ -779,11 +785,8 @@ class MultipleChoiceEditorPage(QuestionEditorPage):
         self.find_element_by_css_selector(
             '.mc-choice-text .editor-field-tabbar', index=n
         ).find_elements_by_tag_name('button')[1].click()
-        answer_el = self.find_element_by_css_selector(
-            'div.cb-editor-field div.html-div textarea',
-            index=2 * n + 1)
-        answer_el.clear()
-        answer_el.send_keys(answer)
+        index = 2 * n + 1
+        self.setvalue_codemirror(index, answer)
         return self
 
     def click_allow_only_one_selection(self):
@@ -1033,18 +1036,6 @@ class CourseContentElement(DashboardEditor):
     def ensure_instanceid_list_matches_last_snapshot(self):
         self._tester.assertEqual(
             self.instanceid_list_snapshot, self._get_instanceid_list())
-        return self
-
-    def setvalue_codemirror(self, nth_instance, code_body):
-        self._tester.driver.execute_script(
-            "$('.CodeMirror')[%s].CodeMirror.setValue('%s');" % (
-                nth_instance, code_body))
-        return self
-
-    def assert_equal_codemirror(self, nth_instance, expected_code_body):
-        actual_code_body = self._tester.driver.execute_script(
-            "return $('.CodeMirror')[%s].CodeMirror.getValue();" % nth_instance)
-        self._tester.assertEqual(expected_code_body, actual_code_body)
         return self
 
 

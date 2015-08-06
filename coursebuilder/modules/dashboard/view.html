@@ -19,13 +19,11 @@
     <script src="//storage.googleapis.com/code.getmdl.io/1.0.0/material.min.js"></script>
     <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
 
-    {% if can_highlight_code and sections %}
-      <!-- import CodeMirror -->
-      <script src="/static/codemirror/lib/codemirror.js"></script>
-      <link rel="stylesheet" href="/static/codemirror/lib/codemirror.css">
-      <script src="/static/codemirror/addon/mode/loadmode.js"></script>
-      <link rel="stylesheet" href="/modules/code_tags/resources/code_tags.css">
-    {% endif %}
+    <!-- import CodeMirror -->
+    <script src="/static/codemirror/lib/codemirror.js"></script>
+    <link rel="stylesheet" href="/static/codemirror/lib/codemirror.css">
+    <script src="/static/codemirror/addon/mode/loadmode.js"></script>
+    <link rel="stylesheet" href="/modules/code_tags/resources/code_tags.css">
 
     <!-- import jQuery -->
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
@@ -213,7 +211,7 @@
                 {% endif %}
                 {% if section.pre %}
                   {{ section.pre }}
-                {% elif can_highlight_code and section.code %}
+                {% elif section.code %}
                   <code class="codemirror-container-readonly" mode={{section.mode}}>{{ section.code }}</code>
                 {% else %}
                   <ol>
@@ -262,7 +260,7 @@
 
     {%- include 'question_filter.html' -%}
 
-    {%- if sections and can_highlight_code -%}
+    {%- if sections -%}
       <script>
         CodeMirror.modeURL = "/static/codemirror/mode/%N/%N.js";
         $('.codemirror-container-readonly').each(function() {
@@ -279,6 +277,5 @@
         });
       </script>
     {%- endif -%}
-
   </body>
 </html>

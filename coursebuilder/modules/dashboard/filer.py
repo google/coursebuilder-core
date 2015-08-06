@@ -313,16 +313,13 @@ class TextAssetRESTHandler(BaseRESTHandler):
             extra_schema_dict_values={
                 'className':'inputEx-Group new-form-layout hidden-header'
             })
-
-        extra_values = {}
-        if oeditor.CAN_HIGHLIGHT_CODE:
-            extra_values['mode'] = mode
-            extra_values['_type'] = 'code'
-            extra_values['large'] = True
-
         schema.add_property(schema_fields.SchemaField(
             'contents', 'Contents', 'text',
-            extra_schema_dict_values=extra_values,
+            extra_schema_dict_values={
+                'mode': mode,
+                '_type': 'code',
+                'large': True,
+            },
         ))
         schema.add_property(schema_fields.SchemaField(
             'is_text', 'Is Text', 'boolean', hidden=True,

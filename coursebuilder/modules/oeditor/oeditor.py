@@ -35,7 +35,6 @@ from models import entities
 from models import models as m_models
 from models import roles
 from models import transforms
-from models.config import ConfigProperty
 
 from google.appengine.ext import db
 
@@ -55,13 +54,6 @@ ALL_MODULES = [
     'inputex-file', 'io-upload-iframe', 'inputex-number', 'array-extras']
 
 RESOURCES_URI = '/modules/oeditor/resources'
-
-# Global code syntax highlighter controls.
-CAN_HIGHLIGHT_CODE = ConfigProperty(
-    'gcb_can_highlight_code', bool, (
-        'Whether or not to highlight code syntax '
-        'in Dashboard editors and displays.'),
-    True, label='Highlight code syntax')
 
 
 class ObjectEditor(object):
@@ -196,7 +188,6 @@ class ObjectEditor(object):
             'save_button_caption': save_button_caption,
             'rte_tag_data': transforms.dumps(rte_tag_data),
             'delete_message': delete_message,
-            'can_highlight_code': CAN_HIGHLIGHT_CODE.value,
             'preview_xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 PreviewHandler.XSRF_TOKEN),
             'editor_prefs': transforms.dumps(editor_prefs),

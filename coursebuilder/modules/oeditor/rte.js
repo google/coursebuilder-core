@@ -1,6 +1,5 @@
 function bindEditorField(Y) {
   var RTE_TAG_DATA = cb_global.rte_tag_data;
-  var CAN_HIGHLIGHT_CODE = cb_global.can_highlight_code;
   var PREVIEW_XSRF_TOKEN = cb_global.preview_xsrf_token;
 
   /**
@@ -53,6 +52,7 @@ function bindEditorField(Y) {
 
   /**
    * An editor component which provides plain text editing in a textarea.
+   * TODO(nretallack): Delete this class. It is no longer used.
    *
    * @class
    * @param root {Element} The root element to hold the editor's HTML.
@@ -414,11 +414,7 @@ function bindEditorField(Y) {
     this.rteDiv = this.fieldContainer.querySelector('.rte-div');
     this.previewDiv = this.fieldContainer.querySelector('.preview-div');
 
-    if (CAN_HIGHLIGHT_CODE) {
-      this.htmlEditor = new HtmlEditor(this.htmlDiv);
-    } else {
-      this.htmlEditor = new TextareaEditor(this.htmlDiv);
-    }
+    this.htmlEditor = new HtmlEditor(this.htmlDiv);
     this.richTextEditor = new RichTextEditor(this.rteDiv, this.opts,
         this.supportCustomTags, this.excludedCustomTags);
     this.previewEditor = new PreviewEditor(this.previewDiv);

@@ -16,9 +16,7 @@
 
 __author__ = 'Gun Pinyo (gunpinyo@google.com)'
 
-from models import config
 from models import courses
-from modules.oeditor import oeditor
 from tests.functional import actions
 
 
@@ -77,7 +75,3 @@ class CodeTagTests(actions.TestBase):
 
     def test_codemirror_loaded_when_enabled_and_code_tags_present(self):
         self.assertIsNotNone(self._get_script_element(self.code_tag_unit))
-
-    def test_codemirror_not_loaded_when_disabled_and_code_tags_present(self):
-        config.Registry.test_overrides[oeditor.CAN_HIGHLIGHT_CODE.name] = False
-        self.assertIsNone(self._get_script_element(self.code_tag_unit))

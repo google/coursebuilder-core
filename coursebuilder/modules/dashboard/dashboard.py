@@ -63,7 +63,6 @@ from models import custom_modules
 from models import roles
 from models.models import RoleDAO
 from common import menus
-from modules.oeditor import oeditor
 
 from google.appengine.api import app_identity
 
@@ -386,7 +385,6 @@ class DashboardHandler(
         template_values['application_id'] = app_identity.get_application_id()
         template_values['application_version'] = (
             os.environ['CURRENT_VERSION_ID'])
-        template_values['can_highlight_code'] = oeditor.CAN_HIGHLIGHT_CODE.value
         template_values['extra_css_href_list'] = self.EXTRA_CSS_HREF_LIST
         template_values['extra_js_href_list'] = self.EXTRA_JS_HREF_LIST
         if not template_values.get('sections'):
