@@ -51,7 +51,8 @@ ALL_MODULES = [
     'inputex-radio', 'inputex-date', 'inputex-datepicker', 'inputex-checkbox',
     'inputex-list', 'inputex-color', 'gcb-rte', 'inputex-textarea',
     'inputex-url', 'gcb-uneditable', 'inputex-integer', 'inputex-hidden',
-    'inputex-file', 'io-upload-iframe', 'inputex-number', 'array-extras']
+    'inputex-file', 'io-upload-iframe', 'inputex-number', 'array-extras',
+    'gcb-code']
 
 RESOURCES_URI = '/modules/oeditor/resources'
 
@@ -113,8 +114,10 @@ class ObjectEditor(object):
         """
         if required_modules:
             if not set(required_modules).issubset(set(ALL_MODULES)):
+                difference = set(required_modules).difference(set(ALL_MODULES))
                 raise ValueError(
-                    "One of the required inputEx modules is unsupported")
+                    "Unsupported inputEx modules were required: {}".format(
+                        difference))
         else:
             required_modules = ALL_MODULES
 
