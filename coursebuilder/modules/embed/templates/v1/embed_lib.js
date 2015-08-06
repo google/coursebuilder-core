@@ -107,6 +107,7 @@
       // continuously. This performs poorly, so we throttle it.
       $('.' + IFRAME_CLASS).each(function(unused, iframe) {
         $(iframe).css('height', '').css('width', '');
+        iframe.contentWindow.postMessage({action: 'resize'}, '*');
       });
     }),
     _renderAuthenticated: function() {

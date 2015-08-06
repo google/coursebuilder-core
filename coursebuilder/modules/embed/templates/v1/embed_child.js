@@ -36,8 +36,18 @@
     window.parent.postMessage(data, '*');
   }
 
+  function onMessage(event) {
+    if (event.source !== window.parent) {
+      return;
+    }
+    if (event.data.action === 'resize') {
+      currentSize = {};
+    }
+  }
+
   function main() {
     setInterval(maybeResize, 50);
+    window.addEventListener('message', onMessage, false);
   }
 
   main();
