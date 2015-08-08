@@ -112,7 +112,9 @@ SkillPanel.prototype = {
       content: function() {
         var description = $(this).data('skillDescription').trim();
         if (description) {
-          return ('<b>' + $(this).text().trim() + '</b>: ' + description);
+          var boldElement = $('<b>').text($(this).text().trim());
+          var textElement = document.createTextNode(': ' + description);
+          return $('<span>').append(boldElement).append(textElement);
         } else {
           return null;
         }
@@ -128,8 +130,10 @@ SkillPanel.prototype = {
       content: function() {
         var content = $(this).find('.content').text().trim();
         if (content) {
-          return (
-              '<b>' + $(this).find('.name').text().trim() + '</b>: ' + content);
+          var name = $(this).find('.name').text().trim();
+          var boldElement = $('<b>').text(name);
+          var textElement = document.createTextNode(': ' + content);
+          return $('<span>').append(boldElement).append(textElement);
         } else {
           return null;
         }

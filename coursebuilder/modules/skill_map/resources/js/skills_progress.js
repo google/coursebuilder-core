@@ -8,8 +8,10 @@ $('.skill-panel .skill-card .description').each(function() {
     content: function () {
       var content = $(this).find('.content').text().trim();
       if (content) {
-        return (
-          '<b>' + $(this).find('.name').text().trim() + '</b>: ' + content);
+        var name = $(this).find('.name').text().trim();
+        var boldElement = $('<b>').text(name);
+        var textElement = document.createTextNode(': ' + content);
+        return $('<span>').append(boldElement).append(textElement);
       } else {
         return null;
       }
