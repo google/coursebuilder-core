@@ -20,13 +20,13 @@
         table.addColumn('string', 'Students');
         table.addColumn('number', 'Completed');
         table.addColumn('number', 'In Progress');
-        var rows = []
+        var rows = [];
         // TODO(juliaoh): Generalize this function to take in user queries.
         for (var entity in content) {
           if ($.inArray(entity, entityCodes) != -1) {
-            for (var unit in content[entity]) {
-              var key = entity + '.' + unit;
-              var label = content[entity][unit]['label'].toString();
+            for (i = 0; i < content[entity].length; i++) {
+              var key = entity + '.' + content[entity][i]['child_id'];
+              var label = content[entity][i]['child_val']['label'].toString();
               if (key in progress) {
                 rows.push(
                 [label, progress[key].completed, progress[key].progress]);

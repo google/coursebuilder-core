@@ -1140,37 +1140,36 @@ class ProgressStats(object):
 
             will have the following dictionary representation:
                 {
-                    's': {
-                        1: {
-                            'label': 'Pre Assessment'
-                        }
-                    },
-                    'u': {
-                        2: {
-                            'l': {
-                                3: {
-                                    'label': 1
-                                }
-                            },
-                            'label': 1
-                        },
-                        4: {
-                            'label': 2
-                        }
-                    }
+                    's': [{
+                        'child_id': 1,
+                        'child_val': {'label': 'Pre Assessment'}
+                        }],
+                    'u': [{
+                        'child_id': 2,
+                        'child_val': {
+                            'l': [{
+                                'child_id': 3,
+                                'child_val': {'label': 1}}],
+                            'label': 1}, {
+                        'child_id': 4,
+                        'child_val': {'label': 2}
+                        }]
                     'label': 'UNTITLED COURSE'
                 }
         """
         entity_dict = {'label': self._get_label(entity, parent_ids)}
         for child_entity, get_children_ids in self.COURSE_STRUCTURE_DICT[
                 entity]['children']:
-            child_entity_dict = {}
+            child_entity_list = []
             for child_id in get_children_ids(self, *parent_ids):
                 new_parent_ids = parent_ids + [child_id]
-                child_entity_dict[child_id] = self.compute_entity_dict(
-                    child_entity, new_parent_ids)
+                child_entity_list.append({
+                    'child_id': child_id,
+                    'child_val': self.compute_entity_dict(
+                        child_entity, new_parent_ids)
+                })
             entity_dict[UnitLessonCompletionTracker.EVENT_CODE_MAPPING[
-                child_entity]] = child_entity_dict
+                child_entity]] = child_entity_list
         return entity_dict
 
     def _get_course(self):

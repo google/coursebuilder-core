@@ -339,50 +339,66 @@ class ProgressAnalyticsTest(actions.TestBase):
         progress_stats = ProgressStats(course)
         course_dict = progress_stats.compute_entity_dict('course', [])
         assert_equals(course_dict, {
-            'label': 'UNTITLED COURSE', 'u': {}, 's': {}})
+            'label': 'UNTITLED COURSE', 'u': [], 's': []})
 
-    def test_compute_entity_dict_constructs_dict_for_empty_course_correctly(
-        self):
+    def test_compute_entity_dict_for_non_empty_course_correctly(self):
         """Tests correct entity_structure is built."""
+
         sites.setup_courses('course:/test::ns_test, course:/:/')
         course = courses.Course(None, app_context=sites.get_all_courses()[0])
         unit1 = course.add_unit()
         assessment1 = course.add_assessment()
         progress_stats = ProgressStats(course)
+        expected = {
+            'label': 'UNTITLED COURSE',
+            'u':
+                [{
+                    'child_id': unit1.unit_id,
+                    'child_val': {
+                        'label': 'Unit %s' % unit1.index,
+                        'l': [],
+                        's': []
+                    }
+            }],
+            's':
+                [{
+                    'child_id': assessment1.unit_id,
+                    'child_val': {'label': assessment1.title}
+            }]
+        }
         assert_equals(
-            progress_stats.compute_entity_dict('course', []),
-            {'label': 'UNTITLED COURSE', 'u': {unit1.unit_id: {
-                'label': 'Unit %s' % unit1.index, 'l': {}, 's': {}}}, 's': {
-                    assessment1.unit_id: {'label': assessment1.title}}})
+            expected, progress_stats.compute_entity_dict('course', []))
+
         lesson11 = course.add_lesson(unit1)
+        expected = {
+            's': [{
+                'child_id': assessment1.unit_id,
+                'child_val': {
+                    'label': assessment1.title}
+                }],
+            'u': [{
+                'child_id': unit1.unit_id,
+                'child_val': {
+                    's': [],
+                    'l': [{
+                        'child_id': lesson11.lesson_id,
+                        'child_val': {
+                            'a': [],
+                            'h': [{
+                                'child_id': 0,
+                                'child_val': {
+                                    'c': [],
+                                    'label': 'L1.1'
+                                }}],
+                            'label': lesson11.index
+                        }}],
+                    'label': 'Unit %s' % unit1.index}
+                }],
+            'label': 'UNTITLED COURSE'
+        }
         assert_equals(
-            progress_stats.compute_entity_dict('course', []),
-            {
-                "s": {
-                    assessment1.unit_id: {
-                        "label": assessment1.title
-                    }
-                },
-                "u": {
-                    unit1.unit_id: {
-                        "s": {},
-                        "l": {
-                            lesson11.lesson_id: {
-                                "a": {},
-                                "h": {
-                                    0: {
-                                        "c": {},
-                                        "label": "L1.1"
-                                    }
-                                },
-                                "label": lesson11.index
-                            }
-                        },
-                        "label": "Unit %s" % unit1.index
-                    }
-                },
-                'label': 'UNTITLED COURSE'
-            })
+            expected, progress_stats.compute_entity_dict('course', []))
+
         lesson11.objectives = """
             <question quid="123" weight="1" instanceid="1"></question>
             random_text
@@ -391,41 +407,44 @@ class ProgressAnalyticsTest(actions.TestBase):
             <question-group qgid="456" instanceid="2"></question-group>
             yet_more_random_text
         """
+        expected = {
+            'label': 'UNTITLED COURSE',
+            's': [{
+                'child_id': assessment1.unit_id,
+                'child_val': {'label': assessment1.title}}],
+            'u': [{
+                'child_id': unit1.unit_id,
+                'child_val': {
+                    'label': 'Unit %s' % unit1.index,
+                    's': [],
+                    'l': [{
+                        'child_id': lesson11.lesson_id,
+                        'child_val': {
+                            'label': lesson11.index,
+                            'a': [],
+                            'h': [{
+                                'child_id': 0,
+                                'child_val': {
+                                    'c': [{
+                                        'child_id': '1',
+                                        'child_val': {
+                                            'label': 'L1.1.1'
+                                        }}, {
+                                        'child_id': '2',
+                                        'child_val': {
+                                            'label': 'L1.1.2'
+                                        }
+                                        }],
+                                    'label': 'L1.1'
+                                }
+                            }]
+                        }
+                    }]
+                }
+            }]
+        }
         assert_equals(
-            progress_stats.compute_entity_dict('course', []),
-            {
-                "s": {
-                    assessment1.unit_id: {
-                        "label": assessment1.title
-                    }
-                },
-                "u": {
-                    unit1.unit_id: {
-                        "s": {},
-                        "l": {
-                            lesson11.lesson_id: {
-                                "a": {},
-                                "h": {
-                                    0: {
-                                        "c": {
-                                            u'1': {
-                                                "label": "L1.1.1"
-                                            },
-                                            u'2': {
-                                                "label": "L1.1.2"
-                                            }
-                                        },
-                                        "label": "L1.1"
-                                    }
-                                },
-                                "label": lesson11.index
-                            }
-                        },
-                        "label": "Unit %s" % unit1.index
-                    }
-                },
-                "label": 'UNTITLED COURSE'
-            })
+            expected, progress_stats.compute_entity_dict('course', []))
 
     def test_entity_dict_for_pre_post_assessment(self):
         """Tests correct entity_structure is built."""
@@ -441,57 +460,89 @@ class ProgressAnalyticsTest(actions.TestBase):
         unit1.pre_assessment = None
         unit1.post_assessment = None
         progress_stats = ProgressStats(course)
+        expected = {
+            's': [{
+                'child_id': pre_assessment.unit_id,
+                'child_val': {
+                    'label': 'Pre Assessment'}}, {
+                'child_id': post_assessment.unit_id,
+                'child_val': {
+                    'label': 'Post Assessment'}}],
+             'u': [{
+                'child_id': unit1.unit_id,
+                'child_val': {
+                        's': [],
+                        'l': [],
+                        'label': 'Unit 1'}}],
+             'label': 'UNTITLED COURSE'}
         assert_equals(
-            progress_stats.compute_entity_dict('course', []),
-            {'s': {
-                pre_assessment.unit_id: {'label': 'Pre Assessment'},
-                post_assessment.unit_id: {'label': 'Post Assessment'}},
-             'u': {unit1.unit_id: {
-                 's': {},
-                 'l': {},
-                 'label': 'Unit 1'}},
-             'label': 'UNTITLED COURSE'})
+            expected, progress_stats.compute_entity_dict('course', []))
 
         # Only pre
         unit1.pre_assessment = pre_assessment.unit_id
         unit1.post_assessment = None
         progress_stats = ProgressStats(course)
+        expected = {
+            's': [{
+                'child_id': post_assessment.unit_id,
+                'child_val': {'label': 'Post Assessment'}}],
+            'u': [{
+                'child_id': unit1.unit_id,
+                'child_val': {
+                    's': [{
+                        'child_id': pre_assessment.unit_id,
+                        'child_val': {'label': 'Pre Assessment'}}],
+                    'l': [],
+                    'label': 'Unit 1'}}],
+            'label': 'UNTITLED COURSE'}
         assert_equals(
-            progress_stats.compute_entity_dict('course', []),
-            {'s': {post_assessment.unit_id: {'label': 'Post Assessment'}},
-             'u': {unit1.unit_id: {
-                 's': {pre_assessment.unit_id: {'label': 'Pre Assessment'}},
-                 'l': {},
-                 'label': 'Unit 1'}},
-             'label': 'UNTITLED COURSE'})
+            expected, progress_stats.compute_entity_dict('course', []))
 
         # Only post
         unit1.pre_assessment = None
         unit1.post_assessment = post_assessment.unit_id
         progress_stats = ProgressStats(course)
+        expected = {
+            's': [{
+                'child_id': pre_assessment.unit_id,
+                'child_val': {'label': 'Pre Assessment'}}],
+            'u': [{
+                'child_id': unit1.unit_id,
+                'child_val': {
+                    's': [{
+                        'child_id': post_assessment.unit_id,
+                        'child_val': {
+                            'label': 'Post Assessment'}}],
+                    'l': [],
+                    'label': 'Unit 1'}}],
+             'label': 'UNTITLED COURSE'}
         assert_equals(
-            progress_stats.compute_entity_dict('course', []),
-            {'s': {pre_assessment.unit_id: {'label': 'Pre Assessment'}},
-             'u': {unit1.unit_id: {
-                 's': {post_assessment.unit_id: {'label': 'Post Assessment'}},
-                 'l': {},
-                 'label': 'Unit 1'}},
-             'label': 'UNTITLED COURSE'})
+            expected, progress_stats.compute_entity_dict('course', []))
 
         # Pre and post assessment set.
         unit1.pre_assessment = pre_assessment.unit_id
         unit1.post_assessment = post_assessment.unit_id
         progress_stats = ProgressStats(course)
+        expected = {
+            's': [],
+            'u': [{
+                'child_id': unit1.unit_id,
+                'child_val': {
+                    's': [
+                        {
+                            'child_id': pre_assessment.unit_id,
+                            'child_val': {
+                                'label': 'Pre Assessment'}
+                        }, {
+                            'child_id': post_assessment.unit_id,
+                            'child_val': {
+                                'label': 'Post Assessment'}
+                        }],
+                    'l': [],
+                    'label': 'Unit 1'}}],
+             'label': 'UNTITLED COURSE'}
         assert_equals(
-            progress_stats.compute_entity_dict('course', []),
-            {'s': {},
-             'u': {unit1.unit_id: {
-                 's': {
-                     pre_assessment.unit_id: {'label': 'Pre Assessment'},
-                     post_assessment.unit_id: {'label': 'Post Assessment'}},
-                 'l': {},
-                 'label': 'Unit 1'}},
-             'label': 'UNTITLED COURSE'})
+            expected, progress_stats.compute_entity_dict('course', []))
 
 
 
