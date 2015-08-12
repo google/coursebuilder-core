@@ -17,11 +17,11 @@ if (typeof window._GCB_EMBED === 'undefined') {
 
 (function(pageState) {
   var ENV = JSON.parse('{{ env | js_string }}');
-  var EMBED_CSS_URL = ENV['EMBED_CSS_URL'];
-  var EMBED_LIB_JS_URL =  ENV['EMBED_LIB_JS_URL'];
-  var JQUERY_URL = ENV['JQUERY_URL'];
-  var MATERIAL_ICONS_URL = ENV['MATERIAL_ICONS_URL'];
-  var ROBOTO_URL = ENV['ROBOTO_URL'];
+  var EMBED_CSS_URL = ENV['embed_css_url'];
+  var EMBED_LIB_JS_URL =  ENV['embed_lib_js_url'];
+  var JQUERY_URL = ENV['jquery_url'];
+  var MATERIAL_ICONS_URL = ENV['material_icons_url'];
+  var ROBOTO_URL = ENV['roboto_url'];
 
   function addOnLoadEventListener(f) {
     // TODO(johncox): this breaks in IE8. Need to think about cross-browser

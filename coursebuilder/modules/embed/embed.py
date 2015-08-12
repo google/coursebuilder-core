@@ -79,36 +79,45 @@ _STATIC = 'static'
 _STATIC_BASE_URL_V1 = '%s/%s/%s' % (_BASE_URL, _STATIC, _V1)
 _STATIC_DIR_V1 = os.path.join(_BASE_DIR, _STATIC, _V1)
 
+_COURSE_TITLE_NAME = 'course_title'
 _DEMO_URL = _BASE_URL_V1 + '/demo'
-_ERRORS_DEMO_URL = _DEMO_URL + '/errors'
-_GLOBAL_ERRORS_DEMO_URL = _ERRORS_DEMO_URL + '/global'
-_LOCAL_ERRORS_DEMO_URL = _ERRORS_DEMO_URL + '/local'
-
 _DISPATCH_INFIX = '/resource'
 _DISPATCH_URL = _BASE_URL_V1 + _DISPATCH_INFIX
-
+_EMAIL_NAME = 'email'
+_EMBED_CHILD_CSS_PATH = os.path.join(_STATIC_DIR_V1, 'embed_child.css')
+_EMBED_CHILD_CSS_URL = '%s/%s' % (_STATIC_BASE_URL_V1, 'embed_child.css')
+_EMBED_CHILD_CSS_URL_NAME = 'embed_child_css_url'
 _EMBED_CHILD_JS_NAME = 'embed_child.js'
 _EMBED_CHILD_JS_URL = '%s/%s' % (_BASE_URL_V1, _EMBED_CHILD_JS_NAME)
 _EMBED_CHILD_JS_URL_NAME = 'embed_child_js_url'
 _EMBED_CSS_PATH = os.path.join(_STATIC_DIR_V1, 'embed.css')
 _EMBED_CSS_URL = '%s/%s' % (_STATIC_BASE_URL_V1, 'embed.css')
-_EMBED_LIB_JS_NAME = 'embed_lib.js'
-_EMBED_LIB_JS_URL = '%s/%s' % (_BASE_URL_V1, _EMBED_LIB_JS_NAME)
+_EMBED_CSS_URL_NAME = 'embed_css_url'
 _EMBED_JS_NAME = 'embed.js'
 _EMBED_JS_URL = '%s/%s' % (_BASE_URL_V1, _EMBED_JS_NAME)
-
-_COURSE_TITLE_NAME = 'course_title'
-_EMAIL_NAME = 'email'
+_EMBED_LIB_JS_NAME = 'embed_lib.js'
+_EMBED_LIB_JS_URL = '%s/%s' % (_BASE_URL_V1, _EMBED_LIB_JS_NAME)
+_EMBED_LIB_JS_URL_NAME = 'embed_lib_js_url'
 _ENV_NAME = 'env'
+_ERRORS_DEMO_URL = _DEMO_URL + '/errors'
 _EXAMPLE_NAME = 'example.html'
 _EXAMPLE_URL = _BASE_URL + '/example'
-_ID_OR_NAME_NAME = 'id_or_name'
-_KIND_NAME = 'kind'
 _FINISH_AUTH_NAME = 'finish_auth.html'
 _FINISH_AUTH_URL = '%s/%s' % (_BASE_URL_V1, 'auth')
+_GLOBAL_ERRORS_DEMO_URL = _ERRORS_DEMO_URL + '/global'
+_ID_OR_NAME_NAME = 'id_or_name'
+_IN_SESSION_NAME = 'in_session'
 _JQUERY_URL = 'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js'
+_JQUERY_URL_NAME = 'jquery_url'
+_KIND_NAME = 'kind'
+_LOCAL_ERRORS_DEMO_URL = _ERRORS_DEMO_URL + '/local'
 _MATERIAL_ICONS_URL = 'https://fonts.googleapis.com/icon?family=Material+Icons'
+_MATERIAL_ICONS_URL_NAME = 'material_icons_url'
+_ORIGIN_NAME = 'origin'
+_RESOURCE_URI_PREFIX_BOUNDARY_NAME = 'resource_uri_prefix_boundary'
 _ROBOTO_URL = 'http://fonts.googleapis.com/css?family=Roboto'
+_ROBOTO_URL_NAME = 'roboto_url'
+_SIGN_IN_URL_NAME = 'sign_in_url'
 
 _LOG = logging.getLogger('modules.embed.embed')
 
@@ -266,12 +275,25 @@ class _404IfHandlersDisabledMixin(object):
         pass
 
 
-class _CssHandler(utils.ApplicationHandler, _404IfHandlersDisabledMixin):
+class _AbstractCssHandler(
+        utils.ApplicationHandler, _404IfHandlersDisabledMixin):
+
+    _PATH = None
 
     def _real_get(self):
         self.response.headers['Content-Type'] = 'text/css'
-        with open(_EMBED_CSS_PATH) as f:
+        with open(self._PATH) as f:
             self.response.out.write(f.read())
+
+
+class _EmbedCssHandler(_AbstractCssHandler):
+
+    _PATH = _EMBED_CSS_PATH
+
+
+class _EmbedChildCssHandler(_AbstractCssHandler):
+
+    _PATH = _EMBED_CHILD_CSS_PATH
 
 
 class _AbstractJsHandler(utils.ApplicationHandler, _404IfHandlersDisabledMixin):
@@ -283,6 +305,12 @@ class _AbstractJsHandler(utils.ApplicationHandler, _404IfHandlersDisabledMixin):
         assert cls._TEMPLATE_NAME is not None
 
         return _TEMPLATES_ENV.get_template(cls._TEMPLATE_NAME)
+
+    def _get_absolute_embed_child_css_url(self):
+        return self.request.host_url + _EMBED_CHILD_CSS_URL
+
+    def _get_absolute_embed_css_url(self):
+        return self.request.host_url + _EMBED_CSS_URL
 
     def _get_env(self):
         raise NotImplementedError
@@ -323,10 +351,13 @@ class _EmbedLibJsHandler(_AbstractJsHandler):
 
     def _get_env(self):
         return {
-            'IN_SESSION': users.get_current_user() is not None,
-            'ORIGIN': self.request.host_url,
-            'RESOURCE_URI_PREFIX_BOUNDARY': _DISPATCH_INFIX,
-            'SIGN_IN_URL': self._get_absolute_sign_in_url(),
+            _EMBED_CHILD_CSS_URL_NAME: self._get_absolute_embed_child_css_url(),
+            _IN_SESSION_NAME: users.get_current_user() is not None,
+            _MATERIAL_ICONS_URL_NAME: _MATERIAL_ICONS_URL,
+            _ORIGIN_NAME: self.request.host_url,
+            _RESOURCE_URI_PREFIX_BOUNDARY_NAME: _DISPATCH_INFIX,
+            _ROBOTO_URL_NAME: _ROBOTO_URL,
+            _SIGN_IN_URL_NAME: self._get_absolute_sign_in_url(),
         }
 
 
@@ -334,19 +365,16 @@ class _EmbedJsHandler(_AbstractJsHandler):
 
     _TEMPLATE_NAME = _EMBED_JS_NAME
 
-    def _get_absolute_embed_css_url(self):
-        return self.request.host_url + _EMBED_CSS_URL
-
     def _get_absolute_embed_lib_js_url(self):
         return self.request.host_url + _EMBED_LIB_JS_URL
 
     def _get_env(self):
         return {
-            'EMBED_CSS_URL': self._get_absolute_embed_css_url(),
-            'EMBED_LIB_JS_URL': self._get_absolute_embed_lib_js_url(),
-            'JQUERY_URL': _JQUERY_URL,
-            'MATERIAL_ICONS_URL': _MATERIAL_ICONS_URL,
-            'ROBOTO_URL': _ROBOTO_URL,
+            _EMBED_CSS_URL_NAME: self._get_absolute_embed_css_url(),
+            _EMBED_LIB_JS_URL_NAME: self._get_absolute_embed_lib_js_url(),
+            _JQUERY_URL_NAME: _JQUERY_URL,
+            _MATERIAL_ICONS_URL_NAME: _MATERIAL_ICONS_URL,
+            _ROBOTO_URL_NAME: _ROBOTO_URL,
         }
 
 
@@ -412,8 +440,12 @@ class _DispatchHandler(
 class _FinishAuthHandler(utils.BaseHandler, _404IfHandlersDisabledMixin):
 
     def _real_get(self):
-        self.response.out.write(
-            _TEMPLATES_ENV.get_template(_FINISH_AUTH_NAME).render())
+        template = _TEMPLATES_ENV.get_template(_FINISH_AUTH_NAME)
+        self.response.out.write(template.render({
+            _ENV_NAME: transforms.dumps({
+                _IN_SESSION_NAME: bool(users.get_current_user()),
+            })
+        }))
 
 
 class _ExampleEmbed(AbstractEmbed):
@@ -462,8 +494,9 @@ custom_module = None
 
 _GLOBAL_HANDLERS = [
     (_DEMO_URL, _DemoHandler),
+    (_EMBED_CHILD_CSS_URL, _EmbedChildCssHandler),
     (_EMBED_CHILD_JS_URL, _EmbedChildJsHandler),
-    (_EMBED_CSS_URL, _CssHandler),
+    (_EMBED_CSS_URL, _EmbedCssHandler),
     (_EMBED_JS_URL, _EmbedJsHandler),
     (_EMBED_LIB_JS_URL, _EmbedLibJsHandler),
     (_FINISH_AUTH_URL, _FinishAuthHandler),

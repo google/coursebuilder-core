@@ -3,19 +3,22 @@
   var $ = jQuery;
 
   var ENV = JSON.parse('{{ env | js_string }}');
-  var IN_SESSION = ENV['IN_SESSION'];
-  var ORIGIN = ENV['ORIGIN'];
-  var RESOURCE_URI_PREFIX_BOUNDARY = ENV['RESOURCE_URI_PREFIX_BOUNDARY'];
-  var SIGN_IN_URL = ENV['SIGN_IN_URL'];
+  var EMBED_CHILD_CSS_URL = ENV['embed_child_css_url'];
+  var IN_SESSION = ENV['in_session'];
+  var MATERIAL_ICONS_URL = ENV['material_icons_url'];
+  var ORIGIN = ENV['origin'];
+  var RESOURCE_URI_PREFIX_BOUNDARY = ENV['resource_uri_prefix_boundary'];
+  var ROBOTO_URL = ENV['roboto_url'];
+  var SIGN_IN_URL = ENV['sign_in_url'];
 
   var EMBED_TAG_NAME = 'cb-embed';
   var ERROR_CLASS = EMBED_TAG_NAME + '-error';
   var IFRAME_CLASS = EMBED_TAG_NAME + '-frame';
+  var IFRAME_CONTENT_CLASS = IFRAME_CLASS + '-content';
+  var MATERIAL_ICONS_CLASS = 'material-icons';
   var SIGN_IN_BUTTON_CLASS = EMBED_TAG_NAME + '-sign-in-button';
   var SIGN_IN_CONTAINER_CLASS = EMBED_TAG_NAME + '-sign-in-container';
   var SIGN_IN_CONTENT_CLASS = EMBED_TAG_NAME + '-sign-in-content';
-
-  var MATERIAL_ICONS_CLASS = EMBED_TAG_NAME + '-material-icon';
   var SIGN_IN_ICON_CLASS = EMBED_TAG_NAME + '-icon';
 
   function debounce(fn, timeoutMillis) {
@@ -32,6 +35,108 @@
       }, timeoutMillis);
     }
   }
+
+  function Frame(parentElement) {
+    this._iframe = null;
+    this._iframeCanBePopulated = $.Deferred();
+    this._parentElement = parentElement;
+    this._resizeIntervalId = null;
+    this._src = null;
+    this._makeIframe();
+  }
+  Frame.prototype = {
+    resize: function() {
+      if (this._isLocal()) {
+        var target = this._iframe.contents().find('.' + IFRAME_CONTENT_CLASS);
+        var htmlTarget = this._iframe.contents().find('html');
+        this._resizeLocal(target, htmlTarget);
+      } else {
+        this._resizeRemote();
+      }
+    },
+    setLocalContent: function(content) {
+      this._src = null;
+      // In FF, elements added to an iframe before its document is loaded will
+      // be discarded. Defer insertion until the iframe is loaded.
+      $.when(this._iframeCanBePopulated).then(function() {
+        this._populateLocalIframe(content);
+      }.bind(this));
+    },
+    setRemoteSrc: function(src) {
+      this._stopLocalResizing();
+      this._src = src;
+      this._iframe.attr('src', this._src);
+    },
+    _isLocal: function() {
+      return (this._src === null);
+    },
+    _makeIframe: function() {
+      this._iframe = $('<iframe>')
+        .attr('class', IFRAME_CLASS)
+        .attr('scrolling', 'no')
+        .css('height', '0')
+        .load(function() {
+          this._iframeCanBePopulated.resolve();
+        }.bind(this));
+      // Insert now so iframe document exists for later accessors.
+      this._parentElement.append(this._iframe);
+    },
+    _makeStylesheetLink: function(url) {
+      return $('<link>')
+        .attr('href', url)
+        .attr('rel', 'stylesheet')
+        .attr('type', 'text/css');
+    },
+    _populateLocalIframe: function(element) {
+      var frameContents = this._iframe.contents();
+      frameContents.find('head').empty()
+          .append(this._makeStylesheetLink(EMBED_CHILD_CSS_URL))
+          .append(this._makeStylesheetLink(MATERIAL_ICONS_URL))
+          .append(this._makeStylesheetLink(ROBOTO_URL));
+      frameContents.find('body').empty()
+          .append($('<div>').attr('class', IFRAME_CONTENT_CLASS));
+      this._iframe.contents().find('.' + IFRAME_CONTENT_CLASS).append(element);
+      this._startLocalResizing();
+    },
+    _resizeLocal: function(target, htmlTarget) {
+      // When we call find() on an element, it pulses in browser inspectors.
+      // This function is called in a polling loop. To keep inspectors from
+      // strobing, we pass elements in as arguments rather than find()ing them.
+      //
+      // Additionally, different browsers have different opinions about the size
+      // of an iframe's <html> element versus our container. We take the max to
+      // avoid truncation.
+      var iframeHeight = this._iframe.height();
+      var newHeight = Math.max(
+        target.outerHeight(true), htmlTarget.outerHeight(true));
+
+      if (iframeHeight !== newHeight) {
+        this._iframe.height(newHeight);
+      }
+    },
+    _resizeRemote: function() {
+      // Clears height and tells the child to request a resize.
+      this._stopLocalResizing();
+      this._iframe.css('height', '').css('width', '');
+      this._iframe[0].contentWindow.postMessage({action: 'resize'}, '*');
+    },
+    _startLocalResizing: function() {
+      // When resizing local content, there is no good event to listen on to
+      // know that the iframe is fully rendered and its size can be reliably
+      // sampled. All manner of corner-cases result. For reliability, we poll.
+      this._stopLocalResizing();
+      var target = this._iframe.contents().find('.' + IFRAME_CONTENT_CLASS);
+      var htmlTarget = this._iframe.contents().find('html');
+      this._resizeIntervalId = window.setInterval(
+        this._resizeLocal.bind(this, target, htmlTarget), 50);
+    },
+    _stopLocalResizing: function() {
+      if (this._resizeIntervalId) {
+        window.clearInterval(this._resizeIntervalId);
+        this._resizeIntervalId = null;
+      }
+    }
+  };
 
   function Page(state) {
     this._state = state;
@@ -82,6 +187,23 @@
       return firstSrc.substring(
         0, firstSrc.indexOf(RESOURCE_URI_PREFIX_BOUNDARY));
     },
+    _handleResizeMessage: function(height, width, sourceWindow) {
+      $('.' + IFRAME_CLASS).each(function(unused, iframe) {
+        if (iframe.contentWindow == sourceWindow) {
+          $(iframe).height(height).width(width);
+          return false;
+        }
+      });
+    },
+    _handleWindowResize: debounce(function() {
+      // Handles window resize events. On Chrome/FF and perhaps other browsers,
+      // these fire continually while the window is being resized. The handler
+      // may do expensive operations like cross-frame messaging, which performs
+      // poorly and must be throttled.
+      $.each(this._widgets, function(unused, widget) {
+        widget.resize();
+      });
+    }),
     _registerListeners: function() {
       $(window).on('message', function(event) {
         if (!this._valid(event)) {
@@ -95,21 +217,12 @@
             this._renderAuthenticated();
             break;
           case 'resize':
-            this._resize(data.height, data.width, sourceWindow);
+            this._handleResizeMessage(data.height, data.width, sourceWindow);
             break;
         }
       }.bind(this));
-      $(window).on('resize', this._removeSize);
+      $(window).on('resize', this._handleWindowResize.bind(this));
     },
-    _removeSize: debounce(function() {
-      // Clears size information so later _resize ticks will set correct values.
-      // On Chrome/FF/perhaps some other browsers, resize fires events
-      // continuously. This performs poorly, so we throttle it.
-      $('.' + IFRAME_CLASS).each(function(unused, iframe) {
-        $(iframe).css('height', '').css('width', '');
-        iframe.contentWindow.postMessage({action: 'resize'}, '*');
-      });
-    }),
     _renderAuthenticated: function() {
       $.each(this._widgets, function(unused, widget) {
         if (widget.hasErrors()) {
@@ -130,14 +243,6 @@
         widget.showUnauthenticated();
       });
     },
-    _resize: function(height, width, sourceWindow) {
-      $('.' + IFRAME_CLASS).each(function(unused, iframe) {
-        if (iframe.contentWindow == sourceWindow) {
-          $(iframe).height(height).width(width);
-          return false;
-        }
-      });
-    },
     _valid: function(event) {
       return (event.originalEvent.origin === ORIGIN);
     },
@@ -151,6 +256,7 @@
   function Widget(parentElement) {
     this._errors = [];
     this._parentElement = parentElement;
+    this._frame = new Frame(this._parentElement);
     this._src = this._getParentSrc();
   }
   Widget.prototype = {
@@ -160,13 +266,11 @@
     hasErrors: function() {
       return this._errors.length > 0;
     },
+    resize: function() {
+      this._frame.resize();
+    },
     showAuthenticated: function() {
-      this._parentElement.empty().append(
-        $('<iframe/>')
-          .attr('class', IFRAME_CLASS)
-          .attr('scrolling', 'no')
-          .attr('src', this._src)
-      );
+      this._frame.setRemoteSrc(this._src);
     },
     showErrors: function() {
       var heading = $('<h1>').text('Embed misconfigured; errors:');
@@ -178,7 +282,7 @@
         .append(heading)
         .append(list);
 
-      this._parentElement.empty().append(div);
+      this._frame.setLocalContent(div);
     },
     showUnauthenticated: function() {
       var container = $(
@@ -198,7 +302,7 @@
         .addClass(MATERIAL_ICONS_CLASS + ' ' + SIGN_IN_ICON_CLASS);
       container.find('span').addClass(SIGN_IN_CONTENT_CLASS);
 
-      this._parentElement.empty().append(container);
+      this._frame.setLocalContent(container);
     },
     validate: function(allowedCbEmbedSrcPrefix) {
       if (!this._srcMatchesOrigin()) {

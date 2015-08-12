@@ -1,14 +1,21 @@
 <!DOCTYPE html>
 <html>
   <head>
+  </head>
+  <body>
+    <div id='state' data-env='{{ env }}'></div>
+    <p>Signing you in...</p>
     <script type="text/javascript">
-      window.opener.postMessage({action: 'login'}, '*');
+      var state = document.getElementById('state');
+      var env = JSON.parse(state.getAttribute('data-env'));
+
+      if (env.in_session) {
+        window.opener.postMessage({action: 'login'}, '*');
+      }
+
       // If we close the window immediately, breakpoints in the receiver never
       // get hit. If we force a dequeue before the close, though, they will.
       window.setTimeout(window.close, 0);
     </script>
-  </head>
-  <body>
-    <p>Signing you in...</p>
   </body>
 </html>

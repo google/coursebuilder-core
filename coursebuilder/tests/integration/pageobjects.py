@@ -1335,51 +1335,154 @@ class DatastorePage(PageObject):
         return data
 
 
-class EmbedModuleDemoPage(PageObject):
+class AbstractEmbedModuleIframePageObject(PageObject):
+    """Base class for pages that have or are in iframes."""
+
+    def is_embed_page(self):
+        try:
+            ps = self._tester.driver.find_elements_by_tag_name('p')
+            return ps and 'Greetings' in ps[-1].text
+        except exceptions.NoSuchElementException:
+            return False
+
+    def is_error_page(self):
+        try:
+            header = self._tester.driver.find_element_by_tag_name('h1')
+            return 'Embed misconfigured' in header.text
+        except exceptions.NoSuchElementException:
+            return False
+
+    def is_sign_in_page(self):
+        try:
+            return bool(self._tester.driver.find_element_by_class_name(
+                'cb-embed-sign-in-button'))
+        except exceptions.NoSuchElementException:
+            return False
+
+    def switch_from_iframe(self):
+        self._tester.driver.switch_to_default_content()
+
+
+class EmbedModuleAbstractIframePageObject(
+        AbstractEmbedModuleIframePageObject):
+    """Base page object for pages containing iframes."""
+
+    def switch_to_iframe(self, iframe):
+        self._tester.driver.switch_to_frame(iframe)
+
+
+class EmbedModuleAbstractIframeContentsPageObject(
+        AbstractEmbedModuleIframePageObject):
+    """Base page object for pages contained in iframes."""
+
+    def __init__(self, tester, iframe):
+        super(EmbedModuleAbstractIframeContentsPageObject, self).__init__(
+            tester)
+        self._iframe = iframe
+
+    def switch_to_iframe(self):
+        self._tester.driver.switch_to_frame(self._iframe)
+
+
+class EmbedModuleDemoPage(EmbedModuleAbstractIframePageObject):
+
+    def get_cb_embed_elements(self):
+        return self._tester.driver.find_elements_by_tag_name('cb-embed')
+
+    def get_iframe(self, cb_embed):
+        def iframe_present(_):
+            return bool(cb_embed.find_element_by_tag_name('iframe'))
+
+        self.wait().until(iframe_present)
+        return cb_embed.find_element_by_tag_name('iframe')
+
+    def get_page(self, iframe):
+        if self.is_embed_page():
+            return EmbedModuleExampleEmbedPage(self._tester, iframe)
+        elif self.is_error_page():
+            return EmbedModuleErrorPage(self._tester, iframe)
+        elif self.is_sign_in_page():
+            return EmbedModuleSignInPage(self._tester, iframe)
+        else:
+            raise TypeError('No matching page object found')
 
     def load(self, url):
         self.get(url)
         return self
 
-    def click_first_sign_in_control(self):
-        embed = self.get_cb_embed_and_wait_until_rendered(0)
-        embed.find_element_by_css_selector('.cb-embed-sign-in-button').click()
-        return LoginPage(self._tester)
+    def load_embed(self, cb_embed):
+        iframe = self.get_iframe(cb_embed)
+        self.switch_to_iframe(iframe)
 
-    def get_cb_embed_and_wait_until_rendered(self, index):
-        embed = self.get_cb_embed_elements()[index]
+        def iframe_populated(_):
+            return bool(self._tester.driver.find_elements_by_tag_name('*'))
 
-        def embed_rendered(unused_driver):
-            return bool(embed.text)
+        self.wait().until(iframe_populated)
+        page = self.get_page(iframe)
+        self.switch_from_iframe()
+        return page
 
-        self.wait().until(embed_rendered)
-        return embed
-
-    def get_cb_embed_elements(self):
-        return self._tester.driver.find_elements_by_tag_name('cb-embed')
-
-    def get_cb_embed_iframe_elements(self):
-        return self._tester.driver.find_elements_by_css_selector(
-            'cb-embed > iframe')
-
-    def get_cb_embed_srcs(self):
-        return [e.get_attribute('src') for e in self.get_cb_embed_elements()]
-
-    def get_cb_embed_text(self, index):
-        """Gets text from a <cb-embed> that isn't an iframe."""
-        embed = self.get_cb_embed_and_wait_until_rendered(index)
-        return embed.text
-
-    def get_iframe(self, url):
-        iframes = self._tester.driver.find_elements_by_tag_name('iframe')
-        for iframe in iframes:
-            if iframe.get_attribute('src') == url:
-                return iframe
-
-        return None
+    def login(self, email):
+        first_cb_embed = self.get_cb_embed_elements()[0]
+        sign_in_page = self.load_embed(first_cb_embed)
+        sign_in_page.click().login(email)
 
 
-class EmbedModuleExampleEmbedPage(PageObject):
+class EmbedModuleErrorPage(EmbedModuleAbstractIframeContentsPageObject):
 
-    def get_data_paragraph_text(self):
-        return self._tester.driver.find_elements_by_tag_name('p')[-1].text
+    def has_error(self, text):
+        self.switch_to_iframe()
+
+        def loaded(_):
+            return self.is_error_page()
+
+        self.wait().until(loaded)
+
+        found = False
+        for li in self._tester.driver.find_elements_by_tag_name('li'):
+            if text in li.text:
+                found = True
+                break
+
+        self.switch_from_iframe()
+        return found
+
+
+class EmbedModuleExampleEmbedPage(EmbedModuleAbstractIframeContentsPageObject):
+
+    def get_text(self):
+        self.switch_to_iframe()
+
+        def loaded(_):
+            return self.is_embed_page()
+
+        self.wait().until(loaded)
+        text = self._tester.driver.find_elements_by_tag_name('p')[-1].text
+        self.switch_from_iframe()
+        return text
+
+
+class EmbedModuleSignInPage(EmbedModuleAbstractIframeContentsPageObject):
+
+    def click(self):
+        self.switch_to_iframe()
+        self._tester.driver.find_element_by_css_selector(
+            '.cb-embed-sign-in-button').click()
+        self.switch_from_iframe()
+        return self
+
+    def login(self, email):
+        last_window_handle = self._tester.driver.current_window_handle
+        self._tester.driver.switch_to_window(
+            self._tester.driver.window_handles[-1])
+
+        login_page = LoginPage(self._tester)
+        login_page.login(email)
+        self._tester.driver.switch_to_window(last_window_handle)
+
+    def get_text(self):
+        self.switch_to_iframe()
+        text = self._tester.driver.find_element_by_css_selector(
+            '.cb-embed-sign-in-button').text
+        self.switch_from_iframe()
+        return text

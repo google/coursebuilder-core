@@ -172,53 +172,18 @@ class EmbedModuleTest(BaseIntegrationTest):
     def setUp(self):
         super(EmbedModuleTest, self).setUp()
         self.email = 'test@example.com'
-        self.last_window_handle = None
 
-    def assert_cb_embed_contains_error(self, page, index, message):
-        text = page.get_cb_embed_text(index)
-        self.assertIn(message, text)
+    def assert_embed_has_error(self, page, error):
+        self.assertIsNotNone(page)
+        self.assertTrue(page.has_error(error))
 
-    def assert_cb_embed_srcs_sane(self, cb_embed_srcs):
-        self.assertEquals(3, len(cb_embed_srcs))
+    def assert_is_embed_page(self, page):
+        self.assertIsNotNone(page)
+        self.assertIn('Greetings, %s.' % self.email, page.get_text())
 
-        for src in cb_embed_srcs:
-            self.assertIn('/sample/modules/embed/v1/resource/example', src)
-
-    def assert_cb_embed_iframes_present(self, demo_page):
-        self.assertTrue(demo_page.get_cb_embed_iframe_elements())
-
-    def assert_cb_embed_iframes_not_present(self, demo_page):
-        self.assertFalse(demo_page.get_cb_embed_iframe_elements())
-
-    def assert_example_embed_page_contents_match_src(self, embed_page, src):
-        expected_course_title_needle = 'Power Searching with Google'
-        expected_id_or_name = embed.UrlParser.get_id_or_name(src)
-        expected_kind = embed.UrlParser.get_kind(src)
-        main_text = embed_page.get_data_paragraph_text()
-
-        self.assertIn(expected_course_title_needle, main_text)
-        self.assertIn(self.email, main_text)
-        self.assertIn(expected_id_or_name, main_text)
-        self.assertIn(expected_kind, main_text)
-
-    def assert_embeds_loaded_in_iframes(self, demo_page, cb_embed_srcs):
-        for src in cb_embed_srcs:
-            iframe = demo_page.get_iframe(src)
-
-            self.assertIsNotNone(iframe)
-
-            example_embed_page = self.switch_to_iframe_window(iframe)
-
-            self.assert_example_embed_page_contents_match_src(
-                example_embed_page, src)
-
-            self.switch_to_demo_window()
-
-    def assert_on_demo_page(self):
-        self.assertIn('/modules/embed/v1/demo', self.driver.current_url)
-
-    def assert_on_login_page(self):
-        self.assertEquals('Login', self.driver.title)
+    def assert_is_sign_in_page(self, page):
+        self.assertIsNotNone(page)
+        self.assertIn('start', page.get_text().lower())
 
     def enable_module_handlers(self):
         # TODO(johncox): remove after security audit of embed module.
@@ -248,31 +213,6 @@ class EmbedModuleTest(BaseIntegrationTest):
             suite.TestBase.INTEGRATION_SERVER_BASE_URL +
             embed._LOCAL_ERRORS_DEMO_URL)
 
-    def switch_to_demo_window(self):
-        self.switch_to_previous_window()
-        self.assert_on_demo_page()
-
-        return pageobjects.EmbedModuleDemoPage(self)
-
-    def switch_to_iframe_window(self, iframe):
-        self.last_window_handle = self.driver.current_window_handle
-        self.driver.switch_to_frame(iframe)
-
-        return pageobjects.EmbedModuleExampleEmbedPage(self)
-
-    def switch_to_login_window(self):
-        self.switch_to_most_recently_opened_window()
-        self.assert_on_login_page()
-
-        return pageobjects.LoginPage(self)
-
-    def switch_to_most_recently_opened_window(self):
-        self.last_window_handle = self.driver.current_window_handle
-        self.driver.switch_to_window(self.driver.window_handles[-1])
-
-    def switch_to_previous_window(self):
-        self.driver.switch_to_window(self.last_window_handle)
-
     def test_embed_global_errors(self):
         self.load_sample_course()
         self.enable_module_handlers()
@@ -281,65 +221,79 @@ class EmbedModuleTest(BaseIntegrationTest):
         global_error_page = pageobjects.EmbedModuleDemoPage(self).load(
             self.get_global_errors_url())
 
-        # Error caused by deployment not matching page origin -- a global error.
-        first_embed_error_message = (
+        cb_embeds = global_error_page.get_cb_embed_elements()
+
+        self.assertEquals(2, len(cb_embeds))
+
+        first_error_page = global_error_page.load_embed(cb_embeds[0])
+        global_error_message = (
             'Embed src '
             '"http://other:8081/sample/modules/embed/v1/resource/example/1" '
             'does not match origin "http://localhost:8081"')
 
-        self.assert_cb_embed_contains_error(
-            global_error_page, 0, first_embed_error_message)
+        self.assert_embed_has_error(first_error_page, global_error_message)
 
-        # Error caused by deployment not matching page origin -- a global error.
-        second_embed_global_error = (
-            'Embed src '
-            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
-            '2" does not match origin "http://localhost:8081"')
-        # Error caused by src not matching src of 0th embed -- a local error.
-        second_embed_local_error = (
-            'Embed src '
-            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
-            '2" does not match first cb-embed src found, which is from the '
-            'deployment at "http://other:8081/sample/modules/embed/v1". All '
-            'cb-embeds in a single page must be from the same Course Builder '
-            'deployment.')
-
-        self.assert_cb_embed_contains_error(
-            global_error_page, 1, second_embed_global_error)
-        self.assert_cb_embed_contains_error(
-            global_error_page, 1, second_embed_local_error)
-
-    def test_embed_local_errors(self):
-        # Broken into its own test because we need to make sure that you can
-        # have embeds in a success state and embeds in a failed state. This
-        # cannot happen if there are any global errors, since global errors put
-        # all embeds in a failed state.
-        self.load_sample_course()
-        self.enable_module_handlers()
-        pageobjects.RootPage(self).click_logout()
-
-        local_error_page = pageobjects.EmbedModuleDemoPage(self).load(
-            self.get_local_errors_url())
-        local_error_page.click_first_sign_in_control()
-        self.switch_to_login_window().login(self.email)
-        local_error_page = self.switch_to_demo_window()
-
-        # The first embed renders successfully.
-        embed_srcs = local_error_page.get_cb_embed_srcs()
-        self.assert_embeds_loaded_in_iframes(local_error_page, [embed_srcs[0]])
-
-        # The second contains a global and a local error.
+        second_error_page = global_error_page.load_embed(cb_embeds[1])
         global_error_message = (
             'Embed src '
             '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
             '2" does not match origin "http://localhost:8081"')
         local_error_message = (
             'Embed src '
-            '"http://localhost:8082/sample/modules/embed/v1/resource/example/ '
+            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
+            '2" does not match first cb-embed src found, which is from the '
+            'deployment at "http://other:8081/sample/modules/embed/v1". '
+            'All cb-embeds in a single page must be from the same Course '
+            'Builder deployment.')
+
+        self.assert_embed_has_error(second_error_page, global_error_message)
+        self.assert_embed_has_error(second_error_page, local_error_message)
+
+    def test_embed_local_errors(self):
+        self.load_sample_course()
+        self.enable_module_handlers()
+        pageobjects.RootPage(self).click_logout()
+
+        local_error_page = pageobjects.EmbedModuleDemoPage(self).load(
+            self.get_local_errors_url())
+
+        # Before signing in, the first embed shows the sign-in widget, and the
+        # second shows both a global and a local error.
+        cb_embeds = local_error_page.get_cb_embed_elements()
+
+        self.assertEquals(2, len(cb_embeds))
+        self.assert_is_sign_in_page(local_error_page.load_embed(cb_embeds[0]))
+
+        second_embed_page = local_error_page.load_embed(cb_embeds[1])
+        global_error_message = (
+            'Embed src '
+            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
+            '2" does not match origin "http://localhost:8081"')
+        local_error_message = (
+            'Embed src '
+            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
             '2" does not match first cb-embed src found, which is from the '
             'deployment at "http://localhost:8081/sample/modules/embed/v1". '
             'All cb-embeds in a single page must be from the same Course '
             'Builder deployment.')
+
+        self.assert_embed_has_error(second_embed_page, global_error_message)
+        self.assert_embed_has_error(second_embed_page, local_error_message)
+
+        # After signing in, the first embed shows content and the second embed
+        # shows both a global and a local error.
+        local_error_page.login(self.email)
+
+        cb_embeds = local_error_page.get_cb_embed_elements()
+
+        self.assertEquals(2, len(cb_embeds))
+
+        first_embed_page = local_error_page.load_embed(cb_embeds[0])
+        second_embed_page = local_error_page.load_embed(cb_embeds[1])
+
+        self.assert_is_embed_page(first_embed_page)
+        self.assert_embed_has_error(second_embed_page, global_error_message)
+        self.assert_embed_has_error(second_embed_page, local_error_message)
 
     def test_embed_render_lifecycle(self):
         self.load_sample_course()
@@ -349,15 +303,15 @@ class EmbedModuleTest(BaseIntegrationTest):
         demo_page = pageobjects.EmbedModuleDemoPage(self).load(
             self.get_demo_url())
 
-        self.assert_cb_embed_iframes_not_present(demo_page)
+        for cb_embed in demo_page.get_cb_embed_elements():
+            page = demo_page.load_embed(cb_embed)
+            self.assert_is_sign_in_page(page)
 
-        cb_embed_srcs = demo_page.get_cb_embed_srcs()
-        demo_page.click_first_sign_in_control()
-        self.switch_to_login_window().login(self.email)
-        demo_page = self.switch_to_demo_window()
+        demo_page.login(self.email)
 
-        self.assert_cb_embed_iframes_present(demo_page)
-        self.assert_embeds_loaded_in_iframes(demo_page, cb_embed_srcs)
+        for cb_embed in demo_page.get_cb_embed_elements():
+            page = demo_page.load_embed(cb_embed)
+            self.assert_is_embed_page(page)
 
 
 class IntegrationServerInitializationTask(BaseIntegrationTest):
