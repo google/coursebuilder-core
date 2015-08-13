@@ -603,7 +603,8 @@ def make_help_menu():
 
 def get_visible_courses():
     result = []
-    for app_context in sorted(sites.get_all_courses()):
+    for app_context in sorted(sites.get_all_courses(),
+            key=lambda course: course.get_title().lower()):
         with Namespace(app_context.namespace):
             if DashboardHandler.current_user_has_access(app_context):
                 result.append(app_context)
