@@ -1,11 +1,21 @@
 <link rel="stylesheet" type="text/css"
       href="/modules/skill_map/resources/dependo-0.1.4/cb/dependency_graph.css">
+<link rel="stylesheet" type="text/css"
+      href="/modules/skill_map/resources/css/skill_map.css">
 
-<div class="graph" data-nodes="{{ nodes }}" data-links="{{ links }}">
+<div class="gcb-button-toolbar">
+  <button class="material-icons clickable tabular-view" title="Show Skills table">
+    view_list
+  </button>
+  <button class="material-icons selected" disabled>insert_chart</button>
+</div>
+
 <div class="control-zoom">
   <a class="control-zoom-in" href="#" title="Zoom in"></a>
   <a class="control-zoom-out" href="#" title="Zoom out"></a>
 </div>
+
+<div class="graph" data-nodes="{{ nodes }}" data-links="{{ links }}">
 </div>
 
 <script src="/modules/skill_map/resources/d3-3.4.3/d3.min.js" charset="utf-8"></script>
@@ -23,6 +33,10 @@
   };
 
   $(function() {
+    $('.tabular-view').on('click', function () {
+      window.location.href = 'modules/skill_map?action=edit_skills_table'
+    });
+
     setupGraph();
   });
 </script>

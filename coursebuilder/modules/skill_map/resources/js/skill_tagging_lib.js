@@ -195,12 +195,24 @@ SkillTable.prototype = {
       '    <input type="checkbox" class="health-checkbox" checked>' +
       '    Show warnings' +
       '  </label>' +
-      '  <button class="gcb-button add-new-skill">+ Create New Skill</button>' +
+      '  <button class="material-icons selected" disabled>view_list</button>' +
+      '  <button class="material-icons graph-view clickable" title="Show Skills graph">' +
+      '    insert_chart' +
+      '  </button>' +
+      '  <button class="material-icons add-new-skill" title="Add skill">' +
+      '    add_box' +
+      '  </button>' +
+      '  </form>' +
+
       '</div>' +
       '<table class="skill-map-table"></table>');
 
     this._table = this._content.filter('table.skill-map-table');
     this._table.append(that._buildHeader());
+
+    this._content.find('.graph-view').on("click", function() {
+      window.location.href = 'modules/skill_map?action=edit_dependency_graph';
+    });
 
     this._content.find('.health-checkbox').on("change", function() {
       that._showHideDiagnosis();

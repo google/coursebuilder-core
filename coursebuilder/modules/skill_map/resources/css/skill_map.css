@@ -86,8 +86,6 @@ table.skill-map-table tr td span.related-skills {
 .skill-map-table .row:hover .row-hover.icon {
   color: #555;
 }
-table.skill-map-table button.add-new-skill {
-}
 table.skill-map-table ol.comma-list {
   padding: 0;
   margin: 0;
@@ -193,4 +191,20 @@ table.skill-map-table ol.comma-list li:last-child:after {
   display: block;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* Styles supporting buttons for switching b/n tabular and skills graph views */
+.gcb-button-toolbar .clickable {
+  border: solid 1px #fff;
+  background-color: #fff;
+}
+.gcb-button-toolbar .clickable:hover {
+  border: solid 1px #ddd;
+}
+.gcb-button-toolbar .selected {
+  background-color: #ddd;
+}
+.gcb-button-toolbar .add-new-skill {
+  border: solid 1px #fff;
+  background-color: #fff;
 }

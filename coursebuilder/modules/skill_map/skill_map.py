@@ -1255,8 +1255,8 @@ class SkillMapHandler(dashboard.DashboardHandler):
             'dependency_graph.html', [TEMPLATES_DIR]).render(template_values)
         self.render_page({
             'page_title': self.format_title('Dependencies Graph'),
-            'main_content': jinja2.utils.Markup(main_content)
-        })
+            'main_content': jinja2.utils.Markup(main_content)},
+            in_action='edit_skills_table')
 
 
 class SkillCompetencyDataSource(data_sources.SynchronousQuery):
@@ -1712,13 +1712,8 @@ def post_update_progress(course, student, lprogress, event_entity, event_key):
 
 def register_tabs():
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'edit', 'skills_table', 'Skills table', action='edit_skills_table',
+        'edit', 'skills_table', 'Skills', action='edit_skills_table',
         href='modules/skill_map?action=edit_skills_table', placement=4000)
-
-    dashboard.DashboardHandler.add_sub_nav_mapping(
-        'edit', 'dependency_graph', 'Skills graph',
-        action='edit_dependency_graph',
-        href='modules/skill_map?action=edit_dependency_graph', placement=4500)
 
     # analytics tab for skill competency histograms grouped by unit
     skill_competencies = analytics.Visualization(

@@ -1077,7 +1077,13 @@ class SkillMapHandlerTests(actions.TestBase):
         self.assertEqual(200, response.status_int)
 
         dom = self.parse_html_string(response.body)
-        assert dom.find('.//div[@class="graph"]')
+        graph_div = dom.find('.//*[@class="graph"]')
+        assert graph_div is not None
+        assert dom.find('.//div[@class="gcb-button-toolbar"]')
+
+        # verify that skills is the active tab for the skills graph
+        skills_tab = dom.find('.//a[@id="menu-item__edit__skills_table"]')
+        assert 'gcb-active' in skills_tab.get('class')
 
     def test_dependency_graph(self):
         skill_graph = SkillGraph.load()
@@ -1090,8 +1096,9 @@ class SkillMapHandlerTests(actions.TestBase):
 
         self.assertEqual(200, response.status_int)
         dom = self.parse_html_string(response.body)
-        graph_div = dom.find('.//div[@class="graph"]')
-        assert graph_div
+        graph_div = dom.find('.//*[@class="graph"]')
+        assert graph_div is not None
+        assert dom.find('.//div[@class="gcb-button-toolbar"]')
 
         nodes = json.loads(graph_div.get('data-nodes'))
         self.assertEqual(2, len(nodes))
