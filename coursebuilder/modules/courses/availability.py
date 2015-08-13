@@ -90,7 +90,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             i18n=False, optional=True,
             extra_schema_dict_values={'className': 'shown'}))
         element_settings.add_property(schema_fields.SchemaField(
-            'availability', 'Content Availability', 'string',
+            'availability', 'Availability', 'string',
             description='Content defaults to the availability '
             'of the course, but may also be restricted to admins '
             '(Private) or open to the public (Public). '
