@@ -28,15 +28,13 @@ from models import courses
 from modules.i18n_dashboard import i18n_dashboard
 from tools.etl import etl_lib
 
-_LOG = logging.getLogger('coursebuilder.tools.etl')
-
 
 def _die(message):
-    _LOG.critical(message)
+    logging.critical(message)
     sys.exit(1)
 
 
-class _BaseJob(etl_lib.Job):
+class _BaseJob(etl_lib.CourseJob):
 
     @classmethod
     def _add_locales_argument(cls, parser):
@@ -56,14 +54,6 @@ class _BaseJob(etl_lib.Job):
     def _check_file_does_not_exist(cls, path):
         if os.path.exists(path):
             _die('File already exists: ' + path)
-
-    @classmethod
-    def _get_app_context_or_die(cls, course_url_prefix):
-        app_context = etl_lib.get_context(course_url_prefix)
-        if not app_context:
-            _die('Unable to find course with url prefix ' + course_url_prefix)
-
-        return app_context
 
     @classmethod
     def _get_locales(
@@ -90,24 +80,6 @@ class _BaseJob(etl_lib.Job):
                     ', '.join(sorted(all_locales))))
 
         return sorted(requested_locales)
-
-    def run(self):
-        """Override run() and setup app_context, course and a namespace."""
-        # ETL import model is complex; run this import here not to interfere
-        from controllers import sites
-
-        app_context = self._get_app_context_or_die(
-            self.etl_args.course_url_prefix)
-        course = courses.Course(None, app_context=app_context)
-
-        sites.set_path_info(app_context.slug)
-        courses.Course.set_current(course)
-        try:
-            with common_utils.Namespace(app_context.get_namespace_name()):
-                super(_BaseJob, self).run()
-        finally:
-            courses.Course.clear_current()
-            sites.unset_path_info()
 
 
 class DeleteTranslations(_BaseJob):
@@ -196,7 +168,7 @@ class DownloadTranslations(_BaseJob):
             i18n_dashboard.TranslationDownloadRestHandler.build_zip_file(
                 courses.Course.get(app_context), f, translations, locales)
 
-        _LOG.info('Translations saved to ' + self.args.path)
+        logging.info('Translations saved to ' + self.args.path)
 
 
 class TranslateToReversedCase(_BaseJob):
@@ -308,7 +280,7 @@ class UploadTranslations(_BaseJob):
         for zipinfo in zf.infolist():
             if cls._get_file_extension(zipinfo.filename) != cls._PO_EXTENSION:
                 continue
-            _LOG.info('Processing ' + zipinfo.filename)
+            logging.info('Processing ' + zipinfo.filename)
             po_contents = zf.read(zipinfo.filename)
             cls._UPLOAD_HANDLER.parse_po_file(translations, po_contents)
         zf.close()
@@ -319,4 +291,4 @@ class UploadTranslations(_BaseJob):
         messages = []
         cls._UPLOAD_HANDLER.update_translations(course, translations, messages)
         for message in messages:
-            _LOG.info(message)
+            logging.info(message)

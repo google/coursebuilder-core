@@ -15,12 +15,9 @@
 """ETL testing utilities."""
 
 import copy
-import cStringIO
-import logging
 import os
 from controllers import sites
 from tests.functional import actions
-from tools.etl import etl
 from tools.etl import remote
 
 
@@ -40,18 +37,9 @@ class EtlTestBase(actions.TestBase):
         self.swap(os, 'environ', self.test_environ)
         sites.setup_courses(self.raw + ', course:/:/')
 
-        self.log_stream = cStringIO.StringIO()
-        self.old_log_handlers = list(etl._LOG.handlers)
-        etl._LOG.handlers = [logging.StreamHandler(self.log_stream)]
-
     def tearDown(self):
         sites.reset_courses()
-        etl._LOG.handlers = self.old_log_handlers
         super(EtlTestBase, self).tearDown()
-
-    def get_log(self):
-        self.log_stream.flush()
-        return self.log_stream.getvalue()
 
 
 class FakeEnvironment(object):

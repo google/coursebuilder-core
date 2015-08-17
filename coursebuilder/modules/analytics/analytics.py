@@ -22,6 +22,7 @@ from models import data_sources
 from models import data_removal
 from modules.analytics import answers_aggregator
 from modules.analytics import clustering
+from modules.analytics import gradebook
 from modules.analytics import location_aggregator
 from modules.analytics import page_event_aggregator
 from modules.analytics import rest_providers
@@ -74,7 +75,7 @@ def register_tabs():
             student_answers.QuestionAnswersDataSource,
             student_answers.CourseQuestionsDataSource,
             student_answers.CourseUnitsDataSource])
-    gradebook = analytics.Visualization(
+    gradebook_visualization = analytics.Visualization(
         'gradebook',
         'Gradebook',
         'gradebook.html',
@@ -116,7 +117,7 @@ def register_tabs():
         placement=3000)
     dashboard.DashboardHandler.add_sub_nav_mapping(
         ANALYTICS, 'gradebook', 'Gradebook', action='analytics_gradebook',
-        contents=analytics.TabRenderer([gradebook]),
+        contents=analytics.TabRenderer([gradebook_visualization]),
         placement=5000)
     dashboard.DashboardHandler.add_sub_nav_mapping(
         ANALYTICS, 'clustering', 'Clustering', action='analytics_clustering',
@@ -153,7 +154,10 @@ def add_actions():
 
 
 def get_namespaced_handlers():
-    return [(clustering.ClusterRESTHandler.URI, clustering.ClusterRESTHandler)]
+    return [
+        (clustering.ClusterRESTHandler.URI, clustering.ClusterRESTHandler),
+        (gradebook.CsvDownloadHandler.URI, gradebook.CsvDownloadHandler),
+        ]
 
 
 def register_module():

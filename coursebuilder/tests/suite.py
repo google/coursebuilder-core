@@ -134,8 +134,12 @@ class TestBase(unittest.TestCase):
         self._logger.removeHandler(self._stream_handler)
         self._log.close()
 
+    def get_log(self):
+        self._log.flush()
+        return self._log.getvalue()
+
     def assertLogContains(self, message):
-        self.assertIn(message, self._log.getvalue())
+        self.assertIn(message, self.get_log())
 
     def reset_filesystem(self, remove_only=False):
         if os.path.exists(self.test_tempdir):

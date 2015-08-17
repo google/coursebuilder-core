@@ -35,6 +35,7 @@ from models import transforms
 from tools import verify
 
 from google.appengine.ext import db
+from google.appengine.api import app_identity
 from google.appengine.api import datastore
 
 MAX_INCORRECT_REPORT = 5
@@ -52,6 +53,8 @@ class QuestionAnswersEntity(entities.BaseEntity):
 
 class RawAnswersGenerator(jobs.MapReduceJob):
     """Extract answers from all event types into QuestionAnswersEntity table."""
+
+    TOTAL_STUDENTS = 'total_students'
 
     @staticmethod
     def get_description():
@@ -124,10 +127,16 @@ class RawAnswersGenerator(jobs.MapReduceJob):
                 group_to_questions, timestamp)
 
         yield (event.user_id, [list(answer) for answer in answers])
+        yield (RawAnswersGenerator.TOTAL_STUDENTS, event.user_id)
 
     @staticmethod
     def reduce(key, answers_lists):
-        """Does not produce output to Job.  Instead, stores values to DB."""
+        """Stores values to DB, and emits one aggregate: Count of students."""
+
+        if key == RawAnswersGenerator.TOTAL_STUDENTS:
+            student_ids = set(answers_lists)
+            yield (key, len(student_ids))
+            return
 
         answers = []
         for data in answers_lists:
@@ -140,12 +149,34 @@ StudentPlaceholder = collections.namedtuple(
     'StudentPlaceholder', ['user_id', 'name', 'email'])
 
 
-class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
+class RawAnswersDataSource(data_sources.SynchronousQuery,
+                           data_sources.AbstractDbTableRestDataSource):
     """Make raw answers from QuestionAnswersEntity available via REST."""
+
+    MAX_INTERACTIVE_DOWNLOAD_SIZE = 100
 
     @staticmethod
     def required_generators():
         return [RawAnswersGenerator]
+
+    @staticmethod
+    def fill_values(app_context, template_values, raw_answers_job):
+        results = jobs.MapReduceJob.get_results(raw_answers_job)
+        if not results:
+            template_values['any_results'] = False
+        else:
+            template_values['any_results'] = True
+            template_values['max_interactive_download_size'] = (
+                RawAnswersDataSource.MAX_INTERACTIVE_DOWNLOAD_SIZE)
+            results = {k: v for k, v in results}
+            template_values['interactive_download_allowed'] = (
+                results[RawAnswersGenerator.TOTAL_STUDENTS] <=
+                RawAnswersDataSource.MAX_INTERACTIVE_DOWNLOAD_SIZE)
+            template_values['course_slug'] = app_context.get_slug()
+            template_values['app_id'] = (
+                app_identity.get_application_id())
+            template_values['hostname'] = (
+                app_identity.get_default_version_hostname())
 
     @classmethod
     def get_entity_class(cls):
@@ -218,6 +249,10 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
             description='Value from the Question indicating the score for '
             'this answer or set of answers.'))
         reg.add_property(schema_fields.SchemaField(
+            'weighted_score', 'Weighted Score', 'number',
+            description='Question score, multiplied by weights in '
+            'containing Question Group, Assessment, etc.'))
+        reg.add_property(schema_fields.SchemaField(
             'tallied', 'Tallied', 'boolean',
             description='Whether the score counts towards the overall grade.  '
             'Lessons by default do not contribute to course score, but may '
@@ -283,6 +318,7 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
                     'timestamp': answer.timestamp,
                     'answers': given_answers,
                     'score': float(answer.score),
+                    'weighted_score': float(answer.weighted_score),
                     'tallied': answer.tallied,
                     })
         return ret
@@ -475,9 +511,7 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
             for lesson in course.get_lessons(unit.unit_id):
                 q_keys, contents = _add_lesson(unit, lesson)
                 if q_keys:
-                    question_keys += q_keys
-                    if lesson.scored:
-                        question_keys += ['subtotal']
+                    question_keys += q_keys + ['subtotal']
                     unit_contents.append(contents)
             if unit.post_assessment:
                 assessment = course.find_unit_by_id(unit.post_assessment)

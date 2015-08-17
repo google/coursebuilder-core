@@ -20,10 +20,15 @@ __author__ = [
 
 import argparse
 import datetime
+import logging
+import sys
 import time
 
+from common import utils as common_utils
 from controllers import sites
 from models import courses
+
+_LOG = logging.getLogger('coursebuilder.tools.etl')
 
 
 def get_context(course_url_prefix):
@@ -158,6 +163,33 @@ class Job(object):
         """Executes the job; called for you by etl.py."""
         self._parse_args()
         self.main()
+
+
+class CourseJob(Job):
+
+    @classmethod
+    def _get_app_context_or_die(cls, course_url_prefix):
+        app_context = get_context(course_url_prefix)
+        if not app_context:
+            _LOG.critical('Unable to find course with url prefix ' +
+                          course_url_prefix)
+            sys.exit(1)
+        return app_context
+
+    def run(self):
+        app_context = self._get_app_context_or_die(
+            self.etl_args.course_url_prefix)
+        course = courses.Course(None, app_context=app_context)
+
+        sites.set_path_info(app_context.slug)
+        courses.Course.set_current(course)
+        try:
+            with common_utils.Namespace(app_context.get_namespace_name()):
+                super(CourseJob, self).run()
+        finally:
+            courses.Course.clear_current()
+            sites.unset_path_info()
+
 
 
 class _ProgressReporter(object):

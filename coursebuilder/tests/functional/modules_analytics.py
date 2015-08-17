@@ -17,9 +17,11 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import appengine_config
+import datetime
 import json
 import os
 import pprint
+import tempfile
 import urllib
 import zlib
 
@@ -32,7 +34,9 @@ from models import models
 from models import transforms
 from models.progress import UnitLessonCompletionTracker
 from modules.analytics import clustering
+from modules.analytics import gradebook
 from modules.analytics import student_aggregate
+from modules.analytics import student_answers
 from tests.functional import actions
 from tools.etl import etl
 
@@ -1707,3 +1711,335 @@ class TestClusterStatisticsDataSource(actions.TestBase):
             job_result)
         self.assertEqual(result[1], [expected0, expected1, expected2])
         self.assertEqual(result[2], expected_mapping)
+
+
+class GradebookCsvTests(actions.TestBase):
+    """Plain vanilla test; does use ETL'd test content."""
+
+    COURSE_NAME = 'gradebook_csv'
+    NAMESPACE = 'ns_%s' % COURSE_NAME
+    ADMIN_EMAIL = 'admin@foo.com'
+    STUDENT_EMAIL = 'student@foo.com'
+
+
+    def setUp(self):
+        super(GradebookCsvTests, self).setUp()
+
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(self.NAMESPACE)
+        self.q_a_id = models.QuestionEntity(
+            data='{"description": "a", "question": "aa"}').put().id()
+        self.q_b_id = models.QuestionEntity(
+            data='{"description": "b", "question": "aa"}').put().id()
+        self.q_c_id = models.QuestionEntity(
+            data='{"description": "c", "question": "aa"}').put().id()
+        self.q_d_id = models.QuestionEntity(
+            data='{"description": "d", "question": "aa"}').put().id()
+        self.q_e_id = models.QuestionEntity(
+            data='{"description": "e", "question": "aa"}').put().id()
+        self.q_f_id = models.QuestionEntity(
+            data='{"description": "f", "question": "aa"}').put().id()
+        self.q_g_id = models.QuestionEntity(
+            data='{"description": "g", "question": "aa"}').put().id()
+
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Gradebook CSV Course')
+        course = courses.Course(None, app_context=self.app_context)
+        self.unit_one = course.add_unit()  # No lessons
+        self.unit_one.title = 'Unit One'
+        self.unit_two = course.add_unit()  # One lesson
+        self.unit_two.title = 'Unit Two'
+        self.u2_l1 = course.add_lesson(self.unit_two)
+        self.u2_l1.title = 'U2L1'
+        self.u2_l1.objectives = (
+            '<question quid="%s" instanceid="x">' % self.q_a_id)
+        self.unit_three = course.add_unit()  # Pre, post assessment & lessons.
+        self.unit_three.title = 'Unit Three'
+        self.pre_assessment = course.add_assessment()
+        self.pre_assessment.title = 'Pre Assessment'
+        self.pre_assessment.html_content = (
+            '<question quid="%s" instanceid="x">' % self.q_b_id)
+        self.unit_three.pre_assessment = self.pre_assessment.unit_id
+        self.u3_l1 = course.add_lesson(self.unit_three)
+        self.u3_l1.title = 'U3L1'
+        self.u3_l2 = course.add_lesson(self.unit_three)
+        self.u3_l2.title = 'U3L2'
+        self.u3_l2.objectives = (
+            '<question quid="%s" instanceid="x">' % self.q_c_id +
+            '<question quid="%s" instanceid="x">' % self.q_d_id +
+            '<question quid="%s" instanceid="x">' % self.q_e_id)
+        self.u3_l3 = course.add_lesson(self.unit_three)
+        self.u3_l3.title = 'U3L3'
+        self.post_assessment = course.add_assessment()
+        self.post_assessment.title = 'Post Assessment'
+        self.post_assessment.html_content = (
+            '<question quid="%s" instanceid="x">' % self.q_b_id)
+        self.unit_three.post_assessment = self.post_assessment.unit_id
+        self.assessment = course.add_assessment()
+        self.assessment.title = 'Top-Level Assessment'
+        self.assessment.html_content = (
+            '<question quid="%s" instanceid="x">' % self.q_f_id +
+            '<question quid="%s" instanceid="x">' % self.q_g_id)
+        course.save()
+
+        self.expected_score_headers = ','.join([
+            'Email',
+            '%s: %s' % (self.unit_two.title, self.u2_l1.title),
+            '%s: %s' % (self.unit_three.title, self.pre_assessment.title),
+            '%s: %s' % (self.unit_three.title, self.u3_l1.title),
+            '%s: %s' % (self.unit_three.title, self.u3_l2.title),
+            '%s: %s' % (self.unit_three.title, self.u3_l3.title),
+            '%s: %s' % (self.unit_three.title, self.post_assessment.title),
+            self.assessment.title]) + '\r\n'
+
+        self.expected_question_headers = ','.join([
+            'Email',
+            'a answer', 'a score',
+            'b answer', 'b score',
+            'c answer', 'c score',
+            'd answer', 'd score',
+            'e answer', 'e score',
+            'b answer', 'b score',
+            'f answer', 'f score',
+            'g answer', 'g score',
+            ]) + '\r\n'
+
+        fp, self.temp_file_name = tempfile.mkstemp(suffix='.zip')
+        os.close(fp)
+        actions.login(self.ADMIN_EMAIL)
+        actions.register(self, 'John Smith', self.COURSE_NAME)
+
+    def tearDown(self):
+        os.unlink(self.temp_file_name)
+        namespace_manager.set_namespace(self.old_namespace)
+        super(GradebookCsvTests, self).tearDown()
+
+    def _build_job(self, mode, course_name=None):
+        etl_args = etl.create_args_parser().parse_args(
+            ['run',
+             'modules.analytics.gradebook.DownloadAsCsv',
+             '/%s' % (course_name or self.COURSE_NAME),
+             'unused_appid',
+             'unused_servername',
+             '--job_args', '--mode=%s --save_as=%s' % (
+                 mode, self.temp_file_name),
+             ])
+        return gradebook.DownloadAsCsv(etl_args)
+
+    def _verify_output(self, expected):
+        with open(self.temp_file_name) as fp:
+            actual = fp.read()
+            self.assertEquals(expected, actual)
+
+
+    def _verify(self, expected_scores, expected_questions, course_name=None):
+        course_name = course_name or self.COURSE_NAME
+
+        self._build_job(gradebook._MODE_SCORES, course_name).run()
+        self._verify_output(expected_scores)
+
+        self._build_job(gradebook._MODE_QUESTIONS, course_name).run()
+        self._verify_output(expected_questions)
+
+        scores_url = ('/%s%s?%s=%s' % (
+            course_name, gradebook.CsvDownloadHandler.URI,
+            gradebook._MODE_ARG_NAME, gradebook._MODE_SCORES))
+        response = self.get(scores_url)
+        self.assertEquals(expected_scores, response.body)
+
+        questions_url = ('/%s%s?%s=%s' % (
+            course_name, gradebook.CsvDownloadHandler.URI,
+            gradebook._MODE_ARG_NAME, gradebook._MODE_QUESTIONS))
+        response = self.get(questions_url)
+        self.assertEquals(expected_questions, response.body)
+
+    def test_no_data(self):
+        self._verify(self.expected_score_headers,
+                     self.expected_question_headers)
+
+    def test_non_admin_url_access(self):
+        actions.logout()
+        actions.login(self.STUDENT_EMAIL)
+
+        scores_url = ('/%s%s?%s=%s' % (
+            self.COURSE_NAME, gradebook.CsvDownloadHandler.URI,
+            gradebook._MODE_ARG_NAME, gradebook._MODE_SCORES))
+        response = self.get(scores_url, expect_errors=True)
+        self.assertEquals(401, response.status_int)
+
+        questions_url = ('/%s%s?%s=%s' % (
+            self.COURSE_NAME, gradebook.CsvDownloadHandler.URI,
+            gradebook._MODE_ARG_NAME, gradebook._MODE_QUESTIONS))
+        response = self.get(questions_url, expect_errors=True)
+        self.assertEquals(401, response.status_int)
+
+    def test_one_answer(self):
+        a1 = 'xxx'
+        s1 = 123.0
+        w1 = 246.0
+        answers = [[
+            self.unit_two.unit_id, self.u2_l1.lesson_id, 0, self.q_a_id,
+            None, None, a1, s1, w1, True]]
+        user = users.get_current_user()
+        student_answers.QuestionAnswersEntity(
+            key_name=user.user_id(), data=transforms.dumps(answers)).put()
+
+        expected_scores = self.expected_score_headers + ','.join(
+            [str(x) for x in
+             user.email(), w1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]) + '\r\n'
+
+        expected_questions = self.expected_question_headers + ','.join(
+            [str(x) for x in
+             user.email(),
+             a1, w1,
+             '', 0.0,
+             '', 0.0,
+             '', 0.0,
+             '', 0.0,
+             '', 0.0,
+             '', 0.0,
+             '', 0.0]) + '\r\n'
+        self._verify(expected_scores, expected_questions)
+
+    def test_multiple_students(self):
+        answers = [
+            [self.unit_two.unit_id, self.u2_l1.lesson_id, 0, self.q_a_id,
+             None, None, 'one', 1, 1, True],
+            [self.pre_assessment.unit_id, None, 0, self.q_b_id,
+             None, None, 'two', 2, 2, True],
+            [self.unit_three.unit_id, self.u3_l2.lesson_id, 0, self.q_c_id,
+             None, None, 'three', 3, 3, True],
+            [self.unit_three.unit_id, self.u3_l2.lesson_id, 1, self.q_d_id,
+             None, None, 'four', 4, 4, True],
+            [self.unit_three.unit_id, self.u3_l2.lesson_id, 2, self.q_e_id,
+             None, None, 'five', 5, 5, True],
+            [self.post_assessment.unit_id, None, 0, self.q_b_id,
+             None, None, 'six', 6, 6, True],
+            [self.assessment.unit_id, None, 0, self.q_f_id,
+             None, None, 'seven', 7, 7, True],
+            [self.assessment.unit_id, None, 1, self.q_g_id,
+             None, None, 'eight', 8, 8, True]]
+        user = users.get_current_user()
+        student_answers.QuestionAnswersEntity(
+            key_name=user.user_id(), data=transforms.dumps(answers)).put()
+
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, 'Jane Smith', self.COURSE_NAME)
+        answers = [
+            [self.unit_two.unit_id, self.u2_l1.lesson_id, 0, self.q_a_id,
+             None, None, 'eleven', 11, 11, True],
+            [self.pre_assessment.unit_id, None, 0, self.q_b_id,
+             None, None, 'twelve', 12, 12, True],
+            [self.unit_three.unit_id, self.u3_l2.lesson_id, 0, self.q_c_id,
+             None, None, 'thirteen', 13, 13, True],
+            [self.unit_three.unit_id, self.u3_l2.lesson_id, 1, self.q_d_id,
+             None, None, 'fourteen', 14, 14, True],
+            [self.unit_three.unit_id, self.u3_l2.lesson_id, 2, self.q_e_id,
+             None, None, 'fifteen', 15, 15, True],
+            [self.post_assessment.unit_id, None, 0, self.q_b_id,
+             None, None, 'sixteen', 16, 16, True],
+            [self.assessment.unit_id, None, 0, self.q_f_id,
+             None, None, 'seventeen', 17, 17, True],
+            [self.assessment.unit_id, None, 1, self.q_g_id,
+             None, None, 'eighteen', 18, 18, True]]
+        user = users.get_current_user()
+        student_answers.QuestionAnswersEntity(
+            key_name=user.user_id(), data=transforms.dumps(answers)).put()
+
+        expected_scores = self.expected_score_headers
+        expected_scores += ','.join(
+            [str(x) for x in
+             self.ADMIN_EMAIL, 1.0, 2.0, 0.0, 12.0, 0.0, 6.0, 15.0]) + '\r\n'
+        expected_scores += ','.join(
+            [str(x) for x in
+             self.STUDENT_EMAIL, 11.0, 12.0, 0.0, 42.0, 0.0, 16.0, 35.0]
+            ) + '\r\n'
+
+        expected_questions = self.expected_question_headers
+        expected_questions += ','.join(
+            [str(x) for x in
+             self.ADMIN_EMAIL,
+             'one', 1.0,
+             'two', 2.0,
+             'three', 3.0,
+             'four', 4.0,
+             'five', 5.0,
+             'six', 6.0,
+             'seven', 7.0,
+             'eight', 8.0]) + '\r\n'
+        expected_questions += ','.join(
+            [str(x) for x in
+             self.STUDENT_EMAIL,
+             'eleven', 11.0,
+             'twelve', 12.0,
+             'thirteen', 13.0,
+             'fourteen', 14.0,
+             'fifteen', 15.0,
+             'sixteen', 16.0,
+             'seventeen', 17.0,
+             'eighteen', 18.0]) + '\r\n'
+
+        actions.login(self.ADMIN_EMAIL)
+        self._verify(expected_scores, expected_questions)
+
+    def test_commas_are_stripped(self):
+        course_name = 'commas'
+        with common_utils.Namespace('ns_' + course_name):
+
+            app_context = actions.simple_add_course(
+                course_name, self.ADMIN_EMAIL, 'Commas')
+            actions.register(self, 'John Smith', course_name)
+            course = courses.Course(None, app_context=app_context)
+            assessment = course.add_assessment()
+            assessment.title = 'This, That, These, and Those'
+            q_id = models.QuestionEntity(
+                data='{"description": "a,b,c", "question": "c,b,a"}').put().id()
+            assessment.html_content = (
+                '<question quid="%s" instanceid="x">' % q_id)
+            course.save()
+            user = users.get_current_user()
+
+            answers = [[
+                assessment.unit_id, None, 0, q_id,
+                None, None, 'to comma, or not to comma', 0, 1, True]]
+            student_answers.QuestionAnswersEntity(
+                key_name=user.user_id(), data=transforms.dumps(answers)).put()
+
+            self._verify(
+                'Email,"This, That, These, and Those"\r\nadmin@foo.com,1.0\r\n',
+                'Email,"a,b,c answer","a,b,c score"\r\n'
+                'admin@foo.com,"to comma, or not to comma",1.0\r\n',
+                course_name)
+
+    def test_interactive_downloads_only_for_courses_with_few_students(self):
+        gradebook_url = ('/%s/dashboard?action=analytics_gradebook' %
+                         self.COURSE_NAME)
+        job_name = student_answers.RawAnswersGenerator(
+            self.app_context)._job_name
+
+        # No results => No button and no too-much-data text
+        response = self.get(gradebook_url)
+        self.assertNotIn('Download Scores as CSV File', response.body)
+        self.assertNotIn('For larger volumes of gradebook data', response.body)
+
+        # Few results => Interactive download
+        with common_utils.Namespace(self.NAMESPACE):
+            jobs.DurableJobEntity(
+                key_name=job_name,
+                status_code=2,
+                updated_on=datetime.datetime(1970, 1, 1),
+                output='{"results": [["total_students", 1]]}').put()
+        response = self.get(gradebook_url)
+        self.assertIn('Download Scores as CSV File', response.body)
+        self.assertNotIn('For larger volumes of gradebook data', response.body)
+
+        # Many results => No interactive download
+        with common_utils.Namespace(self.NAMESPACE):
+            jobs.DurableJobEntity(
+                key_name=job_name,
+                status_code=2,
+                updated_on=datetime.datetime(1970, 1, 1),
+                output='{"results": [["total_students", 101]]}').put()
+        response = self.get(gradebook_url)
+        self.assertNotIn('Download Scores as CSV File', response.body)
+        self.assertIn('For larger volumes of gradebook data', response.body)

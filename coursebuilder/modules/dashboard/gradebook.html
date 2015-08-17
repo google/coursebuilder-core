@@ -76,6 +76,28 @@
 
 </style>
 
+{% if any_results %}
+  {% if interactive_download_allowed %}
+    <form action="gradebook/csv" method="GET">
+      <input type="hidden" name="mode" value="scores">
+      <input type="submit" value="Download Scores as CSV File">
+    </form>
+
+    <form action="gradebook/csv" method="GET">
+      <input type="hidden" name="mode" value="questions">
+      <input type="submit" value="Download Question Answers as CSV File">
+    </form>
+  {% else %}
+    More than {{ max_interactive_download_size }} students' grades are
+    present.  For larger volumes of gradebook data, you can
+    <a href='dashboard?action=analytics_data_pump'>send the data to BigQuery</a>
+    or download it to your own desktop, by using the ETL script run from your
+    Course Builder download directory:
+    <pre>./scripts/etl.sh run modules.analytics.gradebook.DownloadAsCsv {{course_slug}} {{app_id}} {{hostname}} --job_args='--mode=scores --save_as=total_scores.csv'</pre>
+    <pre>./scripts/etl.sh run modules.analytics.gradebook.DownloadAsCsv {{course_slug}} {{app_id}} {{hostname}} --job_args='--mode=questions --save_as=question_answers.csv'</pre>
+  {% endif %}
+{% endif %}
+
 <div id="gcb-gradebook-controls">
   <div class="control-section">
     <form action="">

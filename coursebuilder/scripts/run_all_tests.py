@@ -127,6 +127,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_analytics.StudentVectorGeneratorProgressTests': 2,
     'tests.functional.modules_analytics.StudentVectorGeneratorTests': 12,
     'tests.functional.modules_analytics.TestClusterStatisticsDataSource': 2,
+    'tests.functional.modules_analytics.GradebookCsvTests': 6,
     'tests.functional.modules_balancer.ExternalTaskTest': 3,
     'tests.functional.modules_balancer.ManagerTest': 10,
     'tests.functional.modules_balancer.ProjectRestHandlerTest': 5,
