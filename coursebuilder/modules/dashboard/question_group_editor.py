@@ -122,7 +122,7 @@ class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     def sanitize_input_dict(self, json_dict):
         for item in json_dict['items']:
-            if len(item['weight'].strip()) == 0:
+            if len(str(item['weight']).strip()) == 0:
                 item['weight'] = '1'
 
     def validate(self, question_group_dict, key, schema_version, errors):
