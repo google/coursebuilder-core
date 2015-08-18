@@ -273,6 +273,7 @@ class CsvDownloadHandler(utils.BaseHandler):
         safe_filename = re.sub(r'[\"\']', '_', filename.lower())
         self.response.headers.add('Content-Type', 'text/csv')
         # http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.5.1
-        self.response.headers.add('Content-Disposition',
-                                  'attachment; filename="%s"' % safe_filename)
+        self.response.headers.add(
+            'Content-Disposition',
+            str('attachment; filename="%s"' % safe_filename))
         self.response.write(output)
