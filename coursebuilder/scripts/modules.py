@@ -172,7 +172,7 @@ PARSER.add_argument(
         'to be downloaded, then the name of the module should be followed by '
         'an "@" character, and then the URL at which the module is '
         'available.  E.g.,  '
-        '--modules=example@https://github.com/my-company/my_example_module'
+        '--targets=example@https://github.com/my-company/my_example_module'
         'The file:// style of URI may also be used; in this case a symlink '
         'is made.  This is useful while you are developing a module.  E.g., '
         '--modules=example@file:///home/my_user_name/src/example'
