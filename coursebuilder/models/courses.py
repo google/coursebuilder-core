@@ -2545,7 +2545,7 @@ class Course(object):
             'boolean', optional=True,
             description='Prevent editing of translations. If False, '
             'translations can be edited. If True, editing of translations is '
-            'not allowed, while advance caching and performance boost logic'
+            'not allowed, while pre-caching and performance boost logic '
             'is applied.'))
         return reg
 
