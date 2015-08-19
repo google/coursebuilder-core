@@ -26,7 +26,9 @@ __author__ = [
 
 import os
 import sys
+
 import appengine_config
+from common import utils as common_utils
 from models import models
 from tools.etl import etl_lib
 from google.appengine.api import memcache
@@ -143,21 +145,15 @@ class WriteStudentEmailsToFile(etl_lib.Job):
             self.etl_args.course_url_prefix).get_namespace_name()
 
         # Because our models are namespaced, we need to change to the requested
-        # course's namespace before doing datastore reads or we won't find its
-        # data. Get the current namespace so we can change back when we're done.
-        old_namespace = namespace_manager.get_namespace()
-        try:
-            namespace_manager.set_namespace(namespace)
-            # For this example, we'll only process the first 1000 results. Can
-            # do a keys_only query because the student's email is key.name().
-            keys = models.Student.all(keys_only=True).fetch(1000)
-        finally:
-            # The current namespace is global state. We must change it back to
-            # the old value no matter what to prevent corrupting datastore
-            # operations that run after us.
-            namespace_manager.set_namespace(old_namespace)
+        # course's namespace when doing datastore reads.
+        with common_utils.Namespace(namespace):
 
-        # Write the results. Done!
-        with open(self.args.path, 'w') as f:
-            for key in keys:
-                f.write(str(key.name() + '\n'))
+            # This base query can be modified to add whatever filters you need.
+            query = models.Student.all()
+            students = common_utils.iter_all(query, self.args.batch_size)
+
+            # Write the results. Done!
+            with open(self.args.path, 'w') as f:
+                for student in students:
+                    f.write(student.email)
+                    f.write('\n')
