@@ -543,6 +543,48 @@ class UsageReportingTests(UsageReportingTestBase):
         self.assertEquals(expected, actual)
         sites.reset_courses()
 
+    def test_course_message_with_google_admin(self):
+        actions.login('student@foo.com')
+        course_name = 'google_test_course'
+        course_title = 'Google Test Course'
+        course_namespace = 'ns_%s' % course_name
+        course_slug = '/%s' % course_name
+
+        def add_course_and_register_student(admin_email):
+            google_app_context = actions.simple_add_course(
+                course_name, admin_email, course_title)
+            actions.update_course_config(
+                course_name,
+                {'course': {'now_available': True, 'browsable': True,},})
+            actions.register(self, 'John Smith', course_name)
+
+            with actions.OverriddenConfig(config.REPORT_ALLOWED.name, True):
+                usage_reporting.StartReportingJobs._for_testing_only_get()
+            self.execute_all_deferred_tasks(
+                models.StudentLifecycleObserver.QUEUE_NAME)
+            self.execute_all_deferred_tasks()
+
+        # With admin@google.com - should get extra fields in reports.
+        add_course_and_register_student('admin@google.com')
+        for message in MockSender.get_sent():
+            self.assertEquals(message[messaging.Message._COURSE_TITLE],
+                              course_title)
+            self.assertEquals(message[messaging.Message._COURSE_SLUG],
+                              course_slug)
+            self.assertEquals(message[messaging.Message._COURSE_NAMESPACE],
+                              course_namespace)
+        MockSender.clear_sent()
+        sites.reset_courses()
+
+        # Without admin@google.com - should not get extra fields in reports.
+        add_course_and_register_student('admin@foo.com')
+        for message in MockSender.get_sent():
+            self.assertNotIn(messaging.Message._COURSE_TITLE, message)
+            self.assertNotIn(messaging.Message._COURSE_SLUG, message)
+            self.assertNotIn(messaging.Message._COURSE_NAMESPACE, message)
+        MockSender.clear_sent()
+        sites.reset_courses()
+
 
 class MessageCatcher(object):
 
