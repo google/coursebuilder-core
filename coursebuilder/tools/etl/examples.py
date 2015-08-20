@@ -32,7 +32,6 @@ from common import utils as common_utils
 from models import models
 from tools.etl import etl_lib
 from google.appengine.api import memcache
-from google.appengine.api import namespace_manager
 
 
 class PrintMemcacheStats(etl_lib.Job):
