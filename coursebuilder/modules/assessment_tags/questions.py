@@ -16,6 +16,7 @@
 
 __author__ = 'sll@google.com (Sean Lip)'
 
+import base64
 import logging
 import os
 
@@ -90,9 +91,17 @@ def render_question(
         template_values['button_type'] = 'checkbox' if multi else 'radio'
 
         choices = [{
-            'score': choice['score'], 'feedback': choice.get('feedback')
+            'text': choice['text'], 'score': choice['score'],
+            'feedback': choice.get('feedback')
         } for choice in template_values['choices']]
         js_data['choices'] = choices
+        js_data['defaultFeedback'] = template_values.get('defaultFeedback')
+        js_data['permuteChoices'] = (
+            template_values.get('permute_choices', False))
+        js_data['showAnswerWhenIncorrect'] = (
+            template_values.get('show_answer_when_incorrect', False))
+        js_data['allOrNothingGrading'] = (
+            template_values.get('all_or_nothing_grading', False))
     elif question_dto.type == question_dto.SHORT_ANSWER:
         template_file = 'templates/sa_question.html'
         js_data['graders'] = template_values['graders']
@@ -120,7 +129,7 @@ def render_question(
 
     if not embedded:
         js_data['weight'] = float(weight)
-    template_values['js_data'] = transforms.dumps(js_data)
+    template_values['js_data'] = base64.b64encode(transforms.dumps(js_data))
 
     template = jinja_utils.get_template(
         template_file, [os.path.dirname(__file__)])
@@ -237,7 +246,7 @@ class QuestionGroupTag(tags.BaseTag):
                 embedded=True
             ))
             js_data[question_instanceid] = item
-        template_values['js_data'] = transforms.dumps(js_data)
+        template_values['js_data'] = base64.b64encode(transforms.dumps(js_data))
 
         template_file = 'templates/question_group.html'
         template = jinja_utils.get_template(

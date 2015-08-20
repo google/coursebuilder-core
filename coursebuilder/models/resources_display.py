@@ -209,6 +209,29 @@ class ResourceMCQuestion(ResourceQuestionBase):
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'mc-question'}))
         mc_question.add_property(schema_fields.SchemaField(
+            'defaultFeedback', 'Feedback', 'html', optional=True,
+            extra_schema_dict_values={
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
+                'className': 'mc-question'}))
+
+        mc_question.add_property(schema_fields.SchemaField(
+            'permute_choices', 'Permute Choices', 'boolean', optional=True,
+            extra_schema_dict_values={'className': 'mc-bool-option'}))
+
+        mc_question.add_property(schema_fields.SchemaField(
+            'all_or_nothing_grading', 'All or Nothing', 'boolean',
+            optional=True, description='Disallow partial credit. Assign a '
+            'score of 0.0 to a question unless its raw score is 1.0.',
+            extra_schema_dict_values={'className': 'mc-bool-option'}))
+
+        mc_question.add_property(schema_fields.SchemaField(
+            'show_answer_when_incorrect', 'Display Correct', 'boolean',
+            optional=True, description='Display the correct choice if '
+            'answer is incorrect.',
+            extra_schema_dict_values={'className': 'mc-bool-option'}))
+
+        mc_question.add_property(schema_fields.SchemaField(
             'multiple_selections', 'Selection', 'boolean',
             optional=True,
             select_data=[

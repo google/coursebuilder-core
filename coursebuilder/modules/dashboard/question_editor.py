@@ -123,7 +123,8 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
 
     REQUIRED_MODULES = [
         'array-extras', 'gcb-rte', 'inputex-radio', 'inputex-select',
-        'inputex-string', 'inputex-list', 'inputex-number', 'inputex-hidden']
+        'inputex-string', 'inputex-list', 'inputex-number', 'inputex-hidden',
+        'inputex-checkbox']
     EXTRA_JS_FILES = ['mc_question_editor_lib.js', 'mc_question_editor.js']
 
     ADDITIONAL_DIRS = []

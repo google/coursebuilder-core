@@ -785,7 +785,7 @@ class MultipleChoiceEditorPage(QuestionEditorPage):
         self.find_element_by_css_selector(
             '.mc-choice-text .editor-field-tabbar', index=n
         ).find_elements_by_tag_name('button')[1].click()
-        index = 2 * n + 1
+        index = 2 * n + 2
         self.setvalue_codemirror(index, answer)
         return self
 

@@ -210,6 +210,9 @@
           "mc-0": [0],
           "sa-0": "falafel"
         },
+        "rawScore": 2,
+        "totalWeight": 2,
+        "percentScore": 100,
         "quids": {
           "mc-0": "mc-0-quid",
           "sa-0": "sa-0-quid"

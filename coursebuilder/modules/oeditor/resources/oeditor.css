@@ -387,6 +387,9 @@ div.set-scores-toggle,
 .toggle-feedback {
   margin-left: 87px;
 }
+div.mc-bool-option {
+  margin-left: 115px;
+}
 
 .mc-choice > fieldset > .inputEx-fieldWrapper {
   /* Fieldset contributes 10px so this is really the same as above */

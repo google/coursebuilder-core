@@ -20,6 +20,13 @@ QUESTION_TYPES = {
   QUESTION_GROUP: 'QuestionGroup'
 }
 
+_CORRECT_ANSWER_CUTOFF = 0.99;
+_PARTIALLY_CORRECT_ANSWER_CUTOFF = 0.01;
+
+function roundToTwoDecimalPlaces(x) {
+  return Math.round(x * 100) / 100;
+}
+
 /**
  * Base class for rendering questions.
  */
@@ -38,19 +45,21 @@ BaseQuestion.bindSubclass = function(subclass) {
   subclass.prototype.constructor = subclass;
 }
 BaseQuestion.prototype.getMessageAboutScore = function(score) {
-  if (score > 0.99) {
-    return this.messages.correctAnswer;
-  } else if (score < 0.01) {
-    return this.messages.incorrectAnswer;
+  var p = $('<p></p>');
+  if (score > _CORRECT_ANSWER_CUTOFF) {
+    p.addClass('correct').text(this.messages.correctAnswer);
+  } else if (score < _PARTIALLY_CORRECT_ANSWER_CUTOFF) {
+    p.addClass('incorrect').text(this.messages.incorrectAnswer);
   } else {
-    return this.messages.partiallyCorrectAnswer;
+    p.addClass('partially-correct').text(this.messages.partiallyCorrectAnswer);
   }
+  return p;
 };
 BaseQuestion.prototype.onCheckAnswer = function() {
   var grade = this.grade();
   this.displayFeedback(
       $('<div/>')
-          .append($("<p/>").text(this.getMessageAboutScore(grade.score)))
+          .append(this.getMessageAboutScore(grade.score))
           .append(grade.feedback));
 
   if (this.componentAudit) {
@@ -58,7 +67,7 @@ BaseQuestion.prototype.onCheckAnswer = function() {
       'instanceid': this.id,
       'quid': this.data.quid,
       'answer': grade.answer,
-      'score': Math.round(100 * grade.score) / 100,
+      'score': roundToTwoDecimalPlaces(grade.score),
       'type': this.type
     }
     if (this instanceof QuestionGroup) {
@@ -79,12 +88,37 @@ BaseQuestion.prototype.getWeight = function() {
   return (this.data.weight == null || isNaN(weight)) ? 1.0 : weight;
 };
 
+function getIdentityPermutation(size) {
+  var identity = [];
+  for (var i = 0; i < size; i++) {
+    identity[i] = i;
+  }
+  return identity;
+}
+
+function getRandomPermutation(size, random) {
+  var source = getIdentityPermutation(size);
+  var target = [];
+  while (source.length) {
+    var i = random() * source.length;
+    target.push(source.splice(i, 1)[0]);
+  }
+  return target;
+}
+
 /**
  * A class to handle multiple choice questions.
  */
-function McQuestion(el, questionData, messages, componentAudit, scored) {
+function McQuestion(el, questionData, messages, componentAudit, scored,
+      random) {
   BaseQuestion.call(this, el, questionData, messages, componentAudit, scored);
   this.type = QUESTION_TYPES.MC_QUESTION;
+  this.random = random || Math.random;
+  this.choicesDivs = this.el.find('div.qt-choices > div');
+  if (this.data.permuteChoices) {
+    this.permutation = this._randomPermutation();
+    this._applyPermutation(this.permutation);
+  }
 }
 BaseQuestion.bindSubclass(McQuestion);
 McQuestion.prototype.bind = function() {
@@ -97,48 +131,162 @@ McQuestion.prototype.bind = function() {
       .click(function() {
         that.onCheckAnswer();
       });
-    return this;
-  };
+  return this;
+};
+McQuestion.prototype._applyPermutation = function(perm) {
+  var newChoices = [];
+  for (var i = 0; i < perm.length; i++) {
+    newChoices[perm[i]] = this.choicesDivs.eq(i);
+  }
+  this.el.find('div.qt-choices').empty().append(newChoices);
+};
+McQuestion.prototype._unapplyPermutation = function(perm) {
+  var newChoices = [];
+  for (var i = 0; i < perm.length; i++) {
+    newChoices[i] = this.choicesDivs.eq(perm[i]);
+  }
+  this.el.find('div.qt-choices').empty().append(newChoices);
+};
+McQuestion.prototype._identityPermutation = function() {
+  return getIdentityPermutation(this.choicesDivs.length);
+};
+McQuestion.prototype._randomPermutation = function() {
+  return getRandomPermutation(this.choicesDivs.length, this.random);
+};
 McQuestion.prototype.grade = function() {
   var that = this;
   var answer = [];
   var score = 0.0;
-  var feedback = $('<ul/>');
-  this.el.find('div.qt-choices > div > input').each(function(i, input) {
+  var feedbackDiv = $('<div>');
+  var feedback = [];
+  this.choicesDivs.find('> input').each(function() {
+    var input = this;
+    var index = $(input).data('index');
     if (input.checked) {
-      answer.push(i);
-      score += parseFloat(that.data.choices[i].score);
-      if (that.data.choices[i].feedback) {
-        feedback.append($('<li/>').html(that.data.choices[i].feedback));
+      answer.push(index);
+      score += parseFloat(that.data.choices[index].score);
+      if (that.data.choices[index].feedback) {
+        feedback.push($('<li/>').html(that.data.choices[index].feedback));
       }
     }
   });
-  score = Math.round(Math.min(Math.max(score, 0), 1) * 100) / 100;
+  score = roundToTwoDecimalPlaces(Math.min(Math.max(score, 0), 1));
+  if (this.data.allOrNothingGrading) {
+    score = score > _CORRECT_ANSWER_CUTOFF ? 1.0 : 0.0;
+  }
+
+  if (this.data.showAnswerWhenIncorrect) {
+    var header = $('<h3 class="feedback-header">');
+
+    var headerClass, headerText;
+    if (score > _CORRECT_ANSWER_CUTOFF) {
+      headerClass = 'correct';
+      headerText = this.messages.correct;
+    } else if (score < _PARTIALLY_CORRECT_ANSWER_CUTOFF) {
+      headerClass = 'incorrect';
+      headerText = this.messages.incorrect;
+    } else {
+      headerClass = 'partially-correct';
+      headerText = this.messages.partiallyCorrect;
+    }
+    header.append($('<span>').addClass(headerClass).text(headerText));
+    feedbackDiv.append(header);
+
+    if (score <= _CORRECT_ANSWER_CUTOFF) {
+      header.append($('<span>').addClass('correct-answer-heading')
+          .text(this.messages.correctAnswerHeading));
+      var correctChoicesUl = $('<ul class="correct-choices"></ul>');
+      for (var i = 0; i < this.data.choices.length; i++) {
+        var index = this.permutation ? this.permutation[i] : i;
+        var choice = this.data.choices[index];
+        if (choice.score > 0) {
+          correctChoicesUl.append($('<li>').html(choice.text));
+        }
+      }
+      feedbackDiv.append(correctChoicesUl);
+    }
+  }
+
+  if (feedback.length) {
+    feedbackDiv
+          .append($('<h3 class="feedback-header">')
+              .text(this.messages.targetedFeedbackHeading))
+          .append($('<ul>').append(feedback));
+  }
+  if (this.data.defaultFeedback) {
+    feedbackDiv
+          .append($('<h3 class="feedback-header">')
+              .text(this.messages.feedbackHeading))
+          .append($('<div>').append(this.data.defaultFeedback));
+  }
+
   return {
     answer: answer,
     score: score,
-    feedback: feedback,
+    feedback: feedbackDiv,
     type: this.type
   };
 };
 McQuestion.prototype.getStudentAnswer = function() {
-  var state = [];
-  this.el.find('div.qt-choices > div > input').each(function(i, input) {
-    state[i] = input.checked;
+  var responses = [];
+  this.choicesDivs.find('> input').each(function() {
+    var index = $(this).data('index');
+    responses[index] = this.checked;
   });
-  return state;
+  if (this.data.permuteChoices) {
+    return {
+      responses: responses,
+      permutation: this.permutation
+    };
+  } else {
+    return responses;
+  }
 };
-McQuestion.prototype.setStudentAnswer = function(state) {
-  if (state) {
-    this.el.find('div.qt-choices > div > input').each(function(i, input) {
-      if (typeof state[i] == 'boolean') {
-        input.checked = state[i];
-      }
-    });
+McQuestion.prototype.setStudentAnswer = function(answer) {
+  if (! answer) {
+    return;
+  }
+
+  var responses, permutation;
+
+  if (answer instanceof Array) {
+    if (this.data.permuteChoices) {
+      // The question was changed to permuted after the answer was submitted,
+      // so upgrade the response to a permuted style, but with identity
+      // permutation.
+      responses = answer;
+      permutation = this._identityPermutation();
+    } else {
+      responses = answer;
+      permutation = null;
+    }
+  } else {
+    if (! this.data.permuteChoices) {
+      // If the answer was submitted while permuteChoices was set then display
+      // it in that mode, coercing the question back to that mode if necessary,
+      // so that the students sees the question as they answered it.
+      this.data.permuteChoices = true;
+      this.permutation = this._identityPermutation();
+    }
+    responses = answer.responses;
+    permutation = answer.permutation;
+  }
+
+  this.choicesDivs.find('> input').each(function() {
+    var index = $(this).data('index');
+    if (typeof responses[index] == 'boolean') {
+      this.checked = responses[index];
+    }
+  });
+
+  if (this.data.permuteChoices) {
+    this._unapplyPermutation(this.permutation);
+    this._applyPermutation(permutation);
+    this.permutation = permutation;
   }
 };
 McQuestion.prototype.makeReadOnly = function() {
-  this.el.find('div.qt-choices > div > input').prop('disabled', true);
+  this.choicesDivs.find('> input').prop('disabled', true);
 };
 
 /**
@@ -259,11 +407,11 @@ QuestionGroup.prototype.init = function() {
       .each(function(index, element) {
         var elt = $(element);
         if (elt.hasClass('qt-mc-question')) {
-          that.questions.push(new McQuestion(elt, that.questionData, [], null,
-              this.scored));
+          that.questions.push(new McQuestion(elt, that.questionData,
+              that.messages, null, this.scored));
         } else {
-          that.questions.push(new SaQuestion(elt, that.questionData, [], null,
-              this.scored).bindHintButton());
+          that.questions.push(new SaQuestion(elt, that.questionData,
+              that.messages, null, this.scored).bindHintButton());
         }
       });
 };
@@ -302,14 +450,14 @@ QuestionGroup.prototype.onCheckAnswer = function() {
   var grade = this.grade();
   this.el.find('> div.qt-feedback')
       .empty()
-      .append($('<p/>').text(this.getMessageAboutScore(grade.score)))
+      .append(this.getMessageAboutScore(grade.score))
       .removeClass('qt-hidden');
   this.displayFeedback(grade.feedback);
 
   this.componentAudit({
     'instanceid': this.id,
     'answer': grade.answer,
-    'score': Math.round(100 * grade.score) / 100,
+    'score': roundToTwoDecimalPlaces(grade.score),
     'individualScores': grade.individualScores,
     'containedTypes': grade.containedTypes,
     'quids': grade.quids,
@@ -389,7 +537,7 @@ function gradeScoredLesson(questions, messages, question_batch_id) {
     totalWeight += question.getWeight();
     question.displayFeedback(grade.feedback);
   });
-  score = Math.round(100 * score)/100;
+  score = roundToTwoDecimalPlaces(score);
   $('div.qt-grade-report[data-question-batch-id="' + question_batch_id + '"]')
       .text(messages.yourScoreIs + score + '/' + totalWeight.toFixed(0))
       .removeClass('qt-hidden');
@@ -413,7 +561,10 @@ function gradeAssessment(questions, unitId, xsrfToken) {
     'individualScores': {},
     'containedTypes': {},
     'answers': {},
-    'quids': {}
+    'quids': {},
+    'rawScore': 0,
+    'totalWeight': 0,
+    'percentScore': 0.0
   };
   $.each(questions, function(idx, question) {
     var grade = question.grade();
@@ -432,10 +583,14 @@ function gradeAssessment(questions, unitId, xsrfToken) {
     }
   });
 
-  var percentScore = (score / totalWeight * 100.0).toFixed(2);
+  var percentScore = score / totalWeight * 100.0;
+  answers.rawScore = roundToTwoDecimalPlaces(score);
+  answers.totalWeight = roundToTwoDecimalPlaces(totalWeight);
+  answers.percentScore = roundToTwoDecimalPlaces(percentScore);
+
   submitForm('answer', {
     'assessment_type': unitId,
-    'score': percentScore,
+    'score': percentScore.toFixed(2),
     'answers': JSON.stringify(answers),
     'xsrf_token': xsrfToken
   });
@@ -474,8 +629,8 @@ function submitForm(action, hiddenData) {
 
 /**
     * This will move the submit answers button to a div with class
-    * 'qt-assessment-button-bar-location' if the lesson author has included exactly
-    * one.
+    * 'qt-assessment-button-bar-location' if the lesson author has included
+    * exactly one.
     */
 function maybeMoveGradingButton() {
   var buttonBarDiv = $('div.qt-assessment-button-bar');

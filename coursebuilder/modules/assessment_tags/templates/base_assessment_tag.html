@@ -1,8 +1,15 @@
 <div {% if not embedded %}class="gcb-border-box"{% endif %}>
   <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
   <script>
-    questionData['{{instanceid}}'] = JSON.parse("{{js_data | js_string}}");
+    questionData['{{instanceid}}'] = JSON.parse(window.atob("{{js_data | js_string}}"));
     var assessmentTagMessages = {};
+
+    {# I18N: Confirmation text for the answer given to a question by a student. #}
+    assessmentTagMessages.correct = "{{ gettext('Correct. ') }}";
+    {# I18N: Confirmation text for the answer given to a question by a student. #}
+    assessmentTagMessages.incorrect = "{{ gettext('Incorrect. ') }}";
+    {# I18N: Confirmation text for the answer given to a question by a student. #}
+    assessmentTagMessages.partiallyCorrect = "{{ gettext('Partially Correct. ') }}";
 
     {# I18N: Confirmation text for the answer given to a question by a student. #}
     assessmentTagMessages.correctAnswer = "{{ gettext(' Yes, the answer is correct. ') }}";
@@ -10,6 +17,13 @@
     assessmentTagMessages.incorrectAnswer = "{{ gettext(' No, the answer is incorrect. ') }}";
     {# I18N: Confirmation text for the answer given to a question by a student. #}
     assessmentTagMessages.partiallyCorrectAnswer = "{{ gettext(' The answer is partially correct. ') }}";
+
+    {# I18N: The title for section showing the correct answer #}
+    assessmentTagMessages.correctAnswerHeading = "{{ gettext('The correct answer is:') }}";
+    {# I18N: The title for section showing feedback related to the answer given #}
+    assessmentTagMessages.targetedFeedbackHeading = "{{ gettext('Targeted Feedback:') }}";
+    {# I18N: The title for section showing overall feedback #}
+    assessmentTagMessages.feedbackHeading = "{{ gettext('Feedback:') }}";
 
     {# I18N: Text appearing at the bottom of a lesson page after the student asks for it to be graded. #}
     assessmentTagMessages.yourScoreIs = "{{ gettext(' Your score is: ') }}";

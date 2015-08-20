@@ -19,7 +19,10 @@
     <div class="qt-choices">
       {% for choice in choices %}
         <div>
-          <input type="{{button_type}}" name="{{instanceid}}" id="{{instanceid}}.{{loop.index0}}"/>
+          <input type="{{button_type}}"
+              name="{{instanceid}}"
+              id="{{instanceid}}.{{loop.index0}}"
+              data-index="{{loop.index0}}"/>
           <label for="{{instanceid}}.{{loop.index0}}">
             {{ choice['text'] | gcb_tags }}
           </label>

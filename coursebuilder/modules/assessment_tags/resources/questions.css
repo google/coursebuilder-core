@@ -23,8 +23,13 @@
 .qt-question-item {
   margin: 20px 0;
 }
+.qt-question, .qt-choices, .qt-feedback {
+  margin: 10px 0;
+}
 .qt-feedback {
   width: 600px;
+  font-style: italic;
+  color: #666;
 }
 .qt-hidden {
   display: none !important;
@@ -45,4 +50,27 @@ div.qt-warning {
 
 .qt-grade-scored-lesson, .qt-grade-report, .qt-grade-assessment {
   margin-bottom: 10px;
+}
+
+.feedback-header {
+  margin: 5px 0 0 0;
+  font-size: 100%;
+  font-style: normal;
+}
+.feedback-header .correct {
+  color: green;
+}
+.feedback-header .partially-correct {
+  color: #9D9724;
+}
+.feedback-header .incorrect {
+  color: red;
+}
+.feedback-header .correct-answer-heading {
+  font-weight: normal;
+}
+
+ul.correct-choices {
+  margin: 0;
+  list-style-type: none;
 }

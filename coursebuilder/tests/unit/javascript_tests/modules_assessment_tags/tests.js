@@ -1,10 +1,16 @@
 describe('assessment tags', function() {
   var LOGGING_LOCATION = 'http://localhost:8080/unit?unit=1&lesson=2';
   var MESSAGES = {
+    correct: 'Correct.',
+    incorrect: 'Incorrect.',
+    partiallyCorrect: 'Partially Correct.',
     correctAnswer: 'Yes, the answer is correct.',
     incorrectAnswer: 'No, the answer is incorrect.',
     partiallyCorrectAnswer: 'The answer is partially correct.',
-    yourScoreIs: 'Your score is: '
+    yourScoreIs: 'Your score is: ',
+    correctAnswerHeading: 'Correct Answer:',
+    targetedFeedbackHeading: 'Targeted Feedback:',
+    feedbackHeading: 'Feedback:'
   };
   /**
    * Extract the outerHTML value from the first element in a set of matched
@@ -18,6 +24,19 @@ describe('assessment tags', function() {
     loadFixtures(
         'tests/unit/javascript_tests/modules_assessment_tags/fixture.html');
   });
+  describe('standard rounding function', function() {
+    it('rounds to closest number with 2 decimal place precision', function() {
+      expect(roundToTwoDecimalPlaces(3.14159265)).toBe(3.14);
+      expect(roundToTwoDecimalPlaces(1.001)).toBe(1);
+      expect(roundToTwoDecimalPlaces(1.009)).toBe(1.01);
+      expect(roundToTwoDecimalPlaces(-1.001)).toBe(-1);
+      expect(roundToTwoDecimalPlaces(-1.009)).toBe(-1.01);
+      expect(roundToTwoDecimalPlaces(100000.001)).toBe(100000);
+      expect(roundToTwoDecimalPlaces(100000.009)).toBe(100000.01);
+      expect(roundToTwoDecimalPlaces(0.005)).toBe(0.01);
+      expect(roundToTwoDecimalPlaces(0.0049999)).toBe(0);
+    });
+  });
   describe('base question methods', function() {
     var bq;
     beforeEach(function() {
@@ -26,14 +45,19 @@ describe('assessment tags', function() {
     });
     describe('the message about the score', function() {
       it('calls scores close to 1 correct', function() {
-        expect(bq.getMessageAboutScore(0.991)).toBe(MESSAGES.correctAnswer);
+        var message = bq.getMessageAboutScore(0.991);
+        expect(message.text()).toBe(MESSAGES.correctAnswer);
+        expect(message).toHaveClass('correct');
       });
       it('calls scores between 0 and 1 partially correct', function() {
-        expect(bq.getMessageAboutScore(0.5))
-            .toBe(MESSAGES.partiallyCorrectAnswer);
+        var message = bq.getMessageAboutScore(0.5);
+        expect(message.text()).toBe(MESSAGES.partiallyCorrectAnswer);
+        expect(message).toHaveClass('partially-correct');
       });
       it('calls scores close to 0 incorrect', function() {
-        expect(bq.getMessageAboutScore(0.009)).toBe(MESSAGES.incorrectAnswer);
+        var message = bq.getMessageAboutScore(0.009);
+        expect(message.text()).toBe(MESSAGES.incorrectAnswer);
+        expect(message).toHaveClass('incorrect');
       });
     });
     describe('the weight', function() {
@@ -60,20 +84,28 @@ describe('assessment tags', function() {
         $('#mc-0-0').prop('checked', true);
       });
       it('can grade the question', function() {
-        var questionData = {'mc-0': {choices: [
+        var questionData = {'mc-0': {
+          choices: [
             {score: '1', feedback: 'yes'},
-            {score: '0', feedback: 'no'}]}};
+            {score: '0', feedback: 'no'}],
+            defaultFeedback: 'this is feedback'}};
         var mc = new McQuestion(el, questionData, MESSAGES);
         var grade = mc.grade();
         expect(grade.score).toBe(1);
-        expect(getOuterHTML(grade.feedback)).toBe('<ul><li>yes</li></ul>');
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">Targeted Feedback:</h3>' +
+            '<ul><li>yes</li></ul>' +
+            '<h3 class="feedback-header">Feedback:</h3>' +
+            '<div>this is feedback</div>' +
+            '</div>');
       });
       it('can omit feedback if none provided', function() {
         var questionData = {'mc-0': {choices: [{score: '1'}, {score: '0'}]}};
         var mc = new McQuestion(el, questionData, MESSAGES);
         var grade = mc.grade();
         expect(grade.score).toBe(1);
-        expect(getOuterHTML(grade.feedback)).toBe('<ul></ul>');
+        expect(getOuterHTML(grade.feedback)).toBe('<div></div>');
       });
       it('can give HTML formatted feedback', function() {
         var questionData = {'mc-0': {choices: [
@@ -82,14 +114,202 @@ describe('assessment tags', function() {
         var mc = new McQuestion(el, questionData, MESSAGES);
         var grade = mc.grade();
         expect(grade.score).toBe(1);
-        expect(getOuterHTML(grade.feedback))
-            .toBe('<ul><li><b>yes</b></li></ul>');
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">Targeted Feedback:</h3>' +
+            '<ul><li><b>yes</b></li></ul></div>');
       });
-      it('doesn\'t give negative scores', function() {
-        var questionData = {'mc-0': {choices: [{score: '-1'}, {score: '-5'}]}};
+      it('can show the correct answer', function() {
+        // Test a question with showAnswerWhenIncorrect = false
+        var questionData = {
+          'mc-0': {
+            showAnswerWhenIncorrect: false,
+            choices: [
+              {text: 'correct answer', score: '1', feedback: '<b>yes</b>'},
+              {text: 'incorrect answer', score: '0', feedback: '<u>no</u>'}]}};
         var mc = new McQuestion(el, questionData, MESSAGES);
+
+        // Correct answer
+        $('#mc-0-0').prop('checked', true);
         var grade = mc.grade();
-        expect(grade.score).toBe(0);
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">Targeted Feedback:</h3>' +
+            '<ul><li><b>yes</b></li></ul></div>');
+
+        // Incorrect answer
+        $('#mc-0-1').prop('checked', true);
+        var grade = mc.grade();
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">Targeted Feedback:</h3>' +
+            '<ul><li><u>no</u></li></ul></div>');
+
+        // Then test a question with showAnswerWhenIncorrect = true
+        questionData['mc-0'].showAnswerWhenIncorrect = true;
+        mc = new McQuestion(el, questionData, MESSAGES);
+
+        // Correct answer
+        $('#mc-0-0').prop('checked', true);
+        var grade = mc.grade();
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">' +
+            '<span class="correct">Correct.</span>' +
+            '</h3>' +
+            '<h3 class="feedback-header">Targeted Feedback:</h3>' +
+            '<ul><li><b>yes</b></li></ul></div>');
+
+        // Incorrect answer - with correct answer shown
+        $('#mc-0-1').prop('checked', true);
+        var grade = mc.grade();
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">' +
+            '<span class="incorrect">Incorrect.</span>' +
+            '<span class="correct-answer-heading">Correct Answer:</span>' +
+            '</h3>' +
+            '<ul class="correct-choices"><li>correct answer</li></ul>' +
+            '<h3 class="feedback-header">Targeted Feedback:</h3>' +
+            '<ul><li><u>no</u></li></ul></div>');
+      });
+
+      describe('permutation of choices', function() {
+        var mockRandomCallCount;
+        var mockRandomData;
+        var mockRandom = function() {
+          return mockRandomData[mockRandomCallCount++ % mockRandomData.length];
+        };
+
+        beforeEach(function() {
+          mockRandomCallCount = 0;
+          mockRandomData = [0.9];
+        });
+        it('makes identity permutations', function() {
+          expect(getIdentityPermutation(1)).toEqual([0]);
+          expect(getIdentityPermutation(2)).toEqual([0, 1]);
+          expect(getIdentityPermutation(3)).toEqual([0, 1, 2]);
+          expect(getIdentityPermutation(4)).toEqual([0, 1, 2, 3]);
+          expect(getIdentityPermutation(5)).toEqual([0, 1, 2, 3, 4]);
+        });
+        it('makes random permutations', function() {
+          function frac(i, n) {
+            return (i + 0.5) / n;
+          }
+          // Trivial permutation
+          expect(getRandomPermutation(1, mockRandom)).toEqual([0]);
+          // Always choose the top
+          mockRandomData = [0.9, 0.9, 0.9, 0.9];
+          mockRandomCallCount = 0;
+          expect(getRandomPermutation(4, mockRandom)).toEqual([3, 2, 1, 0]);
+          // Always choose the bottom
+          mockRandomData = [0, 0, 0, 0];
+          mockRandomCallCount = 0;
+          expect(getRandomPermutation(4, mockRandom)).toEqual([0, 1, 2, 3]);
+          // Mix of top, middle, and bottom
+          mockRandomData = [
+              frac(3, 4) /* the top of [0,1,2,3], ie 3 */,
+              frac(1, 3) /* the middle of [0,1,2], ie 1 */,
+              frac(0, 2) /* the bottom of [0, 2] ie 0 */,
+              frac(0, 1)] /* whatever's left ie 2 */;
+          mockRandomCallCount = 0;
+          expect(getRandomPermutation(4, mockRandom)).toEqual([3, 1, 0, 2]);
+        });
+        it('permutes the choices when flag set', function() {
+          var questionData = {
+            'mc-0': {
+              permuteChoices: true,
+              choices: [{score: '1'}, {score: '0'}]
+          }};
+          var mc = new McQuestion(el, questionData, MESSAGES, null, null,
+              mockRandom);
+          var displayedIndexes = mc.el.find('div.qt-choices > div > input')
+              .map(function() { return $(this).data('index') }).get();
+          expect(displayedIndexes).toEqual([1, 0]);
+        });
+        it('does not permute the choices when flag unset', function() {
+          var questionData = {
+            'mc-0': {
+              permuteChoices: false,
+              choices: [{score: '1'}, {score: '0'}]
+          }};
+          var mc = new McQuestion(el, questionData, MESSAGES, null, null,
+              mockRandom);
+          var displayedIndexes = mc.el.find('div.qt-choices > div > input')
+              .map(function() { return $(this).data('index') }).get();
+          expect(displayedIndexes).toEqual([0, 1]);
+        });
+        it('returns the selected choice and the permutation', function() {
+          var questionData = {
+            'mc-0': {
+              permuteChoices: true,
+              choices: [{score: '1'}, {score: '0'}]
+          }};
+          var mc = new McQuestion(el, questionData, MESSAGES, null, null,
+              mockRandom);
+
+          // Select the first radio button and expect the second choice to be
+          // recorded (together with the flip permutation)
+          mc.choicesDivs.find('> input').eq(0).prop('checked', true);
+          expect(mc.getStudentAnswer())
+              .toEqual({responses: [false, true], permutation: [1, 0]});
+        });
+        it('can be set to display the original permutation', function() {
+          var questionData = {
+            'mc-0': {
+              permuteChoices: true,
+              choices: [{score: '1'}, {score: '0'}]
+          }};
+          var mc = new McQuestion(el, questionData, MESSAGES, null, null,
+              mockRandom);
+
+          var answer = {responses: [false, true], permutation: [1, 0]};
+          mc.setStudentAnswer(answer);
+          var firstInput = mc.el.find('div.qt-choices input').eq(0);
+          expect(firstInput.data('index')).toEqual(1);
+          expect(firstInput.prop('checked')).toEqual(true);
+          // also confirm round trip
+          expect(mc.getStudentAnswer()).toEqual(answer);
+        });
+        it('displays the original permutation (when mode unset)', function() {
+          var questionData = {
+            'mc-0': {
+              permuteChoices: false, // set mode to "no permutations"
+              choices: [{score: '1'}, {score: '0'}]
+          }};
+          var mc = new McQuestion(el, questionData, MESSAGES, null, null,
+              mockRandom);
+
+          // provide an answer with a permutation and confirm the question is
+          // coerced to accept it and display it correctly
+          var answer = {responses: [false, true], permutation: [1, 0]};
+          mc.setStudentAnswer(answer);
+          var firstInput = mc.el.find('div.qt-choices input').eq(0);
+          expect(firstInput.data('index')).toEqual(1);
+          expect(firstInput.prop('checked')).toEqual(true);
+          // also confirm round trip
+          expect(mc.getStudentAnswer()).toEqual(answer);
+        });
+        it('can convert an unpermuted answer to a permuted one', function() {
+          var questionData = {
+            'mc-0': {
+              permuteChoices: true, // mode expects permutations
+              choices: [{score: '1'}, {score: '0'}]
+          }};
+          var mc = new McQuestion(el, questionData, MESSAGES, null, null,
+              mockRandom);
+
+          // provide an answer which came from an unpermuted version of the
+          // question
+          var answer = [true, false];
+          mc.setStudentAnswer(answer);
+          var firstInput = mc.el.find('div.qt-choices input').eq(0);
+          expect(firstInput.data('index')).toEqual(0);
+          expect(firstInput.prop('checked')).toEqual(true);
+          // also confirm promoted to response plus trivial permutation
+          expect(mc.getStudentAnswer())
+              .toEqual({responses: [true, false], permutation: [0, 1]});
+        });
       });
       it('doesn\'t give negative scores', function() {
         var questionData = {'mc-0': {choices: [{score: '-1'}, {score: '-5'}]}};
@@ -147,8 +367,139 @@ describe('assessment tags', function() {
         var mc = new McQuestion(el, SAMPLE_QUESTION_DATA, MESSAGES);
         var grade = mc.grade();
         expect(grade.score).toBe(0.9);
-        expect(getOuterHTML(grade.feedback))
-            .toBe('<ul><li>good</li><li>better</li></ul>');
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">Targeted Feedback:</h3>' +
+            '<ul><li>good</li><li>better</li></ul></div>');
+      });
+      it('can grade all-or-nothing', function() {
+        function expectScoreForSelection(score, selection) {
+          $('#mc-1 input[type="checkbox"]').each(function(index, checkbox) {
+            checkbox.checked = selection[index];
+          });
+          expect(mc.grade().score).toBe(score);
+        }
+        var questionData = {
+          'mc-1': {
+            allOrNothingGrading: true,
+            choices: [
+              {text: 'correct answer 1', score: '0.5'},
+              {text: 'correct answer 2', score: '0.5'},
+              {text: 'incorrect answer 1', score: '-1.0'}]}};
+
+        // Expect all-or-nothing grading
+        var mc = new McQuestion(el, questionData, MESSAGES);
+        expectScoreForSelection(0.0, [false, false, false]);
+        expectScoreForSelection(0.0, [false, false, true]);
+        expectScoreForSelection(0.0, [false, true, false]);
+        expectScoreForSelection(0.0, [false, true, true]);
+        expectScoreForSelection(0.0, [true, false, false]);
+        expectScoreForSelection(0.0, [true, false, true]);
+        expectScoreForSelection(1.0, [true, true, false]); /* correct */
+        expectScoreForSelection(0.0, [true, true, true]);
+
+        // Expect partial credit available
+        questionData['mc-1'].allOrNothingGrading = false;
+        mc = new McQuestion(el, questionData, MESSAGES);
+        expectScoreForSelection(0.0, [false, false, false]);
+        expectScoreForSelection(0.0, [false, false, true]);
+        expectScoreForSelection(0.5, [false, true, false]); /* partial credit */
+        expectScoreForSelection(0.0, [false, true, true]);
+        expectScoreForSelection(0.5, [true, false, false]); /* partial credit */
+        expectScoreForSelection(0.0, [true, false, true]);
+        expectScoreForSelection(1.0, [true, true, false]); /* correct */
+        expectScoreForSelection(0.0, [true, true, true]);
+      });
+      it('can show the correct answer(s)', function() {
+        // Test a question with showAnswerWhenIncorrect = false
+        var questionData = {
+          'mc-1': {
+            showAnswerWhenIncorrect: false,
+            choices: [
+              {text: 'correct answer 1', score: '0.5'},
+              {text: 'correct answer 2', score: '0.5'},
+              {text: 'incorrect answer', score: '0.0'}]}};
+        var mc = new McQuestion(el, questionData, MESSAGES);
+
+        // Correct answer
+        $('#mc-1-0').prop('checked', true);
+        $('#mc-1-1').prop('checked', true);
+        $('#mc-1-2').prop('checked', false);
+        var grade = mc.grade();
+        expect(getOuterHTML(grade.feedback)).toBe('<div></div>');
+
+        // Incorrect answer
+        $('#mc-1-0').prop('checked', false);
+        $('#mc-1-1').prop('checked', false);
+        $('#mc-1-2').prop('checked', true);
+        var grade = mc.grade();
+        expect(getOuterHTML(grade.feedback)).toBe('<div></div>');
+
+        // Then test a question with showAnswerWhenIncorrect = true
+        questionData['mc-1'].showAnswerWhenIncorrect = true;
+        mc = new McQuestion(el, questionData, MESSAGES);
+
+        // Correct answer
+        $('#mc-1-0').prop('checked', true);
+        $('#mc-1-1').prop('checked', true);
+        $('#mc-1-2').prop('checked', false);
+        var grade = mc.grade();
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">' +
+            '<span class="correct">Correct.</span>' +
+            '</h3>' +
+            '</div>');
+
+        // Partially correct answer - with correct answer shown
+        $('#mc-1-0').prop('checked', true);
+        $('#mc-1-1').prop('checked', false);
+        $('#mc-1-2').prop('checked', false);
+        var grade = mc.grade();
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">' +
+            '<span class="partially-correct">Partially Correct.</span>' +
+            '<span class="correct-answer-heading">Correct Answer:</span>' +
+            '</h3>' +
+            '<ul class="correct-choices">' +
+            '<li>correct answer 1</li><li>correct answer 2</li>' +
+            '</ul>' +
+            '</div>');
+
+        // Incorrect answer - with correct answer shown
+        $('#mc-1-0').prop('checked', false);
+        $('#mc-1-1').prop('checked', false);
+        $('#mc-1-2').prop('checked', true);
+        var grade = mc.grade();
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">' +
+            '<span class="incorrect">Incorrect.</span>' +
+            '<span class="correct-answer-heading">Correct Answer:</span>' +
+            '</h3>' +
+            '<ul class="correct-choices">' +
+            '<li>correct answer 1</li><li>correct answer 2</li>' +
+            '</ul>' +
+            '</div>');
+
+        // Partially correct answer is shown as incorrect if all-or-nothing
+        questionData['mc-1'].allOrNothingGrading = true;
+        mc = new McQuestion(el, questionData, MESSAGES);
+        $('#mc-1-0').prop('checked', true);
+        $('#mc-1-1').prop('checked', false);
+        $('#mc-1-2').prop('checked', false);
+        var grade = mc.grade();
+        expect(getOuterHTML(grade.feedback)).toBe(
+            '<div>' +
+            '<h3 class="feedback-header">' +
+            '<span class="incorrect">Incorrect.</span>' +
+            '<span class="correct-answer-heading">Correct Answer:</span>' +
+            '</h3>' +
+            '<ul class="correct-choices">' +
+            '<li>correct answer 1</li><li>correct answer 2</li>' +
+            '</ul>' +
+            '</div>');
       });
       it('serializes the student answer', function() {
         var mc = new McQuestion(el, SAMPLE_QUESTION_DATA, MESSAGES);
@@ -166,14 +517,10 @@ describe('assessment tags', function() {
           mc.setStudentAnswer([false, true, true]);
           expectValues('checked', [false, true, true]);
         });
-        it('silently passes a null, undefined, or invalid answer', function() {
+        it('silently passes a null or undefined', function() {
           mc.setStudentAnswer(null);
           expectValues('checked', [false, false, false]);
           mc.setStudentAnswer(undefined);
-          expectValues('checked', [false, false, false]);
-          mc.setStudentAnswer({'wrong': 'format'});
-          expectValues('checked', [false, false, false]);
-          mc.setStudentAnswer(['wrong', 'format']);
           expectValues('checked', [false, false, false]);
         });
       });
@@ -395,7 +742,10 @@ describe('assessment tags', function() {
       $('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
           .val('falafel');
       var grade = qg.grade();
-      expect(getOuterHTML(grade.feedback[0])).toBe('<ul><li>yes</li></ul>');
+      expect(getOuterHTML(grade.feedback[0])).toBe(
+          '<div>' +
+          '<h3 class="feedback-header">Targeted Feedback:</h3>' +
+          '<ul><li>yes</li></ul></div>');
       expect(getOuterHTML(grade.feedback[1])).toBe('<div>good</div>');
     });
     it('computes the total points available', function() {
