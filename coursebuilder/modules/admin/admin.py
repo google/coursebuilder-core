@@ -25,6 +25,7 @@ import time
 import urllib
 
 import appengine_config
+from common import crypto
 from common import jinja_utils
 from common import safe_dom
 from common import tags
@@ -43,6 +44,7 @@ from models import roles
 from models.config import ConfigProperty
 import modules.admin.config
 from modules.admin.config import ConfigPropertyEditor
+from modules.admin.config import CourseDeleteHandler
 from modules.dashboard import dashboard
 from common import menus
 
@@ -770,73 +772,52 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
     def get_courses(self):
         """Shows a list of all courses available on this site."""
-        template_values = {}
-        template_values['page_title'] = self.format_title('Courses')
 
-        content = safe_dom.NodeList()
-        content.append(
-            safe_dom.Element('div', className='gcb-button-toolbar'
-            ).append(
-                safe_dom.Element(
-                    'a', id='add_course', className='gcb-button',
-                    role='button', href='%s?action=add_course' % self.LINK_URL
-                ).add_text('Add Course')
-            )
-        ).append(
-            safe_dom.Element('div', style='clear: both; padding-top: 2px;')
-        )
-        table = safe_dom.Element('table')
-        content.append(table)
-        table.add_child(
-            safe_dom.Element('tr').add_child(
-                safe_dom.Element('th').add_text('Course Title')
-            ).add_child(
-                safe_dom.Element('th').add_text('Context Path')
-            ).add_child(
-                safe_dom.Element('th').add_text('Content Location')
-            ).add_child(
-                safe_dom.Element('th').add_text('Student Data Location')
-            )
-        )
-        count = 0
-        for course in sorted(
-            sites.get_all_courses(),
-            key=lambda course: course.get_title().lower()):
-            count += 1
-            error = safe_dom.Text('')
+        if hasattr(self, 'app_context'):
+            this_namespace = self.app_context.get_namespace_name()
+        else:
+            this_namespace = None  # GlobalAdminHandler
+
+        all_courses = []
+        for course in sorted(sites.get_all_courses(),
+                             key=lambda course: course.get_title().lower()):
             slug = course.get_slug()
             name = course.get_title()
-
             if course.fs.is_read_write():
                 location = 'namespace: %s' % course.get_namespace_name()
             else:
                 location = 'disk: %s' % sites.abspath(
                     course.get_home_folder(), '/')
-
             if slug == '/':
                 link = '/dashboard'
             else:
                 link = '%s/dashboard' % slug
-            link = safe_dom.Element('a', href=link).add_text(name)
 
-            table.add_child(
-                safe_dom.Element('tr').add_child(
-                    safe_dom.Element('td').add_child(link).add_child(error)
-                ).add_child(
-                    safe_dom.Element('td').add_text(slug)
-                ).add_child(
-                    safe_dom.Element('td').add_text(location)
-                ).add_child(
-                    safe_dom.Element('td').add_text(
-                        'namespace: %s' % course.get_namespace_name())
-                ))
+            is_selected_course = (course.get_namespace_name() == this_namespace)
 
-        table.add_child(
-            safe_dom.Element('tr').add_child(
-                safe_dom.Element('td', colspan='4', align='right').add_text(
-                    'Total: %s item(s)' % count)))
-        template_values['main_content'] = content
+            all_courses.append({
+                'link': link,
+                'name': name,
+                'slug': slug,
+                'location': location,
+                'namespace': course.get_namespace_name(),
+                'is_selected_course': is_selected_course,
+                })
 
+        delete_course_xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            CourseDeleteHandler.XSRF_ACTION)
+        template_values = {
+            'page_title': self.format_title('Courses'),
+            'main_content': self.render_template_to_html(
+                {
+                    'add_course_link': '%s?action=add_course' % self.LINK_URL,
+                    'delete_course_link': CourseDeleteHandler.URI,
+                    'delete_course_xsrf_token': delete_course_xsrf_token,
+                    'courses': all_courses,
+                },
+                'courses.html', [os.path.dirname(__file__)]
+            )
+        }
         self.render_page(template_values, in_action='courses')
 
     def get_console(self):
@@ -1107,6 +1088,9 @@ class GlobalAdminHandler(
         self.response.write(
             self.get_template('view.html', []).render(template_values))
 
+    def get_course(self):
+        return None
+
 
 def notify_module_enabled():
     AdminHandler.enable()
@@ -1132,7 +1116,8 @@ def register_module():
         ('/rest/courses/item', modules.admin.config.CoursesItemRESTHandler),
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
 
-    namespaced_handlers = [(AdminHandler.URL, AdminHandler)]
+    namespaced_handlers = [(AdminHandler.URL, AdminHandler),
+                           (CourseDeleteHandler.URI, CourseDeleteHandler)]
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
