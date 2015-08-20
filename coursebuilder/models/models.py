@@ -2154,7 +2154,7 @@ class QuestionImporter(object):
     def import_multiple_choice(cls, question, description, task):
         QuestionDAO.validate_unique_description(description)
         task = ''.join(task) if task else ''
-        return {
+        qu_dict = {
             'version': QuestionDAO.VERSION,
             'description': description,
             'question': task,
@@ -2165,6 +2165,19 @@ class QuestionImporter(object):
                     'score': 1.0 if choice[1].value else 0.0,
                     'feedback': choice[2]
                 } for choice in question['choices']]}
+        # Add optional fields
+        if 'defaultFeedback' in question:
+            qu_dict['defaultFeedback'] = question['defaultFeedback']
+        if 'permute_choices' in question:
+            qu_dict['permute_choices'] = question['permute_choices']
+        if 'show_answer_when_incorrect' in question:
+            qu_dict['show_answer_when_incorrect'] = (
+                question['show_answer_when_incorrect'])
+        if 'all_or_nothing_grading' in question:
+            qu_dict['all_or_nothing_grading'] = (
+                question['all_or_nothing_grading'])
+
+        return qu_dict
 
     @classmethod
     def import_multiple_choice_group(
