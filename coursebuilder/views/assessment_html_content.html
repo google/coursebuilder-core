@@ -1,8 +1,8 @@
 {%
   macro render(
       unit_id, xsrf_token, saved_answers, content, readonly=False,
-      check_answers=False, is_review_form=False, review_key=None,
-      transient_student=False)
+      show_feedback=False, check_answers=False, is_review_form=False,
+      review_key=None, transient_student=False)
 %}
 <div
    data-xsrf-token="{{ xsrf_token }}"
@@ -22,7 +22,10 @@
           JSON.parse("{{saved_answers | js_string}}"));
     {% endif %}
   </script>
-  <div class="gcb-assessment-body{% if readonly %} assessment-readonly{% endif %}{% if is_review_form %} review-form{% endif %}">
+  <div class="gcb-assessment-body
+      {%- if readonly %} assessment-readonly{% endif %}
+      {%- if show_feedback %} show-feedback{% endif %}
+      {%- if is_review_form %} review-form{% endif %}">
     {{ content | gcb_tags }}
   </div>
   <div class="qt-assessment-button-bar">

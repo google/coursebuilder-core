@@ -126,6 +126,20 @@ CHECK_ANSWERS_DESCRIPTION = """
 Choose whether your students can get feedback on whether the answer is correct.
 """
 
+SINGLE_SUBMISSION_DESCRIPTION = """
+Allow students only one opportunity to submit the answers.
+"""
+
+SHOW_FEEDBACK_DESCRIPTION = """
+Show students the feedback on their answers after the due date is passed.
+If no due date is set, this flag has no effect.
+"""
+
+SHOW_SCORE_DESCRIPTION = """
+Show students the total score on the assignment after the due date is passed.
+If no due date is set, this flag has no effect.
+"""
+
 UNIT_DESCRIPTION_DESCRIPTION = """
 Students see this description on the syllabus page.
 """

@@ -689,6 +689,12 @@ function findGcbQuestions() {
         if ($(question.el).parents('div.assessment-readonly').length > 0) {
           question.makeReadOnly();
         }
+
+        // Display feedback
+        if ($(question.el).parents('div.show-feedback').length > 0) {
+          var grade = question.grade();
+          question.displayFeedback(grade.feedback);
+        }
       });
     }
   }

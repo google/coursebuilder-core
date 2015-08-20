@@ -30,22 +30,34 @@
       {% endif %}
     </script>
 
-    {% if grader == 'human' %}
-      <p>
-        {% if due_date_exceeded %}
-          <strong>
-            {# I18N: Text shown to students when they visit an assignment page for which the due date has passed. #}
-            {{ gettext('The due date for submitting this assignment has passed. It was due on %(submission_due_date)s.', submission_due_date=submission_due_date) }}
-          </strong>
-        {% else %}
-          <strong>
-            {# I18N: Shown to the student on the assignment page. #}
-            {{ gettext('Due date for this assignment: ') }}
-          </strong>
-          {{ submission_due_date }}.
-        {% endif %}
-      </p>
+    <div class="assessment-top-info">
+    {% if submission_due_date %}
+      {% if due_date_exceeded %}
+        <strong>
+          {# I18N: Text shown to students when they visit an assignment page for which the due date has passed. #}
+          {{ gettext('The due date for submitting this assignment has passed. It was due on %(submission_due_date)s.', submission_due_date=submission_due_date) }}
+        </strong>
+      {% else %}
+        <strong>
+          {# I18N: Shown to the student on the assignment page. #}
+          {{ gettext('Due date for this assignment: ') }}
+        </strong>
+        {{ submission_due_date }}.
+      {% endif %}
+    {% endif %}
+    </div>
 
+    {% if show_score %}
+      <p class="total-score">
+        <strong>
+          {# I18N: Text telling students what their total score is.  #}
+          {{ gettext('Score:') }}
+        </strong>
+        <span class="score">{{ score }}</span>
+      </p>
+    {% endif %}
+
+    {% if grader == 'human' %}
       {% if matcher == 'peer' %}
         <p>
           <em>
@@ -64,18 +76,34 @@
 
     {% if readonly_student_assessment is defined %}
       {# I18N: Header text for a previously-submitted assignment. #}
-      <h3>{{ gettext('Submitted assignment') }}</h3>
+      <h3 class="submission-info">
+        {{ gettext('Submitted assignment') }}
+        {% if submission_date %}
+          <span class="submission-date">
+            {# I18N: Text telling students the date their answers were submitted  #}
+            (
+              {{- gettext('Submitted on') }}
+              {{ submission_date -}}
+            )
+          </span>
+        {% endif %}
+      </h3>
 
-      <div class="gcb-border-box">
+      <div class="readonly-assessment">
         {% if model_version == '1.4' %}
           {{ readonly_assessment.display(readonly_student_assessment) }}
         {% elif model_version == '1.5' %}
           {{
             html_assessment.render(
-                unit_id, assessment_xsrf_token, html_saved_answers, html_content, readonly=True, transient_student=transient_student)
+                unit_id, assessment_xsrf_token, html_saved_answers, html_content,
+                readonly=True, show_feedback=show_feedback,
+                transient_student=transient_student)
           }}
         {% endif %}
       </div>
+    {% endif %}
+
+    {% if grader == 'human' and readonly_student_assessment is defined %}
 
       {% if reviews_received is defined or not due_date_exceeded %}
         {# I18N: Header text for the list of reviews received for an assignment. #}

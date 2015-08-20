@@ -30,6 +30,7 @@ import sys
 import time
 import types
 import urllib
+import yaml
 import zipfile
 
 import actions
@@ -3177,6 +3178,210 @@ class AssessmentTest(actions.TestBase):
             namespace_manager.set_namespace(old_namespace)
 
 
+class AssessmentPolicyTests(actions.TestBase):
+    _ADMIN_EMAIL = 'admin@foo.com'
+    _COURSE_NAME = 'assessment_test'
+    _STUDENT_EMAIL = 'student@foo.com'
+    _ISO_8601_DATE_FORMAT = '%Y-%m-%d %H:%M'
+
+    _DUE_DATE_IN_PAST = '1995-06-15 12:00'
+    _DUE_DATE_IN_FUTURE = '2035-06-15 12:00'
+
+    def setUp(self):
+        super(AssessmentPolicyTests, self).setUp()
+
+        self.base = '/' + self._COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self._COURSE_NAME, self._ADMIN_EMAIL, 'Assessment Test')
+
+        self.course = courses.Course(None, self.app_context)
+        self.assessment = self.course.add_assessment()
+        self.set_workflow_field('grader', 'auto')
+        self.assessment.now_available = True
+        self.course.save()
+
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self._COURSE_NAME)
+
+        actions.login(self._STUDENT_EMAIL, is_admin=True)
+        actions.register(self, 'S. Tudent')
+
+    def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        namespace_manager.set_namespace(self.old_namespace)
+        super(AssessmentPolicyTests, self).tearDown()
+
+    def set_workflow_field(self, name, value):
+        workflow_dict = {}
+        if self.assessment.workflow_yaml:
+            workflow_dict = yaml.safe_load(self.assessment.workflow_yaml)
+        workflow_dict[name] = value
+        self.assessment.workflow_yaml = yaml.safe_dump(workflow_dict)
+        self.course.save()
+
+    def assert_is_readonly(self, response):
+        dom = self.parse_html_string(response.body)
+        self.assertIsNone(dom.find('.//div[@class="gcb-assessment-body"]'))
+        self.assertIsNotNone(dom.find(
+            './/div[@class="gcb-assessment-body assessment-readonly"]'))
+
+    def assert_is_not_readonly(self, response):
+        dom = self.parse_html_string(response.body)
+        self.assertIsNotNone(dom.find('.//div[@class="gcb-assessment-body"]'))
+        self.assertIsNone(dom.find(
+            './/div[@class="gcb-assessment-body assessment-readonly"]'))
+
+    def test_single_submission(self):
+        self.set_workflow_field('single_submission', True)
+
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        self.assert_is_not_readonly(response)
+
+        actions.submit_assessment(self, self.assessment.unit_id, {
+            'assessment_type': self.assessment.unit_id,
+            'score': '0.0'
+        })
+
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        self.assert_is_readonly(response)
+
+    def test_due_date(self):
+        self.set_workflow_field('submission_due_date', self._DUE_DATE_IN_FUTURE)
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        self.assert_is_not_readonly(response)
+
+        self.set_workflow_field('submission_due_date', self._DUE_DATE_IN_PAST)
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        self.assert_is_readonly(response)
+
+    def assert_feedback(self, workflow_dict, class_list):
+        self.assessment.workflow_yaml = yaml.safe_dump(workflow_dict)
+        self.course.save()
+
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        class_names = ' '.join(['gcb-assessment-body'] + class_list)
+        self.assertIsNotNone(dom.find('.//div[@class="%s"]' % class_names))
+
+    def test_show_feedback(self):
+
+        # If no assignment has been submitted, feedback is not shown, even if
+        # the flag is set and the due date is passed.
+        self.assert_feedback({
+            'grader': 'auto',
+            'submission_due_date': self._DUE_DATE_IN_PAST,
+            'show_feedback': True
+        }, ['assessment-readonly'])
+
+        # Submit assignment
+        actions.submit_assessment(self, self.assessment.unit_id, {
+            'assessment_type': self.assessment.unit_id,
+            'score': '0.0'
+        })
+
+        # If flag is set, feedback is shown after the due date is passed
+        self.assert_feedback({
+            'grader': 'auto',
+            'submission_due_date': self._DUE_DATE_IN_PAST,
+            'show_feedback': True
+        }, ['assessment-readonly', 'show-feedback'])
+
+        # If flag is set, feedback is not shown before the due date is passed
+        self.assert_feedback({
+            'grader': 'auto',
+            'submission_due_date': self._DUE_DATE_IN_FUTURE,
+            'show_feedback': True
+        }, [])
+
+        # If flag is false, feedback is not shown, regardless of due date
+        self.assert_feedback({
+            'grader': 'auto',
+            'submission_due_date': self._DUE_DATE_IN_FUTURE,
+            'show_feedback': False
+        }, [])
+        self.assert_feedback({
+            'grader': 'auto',
+            'submission_due_date': self._DUE_DATE_IN_PAST,
+            'show_feedback': False
+        }, ['assessment-readonly'])
+
+        # If due date is not set, feedback is not shown, regardless of flag
+        self.assert_feedback({
+            'grader': 'auto',
+            'show_feedback': False
+        }, [])
+        self.assert_feedback({
+            'grader': 'auto',
+            'show_feedback': True
+        }, [])
+
+    def test_submission_date_is_shown(self):
+
+        # Nothing when no submission made
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        self.assertIsNone(dom.find('.//*[@class="submission-date"]'))
+
+        # Submit assignment
+        actions.submit_assessment(self, self.assessment.unit_id, {
+            'assessment_type': self.assessment.unit_id,
+            'score': '0.0'
+        })
+
+        # Still nothing while assessment is still available
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        self.assertIsNone(dom.find('.//*[@class="submission-date"]'))
+
+        # Make assessment single-submission so that it's now closed
+        self.set_workflow_field('single_submission', True)
+
+        # Expect submission info
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        self.assertIsNotNone(dom.find('.//*[@class="submission-date"]'))
+
+    def test_student_score_may_be_shown_after_due_date(self):
+        # Set up policy with show_score set to True and due date not yet reached
+        self.set_workflow_field('show_score', True)
+        self.set_workflow_field('submission_due_date', self._DUE_DATE_IN_FUTURE)
+
+        # Expect no score shown when no submission made
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        self.assertIsNone(dom.find('.//*[@class="total-score"]'))
+
+        # Submit assignment
+        actions.submit_assessment(self, self.assessment.unit_id, {
+            'assessment_type': self.assessment.unit_id,
+            'score': '75.0',
+            'answers': transforms.dumps({
+                'rawScore': 3,
+                'totalWeight': 4,
+                'percentScore': 75})
+        })
+
+        # Expect no score, because due date not yet passed
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        self.assertIsNone(dom.find('.//*[@class="total-score"]'))
+
+        # Set due date in the past and expect score shown
+        self.set_workflow_field('submission_due_date', self._DUE_DATE_IN_PAST)
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        total_score = dom.find('.//*[@class="total-score"]')
+        self.assertIsNotNone(total_score)
+        self.assertEquals(
+            '3/4 (75%)', total_score.find('.//*[@class="score"]').text)
+
+        # Turn off show_score flag and expect no score shown
+        self.set_workflow_field('show_score', False)
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        self.assertIsNone(dom.find('.//*[@class="total-score"]'))
+
+
 def remove_dir(dir_name):
     """Delete a directory."""
 
@@ -4287,13 +4492,13 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.make_items_distinct_counter = 0
 
     def create_app_yaml(self, context, title=None):
-        yaml = copy.deepcopy(courses.DEFAULT_COURSE_YAML_DICT)
+        yaml_dict = copy.deepcopy(courses.DEFAULT_COURSE_YAML_DICT)
         if title:
-            yaml['course']['title'] = title
+            yaml_dict['course']['title'] = title
         context.fs.impl.put(
             os.path.join(
                 appengine_config.BUNDLE_ROOT, etl._COURSE_YAML_PATH_SUFFIX),
-            etl._ReadWrapper(str(yaml)), is_draft=False)
+            etl._ReadWrapper(str(yaml_dict)), is_draft=False)
 
     def create_archive(self):
         self.upload_all_sample_course_files([])

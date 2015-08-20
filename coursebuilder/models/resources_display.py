@@ -706,8 +706,14 @@ class UnitTools(object):
             'html_check_answers': (
                 False if unit.is_old_style_assessment(self._course)
                 else unit.html_check_answers),
+            workflow_key(courses.SINGLE_SUBMISSION_KEY): (
+                workflow.is_single_submission()),
             workflow_key(courses.SUBMISSION_DUE_DATE_KEY): (
                 submission_due_date),
+            workflow_key(courses.SHOW_FEEDBACK_KEY): (
+                workflow.show_feedback()),
+            workflow_key(courses.SHOW_SCORE_KEY): (
+                workflow.show_score()),
             workflow_key(courses.GRADER_KEY): workflow.get_grader(),
             })
         return {
@@ -898,9 +904,21 @@ class ResourceAssessment(ResourceUnitBase):
                 'className': 'inputEx-Field assessment-editor-check-answers'},
             optional=True))
         course_opts.add_property(schema_fields.SchemaField(
+            workflow_key(courses.SINGLE_SUBMISSION_KEY), 'Single Submission',
+            'boolean', description=str(messages.SINGLE_SUBMISSION_DESCRIPTION),
+            optional=True))
+        course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SUBMISSION_DUE_DATE_KEY),
             'Submission Due Date', 'string', optional=True,
             description=str(messages.DUE_DATE_FORMAT_DESCRIPTION)))
+        course_opts.add_property(schema_fields.SchemaField(
+            workflow_key(courses.SHOW_FEEDBACK_KEY), 'Show Feedback',
+            'boolean', description=str(messages.SHOW_FEEDBACK_DESCRIPTION),
+            optional=True))
+        course_opts.add_property(schema_fields.SchemaField(
+            workflow_key(courses.SHOW_SCORE_KEY), 'Show Score',
+            'boolean', description=str(messages.SHOW_SCORE_DESCRIPTION),
+            optional=True))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.GRADER_KEY), 'Grading Method', 'string',
             select_data=ALLOWED_GRADERS_NAMES.items()))

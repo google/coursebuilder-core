@@ -841,11 +841,39 @@ class AssessmentHandler(BaseHandler):
                 readonly_view = True
                 configure_readonly_view(unit, submission_contents)
 
+        if not course.needs_human_grader(unit):
+            if not student.is_transient:
+                submission = student_work.Submission.get(
+                    unit.unit_id, student.get_key())
+                if submission is not None:
+                    submission_contents = transforms.loads(submission.contents)
+                    if submission.updated_on is not None:
+                        self.template_value['submission_date'] = (
+                            submission.updated_on.strftime(
+                                HUMAN_READABLE_DATETIME_FORMAT))
+                    if due_date_exceeded and unit.workflow.show_score():
+                        score = submission_contents.get('rawScore', 0)
+                        weight = submission_contents.get('totalWeight', 0)
+                        percent = submission_contents.get('percentScore', 0)
+                        self.template_value['show_score'] = True
+                        self.template_value['score'] = '%d/%d (%d%%)' % (
+                            score, weight, percent)
+                    if due_date_exceeded and unit.workflow.show_feedback():
+                        self.template_value['show_feedback'] = True
+
+            if unit.workflow.is_single_submission() and submission is not None:
+                readonly_view = True
+
+            if readonly_view:
+                configure_readonly_view(unit, submission_contents)
+
         if not readonly_view:
             if not student.is_transient:
                 submission_contents = student_work.Submission.get_contents(
                     unit.unit_id, student.get_key())
             configure_active_view(unit, submission_contents)
+
+        self.template_value['assessment_attempted'] = bool(submission_contents)
 
         return self.render_template_to_html(
             self.template_value, 'assessment.html')

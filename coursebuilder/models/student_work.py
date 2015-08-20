@@ -19,6 +19,8 @@ __author__ = [
     'sll@google.com (Sean Lip)',
 ]
 
+import datetime
+
 import data_removal
 import entities
 import transforms
@@ -182,6 +184,9 @@ class Submission(BaseEntity):
     # Contents of the student submission. Max size is 1MB.
     contents = db.TextProperty()
 
+    # Submission date
+    updated_on = db.DateTimeProperty(indexed=True)
+
     # Key of the Student who wrote this submission.
     reviewee_key = KeyProperty(kind=models.Student.kind())
     # Identifier of the unit this review is a part of.
@@ -256,8 +261,14 @@ class Submission(BaseEntity):
         """
         return cls(
             unit_id=str(unit_id), reviewee_key=reviewee_key,
-            contents=transforms.dumps(contents)
+            contents=transforms.dumps(contents),
+            updated_on=datetime.datetime.utcnow()
         ).put()
+
+    @classmethod
+    def get(cls, unit_id, reviewee_key):
+        submission_key = cls.get_key(unit_id, reviewee_key)
+        return entities.get(submission_key)
 
     @classmethod
     def get_contents(cls, unit_id, reviewee_key):
