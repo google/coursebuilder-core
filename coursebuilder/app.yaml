@@ -76,6 +76,11 @@ libraries:
   version: "2.3"
 
 handlers:
+- url: /modules/([^/]*)/_static/(.*)
+  upload: modules/([^/]*)/_static/(.*)
+  static_files: modules/\1/_static/\2
+  expiration: 1h
+  application_readable: true # TODO(nretallack): deprecate this
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin
