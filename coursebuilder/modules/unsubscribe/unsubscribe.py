@@ -174,7 +174,7 @@ class SubscriptionStateEntity(entities.BaseEntity):
 
     @classmethod
     def safe_key(cls, db_key, transform_fn):
-        return db.Key(cls.kind(), transform_fn(db_key.name()))
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.name()))
 
     @classmethod
     def delete_by_email(cls, email_address):

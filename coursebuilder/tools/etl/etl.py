@@ -181,6 +181,7 @@ common_utils = None
 config = None
 courses = None
 crypto = None
+datastore_types = None
 db = None
 entity_transforms = None
 etl_lib = None
@@ -214,7 +215,7 @@ _EXCLUDE_TYPES = set([
     '_AE_Pipeline_Record',
     '_AE_Pipeline_Slot',
     '_AE_Pipeline_Status',
-    '_AE_TokenStorage_'
+    '_AE_TokenStorage_',
     # AppEngine internal background jobs queue
     '_DeferredTaskEntity',
     ])
@@ -335,13 +336,11 @@ def create_args_parser():
     parser.add_argument(
         '--resume', action='store_true',
         help=(
-            'On upload, setting this flag indicates that you are starting or '
-            'resuming an upload.  Only use this flag when you are uploading '
-            'to a course that had no data prior to starting this upload.  This '
-            'flag assumes that the only data present is that provided by the '
-            'upload.  This permits significant time savings if an upload is '
-            'interrupted or otherwise needs to be performed in multiple '
-            'stages.'))
+            'Setting this flag indicates that you are starting or resuming '
+            'an upload or download.  If uploading, only use this flag when you '
+            'are uploading to a course that had no prior data, or conflicts '
+            'may occur.  When downloading, don\'t change the set of types '
+            'being downloaded when re-trying after a partial failure.  '))
     parser.add_argument(
         '--job_args', default=[],
         help=(
@@ -451,6 +450,12 @@ class _AbstractArchive(object):
         """
         self._path = path
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        pass
+
     @classmethod
     def get_external_path(cls, internal_path, prefix=_ARCHIVE_PATH_PREFIX):
         """Gets external path string from results of cls.get_internal_path."""
@@ -522,11 +527,16 @@ class _AbstractArchive(object):
     @property
     def manifest(self):
         """Returns the archive's manifest."""
-        return _Manifest.from_json(self.get(_MANIFEST_FILENAME))
+        content = self.get(_MANIFEST_FILENAME)
+        return _Manifest.from_json(content) if content else None
 
     @property
     def path(self):
         return self._path
+
+    def listdir(self, path):
+        """Returns a list of names in a directory, excluding . and .."""
+        raise NotImplementedError()
 
 
 class _ZipArchive(_AbstractArchive):
@@ -534,6 +544,10 @@ class _ZipArchive(_AbstractArchive):
     def __init__(self, path):
         super(_ZipArchive, self).__init__(path)
         self._zipfile = None
+
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        if self._zipfile:
+            self.close()
 
     def add(self, filename, contents):
         """Adds contents to the archive.
@@ -580,6 +594,17 @@ class _ZipArchive(_AbstractArchive):
         assert not self._zipfile
         self._zipfile = zipfile.ZipFile(self._path, mode, allowZip64=True)
 
+    def listdir(self, path):
+        ret = []
+        names = self._zipfile.namelist()
+        for name in names:
+            if name.startswith(path):
+                name = name.replace(path, '', 1)
+                name = name.lstrip('/')
+                name = name.split('/')[0]
+                ret.append(name)
+        return ret
+
 
 class _DirectoryArchive(_AbstractArchive):
 
@@ -601,7 +626,10 @@ class _DirectoryArchive(_AbstractArchive):
         pass
 
     def get(self, filename):
-        with open(os.path.join(self.path, filename), 'rb') as fp:
+        path = os.path.join(self.path, filename)
+        if not os.path.exists(path):
+            return None
+        with open(path, 'rb') as fp:
             return fp.read()
 
     def open(self, mode):
@@ -610,6 +638,11 @@ class _DirectoryArchive(_AbstractArchive):
                 os.makedirs(self.path)
         elif not os.path.isdir(self.path):
             raise ValueError('"%s" is not a directory.' % self.path)
+
+    def listdir(self, path):
+        path = os.path.join(self.path, path)
+        return os.listdir(path) if os.path.exists(path) else []
+
 
 
 class _Manifest(object):
@@ -760,23 +793,44 @@ def _download(params):
     archive_path = os.path.abspath(params.archive_path)
     context = _get_context_or_die(params.course_url_prefix)
     course = etl_lib.get_course(context)
-    with common_utils.Namespace(context.get_namespace_name()):
-        if params.type == _TYPE_COURSE:
-            _download_course(context, course, archive_path, params)
-        elif params.type == _TYPE_DATASTORE:
-            _download_datastore(context, course, archive_path, params)
+    archive, already_done_names, manifest = _open_archive_for_write(
+        context, course, archive_path, params)
+    with archive:
+        with common_utils.Namespace(context.get_namespace_name()):
+            if params.type == _TYPE_COURSE:
+                _download_course(context, course, params, archive,
+                                 already_done_names, manifest)
+            elif params.type == _TYPE_DATASTORE:
+                _download_datastore(context, course, params, archive,
+                                    already_done_names, manifest)
+    _LOG.info('Done; archive saved to ' + archive.path)
 
 
-def _download_course(context, course, archive_path, params):
+def _open_archive_for_write(context, course, archive_path, params):
+    archive = _init_archive(
+        archive_path, vars(params).get('archive_type', ARCHIVE_TYPE_ZIP))
+    already_done_names = set()
+    manifest = None
+    if params.resume:
+        archive.open('a')
+        model_names = archive.listdir('models')
+        already_done_names.update([n.replace('.json', '') for n in model_names])
+        manifest = archive.manifest
+    else:
+        archive.open('w')
+
+    if not manifest:
+        manifest = _Manifest(context.raw, course.version)
+    return archive, already_done_names, manifest
+
+
+def _download_course(context, course, params, archive, already_done_names,
+                     manifest):
     """Downloads course content."""
     if course.version < courses.COURSE_MODEL_VERSION_1_3:
         _die(
             'Cannot export course made with Course Builder version < %s' % (
                 courses.COURSE_MODEL_VERSION_1_3))
-    archive = _init_archive(archive_path,
-                            vars(params).get('archive_type', ARCHIVE_TYPE_ZIP))
-    archive.open('w')
-    manifest = _Manifest(context.raw, course.version)
 
     _LOG.info('Processing course with URL prefix ' + params.course_url_prefix)
     datastore_files = set(_list_all(context))
@@ -817,15 +871,12 @@ def _download_course(context, course, archive_path, params):
     _LOG.info('Adding dependencies from datastore')
     all_entities = list(courses.COURSE_CONTENT_ENTITIES) + list(
         courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT)
-    for found_type in all_entities:
-        _download_type(
-            archive, manifest, found_type.__name__, params.batch_size,
-            _IDENTITY_TRANSFORM)
+    type_names = set([entity.__name__ for entity in all_entities])
+    _download_types(archive, manifest, type_names, already_done_names,
+                    params.batch_size, _IDENTITY_TRANSFORM)
 
-    _finalize_download(archive, manifest)
-
-
-def _download_datastore(context, course, archive_path, params):
+def _download_datastore(context, course, params, archive, already_done_types,
+                        manifest):
     """Downloads datastore content."""
     available_types = set(_get_datastore_kinds())
     type_names = params.datastore_types
@@ -843,16 +894,54 @@ def _download_datastore(context, course, archive_path, params):
     privacy_secret = _get_privacy_secret(params.privacy_secret)
     privacy_transform_fn = _get_privacy_transform_fn(
         params.privacy, privacy_secret)
+    found_types = (requested_types & available_types)
+    _download_types(archive, manifest, found_types, already_done_types,
+                    params.batch_size, privacy_transform_fn)
 
-    found_types = requested_types & available_types
-    archive = _init_archive(archive_path,
-                            vars(params).get('archive_type', ARCHIVE_TYPE_ZIP))
-    archive.open('w')
-    manifest = _Manifest(context.raw, course.version)
-    for found_type in found_types:
-        _download_type(archive, manifest, found_type, params.batch_size,
-                       privacy_transform_fn)
-    _finalize_download(archive, manifest)
+
+def _download_types(archive, manifest, type_names, already_done_names,
+                    batch_size, transform):
+    for type_name in type_names & already_done_names:
+        _LOG.info('Skipping already-downloaded type %s', type_name)
+    type_names -= already_done_names
+    _verify_downloadability(type_names)
+    _finalize_manifest(type_names, manifest, archive)
+    for type_name in sorted(type_names):
+        _download_type(archive, manifest, type_name, batch_size, transform)
+
+
+def _verify_downloadability(type_names):
+    problems = []
+    for type_name in type_names:
+        try:
+            cls = db.class_for_kind(type_name)
+            if not hasattr(cls, 'safe_key'):
+                problems.append(
+                    'Class %s has no safe_key method.  This probably means '
+                    'it is non-permanent (e.g., job control for map/reduce), '
+                    'or similar internal state.  Consider adding this type '
+                    'to the permanent exclusions list in tools/etl/etl.py. ')
+        except Exception:  # pylint: disable=broad-except
+            problems.append(
+                'Could not locate the Python code for the type %s.' % type_name)
+
+        if problems:
+            for problem in problems:
+                logging.critical(problem)
+            _die('Remove these types from the --datastore_types list, '
+                 'or add them to the --exclude_types list.')
+
+
+def _finalize_manifest(type_names, manifest, archive):
+    if archive.manifest:
+        return  # We are resuming; manifest has already been written.
+
+    for type_name in type_names:
+        json_name = type_name + '.json'
+        internal_path = _AbstractArchive.get_internal_path(
+            json_name, prefix=_ARCHIVE_PATH_PREFIX_MODELS)
+        manifest.add(_ManifestEntity(internal_path, False))
+    archive.add(_MANIFEST_FILENAME, str(manifest))
 
 
 def _download_type(
@@ -878,7 +967,6 @@ def _download_type(
 
     _LOG.info('Adding %s to archive', internal_path)
     archive.add_local_file(json_file.name, internal_path)
-    manifest.add(_ManifestEntity(internal_path, False))
 
     _LOG.info('Removing temporary file ' + json_file.name)
     os.remove(json_file.name)
@@ -906,13 +994,6 @@ def _filter_filesystem_files(files):
         if not_in_excludes and head_directory in _LOCAL_WHITELIST:
             filtered_files.append(path)
     return filtered_files
-
-
-def _finalize_download(archive, manifest):
-    _LOG.info('Adding manifest')
-    archive.add(_MANIFEST_FILENAME, str(manifest))
-    archive.close()
-    _LOG.info('Done; archive saved to ' + archive.path)
 
 
 def _force_config_reload():
@@ -990,6 +1071,7 @@ def _import_modules_into_global_scope():
     # pylint: disable=redefined-outer-name,unused-variable
     global appengine_config
     global memcache
+    global datastore_types
     global db
     global entities
     global entity_transforms
@@ -1007,6 +1089,7 @@ def _import_modules_into_global_scope():
     try:
         import appengine_config
         from google.appengine.api import memcache
+        from google.appengine.api import datastore_types
         from google.appengine.ext import db
         from google.appengine.ext.db import metadata
         from common import crypto
@@ -1292,7 +1375,7 @@ def _get_classes_for_type_names(type_names):
     for type_name in type_names:
         # TODO(johncox): Add class-method to troublesome types so they can be
         # regenerated from serialized ETL data.
-        if type_name in ('Submission', 'Review'):
+        if type_name in ('Submission', 'Review', 'Notification', 'Payload'):
             any_problems = True
             _LOG.critical(
                 'Cannot upload entities of type "%s". '
@@ -1313,6 +1396,16 @@ def _get_classes_for_type_names(type_names):
                 'substantial incompatiblity in versions; some or all '
                 'functionality may be affected.  Use the --exclude_types '
                 'flag to skip entities of this type.', type_name)
+
+        for field_name, prop in entity_class.properties().iteritems():
+            if prop.data_type == datastore_types.Blob:
+                _LOG.critical(
+                    'Cannot upload entities of type %s, since the field '
+                    '"%s" is a Blob field; this is not currently supported.',
+                    type_name, field_name)
+                any_problems = True
+                break
+
     if any_problems:
         _die('Cannot proceed with upload in the face of these problems.')
     return entity_classes
@@ -1529,7 +1622,8 @@ def _validate_arguments(parsed_args):
         _die('--batch_size must be a positive value')
     if (parsed_args.mode == _MODE_DOWNLOAD and
         os.path.exists(parsed_args.archive_path) and
-        not parsed_args.force_overwrite):
+        not parsed_args.force_overwrite and
+        not parsed_args.resume):
         _die(
             'Cannot download to archive path %s; file already exists' % (
                 parsed_args.archive_path))
@@ -1554,7 +1648,8 @@ def _validate_arguments(parsed_args):
         _die(
             '--privacy_secret supported only if mode is %s, type is %s, and '
             '--privacy is passed' % (_MODE_DOWNLOAD, _TYPE_DATASTORE))
-    if parsed_args.resume and parsed_args.mode != _MODE_UPLOAD:
+    if parsed_args.resume and parsed_args.mode not in (_MODE_UPLOAD,
+                                                       _MODE_DOWNLOAD):
         _die('--resume flag is only supported for uploading.')
 
 

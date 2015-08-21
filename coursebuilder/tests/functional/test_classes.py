@@ -4467,6 +4467,25 @@ class EtlTestEntityIllegal(entities.BaseEntity):
     thingy = student_work.KeyProperty()
 
 
+class LiesAboutItsKind(entities.BaseEntity):
+
+    @classmethod
+    def kind(cls):
+        return 'SomeOtherNameThanLiesAboutItsKind'
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
+
+
+class HasNoSafeKeyMethod(db.Model):
+    pass
+
+
+class HasBlobProperty(entities.BaseEntity):
+    data = db.BlobProperty(indexed=False)
+
+
 class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
     """Tests tools/etl/etl.py's main()."""
 
@@ -4684,10 +4703,37 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
     def test_download_datastore_fails_if_datastore_types_not_in_datastore(self):
         download_datastore_args = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
-            ['--datastore_types', 'missing'])
-        self.assertRaises(
-            SystemExit, etl.main, download_datastore_args,
-            environment_class=testing.FakeEnvironment)
+            ['--datastore_types', 'Missing'])
+        with self.assertRaises(SystemExit):
+            etl.main(download_datastore_args,
+                     environment_class=testing.FakeEnvironment)
+        self.assertLogContains('Requested types not found: Missing')
+
+    def test_download_datastore_fails_if_datastore_types_not_findable(self):
+        with Namespace(self.namespace):
+            LiesAboutItsKind().put()
+
+        download_datastore_args = etl.create_args_parser().parse_args(
+            [etl._MODE_DOWNLOAD] + self.common_datastore_args +
+            ['--datastore_types', 'LiesAboutItsKind'])
+        with self.assertRaises(SystemExit):
+            etl.main(download_datastore_args,
+                     environment_class=testing.FakeEnvironment)
+        self.assertLogContains(
+            'Requested types not found: LiesAboutItsKind\n'
+            'Available types are: SomeOtherNameThanLiesAboutItsKind')
+
+    def test_download_datastore_fails_if_type_has_no_safe_key(self):
+        with Namespace(self.namespace):
+            HasNoSafeKeyMethod().put()
+
+        download_datastore_args = etl.create_args_parser().parse_args(
+            [etl._MODE_DOWNLOAD] + self.common_datastore_args +
+            ['--datastore_types', 'HasNoSafeKeyMethod'])
+        with self.assertRaises(SystemExit):
+            etl.main(download_datastore_args,
+                     environment_class=testing.FakeEnvironment)
+        self.assertLogContains('CRITICAL: Class %s has no safe_key method.')
 
     def test_download_datastore_succeeds(self):
         """Test download of datastore data and archive creation."""
@@ -4737,6 +4783,76 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.assertEqual(
             [model.key().name() for model in [first_entity, second_entity]],
             [entity['key.name'] for entity in entitiez])
+
+    def _test_resume_download(self, what, archive_type):
+        with Namespace(self.namespace):
+            models.QuestionEntity().put()
+            models.QuestionGroupEntity(key_name='x-y').put()
+        args = [etl._MODE_DOWNLOAD, what] + self.common_command_args + [
+            '--resume',
+            '--datastore_types', 'QuestionEntity,QuestionGroupEntity',
+            '--internal',
+            '--archive_type', archive_type]
+        download_args = etl.create_configured_args_parser(args).parse_args(args)
+
+        # Force an "error" while writing the second type.
+        save_write_model_fn = etl._write_model_to_json_file
+        try:
+            def replacement(json_file, privacy_transform_fn, model):
+                if isinstance(model, models.QuestionGroupEntity):
+                    raise RuntimeError('Fake error for testing')
+                save_write_model_fn(json_file, privacy_transform_fn, model)
+            etl._write_model_to_json_file = replacement
+
+            with self.assertRaisesRegexp(RuntimeError,
+                                         'Fake error for testing'):
+                etl.main(download_args,
+                         environment_class=testing.FakeEnvironment)
+        finally:
+            etl._write_model_to_json_file = save_write_model_fn
+
+        # Verify archive has only the non-error type written.
+        archive = etl._init_archive(self.archive_path, archive_type)
+        archive.open('r')
+        course_models = set(['I18nProgressEntity.json',
+                             'LabelEntity.json',
+                             'RoleEntity.json',
+                             'ResourceBundleEntity.json',
+                             '_SkillEntity.json'])
+        expected_models = set(archive.listdir('models')) - course_models
+        self.assertEqual(set(['QuestionEntity.json']), expected_models)
+
+        # Exact same set of arguments, but this time w/o fake failure.
+        etl.main(download_args, environment_class=testing.FakeEnvironment)
+        archive = etl._init_archive(self.archive_path, archive_type)
+        archive.open('r')
+
+        # Expect full complement of items to be present.
+        expected_models = set(archive.listdir('models')) - course_models
+        self.assertEqual(
+            set(['QuestionEntity.json', 'QuestionGroupEntity.json']),
+            expected_models)
+
+        # Delete data and upload, so as to verify that a resumed download
+        # can be uploaded.
+        with Namespace(self.namespace):
+            db.delete(models.QuestionEntity.all(keys_only=True).run())
+            db.delete(models.QuestionGroupEntity.all(keys_only=True).run())
+            self.assertIsNone(models.QuestionEntity.all().get())
+            self.assertIsNone(models.QuestionGroupEntity.all().get())
+        args = [etl._MODE_UPLOAD, what] + self.common_command_args + [
+            '--internal', '--archive_type', archive_type]
+        upload_args = etl.create_configured_args_parser(args).parse_args(args)
+        etl.main(upload_args, environment_class=testing.FakeEnvironment)
+        with Namespace(self.namespace):
+            self.assertIsNotNone(models.QuestionEntity.all().get())
+            self.assertIsNotNone(models.QuestionGroupEntity.all().get())
+
+    def test_resume_download(self):
+        for what in [etl._TYPE_DATASTORE, etl._TYPE_COURSE]:
+            for archive_type in etl._ARCHIVE_TYPES:
+                self.reset_filesystem()
+                self._test_resume_download(what, archive_type)
 
     def test_download_datastore_with_privacy_maintains_references(self):
         """Test download of datastore data and archive creation."""
@@ -5217,6 +5333,17 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         with self.assertRaises(SystemExit):
             self._upload_archive(['--exclude_types=EtlTestEntityPii'])
 
+    def test_upload_type_with_blob_fails(self):
+        sites.setup_courses(self.raw)
+        with Namespace(self.namespace):
+            HasBlobProperty().put()
+        self._download_archive()
+        self._clear_datastore()
+        with self.assertRaises(SystemExit):
+            self._upload_archive(['--datastore_types=HasBlobProperty'])
+        self.assertLogContains('Cannot upload entities of type HasBlobProperty')
+        self.assertLogContains('"data" is a Blob field')
+
     def _build_entity_batch(self):
         ret = []
         for _ in xrange(etl.create_args_parser().get_default('batch_size')):
@@ -5296,7 +5423,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
     def test_is_hmac_sha_2_256_when_privacy_true(self):
         # Must run etl.main() to get crypto module loaded.
         args = etl.create_args_parser().parse_args(['download'] +
-                                                 self.common_course_args)
+                                                   self.common_course_args)
         etl.main(args, environment_class=testing.FakeEnvironment)
         self.assertEqual(
             crypto.hmac_sha_2_256_transform('secret', 'value'),

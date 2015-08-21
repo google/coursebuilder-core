@@ -72,6 +72,10 @@ class ImmediateRemovalState(db.Model):
         instance.state = cls.STATE_DELETION_PENDING
         instance.put()
 
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
+
 
 class BatchRemovalState(db.Model):
     """Represents intent to perform removal for entities not indexed by user_id.
@@ -128,3 +132,7 @@ class BatchRemovalState(db.Model):
     @classmethod
     def get_by_user_id(cls, user_id):
         return db.get(db.Key.from_path(cls.kind(), user_id))
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
