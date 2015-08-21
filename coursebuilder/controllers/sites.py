@@ -122,7 +122,6 @@ import appengine_config
 from common import caching
 from common import safe_dom
 from common import users
-from common import utils as common_utils
 from models import models
 from models import custom_modules
 from models import transforms
@@ -138,7 +137,6 @@ from models.vfs import LocalReadOnlyFileSystem
 
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
-from google.appengine.ext.db import metadata
 from google.appengine.ext import zipserve
 
 
@@ -1129,24 +1127,13 @@ def add_new_course_entry(unique_name, title, admin_email, errors):
         return
 
     # Create new entry and check it is valid.
-    slug = '/%s' % unique_name
-    namespace = 'ns_%s' % unique_name
-    raw = 'course:%s::%s' % (slug, namespace)
+    raw = 'course:/%s::ns_%s' % (unique_name, unique_name)
     try:
         get_all_courses(rules_text=raw)
     except Exception as e:  # pylint: disable=broad-except
         errors.append('Failed to add entry: %s.\n%s' % (raw, e))
     if errors:
         return
-
-    with common_utils.Namespace(namespace):
-        if metadata.Kind.all().get():
-            errors.append(
-                'Unable to add new entry "%s": the corresponding namespace, '
-                '"%s" is not empty.  If you are certain it should be, you '
-                'can use the App Engine Dashboard to manually remove all '
-                'database entities from it.' % (unique_name, namespace))
-            return
 
     # Add new entry to persistence.
     if not _add_new_course_entry_to_persistent_configuration(raw):
@@ -1155,33 +1142,6 @@ def add_new_course_entry(unique_name, title, admin_email, errors):
             'same name \'%s\' already exists.' % (raw, unique_name))
         return
     return raw
-
-
-@db.transactional()
-def _remove_course_from_persistent_configuration(app_context):
-    entity = ConfigPropertyEntity.get_by_key_name(GCB_COURSES_CONFIG.name)
-    if not entity:
-        return
-    if not entity.value:
-        return
-
-    match = 'course:%s::%s' % (app_context.get_slug(),
-                               app_context.get_namespace_name())
-    value = entity.value
-    entity.value = '\n'.join([l for l in value.splitlines() if l != match])
-    if value != entity.value:
-        entity.put()
-        return True
-    return False
-
-
-def remove_course(app_context):
-    with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
-        if _remove_course_from_persistent_configuration(app_context):
-            # Force rebuild of the cached course index in this App Engine
-            # instance: when we draw the page showing available courses, we
-            # want to have the one we just deleted be gone.
-            get_course_index()
 
 
 GCB_COURSES_CONFIG = ConfigProperty(

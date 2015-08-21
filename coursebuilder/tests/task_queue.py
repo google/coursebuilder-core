@@ -74,10 +74,7 @@ class DeferredTaskQueueItemHandler(TaskQueueItemHandler):
 
     def run(self, task):
         data = base64.b64decode(task['body'])
-        namespace = dict(task['headers']).get(
-            'X-AppEngine-Current-Namespace', '')
-        with common_utils.Namespace(namespace):
-            deferred.run(data)
+        deferred.run(data)
 
 
 class PostingTaskQueueItemHandler(TaskQueueItemHandler):

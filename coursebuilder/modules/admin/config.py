@@ -17,27 +17,22 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
-import logging
 import urllib
 
 import appengine_config
-from common import crypto
 from common import users
-from common import utils as common_utils
+from common.utils import Namespace
 from controllers import sites
-from controllers import utils
+from controllers.utils import BaseRESTHandler
+from controllers.utils import XsrfTokenManager
 from models import config
 from models import courses
-from models import entities
 from models import models
 from models import roles
 from models import transforms
 from modules.oeditor import oeditor
-
-from google.appengine.api import namespace_manager
 from google.appengine.ext import db
-from google.appengine.ext import deferred
-from google.appengine.ext.db import metadata
+
 
 # This is a template because the value type is not yet known.
 SCHEMA_JSON_TEMPLATE = """
@@ -185,7 +180,7 @@ class ConfigPropertyEditor(object):
         if not item:
             self.redirect('?action=settings' % self.LINK_URL)
 
-        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+        with Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
             # Add new entity if does not exist.
             try:
                 entity = config.ConfigPropertyEntity.get_by_key_name(name)
@@ -216,7 +211,7 @@ class ConfigPropertyEditor(object):
         if not item:
             self.redirect('%s?action=settings' % self.LINK_URL)
 
-        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+        with Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
             # Delete if exists.
             try:
                 entity = config.ConfigPropertyEntity.get_by_key_name(name)
@@ -248,7 +243,7 @@ class CoursesPropertyRights(object):
         return False
 
 
-class CoursesItemRESTHandler(utils.BaseRESTHandler):
+class CoursesItemRESTHandler(BaseRESTHandler):
     """Provides REST API for course entries."""
 
     URI = '/rest/courses/item'
@@ -288,7 +283,7 @@ class CoursesItemRESTHandler(utils.BaseRESTHandler):
                 'name': 'new_course',
                 'title': 'My New Course',
                 'admin_email': self.get_user().email()},
-            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
+            xsrf_token=XsrfTokenManager.create_xsrf_token(
                 'add-course-put'))
 
     def put(self):
@@ -337,89 +332,7 @@ class CoursesItemRESTHandler(utils.BaseRESTHandler):
             self, 200, 'Added.', {'entry': entry})
 
 
-class Model(object):
-    """Mock of App Engine db.Model class; helps build keys-only .all() queries.
-
-    CourseDeletionHandler, below, needs to delete all entries for all model
-    types in the datastore.  In theory, we could call db.class_for_kind(),
-    but it turns out that in practice, a) the entity type may be an old
-    leftover and the code for that class is gone, b) the entity type is for
-    a Course Builder module that is not currently enabled, or c) it's in
-    some module that overrides the .kind() method to return some other name
-    than the class name (I'm looking at _you_, MapReduce), and we just can't
-    get the class.
-
-    Lucky us, though - it turns out that queries that are only interested in
-    fetching keys only need the db.Model to respond to .kind(), and so an
-    instance of this class can be used in place of an actual class derived
-    from db.Model when building such a query.
-    """
-
-    def __init__(self, kind):
-        self._kind = kind
-
-    def kind(self):
-        return self._kind
-
-
-class CourseDeleteHandler(utils.BaseHandler):
-
-    URI = '/course/delete'
-    XSRF_ACTION = 'course_delete'
-    DELETE_BATCH_SIZE = 1000
-
-    def post(self):
-        user = users.get_current_user()
-        if not roles.Roles.is_course_admin(self.app_context):
-            self.error(401)
-            return
-        if not self.assert_xsrf_token_or_fail(self.request, self.XSRF_ACTION):
-            return
-        if namespace_manager.get_namespace() == '':
-            self.error(400)
-            return
-
-        sites.remove_course(self.app_context)
-        deferred.defer(self.delete_course)
-
-        if self.request.get('is_selected_course') == 'True':
-            # If we are deleting the course the UI is currently selected for,
-            # redirect to the global handler.
-            self.redirect('/admin/global?action=courses', normalize=False)
-        else:
-            self.redirect(self.request.referer)
-
-    @classmethod
-    def delete_course(cls):
-        """Called back repeatedly from deferred queue dispatcher."""
-        try:
-            kind = metadata.Kind.all().get()
-            if not kind:
-                logging.info(
-                    'CourseDeleteHandler found no entity types to delete for '
-                    'namespace %s; deletion complete.',
-                    namespace_manager.get_namespace())
-                return
-
-            kind_name = kind.kind_name
-            model = Model(kind_name)
-            keys = list(db.Query(Model(kind_name), keys_only=True).run(
-                batch_size=cls.DELETE_BATCH_SIZE))
-            entities.delete(keys)
-            logging.info(
-                'CourseDeleteHandler deleted %d entities of type %s from '
-                'namespace %s', len(keys), kind_name,
-                namespace_manager.get_namespace())
-            deferred.defer(cls.delete_course)
-        except Exception:
-            logging.critical(
-                'Failed when attempting to delete course for namespace %s',
-                namespace_manager.get_namespace())
-            common_utils.log_exception_origin()
-            raise
-
-
-class ConfigPropertyItemRESTHandler(utils.BaseRESTHandler):
+class ConfigPropertyItemRESTHandler(BaseRESTHandler):
     """Provides REST API for a configuration property."""
 
     def get(self):
@@ -456,7 +369,7 @@ class ConfigPropertyItemRESTHandler(utils.BaseRESTHandler):
             transforms.send_json_response(
                 self, 200, 'Success.',
                 payload_dict=json_payload,
-                xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
+                xsrf_token=XsrfTokenManager.create_xsrf_token(
                     'config-property-put'))
 
     def put(self):
