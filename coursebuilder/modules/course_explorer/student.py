@@ -154,6 +154,7 @@ class BaseStudentHandler(webapp2.RequestHandler):
         self.template_values['course_info'] = Courses.COURSE_TEMPLATE_DICT
         self.template_values['course_info']['course'] = {
             'locale': self.get_locale_for_user()}
+        self.template_values['page_locale'] = 'en'
         user = users.get_current_user()
         if not user:
             self.template_values['loginUrl'] = users.create_login_url('/')

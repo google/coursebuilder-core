@@ -1,5 +1,9 @@
 {% extends 'base_course.html' %}
 
+{% block subtitle %}
+Registration
+{% endblock %}
+
 {% block assets %}
   {{ super() }}
   <style type="text/css">
@@ -51,7 +55,7 @@
                 </label>
                 {# I18N: A question in the registration form. #}
                 <input
-                  name="form01" id="form01" type="text"
+                  name="form01" id="form01" type="text" autofocus
                   value="{{ current_name|escape }}"
                   aria-label="{{ gettext('What is your name?') }}">
               </li>
