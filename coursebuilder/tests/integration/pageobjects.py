@@ -88,12 +88,6 @@ class PageObject(object):
             ec.text_to_be_present_in_element(
                 (by.By.ID, 'gcb-butterbar-message'), value))
 
-    def wait_until_status_message_hidden(self):
-        self.wait().until(
-            ec.invisibility_of_element_located(
-                (by.By.ID, 'gcb-butterbar-message')))
-        return self
-
     def go_back(self):
         self._tester.driver.back()
         return self
@@ -899,7 +893,6 @@ class CourseContentElement(DashboardEditor):
         return self
 
     def _click_tab(self, field_index=None, button_index=0, selected=True):
-        self.wait_until_status_message_hidden()
         buttonbar = self.find_element_by_css_selector(
             'div.cb-editor-field div.buttonbar-div', index=field_index)
         button = buttonbar.find_elements_by_tag_name('button')[button_index]
@@ -920,7 +913,6 @@ class CourseContentElement(DashboardEditor):
         return self
 
     def _assert_tab_selected(self, field_index=None, button_index=0):
-        self.wait_until_status_message_hidden()
         buttonbar = self.find_element_by_css_selector(
             'div.cb-editor-field div.buttonbar-div', index=field_index)
         button = buttonbar.find_elements_by_tag_name('button')[button_index]
