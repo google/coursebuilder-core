@@ -1,3 +1,27 @@
+{% if not has_google_cloud_services_default_bucket %}
+  <style>
+  .butterbar-alike {
+    background: #FFFFB7;
+    border: 1px solid #BFBA26;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+    max-width: 400px;
+    padding: 10px;
+    margin: 0 auto;
+  }
+  </style>
+  <div class="butterbar-alike">
+    Analytics requires the use of the Google Cloud Storage default bucket.
+    Please
+    <a href="https://cloud.google.com/appengine/docs/python/googlecloudstorageclient/activate">
+    use these instructions
+    </a>
+    to enable Google Cloud Storage and create the default bucket.
+    </div>
+{% endif %}
+
+
 <div class="section">
 {% if any_generator_not_running %}
   <div class="gcb-button-toolbar">

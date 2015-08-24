@@ -24,6 +24,8 @@ from models import transforms
 from models.analytics import utils as analytics_utils
 from modules.mapreduce import mapreduce_module
 
+from google.appengine.api import app_identity
+
 
 def _generate_display_html(template_renderer, xsrf, app_context,
                            visualizations):
@@ -66,6 +68,10 @@ def _generate_display_html(template_renderer, xsrf, app_context,
             'chunk_size': rdsc.get_default_chunk_size(),
         })
         has_pagination = has_pagination or rdsc.get_default_chunk_size()
+
+    bucket_name = app_identity.get_default_gcs_bucket_name()
+    has_google_cloud_services_default_bucket = (bucket_name is not None)
+
     return template_renderer.render(
         None, 'models/analytics/display.html',
         {
@@ -75,7 +81,9 @@ def _generate_display_html(template_renderer, xsrf, app_context,
             'visualizations': names_of_visualizations_with_generators,
             'rest_sources': rest_sources,
             'r': template_renderer.get_current_url(),
-            'has_pagination': has_pagination
+            'has_pagination': has_pagination,
+            'has_google_cloud_services_default_bucket':
+                has_google_cloud_services_default_bucket
         })
 
 
