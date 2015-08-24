@@ -1042,6 +1042,7 @@ class VisualizationsTest(BaseIntegrationTest):
         self._force_response_log_critical('exams')
         page = self.load_dashboard(self._name).click_analytics(
             'Exams').wait_until_logs_not_empty('exams')
+        page.wait_until_logs_not_empty('exams')
         self.assertEquals('critical: Error for testing',
                           page.get_data_source_logs('exams'))
 
@@ -1049,6 +1050,7 @@ class VisualizationsTest(BaseIntegrationTest):
         page = self.load_dashboard(self._name).click_analytics(
             'Exams').wait_until_logs_not_empty('exams')
 
+        page.wait_until_logs_not_empty('exams')
         self.assertRegexpMatches(
             page.get_data_source_logs('exams'),
             'critical: Fetching results data: ValueError: Error for testing')
@@ -1067,6 +1069,7 @@ class VisualizationsTest(BaseIntegrationTest):
         self._force_response_page_number('pupils', 1)
         page.click('pupils', 'plusone')
         self._wait_for_page_number(page, 'pupils', 1)
+        page.wait_until_logs_not_empty('pupils')
         self.assertEquals('warning: Stopping at last page 1',
                           page.get_data_source_logs('pupils'))
         page.click('pupils', 'minusone')
@@ -1084,6 +1087,7 @@ class VisualizationsTest(BaseIntegrationTest):
         self._force_response_page_number('pupils', 22)
         page.click('pupils', 'plusten')
         self._wait_for_page_number(page, 'pupils', 22)
+        page.wait_until_logs_not_empty('pupils')
         self.assertEquals('warning: Stopping at last page 22',
                           page.get_data_source_logs('pupils'))
 
@@ -1125,6 +1129,7 @@ class VisualizationsTest(BaseIntegrationTest):
         page.set_chunk_size('pupils', 3)
         page.click('pupils', 'minusone')
         self._wait_for_page_number(page, 'pupils', 0)
+        page.wait_until_logs_not_empty('pupils')
         self.assertEquals('critical: Error for testing',
                           page.get_data_source_logs('pupils'))
 
@@ -1153,6 +1158,7 @@ class VisualizationsTest(BaseIntegrationTest):
         page.click('pupils', 'plusone')
         self._wait_for_page_number(page, 'pupils', 0)
         self._wait_for_page_number(page, 'fake_answers', 0)
+        page.wait_until_logs_not_empty('pupils')
         self.assertRegexpMatches(
             page.get_data_source_logs('pupils'),
             'critical: Fetching results data: ValueError: Error for testing')
@@ -1168,6 +1174,7 @@ class VisualizationsTest(BaseIntegrationTest):
         self._wait_for_page_number(page, 'pupils', 1)
         self._wait_for_page_number(page, 'fake_answers', 1)
         self.assertEquals('', page.get_data_source_logs('pupils'))
+        page.wait_until_logs_not_empty('fake_answers')
         self.assertEquals('critical: Error for testing',
                           page.get_data_source_logs('fake_answers'))
 
