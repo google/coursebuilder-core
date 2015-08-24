@@ -63,6 +63,7 @@ from models import transforms
 from models import vfs
 from models.courses import Course
 import modules.admin.admin
+import modules.admin.config
 from modules.announcements.announcements import AnnouncementEntity
 from modules import course_explorer
 from modules import search
@@ -2010,6 +2011,102 @@ class CourseAuthorCourseCreationTest(actions.TestBase):
         # But not peer course for which he does not.
         self.assertNotIn('Course Three', response.body)
         self.assertNotIn('/course_three', response.body)
+
+
+class CourseAuthorCourseDeletionTest(actions.TestBase):
+
+    ADMIN_EMAIL = 'admin@foo.com'
+    COURSE_NAME = 'course_one'
+    DELETE_URI = '/%s%s' %(COURSE_NAME,
+                           modules.admin.config.CourseDeleteHandler.URI)
+    NAMESPACE = 'ns_%s' % COURSE_NAME
+
+    def setUp(self):
+        super(CourseAuthorCourseDeletionTest, self).setUp()
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            modules.admin.config.CourseDeleteHandler.XSRF_ACTION)
+        self._add_course()
+
+    def _add_course(self):
+        payload = {
+            'name': self.COURSE_NAME,
+            'title': 'A Course',
+            'admin_email': self.ADMIN_EMAIL,
+        }
+        request = {
+            'payload': transforms.dumps(payload),
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'add-course-put')
+        }
+        return self.put('/rest/courses/item', urllib.urlencode(
+            {'request': transforms.dumps(request)}))
+
+    def test_non_admin_cannot_delete_course(self):
+        actions.login('student@foo.com')
+        with actions.OverriddenEnvironment({'course': {'now_available': True}}):
+            response = self.post(self.DELETE_URI, {}, expect_errors=True)
+            self.assertEqual(401, response.status_int)
+
+    def test_xsrf_token_required(self):
+        response = self.post(self.DELETE_URI, {}, expect_errors=True)
+        self.assertEqual(403, response.status_int)
+
+    def test_redirect_to_global_when_deleting_selected_course(self):
+        response = self.post(self.DELETE_URI,
+                             {
+                                 'xsrf_token': self.xsrf_token,
+                                 'is_selected_course': 'True'
+                             })
+        self.assertEqual(302, response.status_int)
+        self.assertEqual('http://localhost/admin/global?action=courses',
+                         response.location)
+
+    def test_redirect_to_referer_when_deleting_selected_course(self):
+        referer = 'http://foo'
+        response = self.post(self.DELETE_URI,
+                             {
+                                 'xsrf_token': self.xsrf_token,
+                                 'is_selected_course': 'False'
+                             },
+                             headers={'Referer': referer})
+        self.assertEqual(302, response.status_int)
+        self.assertEqual(referer, response.location)
+
+    def test_will_not_delete_default_namespace(self):
+        with actions.OverriddenConfig(sites.GCB_COURSES_CONFIG.name,
+                                      'course:/:/'):
+            response = self.post(modules.admin.config.CourseDeleteHandler.URI,
+                                 {'xsrf_token': self.xsrf_token,
+                                  'is_selected_course': 'True'},
+                                 expect_errors=True)
+            self.assertEqual(400, response.status_int)
+
+    def test_deletion(self):
+        class Foo(db.Model):
+            data = db.TextProperty()
+        with Namespace(self.NAMESPACE):
+            Foo(data='123123123').put()
+
+        self.post(self.DELETE_URI, {'xsrf_token': self.xsrf_token,
+                                    'is_selected_course': 'True'})
+        self.execute_all_deferred_tasks(iteration_limit=10)
+        with Namespace(self.NAMESPACE):
+            self.assertIsNone(Foo.all().get())
+
+    def test_cannot_add_course_while_deletion_not_complete(self):
+
+        # Initiate deletion; course is removed from config, but
+        # there are still items in the DB in the 'ns_course_one'
+        # namespace.
+        self.assertIn(self.COURSE_NAME, sites.GCB_COURSES_CONFIG.value)
+        response = self.post(self.DELETE_URI, {'xsrf_token': self.xsrf_token,
+                                               'is_selected_course': 'True'})
+        self.assertNotIn(self.COURSE_NAME, sites.GCB_COURSES_CONFIG.value)
+
+        # Can't add course with same namespace.
+        response = transforms.loads(self._add_course().body)
+        self.assertEqual(412, response['status'])
 
 
 class StudentKeyNameTest(actions.TestBase):
