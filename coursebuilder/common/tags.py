@@ -268,6 +268,33 @@ class ResourcesHandler(webapp2.RequestHandler):
             self.error(404)
 
 
+class DeprecatedResourcesHandler(ResourcesHandler):
+    """Points "resources" urls at the new "_static" directory."""
+    URL_PATTERN = re.compile(
+        r'^/modules/(?P<module_name>[^/]*)/resources/(?P<asset>.*)$')
+    PATH_TEMPLATE = '/modules/{module_name}/_static/{prefix}{asset}'
+    WARNING_TEMPLATE = ('This URL is deprecated: %s.  Please use the new URL '
+        'instead: %s')
+    PREFIX = ''
+
+    def rebase_path(self, path):
+        match = self.URL_PATTERN.match(path)
+        assert match
+        new_path = self.PATH_TEMPLATE.format(
+            module_name=match.group('module_name'),
+            asset=match.group('asset'),
+            prefix=self.PREFIX)
+        logging.warning(self.WARNING_TEMPLATE, path, new_path)
+        return new_path
+
+
+def make_deprecated_resources_handler(prefix):
+    class CustomDeprecatedResourcesHandler(DeprecatedResourcesHandler):
+        PREFIX = prefix
+
+    return CustomDeprecatedResourcesHandler
+
+
 class JQueryHandler(ResourcesHandler):
     """A content handler which serves jQuery scripts wrapped in $.ready()."""
 

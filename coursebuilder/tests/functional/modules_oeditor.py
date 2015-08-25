@@ -49,25 +49,25 @@ class ObjectEditorTest(actions.TestBase):
 
     def test_get_drive_tag_parent_frame_script_src_empty_if_apis_disabled(self):
         self.assertIsNone(self.get_script_tag_by_src(
-            '/modules/core_tags/resources/drive_tag_parent_frame.js'))
+            '/modules/core_tags/_static/js/drive_tag_parent_frame.js'))
 
     def test_get_drive_tag_parent_frame_script_src_set_if_apis_enabled(self):
         config.Registry.test_overrides[
             courses.COURSES_CAN_USE_GOOGLE_APIS.name] = True
         self.assertIsNotNone(self.get_script_tag_by_src(
-            '/modules/core_tags/resources/drive_tag_parent_frame.js'))
+            '/modules/core_tags/_static/js/drive_tag_parent_frame.js'))
 
     def test_get_drive_tag_script_manager_script_src_empty_if_apis_disabled(
             self):
         self.assertIsNone(self.get_script_tag_by_src(
-            '/modules/core_tags/resources/drive_tag_script_manager.js'))
+            '/modules/core_tags/_static/js/drive_tag_script_manager.js'))
 
     def test_get_drive_tag_script_manager_script_src_set_if_apis_enabled(
             self):
         config.Registry.test_overrides[
             courses.COURSES_CAN_USE_GOOGLE_APIS.name] = True
         self.assertIsNotNone(self.get_script_tag_by_src(
-            '/modules/core_tags/resources/drive_tag_script_manager.js'))
+            '/modules/core_tags/_static/js/drive_tag_script_manager.js'))
 
 
 class ButtonbarCssHandlerTests(actions.TestBase):

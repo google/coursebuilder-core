@@ -38,19 +38,18 @@ from models import transforms
 from modules.oeditor import oeditor
 
 
-_RESOURCE_PREFIX = '/modules/core_tags'
-RESOURCE_FOLDER = _RESOURCE_PREFIX + '/resources/'
+_MODULE_PATH = '/modules/core_tags'
+_STATIC_URL = _MODULE_PATH + '/_static/'
 _OEDITOR_RESOURCE_FOLDER = '/modules/oeditor/resources/'
 
-_DRIVE_TAG_REFRESH_SCRIPT = RESOURCE_FOLDER + 'drive_tag_refresh.js'
+_DRIVE_TAG_REFRESH_SCRIPT = _STATIC_URL + 'js/drive_tag_refresh.js'
 _IFRAME_RESIZE_SCRIPT = _OEDITOR_RESOURCE_FOLDER + 'resize_iframes.js'
-_PARENT_FRAME_SCRIPT = RESOURCE_FOLDER + 'drive_tag_parent_frame.js'
-_SCRIPT_MANAGER_SCRIPT = RESOURCE_FOLDER + 'drive_tag_script_manager.js'
+_PARENT_FRAME_SCRIPT = _STATIC_URL + 'js/drive_tag_parent_frame.js'
+_SCRIPT_MANAGER_SCRIPT = _STATIC_URL + 'js/drive_tag_script_manager.js'
 
-_RESOURCE_ABSPATH = os.path.join(os.path.dirname(__file__), 'resources')
 _TEMPLATES_ABSPATH = os.path.join(os.path.dirname(__file__), 'templates')
-_GOOGLE_DRIVE_TAG_PATH = _RESOURCE_PREFIX + '/googledrivetag'
-_GOOGLE_DRIVE_TAG_RENDERER_PATH = _RESOURCE_PREFIX + '/googledrivetagrenderer'
+_GOOGLE_DRIVE_TAG_PATH = _MODULE_PATH + '/googledrivetag'
+_GOOGLE_DRIVE_TAG_RENDERER_PATH = _MODULE_PATH + '/googledrivetagrenderer'
 
 
 def _escape_url(url, force_https=True):
@@ -116,7 +115,7 @@ class CoreTag(tags.BaseTag):
     @classmethod
     def create_icon_url(cls, name):
         """Creates a URL for an icon with a specific name."""
-        return os.path.join(RESOURCE_FOLDER, name)
+        return os.path.join(_STATIC_URL, 'images', name)
 
 
 class GoogleDoc(CoreTag):
@@ -169,7 +168,7 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
 
     @classmethod
     def additional_dirs(cls):
-        return [_RESOURCE_ABSPATH]
+        return [_TEMPLATES_ABSPATH]
 
     @classmethod
     def extra_css_files(cls):
@@ -496,7 +495,8 @@ class YouTube(CoreTag):
     <script></script>
 </p>""")
         dom.attrib['id'] = uid
-        dom[0].attrib['src'] = os.path.join(RESOURCE_FOLDER, 'youtube_video.js')
+        dom[0].attrib['src'] = os.path.join(
+            _STATIC_URL, 'js', 'youtube_video.js')
         dom[1].text = 'gcbTagYoutubeEnqueueVideo("%s", "%s");' % (video_id, uid)
         return dom
 
@@ -522,7 +522,7 @@ class Html5Video(CoreTag):
         if utils.CAN_PERSIST_TAG_EVENTS.value:
             tracking_text = (
                 '<script src="' + os.path.join(
-                    RESOURCE_FOLDER, 'html5_video.js') + '">' +
+                    _STATIC_URL, 'js', 'html5_video.js') + '">' +
                 '</script>' +
                 '<script>' +
                 '  gcbTagHtml5TrackVideo("%s");' % (
@@ -738,8 +738,8 @@ class Markdown(tags.ContextAwareTag, CoreTag):
     def rollup_header_footer(self, context):
         """Include markdown css only when markdown tag is present."""
         header = tags.html_string_to_element_tree(
-            '<link href="%s/markdown.css" rel="stylesheet" '
-            'type="text/css">' % RESOURCE_FOLDER)
+            '<link href="{}/css/markdown.css" rel="stylesheet">'.format(
+                _STATIC_URL))
         footer = tags.html_string_to_element_tree('')
         return (header, footer)
 
@@ -787,8 +787,7 @@ def register_module():
 
     global custom_module  # pylint: disable=global-statement
 
-    global_routes = [(
-        os.path.join(RESOURCE_FOLDER, '.*'), tags.ResourcesHandler)]
+    global_routes = []
     namespaced_routes = [
         (_GOOGLE_DRIVE_TAG_PATH, GoogleDriveRESTHandler),
         (_GOOGLE_DRIVE_TAG_RENDERER_PATH, GoogleDriveTagRenderer),
