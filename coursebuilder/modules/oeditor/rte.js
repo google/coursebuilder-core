@@ -290,13 +290,14 @@ function bindEditorField(Y) {
         '    <div class="background"></div>' +
         '    <span class="spinner md md-settings md-spin"></span>' +
         '  </div>' +
-        '  <iframe src="oeditor/preview"></iframe>' +
+        '  <iframe></iframe>' +
         '</div>';
     this.previewEditorDiv = root.querySelector('div.preview-editor');
     this.iframe = root.querySelector('iframe');
     this.ajaxSpinner = root.querySelector('div.ajax-spinner');
 
     this.iframeIsLoaded = $.Deferred();
+    this.iframeIsLoaded.resolve()
 
     $(window).on('message', function(evt) {
       if (evt.originalEvent.origin == window.location.origin &&
@@ -331,6 +332,10 @@ function bindEditorField(Y) {
       return;
     }
     this.value = value;
+    if (!this.iframe.src) {
+      this.iframe.src = 'oeditor/preview';
+      this.iframeIsLoaded = $.Deferred();
+    }
     $.when(this.iframeIsLoaded).then(function() {
       that._showAjaxSpinner();
       that._reloadIframe(that.value);
