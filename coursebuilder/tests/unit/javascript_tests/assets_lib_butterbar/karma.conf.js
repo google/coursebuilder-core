@@ -4,7 +4,7 @@ module.exports = function(config) {
     files: [
       'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
       'tests/unit/javascript_tests/assets_lib_butterbar/*.js',
-      'modules/oeditor/resources/butterbar.js',
+      'modules/oeditor/_static/js/butterbar.js',
       {
         pattern: 'tests/unit/javascript_tests/assets_lib_butterbar/*.html',
         watched: true,

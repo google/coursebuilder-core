@@ -3,9 +3,9 @@ module.exports = function(config) {
     basePath: '../../../..',
     files: [
       'tests/unit/javascript_tests/modules_oeditor/*.js',
-      'modules/oeditor/oeditor.js',
-      'modules/oeditor/resources/popup.js',
-      'modules/oeditor/rte.js'
+      'modules/oeditor/templates/oeditor.js',
+      'modules/oeditor/_static/js/popup.js',
+      'modules/oeditor/templates/rte.js'
     ],
 
     exclude: ['**/karma.conf.js'],

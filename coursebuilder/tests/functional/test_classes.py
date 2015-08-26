@@ -2898,7 +2898,8 @@ class StaticHandlerTest(actions.TestBase):
         # static resourse on a namespaced route
         assert_response(self.get('/assets/css/main.css'))
 
-        # static resource from the file system on a global route
+        # deprecated static resource from the file system on a global route
+        # TODO(nretallack): ensure this prints a deprecation message.
         assert_response(self.testapp.get(
             '/modules/oeditor/resources/butterbar.js'))
 

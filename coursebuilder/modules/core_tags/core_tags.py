@@ -40,10 +40,10 @@ from modules.oeditor import oeditor
 
 _MODULE_PATH = '/modules/core_tags'
 _STATIC_URL = _MODULE_PATH + '/_static/'
-_OEDITOR_RESOURCE_FOLDER = '/modules/oeditor/resources/'
+_OEDITOR_STATIC_URL = '/modules/oeditor/_static/'
 
 _DRIVE_TAG_REFRESH_SCRIPT = _STATIC_URL + 'js/drive_tag_refresh.js'
-_IFRAME_RESIZE_SCRIPT = _OEDITOR_RESOURCE_FOLDER + 'resize_iframes.js'
+_IFRAME_RESIZE_SCRIPT = _OEDITOR_STATIC_URL + 'js/resize_iframes.js'
 _PARENT_FRAME_SCRIPT = _STATIC_URL + 'js/drive_tag_parent_frame.js'
 _SCRIPT_MANAGER_SCRIPT = _STATIC_URL + 'js/drive_tag_script_manager.js'
 

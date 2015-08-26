@@ -54,8 +54,8 @@ ALL_MODULES = [
     'inputex-file', 'io-upload-iframe', 'inputex-number', 'array-extras',
     'gcb-code']
 
-RESOURCES_URI = '/modules/oeditor/resources'
-
+_DEPRECATED_STATIC_URI = '/modules/oeditor/resources'
+_STATIC_URI = '/modules/oeditor/_static'
 
 class ObjectEditor(object):
     """Generic object editor powered by jsonschema."""
@@ -205,7 +205,7 @@ class ObjectEditor(object):
             template_values['bundle_lib_files'] = True
 
         return jinja2.utils.Markup(handler.get_template('oeditor.html', (
-            [os.path.dirname(__file__)] + (additional_dirs or [])
+            [TEMPLATES_DIR] + (additional_dirs or [])
         )).render(template_values))
 
 
@@ -450,7 +450,10 @@ def register_module():
 
     global_routes = yui_handlers + codemirror_handler + [
         ('/modules/oeditor/buttonbar.css', ButtonbarCssHandler),
-        (RESOURCES_URI +'/.*', tags.ResourcesHandler)]
+        (_DEPRECATED_STATIC_URI + r'/.*\.css',
+            tags.make_deprecated_resources_handler('css/')),
+        (_DEPRECATED_STATIC_URI + r'/.*\.js',
+            tags.make_deprecated_resources_handler('js/'))]
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

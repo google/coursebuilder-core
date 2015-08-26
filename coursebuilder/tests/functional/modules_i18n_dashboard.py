@@ -3808,7 +3808,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
                 lines.append('RPC Profile, anonymous user %s' % header)
                 _profile(
-                    '/modules/oeditor/resources/butterbar.js',
+                    '/modules/oeditor/resources/butterbar.js', # deprecated
                     'Butterbar', quota=(0, 0))
                 _profile('sample/assets/css/main.css', 'main.css', quota=(6, 0))
                 _profile('sample/course', 'Home page', quota=(None, 1))
@@ -3820,7 +3820,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
                 lines.append('RPC Profile, registered user %s' % header)
                 _profile(
-                    '/modules/oeditor/resources/butterbar.js',
+                    '/modules/oeditor/resources/butterbar.js', # deprecated
                     'Butterbar', quota=(0, 0))
                 _profile(
                     'sample/assets/css/main.css', 'main.css', quota=(3, 1))
@@ -3834,7 +3834,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
                 lines.append('RPC Profile, admin user %s' % header)
                 _profile(
-                    '/modules/oeditor/resources/butterbar.js',
+                    '/modules/oeditor/resources/butterbar.js', # deprecated
                     'Butterbar', quota=(0, 0))
                 _profile(
                     'sample/assets/css/main.css', 'main.css', quota=(3, 1))
