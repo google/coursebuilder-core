@@ -1979,11 +1979,11 @@ def notify_module_enabled():
         course_outline_extra_info_decorator)
     outline.COURSE_OUTLINE_EXTRA_INFO_TITLES.append('Skills')
     dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
-        '/modules/skill_map/resources/css/common.css')
+        '/modules/skill_map/_static/css/common.css')
     dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
-        '/modules/skill_map/resources/css/course_outline.css')
+        '/modules/skill_map/_static/css/course_outline.css')
     dashboard.DashboardHandler.EXTRA_CSS_HREF_LIST.append(
-        '/modules/skill_map/resources/css/skill_tagging.css')
+        '/modules/skill_map/_static/css/skill_tagging.css')
     dashboard.DashboardHandler.EXTRA_JS_HREF_LIST.append(
         '/modules/skill_map/resources/js/course_outline.js')
     dashboard.DashboardHandler.EXTRA_JS_HREF_LIST.append(
@@ -2063,7 +2063,6 @@ def register_module():
         appengine_config.BUNDLE_ROOT, 'lib', 'dependo-0.1.4.zip'))
 
     global_routes = [
-        (RESOURCES_URI + '/css/.*', tags.ResourcesHandler),
         (RESOURCES_URI + '/js/course_outline.js', tags.JQueryHandler),
         (RESOURCES_URI + '/js/lesson_header.js', tags.JQueryHandler),
         (RESOURCES_URI + '/js/skills_progress.js', tags.JQueryHandler),
