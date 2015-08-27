@@ -1,4 +1,38 @@
 {#
+ # Renders a progress icon.
+ # 0: not started
+ # 1: in progress
+ # 2: completed
+ #}
+{% macro render_progress_icon(progress_int, id, submittable=False) %}
+  {% if progress_int == 0 %}
+    <img src="assets/img/not_started.png"
+      {% if submittable %}
+         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+      {% else %}
+         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
+         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
+      {% endif %}
+         class="gcb-progress-icon"
+         id="progress-notstarted-{{id}}">
+  {% elif progress_int == 1 %}
+    <img src="assets/img/in_progress.png"
+         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
+         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
+         class="gcb-progress-icon"
+         id="progress-inprogress-{{id}}">
+  {% elif progress_int == 2 %}
+    <img src="assets/img/completed.png"
+         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+         class="gcb-progress-icon"
+         id="progress-completed-{{id}}">
+  {% endif %}
+{% endmacro %}
+
+
+{#
 # macro to render a title along with a progress indicator for any kind of unit
 #}
 {% macro render_unit_title(
@@ -29,17 +63,9 @@
         <li class='{{ css_class }}'><p class="gcb-top-content">
           {% if not transient_student %}
             {% if progress[unit.unit_id] > 0 %}
-              <img src="assets/img/completed.png"
-                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                   class="gcb-progress-icon"
-                   id="progress-completed-{{unit.unit_id}}">
+              {{ render_progress_icon(2, unit.unit_id, True) }}
             {% else %}
-              <img src="assets/img/not_started.png"
-                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                   class="gcb-progress-icon"
-                   id="progress-notstarted-{{unit.unit_id}}">
+              {{ render_progress_icon(0, unit.unit_id, True) }}
             {% endif %}
           {% else %}
             <span class="{{ progress_class }}"></span>
@@ -60,24 +86,10 @@
               <p class="gcb-top-content">
                 <span class="{{ progress_class }}"></span>
 
-              {% if unit.review_progress == 2 %}
-                <img src="assets/img/completed.png"
-                     alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                     title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                     class="gcb-progress-icon"
-                     id="progress-completed-review-{{unit.unit_id}}">
-              {% elif unit.review_progress == 1 %}
-                <img src="assets/img/in_progress.png"
-                     alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                     title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                     class="gcb-progress-icon"
-                     id="progress-inprogress-review-{{unit.unit_id}}">
+              {% if unit.review_progress in [1,2] %}
+                {{ render_progress_icon(unit.review_progress, 'review-{}'.format(unit.unit_id), True) }}
               {% else %}
-                <img src="assets/img/not_started.png"
-                     alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                     title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                     class="gcb-progress-icon"
-                     id="progress-notstarted-review-{{unit.unit_id}}">
+                {{ render_progress_icon(0, 'review-{}'.format(unit.unit_id), True) }}
               {% endif %}
 
               {% if unit.is_submitted %}
@@ -106,24 +118,10 @@
         {% endif %}
         <li class='{{ css_class }}'><p class="gcb-top-content">
           {% if is_progress_recorded and not transient_student %}
-            {% if progress[unit.unit_id] == 2 %}
-              <img src="assets/img/completed.png"
-                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                   class="gcb-progress-icon"
-                   id="progress-completed-{{unit.unit_id}}">
-            {% elif progress[unit.unit_id] == 1 %}
-              <img src="assets/img/in_progress.png"
-                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                   class="gcb-progress-icon"
-                   id="progress-inprogress-{{unit.unit_id}}">
+            {% if progress[unit.unit_id] in [1,2] %}
+              {{ render_progress_icon(progress[unit.unit_id], unit.unit_id) }}
             {% else %}
-              <img src="assets/img/not_started.png"
-                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                   class="gcb-progress-icon"
-                   id="progress-notstarted-{{unit.unit_id}}">
+              {{ render_progress_icon(0, unit.unit_id) }}
             {% endif %}
           {% else %}
             <span class="{{ progress_class }}"></span>
@@ -161,24 +159,10 @@
         {% endif %}
         <li class='{{ css_class }}'><p class="gcb-top-content">
           {% if not transient_student %}
-            {% if progress[unit.unit_id] == 2 %}
-              <img src="assets/img/completed.png"
-                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                   class="gcb-progress-icon"
-                   id="progress-completed-review-{{unit.unit_id}}">
-            {% elif progress[unit.unit_id] == 1 %}
-              <img src="assets/img/in_progress.png"
-                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                   class="gcb-progress-icon"
-                   id="progress-inprogress-review-{{unit.unit_id}}">
+            {% if progress[unit.unit_id] in [1,2] %}
+              {{ render_progress_icon(progress[unit.unit_id], 'review-{}'.format(unit.unit_id), True) }}
             {% else %}
-              <img src="assets/img/not_started.png"
-                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                   class="gcb-progress-icon"
-                   id="progress-notstarted-review-{{unit.unit_id}}">
+              {{ render_progress_icon(0, 'review-{}'.format(unit.unit_id), True) }}
             {% endif %}
           {% else %}
             <span class="{{ progress_class }}"></span>
@@ -251,24 +235,10 @@
 
       {% if is_progress_recorded %}
         <div class="gcb-progress-icon-holder">
-          {% if lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['html'] == 2 %}
-            <img src="assets/img/completed.png"
-                 alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                 title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                 class="gcb-progress-icon"
-                 id="progress-completed-{{lesson.lesson_id}}">
-          {% elif lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['html'] == 1 %}
-            <img src="assets/img/in_progress.png"
-                 alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                 title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                 class="gcb-progress-icon"
-                 id="progress-inprogress-{{lesson.lesson_id}}">
+          {% if lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['html'] in [1,2] %}
+            {{ render_progress_icon(lesson_progress[lesson.lesson_id]['html'], lesson.lesson_id) }}
           {% else %}
-            <img src="assets/img/not_started.png"
-                 alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                 title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                 class="gcb-progress-icon"
-                 id="progress-notstarted-{{lesson.lesson_id}}">
+            {{ render_progress_icon(0, lesson.lesson_id) }}
           {% endif %}
         </div>
       {% endif %}
@@ -300,24 +270,10 @@
         <li{% if page_type == 'activity' and is_active %} class="active"{% endif %}>
             {% if is_progress_recorded %}
               <div class="gcb-progress-icon-holder">
-                {% if lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['activity'] == 2 %}
-                  <img src="assets/img/completed.png"
-                       alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                       title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                       class="gcb-progress-icon"
-                       id="progress-completed-{{lesson.lesson_id}}-activity">
-                {% elif lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['activity'] == 1 %}
-                  <img src="assets/img/in_progress.png"
-                       alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                       title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                       class="gcb-progress-icon"
-                       id="progress-inprogress-{{lesson.lesson_id}}-activity">
+                {% if lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['activity'] in [1,2] %}
+                  {{ render_progress_icon(lesson_progress[lesson.lesson_id]['activity'], '{}-activity'.format(lesson.lesson_id)) }}
                 {% else %}
-                  <img src="assets/img/not_started.png"
-                       alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                       title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                       class="gcb-progress-icon"
-                       id="progress-notstarted-{{lesson.lesson_id}}-activity">
+                  {{ render_progress_icon(0, '{}-activity'.format(lesson.lesson_id)) }}
                 {% endif %}
               </div>
             {% endif %}
@@ -349,11 +305,7 @@
     <li>
       {% if is_progress_recorded %}
         <div class="gcb-progress-icon-holder">
-          <img src="assets/img/not_started.png"
-             alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-             title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-             class="gcb-progress-icon"
-             id="progress-notstarted-{{lesson.lesson_id}}">
+          {{ render_progress_icon(0, lesson.lesson_id) }}
         </div>
       {% endif %}
 
@@ -377,11 +329,7 @@
 
             {% if is_progress_recorded %}
               <div class="gcb-progress-icon-holder">
-                <img src="assets/img/not_started.png"
-                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                   class="gcb-progress-icon"
-                   id="progress-notstarted-{{lesson.lesson_id}}">
+                {{ render_progress_icon(0, '{}-activity'.format(lesson.lesson_id)) }}
               </div>
             {% endif %}
 
