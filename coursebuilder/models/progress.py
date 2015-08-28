@@ -359,8 +359,11 @@ class UnitLessonCompletionTracker(object):
             if question.type == question.MULTIPLE_CHOICE:
                 q_id = 'u.%s.l.%s.c.%s' % (
                     unit.unit_id, lesson.lesson_id, cpt['instanceid'])
+                lesson_label = str(lesson.index) or lesson.title
+                if lesson_label.startswith('Lesson '):
+                    lesson_label = lesson_label.replace('Lesson ', '', 1)
                 label = 'Unit %s Lesson %s, Question %s' % (
-                    unit.index, lesson.index, question.description)
+                    unit.index, lesson_label, question.description)
                 link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
                 num_choices = len(question.dict['choices'])
                 return self._create_v15_question_dict(
@@ -382,8 +385,11 @@ class UnitLessonCompletionTracker(object):
                 if question.type == question.MULTIPLE_CHOICE:
                     q_id = 'u.%s.l.%s.c.%s.i.%s' % (
                         unit.unit_id, lesson.lesson_id, cpt['instanceid'], ind)
+                    lesson_label = str(lesson.index) or lesson.title
+                    if lesson_label.startswith('Lesson '):
+                        lesson_label = lesson_label.replace('Lesson ', '', 1)
                     label = ('Unit %s Lesson %s, Question Group %s Question %s'
-                             % (unit.index, lesson.index,
+                             % (unit.index, lesson_label,
                                 question_group.description,
                                 question.description))
                     link = self._get_link_for_lesson(
