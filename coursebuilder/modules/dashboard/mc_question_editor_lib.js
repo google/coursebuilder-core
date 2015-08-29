@@ -1,3 +1,14 @@
+var SHOW_SCORES_LABEL = 'Assign scores to individual choices';
+var HIDE_SCORES_LABEL = 'Return to choice picker view';
+var HIDE_SCORES_WARNING_LABEL =
+    'Return to choice-picker (Note: scores will change)';
+
+/* Whether to show the numeric score or a radio/checkbox. */
+var setScores = false;
+var setScoresToggleButton;
+/* Whether a single or multiple selection of choices is allowed. */
+var singleSelection = true;
+
 /**
  * A class which represents a button which can toggle between two states ("a"
  * and "b") on a click.
@@ -187,9 +198,9 @@ function updateSetScoresToggleButtonLabel() {
  * The state of the UI is controlled by two parameters: singleSelection and
  * setScores. This initializes them using data already stored in the form.
  */
-function initState() {
-  singleSelection = (Y.all('div.mc-selection input:checked').get('value') ==
-      'false');
+function initState(mcQuestionEditorForm) {
+  singleSelection = ! mcQuestionEditorForm
+      .getFieldByName('multiple_selections').getValue();
   setScores = !isInNormalForm(getScores());
 }
 
@@ -255,8 +266,8 @@ function initAlternateScoreInputs() {
   });
 }
 
-function init() {
-  initState();
+function initMcQuestionEditor(mcQuestionEditorForm) {
+  initState(mcQuestionEditorForm);
   initSetScoresToggleButton();
   initAlternateScoreInputs();
   updateScoreInputs();
@@ -264,12 +275,13 @@ function init() {
 
   // Add click handler to the single/multiple selection widget
   Y.all('div.mc-selection input').on('click', function(e) {
-    singleSelection = ('false' == e.target.get('value'));
+    singleSelection = ! mcQuestionEditorForm
+        .getFieldByName('multiple_selections').getValue();
     updateScoreInputs();
   });
 
   // Add change handler to the entire InputEx form
-  cb_global.form.getFieldByName('choices').on('updated', function() {
+  mcQuestionEditorForm.getFieldByName('choices').on('updated', function() {
     initAlternateScoreInputs();
     updateScoreInputs();
     updateToggleFeedbackButtons();

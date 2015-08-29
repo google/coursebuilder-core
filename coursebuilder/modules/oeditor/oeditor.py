@@ -20,7 +20,6 @@ import os
 import urllib
 
 import jinja2
-import webapp2
 
 import appengine_config
 from common import crypto
@@ -209,7 +208,7 @@ class ObjectEditor(object):
         )).render(template_values))
 
 
-class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
+class PopupHandler(utils.BaseHandler, utils.ReflectiveRequestHandler):
     """A handler to serve the content of the popup subeditor."""
 
     default_action = 'custom_tag'
@@ -222,11 +221,6 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
             template_name, dirs + [os.path.dirname(__file__)])
 
     def _validate_schema(self, tag, schema):
-        if schema.has_subregistries():
-            return tag.unavailable_schema(
-                'This tag has an invalid schema and cannot be edited. '
-                'Only simple field types are allowed.')
-
         text_field_count = 0
         index = schema_fields.FieldRegistryIndex(schema)
         index.rebuild()

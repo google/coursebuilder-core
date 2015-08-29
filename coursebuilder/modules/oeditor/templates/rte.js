@@ -641,7 +641,10 @@ CustomTagManager.prototype = {
   _populateTagNode: function(node, properties, value) {
     for (var name in properties) {
       if (properties.hasOwnProperty(name)) {
-        if (properties[name].type === "text") {
+        var type = properties[name].type;
+        if (type === "object" || type === "array") {
+          continue;
+        } else if (type === "text") {
           this._setTextContent(node, value[name]);
         } else {
           node.setAttribute(name, value[name]);

@@ -128,6 +128,36 @@ TabBar.prototype._select = function(button) {
   button.addClass('selected');
 }
 
+/**
+ * Perform the given action, or not, depending on the decision made by the
+ * decider function. The decider can return "yes" (boolean true), "no" (boolean
+ * false), or "maybe" (a promise). If it returns a promise the action is
+ * performed if and when the promise is resolved. If no decider is provided, the
+ * action is performed by default.
+ *
+ * @param decider {Function} A zero-args function which returns either boolean
+       or a promise.
+ * @param action {Function} A zero-args function which is conditionally
+       executed.
+ */
+function maybePerformAction(decider, action) {
+  if (! decider) {
+    action();
+    return;
+  }
+  var decision = decider();
+  if (typeof decision == 'boolean') {
+    if (decision == true) {
+      action();
+    }
+    return;
+  }
+  if (decision.then) {
+    decision.then(function() {
+      action();
+    });
+  }
+}
 
 /**
  * Compare two JS objects for equality by value.
@@ -405,7 +435,8 @@ function mainYuiFunction(Y) {
   var inputExDefinition = builder.schemaToInputEx(schema.root);
 
   var editorControls = isFramed() ?
-      new FramedEditorControls(Y, window.parent.frameProxy, cb_global) :
+      new FramedEditorControls(Y, window.parent.frameProxy, cb_global,
+          maybePerformAction) :
       new TopLevelEditorControls(Y, cb_global);
 
   // choose buttons to show
@@ -466,6 +497,7 @@ function TopLevelEditorControls(Y, env) {
 }
 TopLevelEditorControls.prototype = {
   getSaveButton: function() {
+    var that = this;
     if (! this._env.save_url || ! this._env.save_method) {
       return null;
     }
@@ -473,20 +505,16 @@ TopLevelEditorControls.prototype = {
       type: 'submit-link',
       value: this._env.save_button_caption,
       className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
-      onClick: {
-        fn: this._onSaveClick,
-        scope: this
+      onClick: function() {
+        maybePerformAction(that._env.onSaveClick, function() {
+          that._onSaveClick();
+        });
+        return false;
       }
     };
   },
 
   _onSaveClick: function() {
-    // Allow custom code to register a pre-save handler. If it returns 'false'
-    // it will block further action.
-    if (this._env.onSaveClick && this._env.onSaveClick() === false) {
-      return false;
-    }
-
     cbShowMsg("Saving...");
     disableAllControlButtons(this._env.form);
 
@@ -694,29 +722,28 @@ TopLevelEditorControls.prototype = {
   },
 
   getCloseButton: function() {
+    var that = this;
     if (this._env.exit_url == '') {
       return null;
     }
     return {
       type: 'link', value: this._env.exit_button_caption,
       className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
-      onClick: {
-        fn: this._onCloseClick,
-        scope: this
+      onClick: function() {
+        maybePerformAction(that._env.onCloseClick, function() {
+          that._onCloseClick();
+        });
+        return false;
       }
     };
   },
 
   _onCloseClick: function(e) {
-    // Allow custom code to register a pre-close handler. If it returns 'false'
-    // it will block further action.
-    if (this._env.onCloseClick && this._env.onCloseClick() === false) {
-      return false;
-    }
     window.location = cb_global.exit_url;
   },
 
   getDeleteButton: function() {
+    var that = this;
     if (this._env.delete_url == '') {
       return null;
     }
@@ -724,20 +751,16 @@ TopLevelEditorControls.prototype = {
       type: 'link',
       value: this._env.delete_button_caption,
       className: 'inputEx-Button inputEx-Button-Link gcb-pull-right',
-      onClick: {
-        fn: this._onDeleteClick,
-        scope: this
+      onClick: function() {
+        maybePerformAction(that._env.onDeleteClick, function() {
+          that._onDeleteClick();
+        });
+        return false;
       }
     }
   },
 
   _onDeleteClick: function(e) {
-    // Allow custom code to register a pre-delete handler. If it returns 'false'
-    // it will block further action.
-    if (this._env.onDeleteClick && this._env.onDeleteClick() === false) {
-      return false;
-    }
-
     disableAllControlButtons(this._env.form);
     if (confirm(this._env.delete_message)) {
       if (this._env.delete_method == 'delete') {

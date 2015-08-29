@@ -1,0 +1,13 @@
+form#cb-oeditor-form > fieldset {
+  border-top: none;
+  margin-top: 25px;
+}
+#cb-oeditor-form > fieldset > .inputEx-Group-legend {
+  display: none;
+}
+.inputEx-fieldWrapper.question-weight {
+  margin-bottom: 20px;
+}
+.inputEx-fieldWrapper.question-weight .inputEx-label {
+  width: 90px;
+}

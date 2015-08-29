@@ -175,27 +175,75 @@ class QuestionTag(tags.BaseTag):
 
     def get_schema(self, handler):
         """Get the schema for specifying the question."""
-        question_list = []
-        if handler:
-            questions = m_models.QuestionDAO.get_all()
-            question_list = [(
-                unicode(q.id),  # q.id is an int; schema requires a string
-                q.description) for q in questions]
-
-            if not question_list:
-                return self.unavailable_schema('No questions available')
-
         reg = schema_fields.FieldRegistry('Question')
-        reg.add_property(
-            schema_fields.SchemaField(
-                'quid', 'Question', 'string', optional=True, i18n=False,
-                select_data=question_list))
+
+        if handler is None:
+            reg.add_property(schema_fields.SchemaField(
+                'quid', 'Question', 'string', optional=True, i18n=False))
+            reg.add_property(schema_fields.SchemaField(
+                'weight', 'Weight', 'number', optional=True, i18n=False))
+            return reg
+
+        reg.add_property(schema_fields.SchemaField(
+            'quid', None, 'string', hidden=True, optional=True, i18n=False))
+        reg.add_property(schema_fields.SchemaField(
+            'qu_type', None, 'string', hidden=True, optional=True, i18n=False))
+
+        select_schema = schema_fields.FieldRegistry(
+            'Select',
+            extra_schema_dict_values={'className': 'select-container'})
+
+        question_list = [(
+            unicode(q.id),  # q.id is an int; schema requires a string
+            q.description) for q in m_models.QuestionDAO.get_all()]
+
+        if question_list:
+            select_schema.add_property(
+                schema_fields.SchemaField(
+                    'quid', 'Question', 'string', optional=True, i18n=False,
+                    select_data=[('', '-- New Question --')] + question_list))
+        else:
+            select_schema.add_property(
+                schema_fields.SchemaField(
+                    'unused_id', '', 'string', optional=True,
+                    editable=False, extra_schema_dict_values={
+                        'value': 'No questions available'}))
+
+        course = handler.get_course()
+        mc_schema = resources_display.ResourceMCQuestion.get_schema(
+            course, None, forbidCustomTags=True)
+        sa_schema = resources_display.ResourceSAQuestion.get_schema(
+            course, None, forbidCustomTags=True)
+
+        reg.add_sub_registry('mc_tab', registry=mc_schema)
+        reg.add_sub_registry('sa_tab', registry=sa_schema)
+        reg.add_sub_registry('select_tab', registry=select_schema)
+
         reg.add_property(
             schema_fields.SchemaField(
                 'weight', 'Weight', 'number', optional=True, i18n=False,
-                extra_schema_dict_values={'value': '1'},
+                extra_schema_dict_values={
+                    'value': '1',
+                    'className': 'question-weight inputEx-Field'},
                 description='The number of points for a correct answer.'))
+
         return reg
+
+    @classmethod
+    def extra_js_files(cls):
+        return ['questions_popup.js', 'mc_question_editor_lib.js']
+
+    @classmethod
+    def extra_css_files(cls):
+        return ['questions_popup.css']
+
+    @classmethod
+    def additional_dirs(cls):
+        return [
+            os.path.join(appengine_config.BUNDLE_ROOT, 'modules',
+                'assessment_tags', 'templates'),
+            os.path.join(appengine_config.BUNDLE_ROOT, 'modules', 'dashboard'),
+        ]
 
 
 class QuestionGroupTag(tags.BaseTag):

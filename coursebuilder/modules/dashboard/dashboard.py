@@ -30,6 +30,7 @@ from filer import TextAssetRESTHandler
 from label_editor import LabelManagerAndEditor
 from label_editor import LabelRestHandler
 import messages
+from question_editor import GeneralQuestionRESTHandler
 from question_editor import GiftQuestionRESTHandler
 from question_editor import McQuestionRESTHandler
 from question_editor import QuestionManagerAndEditor
@@ -113,6 +114,7 @@ class DashboardHandler(
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
             (GiftQuestionRESTHandler.URI, GiftQuestionRESTHandler),
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
+            (GeneralQuestionRESTHandler.URI, GeneralQuestionRESTHandler),
             (TextAssetRESTHandler.URI, TextAssetRESTHandler),
             (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler),
             (RoleRESTHandler.URI, RoleRESTHandler)]

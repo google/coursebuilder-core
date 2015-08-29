@@ -16,9 +16,8 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
-import copy
-
 from common import schema_fields
+from common.crypto import XsrfTokenManager
 from common import utils as common_utils
 from models import roles
 from models import transforms
@@ -145,19 +144,12 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
     def pre_save_hook(self, question):
         question.type = models.QuestionDTO.MULTIPLE_CHOICE
 
-    def transform_for_editor_hook(self, q_dict):
-        p_dict = copy.deepcopy(q_dict)
-        # InputEx does not correctly roundtrip booleans, so pass strings
-        p_dict['multiple_selections'] = (
-            'true' if q_dict.get('multiple_selections') else 'false')
-        return p_dict
-
     def get_default_content(self):
         return {
             'version': self.SCHEMA_VERSIONS[0],
             'question': '',
             'description': '',
-            'multiple_selections': 'false',
+            'multiple_selections': False,
             'choices': [
                 {'score': '1', 'text': '', 'feedback': ''},
                 {'score': '0', 'text': '', 'feedback': ''},
@@ -401,3 +393,56 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
         msg = 'Saved: %s.' % python_dict['description']
         transforms.send_json_response(self, 200, msg)
         return
+
+
+class GeneralQuestionRESTHandler(BaseQuestionRESTHandler):
+    """REST handler for editing questions of any type."""
+
+    URI = '/rest/question/all'
+
+    def get(self):
+        key = self.request.get('key')
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        if key:
+            question_dto = models.QuestionDAO.load(key)
+            if question_dto.type == models.QuestionDTO.MULTIPLE_CHOICE:
+                mc_dict = question_dto.dict
+                sa_dict = SaQuestionRESTHandler().get_default_content()
+                qu_type = 'mc'
+            elif question_dto.type == models.QuestionDTO.SHORT_ANSWER:
+                mc_dict = McQuestionRESTHandler().get_default_content()
+                sa_dict = question_dto.dict
+                qu_type = 'sa'
+            else:
+                raise ValueError(
+                    'Unrecognized question type ' + question_dto.type)
+        else:
+            mc_dict = McQuestionRESTHandler().get_default_content()
+            sa_dict = SaQuestionRESTHandler().get_default_content()
+            qu_type = None
+
+        question_dict = {
+            'quid': key,
+            'qu_type': qu_type,
+            'mc_tab': mc_dict,
+            'sa_tab': sa_dict,
+            'select_tab': {
+                'quid': key
+            }
+        }
+
+        xsrf_token_dict = {
+            'mc_tab': XsrfTokenManager.create_xsrf_token(
+                McQuestionRESTHandler.XSRF_TOKEN),
+            'sa_tab': XsrfTokenManager.create_xsrf_token(
+                SaQuestionRESTHandler.XSRF_TOKEN)
+        }
+
+        transforms.send_json_response(
+            self, 200, 'Success',
+            payload_dict=question_dict,
+            xsrf_token=transforms.dumps(xsrf_token_dict))

@@ -942,22 +942,38 @@ class CourseContentElement(DashboardEditor):
             return close_clickable(driver) and save_clickable(driver)
         self.wait().until(both_clickable)
 
-    def set_rte_lightbox_field(self, field_css_selector, value):
+    def set_rte_lightbox_field(
+            self, field_css_selector, value, index=0, clear=True):
         self._ensure_rte_iframe_ready_and_switch_to_it()
-        field = self.find_element_by_css_selector(field_css_selector)
-        field.clear()
+        field = self.find_element_by_css_selector(
+            field_css_selector, index=index)
+        if clear:
+            field.clear()
         field.send_keys(value)
         self._tester.driver.switch_to_default_content()
         return self
 
-    def click_rte_save(self):
+    def click_rte_element(self, css_selector):
         self._ensure_rte_iframe_ready_and_switch_to_it()
-        self.find_element_by_link_text('Save').click()
+        self.find_element_by_css_selector(css_selector).click()
+        self._tester.driver.switch_to_default_content()
+        return self
+
+    def _click_rte_control_button(self, link_text):
+        self._ensure_rte_iframe_ready_and_switch_to_it()
+        self.find_element_by_link_text(link_text).click()
         self._tester.driver.switch_to_default_content()
         def is_hidden(driver):
             return 'hidden' in driver.find_element_by_id(
                 'modal-editor').get_attribute('class')
         self.wait().until(is_hidden)
+
+    def click_rte_save(self):
+        self._click_rte_control_button('Save')
+        return self
+
+    def click_rte_close(self):
+        self._click_rte_control_button('Close')
         return self
 
     def send_rte_text(self, text):

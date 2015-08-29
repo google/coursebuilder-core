@@ -103,8 +103,11 @@ class ResourceSAQuestion(ResourceQuestionBase):
         ('numeric', 'Numeric')]
 
     @classmethod
-    def get_schema(cls, course, key):
+    def get_schema(cls, course, key, forbidCustomTags=False):
         """Get the InputEx schema for the short answer question editor."""
+        supportCustomTags = (
+            not forbidCustomTags and tags.CAN_USE_DYNAMIC_TAGS.value)
+
         sa_question = schema_fields.FieldRegistry(
             'Short Answer Question',
             description='short answer question',
@@ -119,7 +122,7 @@ class ResourceSAQuestion(ResourceQuestionBase):
         sa_question.add_property(schema_fields.SchemaField(
             'question', 'Question', 'html', optional=True,
             extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'supportCustomTags': supportCustomTags,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'sa-question'}))
         sa_question.add_property(schema_fields.SchemaField(
@@ -128,7 +131,7 @@ class ResourceSAQuestion(ResourceQuestionBase):
         sa_question.add_property(schema_fields.SchemaField(
             'defaultFeedback', 'Feedback', 'html', optional=True,
             extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'supportCustomTags': supportCustomTags,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'sa-feedback'},
             description=messages.INCORRECT_ANSWER_FEEDBACK))
@@ -168,7 +171,7 @@ class ResourceSAQuestion(ResourceQuestionBase):
         grader_type.add_property(schema_fields.SchemaField(
             'feedback', 'Feedback', 'html', optional=True,
             extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'supportCustomTags': supportCustomTags,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'sa-grader-feedback'}))
 
@@ -189,8 +192,11 @@ class ResourceMCQuestion(ResourceQuestionBase):
     TYPE = ResourceQuestionBase.TYPE_MC_QUESTION
 
     @classmethod
-    def get_schema(cls, course, key):
+    def get_schema(cls, course, key, forbidCustomTags=False):
         """Get the InputEx schema for the multiple choice question editor."""
+        supportCustomTags = (
+            not forbidCustomTags and tags.CAN_USE_DYNAMIC_TAGS.value)
+
         mc_question = schema_fields.FieldRegistry(
             'Multiple Choice Question',
             description='multiple choice question',
@@ -205,13 +211,13 @@ class ResourceMCQuestion(ResourceQuestionBase):
         mc_question.add_property(schema_fields.SchemaField(
             'question', 'Question', 'html', optional=True,
             extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'supportCustomTags': supportCustomTags,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'mc-question'}))
         mc_question.add_property(schema_fields.SchemaField(
             'defaultFeedback', 'Feedback', 'html', optional=True,
             extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'supportCustomTags': supportCustomTags,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'mc-question'}))
 
@@ -235,8 +241,8 @@ class ResourceMCQuestion(ResourceQuestionBase):
             'multiple_selections', 'Selection', 'boolean',
             optional=True,
             select_data=[
-                ('false', 'Allow only one selection'),
-                ('true', 'Allow multiple selections')],
+                (False, 'Allow only one selection'),
+                (True, 'Allow multiple selections')],
             extra_schema_dict_values={
                 '_type': 'radio',
                 'className': 'mc-selection'}))
@@ -251,13 +257,13 @@ class ResourceMCQuestion(ResourceQuestionBase):
         choice_type.add_property(schema_fields.SchemaField(
             'text', 'Text', 'html', optional=True,
             extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'supportCustomTags': supportCustomTags,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'mc-choice-text'}))
         choice_type.add_property(schema_fields.SchemaField(
             'feedback', 'Feedback', 'html', optional=True,
             extra_schema_dict_values={
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'supportCustomTags': supportCustomTags,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
                 'className': 'mc-choice-feedback'}))
 

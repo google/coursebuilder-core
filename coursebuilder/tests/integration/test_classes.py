@@ -809,10 +809,99 @@ class AdminTests(BaseIntegrationTest):
 
 class QuestionsTest(BaseIntegrationTest):
 
-    def test_add_question_and_solve_it(self):
+    def test_inline_question_creation(self):
         name = self.create_new_course()[0]
 
         self.load_dashboard(
+            name
+        ).click_add_unit(
+        ).set_title(
+            'Test Unit'
+        ).click_save(
+        ).click_close(
+        ).click_add_lesson(
+        ).set_title(
+            'Test Lesson'
+        ).click_rich_text(
+
+        #---------------------------------------------- Add a MC question
+        ).click_rte_add_custom_tag(
+            'Question'
+        ).click_rte_element(
+            '#mc_tab'
+        ).set_rte_lightbox_field(
+            '.mc-container [name="description"]', 'mc question'
+        ).set_rte_lightbox_field(
+            '[name="weight"]', '23'
+        ).set_rte_lightbox_field(
+            '.mc-container .yui-editor-editable', 'What color is the sky?',
+            index=0, clear=False
+        ).set_rte_lightbox_field(
+            '.mc-container .yui-editor-editable', 'Blue',
+            index=2, clear=False
+        ).set_rte_lightbox_field(
+            '.mc-container .yui-editor-editable', 'Red',
+            index=4, clear=False
+        ).set_rte_lightbox_field(
+            '.mc-container .yui-editor-editable', 'Green',
+            index=6, clear=False
+        ).set_rte_lightbox_field(
+            '.mc-container .yui-editor-editable', 'Yellow',
+            index=8, clear=False
+        ).click_rte_save(
+        ).doubleclick_rte_element(
+            'img'
+        ).ensure_rte_lightbox_field_has_value(
+            '.mc-container [name="description"]', 'mc question'
+        ).ensure_rte_lightbox_field_has_value(
+            '[name="weight"]', '23'
+        ).click_rte_close(
+        ).click_preview(
+        #---------------------------------------------- Confirm in preview
+        ).ensure_preview_document_matches_regex(
+            '23 points'
+        ).ensure_preview_document_matches_regex(
+            'What color is the sky?'
+        ).click_rich_text(
+
+        #---------------------------------------------- Add a SA questions
+        ).click_rte_add_custom_tag(
+            'Question'
+        ).click_rte_element(
+            '#sa_tab'
+        ).set_rte_lightbox_field(
+            '.sa-container [name="description"]', 'sa question',
+        ).set_rte_lightbox_field(
+            '[name="weight"]', '24',
+        ).set_rte_lightbox_field(
+            '.sa-container .yui-editor-editable', 'Type "woof"',
+            index=0, clear=False
+        ).set_rte_lightbox_field(
+            '.sa-container [name="graders[0]response"]', 'woof'
+        ).click_rte_save(
+        ).doubleclick_rte_element(
+            'img', index=0
+        ).ensure_rte_lightbox_field_has_value(
+            '.sa-container [name="description"]', 'sa question'
+        ).ensure_rte_lightbox_field_has_value(
+            '[name="weight"]', '24'
+        ).click_rte_close(
+        ).click_preview(
+        #---------------------------------------------- Confirm in preview
+        ).ensure_preview_document_matches_regex(
+            '24 points'
+        ).ensure_preview_document_matches_regex(
+            'Type "woof"'
+        ).ensure_preview_document_matches_regex(
+            '23 points'
+        ).ensure_preview_document_matches_regex(
+            'What color is the sky?'
+        )
+
+    def test_add_question_and_solve_it(self):
+        name = self.create_new_course()[0]
+
+        page = self.load_dashboard(
             name
         ).click_course(
         ).click_register(
@@ -873,6 +962,8 @@ class QuestionsTest(BaseIntegrationTest):
             'Question'
         ).set_rte_lightbox_field(
             'input[name=weight]', 1
+        ).click_rte_element(
+            '.select-container [name="quid"] option:nth-child(2)'
         ).click_rte_save(
         ).click_save(
         ).click_close(
@@ -889,6 +980,8 @@ class QuestionsTest(BaseIntegrationTest):
             'Question'
         ).set_rte_lightbox_field(
             'input[name=weight]', 1
+        ).click_rte_element(
+            '.select-container [name="quid"] option:nth-child(2)'
         ).click_rte_save(
         ).click_save(
         ).click_close(
@@ -905,6 +998,8 @@ class QuestionsTest(BaseIntegrationTest):
             pageobjects.AddAssessment.INDEX_CONTENT
         ).set_rte_lightbox_field(
             'input[name=weight]', 1
+        ).click_rte_element(
+            '.select-container [name="quid"] option:nth-child(2)'
         ).click_rte_save(
         ).click_save(
         ).click_close(
@@ -921,6 +1016,8 @@ class QuestionsTest(BaseIntegrationTest):
             pageobjects.AddAssessment.INDEX_CONTENT
         ).set_rte_lightbox_field(
             'input[name=weight]', 1
+        ).click_rte_element(
+            '.select-container [name="quid"] option:nth-child(2)'
         ).click_rte_save(
         ).click_save(
         ).click_close(
@@ -936,7 +1033,9 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_on_course_outline_components(
             '2. Question lesson - UnGraded'
         #---------------------------------------------- Verify pre-assessment
-        ).set_answer_for_mc_question(
+        )
+
+        page.set_answer_for_mc_question(
             'A4', 'What is your favorite color?', 'Red'
         ).submit_question_batch(
             'A4', 'Submit Answers'

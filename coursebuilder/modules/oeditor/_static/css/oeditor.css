@@ -377,9 +377,6 @@ div.mc-container div.CodeMirror {
   margin: 0;
   padding: 0;
 }
-div.mc-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
-  width: 80px;
-}
 div.mc-question,
 div.mc-description,
 div.mc-selection,
@@ -389,6 +386,9 @@ div.set-scores-toggle,
 }
 div.mc-bool-option {
   margin-left: 115px;
+}
+div.mc-container div.inputEx-label {
+  width: inherit;
 }
 
 .mc-choice > fieldset > .inputEx-fieldWrapper {

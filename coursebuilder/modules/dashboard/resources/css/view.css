@@ -4,53 +4,6 @@ body {
 form {
   display: inline;
 }
-
-/* Undo MDL typography module styles.
-When we decide to use their typography rules, we may be able to remove some of
-these rules.
- */
-
-html, body, table, td, th, p {
-  font-family: arial,sans-serif;
-  font-size: 13px;
-}
-html, body {
-  font-weight: inherit;
-  line-height: inherit;
-}
-body, h3 {
-  margin: 0px;
-  padding: 0px;
-}
-ul,ol {
-  font-weight: inherit;
-  letter-spacing: inherit;
-  font-size: inherit;
-  line-height: inherit;
-}
-h1,h2,h3,h4,h5 {
-  font-size: inherit;
-  line-height: inherit;
-  font-weight: bold;
-}
-h3 {
-  font-size: 1.17em;;
-}
-h2 {
-  font-size: 1.5em;
-}
-a {
-  color: rgb(0, 0, 238);
-}
-iframe {
-  border: 2px inset;
-}
-fieldset {
-  padding: 0.35em 0.75em 0.625em 0.75em;
-}
-
-/* end MDL overrides */
-
 table {
   width: 100%;
   border-width: 1px;

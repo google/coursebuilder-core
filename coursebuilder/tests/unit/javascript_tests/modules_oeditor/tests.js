@@ -42,6 +42,32 @@ describe('deepEquals', function() {
   });
 });
 
+describe('maybePerformAction', function() {
+
+  beforeEach(function() {
+    this.action = jasmine.createSpy('action');
+  });
+  it('executes the action when no decider is provided', function() {
+    maybePerformAction(null, this.action);
+    expect(this.action.calls.any()).toEqual(true);
+  });
+  it('executes the action when the decider returns true', function() {
+    maybePerformAction(function() {return true}, this.action);
+    expect(this.action.calls.any()).toEqual(true);
+  });
+  it('does not execute the action when the decider returns false', function() {
+    maybePerformAction(function() {return false}, this.action);
+    expect(this.action.calls.any()).toEqual(false);
+  });
+  it('excecutes the action when decider returns a promise, after it is resolved', function() {
+    var promise = $.Deferred();
+    maybePerformAction(function() {return promise}, this.action);
+    expect(this.action.calls.any()).toEqual(false);
+    promise.resolve();
+    expect(this.action.calls.any()).toEqual(true);
+  });
+});
+
 describe('parseJson', function() {
   it('strips off XSSI prefix if it\'s present', function() {
     var json = ')]}\'{"a": 2}';
@@ -57,6 +83,10 @@ describe('parseJson', function() {
 
 describe('FramedEditorControls', function() {
   var framedEditorControls, Y, frameProxy, env;
+
+  function maybePerformAction(decider, action) {
+    action();
+  };
 
   beforeEach(function() {
     Y = {};
@@ -88,7 +118,8 @@ describe('FramedEditorControls', function() {
     spyOn(env.form, 'setValue');
     spyOn(env, 'onFormLoad');
 
-    framedEditorControls = new FramedEditorControls(Y, frameProxy, env);
+    framedEditorControls = new FramedEditorControls(Y, frameProxy, env,
+        maybePerformAction);
   });
 
   describe('the save button', function() {

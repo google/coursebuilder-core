@@ -5,10 +5,11 @@
  *     the parent window.
  * @param env The shared GCB envronment variables.
  */
-function FramedEditorControls(Y, frameProxy, env) {
+function FramedEditorControls(Y, frameProxy, env, maybePerformAction) {
   this._Y = Y;
   this._frameProxy = frameProxy;
   this._env = env;
+  this._maybePerformAction = maybePerformAction;
 }
 FramedEditorControls.prototype = {
   getSaveButton: function() {
@@ -18,12 +19,11 @@ FramedEditorControls.prototype = {
       value: 'Save',
       className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
       onClick: function() {
-        if (that._env.onSaveClick && that._env.onSaveClick() === false) {
-          return false;
-        }
-
-        that._frameProxy.setValue(that._env.form.getValue());
-        that._frameProxy.submit();
+        that._maybePerformAction(that._env.onSaveClick, function() {
+          that._frameProxy.setValue(that._env.form.getValue());
+          that._frameProxy.submit();
+        });
+        return false;
       }
     };
   },
@@ -35,11 +35,10 @@ FramedEditorControls.prototype = {
       value: 'Close',
       className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
       onClick: function() {
-        if (that._env.onCloseClick && that._env.onCloseClick() === false) {
-          return false;
-        }
-
-        that._frameProxy.close();
+        that._maybePerformAction(that._env.onCloseClick, function() {
+          that._frameProxy.close();
+        });
+        return false;
       }
     };
   },
