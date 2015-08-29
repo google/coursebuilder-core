@@ -92,6 +92,19 @@ class ResourceQuestionBase(resource.AbstractResourceHandler):
     def get_edit_url(cls, key):
         return 'dashboard?action=edit_question&key=%s' % key
 
+    @classmethod
+    def _add_html_field_to(
+            cls, registry, name, label, class_name, supportCustomTags,
+            description=None):
+        registry.add_property(schema_fields.SchemaField(
+            name, label, 'html', optional=True,
+            extra_schema_dict_values={
+                'supportCustomTags': supportCustomTags,
+                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
+                'rteButtonSet': 'reduced',
+                'className': class_name},
+            description=description))
+
 
 class ResourceSAQuestion(ResourceQuestionBase):
 
@@ -119,22 +132,15 @@ class ResourceSAQuestion(ResourceQuestionBase):
             'description', 'Description', 'string', optional=True,
             extra_schema_dict_values={'className': 'sa-description'},
             description=messages.QUESTION_DESCRIPTION))
-        sa_question.add_property(schema_fields.SchemaField(
-            'question', 'Question', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': supportCustomTags,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'sa-question'}))
-        sa_question.add_property(schema_fields.SchemaField(
-            'hint', 'Hint', 'html', optional=True,
-            extra_schema_dict_values={'className': 'sa-hint'}))
-        sa_question.add_property(schema_fields.SchemaField(
-            'defaultFeedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': supportCustomTags,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'sa-feedback'},
-            description=messages.INCORRECT_ANSWER_FEEDBACK))
+        cls._add_html_field_to(
+            sa_question, 'question', 'Question', 'sa-question',
+            supportCustomTags)
+        cls._add_html_field_to(
+            sa_question, 'hint', 'Hint', 'sa-hint', supportCustomTags)
+        cls._add_html_field_to(
+            sa_question, 'defaultFeedback', 'Feedback', 'sa-feedback',
+            supportCustomTags,
+            description=messages.INCORRECT_ANSWER_FEEDBACK)
 
         sa_question.add_property(schema_fields.SchemaField(
             'rows', 'Rows', 'string', optional=True, i18n=False,
@@ -168,12 +174,9 @@ class ResourceSAQuestion(ResourceQuestionBase):
         grader_type.add_property(schema_fields.SchemaField(
             'response', 'Response', 'string', optional=True,
             extra_schema_dict_values={'className': 'sa-grader-text'}))
-        grader_type.add_property(schema_fields.SchemaField(
-            'feedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': supportCustomTags,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'sa-grader-feedback'}))
+        cls._add_html_field_to(
+            grader_type, 'feedback', 'Feedback', 'sa-grader-feedback',
+            supportCustomTags)
 
         graders_array = schema_fields.FieldArray(
             'graders', '', item_type=grader_type,
@@ -208,18 +211,12 @@ class ResourceMCQuestion(ResourceQuestionBase):
             description=messages.QUESTION_DESCRIPTION))
         mc_question.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
-        mc_question.add_property(schema_fields.SchemaField(
-            'question', 'Question', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': supportCustomTags,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'mc-question'}))
-        mc_question.add_property(schema_fields.SchemaField(
-            'defaultFeedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': supportCustomTags,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'mc-question'}))
+        cls._add_html_field_to(
+            mc_question, 'question', 'Question', 'mc-question',
+            supportCustomTags)
+        cls._add_html_field_to(
+            mc_question, 'defaultFeedback', 'Feedback', 'mc-question',
+            supportCustomTags)
 
         mc_question.add_property(schema_fields.SchemaField(
             'permute_choices', 'Permute Choices', 'boolean', optional=True,
@@ -254,18 +251,11 @@ class ResourceMCQuestion(ResourceQuestionBase):
             'score', 'Score', 'string', optional=True, i18n=False,
             extra_schema_dict_values={
                 'className': 'mc-choice-score', 'value': '0'}))
-        choice_type.add_property(schema_fields.SchemaField(
-            'text', 'Text', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': supportCustomTags,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'mc-choice-text'}))
-        choice_type.add_property(schema_fields.SchemaField(
-            'feedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={
-                'supportCustomTags': supportCustomTags,
-                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
-                'className': 'mc-choice-feedback'}))
+        cls._add_html_field_to(
+            choice_type, 'text', 'Text', 'mc-choice-text', supportCustomTags)
+        cls._add_html_field_to(
+            choice_type, 'feedback', 'Feedback', 'mc-choice-feedback',
+            supportCustomTags)
 
         choices_array = schema_fields.FieldArray(
             'choices', '', item_type=choice_type,

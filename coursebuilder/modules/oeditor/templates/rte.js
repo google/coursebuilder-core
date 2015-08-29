@@ -124,34 +124,20 @@ function bindEditorField(Y) {
    *
    * @class
    */
-  function RichTextEditor(root, opts, supportCustomTags, excludedCustomTags) {
+  function RichTextEditor(root, options) {
     var that = this;
 
     this.root = root;
-    this.excludedCustomTags = excludedCustomTags;
+    this.excludedCustomTags = options.excludedCustomTags || [];
 
     var textarea = document.createElement('textarea');
     root.appendChild(textarea);
 
-    var extraCss =
-      '::-webkit-scrollbar {' +
-      '  width: 10px;' +
-      '}' +
-      '::-webkit-scrollbar:horizontal {' +
-      '  height: 10px;' +
-      '}' +
-      '::-webkit-scrollbar-track {' +
-      '  background-color: #f5f5f5;' +
-      '}' +
-      '::-webkit-scrollbar-thumb {' +
-      '  background-color: #c0c0c0;' +
-      '  border: solid 1px #b4b4b4;' +
-      '}';
-    var attrs = {extracss: extraCss};
-    for (var i in opts) {
-      if (opts.hasOwnProperty(i)) {
-        attrs[i] = opts[i];
-      }
+    var attrs = {
+      extracss: this.EXTRA_CSS,
+    };
+    if (options['rteButtonSet'] == 'reduced') {
+      attrs.toolbar = {buttons: this.REDUCED_BUTTON_SET};
     }
     this.editor = new Y.YUI2.widget.Editor(textarea, attrs);
     this._disableHtmlCleaning();
@@ -166,7 +152,7 @@ function bindEditorField(Y) {
     this.editorIsVisible = $.Deferred();
 
     this._customTagManager = new DummyCustomTagManager();
-    if (supportCustomTags) {
+    if (options.supportCustomTags) {
       $.when(this.editorIsRendered).then(function() {
         that._addCustomComponentButtons();
         that._bindCustomTagManager();
@@ -175,6 +161,69 @@ function bindEditorField(Y) {
 
     this.editor.render();
   }
+  RichTextEditor.prototype.EXTRA_CSS =
+    '::-webkit-scrollbar {' +
+    '  width: 10px;' +
+    '}' +
+    '::-webkit-scrollbar:horizontal {' +
+    '  height: 10px;' +
+    '}' +
+    '::-webkit-scrollbar-track {' +
+    '  background-color: #f5f5f5;' +
+    '}' +
+    '::-webkit-scrollbar-thumb {' +
+    '  background-color: #c0c0c0;' +
+    '  border: solid 1px #b4b4b4;' +
+    '}';
+  RichTextEditor.prototype.REDUCED_BUTTON_SET = [
+    {
+      /* See http://yui.github.io/yui2/docs/yui_2.9.0_full/examples/editor/toolbar_editor.html */
+      group: 'fontstyle', label: 'Font Name and Size',
+      buttons: [
+        {
+          type: 'select', label: 'Arial', value: 'fontname', disabled: true,
+          menu: [
+            { text: 'Arial', checked: true },
+            { text: 'Arial Black' },
+            { text: 'Comic Sans MS' },
+            { text: 'Courier New' },
+            { text: 'Lucida Console' },
+            { text: 'Tahoma' },
+            { text: 'Times New Roman' },
+            { text: 'Trebuchet MS' },
+            { text: 'Verdana' }
+          ]
+        },
+        { type: 'spin', label: '13', value: 'fontsize', range: [ 9, 75 ], disabled: true }
+      ]
+    },
+    { type: 'separator' },
+    {
+      group: 'textstyle', label: 'Font Style',
+      buttons: [
+        { type: 'push', label: 'Bold CTRL + SHIFT + B', value: 'bold' },
+        { type: 'push', label: 'Italic CTRL + SHIFT + I', value: 'italic' },
+        { type: 'push', label: 'Underline CTRL + SHIFT + U', value: 'underline' },
+        { type: 'color', label: 'Font Color', value: 'forecolor', disabled: true },
+        { type: 'color', label: 'Background Color', value: 'backcolor', disabled: true }
+      ]
+    },
+    {
+      group: 'indentlist', label: 'Indenting and Lists',
+      buttons: [
+        { type: 'push', label: 'Create an Unordered List', value: 'insertunorderedlist' },
+        { type: 'push', label: 'Create an Ordered List', value: 'insertorderedlist' }
+      ]
+    },
+    {
+      group: 'insertitem', label: 'Insert Item',
+      buttons: [
+        { type: 'push', label: 'HTML Link CTRL + SHIFT + L', value: 'createlink', disabled: true },
+        { type: 'push', label: 'Insert Image', value: 'insertimage' }
+      ]
+    }
+  ];
+
   RichTextEditor.prototype.isReady = function() {
     return this.editorIsRendered;
   };
@@ -387,9 +436,7 @@ function bindEditorField(Y) {
 
   EditorField.prototype.setOptions = function(options) {
     EditorField.superclass.setOptions.call(this, options);
-    this.opts = options.opts || {};
-    this.excludedCustomTags = options.excludedCustomTags || [];
-    this.supportCustomTags = options.supportCustomTags || false;
+    this.options = options;
     this.allowResizeWidth = !isNewFormLayout();
   };
   EditorField.prototype.renderComponent = function() {
@@ -420,8 +467,7 @@ function bindEditorField(Y) {
     this.previewDiv = this.fieldContainer.querySelector('.preview-div');
 
     this.htmlEditor = new HtmlEditor(this.htmlDiv);
-    this.richTextEditor = new RichTextEditor(this.rteDiv, this.opts,
-        this.supportCustomTags, this.excludedCustomTags);
+    this.richTextEditor = new RichTextEditor(this.rteDiv, this.options);
     this.previewEditor = new PreviewEditor(this.previewDiv);
 
     // Bind the buttons
