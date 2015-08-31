@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-24 08:00-0700\n"
-"PO-Revision-Date: 2015-08-03 07:24-0700\n"
+"POT-Creation-Date: 2015-08-31 08:02-0700\n"
+"PO-Revision-Date: 2015-08-31 08:02-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fa <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1133
+#: experimental/coursebuilder/models/resources_display.py:1129
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "واحد %(index)s‏ - %(title)s"
@@ -31,7 +31,7 @@ msgstr "واحد %(index)s‏ - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1153
+#: experimental/coursebuilder/models/resources_display.py:1149
 #, python-format
 msgid "Unit %s"
 msgstr "واحد %s"
@@ -39,17 +39,17 @@ msgstr "واحد %s"
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
 msgid "Correct. "
-msgstr ""
+msgstr "درست. "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:10
 msgid "Incorrect. "
-msgstr ""
+msgstr "نادرست. "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:12
 msgid "Partially Correct. "
-msgstr ""
+msgstr "تا حدی درست. "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:15
@@ -69,17 +69,17 @@ msgstr " پاسخ تا حدی درست است. "
 #. The title for section showing the correct answer
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:22
 msgid "The correct answer is:"
-msgstr ""
+msgstr "پاسخ درست این است:"
 
 #. The title for section showing feedback related to the answer given
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:24
 msgid "Targeted Feedback:"
-msgstr ""
+msgstr "بازخورد هدفمند:"
 
 #. The title for section showing overall feedback
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:26
 msgid "Feedback:"
-msgstr ""
+msgstr "بازخورد:"
 
 #. Text appearing at the bottom of a lesson page after the student asks for it
 #. to be graded.
@@ -99,18 +99,8 @@ msgstr " برای نمره دادن به این سؤال باید جاوا اس�
 #. whether the assessment has been completed.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:44
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:45
-#: experimental/coursebuilder/views/macros.html:33
-#: experimental/coursebuilder/views/macros.html:34
-#: experimental/coursebuilder/views/macros.html:65
-#: experimental/coursebuilder/views/macros.html:66
-#: experimental/coursebuilder/views/macros.html:111
-#: experimental/coursebuilder/views/macros.html:112
-#: experimental/coursebuilder/views/macros.html:166
-#: experimental/coursebuilder/views/macros.html:167
-#: experimental/coursebuilder/views/macros.html:256
-#: experimental/coursebuilder/views/macros.html:257
-#: experimental/coursebuilder/views/macros.html:305
-#: experimental/coursebuilder/views/macros.html:306
+#: experimental/coursebuilder/views/macros.html:27
+#: experimental/coursebuilder/views/macros.html:28
 #: experimental/coursebuilder/views/review_dashboard.html:58
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
@@ -119,16 +109,8 @@ msgstr "کامل"
 #. Alt text for image representing student progress.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:49
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:50
-#: experimental/coursebuilder/views/macros.html:123
-#: experimental/coursebuilder/views/macros.html:124
-#: experimental/coursebuilder/views/macros.html:268
-#: experimental/coursebuilder/views/macros.html:269
-#: experimental/coursebuilder/views/macros.html:317
-#: experimental/coursebuilder/views/macros.html:318
-#: experimental/coursebuilder/views/macros.html:353
-#: experimental/coursebuilder/views/macros.html:354
-#: experimental/coursebuilder/views/macros.html:381
-#: experimental/coursebuilder/views/macros.html:382
+#: experimental/coursebuilder/views/macros.html:14
+#: experimental/coursebuilder/views/macros.html:15
 msgid "Not yet started"
 msgstr "هنوز آغاز نشده"
 
@@ -210,19 +192,19 @@ msgid ""
 msgstr "برای دریافت گواهینامه تکمیل دوره، هنوز پیش‌نیازهای دوره را طی نکرده‌اید."
 
 #. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:28
+#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
 msgid "Explore Courses"
 msgstr "کاوش دوره‌های آموزشی"
 
 #. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:33
-#: experimental/coursebuilder/views/base_course.html:77
+#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
+#: experimental/coursebuilder/views/base_course.html:76
 msgid "My Courses"
 msgstr "دوره‌های آموزشی من"
 
 #. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:38
-#: experimental/coursebuilder/views/base_course.html:82
+#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:37
+#: experimental/coursebuilder/views/base_course.html:81
 msgid "Profile"
 msgstr "نمایه"
 
@@ -283,7 +265,7 @@ msgstr "دوره‌های آموزشی ثبت نام شده"
 #. Text for representing student progress in a course.
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
-#: experimental/coursebuilder/views/base_course.html:54
+#: experimental/coursebuilder/views/base_course.html:53
 msgid "Progress"
 msgstr "پیشرفت"
 
@@ -702,27 +684,27 @@ msgid "Search is currently unavailable."
 msgstr "در حال حاضر جستجو در دسترس نیست."
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:23
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:21
 msgid "Taught in this lesson:"
 msgstr "تدریس شده در این درس:"
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:47
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:45
 msgid "Depends on:"
 msgstr "وابسته است به:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:51
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:49
 msgid "This lesson doesn't have any prerequisites."
 msgstr "این درس هیچ پیش‌نیازی ندارد."
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:66
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:64
 msgid "Leads to:"
 msgstr "نتیجه:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:70
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:68
 msgid "This lesson isn't a prerequisite for any other skills."
 msgstr "این درس پیش‌نیاز هیچ مهارت دیگری نیست."
 
@@ -753,27 +735,27 @@ msgid "high"
 msgstr "بالا"
 
 #. Header for skills progress section
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:21
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:20
 msgid "Skills Progress"
 msgstr "پیشرفت مهارت‌ها"
 
 #. List of acquired skills for a student
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:32
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:31
 msgid "Achievements"
 msgstr "دستاوردها"
 
 #. Describe an empty set of acquired skills
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:36
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:35
 msgid "Currently, no acquired skills."
 msgstr "در حال حاضر مهارتی کسب نشده است."
 
 #. List of skills recommended to a student to learn
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:53
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:52
 msgid "Recommended Next"
 msgstr "توصیه‌های بعدی"
 
 #. Describe an empty set of recommended skills
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:57
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:56
 msgid "Currently, you have no recommended skills."
 msgstr "در حال حاضر مهارت توصیه‌شده‌ای ندارید."
 
@@ -845,7 +827,7 @@ msgstr "بازگردید و دوباره امتحان کنید."
 #. Title of the webpage.
 #. Navbar tab.
 #: experimental/coursebuilder/views/announcements.html:5
-#: experimental/coursebuilder/views/base_course.html:39
+#: experimental/coursebuilder/views/base_course.html:38
 msgid "Announcements"
 msgstr "اعلامیه‌ها"
 
@@ -873,7 +855,7 @@ msgstr "زمان تحویل این تکلیف: "
 #. Text telling students what their total score is.
 #: experimental/coursebuilder/views/assessment.html:54
 msgid "Score:"
-msgstr ""
+msgstr "امتیاز:"
 
 #. Instructions to the student for a peer-reviewed assignment.
 #: experimental/coursebuilder/views/assessment.html:65
@@ -894,7 +876,7 @@ msgstr "تکلیف ارسال شده"
 #. Text telling students the date their answers were submitted
 #: experimental/coursebuilder/views/assessment.html:85
 msgid "Submitted on"
-msgstr ""
+msgstr "ارسال شده در"
 
 #. Header text for the list of reviews received for an assignment.
 #: experimental/coursebuilder/views/assessment.html:110
@@ -1064,20 +1046,20 @@ msgstr "زبان:"
 #. Navbar tab.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/base_course.html:7
-#: experimental/coursebuilder/views/base_course.html:43
+#: experimental/coursebuilder/views/base_course.html:42
 #: experimental/coursebuilder/views/unit.html:77
 msgid "Course"
 msgstr "دوره"
 
 #. Navbar tab.
 #. Title of the webpage.
-#: experimental/coursebuilder/views/base_course.html:48
+#: experimental/coursebuilder/views/base_course.html:47
 #: experimental/coursebuilder/views/forum.html:13
 msgid "Forum"
 msgstr "تالار گفتمان"
 
 #. Navbar tab.
-#: experimental/coursebuilder/views/base_course.html:59
+#: experimental/coursebuilder/views/base_course.html:58
 msgid "Registration"
 msgstr "ثبت‌نام"
 
@@ -1181,43 +1163,31 @@ msgid "This lesson is not available."
 msgstr "این درس در دسترس نیست."
 
 #. Alt text for image representing student progress.
-#: experimental/coursebuilder/views/macros.html:39
-#: experimental/coursebuilder/views/macros.html:40
-#: experimental/coursebuilder/views/macros.html:77
-#: experimental/coursebuilder/views/macros.html:78
-#: experimental/coursebuilder/views/macros.html:178
-#: experimental/coursebuilder/views/macros.html:179
+#: experimental/coursebuilder/views/macros.html:11
+#: experimental/coursebuilder/views/macros.html:12
 msgid "Not yet submitted"
 msgstr "هنوز ارسال نشده"
 
 #. Alt text for image representing student progress.
-#: experimental/coursebuilder/views/macros.html:71
-#: experimental/coursebuilder/views/macros.html:72
-#: experimental/coursebuilder/views/macros.html:117
-#: experimental/coursebuilder/views/macros.html:118
-#: experimental/coursebuilder/views/macros.html:172
-#: experimental/coursebuilder/views/macros.html:173
-#: experimental/coursebuilder/views/macros.html:262
-#: experimental/coursebuilder/views/macros.html:263
-#: experimental/coursebuilder/views/macros.html:311
-#: experimental/coursebuilder/views/macros.html:312
+#: experimental/coursebuilder/views/macros.html:21
+#: experimental/coursebuilder/views/macros.html:22
 msgid "In progress"
 msgstr "در حال انجام"
 
 #. Displayed in the course contents page. Indicates a page to which students
 #. can go to review other students' assignments.
 #. Text for the button on the assignment submission confirmation page.
-#: experimental/coursebuilder/views/macros.html:87
-#: experimental/coursebuilder/views/macros.html:94
+#: experimental/coursebuilder/views/macros.html:99
+#: experimental/coursebuilder/views/macros.html:106
 #: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:39
 msgid "Review peer assignments"
 msgstr "بازبینی تکالیف همکلاسی‌ها"
 
 #. Menu item.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/views/macros.html:334
-#: experimental/coursebuilder/views/macros.html:338
-#: experimental/coursebuilder/views/macros.html:396
+#: experimental/coursebuilder/views/macros.html:290
+#: experimental/coursebuilder/views/macros.html:294
+#: experimental/coursebuilder/views/macros.html:344
 #: experimental/coursebuilder/views/unit.html:88
 msgid "Activity"
 msgstr "فعالیت"
@@ -1446,7 +1416,7 @@ msgstr "پیشرفت دانشجو"
 #. Shown on the student profile page.
 #: experimental/coursebuilder/views/student_profile.html:60
 msgid "To leave the course permanently, click on Unenroll"
-msgstr "برای خروج از این دوره به طور دائم، روی لغو نام‌نویسی کلیک کنید"
+msgstr "برای خروج از این دوره به‌طور دائم، روی لغو نام‌نویسی کلیک کنید"
 
 #. Button that allows the student to unenroll from a course.
 #: experimental/coursebuilder/views/student_profile.html:66
