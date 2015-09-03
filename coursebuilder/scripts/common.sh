@@ -29,7 +29,7 @@ else
   exit -1
 fi
 
-CHROMIUM_TARGET_VERSION=43.0.2357.130
+CHROMIUM_TARGET_VERSION=44.0.2403.89
 set +e
 cb_chromium_browser=`which chromium-browser`
 set -e

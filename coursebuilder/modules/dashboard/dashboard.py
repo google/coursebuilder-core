@@ -21,6 +21,7 @@ import datetime
 import logging
 import os
 import urllib
+import uuid
 
 import appengine_config
 from filer import AssetItemRESTHandler
@@ -391,7 +392,8 @@ class DashboardHandler(
         template_values['extra_js_href_list'] = self.EXTRA_JS_HREF_LIST
         if not template_values.get('sections'):
             template_values['sections'] = []
-
+        if not appengine_config.PRODUCTION_MODE:
+            template_values['page_uuid'] = str(uuid.uuid1())
         self.response.write(
             self.get_template('view.html', []).render(template_values))
 

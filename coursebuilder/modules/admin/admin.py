@@ -23,6 +23,7 @@ import os
 import sys
 import time
 import urllib
+import uuid
 
 import appengine_config
 from common import crypto
@@ -164,6 +165,8 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
         for hook in self.WELCOME_FORM_HOOKS:
             welcome_form_content.append(hook())
         template_values['welcome_form_content'] = welcome_form_content
+        if not appengine_config.PRODUCTION_MODE:
+            template_values['page_uuid'] = str(uuid.uuid1())
         self.response.write(
             self.get_template('welcome.html').render(template_values))
 
@@ -1084,6 +1087,8 @@ class GlobalAdminHandler(
             os.environ['CURRENT_VERSION_ID'])
         if not template_values.get('sections'):
             template_values['sections'] = []
+        if not appengine_config.PRODUCTION_MODE:
+            template_values['page_uuid'] = str(uuid.uuid1())
 
         self.response.write(
             self.get_template('view.html', []).render(template_values))

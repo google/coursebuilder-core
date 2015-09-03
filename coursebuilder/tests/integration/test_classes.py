@@ -31,6 +31,7 @@ import pageobjects
 from selenium import webdriver
 from selenium.common import exceptions
 from selenium.webdriver.chrome import options
+from selenium.webdriver.support import expected_conditions as ec
 
 from models import models
 from models import transforms
@@ -145,8 +146,8 @@ class BaseIntegrationTest(suite.TestBase):
         ).set_fields(
             name=name, title=title, email='a@bb.com'
         ).click_save(
-            link_text='Add New Course', status_message='Added.'
-        ).click_close()
+            link_text='Add New Course', status_message='Added.', post_wait=True
+        )
 
         return (name, title)
 
@@ -316,7 +317,7 @@ class EmbedModuleTest(BaseIntegrationTest):
 
 class IntegrationServerInitializationTask(BaseIntegrationTest):
 
-    def test_setup_defaut_course(self):
+    def test_setup_default_course(self):
         assert os.environ.get('CB_CHROMIUM_BROWSER'), (
             'Integration tests require Chromium browser to be installed.')
         self.load_root_page()._add_default_course_if_needed(
@@ -342,10 +343,10 @@ class EtlTranslationRoundTripTest(BaseIntegrationTest):
 
         return os.path.join(cb_home, 'scripts/etl.sh')
 
-    def _get_ln_locale_element(self, page):
+    def _get_ln_locale_element(self, page, pre_wait=True):
         try:
             return page.find_element_by_css_selector(
-                'thead > tr > th:nth-child(3)')
+                'thead > tr > th:nth-child(3)', pre_wait=pre_wait)
         except exceptions.NoSuchElementException:
             return None
 
@@ -413,7 +414,7 @@ class EtlTranslationRoundTripTest(BaseIntegrationTest):
         self.assertTrue(self._get_ln_locale_element(page))
 
     def assert_ln_locale_not_in_course(self, page):
-        self.assertFalse(self._get_ln_locale_element(page))
+        self.assertFalse(self._get_ln_locale_element(page, pre_wait=False))
 
     def assert_zipfile_contains_only_ln_locale(self):
         self.assert_archive_file_exists()
@@ -435,8 +436,10 @@ class EtlTranslationRoundTripTest(BaseIntegrationTest):
         self._run_download_job()
         self.assert_zipfile_contains_only_ln_locale()
 
+        ln_locale = self._get_ln_locale_element(page)
         self._run_delete_job()
         page.click_i18n()
+        page.wait().until(ec.staleness_of((ln_locale)))
         self.assert_ln_locale_not_in_course(page)
 
         self._run_upload_job()
@@ -1135,8 +1138,9 @@ class VisualizationsTest(BaseIntegrationTest):
         self.assertEquals(0, page.get_data_page_number('exams'))
 
         # Verify that page controls and page number are not displayed.
-        self.assertEquals('', page.get_displayed_page_number('exams'))
-        self.assertFalse(page.buttons_present('exams'))
+        self.assertEquals('', page.get_displayed_page_number(
+            'exams', pre_wait=False))
+        self.assertFalse(page.buttons_present('exams', pre_wait=False))
 
         self._force_response_log_critical('exams')
         page = self.load_dashboard(self._name).click_analytics(
@@ -1284,7 +1288,8 @@ class EventsTest(BaseIntegrationTest):
         name = self.create_new_course()[0]
 
         # Set gcb_can_persist_tag_events so we will track video events.
-        self.load_root_page(
+
+        thing = self.load_root_page(
         ).click_dashboard(
         ).click_admin(
         ).click_settings(
@@ -1330,7 +1335,7 @@ class EventsTest(BaseIntegrationTest):
         ).play_video(
             instanceid
         ).wait_for_video_state(
-            instanceid, 'paused', False, 10
+            instanceid, 'paused', None, 10
         ).pause_video(
             instanceid
         ).wait_for_video_state(

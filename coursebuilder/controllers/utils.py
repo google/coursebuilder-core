@@ -25,6 +25,7 @@ import os
 import re
 import urllib
 import urlparse
+import uuid
 
 import jinja2
 import sites
@@ -878,6 +879,8 @@ class CourseHandler(ApplicationHandler):
             'extra_global_css_urls'] = self.EXTRA_GLOBAL_CSS_URLS
         self.template_value[
             'extra_global_js_urls'] = self.EXTRA_GLOBAL_JS_URLS
+        if not appengine_config.PRODUCTION_MODE:
+            self.template_value['page_uuid'] = str(uuid.uuid1())
 
         # Common template information for the locale picker (only shown for
         # user in session)

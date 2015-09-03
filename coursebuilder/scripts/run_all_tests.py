@@ -418,6 +418,9 @@ def ensure_port_available(port_number):
             This probably means another CourseBuilder server is
             already running.  Be sure to shut down any manually
             started servers before running tests.
+
+            Kill running server from command line via:
+            lsof -i tcp:8081 -Fp | tr -d p | xargs kill -9
             ==========================================================''',
             port_number)
         raise ex

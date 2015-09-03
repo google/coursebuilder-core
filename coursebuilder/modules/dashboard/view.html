@@ -278,5 +278,17 @@
         });
       </script>
     {%- endif -%}
+    {% if page_uuid %}
+      <!-- For functional tests; please leave this section dead last. -->
+      <div id="page_uuid"
+           style="display: none"
+           data-value="{{ page_uuid }}"
+           data-loaded="false"
+           >
+      </div>
+      <script>
+        $(function(){ $("#page_uuid").attr("data-loaded", "true"); });
+      </script>
+    {% endif %}
   </body>
 </html>

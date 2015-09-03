@@ -524,10 +524,10 @@ class JinjaContextTest(actions.TestBase):
 
     def _get_jinja_context_text(self, response):
         root = self.parse_html_string(response.text)
-        div = root.find('body/div[last()]')
+        div = root.find('body/div[last()-1]')
         return ''.join(div.itertext())
 
-    def test_show_jina_context_presence(self):
+    def test_show_jinja_context_presence(self):
 
         # Turn preference on; expect to see context dump.
         with common_utils.Namespace(NAMESPACE):

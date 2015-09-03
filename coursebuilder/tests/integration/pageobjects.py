@@ -31,7 +31,7 @@ from selenium.webdriver.support import select
 from selenium.webdriver.support import wait
 
 
-DEFAULT_TIMEOUT = 15
+DEFAULT_TIMEOUT = 20
 
 
 def get_parent_element(web_element):
@@ -64,24 +64,78 @@ class PageObject(object):
             timeout = DEFAULT_TIMEOUT
         return wait.WebDriverWait(self._tester.driver, timeout)
 
-    def find_element_by_css_selector(self, selector, index=None):
+    def find_element_by_css_selector(self, selector, index=None, pre_wait=True):
+        if pre_wait:
+            self.wait().until(ec.visibility_of_element_located(
+                (by.By.CSS_SELECTOR, selector)))
         if index is None:
             return self._tester.driver.find_element_by_css_selector(selector)
         else:
             return self._tester.driver.find_elements_by_css_selector(
                 selector)[index]
 
-    def find_element_by_id(self, elt_id):
+    def find_elements_by_css_selector(self, selector):
+        self.wait().until(ec.visibility_of_element_located(
+                (by.By.CSS_SELECTOR, selector)))
+        return self._tester.driver.find_elements_by_css_selector(selector)
+
+    def find_element_by_id(self, elt_id, pre_wait=True):
+        if pre_wait:
+            self.wait().until(ec.visibility_of_element_located(
+                (by.By.ID, elt_id)))
         return self._tester.driver.find_element_by_id(elt_id)
 
-    def find_element_by_link_text(self, text, index=None):
+    def find_element_by_link_text(self, text, index=None, pre_wait=True):
+        if pre_wait:
+            self.wait().until(ec.visibility_of_element_located(
+                (by.By.LINK_TEXT, text)))
         if index is None:
             return self._tester.driver.find_element_by_link_text(text)
         else:
             return self._tester.driver.find_elements_by_link_text(text)[index]
 
-    def find_element_by_name(self, name):
+    def find_element_by_name(self, name, pre_wait=True):
+        if pre_wait:
+            self.wait().until(ec.visibility_of_element_located(
+                (by.By.NAME, name)))
         return self._tester.driver.find_element_by_name(name)
+
+    def find_element_by_tag_name(self, tag_name, index=None, pre_wait=True):
+        if pre_wait:
+            self.wait().until(ec.visibility_of_element_located(
+                (by.By.TAG_NAME, tag_name)))
+        if index is None:
+            return self._tester.driver.find_element_by_tag_name(tag_name)
+        else:
+            return self._tester.driver.find_elements_by_tag_name(
+                tag_name)[index]
+
+    def wait_for_page_load_after(self, load_page_callback):
+        # Get the current page's UUID.
+        self.wait(timeout=100).until(ec.presence_of_element_located(
+            (by.By.ID, 'page_uuid')))
+        old_uuid = self._tester.driver.find_element_by_id(
+            'page_uuid').get_attribute('data-value')
+
+        # Do the whatever-it-is that will get the next page loaded.
+        load_page_callback()
+
+        # If we have a different UUID, *and* the JQuery on-load code has run
+        # and marked the UUID element's "loaded" attribute, declare the page
+        # loaded.
+        def is_new_page_loaded(driver):
+            try:
+                new_uuid_div = self._tester.driver.find_element_by_id(
+                    'page_uuid')
+                new_uuid = new_uuid_div.get_attribute('data-value')
+                loaded = new_uuid_div.get_attribute('data-loaded')
+                return new_uuid != old_uuid and loaded == 'true'
+            except (exceptions.NoSuchElementException,
+                    exceptions.StaleElementReferenceException), ex:
+                # Page not yet fully loaded; this is an expected condition.
+                pass
+            return False
+        self.wait().until(is_new_page_loaded)
 
     def expect_status_message_to_be(self, value):
         self.wait().until(
@@ -111,10 +165,13 @@ class EditorPageObject(PageObject):
         super(EditorPageObject, self).__init__(tester)
 
         def successful_butter_bar(unused_driver):
-            butter_bar_message = self.find_element_by_id(
-                'gcb-butterbar-message')
-            return 'Success' in butter_bar_message.text or (
-                not butter_bar_message.is_displayed())
+            try:
+                butter_bar_message = self.find_element_by_id(
+                    'gcb-butterbar-message', pre_wait=False)
+                return 'Success' in butter_bar_message.text or (
+                    not butter_bar_message.is_displayed())
+            except exceptions.StaleElementReferenceException:
+                return False
 
         self.wait().until(successful_butter_bar)
 
@@ -123,13 +180,23 @@ class EditorPageObject(PageObject):
             'is_draft')).select_by_visible_text(status)
         return self
 
-    def click_save(self, link_text='Save', status_message='Saved'):
-        self.find_element_by_link_text(link_text).click()
+    def click_save(self, link_text='Save', status_message='Saved',
+                   post_wait=False):
+        clickable = self.find_element_by_link_text(link_text)
+        clickable.click()
         self.expect_status_message_to_be(status_message)
+        if post_wait:
+            self.wait_for_page_load_after(clickable.click)
+        else:
+            clickable.click()
         return self
 
     def _close_and_return_to(self, continue_page):
-        self.find_element_by_link_text('Close').click()
+        close_button = self.find_element_by_link_text('Close')
+        try:  # Add course editor auto-closes on "Add Course".
+            close_button.click()
+        except exceptions.StaleElementReferenceException:
+            pass
         return continue_page(self._tester)
 
     def setvalue_codemirror(self, nth_instance, code_body):
@@ -189,7 +256,8 @@ class RootPage(PageObject):
         return LoginPage(self._tester)
 
     def click_logout(self):
-        self.find_element_by_link_text('Logout').click()
+        logout_button = self.find_element_by_link_text('Logout')
+        self.wait_for_page_load_after(logout_button.click)
         return self
 
     def click_dashboard(self):
@@ -208,7 +276,10 @@ class RootPage(PageObject):
 class WelcomePage(PageObject):
 
     def click_explore_sample_course(self):
-        self.find_element_by_id('explore').click()
+        explore_button = self.find_element_by_id('explore')
+        # Create sample course takes several seconds; wait for create to
+        # go stale when created course page is loaded.
+        self.wait_for_page_load_after(explore_button.click)
         return DashboardPage(self._tester)
 
 
@@ -244,16 +315,16 @@ class AnnouncementsPage(PageObject):
         """Verify that the announcement has the given fields."""
         if title:
             self._tester.assertEquals(
-                title, self._tester.driver.find_elements_by_css_selector(
-                    'div.gcb-aside h2')[0].text)
+                title, self.find_element_by_css_selector(
+                    'div.gcb-aside h2', index=0).text)
         if date:
             self._tester.assertEquals(
-                date, self._tester.driver.find_elements_by_css_selector(
-                    'div.gcb-aside p')[0].text)
+                date, self.find_element_by_css_selector(
+                    'div.gcb-aside p', index=0).text)
         if body:
             self._tester.assertEquals(
-                body, self._tester.driver.find_elements_by_css_selector(
-                    'div.gcb-aside p')[1].text)
+                body, self.find_element_by_css_selector(
+                    'div.gcb-aside p', index=1).text)
         return self
 
 
@@ -285,13 +356,17 @@ class AnnouncementsEditorPage(EditorPageObject):
 class LoginPage(PageObject):
     """Page object to model the interactions with the login page."""
 
-    def login(self, login, admin=False):
+    def login(self, login, admin=False, post_wait=True):
+        self.wait().until(ec.element_to_be_clickable((by.By.ID, 'email')))
         email = self.find_element_by_id('email')
         email.clear()
         email.send_keys(login)
         if admin:
             self.find_element_by_id('admin').click()
-        self.find_element_by_id('submit-login').click()
+        login_button = self.find_element_by_id('submit-login')
+        login_button.click()
+        if post_wait:
+            self.wait().until(ec.staleness_of((login_button)))
         return RootPage(self._tester)
 
 
@@ -299,7 +374,11 @@ class DashboardPage(PageObject):
     """Page object to model the interactions with the dashboard landing page."""
 
     def load(self, base_url, name):
-        self.get('/'.join([base_url, name, 'dashboard']))
+        dest = '/'.join([base_url, name, 'dashboard'])
+        def page_loaded(driver):
+            self.get(dest)
+            return driver.current_url == dest
+        self.wait().until(page_loaded)
         return self
 
     def verify_read_only_course(self):
@@ -401,7 +480,8 @@ class DashboardPage(PageObject):
 
     def click_i18n(self):
         self.ensure_menu_group_is_open('publish')
-        self.find_element_by_link_text('Translations').click()
+        clickable = self.find_element_by_link_text('Translations')
+        self.wait_for_page_load_after(clickable.click)
         return self
 
 
@@ -409,7 +489,7 @@ class CourseContentPage(RootPage):
     """Page object for viewing course content."""
 
     def _find_question(self, question_batch_id, question_text):
-        questions = self._tester.driver.find_elements_by_css_selector(
+        questions = self.find_elements_by_css_selector(
             '[data-question-batch-id="%s"] .qt-mc-question.qt-standalone' %
             question_batch_id)
         if not questions:
@@ -440,9 +520,9 @@ class CourseContentPage(RootPage):
             'had an answer matching "%s"' % answer)
 
     def submit_question_batch(self, question_batch_id, button_text):
-        buttons = self._tester.driver.find_elements_by_css_selector(
-            'div[data-question-batch-id="%s"] .qt-check-answer-button' %
-            question_batch_id)
+        div = self.find_element_by_css_selector(
+            'div[data-question-batch-id="%s"]' % question_batch_id)
+        buttons = div.find_elements_by_css_selector('.qt-check-answer-button')
         for button in buttons:
             if button_text in button.text:
                 button.click()
@@ -497,11 +577,11 @@ class LessonPage(CourseContentPage):
 
     def wait_for_video_state(self, instanceid, attribute, desired_state,
                              max_patience):
+        desired_state = str(desired_state).lower()
         def in_desired_state(driver):
-            state = driver.execute_script(
-                'return document.getElementById("%s").%s' % (
-                    instanceid, attribute))
-            return state == desired_state
+            state_obj = self.find_element_by_id(instanceid)
+            state = str(state_obj.get_attribute(attribute)).lower()
+            return str(state).lower() == str(desired_state).lower()
         self.wait(timeout=max_patience).until(in_desired_state)
         return self
 
@@ -637,7 +717,7 @@ class AssetsPage(PageObject):
         self.wait().until(ec.visibility_of_element_located(
             (by.By.ID, 'upload-button')))
         try:
-            self.find_element_by_link_text(name)  # throw exception if not found
+            self.find_element_by_link_text(name, pre_wait=False)
             raise AssertionError('Found file %s which should be absent' % name)
         except exceptions.NoSuchElementException:
             pass
@@ -669,8 +749,8 @@ class AssetsPage(PageObject):
 
     def verify_question_exists(self, description):
         """Verifies question description exists on list of question banks."""
-        tds = self._tester.driver.find_elements_by_css_selector(
-            '#gcb-main-content tbody td')
+        self.find_element_by_css_selector('#gcb-main-content tbody td')
+        tds = self.find_elements_by_css_selector('#gcb-main-content tbody td')
         for td in tds:
             try:
                 self._tester.assertEquals(description, td.text)
@@ -714,7 +794,7 @@ class AssetsPage(PageObject):
 
     def verify_label_not_present(self, title):
         try:
-            self.find_element_by_id('label_' + title)  # Exception if not found.
+            self.find_element_by_id('label_' + title, pre_wait=False)
             raise AssertionError('Unexpectedly found label %s' % title)
         except exceptions.NoSuchElementException:
             pass
@@ -751,8 +831,8 @@ class QuestionEditorPage(EditorPageObject):
 
     def set_question(self, question):
         # Click the first tabbar button to select plain text
-        self._tester.driver.find_elements_by_css_selector(
-            '.mc-question .editor-field-tabbar button')[1].click()
+        self.find_element_by_css_selector(
+            '.mc-question .editor-field-tabbar button', index=1).click()
 
         self.setvalue_codemirror(0, question)
         return self
@@ -851,7 +931,7 @@ class LabelEditorPage(EditorPageObject):
         return self
 
     def confirm_delete(self):
-        self._tester.driver.switch_to_alert().accept()
+        self.switch_to_alert().accept()
         return AssetsPage(self._tester)
 
     def click_close(self):
@@ -866,6 +946,7 @@ class ImageEditorPage(EditorPageObject):
         return self
 
     def confirm_delete(self):
+        self.wait().until(ec.alert_is_present())
         self._tester.driver.switch_to_alert().accept()
         return AssetsPage(self._tester)
 
@@ -1004,7 +1085,7 @@ class CourseContentElement(DashboardEditor):
     def ensure_preview_document_matches_regex(self, regex, index=None):
         def preview_spinner_closed(driver):
             spinner = self.find_element_by_css_selector(
-                'div.preview-editor div.ajax-spinner', index)
+                'div.preview-editor div.ajax-spinner', index, pre_wait=False)
             return not spinner.is_displayed()
 
         self.wait().until(preview_spinner_closed)
@@ -1019,7 +1100,8 @@ class CourseContentElement(DashboardEditor):
 
     def _get_rte_contents(self):
         return self.find_element_by_css_selector(
-            'div.cb-editor-field div.rte-div textarea').get_attribute('value')
+            'div.cb-editor-field div.rte-div textarea',
+            pre_wait=False).get_attribute('value')
 
     def _get_instanceid_list(self):
         """Returns a list of the instanceid attrs in the lesson body."""
@@ -1143,7 +1225,8 @@ class AdminPage(DashboardPage):
     """Page object to model the interactions with the admin landing page."""
 
     def click_add_course(self):
-        self.find_element_by_id('add_course').click()
+        button = self.find_element_by_id('add_course')
+        self.wait_for_page_load_after(button.click)
         return AddCourseEditorPage(self._tester)
 
     def click_settings(self):
@@ -1156,8 +1239,7 @@ class AdminSettingsPage(PageObject):
     """Page object for the admin settings."""
 
     def click_override_admin_user_emails(self):
-        self._tester.driver.find_elements_by_css_selector(
-            'button.gcb-button')[0].click()
+        self.find_element_by_css_selector('button.gcb-button', index=0).click()
         return ConfigPropertyOverridePage(self._tester)
 
     def click_override(self, setting_name):
@@ -1165,10 +1247,9 @@ class AdminSettingsPage(PageObject):
         return ConfigPropertyOverridePage(self._tester)
 
     def verify_admin_user_emails_contains(self, email):
-        self._tester.assertTrue(
-            email in self._tester.driver.find_elements_by_css_selector(
-                'table.gcb-config tr')[1].find_elements_by_css_selector(
-                    'td')[1].text)
+        row = self.find_element_by_css_selector('table.gcb-config tr', index=1)
+        cell = row.find_elements_by_css_selector('td')[1]
+        self._tester.assertIn(email, cell.text)
 
 
 class ConfigPropertyOverridePage(EditorPageObject):
@@ -1180,13 +1261,13 @@ class ConfigPropertyOverridePage(EditorPageObject):
         return self
 
     def set_value(self, value):
-        element = self.find_element_by_name('value')
+        element = self.find_element_by_name('value', pre_wait=False)
         if type(value) is bool:
             current_value = element.get_attribute('value').lower()
             if str(value).lower() != current_value:
                 checkbox = get_parent_element(
                     element).find_element_by_css_selector('[type="checkbox"]')
-                checkbox.send_keys(' ')  # Toggle, iff necessary.
+                checkbox.click()  # Toggle, iff necessary.
         else:
             element.send_keys(value)
         return self
@@ -1247,13 +1328,13 @@ class AnalyticsPage(PageObject):
             numbers[name] = int(value)
         return numbers[data_source]
 
-    def get_displayed_page_number(self, data_source):
+    def get_displayed_page_number(self, data_source, pre_wait=True):
         return self.find_element_by_id('gcb_rest_source_page_number_' +
-                                       data_source).text
+                                       data_source, pre_wait=pre_wait).text
 
     def get_data_source_logs(self, data_source):
         return self.find_element_by_id(
-            'gcb_log_rest_source_' + data_source).text
+            'gcb_log_rest_source_' + data_source, pre_wait=False).text
 
     def get_page_level_logs(self):
         return self.find_element_by_id('gcb_rest_source_errors').text
@@ -1262,10 +1343,10 @@ class AnalyticsPage(PageObject):
         name = 'gcb_rest_source_page_request_' + button + '_' + data_source
         self.find_element_by_id(name).click()
 
-    def buttons_present(self, data_source):
+    def buttons_present(self, data_source, pre_wait=True):
         try:
-            self.find_element_by_id('gcb_rest_source_request_zero_' +
-                                    data_source)
+            self.find_element_by_id(
+                'gcb_rest_source_request_zero_' + data_source, pre_wait=False)
             return True
         except exceptions.NoSuchElementException:
             return False
@@ -1321,8 +1402,7 @@ class DatastorePage(PageObject):
         data = []
         for data_url in data_urls:
             self.get(data_url)
-            rows = self._tester.driver.find_elements_by_css_selector(
-                'div.ae-settings-block')
+            rows = self.find_elements_by_css_selector('div.ae-settings-block')
             item = {}
             data.append(item)
             for row in rows:
@@ -1395,6 +1475,8 @@ class EmbedModuleAbstractIframeContentsPageObject(
 class EmbedModuleDemoPage(EmbedModuleAbstractIframePageObject):
 
     def get_cb_embed_elements(self):
+        self.wait().until(ec.visibility_of_element_located(
+            (by.By.TAG_NAME, 'cb-embed')))
         return self._tester.driver.find_elements_by_tag_name('cb-embed')
 
     def get_iframe(self, cb_embed):
@@ -1433,7 +1515,13 @@ class EmbedModuleDemoPage(EmbedModuleAbstractIframePageObject):
     def login(self, email):
         first_cb_embed = self.get_cb_embed_elements()[0]
         sign_in_page = self.load_embed(first_cb_embed)
-        sign_in_page.click().login(email)
+        # This is a great big bag of ugly, but it _is_ effective.  Without these
+        # sleeps, _something_ becomes unhappy, but only when run in parallel
+        # during release; one at a time, tests pass just fine.
+        time.sleep(10)
+        sign_in_page.click()
+        time.sleep(10)
+        sign_in_page.login(email)
 
 
 class EmbedModuleErrorPage(EmbedModuleAbstractIframeContentsPageObject):
@@ -1485,7 +1573,7 @@ class EmbedModuleSignInPage(EmbedModuleAbstractIframeContentsPageObject):
             self._tester.driver.window_handles[-1])
 
         login_page = LoginPage(self._tester)
-        login_page.login(email)
+        login_page.login(email, post_wait=False)
         self._tester.driver.switch_to_window(last_window_handle)
 
     def get_text(self):
