@@ -46,7 +46,6 @@ from models import courses
 from models import custom_modules
 from models import data_sources
 from models import jobs
-from models import roles
 from models import transforms
 from modules.courses import settings
 from modules.dashboard import dashboard
@@ -57,10 +56,6 @@ from google.appengine.ext import deferred
 # CourseBuilder setup strings
 XSRF_ACTION_NAME = 'data_pump'
 DASHBOARD_ACTION = 'data_pump'
-
-# Separate permission to be able to push user data delegable to non-super-users
-ACCESS_PERMISSION = 'push_data'
-ACCESS_PERMISSION_DESCRIPTION = 'Can push user data outside CourseBuilder.'
 
 # Connection parameters for discovering and auth to BigQuery.
 BIGQUERY_RW_SCOPE = 'https://www.googleapis.com/auth/bigquery'
@@ -1104,10 +1099,6 @@ class DashboardExtension(object):
 
     @classmethod
     def register(cls):
-        # Register new permission for pushing student data to external location.
-        dashboard.DashboardHandler.add_external_permission(
-            ACCESS_PERMISSION, ACCESS_PERMISSION_DESCRIPTION)
-
         # Register a new Analytics sub-tab for showing data pump status and
         # start/stop buttons.
         data_pump_visualization = analytics.Visualization(
@@ -1123,18 +1114,11 @@ class DashboardExtension(object):
         dashboard.DashboardHandler.post_actions.append(DASHBOARD_ACTION)
         setattr(dashboard.DashboardHandler, 'post_%s' % DASHBOARD_ACTION,
                 post_action)
-        dashboard.DashboardHandler.map_action_to_permission(
-            'post_%s' % DASHBOARD_ACTION, ACCESS_PERMISSION)
 
     @classmethod
     def unregister(cls):
         dashboard.DashboardHandler.post_actions.remove(DASHBOARD_ACTION)
         setattr(dashboard.DashboardHandler, 'post_%s' % DASHBOARD_ACTION, None)
-        dashboard.DashboardHandler.unmap_action_to_permission(
-            'post_%s' % DASHBOARD_ACTION, ACCESS_PERMISSION)
-
-        dashboard.DashboardHandler.remove_external_permission(ACCESS_PERMISSION)
-        roles.Roles.unregister_permissions(custom_module)
 
     def post_data_pump(self):
         source_name = self.handler.request.get('data_source')
@@ -1272,12 +1256,9 @@ def register_module():
         data_sources.Registry.register(DataPumpJobsDataSource)
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             DATA_PUMP_SETTINGS_SCHEMA_SECTION] += course_settings_fields
-        dashboard.DashboardHandler.add_sub_nav_mapping(
-            'settings', 'data_pump', 'Data pump', action='settings_data_pump',
-            contents=lambda handler:
-                settings.CourseSettingsHandler.show_settings_tab(
-                    handler, DATA_PUMP_SETTINGS_SCHEMA_SECTION),
-            placement=7000)
+        settings.CourseSettingsHandler.register_settings_section(
+            DATA_PUMP_SETTINGS_SCHEMA_SECTION, 'Data Pump', 7000,
+            [DATA_PUMP_SETTINGS_SCHEMA_SECTION])
         DashboardExtension.register()
 
     def on_module_disabled():

@@ -671,8 +671,8 @@ class DashboardAccessTestCase(actions.TestBase):
         DashboardHandler.add_nav_mapping(self.ACTION, self.ACTION)
         DashboardHandler.add_sub_nav_mapping(self.ACTION, self.ACTION,
             self.ACTION, action=self.ACTION, contents=test_content)
-        DashboardHandler.map_action_to_permission(
-            'get_%s' % self.ACTION, self.PERMISSION)
+        DashboardHandler.map_get_action_to_permission(
+            self.ACTION, dashboard.custom_module, self.PERMISSION)
         actions.logout()
 
     def tearDown(self):

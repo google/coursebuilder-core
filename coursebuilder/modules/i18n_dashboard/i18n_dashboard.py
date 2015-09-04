@@ -58,6 +58,7 @@ from models import roles
 from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
+from modules.courses import settings
 from modules.dashboard import dashboard
 from modules.dashboard import unit_lesson_editor
 from modules.oeditor import oeditor
@@ -458,14 +459,13 @@ class BaseDashboardExtension(object):
         def get_action(handler):
             cls(handler).render()
         dashboard.DashboardHandler.add_custom_get_action(cls.ACTION, get_action)
-        dashboard.DashboardHandler.map_action_to_permission(
-            'get_%s' % cls.ACTION, ACCESS_PERMISSION)
+        dashboard.DashboardHandler.map_get_action_to_permission(
+            cls.ACTION, dashboard.custom_module, ACCESS_PERMISSION)
 
     @classmethod
     def unregister(cls):
         dashboard.DashboardHandler.remove_custom_get_action(cls.ACTION)
-        dashboard.DashboardHandler.unmap_action_to_permission(
-            'get_%s' % cls.ACTION)
+        dashboard.DashboardHandler.unmap_get_action_to_permission(cls.ACTION)
 
     def __init__(self, handler):
         """Initialize the class with a request handler.
@@ -2862,7 +2862,7 @@ def notify_module_enabled():
         'publish', 'translations', 'Translations',
         action=I18nDashboardHandler.ACTION, placement=2000)
 
-    dashboard.DashboardHandler.add_external_permission(
+    dashboard.DashboardHandler.deprecated_add_external_permission(
         ACCESS_PERMISSION, ACCESS_PERMISSION_DESCRIPTION)
     roles.Roles.register_permissions(
         custom_module, permissions_callback)
@@ -2893,6 +2893,8 @@ def notify_module_enabled():
         I18nProgressDeferredUpdater.on_question_groups_changed)
     courses.Course.COURSE_ENV_POST_SAVE_HOOKS.append(
         I18nProgressDeferredUpdater.on_course_settings_changed)
+    settings.CourseSettingsHandler.register_settings_section(
+        'i18n', 'Translations', 5000, ['i18n'])
 
     # Implementation in Babel 0.9.6 is buggy; replace with corrected version.
     pofile.denormalize = denormalize

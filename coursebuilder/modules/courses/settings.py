@@ -17,6 +17,8 @@
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
 import cgi
+import copy
+import logging
 import os
 import urllib
 
@@ -27,6 +29,7 @@ from controllers import utils as controllers_utils
 from controllers import sites
 from models import courses
 from models import models
+from models import permissions
 from models import roles
 from models import transforms
 from models import vfs
@@ -35,25 +38,14 @@ from modules.dashboard import dashboard
 from modules.dashboard import utils as dashboard_utils
 from modules.oeditor import oeditor
 
+# Internal name for the settings top-level Dashboard tab
+SETTINGS_TAB_NAME = 'settings'
 
-class CourseSettingsRights(object):
-    """Manages view/edit rights for files."""
+# Name for the permission for read-only access to all course settings.
+VIEW_ALL_SETTINGS_PERMISSION = 'settings_viewer'
 
-    @classmethod
-    def can_view(cls, handler):
-        return roles.Roles.is_course_admin(handler.app_context)
-
-    @classmethod
-    def can_edit(cls, handler):
-        return roles.Roles.is_course_admin(handler.app_context)
-
-    @classmethod
-    def can_delete(cls, handler):
-        return cls.can_edit(handler)
-
-    @classmethod
-    def can_add(cls, handler):
-        return cls.can_edit(handler)
+# Reference to custom_module registered in modules/courses/courses.py
+custom_module = None
 
 
 class CourseSettingsHandler(object):
@@ -62,6 +54,8 @@ class CourseSettingsHandler(object):
     EXTRA_CSS_FILES = []
     EXTRA_JS_FILES = []
     ADDITIONAL_DIRS = []
+
+    GROUP_SETTINGS_LISTS = {}
 
     def __init__(self):
         raise NotImplementedError('Not for instantiation; just a namespace')
@@ -85,17 +79,17 @@ class CourseSettingsHandler(object):
         handler.redirect('/dashboard')
 
     @staticmethod
-    def show_edit_settings_section(
-            handler, template_values, key, section_names=None, exit_url=''):
-
+    def _show_edit_settings_section(
+            handler, template_values, key, section_names, exit_url=''):
         # The editor for all course settings is getting rather large.  Here,
         # prune out all sections except the one named.  Names can name either
         # entire sub-registries, or a single item.  E.g., "course" selects all
         # items under the 'course' sub-registry, while
         # "base.before_head_tag_ends" selects just that one field.
         registry = handler.get_course().create_settings_schema()
-        if section_names:
-            registry = registry.clone_only_items_named(section_names.split(','))
+        registry = registry.clone_only_items_named(section_names)
+        permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
+            handler.app_context, registry)
 
         rest_url = handler.canonicalize_url(CourseSettingsRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
@@ -110,7 +104,7 @@ class CourseSettingsHandler(object):
         })
 
     @staticmethod
-    def show_settings_tab(handler, section_names):
+    def _show_settings_tab(handler, section_names):
         menu_item = dashboard.DashboardHandler.actions_to_menu_items[
             handler.request.get('action') or 'settings_course']
         template_values = {
@@ -119,11 +113,59 @@ class CourseSettingsHandler(object):
         }
         exit_url = handler.request.get('exit_url')
 
-        CourseSettingsHandler.show_edit_settings_section(
+        CourseSettingsHandler._show_edit_settings_section(
             handler, template_values, '/course.yaml', exit_url=exit_url,
             section_names=section_names)
         return template_values
 
+    @classmethod
+    def register_settings_section(cls, menu_sub_group_name,
+                                  menu_sub_group_title,
+                                  menu_sub_group_placement, settings_list):
+        """Register a group of settings for a module.
+
+        Args:
+          menu_sub_group_name: Internal short name for menu sub group.  Must
+              be globally unique vs. all modules' settings subgroups calling
+              this function.  Choose names with lowercase/numbers/underscores;
+              e.g., 'units', 'i18n', etc.
+          menu_sub_group_title: Display name for this settings submenu.
+          menu_sub_group_placement: Relative ordering priority among modules.
+              1000 is very high; 10000 is very low.
+          settings_list: List of strings that specify paths within settings
+              in course.yaml tree.  E.g., 'course' picks the entire course
+              subtree; 'course.main_image' that subgroup of settings, and
+              'course.main_image.alt_text' just that one item.
+        """
+        action_name = 'settings_%s' % menu_sub_group_name
+
+        if menu_sub_group_name in cls.GROUP_SETTINGS_LISTS:
+            cls.GROUP_SETTINGS_LISTS[menu_sub_group_name].extend(settings_list)
+            tab = dashboard.DashboardHandler.root_menu_group.get_child(
+                SETTINGS_TAB_NAME).get_child(menu_sub_group_name)
+            if tab.title != menu_sub_group_title:
+                logging.warning(
+                    'Title %s of settings sub group %s does not match title '
+                    '%s from earlier registration.',
+                        menu_sub_group_name, menu_sub_group_title, tab.title)
+            if tab.placement != menu_sub_group_placement:
+                logging.warning(
+                    'Placement %d of settings sub group %s does not match '
+                    'placement %d from earlier registration.',
+                        menu_sub_group_placement, menu_sub_group_title,
+                        tab.placement)
+        else:
+            cls.GROUP_SETTINGS_LISTS[menu_sub_group_name] = copy.copy(
+                settings_list)
+            dashboard.DashboardHandler.add_sub_nav_mapping(
+                SETTINGS_TAB_NAME, menu_sub_group_name, menu_sub_group_title,
+                action=action_name, placement=menu_sub_group_placement,
+                contents=(lambda h: CourseSettingsHandler._show_settings_tab(
+                    h, cls.GROUP_SETTINGS_LISTS[menu_sub_group_name])))
+            dashboard.DashboardHandler.map_get_action_to_permission_checker(
+                action_name,
+                permissions.SchemaPermissionRegistry.build_view_checker(
+                    cls.GROUP_SETTINGS_LISTS[menu_sub_group_name]))
 
 
 class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
@@ -138,7 +180,7 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
 
         key = self.request.get('key')
 
-        if not CourseSettingsRights.can_view(self):
+        if not permissions.SchemaPermissionRegistry.can_view(self.app_context):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -197,12 +239,18 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
         if not self.assert_xsrf_token_or_fail(
                 request, self.XSRF_ACTION, {'key': key}):
             return
-        if not CourseSettingsRights.can_edit(self):
+        if not permissions.SchemaPermissionRegistry.can_edit(self.app_context):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
 
         request_data = self.process_put(request, payload)
+
+        schema = self.get_course().create_settings_schema()
+        permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
+            self.app_context, schema)
+        schema.redact_entity_to_schema(payload)
+
         if request_data:
             course_settings = courses.deep_dict_merge(
                 request_data, self.get_course_dict())
@@ -224,8 +272,8 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
                 self.request, self.XSRF_ACTION, {'key': key}):
             return
 
-        if (not CourseSettingsRights.can_delete(self) or
-            not self.is_deletion_allowed()):
+        if (not permissions.SchemaPermissionRegistry.can_edit(self.app_context)
+            or not self.is_deletion_allowed()):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -268,9 +316,10 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
     def process_get(self):
         entity = {}
         schema = self.get_course().create_settings_schema()
+        permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
+            self.app_context, schema)
         schema.convert_entity_to_json_entity(
             self.get_course_dict(), entity)
-
         json_payload = transforms.dict_to_json(
             entity, schema.get_json_schema_dict())
 
@@ -572,46 +621,67 @@ def _get_settings_advanced(handler):
     return template_values
 
 
-def on_module_enabled():
+class ViewAllSettingsPermission(permissions.AbstractSchemaPermission):
+    """Binds readability on all course settings to a custom permission.
+
+    This is an optional extra if an admin wants to give otherwise-limited
+    roles visibility on all settings.  Note that this is a lazy option -
+    better is to add a new permission and bind it to specific
+    readable/writable fields by registering a SimpleSchemaPermission
+    instance.
+    """
+
+    def get_name(self):
+        return VIEW_ALL_SETTINGS_PERMISSION
+
+    def applies_to_current_user(self, application_context):
+        return roles.Roles.is_user_allowed(
+            application_context, custom_module, VIEW_ALL_SETTINGS_PERMISSION)
+
+    def can_view(self, prop_name):
+        return True
+
+    def can_edit(self, prop_name):
+        return False
+
+
+def on_module_enabled(courses_custom_module, perms):
+    global custom_module  # pylint: disable=global-statement
+    custom_module = courses_custom_module
+    perms.append(roles.Permission(VIEW_ALL_SETTINGS_PERMISSION,
+                                  'Can view all course settings'))
+    permissions.SchemaPermissionRegistry.add(ViewAllSettingsPermission())
+
+
     dashboard.DashboardHandler.add_custom_post_action(
         'course_availability', CourseSettingsHandler.post_course_availability)
+    dashboard.DashboardHandler.map_post_action_to_permission_checker(
+        'course_availability',
+        permissions.SchemaPermissionRegistry.build_edit_checker(
+            ['course/course:now_available']))
+
     dashboard.DashboardHandler.add_custom_post_action(
         'course_browsability', CourseSettingsHandler.post_course_browsability)
+    dashboard.DashboardHandler.map_post_action_to_permission_checker(
+        'course_browsability',
+        permissions.SchemaPermissionRegistry.build_edit_checker(
+            ['course/course:browsable']))
+
     dashboard.DashboardHandler.add_custom_get_action(
         'edit_html_hook', HtmlHookHandler.get_edit_html_hook)
 
-    # Default item in tab group should be dead first in list for good UX.
-    dashboard.DashboardHandler.add_sub_nav_mapping(
-        'settings', 'course', 'Course', action='settings_course',
-        contents=(lambda h: CourseSettingsHandler.show_settings_tab(
-            h, 'course')),
-        placement=1000)
-    dashboard.DashboardHandler.add_sub_nav_mapping(
-        'settings', 'units', 'Units & lessons', action='settings_unit',
-        contents=(lambda h: CourseSettingsHandler.show_settings_tab(
-            h, 'unit,assessment')),
-        placement=2000)
-    # TODO(jorr): Remove the dependency on the invitations module in this line
-    dashboard.DashboardHandler.add_sub_nav_mapping(
-        'settings', 'registration', 'Registration',
-        action='settings_registration',
-        contents=(lambda h: CourseSettingsHandler.show_settings_tab(
-            h, 'registration,invitation')),
-        placement=3000)
-    dashboard.DashboardHandler.add_sub_nav_mapping(
-        'settings', 'i18n', 'Translations', action='settings_i18n',
-        contents=(lambda h: CourseSettingsHandler.show_settings_tab(h, 'i18n')),
-        placement=5000)
+    CourseSettingsHandler.register_settings_section(
+        'course', 'Course', 1000, ['course'])
+    CourseSettingsHandler.register_settings_section(
+        'homepage', 'Homepage', 1500, ['homepage'])
+    CourseSettingsHandler.register_settings_section(
+        'units', 'Units & lessons', 2000, ['unit', 'assessment'])
+    CourseSettingsHandler.register_settings_section(
+        'registration', 'Registration', 3000, ['registration'])
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'settings', 'advanced', 'Advanced', action='settings_advanced',
+        SETTINGS_TAB_NAME, 'advanced', 'Advanced', action='settings_advanced',
         contents=_get_settings_advanced, placement=10000)
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'settings', 'about', 'Debug info', action='settings_about',
+        SETTINGS_TAB_NAME, 'about', 'Debug info', action='settings_about',
         contents=_get_about_course, placement=11000)
-
-    dashboard.DashboardHandler.add_sub_nav_mapping(
-        'settings', 'homepage', 'Homepage', action='settings_homepage',
-        contents=(lambda h: CourseSettingsHandler.show_settings_tab(
-            h, 'homepage')),
-        placement=1500)

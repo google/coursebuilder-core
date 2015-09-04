@@ -143,7 +143,7 @@ class Roles(object):
     def _load_permissions_map(cls):
         """Loads the permissions map from Memcache or creates it if needed."""
         permissions_map = MemcacheManager.get(cls.memcache_key)
-        if not permissions_map:
+        if permissions_map is None:  # As opposed to {}, which is valid.
             permissions_map = cls.update_permissions_map()
         return permissions_map
 
@@ -168,6 +168,15 @@ class Roles(object):
         user_permissions = permissions_map.get(
             users.get_current_user().email(), {})
         return permission in user_permissions.get(module.name, set())
+
+    @classmethod
+    def in_any_role(cls, app_context):
+        user = users.get_current_user()
+        if not user:
+            return False
+        permissions_map = cls._load_permissions_map()
+        user_permissions = permissions_map.get(user.email(), {})
+        return bool(user_permissions)
 
     @classmethod
     def register_permissions(cls, module, callback_function):

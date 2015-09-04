@@ -390,16 +390,16 @@ class BaseAdminHandler(ConfigPropertyEditor):
         if DIRECT_CODE_EXECUTION_UI_ENABLED:
             cls.post_actions.append('console_run')
 
-    def can_view(self, action):
+    @classmethod
+    def can_view(cls, action):
         """Checks if current user has viewing rights."""
         # Overrides method in DashboardHandler
         return can_view_admin_action(action)
 
-    def can_edit(self):
+    @classmethod
+    def can_edit(cls, action):
         """Checks if current user has editing rights."""
-        # Overrides method in DashboardHandler
-        action = self.request.get('action')
-        return self.can_view(action)
+        return cls.can_view(action)
 
     def render_dict(self, source_dict, title):
         """Renders a dictionary ordered by keys."""
@@ -1044,7 +1044,7 @@ class GlobalAdminHandler(
         super(GlobalAdminHandler, self).get()
 
     def post(self):
-        if not self.can_edit():
+        if not self.can_edit(self.request.get('action')):
             self.redirect('/', normalize=False)
             return
         return super(GlobalAdminHandler, self).post()

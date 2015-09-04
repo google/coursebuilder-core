@@ -38,7 +38,6 @@ from models import models
 from models import transforms
 from modules.admin import admin
 from modules.courses import settings
-from modules.dashboard import dashboard
 from modules.data_removal import removal_models
 
 from google.appengine.api import namespace_manager
@@ -757,13 +756,9 @@ def register_module():
             )
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             DATA_REMOVAL_SETTINGS_SECTION].extend(course_settings_fields)
-        dashboard.DashboardHandler.add_sub_nav_mapping(
-            'settings', DATA_REMOVAL_SETTINGS_SECTION, 'Data removal',
-            action='settings_data_removal',
-            contents=lambda handler:
-                settings.CourseSettingsHandler.show_settings_tab(
-                    handler, DATA_REMOVAL_SETTINGS_SECTION),
-            placement=8000)
+        settings.CourseSettingsHandler.register_settings_section(
+            DATA_REMOVAL_SETTINGS_SECTION, 'Data Removal', 8000,
+            [DATA_REMOVAL_SETTINGS_SECTION])
 
         # Register available cleanup policies.
         DataRemovalPolicyRegistry.register(IndefiniteRetentionPolicy)

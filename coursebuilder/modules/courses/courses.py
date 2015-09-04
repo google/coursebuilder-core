@@ -23,6 +23,7 @@ from controllers import utils
 from models import content
 from models import resources_display
 from models import custom_modules
+from models import roles
 from models import student_labels
 from modules.courses import admin_preferences_editor
 from modules.courses import assets
@@ -33,8 +34,14 @@ from tools import verify
 custom_module = None
 
 
+
 def register_module():
     """Registers this module in the registry."""
+
+    permissions = []
+
+    def permissions_callback(unused_application_context):
+        return permissions
 
     def on_module_enabled():
         resource.Registry.register(resources_display.ResourceCourseSettings)
@@ -50,7 +57,9 @@ def register_module():
         outline.on_module_enabled()
         assets.on_module_enabled()
         admin_preferences_editor.on_module_enabled()
-        settings.on_module_enabled()
+        settings.on_module_enabled(custom_module, permissions)
+
+        roles.Roles.register_permissions(custom_module, permissions_callback)
 
     # provide parser to verify
     verify.parse_content = content.parse_string_in_scope

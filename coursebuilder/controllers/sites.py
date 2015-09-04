@@ -1022,6 +1022,11 @@ def get_app_context_for_namespace(namespace):
     return app_context
 
 
+def get_app_context_for_current_request():
+    return get_course_index().get_app_context_for_namespace(
+        namespace_manager.get_namespace())
+
+
 def get_course_for_path(path):
     """Chooses app_context that matches a context path."""
     return get_course_index().get_course_for_path(path)
@@ -1335,7 +1340,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     def can_handle_course_requests(self, context):
         """Reject all, but authors requests, to an unpublished course."""
         return ((context.now_available and Roles.is_user_whitelisted(context))
-                or Roles.is_course_admin(context))
+                or Roles.is_course_admin(context)
+                or Roles.in_any_role(context))
 
     def _get_handler_factory_for_path(self, path):
         """Picks a handler to handle the path."""

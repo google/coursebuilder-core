@@ -141,7 +141,8 @@ class DashboardHandler(
     # Dictionary that maps external permissions to their descriptions
     _external_permissions = {}
     # Dictionary that maps actions to permissions
-    _action_to_permission = {}
+    _get_action_to_permission = {}
+    _post_action_to_permission = {}
 
     default_action = None
     _custom_get_actions = {}
@@ -167,12 +168,6 @@ class DashboardHandler(
             return item.group.title + " > " + item.title
         else:
             return None
-
-    @classmethod
-    def has_action_permission(cls, app_context, action):
-        return roles.Roles.is_user_allowed(
-            app_context, custom_module,
-            cls._action_to_permission.get('get_%s' % action, ''))
 
     @classmethod
     def add_sub_nav_mapping(
@@ -210,8 +205,7 @@ class DashboardHandler(
             href = "dashboard?action={}".format(action)
 
         def combined_can_view(app_context):
-            if action and not cls.has_action_permission(
-                    app_context, action):
+            if not cls.can_view(action):
                 return False
 
             if can_view and not can_view(app_context):
@@ -262,7 +256,7 @@ class DashboardHandler(
         if ((action in cls._custom_post_actions or action in cls.post_actions)
             and not overwrite):
             logging.critical(
-                'action : %s already exists. Ignoring the custom get action.',
+                'action : %s already exists. Ignoring the custom post action.',
                 action)
             return
 
@@ -278,13 +272,21 @@ class DashboardHandler(
         """Add child handlers for REST."""
         return cls.child_routes
 
-    def can_view(self, action):
+    @classmethod
+    def can_view(cls, action):
         """Checks if current user has viewing rights."""
-        return self.has_action_permission(self.app_context, action)
+        app_context = sites.get_app_context_for_current_request()
+        if action in cls._get_action_to_permission:
+            return cls._get_action_to_permission[action](app_context)
+        return roles.Roles.is_course_admin(app_context)
 
-    def can_edit(self):
+    @classmethod
+    def can_edit(cls, action):
         """Checks if current user has editing rights."""
-        return roles.Roles.is_course_admin(self.app_context)
+        app_context = sites.get_app_context_for_current_request()
+        if action in cls._post_action_to_permission:
+            return cls._post_action_to_permission[action](app_context)
+        return roles.Roles.is_course_admin(app_context)
 
     def default_action_for_current_permissions(self):
         """Set the default or first active navigation tab as default action."""
@@ -329,10 +331,10 @@ class DashboardHandler(
 
     def post(self):
         """Enforces rights to all POST operations."""
-        if not self.can_edit():
+        action = self.request.get('action')
+        if not self.can_edit(action):
             self.redirect(self.app_context.get_slug())
             return
-        action = self.request.get('action')
         if action in self._custom_post_actions:
             # Each POST request must have valid XSRF token.
             xsrf_token = self.request.get('xsrf_token')
@@ -340,7 +342,7 @@ class DashboardHandler(
                 xsrf_token, action):
                 self.error(403)
                 return
-            self.custom_post_handler()
+            self._custom_post_actions[action](self)
             return
 
         return super(DashboardHandler, self).post()
@@ -419,11 +421,6 @@ class DashboardHandler(
         self.response.write(self.get_template(
             'question_preview.html', []).render(template_values))
 
-    def custom_post_handler(self):
-        """Edit Custom Unit Settings view."""
-        action = self.request.get('action')
-        self._custom_post_actions[action](self)
-
     def get_action_url(self, action, key=None, extra_args=None, fragment=None):
         args = {'action': action}
         if key:
@@ -471,32 +468,77 @@ class DashboardHandler(
         return template_values
 
     @classmethod
-    def map_action_to_permission(cls, action, permission):
-        """Maps an action to a permission.
+    def map_get_action_to_permission(cls, action, module, perm):
+        """Maps a view/get action to a permission.
 
-        Map a GET or POST action that goes through the dashboard to a
-        permission to control which users have access. GET actions start with
-        'get_' while post actions start with 'post_'.
+        Map a GET action that goes through the dashboard to a
+        permission to control which users have access.
 
         Example:
-            The i18n module maps both the actions 'get_i18n_dashboard' and
-            'get_i18_console' to the permission 'access_i18n_dashboard'.
-            Users who have a role assigned with this permission are then allowed
-            to perform these actions and thus access the translation tools.
+            The i18n module maps multiple actions to the permission
+            'access_i18n_dashboard'.  Users who have a role assigned with this
+            permission are then allowed to perform these actions and thus
+            access the translation tools.
 
         Args:
             action: a string specifying the action to map.
-            permission: a string specifying to which permission the action maps.
+            module: The module with which the permission was registered via
+                a call to models.roles.Roles.register_permission()
+            permission: a string specifying the permission to which the action
+                should be mapped.
         """
-        cls._action_to_permission[action] = permission
+        checker = lambda ctx: roles.Roles.is_user_allowed(ctx, module, perm)
+        cls.map_get_action_to_permission_checker(action, checker)
 
     @classmethod
-    def unmap_action_to_permission(cls, action):
-        del cls._action_to_permission[action]
+    def map_get_action_to_permission_checker(cls, action, checker):
+        """Map an action to a function to check permissions.
+
+        Some actions (notably settings and the course overview) produce pages
+        that have items that may be controlled by multiple permissions or
+        more complex verification than a single permission allows.  This
+        function allows modules to specify check functions.
+
+        Args:
+          action: A string specifying the name of the action being checked.
+              This should have been registered via add_custom_get_action(),
+              or present in the 'get_actions' list above in this file.
+          checker: A function which is run when the named action is accessed.
+              Registered functions should expect one parameter: the application
+              context object, and return a Boolean value.
+        """
+        cls._get_action_to_permission[action] = checker
 
     @classmethod
-    def add_external_permission(cls, permission_name, permission_description):
-        """Adds extra permissions that will be registered by the Dashboard."""
+    def unmap_get_action_to_permission(cls, action):
+        del cls._get_action_to_permission[action]
+
+    @classmethod
+    def map_post_action_to_permission(cls, action, module, perm):
+        """Maps an edit action to a permission. (See 'get' version, above.)"""
+        checker = lambda ctx: roles.Roles.is_user_allowed(ctx, module, perm)
+        cls.map_post_action_to_permission_checker(action, checker)
+
+    @classmethod
+    def map_post_action_to_permission_checker(cls, action, checker):
+        """Map an edit action to check function.  (See 'get' version, above)."""
+        cls._post_action_to_permission[action] = checker
+
+    @classmethod
+    def unmap_post_action_to_permission(cls, action):
+        """Remove mapping to edit action.  (See 'get' version, above)."""
+        del cls._post_action_to_permission[action]
+
+    @classmethod
+    def deprecated_add_external_permission(cls, permission_name,
+                                           permission_description):
+        """Adds extra permissions that will be registered by the Dashboard.
+
+        Normally, permissions should be registered in their own modules.
+        Due to historical accident, the I18N module registers permissions
+        with the dashboard.  For backward compatibility with existing roles,
+        this API is preserved, but not suggested for use by future modules.
+        """
         cls._external_permissions[permission_name] = permission_description
 
     @classmethod

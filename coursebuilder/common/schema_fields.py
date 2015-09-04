@@ -77,6 +77,8 @@ class Property(object):
 class Registry(object):
     """Registry is a collection of Property's."""
 
+    SCHEMA_PATH_SEPARATOR = '/'
+
     def __init__(self, title, description=None, extra_schema_dict_values=None):
         self._title = title
         self._registry = {'id': title, 'type': 'object'}
@@ -164,7 +166,7 @@ class Registry(object):
         # Build a tree of nodes from the given paths.
         root = treebuilder()
         for path in paths:
-            parts = path.split('/')
+            parts = path.split(self.SCHEMA_PATH_SEPARATOR)
             node = root
             for part in parts:
                 node = node[part]
@@ -412,6 +414,18 @@ class FieldRegistry(Registry):
             self._sub_registries[key].convert_entity_to_json_entity(
                 entity, json_entry[key])
 
+    def redact_entity_to_schema(self, entity):
+        property_names = {p.name: p for p in self._properties}
+        registry_names = set(self._sub_registries.keys())
+        for name in copy.copy(entity.keys()):
+            if name not in property_names and name not in registry_names:
+                del entity[name]
+            elif name in registry_names:
+                self._sub_registries[name].redact_entity_to_schema(entity[name])
+            elif name in property_names and not property_names[name].editable:
+                del entity[name]
+
+
     def validate(self, payload, errors):
         for schema_field in self._properties:
             value = self.get_field_value(schema_field, payload)
@@ -420,6 +434,9 @@ class FieldRegistry(Registry):
         for registry in self._sub_registries.values():
             registry.validate(payload, errors)
 
+    # TODO(mgainer): Teach this and all other recursive schema things that
+    # FieldArray is a thing, and may need recursing into if the array's
+    # data type is a FieldRegistry
 
     @classmethod
     def is_complex_name(cls, name):
