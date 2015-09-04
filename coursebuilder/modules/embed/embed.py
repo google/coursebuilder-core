@@ -62,9 +62,9 @@ import appengine_config
 import jinja2
 
 from common import jinja_utils
+from common import tags
 from common import users
 from controllers import utils
-from models import config
 from models import custom_modules
 from models import models
 from models import transforms
@@ -77,20 +77,17 @@ _V1 = 'v1'
 _BASE_URL_V1 = '%s/%s' % (_BASE_URL, _V1)
 _STATIC = 'static'
 _STATIC_BASE_URL_V1 = '%s/%s/%s' % (_BASE_URL, _STATIC, _V1)
-_STATIC_DIR_V1 = os.path.join(_BASE_DIR, _STATIC, _V1)
 
 _COURSE_TITLE_NAME = 'course_title'
 _DEMO_URL = _BASE_URL_V1 + '/demo'
 _DISPATCH_INFIX = '/resource'
 _DISPATCH_URL = _BASE_URL_V1 + _DISPATCH_INFIX
 _EMAIL_NAME = 'email'
-_EMBED_CHILD_CSS_PATH = os.path.join(_STATIC_DIR_V1, 'embed_child.css')
 _EMBED_CHILD_CSS_URL = '%s/%s' % (_STATIC_BASE_URL_V1, 'embed_child.css')
 _EMBED_CHILD_CSS_URL_NAME = 'embed_child_css_url'
 _EMBED_CHILD_JS_NAME = 'embed_child.js'
 _EMBED_CHILD_JS_URL = '%s/%s' % (_BASE_URL_V1, _EMBED_CHILD_JS_NAME)
 _EMBED_CHILD_JS_URL_NAME = 'embed_child_js_url'
-_EMBED_CSS_PATH = os.path.join(_STATIC_DIR_V1, 'embed.css')
 _EMBED_CSS_URL = '%s/%s' % (_STATIC_BASE_URL_V1, 'embed.css')
 _EMBED_CSS_URL_NAME = 'embed_css_url'
 _EMBED_JS_NAME = 'embed.js'
@@ -118,6 +115,7 @@ _RESOURCE_URI_PREFIX_BOUNDARY_NAME = 'resource_uri_prefix_boundary'
 _ROBOTO_URL = 'http://fonts.googleapis.com/css?family=Roboto'
 _ROBOTO_URL_NAME = 'roboto_url'
 _SIGN_IN_URL_NAME = 'sign_in_url'
+_STATIC_URL = '%s/%s/.*' % (_BASE_URL, _STATIC)
 
 _LOG = logging.getLogger('modules.embed.embed')
 
@@ -129,14 +127,6 @@ _LOCAL_ERRORS_DEMO_HTML_PATH = os.path.join(
     _TEMPLATES_DIR_V1, 'local_errors.html')
 _TEMPLATES_ENV = jinja_utils.create_jinja_environment(
     jinja2.FileSystemLoader([_TEMPLATES_DIR_V1]))
-
-
-# TODO(johncox): remove after security audit of embed module.
-_MODULE_HANDLERS_ENABLED = config.ConfigProperty(
-    'gcb_modules_embed_handlers_enabled', bool,
-    ('Whether or not to enable the embed module handlers. You must enable this '
-     'property to use Course Builder embeds'), default_value=False,
-    label='Enable embed module handlers')
 
 
 class AbstractEnrollmentPolicy(object):
@@ -255,48 +245,7 @@ class UrlParser(object):
         return tuple([value.strip() for value in [id_or_name, kind]])
 
 
-class _404IfHandlersDisabledMixin(object):
-    """Mixin that 404s unless _MODULE_HANDLERS_ENABLED is True.
-
-    TODO(johncox): remove after security audit of embed module.
-    """
-
-    def get(self):
-        if not _MODULE_HANDLERS_ENABLED.value:
-            self.error(404)
-            _LOG.error(
-                'You must enable %s to fetch %s.',
-                _MODULE_HANDLERS_ENABLED.name, self.request.path)
-            return
-
-        self._real_get()
-
-    def _real_get(self):
-        pass
-
-
-class _AbstractCssHandler(
-        utils.ApplicationHandler, _404IfHandlersDisabledMixin):
-
-    _PATH = None
-
-    def _real_get(self):
-        self.response.headers['Content-Type'] = 'text/css'
-        with open(self._PATH) as f:
-            self.response.out.write(f.read())
-
-
-class _EmbedCssHandler(_AbstractCssHandler):
-
-    _PATH = _EMBED_CSS_PATH
-
-
-class _EmbedChildCssHandler(_AbstractCssHandler):
-
-    _PATH = _EMBED_CHILD_CSS_PATH
-
-
-class _AbstractJsHandler(utils.ApplicationHandler, _404IfHandlersDisabledMixin):
+class _AbstractJsHandler(utils.ApplicationHandler):
 
     _TEMPLATE_NAME = None
 
@@ -306,6 +255,15 @@ class _AbstractJsHandler(utils.ApplicationHandler, _404IfHandlersDisabledMixin):
 
         return _TEMPLATES_ENV.get_template(cls._TEMPLATE_NAME)
 
+    def get(self):
+        self._set_headers(self.response.headers)
+        context = {}
+        env = self._get_env()
+        if env:
+            context = {_ENV_NAME: transforms.dumps(env)}
+
+        self.response.out.write(self._get_template().render(context))
+
     def _get_absolute_embed_child_css_url(self):
         return self.request.host_url + _EMBED_CHILD_CSS_URL
 
@@ -314,15 +272,6 @@ class _AbstractJsHandler(utils.ApplicationHandler, _404IfHandlersDisabledMixin):
 
     def _get_env(self):
         raise NotImplementedError
-
-    def _real_get(self):
-        self._set_headers(self.response.headers)
-        context = {}
-        env = self._get_env()
-        if env:
-            context = {_ENV_NAME: transforms.dumps(env)}
-
-        self.response.out.write(self._get_template().render(context))
 
     def _set_headers(self, headers):
         headers['Content-Type'] = 'text/javascript'
@@ -378,16 +327,11 @@ class _EmbedJsHandler(_AbstractJsHandler):
         }
 
 
-class _AbstractDemoHandler(utils.BaseHandler, _404IfHandlersDisabledMixin):
+class _AbstractDemoHandler(utils.BaseHandler):
 
     _TEMPLATE_PATH = None
 
-    @classmethod
-    def _active(cls):
-        # Turn off in prod; exposed for swap() in tests.
-        return not appengine_config.PRODUCTION_MODE
-
-    def _real_get(self):
+    def get(self):
         if not self._active():
             self.error(404)
             return
@@ -396,6 +340,11 @@ class _AbstractDemoHandler(utils.BaseHandler, _404IfHandlersDisabledMixin):
         # where embeds bring dynamic content into an otherwise-static HTML page.
         with open(self._TEMPLATE_PATH) as f:
             self.response.out.write(f.read())
+
+    @classmethod
+    def _active(cls):
+        # Turn off in prod; exposed for swap() in tests.
+        return not appengine_config.PRODUCTION_MODE
 
 
 class _DemoHandler(_AbstractDemoHandler):
@@ -413,11 +362,9 @@ class _LocalErrorsDemoHandler(_AbstractDemoHandler):
     _TEMPLATE_PATH = _LOCAL_ERRORS_DEMO_HTML_PATH
 
 
-class _DispatchHandler(
-        utils.BaseHandler, utils.StarRouteHandlerMixin,
-        _404IfHandlersDisabledMixin):
+class _DispatchHandler(utils.BaseHandler, utils.StarRouteHandlerMixin):
 
-    def _real_get(self):
+    def get(self):
         kind = UrlParser.get_kind(self.request.url)
         id_or_name = UrlParser.get_id_or_name(self.request.url)
 
@@ -437,9 +384,9 @@ class _DispatchHandler(
         return embed.dispatch(self)
 
 
-class _FinishAuthHandler(utils.BaseHandler, _404IfHandlersDisabledMixin):
+class _FinishAuthHandler(utils.BaseHandler):
 
-    def _real_get(self):
+    def get(self):
         template = _TEMPLATES_ENV.get_template(_FINISH_AUTH_NAME)
         self.response.out.write(template.render({
             _ENV_NAME: transforms.dumps({
@@ -464,10 +411,10 @@ class _ExampleEmbed(AbstractEmbed):
             urllib.urlencode(query))
 
 
-class _ExampleHandler(utils.BaseHandler, _404IfHandlersDisabledMixin):
+class _ExampleHandler(utils.BaseHandler):
     """Reference implementation of a handler for an Embed."""
 
-    def _real_get(self):
+    def get(self):
         template = _TEMPLATES_ENV.get_template(_EXAMPLE_NAME)
         id_or_name = self.request.get(_ID_OR_NAME_NAME)
         kind = self.request.get(_KIND_NAME)
@@ -494,14 +441,13 @@ custom_module = None
 
 _GLOBAL_HANDLERS = [
     (_DEMO_URL, _DemoHandler),
-    (_EMBED_CHILD_CSS_URL, _EmbedChildCssHandler),
     (_EMBED_CHILD_JS_URL, _EmbedChildJsHandler),
-    (_EMBED_CSS_URL, _EmbedCssHandler),
     (_EMBED_JS_URL, _EmbedJsHandler),
     (_EMBED_LIB_JS_URL, _EmbedLibJsHandler),
     (_FINISH_AUTH_URL, _FinishAuthHandler),
     (_GLOBAL_ERRORS_DEMO_URL, _GlobalErrorsDemoHandler),
     (_LOCAL_ERRORS_DEMO_URL, _LocalErrorsDemoHandler),
+    (_STATIC_URL, tags.ResourcesHandler),
 ]
 _NAMESPACED_HANDLERS = [
     (_DISPATCH_URL, _DispatchHandler),

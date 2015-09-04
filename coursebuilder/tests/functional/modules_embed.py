@@ -20,7 +20,6 @@ __author__ = [
 
 from common import users
 from common import utils
-from models import config
 from models import models
 from modules.embed import embed
 
@@ -38,22 +37,7 @@ class FakeRequest(object):
         self.method = method
 
 
-# TODO(johncox): remove after security audit of embed module.
-class TestBase(actions.TestBase):
-
-    def setUp(self):
-        super(TestBase, self).setUp()
-        self.old_module_handlers_enabled = embed._MODULE_HANDLERS_ENABLED.value
-        config.Registry.test_overrides[
-            embed._MODULE_HANDLERS_ENABLED.name] = True
-
-    def tearDown(self):
-        config.Registry.test_overrides[embed._MODULE_HANDLERS_ENABLED.name] = (
-            self.old_module_handlers_enabled)
-        super(TestBase, self).tearDown()
-
-
-class DemoHandlerTestBase(TestBase):
+class DemoHandlerTestBase(actions.TestBase):
 
     _HANDLER = None
     _URL = None
@@ -107,7 +91,7 @@ class LocalErrorsDemoHandlerTest(DemoHandlerTestBase):
         self.assert_get_returns_404_in_prod()
 
 
-class ExampleEmbedAndHandlerV1Test(TestBase):
+class ExampleEmbedAndHandlerV1Test(actions.TestBase):
 
     def setUp(self):
         super(ExampleEmbedAndHandlerV1Test, self).setUp()
@@ -171,7 +155,7 @@ class ExampleEmbedAndHandlerV1Test(TestBase):
             'Request malformed; kind: None, id_or_name: None')
 
 
-class FinishAuthHandlerTest(TestBase):
+class FinishAuthHandlerTest(actions.TestBase):
 
     def test_get_returns_200_with_contents(self):
         response = self.testapp.get(embed._FINISH_AUTH_URL)
@@ -180,7 +164,7 @@ class FinishAuthHandlerTest(TestBase):
         self.assertTrue(len(response.body))
 
 
-class JsHandlersTest(TestBase):
+class JsHandlersTest(actions.TestBase):
 
     def assert_caching_disabled(self, response):
         self.assertEquals(
@@ -215,7 +199,7 @@ class JsHandlersTest(TestBase):
             self.testapp.get(embed._EMBED_LIB_JS_URL))
 
 
-class RegistryTest(TestBase):
+class RegistryTest(actions.TestBase):
 
     def setUp(self):
         super(RegistryTest, self).setUp()
@@ -242,7 +226,7 @@ class RegistryTest(TestBase):
         self.assertIsNone(embed.Registry.get('no_match'))
 
 
-class StaticResourcesTest(TestBase):
+class StaticResourcesTest(actions.TestBase):
 
     def test_get_returns_successful_response_with_correct_headers(self):
         response = self.testapp.get(embed._EMBED_CSS_URL)
@@ -252,7 +236,7 @@ class StaticResourcesTest(TestBase):
         self.assertTrue(len(response.body))
 
 
-class UrlParserTest(TestBase):
+class UrlParserTest(actions.TestBase):
 
     def test_get_kind_returns_none_if_no_suffix(self):
         no_suffix = 'http://example.com/namespace/modules/embed/v1/resource'
@@ -323,31 +307,3 @@ class UrlParserTest(TestBase):
             'http://example.com/namespace/modules/embed/v1/resource/kind/'
             ' id_or_name ')
         self.assertEquals('id_or_name', embed.UrlParser.get_id_or_name(url))
-
-
-# TODO(johncox): remove after security audit of embed module.
-class Handlers404ByDefaultTest(actions.TestBase):
-
-    def assert_handlers_404(self, handlers, prefix=None):
-        for url, _ in handlers:
-            if prefix:
-                url = '/%s%s' % (prefix, url)
-
-            response = self.testapp.get(url, expect_errors=True)
-
-            self.assertEquals(404, response.status_code)
-            self.assertIn('HTTP status code: 404.', response.body)
-            self.assertLogContains(
-                'You must enable %s to fetch %s' % (
-                    embed._MODULE_HANDLERS_ENABLED.name, url))
-
-    def test_global_handlers_404(self):
-        self.assert_handlers_404(embed._GLOBAL_HANDLERS)
-
-    def test_namespaced_handlers_404(self):
-        self.admin_email = 'admin@example.com'
-        self.prefix = 'course'
-        actions.login(self.admin_email, is_admin=True)
-        actions.simple_add_course(self.prefix, self.admin_email, 'Course')
-
-        self.assert_handlers_404(embed._NAMESPACED_HANDLERS, prefix=self.prefix)
