@@ -1423,13 +1423,25 @@ class DatastorePage(PageObject):
         return data
 
 
+class EmbedModuleStateError(object):
+    """Type for embeds rendering an error."""
+
+
+class EmbedModuleStateEmbed(object):
+    """Type for embeds rendering embed content."""
+
+
+class EmbedModuleStateSignIn(object):
+    """Type for embeds rendering the sign-in control."""
+
+
 class AbstractEmbedModuleIframePageObject(PageObject):
     """Base class for pages that have or are in iframes."""
 
     def is_embed_page(self):
         try:
             ps = self._tester.driver.find_elements_by_tag_name('p')
-            return ps and 'Greetings' in ps[-1].text
+            return bool(ps and 'Greetings' in ps[-1].text)
         except exceptions.NoSuchElementException:
             return False
 
@@ -1474,6 +1486,12 @@ class EmbedModuleAbstractIframeContentsPageObject(
 
 class EmbedModuleDemoPage(EmbedModuleAbstractIframePageObject):
 
+    _STATES = [
+        EmbedModuleStateError,
+        EmbedModuleStateEmbed,
+        EmbedModuleStateSignIn,
+    ]
+
     def get_cb_embed_elements(self):
         self.wait().until(ec.visibility_of_element_located(
             (by.By.TAG_NAME, 'cb-embed')))
@@ -1496,16 +1514,35 @@ class EmbedModuleDemoPage(EmbedModuleAbstractIframePageObject):
         else:
             raise TypeError('No matching page object found')
 
+    def is_state_valid(self, state):
+        return state in self._STATES
+
     def load(self, url):
         self.get(url)
         return self
 
-    def load_embed(self, cb_embed):
+    def load_embed(self, cb_embed, wait_for=EmbedModuleStateEmbed):
+        if not self.is_state_valid(wait_for):
+            raise ValueError('Invalid state: %s' % wait_for)
+
         iframe = self.get_iframe(cb_embed)
         self.switch_to_iframe(iframe)
 
         def iframe_populated(_):
-            return bool(self._tester.driver.find_elements_by_tag_name('*'))
+            # Must always block until embed is in the state the caller requires.
+            # Otherwise, timing issues could cause (for example) tests to run
+            # against the widget in the sign-in state that expect the widget to
+            # be displaying content immediately after sign-in. Note that this
+            # does not replace asserts against embed contents in any particular
+            # state -- it merely ensures the widget is displaying the right
+            # state for the assert to run. All checks against widget contents
+            # must come after these blocking calls.
+            if wait_for is EmbedModuleStateEmbed:
+                return self.is_embed_page()
+            elif wait_for is EmbedModuleStateError:
+                return self.is_error_page()
+            elif wait_for is EmbedModuleStateSignIn:
+                return self.is_sign_in_page()
 
         self.wait().until(iframe_populated)
         page = self.get_page(iframe)
@@ -1513,15 +1550,10 @@ class EmbedModuleDemoPage(EmbedModuleAbstractIframePageObject):
         return page
 
     def login(self, email):
-        first_cb_embed = self.get_cb_embed_elements()[0]
-        sign_in_page = self.load_embed(first_cb_embed)
-        # This is a great big bag of ugly, but it _is_ effective.  Without these
-        # sleeps, _something_ becomes unhappy, but only when run in parallel
-        # during release; one at a time, tests pass just fine.
-        time.sleep(10)
-        sign_in_page.click()
-        time.sleep(10)
-        sign_in_page.login(email)
+        cb_embed = self.get_cb_embed_elements()[0]
+        sign_in_page = self.load_embed(
+            cb_embed, wait_for=EmbedModuleStateSignIn)
+        sign_in_page.click().login(email)
 
 
 class EmbedModuleErrorPage(EmbedModuleAbstractIframeContentsPageObject):
@@ -1569,11 +1601,11 @@ class EmbedModuleSignInPage(EmbedModuleAbstractIframeContentsPageObject):
 
     def login(self, email):
         last_window_handle = self._tester.driver.current_window_handle
-        self._tester.driver.switch_to_window(
-            self._tester.driver.window_handles[-1])
+        self.switch_to_login_window(last_window_handle)
 
         login_page = LoginPage(self._tester)
         login_page.login(email, post_wait=False)
+
         self._tester.driver.switch_to_window(last_window_handle)
 
     def get_text(self):
@@ -1582,3 +1614,29 @@ class EmbedModuleSignInPage(EmbedModuleAbstractIframeContentsPageObject):
             '.cb-embed-sign-in-button').text
         self.switch_from_iframe()
         return text
+
+    def switch_to_login_window(self, from_handle):
+        # Switch to the login window, which cannot be the current window. To
+        # avoid interleaving with other tests, do not rely on window order.
+        # Instead, cycle through candidates and pick the first with the correct
+        # title. We make no attempt to guard against the test executor
+        # running multiple tests in the same browser that hit login > 1 times
+        # concurrently.
+        get_other_handles = lambda: [
+            h for h in self._tester.driver.window_handles if h != from_handle]
+
+        def other_windows_exist(_):
+            return bool(get_other_handles())
+
+        self.wait().until(other_windows_exist)
+
+        for candidate_handle in get_other_handles():
+            self._tester.driver.switch_to_window(candidate_handle)
+            if self._tester.driver.title != 'Login':
+                self._tester.driver.switch_to_window(from_handle)
+            else:
+                return
+
+        raise exceptions.InvalidSwitchToTargetException(
+            'Unable to find login window')
+

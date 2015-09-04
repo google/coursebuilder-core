@@ -222,11 +222,14 @@ class EmbedModuleTest(BaseIntegrationTest):
         global_error_page = pageobjects.EmbedModuleDemoPage(self).load(
             self.get_global_errors_url())
 
+        # Because both widgets have configuration errors, the embeds are both in
+        # state error and no sign-in widget is shown.
         cb_embeds = global_error_page.get_cb_embed_elements()
 
         self.assertEquals(2, len(cb_embeds))
 
-        first_error_page = global_error_page.load_embed(cb_embeds[0])
+        first_error_page = global_error_page.load_embed(
+            cb_embeds[0], wait_for=pageobjects.EmbedModuleStateError)
         global_error_message = (
             'Embed src '
             '"http://other:8081/sample/modules/embed/v1/resource/example/1" '
@@ -234,7 +237,8 @@ class EmbedModuleTest(BaseIntegrationTest):
 
         self.assert_embed_has_error(first_error_page, global_error_message)
 
-        second_error_page = global_error_page.load_embed(cb_embeds[1])
+        second_error_page = global_error_page.load_embed(
+            cb_embeds[1], wait_for=pageobjects.EmbedModuleStateError)
         global_error_message = (
             'Embed src '
             '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
@@ -263,9 +267,12 @@ class EmbedModuleTest(BaseIntegrationTest):
         cb_embeds = local_error_page.get_cb_embed_elements()
 
         self.assertEquals(2, len(cb_embeds))
-        self.assert_is_sign_in_page(local_error_page.load_embed(cb_embeds[0]))
+        self.assert_is_sign_in_page(
+            local_error_page.load_embed(
+                cb_embeds[0], wait_for=pageobjects.EmbedModuleStateSignIn))
 
-        second_embed_page = local_error_page.load_embed(cb_embeds[1])
+        second_embed_page = local_error_page.load_embed(
+            cb_embeds[1], wait_for=pageobjects.EmbedModuleStateError)
         global_error_message = (
             'Embed src '
             '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
@@ -290,7 +297,8 @@ class EmbedModuleTest(BaseIntegrationTest):
         self.assertEquals(2, len(cb_embeds))
 
         first_embed_page = local_error_page.load_embed(cb_embeds[0])
-        second_embed_page = local_error_page.load_embed(cb_embeds[1])
+        second_embed_page = local_error_page.load_embed(
+            cb_embeds[1], wait_for=pageobjects.EmbedModuleStateError)
 
         self.assert_is_embed_page(first_embed_page)
         self.assert_embed_has_error(second_embed_page, global_error_message)
@@ -305,7 +313,8 @@ class EmbedModuleTest(BaseIntegrationTest):
             self.get_demo_url())
 
         for cb_embed in demo_page.get_cb_embed_elements():
-            page = demo_page.load_embed(cb_embed)
+            page = demo_page.load_embed(
+                cb_embed, wait_for=pageobjects.EmbedModuleStateSignIn)
             self.assert_is_sign_in_page(page)
 
         demo_page.login(self.email)
@@ -1393,7 +1402,7 @@ class EventsTest(BaseIntegrationTest):
 
 
 class IntegrationTestBundle1(
-    AdminTests, EventsTest, EtlTranslationRoundTripTest, QuestionsTest,
-    SampleCourseTests):
+        AdminTests, EventsTest, EtlTranslationRoundTripTest, QuestionsTest,
+        SampleCourseTests):
     """Test bundle that forces serial execution of all containing tests."""
     pass

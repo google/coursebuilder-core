@@ -60,8 +60,7 @@ import yaml
 ALL_INTEGRATION_TEST_CLASSES = {
     'tests.integration.test_classes.IntegrationTestBundle1': 16,
     'tests.integration.test_classes.VisualizationsTest': 5,
-    # TODO(johncox): Re-enable Embed tests
-    # 'tests.integration.test_classes.EmbedModuleTest': 3,
+    'tests.integration.test_classes.EmbedModuleTest': 3,
 }
 
 # here we list all functional and unit tests that run in-process
