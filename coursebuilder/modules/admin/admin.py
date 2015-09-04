@@ -52,9 +52,8 @@ from common import menus
 import google.appengine.api.app_identity as app
 from google.appengine.ext import db
 
-RESOURCES_PATH = '/modules/admin/resources'
-
-TEMPLATE_DIR = os.path.join(appengine_config.BUNDLE_ROOT, 'modules', 'admin')
+TEMPLATE_DIR = os.path.join(
+    appengine_config.BUNDLE_ROOT, 'modules', 'admin', 'templates')
 
 DIRECT_CODE_EXECUTION_UI_ENABLED = False
 
@@ -606,7 +605,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
         content = safe_dom.NodeList()
         content.append(safe_dom.Element(
             'link', rel='stylesheet',
-            href='/modules/admin/resources/css/admin.css'))
+            href='/modules/admin/_static/css/admin.css'))
         table = safe_dom.Element('table', className='gcb-config').add_child(
             safe_dom.Element('tr').add_child(
                 safe_dom.Element('th').add_text('Setting')
@@ -818,7 +817,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
                     'delete_course_xsrf_token': delete_course_xsrf_token,
                     'courses': all_courses,
                 },
-                'courses.html', [os.path.dirname(__file__)]
+                'courses.html', [TEMPLATE_DIR]
             )
         }
         self.render_page(template_values, in_action='courses')
@@ -1051,10 +1050,8 @@ class GlobalAdminHandler(
 
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
-        dashboard_template_dir = os.path.join(
-            appengine_config.BUNDLE_ROOT, 'modules', 'dashboard')
         return jinja_utils.get_template(
-            template_name, dirs + [dashboard_template_dir], handler=self)
+            template_name, dirs + [dashboard.TEMPLATE_DIR], handler=self)
 
     def render_page(self, template_values, in_action=None):
         page_title = template_values['page_title']
@@ -1118,8 +1115,7 @@ def register_module():
         ('/admin/welcome', WelcomeHandler),
         ('/rest/config/item', (
             modules.admin.config.ConfigPropertyItemRESTHandler)),
-        ('/rest/courses/item', modules.admin.config.CoursesItemRESTHandler),
-        (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
+        ('/rest/courses/item', modules.admin.config.CoursesItemRESTHandler)]
 
     namespaced_handlers = [(AdminHandler.URL, AdminHandler),
                            (CourseDeleteHandler.URI, CourseDeleteHandler)]

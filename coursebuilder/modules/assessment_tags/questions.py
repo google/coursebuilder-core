@@ -242,7 +242,8 @@ class QuestionTag(tags.BaseTag):
         return [
             os.path.join(appengine_config.BUNDLE_ROOT, 'modules',
                 'assessment_tags', 'templates'),
-            os.path.join(appengine_config.BUNDLE_ROOT, 'modules', 'dashboard'),
+            os.path.join(appengine_config.BUNDLE_ROOT, 'modules', 'dashboard',
+                'templates'),
         ]
 
 

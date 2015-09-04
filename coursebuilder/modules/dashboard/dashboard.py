@@ -70,6 +70,9 @@ from google.appengine.api import app_identity
 
 custom_module = None
 
+TEMPLATE_DIR = os.path.join(
+    appengine_config.BUNDLE_ROOT, 'modules', 'dashboard', 'templates')
+
 
 class DashboardHandler(
     CourseHandler, FileManagerAndEditor,
@@ -350,7 +353,7 @@ class DashboardHandler(
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
         return jinja_utils.get_template(
-            template_name, dirs + [os.path.dirname(__file__)], handler=self)
+            template_name, dirs + [TEMPLATE_DIR], handler=self)
 
     def get_alerts(self):
         alerts = []
@@ -628,7 +631,8 @@ def register_module():
                 appengine_config.BUNDLE_ROOT, 'lib',
                 'material-design-iconic-font-1.1.1.zip'))),
         (dashboard_utils.RESOURCES_PATH +'/js/.*', tags.JQueryHandler),
-        (dashboard_utils.RESOURCES_PATH + '/.*', tags.ResourcesHandler)]
+        (dashboard_utils.RESOURCES_PATH + '/.*',
+            tags.DeprecatedResourcesHandler)]
 
     dashboard_handlers = [
         ('/dashboard', DashboardHandler),

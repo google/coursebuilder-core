@@ -50,7 +50,7 @@ module.exports = function(config) {
         included: false,
         served: true
       },
-      'modules/dashboard/mc_question_editor_lib.js',
+      'modules/dashboard/templates/mc_question_editor_lib.js',
       'modules/dashboard/resources/js/view.js',
       'modules/dashboard/resources/js/role_editor.js',
     ],
