@@ -2540,8 +2540,8 @@ class Course(object):
             'extra_locales', 'Extra languages',
             item_type=locale_type,
             description=(
-                'Languages which are listed here and marked as available can be '
-                'selected by students as their preferred language.'),
+                'Languages which are listed here and marked as available can '
+                'be selected by students as their preferred language.'),
             extra_schema_dict_values={
                 'className': 'settings-list',
                 'listAddLabel': 'Add a language',
