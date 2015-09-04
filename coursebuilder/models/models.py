@@ -2444,7 +2444,7 @@ class LabelDTO(object):
         LabelType(LABEL_TYPE_COURSE_TRACK, 'course_track', 'Course Track', 1),
         ]
     SYSTEM_EDITABLE_LABEL_TYPES = [
-        LabelType(LABEL_TYPE_LOCALE, 'locale', 'Locale', 2),
+        LabelType(LABEL_TYPE_LOCALE, 'locale', 'Language', 2),
         ]
     LABEL_TYPES = USER_EDITABLE_LABEL_TYPES + SYSTEM_EDITABLE_LABEL_TYPES
 

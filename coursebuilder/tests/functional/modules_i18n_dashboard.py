@@ -252,7 +252,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Data Pump',
             'Data Removal',
             'Homepage',
-            'I18N',
+            'Translations',
             'Invitation',
             'Registration',
             'Units & lessons',
@@ -297,7 +297,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             columns = table.findall('./thead/tr/th')
             expected_col_data = [
                 'Asset',
-                'en_US (Base locale)',
+                'en_US (Base language)',
                 'el',
                 'ru',
             ]
@@ -2094,7 +2094,7 @@ class TranslationImportExportTests(actions.TestBase):
         rsp = transforms.loads(self._do_deletion(
             {'locales': [{'checked': True}]}).body)
         self.assertEquals(rsp['status'], 400)
-        self.assertEquals('Locales specification not as expected.',
+        self.assertEquals('Language specification not as expected.',
                           rsp['message'])
 
     def test_deletion_ui_no_selected_locales(self):
@@ -2411,7 +2411,7 @@ class TranslationImportExportTests(actions.TestBase):
         rsp = transforms.loads(self._do_download(
             {'locales': [{'checked': True}]}).body)
         self.assertEquals(rsp['status'], 400)
-        self.assertEquals('Locales specification not as expected.',
+        self.assertEquals('Language specification not as expected.',
                           rsp['message'])
 
     def test_download_ui_no_selected_locales(self):

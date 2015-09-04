@@ -288,7 +288,7 @@
             {% if available_locales %}
               <li>
                 {# I18N: Text describing the locale selector. #}
-                {{ gettext('Locale:') }}
+                {{ gettext('Language:') }}
                 <select id="locale-select" data-xsrf-token="{{ locale_xsrf_token}}">
                   {% for locale in available_locales %}
                     <option value="{{ locale.value }}"

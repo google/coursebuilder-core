@@ -143,7 +143,7 @@ class LocaleAggregator(student_aggregate.AbstractStudentAggregationComponent):
 
         locale_frequency = schema_fields.FieldRegistry('locale_frequency')
         locale_frequency.add_property(schema_fields.SchemaField(
-            'locale', 'Locale', 'string',
+            'locale', 'Language', 'string',
             description='A string indicating language and possibly regional '
             'variation.  Always starts with an ISO-639-1 two-character '
             'lanaguage code.  If the language is used in multiple countries, '
@@ -157,7 +157,7 @@ class LocaleAggregator(student_aggregate.AbstractStudentAggregationComponent):
             'frequency values should add up to 1.0.  The most-frequent '
             'locale is listed first in the array.'))
         return schema_fields.FieldArray(
-            'locale_frequencies', 'Locale Frequencies',
+            'locale_frequencies', 'Language Frequencies',
             item_type=locale_frequency,
-            description='List of all locales seen for this user, in '
+            description='List of all languages seen for this user, in '
             'descending order by proportion of responses.')

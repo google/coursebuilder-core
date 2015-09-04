@@ -19,6 +19,7 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 from common import schema_fields
 from models import models
 from modules.dashboard import dto_editor
+from modules.dashboard import messages
 from modules.dashboard import utils as dashboard_utils
 
 
@@ -76,13 +77,7 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
             'items marked with this label.'))
         schema.add_property(schema_fields.SchemaField(
             'type', 'Type', 'integer',
-            description='The purpose for which this label will be used. '
-            'E.g., <b>Course Track</b> labels are used to match to labels on '
-            'students to select which units the student will see when '
-            'taking the course. <b>Locale</b> labels are automatically '
-            'created by the system and are used to select content applicable '
-            'to a specific language and/or country. More types of label will '
-            'be added as more features are added.',
+            description=messages.LABELS_TYPE_DESCRIPTION,
             select_data=[
                 (lt.type, lt.title) for lt in (
                     models.LabelDTO.USER_EDITABLE_LABEL_TYPES)],

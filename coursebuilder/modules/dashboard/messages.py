@@ -22,3 +22,8 @@ Manage the different roles associated with your course.
 A role binds a set of permissions to a set of users. The role editor allows you
 to assign any of the permissions currently registered by the enabled modules.
 """
+
+LABELS_TYPE_DESCRIPTION = """
+You can put students in different <b>Course tracks</b> to show them different
+units.
+"""

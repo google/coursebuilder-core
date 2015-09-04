@@ -2506,32 +2506,27 @@ class Course(object):
             validator=must_contain_one_string_substitution))
 
         i18n_opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_I18N, 'I18N',
+            Course.SCHEMA_SECTION_I18N, 'Translations',
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
         i18n_opts.add_property(schema_fields.SchemaField(
-            'course:can_student_change_locale', 'Let Student Change Locale',
+            'course:can_student_change_locale', 'Let students switch languages',
             'boolean',
-            description='Allow student to change locale at any time during the '
-            'course. If checked, a language picker is shown to the student and '
-            'locale changes are allowed at any time. If unchecked, a language '
-            'picker is not shown to the student and the desired locale must be '
-            'assigned during registration process via Locale Labels. Current '
-            'locale for any request is determined by looking into student '
-            'Locale Labels first, and then, if this value here is checked, into'
-            ' student preferences set by the language picker.', optional=True))
+            description=messages.ALLOW_LANGUAGE_SWITCHING_DESCRIPTION,
+            optional=True))
         locale_data_for_select = [
             (loc, locales.get_locale_display_name(loc))
             for loc in locales.get_system_supported_locales()]
         i18n_opts.add_property(schema_fields.SchemaField(
-            'course:locale', 'Base Locale', 'string', i18n=False,
+            'course:locale', 'Base language', 'string',
+            description=messages.BASE_LANGUAGE_DESCRIPTION, i18n=False,
             select_data=locale_data_for_select))
         locale_type = schema_fields.FieldRegistry(
-            'Locale',
+            'Language',
             extra_schema_dict_values={'className': 'settings-list-item'})
         locale_type.add_property(schema_fields.SchemaField(
-            'locale', 'Locale', 'string', optional=True, i18n=False,
+            'locale', 'Language', 'string', optional=True, i18n=False,
             select_data=locale_data_for_select))
         select_data = [
             (
@@ -2542,23 +2537,20 @@ class Course(object):
             cls.SCHEMA_LOCALE_AVAILABILITY, 'Availability',
             'boolean', optional=True, select_data=select_data))
         i18n_opts.add_property(schema_fields.FieldArray(
-            'extra_locales', 'Extra locales',
+            'extra_locales', 'Extra languages',
             item_type=locale_type,
             description=(
-                'Locales which are listed here and marked as available can be '
-                'selected by students as their preferred locale.'),
+                'Languages which are listed here and marked as available can be '
+                'selected by students as their preferred language.'),
             extra_schema_dict_values={
                 'className': 'settings-list',
-                'listAddLabel': 'Add a locale',
-                'listRemoveLabel': 'Delete locale'}))
+                'listAddLabel': 'Add a language',
+                'listRemoveLabel': 'Delete language'}))
         i18n_opts.add_property(schema_fields.SchemaField(
             'course:prevent_translation_edits',
-            'Prevent Translation Edits',
+            'Prevent translation edits',
             'boolean', optional=True,
-            description='Prevent editing of translations. If False, '
-            'translations can be edited. If True, editing of translations is '
-            'not allowed, while pre-caching and performance boost logic '
-            'is applied.'))
+            description=messages.PREVENT_TRANSLATION_EDITS_DESCRIPTION))
         return reg
 
     @classmethod

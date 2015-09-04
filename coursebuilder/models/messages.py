@@ -148,3 +148,16 @@ SHORT_ANSWER_SCORE_DESCRIPTION = """
 Points a student receives for answering this question correctly. 1.0 indicates
 full credit.
 """
+
+ALLOW_LANGUAGE_SWITCHING_DESCRIPTION = """
+Allow students to switch languages at any time using a menu on the bottom of
+the page.
+"""
+
+BASE_LANGUAGE_DESCRIPTION = """
+The language your original course content is written in.
+"""
+
+PREVENT_TRANSLATION_EDITS_DESCRIPTION = """
+Enable this to boost performance if you are finished translating your course.
+"""

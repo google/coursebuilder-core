@@ -80,7 +80,7 @@ VERB_CURRENT = xcontent.SourceToTargetDiffMapping.VERB_CURRENT
 
 # This permission grants the user access to the i18n dashboard and console.
 ACCESS_PERMISSION = 'access_i18n_dashboard'
-ACCESS_PERMISSION_DESCRIPTION = 'Can access I18n Dashboard.'
+ACCESS_PERMISSION_DESCRIPTION = 'Can access the translation dashboard.'
 
 TYPE_HTML = 'html'
 TYPE_STRING = 'string'
@@ -539,7 +539,7 @@ class I18nDeletionHandler(BaseDashboardExtension):
             additional_dirs=[TEMPLATES_DIR])
         self.handler.render_page({
             'page_title': self.handler.format_title(
-                'I18n Translation Deletion'),
+                'Translation Deletion'),
             'main_content': main_content,
             }, in_action=I18nDashboardHandler.ACTION)
 
@@ -621,7 +621,7 @@ class TranslationDeletionRestHandler(utils.BaseRESTHandler):
                        if l.get('checked')]
         except (TypeError, ValueError, KeyError):
             transforms.send_json_response(
-                self, 400, 'Locales specification not as expected.')
+                self, 400, 'Language specification not as expected.')
             return []
         if not locales:
             # Nice UI message when no locales selected.
@@ -687,7 +687,7 @@ class I18nDownloadHandler(BaseDashboardExtension):
             additional_dirs=[TEMPLATES_DIR])
         self.handler.render_page({
             'page_title': self.handler.format_title(
-                'I18n Translation Download'),
+                'Translation Download'),
             'main_content': main_content,
             }, in_action=I18nDashboardHandler.ACTION)
 
@@ -982,7 +982,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
                        if l.get('checked') and l['locale'] != PSEUDO_LANGUAGE]
         except (TypeError, ValueError, KeyError):
             transforms.send_json_response(
-                self, 400, 'Locales specification not as expected.')
+                self, 400, 'Language specification not as expected.')
             return None, None, None
         if not locales:
             # Nice UI message when no locales selected.
@@ -1052,7 +1052,7 @@ class I18nUploadHandler(BaseDashboardExtension):
             extra_js_files=['upload_translations.js'],
             additional_dirs=[TEMPLATES_DIR])
         self.handler.render_page({
-            'page_title': self.handler.format_title('I18n Translation Upload'),
+            'page_title': self.handler.format_title('Translation Upload'),
             'main_content': main_content,
             }, in_action=I18nDashboardHandler.ACTION)
 
@@ -1942,7 +1942,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
             actions += [
                 {
                     'id': 'edit_18n_settings',
-                    'caption': 'Edit I18N Settings',
+                    'caption': 'Settings',
                     'href': self.handler.get_action_url(
                         'settings_i18n', extra_args={
                             'exit_url': 'dashboard?action=' + self.ACTION,
@@ -1951,7 +1951,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 ]
 
         self.handler.render_page({
-            'page_title': self.handler.format_title('I18n Workflow'),
+            'page_title': self.handler.format_title('Translation workflow'),
             'main_content': jinja2.utils.Markup(main_content),
             'sections': [{
                     'actions': actions,
@@ -1987,7 +1987,7 @@ class TranslationConsole(BaseDashboardExtension):
             main_content = self.format_readonly_message()
 
         self.handler.render_page({
-            'page_title': self.handler.format_title('I18n Workflow'),
+            'page_title': self.handler.format_title('Translation workflow'),
             'main_content': main_content,
             }, in_action=I18nDashboardHandler.ACTION)
 
