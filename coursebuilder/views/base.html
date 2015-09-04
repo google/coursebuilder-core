@@ -276,15 +276,20 @@
       <div id="gcb-footer-global" role="contentinfo">
         <div class="gcb-aux">
           <ul>
+            {% if course_info.institution.url not in (None, '', 'LINK_TO_YOUR_INSTITUTION_HERE')
+              and course_info.institution.name not in (None, '', 'Add Your Institution Here') %}
             <li>
               <a href="{{course_info.institution.url}}" target="_blank">{{course_info.institution.name}}</a>
             </li>
+            {% endif %}
+            {% if course_info.privacy_terms_url not in (None, '', 'PRIVACY_POLICY_AND_TERMS_OF_SERVICE') %}
             <li>
               <a href="{{course_info.base.privacy_terms_url}}" target="_blank">
                 {# I18N: Link at the bottom of each page to the privacy and 'Terms and Conditions' pages. #}
                 {{ gettext('Privacy & Terms') }}
               </a>
             </li>
+            {% endif %}
             {% if available_locales %}
               <li>
                 {# I18N: Text describing the locale selector. #}

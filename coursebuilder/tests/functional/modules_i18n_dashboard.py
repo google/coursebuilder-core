@@ -2681,7 +2681,7 @@ class TranslationImportExportTests(actions.TestBase):
                     num_translations += 1
                     self.assertNotEquals(msg.id, msg.string)
                     self.assertEquals(msg.id.upper() * 2, msg.string)
-            self.assertEquals(31, num_translations)
+            self.assertEquals(30, num_translations)
 
         # And verify the presence of the translated versions on actual
         # course pages.
