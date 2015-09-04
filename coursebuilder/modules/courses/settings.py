@@ -638,10 +638,10 @@ class ViewAllSettingsPermission(permissions.AbstractSchemaPermission):
         return roles.Roles.is_user_allowed(
             application_context, custom_module, VIEW_ALL_SETTINGS_PERMISSION)
 
-    def can_view(self, prop_name):
+    def can_view(self, prop_name=None):
         return True
 
-    def can_edit(self, prop_name):
+    def can_edit(self, prop_name=None):
         return False
 
 

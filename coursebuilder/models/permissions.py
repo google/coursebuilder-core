@@ -42,7 +42,7 @@ class AbstractSchemaPermission(object):
         """Indicate whether the current user satisfies this permission."""
         raise NotImplementedError()
 
-    def can_view(self, prop_name):
+    def can_view(self, prop_name=None):
         """Indicate whether users in this permission may view this setting.
 
         Args:
@@ -61,7 +61,7 @@ class AbstractSchemaPermission(object):
         """
         raise NotImplementedError()
 
-    def can_edit(self, prop_name):
+    def can_edit(self, prop_name=None):
         """Indicate whether users in this permission may edit a property.
 
         Args:
@@ -71,14 +71,6 @@ class AbstractSchemaPermission(object):
               some REST handlers to bail out early with a useful error code.
           Returns:
             boolean: True if the user may modify the field's value.
-        """
-        raise NotImplementedError()
-
-    def permits_edits(self):
-        """If a permission permits only viewing, return False.
-
-        This allows short-ciruiting logic in handlers so that users that
-        have no privileges at all can be errored out of flows early.
         """
         raise NotImplementedError()
 
@@ -139,13 +131,13 @@ class SimpleSchemaPermission(AbstractSchemaPermission):
         return roles.Roles.is_user_allowed(
             application_context, self._module, self._permission_name)
 
-    def can_view(self, prop_name):
+    def can_view(self, prop_name=None):
         if prop_name is None:
             return len(self._readable) > 0 or len(self._editable) > 0
         return (self.can_edit(prop_name) or
                 self._tree_matches(self._readable, prop_name))
 
-    def can_edit(self, prop_name):
+    def can_edit(self, prop_name=None):
         if prop_name is None:
             return len(self._editable) > 0
         return self._tree_matches(self._editable, prop_name)
@@ -162,10 +154,10 @@ class CourseAdminSchemaPermission(AbstractSchemaPermission):
     def applies_to_current_user(self, application_context):
         return roles.Roles.is_course_admin(application_context)
 
-    def can_view(self, prop_name):
+    def can_view(self, prop_name=None):
         return True
 
-    def can_edit(self, prop_name):
+    def can_edit(self, prop_name=None):
         return True
 
 
@@ -244,7 +236,7 @@ class SchemaPermissionRegistry(object):
           True iff user has read access to at least one setting.
         """
         perms = cls._get_active_permissions(app_context)
-        return len(perms) > 0
+        return any([p.can_view() for p in perms])
 
     @classmethod
     def can_edit(cls, app_context):
@@ -261,7 +253,7 @@ class SchemaPermissionRegistry(object):
           True iff user has write access to at least one setting.
         """
         perms = cls._get_active_permissions(app_context)
-        return any([p.permits_edits for p in perms])
+        return any([p.can_edit() for p in perms])
 
     @classmethod
     def build_view_checker(cls, sections):
