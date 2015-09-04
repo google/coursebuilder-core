@@ -40,13 +40,13 @@ from question_group_editor import QuestionGroupManagerAndEditor
 from question_group_editor import QuestionGroupRESTHandler
 from role_editor import RoleManagerAndEditor
 from role_editor import RoleRESTHandler
-from unit_lesson_editor import AssessmentRESTHandler
-from unit_lesson_editor import ImportCourseRESTHandler
-from unit_lesson_editor import LessonRESTHandler
-from unit_lesson_editor import LinkRESTHandler
-from unit_lesson_editor import UnitLessonEditor
-from unit_lesson_editor import UnitLessonTitleRESTHandler
-from unit_lesson_editor import UnitRESTHandler
+from modules.courses.unit_lesson_editor import AssessmentRESTHandler
+from modules.courses.unit_lesson_editor import ImportCourseRESTHandler
+from modules.courses.unit_lesson_editor import LessonRESTHandler
+from modules.courses.unit_lesson_editor import LinkRESTHandler
+from modules.courses.unit_lesson_editor import UnitLessonEditor
+from modules.courses.unit_lesson_editor import UnitLessonTitleRESTHandler
+from modules.courses.unit_lesson_editor import UnitRESTHandler
 
 import utils as dashboard_utils
 

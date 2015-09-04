@@ -48,11 +48,11 @@ from models import roles
 from models import transforms
 from modules.admin.admin import WelcomeHandler
 from modules.courses import outline
+from modules.courses.unit_lesson_editor import LessonRESTHandler
 from modules.dashboard import dashboard
 from modules.dashboard.question_editor import BaseQuestionRESTHandler
 from modules.dashboard.question_editor import McQuestionRESTHandler
 from modules.dashboard.question_editor import SaQuestionRESTHandler
-from modules.dashboard.unit_lesson_editor import LessonRESTHandler
 from modules.i18n_dashboard import i18n_dashboard
 from modules.skill_map import competency
 from modules.skill_map import constants

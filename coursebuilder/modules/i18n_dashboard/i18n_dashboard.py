@@ -60,7 +60,7 @@ from models.config import ConfigProperty
 from models.counters import PerfCounter
 from modules.courses import settings
 from modules.dashboard import dashboard
-from modules.dashboard import unit_lesson_editor
+from modules.courses import unit_lesson_editor
 from modules.oeditor import oeditor
 from tools import verify
 

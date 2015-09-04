@@ -26,7 +26,7 @@ from models import courses
 from models import custom_units
 from models import resources_display
 from modules.dashboard import dashboard
-from modules.dashboard import unit_lesson_editor
+from modules.courses import unit_lesson_editor
 from modules.dashboard import utils as dashboard_utils
 from tools import verify
 

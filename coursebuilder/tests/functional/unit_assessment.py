@@ -25,7 +25,7 @@ from controllers import utils
 from models import config
 from models import courses
 from models import models
-from modules.dashboard import unit_lesson_editor
+from modules.courses import unit_lesson_editor
 from tests.functional import actions
 from tools import verify
 
@@ -718,4 +718,3 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             self.unit_one_lesson.unit_id, self.assessment_two.unit_id))
         self.assertIn(self.assessment_two.html_content, response.body,
             msg='Private post-assessment content should be visible to admin')
-
