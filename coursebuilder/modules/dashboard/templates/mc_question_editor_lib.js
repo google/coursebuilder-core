@@ -160,29 +160,39 @@ function updateScoreInputs() {
   });
 }
 
-function updateToggleFeedbackButtons() {
-  Y.all('div.mc-choice').each(function(choiceDiv) {
-    if (!choiceDiv.hasToggleButton) {
-      addToggleFeedbackButtonToChoiceDiv(choiceDiv);
-      choiceDiv.hasToggleButton = true;
+function updateToggleFeedbackButtons(mcQuestionEditorForm) {
+  var choiceFields = mcQuestionEditorForm.getFieldByName('choices').subFields;
+  for (var i = 0; i < choiceFields.length; i++) {
+    var choiceField = choiceFields[i];
+    if (! choiceField.hasToggleButton) {
+      addToggleFeedbackButton(choiceFields[i].getFieldByName('feedback'));
+      choiceField.hasToggleButton = true;
     }
-  });
+  }
 }
 
-function addToggleFeedbackButtonToChoiceDiv(choiceDiv) {
-  var feedbackDiv = choiceDiv.one('> fieldset > div + div + div');
-  feedbackDiv.setStyle('display', 'none');
-
+function addToggleFeedbackButton(feedbackField) {
+  var feedbackDiv = Y.one(feedbackField.divEl);
   var toggleFeedbackDiv = Y.Node.create('<div class="toggle-feedback"></div>');
-  new ToggleButton(toggleFeedbackDiv, 'Show feedback', 'Hide feedback',
+  var button = new ToggleButton(toggleFeedbackDiv,
+      'Add feedback',
+      'Delete feedback',
       function() {
         feedbackDiv.setStyle('display', 'block');
       },
       function() {
+        feedbackField.setValue('');
         feedbackDiv.setStyle('display', 'none');
       }
   );
-  choiceDiv.appendChild(toggleFeedbackDiv);
+  feedbackDiv.insert(toggleFeedbackDiv, 'after');
+
+  if (feedbackField.getValue() == '') {
+    feedbackDiv.setStyle('display', 'none');
+    button.setStateA(true);
+  } else {
+    button.setStateA(false);
+  }
 }
 
 function updateSetScoresToggleButtonLabel() {
@@ -271,7 +281,9 @@ function initMcQuestionEditor(mcQuestionEditorForm) {
   initSetScoresToggleButton();
   initAlternateScoreInputs();
   updateScoreInputs();
-  updateToggleFeedbackButtons();
+  updateToggleFeedbackButtons(mcQuestionEditorForm);
+  addToggleFeedbackButton(
+      mcQuestionEditorForm.getFieldByName('defaultFeedback'));
 
   // Add click handler to the single/multiple selection widget
   Y.all('div.mc-selection input').on('click', function(e) {
@@ -284,7 +296,7 @@ function initMcQuestionEditor(mcQuestionEditorForm) {
   mcQuestionEditorForm.getFieldByName('choices').on('updated', function() {
     initAlternateScoreInputs();
     updateScoreInputs();
-    updateToggleFeedbackButtons();
+    updateToggleFeedbackButtons(mcQuestionEditorForm);
     updateSetScoresToggleButtonLabel();
   });
 }

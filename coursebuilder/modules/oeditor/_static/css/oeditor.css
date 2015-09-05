@@ -8,7 +8,7 @@ div.form > div {
   padding: 15px;
   text-align: left;
 }
-div#formContainer fieldset {
+#formContainer fieldset {
   border: none;
   border-top: solid 1px #999999;
   border-bottom: solid 1px #999999;
@@ -273,10 +273,10 @@ div.cb-editor-field div.buttonbar-div {
   margin-bottom: 10px;
   position: relative;
 }
-div.cb-editor-field div.editors-div {
+.editors-div {
   z-index: inherit;
+  height: 200px;
   min-width: 200px;
-  min-height: 200px;
 }
 div.cb-editor-field div.editors-div > div {
   /* The sub-editors must be positioned absolutely so that their size doesn't
@@ -381,6 +381,11 @@ div.set-scores-toggle,
 div.mc-bool-option {
   margin-left: 115px;
 }
+div.mc-bool-option .inputEx-description {
+  display: inline-block;
+  line-height: 16px;
+  vertical-align: top;
+}
 div.mc-container div.inputEx-label {
   width: inherit;
 }
@@ -388,6 +393,10 @@ div.mc-container div.inputEx-label {
 .mc-choice > fieldset > .inputEx-fieldWrapper {
   /* Fieldset contributes 10px so this is really the same as above */
   margin-left: 77px;
+}
+.mc-choice-feedback .editors-div,
+.mc-choice-text .editors-div {
+  height: 100px;
 }
 
 div.mc-description input {
@@ -423,7 +432,7 @@ div.mc-choice {
   margin-top: 15px;
 }
 
-div.mc-choice > div.toggle-feedback > button,
+.toggle-feedback > button,
 div.mc-choice + a {
   /* The show-feedback and the delete-choice button */
   color: #000;
@@ -432,8 +441,17 @@ div.mc-choice + a {
   padding: 3px;
   font-weight: bold;
   font-size: 10px;
-  float: left;
+  margin-top: 5px;
 }
+.mc-choice .toggle-feedback {
+  margin-left: 77px;
+}
+div.mc-choice + a {
+  /* The delete-choice button */
+  float: right;
+  margin-top: -24px;
+}
+
 
 /*
  * CSS for short answer question creation.

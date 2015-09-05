@@ -151,10 +151,7 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             'description': '',
             'multiple_selections': False,
             'choices': [
-                {'score': '1', 'text': '', 'feedback': ''},
-                {'score': '0', 'text': '', 'feedback': ''},
-                {'score': '0', 'text': '', 'feedback': ''},
-                {'score': '0', 'text': '', 'feedback': ''}
+                {'score': '1', 'text': '', 'feedback': ''}
             ]}
 
     def validate(self, question_dict, key, version, errors):
@@ -197,7 +194,8 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list',
         'inputex-hidden', 'inputex-integer', 'inputex-number']
 
-    EXTRA_JS_FILES = []
+    EXTRA_JS_FILES = ['sa_question_editor.js']
+
 
     ADDITIONAL_DIRS = []
 

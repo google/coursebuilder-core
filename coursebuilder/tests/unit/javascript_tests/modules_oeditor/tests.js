@@ -68,6 +68,50 @@ describe('maybePerformAction', function() {
   });
 });
 
+describe('setQuestionDescriptionIfEmpty', function() {
+  beforeEach(function() {
+    var that = this;
+    this.description = '';
+    this.question = 'question text';
+    // Mock the InputEx form object with two fields, description and question
+    // which are backed by this.description and this.question.
+    this.quForm = {
+      _description: {
+        getValue: function() { return that.description },
+        setValue: function(value) { that.description = value }
+      },
+      _question: {
+        getValue: function() { return that.question }
+      },
+      getFieldByName: function(name) { return this['_' + name] }
+    };
+  });
+  it('does nothing if the description is already set', function() {
+    this.description = 'already set';
+    setQuestionDescriptionIfEmpty(this.quForm);
+    expect(this.description).toEqual('already set');
+  });
+  it('sets the description to question text', function() {
+    this.question = 'question text';
+    setQuestionDescriptionIfEmpty(this.quForm);
+    expect(this.description).toEqual('question text');
+  });
+  it('sets the description to plain question text', function() {
+    this.question = '<p>question <b>text</b></p>';
+    setQuestionDescriptionIfEmpty(this.quForm);
+    expect(this.description).toEqual('question text');});
+  it('set the description to truncated question text', function() {
+    this.question =
+        'question text question text question text question text ' +
+        'question text question text question text question text ' +
+        'question text question text question text question text ' +
+        'question text question text question text question text ';
+    setQuestionDescriptionIfEmpty(this.quForm);
+    expect(this.description).toEqual(
+        'question text question text question text question text q...');
+  });
+});
+
 describe('parseJson', function() {
   it('strips off XSSI prefix if it\'s present', function() {
     var json = ')]}\'{"a": 2}';

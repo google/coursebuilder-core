@@ -1,13 +1,39 @@
 form#cb-oeditor-form > fieldset {
-  border-top: none;
   margin-top: 25px;
 }
-#cb-oeditor-form > fieldset > .inputEx-Group-legend {
+
+/* Hide headers for:
+ *   the form
+ *   the MC container
+ *   the SA container
+ *   the question weight
+ */
+#cb-oeditor-form > fieldset,
+#cb-oeditor-form .mc-container > fieldset,
+#cb-oeditor-form .sa-container > fieldset,
+#cb-oeditor-form > fieldset > .inputEx-Group:last-child > fieldset {
+  border-top: none;
+}
+#cb-oeditor-form > fieldset > .inputEx-Group-legend,
+#cb-oeditor-form .mc-container > fieldset > .inputEx-Group-legend,
+#cb-oeditor-form .sa-container > fieldset > .inputEx-Group-legend,
+#cb-oeditor-form > fieldset > .inputEx-Group:last-child > fieldset > .inputEx-Group-legend {
   display: none;
 }
-.inputEx-fieldWrapper.question-weight {
-  margin-bottom: 20px;
+
+/* Extra space before the description field */
+.mc-container > fieldset > .inputEx-fieldWrapper:last-child,
+.sa-container > fieldset > .inputEx-fieldWrapper:last-child {
+  margin-top: 50px;
 }
-.inputEx-fieldWrapper.question-weight .inputEx-label {
-  width: 90px;
+
+#cb-oeditor-form > fieldset > .inputEx-Group:last-child > fieldset .inputEx-label {
+  width: inherit;
+}
+.question-weight {
+  margin-left: 87px;
+}
+.question-weight input {
+  width: 546px;
+  margin: 0;
 }

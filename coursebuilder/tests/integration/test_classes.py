@@ -830,19 +830,25 @@ class QuestionsTest(BaseIntegrationTest):
         ).set_rte_lightbox_field(
             '.mc-container [name="description"]', 'mc question'
         ).set_rte_lightbox_field(
-            '[name="weight"]', '23'
+            '.question-weight [name="weight"]', '23'
         ).set_rte_lightbox_field(
             '.mc-container .yui-editor-editable', 'What color is the sky?',
             index=0, clear=False
         ).set_rte_lightbox_field(
             '.mc-container .yui-editor-editable', 'Blue',
             index=2, clear=False
+        ).click_rte_link(
+            'Add a choice'
         ).set_rte_lightbox_field(
             '.mc-container .yui-editor-editable', 'Red',
             index=4, clear=False
+        ).click_rte_link(
+            'Add a choice'
         ).set_rte_lightbox_field(
             '.mc-container .yui-editor-editable', 'Green',
             index=6, clear=False
+        ).click_rte_link(
+            'Add a choice'
         ).set_rte_lightbox_field(
             '.mc-container .yui-editor-editable', 'Yellow',
             index=8, clear=False
@@ -852,7 +858,7 @@ class QuestionsTest(BaseIntegrationTest):
         ).ensure_rte_lightbox_field_has_value(
             '.mc-container [name="description"]', 'mc question'
         ).ensure_rte_lightbox_field_has_value(
-            '[name="weight"]', '23'
+            '.question-weight [name="weight"]', '23'
         ).click_rte_close(
         ).click_preview(
         #---------------------------------------------- Confirm in preview
@@ -870,7 +876,7 @@ class QuestionsTest(BaseIntegrationTest):
         ).set_rte_lightbox_field(
             '.sa-container [name="description"]', 'sa question',
         ).set_rte_lightbox_field(
-            '[name="weight"]', '24',
+            '.question-weight [name="weight"]', '24',
         ).set_rte_lightbox_field(
             '.sa-container .yui-editor-editable', 'Type "woof"',
             index=0, clear=False
@@ -882,7 +888,7 @@ class QuestionsTest(BaseIntegrationTest):
         ).ensure_rte_lightbox_field_has_value(
             '.sa-container [name="description"]', 'sa question'
         ).ensure_rte_lightbox_field_has_value(
-            '[name="weight"]', '24'
+            '.question-weight [name="weight"]', '24'
         ).click_rte_close(
         ).click_preview(
         #---------------------------------------------- Confirm in preview
@@ -898,6 +904,10 @@ class QuestionsTest(BaseIntegrationTest):
 
     def test_add_question_and_solve_it(self):
         name = self.create_new_course()[0]
+
+        # Note the occasional breaks in the fluent structure of the code in this
+        # test are because Pylint has stack overflow problems with very long
+        # chained expressions
 
         page = self.load_dashboard(
             name
@@ -919,10 +929,13 @@ class QuestionsTest(BaseIntegrationTest):
             'Multiple choice question'
         ).set_answer(
             0, 'Red'
+        ).click_add_choice(
         ).set_answer(
             1, 'Blue'
+        ).click_add_choice(
         ).set_answer(
             2, 'Yellow'
+        ).click_add_choice(
         ).set_answer(
             3, 'Pink'
         ).click_save(
@@ -959,7 +972,7 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_rte_add_custom_tag(
             'Question'
         ).set_rte_lightbox_field(
-            'input[name=weight]', 1
+            '.question-weight input[name=weight]', 1
         ).click_rte_element(
             '.select-container [name="quid"] option:nth-child(2)'
         ).click_rte_save(
@@ -977,14 +990,16 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_rte_add_custom_tag(
             'Question'
         ).set_rte_lightbox_field(
-            'input[name=weight]', 1
+            '.question-weight input[name=weight]', 1
         ).click_rte_element(
             '.select-container [name="quid"] option:nth-child(2)'
         ).click_rte_save(
         ).click_save(
         ).click_close(
         #---------------------------------------------- Assessment pre (ID 4)
-        ).click_add_assessment(
+        )
+
+        page = page.click_add_assessment(
         ).set_title(
             'Pre-Assessment'
         ).set_status(
@@ -995,7 +1010,7 @@ class QuestionsTest(BaseIntegrationTest):
             'Question',
             pageobjects.AddAssessment.INDEX_CONTENT
         ).set_rte_lightbox_field(
-            'input[name=weight]', 1
+            '.question-weight input[name=weight]', 1
         ).click_rte_element(
             '.select-container [name="quid"] option:nth-child(2)'
         ).click_rte_save(
@@ -1013,7 +1028,7 @@ class QuestionsTest(BaseIntegrationTest):
             'Question',
             pageobjects.AddAssessment.INDEX_CONTENT
         ).set_rte_lightbox_field(
-            'input[name=weight]', 1
+            '.question-weight input[name=weight]', 1
         ).click_rte_element(
             '.select-container [name="quid"] option:nth-child(2)'
         ).click_rte_save(

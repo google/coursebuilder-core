@@ -51,7 +51,7 @@ $(function() {
 
     var payload = JSON.parse(data['payload']);
     _env.form.setValue(payload);
-    _env.form.getFieldByName('weight').setValue(weight);
+    _env.form.getFieldByName('weight_holder').setValue({weight: weight});
 
     tabBar.find('a').show().removeClass('is-active');
     $('#cb-oeditor-form .mdl-tabs__panel').removeClass('is-active');
@@ -77,16 +77,19 @@ $(function() {
 
   function saveFormData() {
     var finishSave = $.Deferred();
-    var formData = _env.form.getValue();
     activeTab = tabBar.find('.is-active').attr('id');
 
     if (activeTab == 'select_tab') {
-      _env.form.getFieldByName('quid').setValue(formData.select_tab.quid);
+      _env.form.getFieldByName('quid').setValue(_env.form
+          .getFieldByName('select_tab').getFieldByName('quid').getValue());
       return true;
     }
 
+    setQuestionDescriptionIfEmpty(_env.form.getFieldByName(activeTab));
+
     var handlerUrl = _HANDLER_URL_TABLE[activeTab];
     var xsrfToken = xsrfTokenTable[activeTab];
+    var formData = _env.form.getValue();
 
     var requestDict = {
       xsrf_token: xsrfToken,
@@ -114,6 +117,11 @@ $(function() {
 
     var key = JSON.parse(data.payload).key;
     _env.form.getFieldByName('quid').setValue(key);
+
+    // Copy the weight into its top-level field
+    var weight = _env.form.getFieldByName('weight_holder').getValue().weight;
+    _env.form.getFieldByName('weight').setValue(weight);
+
     finishSave.resolve();
   }
 
@@ -154,13 +162,6 @@ $(function() {
         initMcQuestionEditor(_env.form.getFieldByName('mc_tab'));
     });
     _env.onSaveClick = saveFormData;
-
-    // Adjust class name position because InputEx doesn't let us put it where we
-    // need it
-    $('.question-weight')
-        .removeClass('question-weight')
-        .closest('.inputEx-fieldWrapper')
-        .addClass('question-weight');
   }
 
   initQuestionsPopup();

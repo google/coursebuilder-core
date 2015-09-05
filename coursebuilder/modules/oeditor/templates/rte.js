@@ -160,6 +160,7 @@ function bindEditorField(Y) {
     }
 
     this.editor.render();
+    this.setValue('');
   }
   RichTextEditor.prototype.EXTRA_CSS =
     '::-webkit-scrollbar {' +
@@ -497,7 +498,7 @@ function bindEditorField(Y) {
     // Bind the resizer
     new Y.YUI2.util.Resize(this.editorsDiv, {
       handles: ['br'],
-      minHeight: 200,
+      minHeight: 100,
       minWidth: 200,
       proxy: true,
       setSize: false

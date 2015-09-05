@@ -159,6 +159,22 @@ function maybePerformAction(decider, action) {
   }
 }
 
+function setQuestionDescriptionIfEmpty(quForm) {
+  var descriptionField = quForm.getFieldByName('description');
+  var description = descriptionField.getValue();
+  if (description !== null && description.trim() !== '') {
+    return;
+  }
+  var questionField = quForm.getFieldByName('question');
+  var questionText = $('<div></div>').html(questionField.getValue()).text();
+  var maxSize = 60;
+  var truncated = questionText.length <= maxSize
+      ? questionText
+      : (questionText.slice(0, maxSize - 3) + '...')
+
+  descriptionField.setValue(truncated);
+}
+
 /**
  * Compare two JS objects for equality by value.
  */

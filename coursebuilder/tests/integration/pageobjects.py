@@ -869,6 +869,10 @@ class MultipleChoiceEditorPage(QuestionEditorPage):
     def click_allow_multiple_selections(self):
         raise NotImplementedError
 
+    def click_add_choice(self):
+        self.find_element_by_link_text('Add a choice').click()
+        return self
+
 
 class ShortAnswerEditorPage(QuestionEditorPage):
     """Page object for editing short answer questions."""
@@ -1037,6 +1041,12 @@ class CourseContentElement(DashboardEditor):
     def click_rte_element(self, css_selector):
         self._ensure_rte_iframe_ready_and_switch_to_it()
         self.find_element_by_css_selector(css_selector).click()
+        self._tester.driver.switch_to_default_content()
+        return self
+
+    def click_rte_link(self, link_name):
+        self._ensure_rte_iframe_ready_and_switch_to_it()
+        self.find_element_by_link_text(link_name).click()
         self._tester.driver.switch_to_default_content()
         return self
 

@@ -128,10 +128,6 @@ class ResourceSAQuestion(ResourceQuestionBase):
 
         sa_question.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
-        sa_question.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True,
-            extra_schema_dict_values={'className': 'sa-description'},
-            description=messages.QUESTION_DESCRIPTION))
         cls._add_html_field_to(
             sa_question, 'question', 'Question', 'sa-question',
             supportCustomTags)
@@ -187,6 +183,11 @@ class ResourceSAQuestion(ResourceQuestionBase):
 
         sa_question.add_property(graders_array)
 
+        sa_question.add_property(schema_fields.SchemaField(
+            'description', 'Description', 'string', optional=True,
+            extra_schema_dict_values={'className': 'sa-description'},
+            description=messages.QUESTION_DESCRIPTION))
+
         return sa_question
 
 
@@ -205,10 +206,6 @@ class ResourceMCQuestion(ResourceQuestionBase):
             description='multiple choice question',
             extra_schema_dict_values={'className': 'mc-container'})
 
-        mc_question.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True,
-            extra_schema_dict_values={'className': 'mc-description'},
-            description=messages.QUESTION_DESCRIPTION))
         mc_question.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         cls._add_html_field_to(
@@ -265,6 +262,11 @@ class ResourceMCQuestion(ResourceQuestionBase):
                 'listRemoveLabel': 'Delete choice'})
 
         mc_question.add_property(choices_array)
+
+        mc_question.add_property(schema_fields.SchemaField(
+            'description', 'Description', 'string', optional=True,
+            extra_schema_dict_values={'className': 'mc-description'},
+            description=messages.QUESTION_DESCRIPTION))
 
         return mc_question
 

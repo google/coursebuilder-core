@@ -188,6 +188,8 @@ class QuestionTag(tags.BaseTag):
             'quid', None, 'string', hidden=True, optional=True, i18n=False))
         reg.add_property(schema_fields.SchemaField(
             'qu_type', None, 'string', hidden=True, optional=True, i18n=False))
+        reg.add_property(schema_fields.SchemaField(
+            'weight', None, 'number', hidden=True, optional=True, i18n=False))
 
         select_schema = schema_fields.FieldRegistry(
             'Select',
@@ -219,13 +221,21 @@ class QuestionTag(tags.BaseTag):
         reg.add_sub_registry('sa_tab', registry=sa_schema)
         reg.add_sub_registry('select_tab', registry=select_schema)
 
-        reg.add_property(
+        # TODO(jorr): This trick of putting a second weight field in here is
+        # needed only because FieldRegistry.get_json_schema_dict() outputs all
+        # top-level fields before the subregistries. Fix that and do a thorough
+        # audit of its impact on other OEditor forms' layout.
+        weight_holder = schema_fields.FieldRegistry('Weight Holder')
+        weight_holder.add_property(
             schema_fields.SchemaField(
                 'weight', 'Weight', 'number', optional=True, i18n=False,
                 extra_schema_dict_values={
                     'value': '1',
-                    'className': 'question-weight inputEx-Field'},
+                    'className': 'question-weight'},
                 description='The number of points for a correct answer.'))
+
+        reg.add_sub_registry(
+            'weight_holder', registry=weight_holder)
 
         return reg
 
