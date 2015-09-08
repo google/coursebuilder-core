@@ -52,7 +52,7 @@ module.exports = function(config) {
       },
       'modules/dashboard/templates/mc_question_editor_lib.js',
       'modules/dashboard/resources/js/view.js',
-      'modules/dashboard/resources/js/role_editor.js',
+      'modules/dashboard/templates/role_editor.js',
     ],
     exclude: ['**/karma.conf.js'],
     frameworks: ['jasmine-jquery', 'jasmine'],
