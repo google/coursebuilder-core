@@ -301,7 +301,11 @@ class RawAnswersDataSource(data_sources.SynchronousQuery,
             for answer in answers:
                 if answer.question_id in mc_choices:
                     choices = mc_choices[answer.question_id]
-                    given_answers = [choices[i] for i in answer.answers]
+                    given_answers = []
+                    for i in answer.answers:
+                        given_answers.append(
+                            choices[i] if i < len(choices)
+                            else '[deleted choice]')
                 else:
                     given_answers = answer.answers
                     if not isinstance(given_answers, list):
