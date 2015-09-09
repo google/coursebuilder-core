@@ -437,7 +437,8 @@ function bindEditorField(Y) {
 
   EditorField.prototype.setOptions = function(options) {
     EditorField.superclass.setOptions.call(this, options);
-    this.options = options;
+    // Don't call this field options as this conflicts with a name in superclass
+    this._options = options;
     this.allowResizeWidth = !isNewFormLayout();
   };
   EditorField.prototype.renderComponent = function() {
@@ -468,7 +469,7 @@ function bindEditorField(Y) {
     this.previewDiv = this.fieldContainer.querySelector('.preview-div');
 
     this.htmlEditor = new HtmlEditor(this.htmlDiv);
-    this.richTextEditor = new RichTextEditor(this.rteDiv, this.options);
+    this.richTextEditor = new RichTextEditor(this.rteDiv, this._options);
     this.previewEditor = new PreviewEditor(this.previewDiv);
 
     // Bind the buttons
