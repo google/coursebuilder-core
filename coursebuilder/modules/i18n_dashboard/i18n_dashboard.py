@@ -1709,7 +1709,7 @@ class TranslatableResourceCourseSettings(AbstractTranslatableResourceType):
 
     @classmethod
     def get_title(cls):
-        return 'Course Settings'
+        return 'Settings'
 
     @classmethod
     def get_resources_and_keys(cls, course):
@@ -1732,7 +1732,7 @@ class TranslatableResourceCourseComponents(AbstractTranslatableResourceType):
 
     @classmethod
     def get_title(cls):
-        return 'Course Outline'
+        return 'Create > Outline'
 
     @classmethod
     def get_resources_and_keys(cls, course):

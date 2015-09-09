@@ -246,7 +246,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
 
         expected_row_data = [
             '',
-            'Course Settings',
+            'Settings',
             'Assessments',
             'Course',
             'Data Pump',
@@ -257,7 +257,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Registration',
             'Units & lessons',
             '',
-            'Course Outline',
+            'Create > Outline',
             'Unit 1 - Test Unit',
             '1.1 Test Lesson',
             'Post Assessment',

@@ -2294,7 +2294,7 @@ class Course(object):
     def create_base_settings_schema(cls):
         """Create the registry for course properties."""
 
-        reg = schema_fields.FieldRegistry('Course Settings',
+        reg = schema_fields.FieldRegistry('Settings',
             extra_schema_dict_values={
                 'className': 'inputEx-Group new-form-layout hidden-header'})
 

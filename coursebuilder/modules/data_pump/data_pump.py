@@ -1244,7 +1244,9 @@ def register_module():
         'a new secret will be generated.  PII items with the same un-obscured '
         'value which are obscured with different values for this secret will '
         'have different values.  Most importantly, this means that joins on '
-        'fields that should be the same (e.g., user ID) will not work.')
+        'fields that should be the same (e.g., user ID) will not work. This '
+        'value will automatically be generated after all required fields are '
+        'satisfied and you click Save.')
 
     course_settings_fields = (
         lambda c: project_id,

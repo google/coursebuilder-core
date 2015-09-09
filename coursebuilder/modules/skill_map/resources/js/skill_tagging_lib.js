@@ -965,6 +965,7 @@ ListDisplay.prototype = {
     }
 
     li.addClass(this._itemClass).text(label).append(closeButton);
+    li.addClass('removable')
 
     closeButton.click(function() {
       li.remove();
