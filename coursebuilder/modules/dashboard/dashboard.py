@@ -595,25 +595,29 @@ def make_help_menu(root_group):
     menus.MenuItem(
         'documentation', 'Documentation',
         href='https://www.google.com/edu/openonline/tech/index.html',
-        can_view=anyone_can_view, group=sub_group, placement=1000, target='_blank')
+        can_view=anyone_can_view, group=sub_group, placement=1000,
+        target='_blank')
 
     menus.MenuItem(
         'videos', 'Demo videos',
         href='https://www.youtube.com/playlist?list=PLFB_aGY5EfxeltJfJZwkjqDLAW'
         'dMfSpES',
-        can_view=anyone_can_view, group=sub_group, placement=2000, target='_blank')
+        can_view=anyone_can_view, group=sub_group, placement=2000,
+        target='_blank')
 
     menus.MenuItem(
         'showcase', 'Showcase courses',
         href='https://www.google.com/edu/openonline/index.html',
-        can_view=anyone_can_view, group=sub_group, placement=3000, target='_blank')
+        can_view=anyone_can_view, group=sub_group, placement=3000,
+        target='_blank')
 
     menus.MenuItem(
         'forum', 'Support forum',
         href=(
             'https://groups.google.com/forum/?fromgroups#!categories/'
             'course-builder-forum/general-troubleshooting'),
-        can_view=anyone_can_view, group=sub_group, placement=4000, target='_blank')
+        can_view=anyone_can_view, group=sub_group, placement=4000,
+        target='_blank')
 
 
 def get_visible_courses():
