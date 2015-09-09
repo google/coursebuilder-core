@@ -286,4 +286,4 @@ def _get_outline(handler):
 def on_module_enabled():
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'outline', 'Outline', action='outline', contents=_get_outline,
-        placement=1000)
+        placement=1000, sub_group_name='pinned')

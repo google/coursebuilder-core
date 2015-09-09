@@ -103,29 +103,24 @@ def register_tabs():
         contents=analytics.TabRenderer([
             labels_on_students,
             student_progress,
-            enrollment_assessment]),
-        placement=1000)
+            enrollment_assessment]))
     dashboard.DashboardHandler.add_sub_nav_mapping(
         ANALYTICS, 'questions', 'Questions', action='analytics_questions',
         contents=analytics.TabRenderer([
             multiple_choice_question,
-            question_answers]),
-        placement=2000)
+            question_answers]))
     dashboard.DashboardHandler.add_sub_nav_mapping(
         ANALYTICS, 'assessments', 'Assessments', action='analytics_assessments',
-        contents=analytics.TabRenderer([assessment_difficulty]),
-        placement=3000)
+        contents=analytics.TabRenderer([assessment_difficulty]))
     dashboard.DashboardHandler.add_sub_nav_mapping(
         ANALYTICS, 'gradebook', 'Gradebook', action='analytics_gradebook',
-        contents=analytics.TabRenderer([gradebook_visualization]),
-        placement=5000)
+        contents=analytics.TabRenderer([gradebook_visualization]))
     dashboard.DashboardHandler.add_sub_nav_mapping(
         ANALYTICS, 'clustering', 'Clustering', action='analytics_clustering',
         contents=analytics.TabRenderer([
             clusters_visualization,
             student_vectors_visualization,
-            stats_visualization]),
-        placement=8000)
+            stats_visualization]))
 
 
 def add_actions():

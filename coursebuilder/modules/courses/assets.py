@@ -31,11 +31,6 @@ from modules.dashboard import dashboard
 from modules.dashboard import utils as dashboard_utils
 from tools import verify
 
-# Other modules which manage editable assets can add functions here to
-# list their assets on the Assets tab. The function will receive an instance
-# of DashboardHandler as an argument.
-contrib_asset_listers = []
-
 TEMPLATE_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'courses', 'views')
 
@@ -518,7 +513,7 @@ def _get_assets_activities(handler, items, name, all_paths):
 
 def _get_assets_images(handler, items, name, all_paths):
     items.append(_list_and_format_file_list(
-        handler, 'Images & documents', '/assets/img/', name, links=True,
+        handler, 'Images', '/assets/img/', name, links=True,
         upload=True, merge_local_files=True,
         edit_url_template=(
             'dashboard?action=manage_asset&type=%s&key=%s&from_action=%s'),
@@ -552,14 +547,6 @@ def _get_assets_templates(handler, items, name, all_paths):
         edit_url_template=_filer_url_template(),
         caption_if_empty='< inherited from /views/ >',
         merge_local_files=True, all_paths=all_paths))
-
-def _get_assets_contrib(handler, items, name, all_paths):
-    if not contrib_asset_listers:
-        items.append(safe_dom.Text(
-            'No assets extensions have been registered'))
-    else:
-        for asset_lister in contrib_asset_listers:
-            items.append(asset_lister(handler))
 
 def _get_tab_content(tab, handler, add_assets):
     """Renders course assets view."""
@@ -598,15 +585,16 @@ def on_module_enabled():
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'questions', 'Questions', action='edit_questions',
         contents=lambda h: _get_edit_tab(h, _get_assets_questions),
-        placement=2000)
+        placement=2000, sub_group_name='pinned')
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'edit', 'images', 'Images & documents', action='edit_images',
-        contents=lambda h: _get_edit_tab(h, _get_assets_images),
-        placement=6000)
+        'edit', 'html', 'HTML', action='edit_html',
+        contents=lambda h: _get_style_tab(h, _get_assets_html))
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'images', 'Images', action='edit_images',
+        contents=lambda h: _get_edit_tab(h, _get_assets_images))
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'labels', 'Labels', action='edit_labels',
-        contents=lambda h: _get_edit_tab(h, _get_assets_labels),
-        placement=7000)
+        contents=lambda h: _get_edit_tab(h, _get_assets_labels))
 
     # These tabs only show up if your schema is old
     dashboard.DashboardHandler.add_sub_nav_mapping(
@@ -621,22 +609,10 @@ def on_module_enabled():
     # Style tabs
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'style', 'css', 'CSS', action='style_css',
-        contents=lambda h: _get_style_tab(h, _get_assets_css),
-        placement=1000)
+        contents=lambda h: _get_style_tab(h, _get_assets_css))
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'style', 'js', 'JavaScript', action='style_js',
-        contents=lambda h: _get_style_tab(h, _get_assets_js),
-        placement=2000)
-    dashboard.DashboardHandler.add_sub_nav_mapping(
-        'style', 'html', 'HTML', action='style_html',
-        contents=lambda h: _get_style_tab(h, _get_assets_html),
-        placement=3000)
+        contents=lambda h: _get_style_tab(h, _get_assets_js))
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'style', 'templates', 'Templates', action='style_templates',
-        contents=lambda h: _get_style_tab(h, _get_assets_templates),
-        placement=4000)
-    dashboard.DashboardHandler.add_sub_nav_mapping(
-        'style', 'contrib', 'Extensions', action='style_contrib',
-        contents=lambda h: _get_style_tab(h, _get_assets_contrib),
-        placement=5000)
-
+        contents=lambda h: _get_style_tab(h, _get_assets_templates))

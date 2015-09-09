@@ -389,8 +389,9 @@ def register_module():
     announcement_handlers = [('/announcements', AnnouncementsHandler)]
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'edit', 'announcements', 'Announcements', action='edit_announcements',
-        href='announcements', placement=5000)
+        'analytics', 'announcements', 'Announcements',
+        action='edit_announcements', href='announcements', placement=1000,
+        sub_group_name='pinned')
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

@@ -66,6 +66,7 @@ from tools import verify
 
 from google.appengine.ext import db
 
+MODULE_TITLE = 'Translations'
 RESOURCES_PATH = '/modules/i18n_dashboard/resources'
 
 TEMPLATES_DIR = os.path.join(
@@ -2859,7 +2860,7 @@ def notify_module_enabled():
     TranslatableResourceRegistry.register(TranslatableResourceHtmlHooks)
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'publish', 'translations', 'Translations',
+        'publish', 'translations', MODULE_TITLE,
         action=I18nDashboardHandler.ACTION, placement=2000)
 
     dashboard.DashboardHandler.deprecated_add_external_permission(
@@ -2894,7 +2895,7 @@ def notify_module_enabled():
     courses.Course.COURSE_ENV_POST_SAVE_HOOKS.append(
         I18nProgressDeferredUpdater.on_course_settings_changed)
     settings.CourseSettingsHandler.register_settings_section(
-        'i18n', 'Translations', 5000, ['i18n'])
+        'i18n', title=MODULE_TITLE)
 
     # Implementation in Babel 0.9.6 is buggy; replace with corrected version.
     pofile.denormalize = denormalize

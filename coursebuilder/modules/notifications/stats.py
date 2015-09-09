@@ -142,5 +142,4 @@ def register_analytic():
         data_source_classes=[NotificationsDataSource])
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'analytics', name, title, action='analytics_notifications',
-        contents=analytics.TabRenderer([visualization]),
-        placement=10000)
+        contents=analytics.TabRenderer([visualization]))

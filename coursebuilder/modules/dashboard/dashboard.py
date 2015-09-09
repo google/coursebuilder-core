@@ -161,21 +161,30 @@ class DashboardHandler(
         """Create a top level nav item."""
         group = cls.root_menu_group.get_child(name)
         if group is None:
-            menu_cls = menus.MenuItem if kwargs.get('href') else menus.MenuGroup
-            menu_cls(name, title, group=cls.root_menu_group, **kwargs)
+            is_link = kwargs.get('href')
+            menu_cls = menus.MenuItem if is_link else menus.MenuGroup
+            group = menu_cls(name, title, group=cls.root_menu_group, **kwargs)
+            if not is_link:
+                # create the basic buckets
+                pinned = menus.MenuGroup(
+                    'pinned', None, placement=1000, group=group)
+                default = menus.MenuGroup(
+                    'default', None, placement=2000, group=group)
+                advanced = menus.MenuGroup(
+                    'advanced', None, placement=3000, group=group)
 
     @classmethod
     def get_nav_title(cls, action):
         item = cls.actions_to_menu_items.get(action)
         if item:
-            return item.group.title + " > " + item.title
+            return item.group.group.title + " > " + item.title
         else:
             return None
 
     @classmethod
     def add_sub_nav_mapping(
             cls, group_name, item_name, title, action=None, contents=None,
-            can_view=None, href=None, **kwargs):
+            can_view=None, href=None, sub_group_name=None, **kwargs):
         """Create a second level nav item.
 
         Args:
@@ -186,7 +195,13 @@ class DashboardHandler(
             action: A unique operation ID for
             contents: A handler which will be added as a custom get-action on
                 DashboardHandler
-
+            can_view: Pass a boolean function here if your handler has
+                additional permissions logic in it that the dashboard does not
+                check for you.  You must additionally check it in your handler.
+            sub_group_name: The sub groups 'pinned', 'default', and 'advanced'
+                exist in that order and 'default' is used by default.  You can
+                pass some other string to create a new group at the end.
+            other arguments: see common/menus.py
         """
 
         group = cls.root_menu_group.get_child(group_name)
@@ -194,11 +209,19 @@ class DashboardHandler(
             logging.critical('The group %s does not exist', group_name)
             return
 
-        item = group.get_child(item_name)
+        if sub_group_name is None:
+            sub_group_name = 'default'
+
+        sub_group = group.get_child(sub_group_name)
+        if not sub_group:
+            sub_group = menus.MenuGroup(
+                sub_group_name, None, group=group)
+
+        item = sub_group.get_child(item_name)
         if item:
             logging.critical(
                 'There is already a sub-menu item named "%s" registered in '
-                'group %s.', item_name, group_name)
+                'group %s subgroup %s.', item_name, group_name, sub_group_name)
             return
 
         if contents:
@@ -217,7 +240,7 @@ class DashboardHandler(
             return True
 
         item = menus.MenuItem(
-            item_name, title, action=action, group=group,
+            item_name, title, action=action, group=sub_group,
             can_view=combined_can_view, href=href, **kwargs)
         cls.actions_to_menu_items[action] = item
 
@@ -567,29 +590,30 @@ def make_help_menu(root_group):
     anyone_can_view = lambda x: True
 
     group = menus.MenuGroup('help', 'Help', group=root_group, placement=6000)
+    sub_group = menus.MenuGroup('default', None, group=group, placement=2000)
 
     menus.MenuItem(
         'documentation', 'Documentation',
         href='https://www.google.com/edu/openonline/tech/index.html',
-        can_view=anyone_can_view, group=group, placement=1000, target='_blank')
+        can_view=anyone_can_view, group=sub_group, placement=1000, target='_blank')
 
     menus.MenuItem(
         'videos', 'Demo videos',
         href='https://www.youtube.com/playlist?list=PLFB_aGY5EfxeltJfJZwkjqDLAW'
         'dMfSpES',
-        can_view=anyone_can_view, group=group, placement=2000, target='_blank')
+        can_view=anyone_can_view, group=sub_group, placement=2000, target='_blank')
 
     menus.MenuItem(
         'showcase', 'Showcase courses',
         href='https://www.google.com/edu/openonline/index.html',
-        can_view=anyone_can_view, group=group, placement=3000, target='_blank')
+        can_view=anyone_can_view, group=sub_group, placement=3000, target='_blank')
 
     menus.MenuItem(
         'forum', 'Support forum',
         href=(
             'https://groups.google.com/forum/?fromgroups#!categories/'
             'course-builder-forum/general-troubleshooting'),
-        can_view=anyone_can_view, group=group, placement=4000, target='_blank')
+        can_view=anyone_can_view, group=sub_group, placement=4000, target='_blank')
 
 
 def get_visible_courses():
@@ -614,8 +638,8 @@ def register_module():
 
     # pylint: disable=protected-access
     DashboardHandler.add_sub_nav_mapping(
-        'edit', 'roles', 'Roles', action='edit_roles',
-        contents=DashboardHandler._render_roles_view, placement=8000)
+        'settings', 'roles', 'Roles', action='edit_roles',
+        contents=DashboardHandler._render_roles_view)
     # pylint: enable=protected-access
 
     def on_module_enabled():

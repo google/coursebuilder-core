@@ -326,6 +326,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
         group = menus.MenuGroup(
             'admin', 'Site admin', group=root_menu_group, placement=placement)
+        sub_group = menus.MenuGroup(
+            'default', None, group=group, placement=2000)
 
         def bind(key, label, handler, href=None):
             if href:
@@ -338,7 +340,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 return can_view_admin_action(key)
 
             menu_item = menus.MenuItem(
-                key, label, action=key, can_view=can_view, group=group,
+                key, label, action=key, can_view=can_view, group=sub_group,
                 href=href, target=target)
 
             if handler:

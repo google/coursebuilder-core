@@ -104,8 +104,6 @@ def on_module_enabled():
     dashboard.DashboardHandler.add_custom_post_action(
         'admin_prefs', AdminPreferencesEditor.edit_admin_preferences)
 
-    # Keep [Admin] Preferences, About, Advanced at very end of list.
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'settings', 'admin_prefs', 'Preferences', action='settings_admin_prefs',
-        contents=AdminPreferencesEditor.edit_admin_preferences,
-        placement=9000)
+        'settings', 'admin_prefs', 'Debugging', action='settings_admin_prefs',
+        contents=AdminPreferencesEditor.edit_admin_preferences)

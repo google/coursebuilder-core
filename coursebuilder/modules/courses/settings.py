@@ -79,6 +79,11 @@ class CourseSettingsHandler(object):
         handler.redirect('/dashboard')
 
     @staticmethod
+    def get_schema_title(name):
+        return courses.Course.create_base_settings_schema().\
+            get_sub_registry(name).title
+
+    @staticmethod
     def _show_edit_settings_section(
             handler, template_values, key, section_names, exit_url=''):
         # The editor for all course settings is getting rather large.  Here,
@@ -119,53 +124,62 @@ class CourseSettingsHandler(object):
         return template_values
 
     @classmethod
-    def register_settings_section(cls, menu_sub_group_name,
-                                  menu_sub_group_title,
-                                  menu_sub_group_placement, settings_list):
+    def register_settings_section(
+        cls, settings, name=None, placement=None, title=None,
+        sub_group_name=None):
         """Register a group of settings for a module.
 
         Args:
-          menu_sub_group_name: Internal short name for menu sub group.  Must
-              be globally unique vs. all modules' settings subgroups calling
-              this function.  Choose names with lowercase/numbers/underscores;
-              e.g., 'units', 'i18n', etc.
-          menu_sub_group_title: Display name for this settings submenu.
-          menu_sub_group_placement: Relative ordering priority among modules.
-              1000 is very high; 10000 is very low.
-          settings_list: List of strings that specify paths within settings
-              in course.yaml tree.  E.g., 'course' picks the entire course
-              subtree; 'course.main_image' that subgroup of settings, and
-              'course.main_image.alt_text' just that one item.
+          settings: A string or a list of strings that specify paths within
+            settings in course.yaml tree.  E.g., 'course' picks the entire
+            course subtree; 'course.main_image' that subgroup of settings, and
+            'course.main_image.alt_text' just that one item.
+          name: Internal short name for menu sub group.  Must
+            be globally unique vs. all modules' settings subgroups calling
+            this function.  Choose names with lowercase/numbers/underscores;
+            e.g., 'units', 'i18n', etc.
+          placement: Determines ordering in the menu.  See common/menus.py.
+          title: Display name for this settings submenu.
+          sub_group_name: see dashboard.
         """
-        action_name = 'settings_%s' % menu_sub_group_name
+        if isinstance(settings, basestring):
+            settings = [settings]
+        if name is None:
+            name = settings[0]
+        if title is None:
+            title = cls.get_schema_title(settings[0])
+        if sub_group_name is None:
+            sub_group_name = 'default'
 
-        if menu_sub_group_name in cls.GROUP_SETTINGS_LISTS:
-            cls.GROUP_SETTINGS_LISTS[menu_sub_group_name].extend(settings_list)
+        action_name = 'settings_%s' % name
+
+        if name in cls.GROUP_SETTINGS_LISTS:
+            cls.GROUP_SETTINGS_LISTS[name].extend(settings)
             tab = dashboard.DashboardHandler.root_menu_group.get_child(
-                SETTINGS_TAB_NAME).get_child(menu_sub_group_name)
-            if tab.title != menu_sub_group_title:
+                SETTINGS_TAB_NAME).get_child(sub_group_name).get_child(name)
+            if tab.title != title:
                 logging.warning(
                     'Title %s of settings sub group %s does not match title '
                     '%s from earlier registration.',
-                        menu_sub_group_name, menu_sub_group_title, tab.title)
-            if tab.placement != menu_sub_group_placement:
+                        name, title, tab.title)
+            if tab.placement != placement:
                 logging.warning(
                     'Placement %d of settings sub group %s does not match '
                     'placement %d from earlier registration.',
-                        menu_sub_group_placement, menu_sub_group_title,
+                        placement, title,
                         tab.placement)
         else:
-            cls.GROUP_SETTINGS_LISTS[menu_sub_group_name] = copy.copy(
-                settings_list)
+            cls.GROUP_SETTINGS_LISTS[name] = copy.copy(settings)
             dashboard.DashboardHandler.add_sub_nav_mapping(
-                SETTINGS_TAB_NAME, menu_sub_group_name, menu_sub_group_title,
-                action=action_name, placement=menu_sub_group_placement,
+                SETTINGS_TAB_NAME, name, title,
+                action=action_name,
                 contents=(lambda h: CourseSettingsHandler._show_settings_tab(
-                    h, cls.GROUP_SETTINGS_LISTS[menu_sub_group_name])))
+                    h, cls.GROUP_SETTINGS_LISTS[name])),
+                placement=placement, sub_group_name=sub_group_name)
             dashboard.DashboardHandler.map_get_action_to_permission_checker(
                 action_name,
                 permissions.SchemaPermissionRegistry.build_view_checker(
-                    cls.GROUP_SETTINGS_LISTS[menu_sub_group_name]))
+                    cls.GROUP_SETTINGS_LISTS[name]))
 
 
 class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
@@ -671,17 +685,17 @@ def on_module_enabled(courses_custom_module, perms):
         'edit_html_hook', HtmlHookHandler.get_edit_html_hook)
 
     CourseSettingsHandler.register_settings_section(
-        'course', 'Course', 1000, ['course'])
+        'homepage', placement=1000, sub_group_name='pinned')
     CourseSettingsHandler.register_settings_section(
-        'homepage', 'Homepage', 1500, ['homepage'])
+        'course', placement=2000, sub_group_name='pinned')
     CourseSettingsHandler.register_settings_section(
-        'units', 'Units & lessons', 2000, ['unit', 'assessment'])
-    CourseSettingsHandler.register_settings_section(
-        'registration', 'Registration', 3000, ['registration'])
+        'unit', placement=3000, sub_group_name='pinned')
+    CourseSettingsHandler.register_settings_section('registration')
+    CourseSettingsHandler.register_settings_section('assessment')
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
         SETTINGS_TAB_NAME, 'advanced', 'Advanced', action='settings_advanced',
-        contents=_get_settings_advanced, placement=10000)
+        contents=_get_settings_advanced, sub_group_name='advanced')
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        SETTINGS_TAB_NAME, 'about', 'Debug info', action='settings_about',
-        contents=_get_about_course, placement=11000)
+        'help', 'about', 'Debug info', action='settings_about',
+        contents=_get_about_course, sub_group_name='advanced')

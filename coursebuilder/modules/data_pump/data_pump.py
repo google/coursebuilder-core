@@ -56,6 +56,7 @@ from google.appengine.ext import deferred
 # CourseBuilder setup strings
 XSRF_ACTION_NAME = 'data_pump'
 DASHBOARD_ACTION = 'data_pump'
+MODULE_TITLE = 'Data pump'
 
 # Connection parameters for discovering and auth to BigQuery.
 BIGQUERY_RW_SCOPE = 'https://www.googleapis.com/auth/bigquery'
@@ -1102,12 +1103,13 @@ class DashboardExtension(object):
         # Register a new Analytics sub-tab for showing data pump status and
         # start/stop buttons.
         data_pump_visualization = analytics.Visualization(
-            'data_pumps', 'Data Pumps', 'data_pump.html',
+            'data_pumps', MODULE_TITLE, 'data_pump.html',
             data_source_classes=[DataPumpJobsDataSource])
         dashboard.DashboardHandler.add_sub_nav_mapping(
-            'analytics', 'data_pump', 'Data pump', action='analytics_data_pump',
+            'analytics', 'data_pump', MODULE_TITLE,
+            action='analytics_data_pump',
             contents=analytics.TabRenderer([data_pump_visualization]),
-            placement=9000)
+             placement=1000, sub_group_name='advanced')
 
         def post_action(handler):
             cls(handler).post_data_pump()
@@ -1257,8 +1259,7 @@ def register_module():
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             DATA_PUMP_SETTINGS_SCHEMA_SECTION] += course_settings_fields
         settings.CourseSettingsHandler.register_settings_section(
-            DATA_PUMP_SETTINGS_SCHEMA_SECTION, 'Data Pump', 7000,
-            [DATA_PUMP_SETTINGS_SCHEMA_SECTION])
+            DATA_PUMP_SETTINGS_SCHEMA_SECTION, title=MODULE_TITLE)
         DashboardExtension.register()
 
     def on_module_disabled():
@@ -1269,7 +1270,7 @@ def register_module():
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
-        'Data pump', 'Pushes DB and generated content to a BigQuery project',
+        MODULE_TITLE, 'Pushes DB and generated content to a BigQuery project',
         [], [],
         notify_module_enabled=on_module_enabled,
         notify_module_disabled=on_module_disabled)

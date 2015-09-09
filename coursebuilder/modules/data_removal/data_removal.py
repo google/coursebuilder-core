@@ -44,6 +44,7 @@ from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 
 MODULE_NAME = 'data_removal'
+MODULE_TITLE = 'Data removal'
 
 # Names for course-level settings options.
 DATA_REMOVAL_SETTINGS_SECTION = 'data_removal'
@@ -757,8 +758,7 @@ def register_module():
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             DATA_REMOVAL_SETTINGS_SECTION].extend(course_settings_fields)
         settings.CourseSettingsHandler.register_settings_section(
-            DATA_REMOVAL_SETTINGS_SECTION, 'Data Removal', 8000,
-            [DATA_REMOVAL_SETTINGS_SECTION])
+            DATA_REMOVAL_SETTINGS_SECTION, title=MODULE_TITLE)
 
         # Register available cleanup policies.
         DataRemovalPolicyRegistry.register(IndefiniteRetentionPolicy)
@@ -794,7 +794,7 @@ def register_module():
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
-        'Data removal', 'Remove user data on un-registration',
+        MODULE_TITLE, 'Remove user data on un-registration',
         [(DataRemovalCronHandler.URL, DataRemovalCronHandler)],
         [(DataRemovalConfirmationHandler.URL, DataRemovalConfirmationHandler)],
         notify_module_enabled=notify_module_enabled)

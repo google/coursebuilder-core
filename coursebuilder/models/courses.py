@@ -2166,6 +2166,11 @@ class Course(object):
     # object, which will be added to the appropriate subsection.
     OPTIONS_SCHEMA_PROVIDERS = collections.defaultdict(list)
 
+    # Use this to set a human-readable name for a schema provider in the dict
+    # above.  Otherwise the name will be derived from the key.  This dict uses
+    # the same keys as above.
+    OPTIONS_SCHEMA_PROVIDER_TITLES = {}
+
     # Holds callback functions which are passed the course object after it it
     # loaded, to perform any further processing on loaded course data. An
     # instance of the newly created course is passed into each of the hook
@@ -2559,9 +2564,10 @@ class Course(object):
         for schema_section in cls.OPTIONS_SCHEMA_PROVIDERS:
             sub_registry = reg.get_sub_registry(schema_section)
             if not sub_registry:
+                schema_title = cls.OPTIONS_SCHEMA_PROVIDER_TITLES.get(
+                    schema_section, schema_section.replace('_', ' ').title())
                 sub_registry = reg.add_sub_registry(
-                    schema_section,
-                    schema_section.replace('_', ' ').title(),
+                    schema_section, schema_title,
                     extra_schema_dict_values={
                         'className': 'inputEx-Group hidden-header'
                     })

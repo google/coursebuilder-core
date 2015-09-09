@@ -18,14 +18,40 @@ __author__ = 'Nick Retallack (nretallack@google.com)'
 
 
 class BaseMenu(object):
-    """Base class for commonalities between MenuGroup and MenuItem"""
+    DEFAULT_PLACEMENT = 1000000
+
+    """Base class for commonalities between MenuGroup and MenuItem.
+
+    Args:
+      name: String key used to identify this menu item.
+      title: Human-readable name.
+      group: Menu group that this item should appear inside.
+      can_view: A function that returns True if this menu item should be
+        visible.
+      placement: Sibling menu items appear in ascending order of placement,
+        and then in alphabetical order if placement matches.  Conventionally,
+        we will use increments of 1000 initially so it is easy to place items
+        between other items later.  Defaults to one million.
+
+        Using a value for 'placement' other than DEFAULT_PLACEMENT indicates a
+        desire to get a strict ordering relative to other items which also
+        choose a specific value.  Typical values for items wanting an early
+        placement that will be in the low thousands.  Typical values for items
+        wanting a later placement must be above DEFAULT_PLACEMENT.
+
+        Since multiple modules may wish to appear first or last, and since that
+        degenerates into an arms race of picking ever-lower/higher values, it is
+        left as an exercise to the implementer to search through code to find
+        what values other modules are using if your module Just Really Has To be
+        first/last.
+    """
     def __init__(
             self, name, title, group=None, can_view=None,
             placement=None):
         self.name = name
         self.title = title
         if placement is None:
-            placement = 1000000
+            placement = self.DEFAULT_PLACEMENT
         self.placement = placement
         self._can_view = can_view
 
@@ -52,7 +78,7 @@ class MenuGroup(BaseMenu):
     def add_child(self, child):
         child.group = self
         self.children.append(child)
-        self.children.sort(key=lambda item: item.placement)
+        self.children.sort(key=lambda item: (item.placement, item.title))
 
     def remove_child(self, child):
         self.children.remove(child)

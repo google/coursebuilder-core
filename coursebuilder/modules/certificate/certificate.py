@@ -421,8 +421,7 @@ def register_analytic():
         data_source_classes=[CertificatesEarnedDataSource])
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'analytics', name, title, action='analytics_certificates_earned',
-        contents=analytics.TabRenderer([certificates_earned]),
-        placement=6000)
+        contents=analytics.TabRenderer([certificates_earned]))
 
 
 class CertificateAggregator(

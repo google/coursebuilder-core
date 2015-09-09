@@ -105,11 +105,11 @@ class PeerReviewStatsSource(data_sources.SynchronousQuery):
 def register_analytic():
     data_sources.Registry.register(PeerReviewStatsSource)
     name = 'peer_review'
-    title = 'Peer review'
+    title = 'Peer review assignments'
     peer_review = analytics.Visualization(
         name, title, 'stats.html',
         data_source_classes=[PeerReviewStatsSource])
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'analytics', name, title, action='analytics_peer_review',
         contents=analytics.TabRenderer([peer_review]),
-        placement=7000)
+        placement=2000, sub_group_name='advanced')

@@ -253,7 +253,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Data Removal',
             'Homepage',
             'Translations',
-            'Invitation',
+            'Invitations',
             'Registration',
             'Units & lessons',
             '',

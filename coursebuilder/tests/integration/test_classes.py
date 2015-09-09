@@ -623,7 +623,7 @@ class AdminTests(BaseIntegrationTest):
         # Test Upload asset
         self.load_dashboard(name).click_edit(
         ).click_sub_tab(
-            'Images & documents'
+            'Images'
         ).click_upload(
         ).click_close(
         ).verify_selected_group('edit')
@@ -678,7 +678,7 @@ class AdminTests(BaseIntegrationTest):
             name
         ).click_edit(
         ).click_sub_tab(
-            'Images & documents'
+            'Images'
         ).click_upload(
         ).select_file(
             image_file

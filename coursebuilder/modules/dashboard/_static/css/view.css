@@ -626,6 +626,15 @@ Minimal Example:
   padding-left: 45px;
 }
 
+/* sub-groups */
+.gcb-menu__sub-group {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.gcb-menu__sub-group + .gcb-menu__sub-group {
+  border-top: 1px dotted #e0e0e0;
+}
+
 /* Course Picker stuff */
 .gcb-course-picker.mdl-navigation.gcb-menu {
   padding-top: 0;

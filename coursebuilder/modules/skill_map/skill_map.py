@@ -1713,7 +1713,7 @@ def post_update_progress(course, student, lprogress, event_entity, event_key):
 def register_tabs():
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'skills_table', 'Skills', action='edit_skills_table',
-        href='modules/skill_map?action=edit_skills_table', placement=4000)
+        href='modules/skill_map?action=edit_skills_table')
 
     # analytics tab for skill competency histograms grouped by unit
     skill_competencies = analytics.Visualization(
@@ -1725,8 +1725,7 @@ def register_tabs():
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'analytics', 'skill_competencies', 'Skill competencies',
         action='analytics_skill_competencies',
-        contents=analytics.TabRenderer([skill_competencies]),
-        placement=3500)
+        contents=analytics.TabRenderer([skill_competencies]))
 
     skill_map_visualization = analytics.Visualization(
         'skill_map',
@@ -1736,8 +1735,7 @@ def register_tabs():
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'analytics', 'skill_map', 'Skill map', action='analytics_skill_map',
-        contents=analytics.TabRenderer([skill_map_visualization]),
-        placement=4000)
+        contents=analytics.TabRenderer([skill_map_visualization]))
 
 
 def lesson_rest_handler_schema_load_hook(lesson_field_registry):

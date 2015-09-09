@@ -344,11 +344,6 @@ class ResourceCourseSettings(resource.AbstractResourceHandler):
 
     TYPE = 'course_settings'
 
-    SETTING_TO_ACTION = {
-        'assessment': 'settings_unit',
-        'invitation': 'settings_registration',
-    }
-
     @classmethod
     def get_resource(cls, course, key):
         entire_schema = course.create_settings_schema()
@@ -376,7 +371,7 @@ class ResourceCourseSettings(resource.AbstractResourceHandler):
 
     @classmethod
     def get_edit_url(cls, key):
-        action = cls.SETTING_TO_ACTION.get(key, 'settings_{}'.format(key))
+        action = 'settings_{}'.format(key)
         return 'dashboard?action={}'.format(action)
 
 
