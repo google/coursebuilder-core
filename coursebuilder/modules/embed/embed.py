@@ -31,7 +31,7 @@ network communication.
 
 To get started writing embeds, see AbstractEmbed. For an example, see
 _ExampleEmbed (and _ExampleHandler, which renders the stateful, dynamic
-embedded content).
+embedded content). Handlers for your embedded content extend BaseHandler.
 
 Known gaps:
 
@@ -157,6 +157,8 @@ class AbstractEmbed(object):
     """Abstract parent class for Embeds, which define embeddable types.
 
     See _ExampleEmbed|Handler below for a reference implementation.
+    Additionally, your handlers that serve embedded content must inherit from
+    BaseHandler.
     """
 
     # TODO(johncox): add method for generating HTML embed snippet once we have
@@ -182,6 +184,17 @@ class AbstractEmbed(object):
     def get_redirect_url(cls, unused_handler):
         """Given dispatch handler, returns URL of resource we 302 to."""
         raise NotImplementedError
+
+
+class BaseHandler(utils.BaseHandler):
+    """Base class for handlers that serve embedded content.
+
+    All your handlers should inherit from this class.
+    """
+
+    def before_method(self, unused_verb, unused_path):
+        # Explicitly tell browsers this content may be framed.
+        self.response.headers['X-Frame-Options'] = 'ALLOWALL'
 
 
 class Registry(object):
@@ -411,7 +424,7 @@ class _ExampleEmbed(AbstractEmbed):
             urllib.urlencode(query))
 
 
-class _ExampleHandler(utils.BaseHandler):
+class _ExampleHandler(BaseHandler):
     """Reference implementation of a handler for an Embed."""
 
     def get(self):

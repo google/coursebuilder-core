@@ -106,6 +106,9 @@ class ExampleEmbedAndHandlerV1Test(actions.TestBase):
     def assert_current_user_not_enrolled(self):
         self.assertFalse(bool(self.get_student_for_current_user()))
 
+    def assert_expected_headers_present(self, headers):
+        self.assertEquals(headers.get('X-Frame-Options'), 'ALLOWALL')
+
     def get_student_for_current_user(self):
         user = users.get_current_user()
         assert user
@@ -126,6 +129,7 @@ class ExampleEmbedAndHandlerV1Test(actions.TestBase):
 
         response = self.testapp.get(redirect_url)
 
+        self.assert_expected_headers_present(response.headers)
         self.assertEquals(200, response.status_code)
         # Required for frame resizing.
         self.assertIn(embed._EMBED_CHILD_JS_URL, response.body)
