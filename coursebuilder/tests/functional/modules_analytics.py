@@ -1728,7 +1728,7 @@ class GradebookCsvTests(actions.TestBase):
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace(self.NAMESPACE)
         self.q_a_id = models.QuestionEntity(
-            data='{"description": "\u9959", "question": "aa"}').put().id()
+            data=u'{"description": "\u9959", "question": "aa"}').put().id()
         self.q_b_id = models.QuestionEntity(
             data='{"description": "b", "question": "aa"}').put().id()
         self.q_c_id = models.QuestionEntity(
