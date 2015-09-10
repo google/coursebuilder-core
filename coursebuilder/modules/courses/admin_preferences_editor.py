@@ -100,6 +100,11 @@ class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):
         pass
 
 
+def get_namespaced_handlers():
+    return [
+        (AdminPreferencesRESTHandler.URI, AdminPreferencesRESTHandler)
+    ]
+
 def on_module_enabled():
     dashboard.DashboardHandler.add_custom_post_action(
         'admin_prefs', AdminPreferencesEditor.edit_admin_preferences)

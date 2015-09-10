@@ -659,6 +659,13 @@ class ViewAllSettingsPermission(permissions.AbstractSchemaPermission):
         return False
 
 
+def get_namespaced_handlers():
+    return [
+        (CourseSettingsRESTHandler.URI, CourseSettingsRESTHandler),
+        (HtmlHookRESTHandler.URI, HtmlHookRESTHandler),
+    ]
+
+
 def on_module_enabled(courses_custom_module, perms):
     global custom_module  # pylint: disable=global-statement
     custom_module = courses_custom_module

@@ -29,6 +29,7 @@ from modules.courses import admin_preferences_editor
 from modules.courses import assets
 from modules.courses import outline
 from modules.courses import settings
+from modules.courses import unit_lesson_editor
 from tools import verify
 
 custom_module = None
@@ -58,6 +59,7 @@ def register_module():
         assets.on_module_enabled()
         admin_preferences_editor.on_module_enabled()
         settings.on_module_enabled(custom_module, permissions)
+        unit_lesson_editor.on_module_enabled()
 
         roles.Roles.register_permissions(custom_module, permissions_callback)
 
@@ -82,12 +84,10 @@ def register_module():
         ('/student/home', utils.StudentProfileHandler),
         ('/student/unenroll', utils.StudentUnenrollHandler),
         ('/unit', lessons.UnitHandler),
-        (settings.CourseSettingsRESTHandler.URI,
-         settings.CourseSettingsRESTHandler),
-        (settings.HtmlHookRESTHandler.URI, settings.HtmlHookRESTHandler),
-        (admin_preferences_editor.AdminPreferencesRESTHandler.URI,
-         admin_preferences_editor.AdminPreferencesRESTHandler),
-    ]
+        ]
+    courses_routes += admin_preferences_editor.get_namespaced_handlers()
+    courses_routes += settings.get_namespaced_handlers()
+    courses_routes += unit_lesson_editor.get_namespaced_handlers()
     courses_routes += student_labels.get_namespaced_handlers()
 
     global custom_module  # pylint: disable=global-statement

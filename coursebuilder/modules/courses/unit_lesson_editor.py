@@ -21,15 +21,15 @@ import logging
 import urllib
 
 from common import utils as common_utils
+from common import crypto
 from controllers import sites
-from controllers.utils import ApplicationHandler
-from controllers.utils import BaseRESTHandler
-from controllers.utils import XsrfTokenManager
+from controllers import utils
 from models import courses
 from models import resources_display
 from models import custom_units
 from models import roles
 from models import transforms
+from modules.dashboard import dashboard
 from modules.oeditor import oeditor
 from tools import verify
 
@@ -54,8 +54,8 @@ class CourseOutlineRights(object):
         return cls.can_edit(handler)
 
 
-class UnitLessonEditor(ApplicationHandler):
-    """An editor for the unit and lesson titles."""
+class UnitLessonEditor(object):
+    """Namespace for functions handling action callbacks from Dashboard."""
 
     HIDE_ACTIVITY_ANNOTATIONS = [
         (['properties', 'activity_title', '_inputex'], {'_type': 'hidden'}),
@@ -63,21 +63,64 @@ class UnitLessonEditor(ApplicationHandler):
         (['properties', 'activity', '_inputex'], {'_type': 'hidden'}),
     ]
 
-    def get_import_course(self):
+    ACTION_GET_IMPORT_COURSE = 'import_course'
+    ACTION_POST_ADD_UNIT = 'add_unit'
+    ACTION_GET_EDIT_UNIT = 'edit_unit'
+    ACTION_POST_ADD_LESSON = 'add_lesson'
+    ACTION_GET_EDIT_LESSON = 'edit_lesson'
+    ACTION_GET_IN_PLACE_LESSON_EDITOR = 'in_place_lesson_editor'
+    ACTION_POST_ADD_LINK = 'add_link'
+    ACTION_GET_EDIT_LINK = 'edit_link'
+    ACTION_POST_ADD_ASSESSMENT = 'add_assessment'
+    ACTION_GET_EDIT_ASSESSMENT = 'edit_assessment'
+    ACTION_POST_ADD_CUSTOM_UNIT = 'add_custom_unit'
+    ACTION_GET_EDIT_CUSTOM_UNIT = 'edit_custom_unit'
+    ACTION_POST_SET_DRAFT_STATUS = 'set_draft_status'
+
+    @classmethod
+    def on_module_enabled(cls):
+        for action, callback in (
+            (cls.ACTION_GET_IMPORT_COURSE, cls.get_import_course),
+            (cls.ACTION_POST_ADD_UNIT, cls.post_add_unit),
+            (cls.ACTION_GET_EDIT_UNIT, cls.get_edit_unit),
+            (cls.ACTION_POST_ADD_LESSON, cls.post_add_lesson),
+            (cls.ACTION_GET_EDIT_LESSON, cls.get_edit_lesson),
+            (cls.ACTION_GET_IN_PLACE_LESSON_EDITOR,
+             cls.get_in_place_lesson_editor),
+            (cls.ACTION_POST_ADD_LINK, cls.post_add_link),
+            (cls.ACTION_GET_EDIT_LINK, cls.get_edit_link),
+            (cls.ACTION_POST_ADD_ASSESSMENT, cls.post_add_assessment),
+            (cls.ACTION_GET_EDIT_ASSESSMENT, cls.get_edit_assessment),
+            (cls.ACTION_POST_ADD_CUSTOM_UNIT, cls.post_add_custom_unit),
+            (cls.ACTION_GET_EDIT_CUSTOM_UNIT, cls.get_edit_custom_unit),
+            (cls.ACTION_POST_SET_DRAFT_STATUS, cls.post_set_draft_status),
+            ):
+
+            if callback.__name__.startswith('get_'):
+                dashboard.DashboardHandler.add_custom_get_action(
+                    action, callback)
+            elif callback.__name__.startswith('post_'):
+                dashboard.DashboardHandler.add_custom_post_action(
+                    action, callback)
+            else:
+                raise ValueError('Callback names must start with get_ or post_')
+
+    @classmethod
+    def get_import_course(cls, handler):
         """Shows setup form for course import."""
 
         template_values = {}
-        template_values['page_title'] = self.format_title('Import Course')
+        template_values['page_title'] = handler.format_title('Import Course')
         annotations = ImportCourseRESTHandler.SCHEMA_ANNOTATIONS_DICT()
         if not annotations:
             template_values['main_content'] = 'No courses to import from.'
-            self.render_page(template_values)
+            handler.render_page(template_values)
             return
 
-        exit_url = self.canonicalize_url('/dashboard')
-        rest_url = self.canonicalize_url(ImportCourseRESTHandler.URI)
+        exit_url = handler.canonicalize_url('/dashboard')
+        rest_url = handler.canonicalize_url(ImportCourseRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
-            self,
+            handler,
             ImportCourseRESTHandler.SCHEMA_JSON,
             annotations,
             None, rest_url, exit_url,
@@ -86,16 +129,17 @@ class UnitLessonEditor(ApplicationHandler):
             required_modules=ImportCourseRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
-        template_values['page_title'] = self.format_title('Import Course')
+        template_values['page_title'] = handler.format_title('Import Course')
         template_values['main_content'] = form_html
-        self.render_page(template_values)
+        return template_values
 
-    def post_add_lesson(self):
+    @classmethod
+    def post_add_lesson(cls, handler):
         """Adds new lesson to a first unit of the course."""
-        course = courses.Course(self)
+        course = courses.Course(handler)
         target_unit = None
-        if self.request.get('unit_id'):
-            target_unit = course.find_unit_by_id(self.request.get('unit_id'))
+        if handler.request.get('unit_id'):
+            target_unit = course.find_unit_by_id(handler.request.get('unit_id'))
         else:
             for unit in course.get_units():
                 if unit.type == verify.UNIT_TYPE_UNIT:
@@ -105,80 +149,85 @@ class UnitLessonEditor(ApplicationHandler):
             lesson = course.add_lesson(target_unit)
             course.save()
             # TODO(psimakov): complete 'edit_lesson' view
-            self.redirect(self.get_action_url(
+            handler.redirect(handler.get_action_url(
                 'edit_lesson', key=lesson.lesson_id,
                 extra_args={'is_newly_created': 1}))
         else:
-            self.redirect('/dashboard')
+            handler.redirect('/dashboard')
 
-    def post_add_unit(self):
+    @classmethod
+    def post_add_unit(cls, handler):
         """Adds new unit to a course."""
-        course = courses.Course(self)
+        course = courses.Course(handler)
         unit = course.add_unit()
         course.save()
-        self.redirect(self.get_action_url(
+        handler.redirect(handler.get_action_url(
             'edit_unit', key=unit.unit_id, extra_args={'is_newly_created': 1}))
 
-    def post_add_link(self):
+    @classmethod
+    def post_add_link(cls, handler):
         """Adds new link to a course."""
-        course = courses.Course(self)
+        course = courses.Course(handler)
         link = course.add_link()
         link.href = ''
         course.save()
-        self.redirect(self.get_action_url(
+        handler.redirect(handler.get_action_url(
             'edit_link', key=link.unit_id, extra_args={'is_newly_created': 1}))
 
-    def post_add_assessment(self):
+    @classmethod
+    def post_add_assessment(cls, handler):
         """Adds new assessment to a course."""
-        course = courses.Course(self)
+        course = courses.Course(handler)
         assessment = course.add_assessment()
         course.save()
-        self.redirect(self.get_action_url(
+        handler.redirect(handler.get_action_url(
             'edit_assessment', key=assessment.unit_id,
             extra_args={'is_newly_created': 1}))
 
-    def post_add_custom_unit(self):
+    @classmethod
+    def post_add_custom_unit(cls, handler):
         """Adds a custom unit to a course."""
-        course = courses.Course(self)
-        custom_unit_type = self.request.get('unit_type')
+        course = courses.Course(handler)
+        custom_unit_type = handler.request.get('unit_type')
         custom_unit = course.add_custom_unit(custom_unit_type)
         course.save()
-        self.redirect(self.get_action_url(
+        handler.redirect(handler.get_action_url(
             'edit_custom_unit', key=custom_unit.unit_id,
             extra_args={'is_newly_created': 1,
                         'unit_type': custom_unit_type}))
 
-    def post_set_draft_status(self):
+    @classmethod
+    def post_set_draft_status(cls, handler):
         """Sets the draft status of a course component.
 
         Only works with CourseModel13 courses, but the REST handler
         is only called with this type of courses.
         """
-        key = self.request.get('key')
-        if not CourseOutlineRights.can_edit(self):
+        key = handler.request.get('key')
+        if not CourseOutlineRights.can_edit(handler):
             transforms.send_json_response(
-                self, 401, 'Access denied.', {'key': key})
+                handler, 401, 'Access denied.', {'key': key})
             return
 
-        course = courses.Course(self)
-        component_type = self.request.get('type')
+        course = courses.Course(handler)
+        component_type = handler.request.get('type')
         if component_type == 'unit':
             course_component = course.find_unit_by_id(key)
         elif component_type == 'lesson':
             course_component = course.find_lesson_by_id(None, key)
         else:
             transforms.send_json_response(
-                self, 401, 'Invalid key.', {'key': key})
+                handler, 401, 'Invalid key.', {'key': key})
             return
 
-        set_draft = self.request.get('set_draft')
+        set_draft = handler.request.get('set_draft')
         if set_draft == '1':
             set_draft = True
         elif set_draft == '0':
             set_draft = False
         else:
             transforms.send_json_response(
-                self, 401, 'Invalid set_draft value, expected 0 or 1.',
+                handler, 401, 'Invalid set_draft value, expected 0 or 1.',
                 {'set_draft': set_draft}
             )
             return
@@ -187,7 +236,7 @@ class UnitLessonEditor(ApplicationHandler):
         course.save()
 
         transforms.send_json_response(
-            self,
+            handler,
             200,
             'Draft status set to %s.' % (
                 resources_display.DRAFT_TEXT if set_draft else
@@ -198,8 +247,9 @@ class UnitLessonEditor(ApplicationHandler):
         )
         return
 
+    @classmethod
     def _render_edit_form_for(
-        self, rest_handler_cls, title, additional_dirs=None,
+        cls, handler, rest_handler_cls, title, additional_dirs=None,
         annotations_dict=None, delete_xsrf_token='delete-unit',
         extra_js_files=None, extra_css_files=None, schema=None):
         """Renders an editor form for a given REST handler class."""
@@ -212,20 +262,20 @@ class UnitLessonEditor(ApplicationHandler):
             if not annotations_dict:
                 annotations_dict = rest_handler_cls.SCHEMA_ANNOTATIONS_DICT
 
-        key = self.request.get('key')
+        key = handler.request.get('key')
 
         extra_args = {}
-        if self.request.get('is_newly_created'):
+        if handler.request.get('is_newly_created'):
             extra_args['is_newly_created'] = 1
 
-        exit_url = self.canonicalize_url('/dashboard')
-        rest_url = self.canonicalize_url(rest_handler_cls.URI)
+        exit_url = handler.canonicalize_url('/dashboard')
+        rest_url = handler.canonicalize_url(rest_handler_cls.URI)
         delete_url = '%s?%s' % (
-            self.canonicalize_url(rest_handler_cls.URI),
+            handler.canonicalize_url(rest_handler_cls.URI),
             urllib.urlencode({
                 'key': key,
                 'xsrf_token': cgi.escape(
-                    self.create_xsrf_token(delete_xsrf_token))
+                    handler.create_xsrf_token(delete_xsrf_token))
                 }))
 
         def extend_list(target_list, ext_name):
@@ -238,55 +288,61 @@ class UnitLessonEditor(ApplicationHandler):
             return target_list
 
         form_html = oeditor.ObjectEditor.get_html_for(
-            self,
+            handler,
             schema_json,
             annotations_dict,
             key, rest_url, exit_url,
             extra_args=extra_args,
             delete_url=delete_url, delete_method='delete',
-            read_only=not self.app_context.is_editable_fs(),
+            read_only=not handler.app_context.is_editable_fs(),
             required_modules=rest_handler_cls.REQUIRED_MODULES,
             additional_dirs=extend_list(additional_dirs, 'ADDITIONAL_DIRS'),
             extra_css_files=extend_list(extra_css_files, 'EXTRA_CSS_FILES'),
             extra_js_files=extend_list(extra_js_files, 'EXTRA_JS_FILES'))
 
         template_values = {}
-        template_values['page_title'] = self.format_title('Edit %s' % title)
+        template_values['page_title'] = handler.format_title('Edit %s' % title)
         template_values['main_content'] = form_html
-        self.render_page(template_values, in_action='outline')
+        return template_values
 
-    def get_edit_unit(self):
+    @classmethod
+    def get_edit_unit(cls, handler):
         """Shows unit editor."""
-        self._render_edit_form_for(
-            UnitRESTHandler, 'Unit',
+        return cls._render_edit_form_for(
+            handler, UnitRESTHandler, 'Unit',
             annotations_dict=UnitRESTHandler.get_annotations_dict(
-                courses.Course(self), int(self.request.get('key'))))
+                courses.Course(handler), int(handler.request.get('key'))))
 
-    def get_edit_custom_unit(self):
+    @classmethod
+    def get_edit_custom_unit(cls, handler):
         """Shows custom_unit_editor."""
-        custom_unit_type = self.request.get('unit_type')
+        custom_unit_type = handler.request.get('unit_type')
         custom_unit = custom_units.UnitTypeRegistry.get(custom_unit_type)
         rest_handler = custom_unit.rest_handler
-        self._render_edit_form_for(
+        return cls._render_edit_form_for(
+            handler,
             rest_handler,
             custom_unit.name,
             annotations_dict=rest_handler.get_schema_annotations_dict(
-                courses.Course(self)))
+                courses.Course(handler)))
 
-    def get_edit_link(self):
+    @classmethod
+    def get_edit_link(cls, handler):
         """Shows link editor."""
-        self._render_edit_form_for(LinkRESTHandler, 'Link')
+        return cls._render_edit_form_for(handler, LinkRESTHandler, 'Link')
 
-    def get_edit_assessment(self):
+    @classmethod
+    def get_edit_assessment(cls, handler):
         """Shows assessment editor."""
-        self._render_edit_form_for(
-            AssessmentRESTHandler, 'Assessment',
+        return cls._render_edit_form_for(
+            handler, AssessmentRESTHandler, 'Assessment',
             extra_js_files=['assessment_editor_lib.js', 'assessment_editor.js'])
 
-    def get_edit_lesson(self):
+    @classmethod
+    def get_edit_lesson(cls, handler):
         """Shows the lesson/activity editor."""
-        key = self.request.get('key')
-        course = courses.Course(self)
+        key = handler.request.get('key')
+        course = courses.Course(handler)
         lesson = course.find_lesson_by_id(None, key)
         annotations_dict = (
             None if lesson.has_activity
@@ -295,21 +351,24 @@ class UnitLessonEditor(ApplicationHandler):
         if courses.has_only_new_style_activities(course):
             schema.get_property('objectives').extra_schema_dict_values[
               'excludedCustomTags'] = set(['gcb-activity'])
-        self._render_edit_form_for(
+        return cls._render_edit_form_for(
+            handler,
             LessonRESTHandler, 'Lessons and Activities',
             schema=schema,
             annotations_dict=annotations_dict,
             delete_xsrf_token='delete-lesson',
             extra_js_files=['lesson_editor.js'])
 
-    def get_in_place_lesson_editor(self):
+
+    @classmethod
+    def get_in_place_lesson_editor(cls, handler):
         """Shows the lesson editor iframed inside a lesson page."""
-        if not self.app_context.is_editable_fs():
+        if not handler.app_context.is_editable_fs():
             return
 
-        key = self.request.get('key')
+        key = handler.request.get('key')
 
-        course = courses.Course(self)
+        course = courses.Course(handler)
         lesson = course.find_lesson_by_id(None, key)
         annotations_dict = (
             None if lesson.has_activity
@@ -326,24 +385,24 @@ class UnitLessonEditor(ApplicationHandler):
         ] + LessonRESTHandler.EXTRA_JS_FILES
 
         form_html = oeditor.ObjectEditor.get_html_for(
-            self,
+            handler,
             schema.get_json_schema(),
             annotations_dict,
-            key, self.canonicalize_url(LessonRESTHandler.URI), None,
+            key, handler.canonicalize_url(LessonRESTHandler.URI), None,
             required_modules=LessonRESTHandler.REQUIRED_MODULES,
             additional_dirs=LessonRESTHandler.ADDITIONAL_DIRS,
             extra_css_files=LessonRESTHandler.EXTRA_CSS_FILES,
             extra_js_files=extra_js_files)
-        template = self.get_template('in_place_lesson_editor.html', [])
+        template = handler.get_template('in_place_lesson_editor.html', [])
         template_values = {
             'form_html': form_html,
-            'extra_css_href_list': self.EXTRA_CSS_HREF_LIST,
-            'extra_js_href_list': self.EXTRA_JS_HREF_LIST
+            'extra_css_href_list': handler.EXTRA_CSS_HREF_LIST,
+            'extra_js_href_list': handler.EXTRA_JS_HREF_LIST
         }
-        self.response.write(template.render(template_values))
+        handler.response.write(template.render(template_values))
 
 
-class CommonUnitRESTHandler(BaseRESTHandler):
+class CommonUnitRESTHandler(utils.BaseRESTHandler):
     """A common super class for all unit REST handlers."""
 
     # These functions are called with an updated unit object whenever a
@@ -383,7 +442,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
         transforms.send_json_response(
             self, 200, '\n'.join(message),
             payload_dict=self.unit_to_dict(unit),
-            xsrf_token=XsrfTokenManager.create_xsrf_token('put-unit'))
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token('put-unit'))
 
     def put(self):
         """A PUT REST method shared by all unit types."""
@@ -579,7 +638,7 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
         transforms.send_json_response(
             self, 200, None,
             payload_dict={'course': first_course_in_dropdown},
-            xsrf_token=XsrfTokenManager.create_xsrf_token(
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
                 'import-course'))
 
     def put(self):
@@ -645,7 +704,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         'inputex-checkbox', 'inputex-list']
 
 
-class UnitLessonTitleRESTHandler(BaseRESTHandler):
+class UnitLessonTitleRESTHandler(utils.BaseRESTHandler):
     """Provides REST API to reorder unit and lesson titles."""
 
     URI = '/rest/course/outline'
@@ -704,7 +763,7 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
         transforms.send_json_response(self, 200, 'Saved.')
 
 
-class LessonRESTHandler(BaseRESTHandler):
+class LessonRESTHandler(utils.BaseRESTHandler):
     """Provides REST API to handle lessons and activities."""
 
     URI = '/rest/course/lesson'
@@ -781,7 +840,7 @@ class LessonRESTHandler(BaseRESTHandler):
         transforms.send_json_response(
             self, 200, '\n'.join(message),
             payload_dict=payload_dict,
-            xsrf_token=XsrfTokenManager.create_xsrf_token('lesson-edit'))
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token('lesson-edit'))
 
     def put(self):
         """Handles PUT REST verb to save lesson and associated activity."""
@@ -869,3 +928,18 @@ class LessonRESTHandler(BaseRESTHandler):
         course.save()
 
         transforms.send_json_response(self, 200, 'Deleted.')
+
+
+def get_namespaced_handlers():
+    return [
+        (AssessmentRESTHandler.URI, AssessmentRESTHandler),
+        (ImportCourseRESTHandler.URI, ImportCourseRESTHandler),
+        (LessonRESTHandler.URI, LessonRESTHandler),
+        (LinkRESTHandler.URI, LinkRESTHandler),
+        (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
+        (UnitRESTHandler.URI, UnitRESTHandler)
+    ]
+
+
+def on_module_enabled():
+    UnitLessonEditor.on_module_enabled()

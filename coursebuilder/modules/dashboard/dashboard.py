@@ -40,13 +40,6 @@ from question_group_editor import QuestionGroupManagerAndEditor
 from question_group_editor import QuestionGroupRESTHandler
 from role_editor import RoleManagerAndEditor
 from role_editor import RoleRESTHandler
-from modules.courses.unit_lesson_editor import AssessmentRESTHandler
-from modules.courses.unit_lesson_editor import ImportCourseRESTHandler
-from modules.courses.unit_lesson_editor import LessonRESTHandler
-from modules.courses.unit_lesson_editor import LinkRESTHandler
-from modules.courses.unit_lesson_editor import UnitLessonEditor
-from modules.courses.unit_lesson_editor import UnitLessonTitleRESTHandler
-from modules.courses.unit_lesson_editor import UnitRESTHandler
 
 import utils as dashboard_utils
 
@@ -77,8 +70,7 @@ TEMPLATE_DIR = os.path.join(
 class DashboardHandler(
     CourseHandler, FileManagerAndEditor,
     LabelManagerAndEditor, QuestionGroupManagerAndEditor,
-    QuestionManagerAndEditor, ReflectiveRequestHandler, RoleManagerAndEditor,
-    UnitLessonEditor):
+    QuestionManagerAndEditor, ReflectiveRequestHandler, RoleManagerAndEditor):
     """Handles all pages and actions required for managing a course."""
 
     # This dictionary allows the dashboard module to optionally nominate a
@@ -90,31 +82,22 @@ class DashboardHandler(
     default_subtab_action = collections.defaultdict(lambda: None)
     get_actions = [
         'edit_settings', 'edit_unit_lesson',
-        'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
-        'manage_asset', 'manage_text_asset', 'import_course',
+        'manage_asset', 'manage_text_asset',
         'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
         'add_label', 'edit_label', 'question_preview',
-        'add_role', 'edit_role', 'edit_custom_unit',
-        'import_gift_questions', 'in_place_lesson_editor']
+        'add_role', 'edit_role',
+        'import_gift_questions']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
-        'create_or_edit_settings', 'add_unit',
-        'add_link', 'add_assessment', 'add_lesson',
-        'set_draft_status',
+        'create_or_edit_settings',
         'add_to_question_group',
-        'clone_question', 'add_custom_unit']
+        'clone_question']
     child_routes = [
-            (AssessmentRESTHandler.URI, AssessmentRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
-            (ImportCourseRESTHandler.URI, ImportCourseRESTHandler),
             (LabelRestHandler.URI, LabelRestHandler),
-            (LessonRESTHandler.URI, LessonRESTHandler),
-            (LinkRESTHandler.URI, LinkRESTHandler),
-            (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
-            (UnitRESTHandler.URI, UnitRESTHandler),
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
             (GiftQuestionRESTHandler.URI, GiftQuestionRESTHandler),
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
