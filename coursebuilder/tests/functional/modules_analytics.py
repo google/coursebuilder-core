@@ -1728,7 +1728,7 @@ class GradebookCsvTests(actions.TestBase):
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace(self.NAMESPACE)
         self.q_a_id = models.QuestionEntity(
-            data='{"description": "a", "question": "aa"}').put().id()
+            data='{"description": "\u9959", "question": "aa"}').put().id()
         self.q_b_id = models.QuestionEntity(
             data='{"description": "b", "question": "aa"}').put().id()
         self.q_c_id = models.QuestionEntity(
@@ -1794,7 +1794,7 @@ class GradebookCsvTests(actions.TestBase):
 
         self.expected_question_headers = ','.join([
             'Email',
-            'a answer', 'a score',
+            '\xe9\xa5\x99 answer', '\xe9\xa5\x99 score',
             'b answer', 'b score',
             'c answer', 'c score',
             'd answer', 'd score',
@@ -1874,7 +1874,7 @@ class GradebookCsvTests(actions.TestBase):
         self.assertEquals(401, response.status_int)
 
     def test_one_answer(self):
-        a1 = 'xxx'
+        a1 = 'xxx\xe7\xb6\x92'
         s1 = 123.0
         w1 = 246.0
         answers = [[

@@ -52,6 +52,8 @@ class AbstractGradebookCsvGenerator(object):
         stream = StringIO.StringIO()
         csv_stream = csv.writer(stream, quoting=csv.QUOTE_MINIMAL)
         for row in [column_titles] + answer_rows:
+            row = [i.encode('utf-8') if isinstance(i, unicode) else str(i)
+                   for i in row]
             csv_stream.writerow(row)
         ret = stream.getvalue()
         stream.close()
@@ -275,5 +277,5 @@ class CsvDownloadHandler(utils.BaseHandler):
         # http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.5.1
         self.response.headers.add(
             'Content-Disposition',
-            str('attachment; filename="%s"' % safe_filename))
+            str('attachment; filename="%s"' % str(safe_filename)))
         self.response.write(output)
