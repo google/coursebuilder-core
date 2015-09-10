@@ -349,13 +349,6 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
             if forum_web_url:
                 course_data['forum_embed_url'] = forum_web_url
 
-        if 'announcement_list_email' in course_data:
-            announcement_email = course_data['announcement_list_email']
-            announcement_web_url = self.get_groups_web_url(
-                announcement_email)
-            if announcement_web_url:
-                course_data['announcement_list_url'] = announcement_web_url
-
     def _process_extra_locales(self, extra_locales):
         """Make sure each locale has a label to go along."""
         existing = set([

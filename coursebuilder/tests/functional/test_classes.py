@@ -595,10 +595,8 @@ class InfrastructureTest(actions.TestBase):
         src_course = courses.Course(None, app_context=src_app_context)
 
         new_course_keys = [
-            'admin_user_emails', 'announcement_list_email',
-            'announcement_list_url', 'blurb', 'forum_email',
-            'forum_embed_url', 'forum_url',
-            'google_analytics_id', 'google_tag_manager_id',
+            'admin_user_emails', 'blurb', 'forum_email', 'forum_embed_url',
+            'forum_url', 'google_analytics_id', 'google_tag_manager_id',
             'instructor_details', 'main_video', 'start_date']
         init_settings = dst_course_a.app_context.get_environ()
         assert 'assessment_confirmations' not in init_settings
@@ -1955,7 +1953,6 @@ class CourseAuthorAspectTest(actions.TestBase):
             payload_dict['title'] = u'My Test Title Мой заголовок теста'
             payload_dict['date'] = '2012/12/31'
             payload_dict['is_draft'] = True
-            payload_dict['send_email'] = False
             request = {}
             request['key'] = str(item.key())
             request['payload'] = transforms.dumps(payload_dict)
@@ -2342,7 +2339,6 @@ class StudentAspectTest(actions.TestBase):
         payload_dict['title'] = u'My Test Title'
         payload_dict['date'] = '2015/02/03'
         payload_dict['is_draft'] = False
-        payload_dict['send_email'] = False
         request = {}
         request['key'] = key
         request['payload'] = transforms.dumps(payload_dict)

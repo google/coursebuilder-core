@@ -33,7 +33,6 @@ from models.resources_display import LabelGroupsHelper
 from models import custom_modules
 from models import entities
 from models import models
-from models import notify
 from models import resources_display
 from models import roles
 from models import transforms
@@ -160,9 +159,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
         key = self.request.get('key')
 
-        schema = AnnouncementsItemRESTHandler.SCHEMA(
-            'Announcement',
-            self.get_course().get_course_announcement_list_email())
+        schema = AnnouncementsItemRESTHandler.SCHEMA()
 
         exit_url = self.canonicalize_url(
             '/announcements#%s' % urllib.quote(key, safe=''))
@@ -213,8 +210,8 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
         'inputex-hidden']
 
     @classmethod
-    def SCHEMA(cls, title, announcement_email):
-        schema = FieldRegistry(title)
+    def SCHEMA(cls):
+        schema = FieldRegistry('Announcement')
         schema.add_property(SchemaField(
             'key', 'ID', 'string', editable=False,
             extra_schema_dict_values={'className': 'inputEx-Field keyHolder'}))
@@ -236,25 +233,12 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
              extra_schema_dict_values={
                  'className': 'inputEx-Field label-group-list'}))
         schema.add_property(SchemaField(
-            'send_email', 'Send Email', 'boolean', optional=True,
-            extra_schema_dict_values={
-                'description':
-                    AnnouncementsItemRESTHandler.get_send_email_description(
-                        announcement_email)}))
-        schema.add_property(SchemaField(
             'is_draft', 'Status', 'boolean',
             select_data=[
                 (True, resources_display.DRAFT_TEXT),
                 (False, resources_display.PUBLISHED_TEXT)],
             extra_schema_dict_values={'className': 'split-from-main-group'}))
         return schema
-
-    @classmethod
-    def get_send_email_description(cls, announcement_email):
-        """Get the description for Send Email field."""
-        if announcement_email:
-            return 'Email will be sent to : ' + announcement_email
-        return 'Announcement list not configured.'
 
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
@@ -277,9 +261,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
             return
         entity = viewable[0]
 
-        schema = AnnouncementsItemRESTHandler.SCHEMA(
-            'Announcement',
-            self.get_course().get_course_announcement_list_email())
+        schema = AnnouncementsItemRESTHandler.SCHEMA()
 
         entity_dict = transforms.entity_to_dict(entity)
         entity_dict['label_groups'] = (
@@ -313,9 +295,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
                 self, 404, 'Object not found.', {'key': key})
             return
 
-        schema = AnnouncementsItemRESTHandler.SCHEMA(
-            'Announcement',
-            self.get_course().get_course_announcement_list_email())
+        schema = AnnouncementsItemRESTHandler.SCHEMA()
 
         payload = request.get('payload')
         update_dict = transforms.json_to_dict(
@@ -329,20 +309,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
 
         entity.put()
 
-        email_sent = False
-        if entity.send_email:
-            email_manager = notify.EmailManager(self.get_course())
-            email_sent = email_manager.send_announcement(
-                entity.title, entity.html)
-
-        if entity.send_email and not email_sent:
-            if not self.get_course().get_course_announcement_list_email():
-                message = 'Saved. Announcement list not configured.'
-            else:
-                message = 'Saved, but there was an error sending email.'
-        else:
-            message = 'Saved.'
-        transforms.send_json_response(self, 200, message)
+        transforms.send_json_response(self, 200, 'Saved.')
 
 
 class AnnouncementEntity(entities.BaseEntity):
@@ -352,7 +319,6 @@ class AnnouncementEntity(entities.BaseEntity):
     html = db.TextProperty(indexed=False)
     labels = db.StringProperty(indexed=False)
     is_draft = db.BooleanProperty()
-    send_email = db.BooleanProperty()
 
     memcache_key = 'announcements'
 

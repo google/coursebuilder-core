@@ -2329,15 +2329,6 @@ class Course(object):
             'course:forum_url', 'Forum URL', 'string', optional=True,
             description='URL for the forum.'))
         course_opts.add_property(schema_fields.SchemaField(
-            'course:announcement_list_url', 'Announcement List URL',
-            'string', optional=True, description='URL for the mailing list '
-            'where students can register to receive course announcements.'))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:announcement_list_email', 'Announcement List Email',
-            'string', optional=True, description='Email for the mailing list '
-            'where students can register to receive course announcements, e.g. '
-            '\'My-Course-Announce@googlegroups.com\'', i18n=False))
-        course_opts.add_property(schema_fields.SchemaField(
             'course:start_date', 'Course Start Date', 'string', optional=True,
             i18n=False))
         course_opts.add_property(schema_fields.SchemaField(
@@ -3222,21 +3213,6 @@ class Course(object):
                 self.app_context.raw, self.version))
 
         return None, None
-
-    def get_course_announcement_list_email(self):
-        """Get Announcement email address for the course."""
-        course_env = self.get_environ(self._app_context)
-        if not course_env:
-            return None
-        if 'course' not in course_env:
-            return None
-        course_dict = course_env['course']
-        if 'announcement_list_email' not in course_dict:
-            return None
-        announcement_list_email = course_dict['announcement_list_email']
-        if announcement_list_email:
-            return announcement_list_email
-        return None
 
     def init_new_course_settings(self, title, admin_email):
         """Initializes new course.yaml file if it does not yet exists."""

@@ -278,14 +278,12 @@ class SearchTest(search_unit_test.SearchTestBase):
             'title': 'My Test Title',
             'date': '2015/02/03',
             'is_draft': False,
-            'send_email': False,
             'html': 'Four score and seven years ago, our founding fathers'
             })
         self._add_announcement({
             'title': 'My Test Title',
             'date': '2015/02/03',
             'is_draft': True,
-            'send_email': False,
             'html': 'Standing beneath this serene sky, overlooking these',
             })
 

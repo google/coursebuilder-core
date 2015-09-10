@@ -64,13 +64,6 @@ course:
   # to remove the Forum link from the student navigation bar.
   forum_embed_url: https://groups.google.com/forum/embed/?place=forum/My-Course
 
-  # URL for the mailing list where students can register to receive course
-  # announcements. For details, see
-  #
-  #     http://code.google.com/p/course-builder/wiki/CreateEmailList
-  announcement_list_email: My-Course-Announce@googlegroups.com
-  announcement_list_url: https://groups.google.com/group/My-Course-Announce
-
   # Locale for internationalization. See modules/i18n/resources/locale for
   # available locales.
   locale: 'en_US'
@@ -179,7 +172,7 @@ unit:
 # where "container" is, e.g., 'unit' or whatever other word
 # you'd like.  The final "item" gives a name to a fragment of
 # HTML.  This is a way of inserting small text fragments into
-# a page without having to make a separate Jinja template 
+# a page without having to make a separate Jinja template
 # or macro file.
 
 html_hooks:
