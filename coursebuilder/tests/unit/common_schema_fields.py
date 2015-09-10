@@ -367,3 +367,330 @@ class FieldRegistryTests(BaseFieldTests):
         registry.validate(payload, errors)
 
         self.assertEqual([top_level_bad_value, child_bad_value], errors)
+
+
+class StructureRecursionTests(unittest.TestCase):
+
+    def setUp(self):
+        super(StructureRecursionTests, self).setUp()
+        parent = schema_fields.FieldRegistry('parent_dict_title')
+        child = parent.add_sub_registry('child_dict_name', 'child_dict_title')
+
+        simple_array_type = schema_fields.SchemaField(
+            'simple_array_type_name', 'simple_array_type_title', 'string')
+        parent.add_property(schema_fields.FieldArray(
+            'simple_array_prop_name', 'simple_array_prop_label',
+            item_type=simple_array_type))
+
+        complex_array_type = schema_fields.FieldRegistry(
+            'complex_array_type_title')
+        array_child = complex_array_type.add_sub_registry(
+            'complex_array_child_name', 'array_child_title')
+
+        parent.add_property(schema_fields.FieldArray(
+            'complex_array_prop_name', 'complex_array_prop_label',
+            item_type=complex_array_type))
+        parent.add_property(schema_fields.SchemaField(
+            'parent_prop', 'X', 'string'))
+        child.add_property(schema_fields.SchemaField(
+            'child_prop', 'X', 'string'))
+        complex_array_type.add_property(schema_fields.SchemaField(
+            'complex_array_type_prop', 'X', 'string'))
+        array_child.add_property(schema_fields.SchemaField(
+            'array_child_p1', 'X', 'string'))
+        array_child.add_property(schema_fields.SchemaField(
+            'array_child_p2', 'X', 'string'))
+        self.schema = parent
+
+        self.entity = {
+            "parent_prop": "parent_prop_value",
+            "child_dict_name": {
+                "child_prop": "child_prop_value"
+            },
+            "simple_array_prop_name": [
+                "simple_array_prop_value_000",
+                "simple_array_prop_value_001",
+                "simple_array_prop_value_002"
+            ],
+            "complex_array_prop_name": [
+                {
+                    "complex_array_type_prop": "complex_array_prop_value_000",
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_000",
+                        "array_child_p2": "array_child_p2_value_000"
+                    }
+                },
+                {
+                    "complex_array_type_prop": "complex_array_prop_value_001",
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_001",
+                        "array_child_p2": "array_child_p2_value_001"
+                    }
+                },
+                {
+                    "complex_array_type_prop": "complex_array_prop_value_002",
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_002",
+                        "array_child_p2": "array_child_p2_value_002"
+                    }
+                }
+            ]
+        }
+
+
+class CloneItemsNamedTests(StructureRecursionTests):
+
+    def test_clone_no_paths(self):
+        ret = self.schema.clone_only_items_named([])
+        self.assertEquals([], ret._properties)
+        self.assertEquals({}, ret._sub_registries)
+
+    def test_clone_toplevel_prop(self):
+        ret = self.schema.clone_only_items_named(['parent_prop'])
+        self.assertEquals(1, len(ret._properties))
+        self.assertEquals('parent_prop', ret._properties[0]._name)
+        self.assertEquals({}, ret._sub_registries)
+
+    def test_clone_toplevel_struct(self):
+        ret = self.schema.clone_only_items_named(['child_dict_name'])
+        self.assertEquals([], ret._properties)
+        self.assertEquals(1, len(ret._sub_registries))
+        self.assertEquals(
+            'child_dict_title', ret._sub_registries['child_dict_name']._title)
+        # Verify that child dict has not lost any substructure.
+        self.assertEquals(
+            1, len(ret._sub_registries['child_dict_name']._properties))
+
+    def test_clone_child_prop(self):
+        ret = self.schema.clone_only_items_named(['child_dict_name/child_prop'])
+        self.assertEquals([], ret._properties)
+        self.assertEquals(1, len(ret._sub_registries))
+        self.assertEquals(
+            1, len(ret._sub_registries['child_dict_name']._properties))
+        self.assertEquals(
+            'child_prop',
+            ret._sub_registries['child_dict_name']._properties[0]._name)
+
+    def test_clone_simple_child_array(self):
+        ret = self.schema.clone_only_items_named(['simple_array_prop_name'])
+        self.assertEquals(1, len(ret._properties))
+        self.assertEquals({}, ret._sub_registries)
+        self.assertEquals(
+            'simple_array_prop_name', ret._properties[0]._name)
+        self.assertEquals(
+            'simple_array_type_name', ret._properties[0]._item_type._name)
+
+    def test_clone_simple_array_can_name_simple_childs_type(self):
+        ret = self.schema.clone_only_items_named(
+            ['simple_array_prop_name/simple_array_type_name'])
+        self.assertEquals(1, len(ret._properties))
+        self.assertEquals({}, ret._sub_registries)
+        self.assertEquals(
+            'simple_array_prop_name', ret._properties[0]._name)
+        self.assertEquals(
+            'simple_array_type_name', ret._properties[0]._item_type._name)
+
+    def test_clone_complex_child_array(self):
+        ret = self.schema.clone_only_items_named(['complex_array_prop_name'])
+        self.assertEquals(1, len(ret._properties))
+        self.assertEquals({}, ret._sub_registries)
+        self.assertEquals('complex_array_prop_name', ret._properties[0]._name)
+
+        # Also verify that array hasn't had any substructure removed.
+        self.assertEquals(1, len(ret._properties[0]._item_type._properties))
+        self.assertEquals(1, len(ret._properties[0]._item_type._sub_registries))
+
+    def test_clone_array_simple_subprop(self):
+        ret = self.schema.clone_only_items_named(
+            ['complex_array_prop_name/complex_array_type_prop'])
+        self.assertEquals(1, len(ret._properties))
+        self.assertEquals({}, ret._sub_registries)
+        self.assertEquals('complex_array_prop_name', ret._properties[0]._name)
+
+        # verify that array hasn't had any substructure removed.
+        self.assertEquals({}, ret._properties[0]._item_type._sub_registries)
+        self.assertEquals(1, len(ret._properties[0]._item_type._properties))
+        self.assertEquals(
+            'complex_array_type_prop',
+            ret._properties[0]._item_type._properties[0]._name)
+
+    def test_clone_array_complex_subprop(self):
+        ret = self.schema.clone_only_items_named(
+            ['complex_array_prop_name/complex_array_child_name'])
+        self.assertEquals(1, len(ret._properties))
+        self.assertEquals({}, ret._sub_registries)
+        self.assertEquals('complex_array_prop_name', ret._properties[0]._name)
+        self.assertEquals([], ret._properties[0]._item_type._properties)
+        self.assertEquals(1, len(ret._properties[0]._item_type._sub_registries))
+        self.assertIn('complex_array_child_name',
+                      ret._properties[0]._item_type._sub_registries)
+
+    def test_clone_array_substructure_property(self):
+        ret = self.schema.clone_only_items_named(
+            ['complex_array_prop_name/complex_array_child_name/array_child_p1'])
+        self.assertEquals(1, len(ret._properties))
+        self.assertEquals({}, ret._sub_registries)
+        self.assertEquals('complex_array_prop_name', ret._properties[0]._name)
+        self.assertEquals([], ret._properties[0]._item_type._properties)
+        self.assertEquals(1, len(ret._properties[0]._item_type._sub_registries))
+
+        leaf_reg = ret._properties[0]._item_type._sub_registries[
+            'complex_array_child_name']
+        self.assertEquals(1, len(leaf_reg._properties))
+        self.assertEquals('array_child_p1', leaf_reg._properties[0].name)
+        self.assertEquals({}, leaf_reg._sub_registries)
+
+
+class RedactEntityTests(StructureRecursionTests):
+
+    def test_redact_no_paths(self):
+        schema = self.schema.clone_only_items_named([])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({}, self.entity)
+
+    def test_redact_toplevel_prop(self):
+        schema = self.schema.clone_only_items_named(['parent_prop'])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({
+            "parent_prop": "parent_prop_value",
+        }, self.entity)
+
+    def test_redact_toplevel_struct(self):
+        schema = self.schema.clone_only_items_named(['child_dict_name'])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({
+            "child_dict_name": {
+                "child_prop": "child_prop_value"
+            },
+        }, self.entity)
+
+    def test_redact_child_prop(self):
+        schema = self.schema.clone_only_items_named(
+            ['child_dict_name/child_prop'])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({
+            "child_dict_name": {
+                "child_prop": "child_prop_value"
+            },
+        }, self.entity)
+
+    def test_redact_simple_child_array(self):
+        schema = self.schema.clone_only_items_named(['simple_array_prop_name'])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({
+            "simple_array_prop_name": [
+                "simple_array_prop_value_000",
+                "simple_array_prop_value_001",
+                "simple_array_prop_value_002"
+            ]
+        }, self.entity)
+
+    def test_redact_simple_array_can_name_simple_childs_type(self):
+        schema = self.schema.clone_only_items_named(
+            ['simple_array_prop_name/simple_array_type_name'])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({
+            "simple_array_prop_name": [
+                "simple_array_prop_value_000",
+                "simple_array_prop_value_001",
+                "simple_array_prop_value_002"
+            ]
+        }, self.entity)
+
+    def test_redact_complex_child_array(self):
+        schema = self.schema.clone_only_items_named(['complex_array_prop_name'])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({
+            "complex_array_prop_name": [
+                {
+                    "complex_array_type_prop": "complex_array_prop_value_000",
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_000",
+                        "array_child_p2": "array_child_p2_value_000"
+                    }
+                },
+                {
+                    "complex_array_type_prop": "complex_array_prop_value_001",
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_001",
+                        "array_child_p2": "array_child_p2_value_001"
+                    }
+                },
+                {
+                    "complex_array_type_prop": "complex_array_prop_value_002",
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_002",
+                        "array_child_p2": "array_child_p2_value_002"
+                    }
+                }
+            ]
+        }, self.entity)
+
+    def test_redact_array_simple_subprop(self):
+        schema = self.schema.clone_only_items_named(
+            ['complex_array_prop_name/complex_array_type_prop'])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({
+            "complex_array_prop_name": [
+                {
+                    "complex_array_type_prop": "complex_array_prop_value_000",
+                },
+                {
+                    "complex_array_type_prop": "complex_array_prop_value_001",
+                },
+                {
+                    "complex_array_type_prop": "complex_array_prop_value_002",
+                }
+            ]
+        }, self.entity)
+
+    def test_redact_array_complex_subprop(self):
+        schema = self.schema.clone_only_items_named(
+            ['complex_array_prop_name/complex_array_child_name'])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({
+            "complex_array_prop_name": [
+                {
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_000",
+                        "array_child_p2": "array_child_p2_value_000"
+                    }
+                },
+                {
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_001",
+                        "array_child_p2": "array_child_p2_value_001"
+                    }
+                },
+                {
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_002",
+                        "array_child_p2": "array_child_p2_value_002"
+                    }
+                }
+            ]
+        }, self.entity)
+
+    def test_redact_array_substructure_property(self):
+        schema = self.schema.clone_only_items_named(
+            ['complex_array_prop_name/complex_array_child_name/array_child_p1'])
+        schema.redact_entity_to_schema(self.entity)
+        self.assertEquals({
+            "complex_array_prop_name": [
+                {
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_000",
+                    }
+                },
+                {
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_001",
+                    }
+                },
+                {
+                    "complex_array_child_name": {
+                        "array_child_p1": "array_child_p1_value_002",
+                    }
+                }
+            ]
+        }, self.entity)

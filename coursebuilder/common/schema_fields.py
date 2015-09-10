@@ -178,6 +178,12 @@ class Registry(object):
             for prop in copy.copy(registry._properties):
                 if prop.name not in node:
                     registry._properties.remove(prop)
+
+                # If this is an array of complex types, recurse.
+                if (node[prop.name] and
+                    isinstance(prop, FieldArray) and
+                    isinstance(prop._item_type, Registry)):
+                    delete_all_but(prop._item_type, node[prop.name])
             for name, value in registry._sub_registries.iteritems():
                 # If this subregistry is not named at all, remove it.
                 if name not in node:
@@ -422,9 +428,14 @@ class FieldRegistry(Registry):
                 del entity[name]
             elif name in registry_names:
                 self._sub_registries[name].redact_entity_to_schema(entity[name])
-            elif name in property_names and not property_names[name].editable:
-                del entity[name]
-
+            elif name in property_names:
+                prop = property_names[name]
+                if not prop.editable:
+                    del entity[name]
+                elif (isinstance(prop, FieldArray) and
+                      isinstance(prop.item_type, Registry)):
+                    for item in entity[name]:
+                        prop.item_type.redact_entity_to_schema(item)
 
     def validate(self, payload, errors):
         for schema_field in self._properties:
@@ -433,10 +444,6 @@ class FieldRegistry(Registry):
 
         for registry in self._sub_registries.values():
             registry.validate(payload, errors)
-
-    # TODO(mgainer): Teach this and all other recursive schema things that
-    # FieldArray is a thing, and may need recursing into if the array's
-    # data type is a FieldRegistry
 
     @classmethod
     def is_complex_name(cls, name):

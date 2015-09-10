@@ -312,6 +312,8 @@ ALL_TEST_CLASSES = {
     'tests.unit.common_schema_fields.SchemaFieldTests': 4,
     'tests.unit.common_schema_fields.FieldArrayTests': 3,
     'tests.unit.common_schema_fields.FieldRegistryTests': 7,
+    'tests.unit.common_schema_fields.CloneItemsNamedTests': 10,
+    'tests.unit.common_schema_fields.RedactEntityTests': 10,
     'tests.unit.common_safe_dom.NodeListTests': 4,
     'tests.unit.common_safe_dom.TextTests': 2,
     'tests.unit.common_safe_dom.ElementTests': 17,
@@ -715,7 +717,10 @@ def select_tests_to_run(test_class_name):
                 continue
 
         if not _test_classes:
-            raise Exception('No tests found for "%s".' % test_class_name)
+            raise Exception(
+                'No tests found for "%s".  (Did you remember to add the test '
+                'class to the list in tests/run_all_tests.py?)' %
+                test_class_name)
         test_classes = _test_classes
 
         sorted_names = sorted(test_classes, key=lambda key: test_classes[key])
