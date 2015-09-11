@@ -98,7 +98,7 @@ class UnitLessonEditor(object):
 
             if callback.__name__.startswith('get_'):
                 dashboard.DashboardHandler.add_custom_get_action(
-                    action, callback)
+                    action, callback, in_action='outline')
             elif callback.__name__.startswith('post_'):
                 dashboard.DashboardHandler.add_custom_post_action(
                     action, callback)

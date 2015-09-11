@@ -309,6 +309,7 @@ class DashboardHandler(
         if not action:
             self.default_action = self.default_action_for_current_permissions()
             action = self.default_action
+        self.action = action
 
         if not self.can_view(action):
             self.redirect(self.app_context.get_slug())
@@ -341,6 +342,7 @@ class DashboardHandler(
     def post(self):
         """Enforces rights to all POST operations."""
         action = self.request.get('action')
+        self.action = action
         if not self.can_edit(action):
             self.redirect(self.app_context.get_slug())
             return
@@ -369,6 +371,15 @@ class DashboardHandler(
             alerts.append('The course is not publicly available.')
         return '\n'.join(alerts)
 
+    def _get_current_menu_action(self):
+        registered_action = self._custom_get_actions.get(self.action)
+        if registered_action:
+            registered_in_action = registered_action[1]
+            if registered_in_action:
+                return registered_in_action
+
+        return self.action
+
     def render_page(self, template_values, in_action=None):
         """Renders a page using provided template values."""
         template_values['header_title'] = template_values['page_title']
@@ -376,8 +387,7 @@ class DashboardHandler(
             hook(self) for hook in self.PAGE_HEADER_HOOKS]
         template_values['course_title'] = self.app_context.get_title()
 
-        current_action = (in_action or self.request.get('action')
-            or self.default_action_for_current_permissions())
+        current_action = in_action or self._get_current_menu_action()
         current_menu_item = self.actions_to_menu_items.get(current_action)
         template_values['root_menu_group'] = self.root_menu_group
         template_values['current_menu_item'] = current_menu_item
