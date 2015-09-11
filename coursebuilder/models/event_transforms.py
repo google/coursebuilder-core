@@ -297,12 +297,21 @@ def _add_questions_from_html(
     sequence_counter = 0
     for component in tags.get_components_from_html(html):
         if component['cpt_name'] == 'question':
+            weight = 1.0
+            if 'weight' in component and component['weight'] != '':
+                try:
+                    weight = float(component['weight'])
+                except ValueError:
+                    logging.warning(
+                        'Weight "%s" is not a number; using 1.0 instead.',
+                        component['weight'])
+
             questions_by_usage_id[component['instanceid']] = {
                 'unit': unit_id,
                 'lesson': lesson_id,
                 'sequence': sequence_counter,
                 'id': component['quid'],
-                'weight': float(component.get('weight', 1.0)),
+                'weight': weight,
                 }
             sequence_counter += 1
         elif component['cpt_name'] == 'question-group':
@@ -371,7 +380,15 @@ def get_group_to_questions():
         items = group.items
         for element in items:
             element['question'] = str(element['question'])
-            element['weight'] = float(element['weight'])
+            weight = 1.0
+            if 'weight' in element and element['weight'] != '':
+                try:
+                    weight = float(element['weight'])
+                except ValueError:
+                    logging.warning(
+                        'Weight "%s" is not a number; using 1.0 instead.',
+                        element['weight'])
+            element['weight'] = weight
         ret[str(group.id)] = items
     return ret
 
