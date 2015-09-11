@@ -111,6 +111,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_models.StudentProfileDAOTestCase': 6,
     'tests.functional.model_models.StudentPropertyEntityTestCase': 1,
     'tests.functional.model_models.StudentTestCase': 11,
+    'tests.functional.model_permissions.PermissionsTests': 4,
     'tests.functional.model_student_work.KeyPropertyTest': 4,
     'tests.functional.model_student_work.ReviewTest': 3,
     'tests.functional.model_student_work.SubmissionTest': 3,
