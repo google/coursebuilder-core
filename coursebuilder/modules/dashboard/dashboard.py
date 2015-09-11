@@ -131,8 +131,9 @@ class DashboardHandler(
     _post_action_to_permission = {}
 
     default_action = None
-    _custom_get_actions = {}
-    _custom_post_actions = {}
+    GetAction = collections.namedtuple('GetAction', ['handler', 'in_action'])
+    _custom_get_actions = {}  # Map of name to GetAction
+    _custom_post_actions = {}  # Map of name to handler callback.
 
     # Create top level menu groups which other modules can register against.
     # I would do this in "register", but other modules register first.
@@ -249,7 +250,7 @@ class DashboardHandler(
                 action)
             return
 
-        cls._custom_get_actions[action] = (handler, in_action)
+        cls._custom_get_actions[action] = cls.GetAction(handler, in_action)
 
     @classmethod
     def remove_custom_get_action(cls, action):
@@ -316,7 +317,7 @@ class DashboardHandler(
             return
 
         if action in self._custom_get_actions:
-            result = self._custom_get_actions[action][0](self)
+            result = self._custom_get_actions[action].handler(self)
             if result is None:
                 return
 
@@ -374,7 +375,7 @@ class DashboardHandler(
     def _get_current_menu_action(self):
         registered_action = self._custom_get_actions.get(self.action)
         if registered_action:
-            registered_in_action = registered_action[1]
+            registered_in_action = registered_action.in_action
             if registered_in_action:
                 return registered_in_action
 
