@@ -114,6 +114,9 @@ class ResourceBundleKey(object):
     def __str__(self):
         return '%s:%s:%s' % (self._type, self._key, self._locale)
 
+    def __repr__(self):
+        return '<{} {}>'.format(self.__class__.__name__, str(self))
+
     @property
     def locale(self):
         return self._locale
@@ -2756,10 +2759,14 @@ def translate_course_env(env):
             env, schema)
 
         for name, translation_dict in bundle.dict.items():
-            field = binding.name_to_value[name]
-            source_value = field.value
-            field.value = LazyTranslator(
-                app_context, key, source_value, translation_dict)
+            field = binding.name_to_value.get(name)
+            if field:
+                source_value = field.value
+                field.value = LazyTranslator(
+                    app_context, key, source_value, translation_dict)
+            else:
+                logging.warning("Translations exist for non-existent field %s",
+                    name)
 
 
 def translate_dto_list(course, dto_list, resource_key_list):
