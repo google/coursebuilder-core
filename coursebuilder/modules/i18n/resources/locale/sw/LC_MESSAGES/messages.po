@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-31 08:02-0700\n"
+"POT-Creation-Date: 2015-09-14 07:51-0700\n"
 "PO-Revision-Date: 2015-08-31 08:02-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sw <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1129
+#: experimental/coursebuilder/models/resources_display.py:1126
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "Somo %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "Somo %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1149
+#: experimental/coursebuilder/models/resources_display.py:1146
 #, python-format
 msgid "Unit %s"
 msgstr "Somo la %s"
@@ -436,7 +436,7 @@ msgid "A password change has been requested for"
 msgstr "Ombi la kufanya mabadiliko ya nenosiri limepokelewa kwa"
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:274
+#: experimental/coursebuilder/modules/invitation/invitation.py:275
 msgid "Error: Empty email list"
 msgstr "Hitilafu: Orodha ya anwani za barua pepe haina kitu"
 
@@ -446,7 +446,7 @@ msgstr "Hitilafu: Orodha ya anwani za barua pepe haina kitu"
 #. than any single user is allowed to send.  No email addresses
 #. were added to the list to send, and no further email messages
 #. were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:288
+#: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -456,66 +456,66 @@ msgstr ""
 "iliyobakia: %s. Hakuna ujumbe uliotumwa."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:297
+#: experimental/coursebuilder/modules/invitation/invitation.py:298
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "Hitilafu: Anwani ya barua pepe isiyo sahihi \"%s\""
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:301
+#: experimental/coursebuilder/modules/invitation/invitation.py:302
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "Hitilafu: Tayari umetuma mwaliko kwa anwani ya barua pepe ya \"%s\""
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:318
+#: experimental/coursebuilder/modules/invitation/invitation.py:319
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "Baadhi ya ujumbe haukutumwa (%s / %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:326
+#: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "Sawa, ujumbe %s ulitumwa"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:379
+#: experimental/coursebuilder/modules/invitation/invitation.py:380
 msgid "Invite Friends"
 msgstr "Alika Marafiki"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:384
+#: experimental/coursebuilder/modules/invitation/invitation.py:385
 msgid "Click to send invitations to family and friends"
 msgstr "Bofya ili utume mialiko kwa familia na marafiki"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:388
+#: experimental/coursebuilder/modules/invitation/invitation.py:389
 msgid "Invitations not currently available"
 msgstr "Mialiko haipatikani kwa sasa"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:400
+#: experimental/coursebuilder/modules/invitation/invitation.py:401
 msgid "Subscribe/Unsubscribe"
 msgstr "Jiunge/Jiondoe"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:407
+#: experimental/coursebuilder/modules/invitation/invitation.py:408
 msgid "You are currently unsubscribed from course-related emails."
 msgstr "Umeondolewa kutoka kupokea barua pepe zinazohusiana na kozi kwa sasa."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:411
+#: experimental/coursebuilder/modules/invitation/invitation.py:412
 msgid "Click here to re-subscribe."
 msgstr "Bofya hapa ili ujiunge upya."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:416
+#: experimental/coursebuilder/modules/invitation/invitation.py:417
 msgid "You are currently receiving course-related emails. "
 msgstr "Unapokea barua pepe zinazohusiana na kozi kwa sasa. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:420
+#: experimental/coursebuilder/modules/invitation/invitation.py:421
 msgid "Click here to unsubscribe."
 msgstr "Bofya hapa ili ujiondoe."
 
@@ -631,7 +631,7 @@ msgstr "Wasilisha"
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/modules/search/resources.py:362
-#: experimental/coursebuilder/views/unit.html:86
+#: experimental/coursebuilder/views/unit.html:85
 msgid "Lesson"
 msgstr "Somo"
 
@@ -1035,21 +1035,21 @@ msgstr "Ingia"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:285
+#: experimental/coursebuilder/views/base.html:289
 msgid "Privacy & Terms"
 msgstr "Faragha na Masharti"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:291
-msgid "Locale:"
-msgstr "Lugha:"
+#: experimental/coursebuilder/views/base.html:296
+msgid "Language:"
+msgstr ""
 
 #. Title of the webpage.
 #. Navbar tab.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/base_course.html:7
 #: experimental/coursebuilder/views/base_course.html:42
-#: experimental/coursebuilder/views/unit.html:77
+#: experimental/coursebuilder/views/unit.html:76
 msgid "Course"
 msgstr "Kozi"
 
@@ -1192,7 +1192,7 @@ msgstr "Kagua mazoezi ya wenzako"
 #: experimental/coursebuilder/views/macros.html:290
 #: experimental/coursebuilder/views/macros.html:294
 #: experimental/coursebuilder/views/macros.html:344
-#: experimental/coursebuilder/views/unit.html:88
+#: experimental/coursebuilder/views/unit.html:87
 msgid "Activity"
 msgstr "Shughuli"
 
@@ -1501,34 +1501,35 @@ msgid "No"
 msgstr "La"
 
 #. Label on a control to show a class syllabus.
-#: experimental/coursebuilder/views/unit.html:50
+#: experimental/coursebuilder/views/unit.html:49
 msgid "Show Syllabus"
 msgstr "Onyesha Muhtasari wa masomo"
 
 #. Label on a control to hide a class syllabus.
-#: experimental/coursebuilder/views/unit.html:54
+#: experimental/coursebuilder/views/unit.html:53
 msgid "Hide Syllabus"
 msgstr "Ficha Muhtasari wa masomo"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
-#: experimental/coursebuilder/views/unit.html:114
+#: experimental/coursebuilder/views/unit.html:113
 msgid "This unit has no content."
 msgstr "Somo hili halina maudhui."
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:135
+#: experimental/coursebuilder/views/unit.html:134
 msgid "Previous Page"
 msgstr "Ukurasa Uliotangulia"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:141
+#: experimental/coursebuilder/views/unit.html:140
 msgid "Next Page"
 msgstr "Ukurasa Unaofuata"
 
 #. Text on the navigation button at the end of a lesson. It signals that the
 #. student has completed a unit (which is a series of lessons).
-#: experimental/coursebuilder/views/unit.html:144
+#: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "Mwisho"
+
 

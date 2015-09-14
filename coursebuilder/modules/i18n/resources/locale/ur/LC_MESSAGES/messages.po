@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-31 08:02-0700\n"
+"POT-Creation-Date: 2015-09-14 07:51-0700\n"
 "PO-Revision-Date: 2015-08-31 08:02-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ur <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1129
+#: experimental/coursebuilder/models/resources_display.py:1126
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "یونٹ %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "یونٹ %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1149
+#: experimental/coursebuilder/models/resources_display.py:1146
 #, python-format
 msgid "Unit %s"
 msgstr "یونٹ ‎%s"
@@ -436,7 +436,7 @@ msgid "A password change has been requested for"
 msgstr "اس کیلئے پاس ورڈ کی تبدیلی کی درخواست کی گئی ہے"
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:274
+#: experimental/coursebuilder/modules/invitation/invitation.py:275
 msgid "Error: Empty email list"
 msgstr "خرابی: ای میل کی خالی فہرست"
 
@@ -446,7 +446,7 @@ msgstr "خرابی: ای میل کی خالی فہرست"
 #. than any single user is allowed to send.  No email addresses
 #. were added to the list to send, and no further email messages
 #. were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:288
+#: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -456,66 +456,66 @@ msgstr ""
 " پیغامات نہیں بھیجے گئے۔"
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:297
+#: experimental/coursebuilder/modules/invitation/invitation.py:298
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "خرابی: غلط ای میل \"‎%s\""
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:301
+#: experimental/coursebuilder/modules/invitation/invitation.py:302
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "خرابی: آپ نے پہلے ہی ایک دعوتی ای میل \"‎%s\" کو بھیجی ہے"
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:318
+#: experimental/coursebuilder/modules/invitation/invitation.py:319
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "سبھی پیغامات نہیں بھیجے گئے (‎%s / %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:326
+#: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "ٹھیک ہے، ‎%s پیغامات بھیجے گئے"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:379
+#: experimental/coursebuilder/modules/invitation/invitation.py:380
 msgid "Invite Friends"
 msgstr "دوستوں کو مدعو کریں"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:384
+#: experimental/coursebuilder/modules/invitation/invitation.py:385
 msgid "Click to send invitations to family and friends"
 msgstr "خاندان اور دوستوں کو دعوتیں بھیجنے کیلئے کلک کریں"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:388
+#: experimental/coursebuilder/modules/invitation/invitation.py:389
 msgid "Invitations not currently available"
 msgstr "دعوتیں فی الحال دستیاب نہیں ہیں"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:400
+#: experimental/coursebuilder/modules/invitation/invitation.py:401
 msgid "Subscribe/Unsubscribe"
 msgstr "سبسکرائب/اَن سبسکرائب کریں"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:407
+#: experimental/coursebuilder/modules/invitation/invitation.py:408
 msgid "You are currently unsubscribed from course-related emails."
 msgstr "آپ فی الحال کورس سے متعلق ای میلز سے اَن سبسکرائب کردہ ہیں۔"
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:411
+#: experimental/coursebuilder/modules/invitation/invitation.py:412
 msgid "Click here to re-subscribe."
 msgstr "دوبارہ سبسکرائب کرنے کیلئے یہاں کلک کریں۔"
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:416
+#: experimental/coursebuilder/modules/invitation/invitation.py:417
 msgid "You are currently receiving course-related emails. "
 msgstr "آپ فی الحال کورس سے متعلق ای میلز موصول کر رہے ہیں۔ "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:420
+#: experimental/coursebuilder/modules/invitation/invitation.py:421
 msgid "Click here to unsubscribe."
 msgstr "اَن سبسکرائب کرنے کیلئے یہاں کلک کریں۔"
 
@@ -631,7 +631,7 @@ msgstr "جمع کرائیں"
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/modules/search/resources.py:362
-#: experimental/coursebuilder/views/unit.html:86
+#: experimental/coursebuilder/views/unit.html:85
 msgid "Lesson"
 msgstr "سبق"
 
@@ -1042,21 +1042,21 @@ msgstr "لاگ ان کریں"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:285
+#: experimental/coursebuilder/views/base.html:289
 msgid "Privacy & Terms"
 msgstr "رازداری اور شرائط"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:291
-msgid "Locale:"
-msgstr "زبان:"
+#: experimental/coursebuilder/views/base.html:296
+msgid "Language:"
+msgstr ""
 
 #. Title of the webpage.
 #. Navbar tab.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/base_course.html:7
 #: experimental/coursebuilder/views/base_course.html:42
-#: experimental/coursebuilder/views/unit.html:77
+#: experimental/coursebuilder/views/unit.html:76
 msgid "Course"
 msgstr "کورس"
 
@@ -1199,7 +1199,7 @@ msgstr "ہمسر کی اسائنمنٹس کا جائزہ لیں"
 #: experimental/coursebuilder/views/macros.html:290
 #: experimental/coursebuilder/views/macros.html:294
 #: experimental/coursebuilder/views/macros.html:344
-#: experimental/coursebuilder/views/unit.html:88
+#: experimental/coursebuilder/views/unit.html:87
 msgid "Activity"
 msgstr "سرگرمی"
 
@@ -1511,34 +1511,35 @@ msgid "No"
 msgstr "نہیں"
 
 #. Label on a control to show a class syllabus.
-#: experimental/coursebuilder/views/unit.html:50
+#: experimental/coursebuilder/views/unit.html:49
 msgid "Show Syllabus"
 msgstr "نصاب دکھائیں"
 
 #. Label on a control to hide a class syllabus.
-#: experimental/coursebuilder/views/unit.html:54
+#: experimental/coursebuilder/views/unit.html:53
 msgid "Hide Syllabus"
 msgstr "نصاب چھپائیں"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
-#: experimental/coursebuilder/views/unit.html:114
+#: experimental/coursebuilder/views/unit.html:113
 msgid "This unit has no content."
 msgstr "اس یونٹ میں کوئی مواد نہیں ہے۔"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:135
+#: experimental/coursebuilder/views/unit.html:134
 msgid "Previous Page"
 msgstr "پچھلا صفحہ"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:141
+#: experimental/coursebuilder/views/unit.html:140
 msgid "Next Page"
 msgstr "اگلا صفحہ"
 
 #. Text on the navigation button at the end of a lesson. It signals that the
 #. student has completed a unit (which is a series of lessons).
-#: experimental/coursebuilder/views/unit.html:144
+#: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "اختتام"
+
 

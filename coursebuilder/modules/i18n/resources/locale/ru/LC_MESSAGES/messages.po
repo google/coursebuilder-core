@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-08-31 08:02-0700\n"
+"POT-Creation-Date: 2015-09-14 07:51-0700\n"
 "PO-Revision-Date: 2015-08-31 08:02-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ru <LL@li.org>\n"
@@ -24,7 +24,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1129
+#: experimental/coursebuilder/models/resources_display.py:1126
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "Модуль %(index)s – %(title)s"
@@ -32,7 +32,7 @@ msgstr "Модуль %(index)s – %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1149
+#: experimental/coursebuilder/models/resources_display.py:1146
 #, python-format
 msgid "Unit %s"
 msgstr "Раздел \"%s\""
@@ -439,7 +439,7 @@ msgid "A password change has been requested for"
 msgstr "Вы запросили изменение пароля для"
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:274
+#: experimental/coursebuilder/modules/invitation/invitation.py:275
 msgid "Error: Empty email list"
 msgstr "Ошибка: пустой список рассылки."
 
@@ -449,7 +449,7 @@ msgstr "Ошибка: пустой список рассылки."
 #. than any single user is allowed to send.  No email addresses
 #. were added to the list to send, and no further email messages
 #. were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:288
+#: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -459,66 +459,66 @@ msgstr ""
 " отправлены. Осталось приглашений: %s."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:297
+#: experimental/coursebuilder/modules/invitation/invitation.py:298
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "Ошибка: недействительный адрес электронной почты %s."
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:301
+#: experimental/coursebuilder/modules/invitation/invitation.py:302
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "Ошибка: вы уже отправили письмо с приглашением на адрес %s."
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:318
+#: experimental/coursebuilder/modules/invitation/invitation.py:319
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "Не все сообщения отправлены (%s из %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:326
+#: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "Отправлено сообщений: %s"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:379
+#: experimental/coursebuilder/modules/invitation/invitation.py:380
 msgid "Invite Friends"
 msgstr "Пригласите друзей"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:384
+#: experimental/coursebuilder/modules/invitation/invitation.py:385
 msgid "Click to send invitations to family and friends"
 msgstr "Нажмите, чтобы отправить приглашения своим друзьям."
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:388
+#: experimental/coursebuilder/modules/invitation/invitation.py:389
 msgid "Invitations not currently available"
 msgstr "Сейчас нельзя никого пригласить."
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:400
+#: experimental/coursebuilder/modules/invitation/invitation.py:401
 msgid "Subscribe/Unsubscribe"
 msgstr "Подписаться/отменить подписку"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:407
+#: experimental/coursebuilder/modules/invitation/invitation.py:408
 msgid "You are currently unsubscribed from course-related emails."
 msgstr "Вы отказались от уведомлений о курсе."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:411
+#: experimental/coursebuilder/modules/invitation/invitation.py:412
 msgid "Click here to re-subscribe."
 msgstr "Нажмите здесь, чтобы возобновить подписку."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:416
+#: experimental/coursebuilder/modules/invitation/invitation.py:417
 msgid "You are currently receiving course-related emails. "
 msgstr "Вы подписаны на уведомления о курсе. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:420
+#: experimental/coursebuilder/modules/invitation/invitation.py:421
 msgid "Click here to unsubscribe."
 msgstr "Нажмите здесь, чтобы отменить подписку."
 
@@ -634,7 +634,7 @@ msgstr "Отправить"
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/modules/search/resources.py:362
-#: experimental/coursebuilder/views/unit.html:86
+#: experimental/coursebuilder/views/unit.html:85
 msgid "Lesson"
 msgstr "Урок"
 
@@ -1040,21 +1040,21 @@ msgstr "Войти"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:285
+#: experimental/coursebuilder/views/base.html:289
 msgid "Privacy & Terms"
 msgstr "Правила и принципы"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:291
-msgid "Locale:"
-msgstr "Язык:"
+#: experimental/coursebuilder/views/base.html:296
+msgid "Language:"
+msgstr ""
 
 #. Title of the webpage.
 #. Navbar tab.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/base_course.html:7
 #: experimental/coursebuilder/views/base_course.html:42
-#: experimental/coursebuilder/views/unit.html:77
+#: experimental/coursebuilder/views/unit.html:76
 msgid "Course"
 msgstr "Курс"
 
@@ -1189,7 +1189,7 @@ msgstr "Написать отзыв о заданиях других участ�
 #: experimental/coursebuilder/views/macros.html:290
 #: experimental/coursebuilder/views/macros.html:294
 #: experimental/coursebuilder/views/macros.html:344
-#: experimental/coursebuilder/views/unit.html:88
+#: experimental/coursebuilder/views/unit.html:87
 msgid "Activity"
 msgstr "Учебная работа"
 
@@ -1494,34 +1494,35 @@ msgid "No"
 msgstr "Нет"
 
 #. Label on a control to show a class syllabus.
-#: experimental/coursebuilder/views/unit.html:50
+#: experimental/coursebuilder/views/unit.html:49
 msgid "Show Syllabus"
 msgstr "Показать"
 
 #. Label on a control to hide a class syllabus.
-#: experimental/coursebuilder/views/unit.html:54
+#: experimental/coursebuilder/views/unit.html:53
 msgid "Hide Syllabus"
 msgstr "Скрыть"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
-#: experimental/coursebuilder/views/unit.html:114
+#: experimental/coursebuilder/views/unit.html:113
 msgid "This unit has no content."
 msgstr "В этом разделе ничего нет."
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:135
+#: experimental/coursebuilder/views/unit.html:134
 msgid "Previous Page"
 msgstr "Предыдущая страница"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:141
+#: experimental/coursebuilder/views/unit.html:140
 msgid "Next Page"
 msgstr "Следующая страница"
 
 #. Text on the navigation button at the end of a lesson. It signals that the
 #. student has completed a unit (which is a series of lessons).
-#: experimental/coursebuilder/views/unit.html:144
+#: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "Завершить"
+
 
