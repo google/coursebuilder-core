@@ -455,7 +455,8 @@ def start_integration_server_process(integration_server_start_cmd, modules):
     logging.info('Starting external server: %s', integration_server_start_cmd)
     devnull = open(os.devnull, 'w')
     server = subprocess.Popen(
-        integration_server_start_cmd, stdout=devnull, stderr=devnull)
+        integration_server_start_cmd, preexec_fn=os.setsid, stdout=devnull,
+        stderr=devnull)
     time.sleep(3)  # Wait for server to start up
 
     return server
@@ -467,15 +468,7 @@ def stop_integration_server(server, modules):
     # The new dev appserver starts a _python_runtime.py process that isn't
     # captured by start_integration_server and so doesn't get killed. Until it's
     # done, our tests will never complete so we kill it manually.
-    (stdout, unused_stderr) = subprocess.Popen(
-        ['pgrep', '-f', '_python_runtime.py'], stdout=subprocess.PIPE
-    ).communicate()
-
-    # If tests are killed partway through, runtimes can build up; send kill
-    # signals to all of them, JIC.
-    pids = [int(pid.strip()) for pid in stdout.split('\n') if pid.strip()]
-    for pid in pids:
-        os.kill(pid, signal.SIGKILL)
+    os.killpg(server.pid, signal.SIGTERM)
 
     if modules:
         fp = open(
