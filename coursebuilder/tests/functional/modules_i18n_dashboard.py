@@ -251,6 +251,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Course',
             'Data Pump',
             'Data Removal',
+            'Forums',
             'Homepage',
             'Translations',
             'Invitations',
@@ -327,7 +328,10 @@ class I18nDashboardHandlerTests(actions.TestBase):
             td = row.findall('td')[index]
             self.assertIn(class_name, td.get('class').split())
 
-        lesson_row_index = 14
+        lesson_row_xpath = ('.//table[@class="i18n-progress-table"]'
+            '/tbody/tr[@data-resource-key="lesson:{}"]').format(
+            self.lesson.lesson_id)
+
         extra_env = {
             'extra_locales': [
                 {'locale': 'el', 'availability': 'unavailable'},
@@ -335,9 +339,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             ]}
         with actions.OverriddenEnvironment(extra_env):
             dom = self.parse_html_string(self.get(self.URL).body)
-            table = dom.find('.//table[@class="i18n-progress-table"]')
-            lesson_row = table.findall('./tbody/tr')[lesson_row_index]
-
+            lesson_row = dom.find(lesson_row_xpath)
             lesson_title = ''.join(lesson_row.find('td[1]').itertext()).strip()
             self.assertEquals('1.1 Test Lesson', lesson_title)
             assert_progress('not-started', lesson_row, 2)
@@ -351,8 +353,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             I18nProgressDAO.save(dto)
 
             dom = self.parse_html_string(self.get(self.URL).body)
-            table = dom.find('.//table[@class="i18n-progress-table"]')
-            lesson_row = table.findall('./tbody/tr')[lesson_row_index]
+            lesson_row = dom.find(lesson_row_xpath)
 
             assert_progress('done', lesson_row, 2)
             assert_progress('in-progress', lesson_row, 3)
@@ -2354,6 +2355,8 @@ class TranslationImportExportTests(actions.TestBase):
         self.assertIn('Did not find translation for "Lesson Title"', messages)
 
     def test_upload_ui_with_blank_translation(self):
+        resource_count = 24
+
         # Do export to force creation of progress, bundle entities
         self._do_download({'locales': [{'locale': 'de', 'checked': True}],
                            'export_what': 'all'}, method='post')
@@ -2366,8 +2369,9 @@ class TranslationImportExportTests(actions.TestBase):
             'msgstr ""\n')
         messages = self._parse_messages(response)
         self.assertIn(
-            'For Deutsch (de), made 0 total replacements in 23 resources.  '
-            '1 items in the uploaded file did not have translations.', messages)
+            'For Deutsch (de), made 0 total replacements in {} resources.  '
+            '1 items in the uploaded file did not have translations.'.format(
+                resource_count), messages)
 
     def test_download_ui_no_request(self):
         response = self.put(

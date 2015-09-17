@@ -315,23 +315,6 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
 
     XSRF_ACTION = 'basic-course-settings-put'
 
-    def get_group_id(self, email):
-        if not email or '@googlegroups.com' not in email:
-            return None
-        return email.split('@')[0]
-
-    def get_groups_web_url(self, email):
-        group_id = self.get_group_id(email)
-        if not group_id:
-            return None
-        return 'https://groups.google.com/group/' + group_id
-
-    def get_groups_embed_url(self, email):
-        group_id = self.get_group_id(email)
-        if not group_id:
-            return None
-        return 'https://groups.google.com/forum/embed/?place=forum/' + group_id
-
     def process_get(self):
         entity = {}
         schema = self.get_course().create_settings_schema()
@@ -343,16 +326,6 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
             entity, schema.get_json_schema_dict())
 
         return json_payload
-
-    def _process_course_data(self, course_data):
-        if 'forum_email' in course_data:
-            forum_email = course_data['forum_email']
-            forum_web_url = self.get_groups_web_url(forum_email)
-            if forum_web_url:
-                course_data['forum_url'] = forum_web_url
-            forum_web_url = self.get_groups_embed_url(forum_email)
-            if forum_web_url:
-                course_data['forum_embed_url'] = forum_web_url
 
     def _process_extra_locales(self, extra_locales):
         """Make sure each locale has a label to go along."""
@@ -385,8 +358,6 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
 
         if 'extra_locales' in request_data:
             self._process_extra_locales(request_data['extra_locales'])
-        if 'course' in request_data:
-            self._process_course_data(request_data['course'])
 
         return request_data
 
@@ -699,6 +670,7 @@ def on_module_enabled(courses_custom_module, perms):
         'unit', placement=3000, sub_group_name='pinned')
     CourseSettingsHandler.register_settings_section('registration')
     CourseSettingsHandler.register_settings_section('assessment')
+    CourseSettingsHandler.register_settings_section('forums')
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
         SETTINGS_TAB_NAME, 'advanced', 'Advanced', action='settings_advanced',

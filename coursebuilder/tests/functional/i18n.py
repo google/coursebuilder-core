@@ -115,8 +115,8 @@ class I18NCourseSettingsTests(actions.TestBase):
         self.assertEqual('Power Searching with Google', value.value)
         self.assertEqual(binding.name_to_field['course:title'], value.field)
 
-        forum_url_field = binding.find_field('course:forum_url')
-        self.assertEquals('string', forum_url_field.type)
+        forum_email_field = binding.find_field('course:forum_email')
+        self.assertEquals('string', forum_email_field.type)
         blurb_field = binding.find_field('course:blurb')
         self.assertEquals('html', blurb_field.type)
         now_avail_field = binding.find_field('course:now_available')
@@ -172,7 +172,7 @@ class I18NCourseSettingsTests(actions.TestBase):
         self.assertEqual('POWER SEARCHING WITH Google', mapping.target_value)
 
         mapping = xcontent.SourceToTargetMapping.find_mapping(
-            mappings, 'course:forum_url')
+            mappings, 'course:forum_email')
         self.assertEqual(
             mapping.verb, xcontent.SourceToTargetDiffMapping.VERB_NEW)
         self.assertEqual(None, mapping.target_value)

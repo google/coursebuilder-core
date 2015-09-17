@@ -53,16 +53,10 @@ course:
   # Course start date.
   start_date: 'July 10, 2012'
 
-  # Forum URL. For details, see
+  # Forum email. For details, see
   #
   #     http://code.google.com/p/course-builder/wiki/WebForums.
   forum_email: My-Course@googlegroups.com
-  forum_url: https://groups.google.com/group/My-Course
-
-  # Forum embedding URL. This link is used to embed the forum in an iframe on
-  # the forum.html page. Set this value to False if you don't use forum and/or
-  # to remove the Forum link from the student navigation bar.
-  forum_embed_url: https://groups.google.com/forum/embed/?place=forum/My-Course
 
   # Locale for internationalization. See modules/i18n/resources/locale for
   # available locales.

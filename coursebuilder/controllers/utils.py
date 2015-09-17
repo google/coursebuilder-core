@@ -120,6 +120,9 @@ HUMAN_READABLE_DATE_FORMAT = '%Y-%m-%d'
 # Time format string for displaying times. Example: 01:16:40 UTC.
 HUMAN_READABLE_TIME_FORMAT = '%H:%M:%S UTC'
 
+# Regular expression for parsing email addresses
+EMAIL_PATTERN = re.compile(r'^(?P<name>[^@]+)@(?P<domain>.+)$')
+
 
 class RESTHandlerMixin(object):
     """A mixin class to mark any handler as REST handler."""
@@ -1209,6 +1212,10 @@ class RegisterHandler(BaseHandler):
 class ForumHandler(BaseHandler):
     """Handler for forum page."""
 
+    FORUM_EMBED_TEMPLATE = (
+        'https://groups.google.com/forum/embed/?place=forum/{name}'
+        '{domain_portion}')
+
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled(
@@ -1216,8 +1223,38 @@ class ForumHandler(BaseHandler):
         if not student:
             return
 
+        environ = self.app_context.get_environ()
+        forum_email = environ.get('course', {}).get('forum_email', None)
+
+        if not forum_email:
+            self.error(404)
+            return
+
+        self.template_value['forum_embed_url'] =\
+            self.generate_forum_embed_url(forum_email)
+
         self.template_value['navbar'] = {'forum': True}
+
         self.render('forum.html')
+
+    @classmethod
+    def generate_forum_embed_url(cls, email):
+        if not email:
+            return None
+
+        parsed_email = EMAIL_PATTERN.match(str(email))
+        if not parsed_email:
+            return None
+
+        domain = parsed_email.group('domain')
+        name = parsed_email.group('name')
+
+        domain_portion = ''
+        if domain != 'googlegroups.com':
+            domain_portion = '&domain={}'.format(domain)
+
+        return cls.FORUM_EMBED_TEMPLATE.format(
+            name=name, domain_portion=domain_portion)
 
 
 class StudentProfileHandler(BaseHandler):

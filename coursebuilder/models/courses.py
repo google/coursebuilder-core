@@ -2194,6 +2194,7 @@ class Course(object):
     SCHEMA_SECTION_UNITS_AND_LESSONS = 'unit'
     SCHEMA_SECTION_ASSESSMENT = 'assessment'
     SCHEMA_SECTION_I18N = 'i18n'
+    SCHEMA_SECTION_FORUMS = 'forums'
 
     SCHEMA_LOCALE_AVAILABILITY = 'availability'
     SCHEMA_LOCALE_AVAILABILITY_AVAILABLE = 'available'
@@ -2212,6 +2213,7 @@ class Course(object):
             cls.SCHEMA_SECTION_UNITS_AND_LESSONS,
             cls.SCHEMA_SECTION_ASSESSMENT,
             cls.SCHEMA_SECTION_I18N,
+            cls.SCHEMA_SECTION_FORUMS,
             ])
         for name in cls.OPTIONS_SCHEMA_PROVIDERS:
             ret.add(name)
@@ -2291,12 +2293,28 @@ class Course(object):
             DEFAULT_EXISTING_COURSE_YAML_DICT, COURSE_TEMPLATE_DICT)
 
     @classmethod
+    def create_forum_settings_schema(cls, reg):
+        opts = reg.add_sub_registry(
+            Course.SCHEMA_SECTION_FORUMS, 'Forums',
+            extra_schema_dict_values={
+                'className': 'inputEx-Group hidden-header'
+            })
+
+        opts.add_property(schema_fields.SchemaField(
+            'course:forum_email', 'Google Group Email', 'string', optional=True,
+            description='This is the email address of the Google Group forum '
+            'for this course. It can be at googlegroups.com or at your own '
+            'domain, but must correspond to a Google Group.', i18n=True))
+
+    @classmethod
     def create_base_settings_schema(cls):
         """Create the registry for course properties."""
 
         reg = schema_fields.FieldRegistry('Settings',
             extra_schema_dict_values={
                 'className': 'inputEx-Group new-form-layout hidden-header'})
+
+        cls.create_forum_settings_schema(reg)
 
         course_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_COURSE, 'Course',
@@ -2318,16 +2336,6 @@ class Course(object):
             'tabs, spaces, commas, or newlines.  Existing values using "[" and '
             '"]" around email addresses continues to be supported.  '
             'Regular expressions are not supported.'))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:forum_email', 'Forum Email', 'string', optional=True,
-            description='Email for the forum, e.g. '
-            '\'My-Course@googlegroups.com\'.', i18n=False))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:forum_embed_url', 'Forum URL for embedding', 'string',
-            optional=True, description='URL for the forum &lt;iframe&gt;.'))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:forum_url', 'Forum URL', 'string', optional=True,
-            description='URL for the forum.'))
         course_opts.add_property(schema_fields.SchemaField(
             'course:start_date', 'Course Start Date', 'string', optional=True,
             i18n=False))
