@@ -112,7 +112,7 @@ _MATERIAL_ICONS_URL = 'https://fonts.googleapis.com/icon?family=Material+Icons'
 _MATERIAL_ICONS_URL_NAME = 'material_icons_url'
 _ORIGIN_NAME = 'origin'
 _RESOURCE_URI_PREFIX_BOUNDARY_NAME = 'resource_uri_prefix_boundary'
-_ROBOTO_URL = 'http://fonts.googleapis.com/css?family=Roboto'
+_ROBOTO_URL = 'https://fonts.googleapis.com/css?family=Roboto'
 _ROBOTO_URL_NAME = 'roboto_url'
 _SIGN_IN_URL_NAME = 'sign_in_url'
 _STATIC_URL = '%s/%s/.*' % (_BASE_URL, _STATIC)
