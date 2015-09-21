@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-14 07:51-0700\n"
-"PO-Revision-Date: 2015-08-31 08:02-0700\n"
+"POT-Creation-Date: 2015-09-21 07:58-0700\n"
+"PO-Revision-Date: 2015-09-21 07:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fil <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -44,7 +44,7 @@ msgstr "Tama. "
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:10
 msgid "Incorrect. "
-msgstr "Hindi Tama. "
+msgstr "Mali. "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:12
@@ -1058,7 +1058,7 @@ msgstr "Privacy at Mga Tuntunin"
 #. Text describing the locale selector.
 #: experimental/coursebuilder/views/base.html:296
 msgid "Language:"
-msgstr ""
+msgstr "Wika:"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1557,5 +1557,4 @@ msgstr "Susunod na Pahina"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "Dulo"
-
 

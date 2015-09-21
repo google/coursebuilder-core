@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-14 07:51-0700\n"
-"PO-Revision-Date: 2015-08-31 08:02-0700\n"
+"POT-Creation-Date: 2015-09-21 07:58-0700\n"
+"PO-Revision-Date: 2015-09-21 07:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sw <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -44,12 +44,12 @@ msgstr "Ni sahihi. "
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:10
 msgid "Incorrect. "
-msgstr "Sio sahihi. "
+msgstr "Si sahihi. "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:12
 msgid "Partially Correct. "
-msgstr "Ni Sahihi kwa Kiasi Fulani "
+msgstr "Ni Sahihi kwa Kiasi Fulani. "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:15
@@ -74,7 +74,7 @@ msgstr "Jibu sahihi ni:"
 #. The title for section showing feedback related to the answer given
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:24
 msgid "Targeted Feedback:"
-msgstr "Maoni Yaliyolengwa"
+msgstr "Majibu Yaliyotarajiwa:"
 
 #. The title for section showing overall feedback
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:26
@@ -1042,7 +1042,7 @@ msgstr "Faragha na Masharti"
 #. Text describing the locale selector.
 #: experimental/coursebuilder/views/base.html:296
 msgid "Language:"
-msgstr ""
+msgstr "Lugha:"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1531,5 +1531,4 @@ msgstr "Ukurasa Unaofuata"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "Mwisho"
-
 

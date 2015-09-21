@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-14 07:51-0700\n"
-"PO-Revision-Date: 2015-08-31 08:02-0700\n"
+"POT-Creation-Date: 2015-09-21 07:58-0700\n"
+"PO-Revision-Date: 2015-09-21 07:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: is <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -1049,7 +1049,7 @@ msgstr "Persónuvernd og skilmálar"
 #. Text describing the locale selector.
 #: experimental/coursebuilder/views/base.html:296
 msgid "Language:"
-msgstr ""
+msgstr "Tungumál:"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1538,5 +1538,4 @@ msgstr "Næsta síða"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "Lok"
-
 

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-14 07:51-0700\n"
-"PO-Revision-Date: 2015-08-31 08:02-0700\n"
+"POT-Creation-Date: 2015-09-21 07:58-0700\n"
+"PO-Revision-Date: 2015-09-21 07:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ta <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -74,12 +74,12 @@ msgstr "சரியான பதில்:"
 #. The title for section showing feedback related to the answer given
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:24
 msgid "Targeted Feedback:"
-msgstr "பிழைகள் குறித்த பின்னூட்டம்:"
+msgstr "பிழைகள் குறித்த கருத்து:"
 
 #. The title for section showing overall feedback
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:26
 msgid "Feedback:"
-msgstr "பின்னூட்டம்:"
+msgstr "கருத்து:"
 
 #. Text appearing at the bottom of a lesson page after the student asks for it
 #. to be graded.
@@ -1056,7 +1056,7 @@ msgstr "தனியுரிமை & விதிமுறைகள்"
 #. Text describing the locale selector.
 #: experimental/coursebuilder/views/base.html:296
 msgid "Language:"
-msgstr ""
+msgstr "மொழி:"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1557,5 +1557,4 @@ msgstr "அடுத்த பக்கம்"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "முடிவு"
-
 

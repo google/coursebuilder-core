@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-14 07:51-0700\n"
-"PO-Revision-Date: 2015-08-31 08:02-0700\n"
+"POT-Creation-Date: 2015-09-21 07:58-0700\n"
+"PO-Revision-Date: 2015-09-21 07:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: nl <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -74,7 +74,7 @@ msgstr "Het juiste antwoord is:"
 #. The title for section showing feedback related to the answer given
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:24
 msgid "Targeted Feedback:"
-msgstr "Getargete feedback:"
+msgstr "Gerichte feedback:"
 
 #. The title for section showing overall feedback
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:26
@@ -1050,7 +1050,7 @@ msgstr "Privacy en voorwaarden"
 #. Text describing the locale selector.
 #: experimental/coursebuilder/views/base.html:296
 msgid "Language:"
-msgstr ""
+msgstr "Taal:"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1544,5 +1544,4 @@ msgstr "Volgende pagina"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "Einde"
-
 

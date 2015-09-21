@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-14 07:51-0700\n"
-"PO-Revision-Date: 2015-08-31 08:02-0700\n"
+"POT-Creation-Date: 2015-09-21 07:58-0700\n"
+"PO-Revision-Date: 2015-09-21 07:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: mr <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -886,7 +886,7 @@ msgstr "सादर केलेले अभिहस्तांकन"
 #. Text telling students the date their answers were submitted
 #: experimental/coursebuilder/views/assessment.html:85
 msgid "Submitted on"
-msgstr "यारोजी सबमिट केले"
+msgstr "या रोजी सबमिट केले"
 
 #. Header text for the list of reviews received for an assignment.
 #: experimental/coursebuilder/views/assessment.html:110
@@ -1053,7 +1053,7 @@ msgstr "गोपनीयता आणि अटी"
 #. Text describing the locale selector.
 #: experimental/coursebuilder/views/base.html:296
 msgid "Language:"
-msgstr ""
+msgstr "भाषा:"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1552,5 +1552,4 @@ msgstr "पुढील पृष्ठ"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "समाप्त"
-
 
