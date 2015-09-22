@@ -573,11 +573,11 @@ def _get_edit_tab(handler, add_assets):
     return _get_tab_content(tab, handler, add_assets)
 
 def can_view_assessments(app_context):
-    return not courses.has_only_new_style_assessments(
+    return app_context and not courses.has_only_new_style_assessments(
         courses.Course(None, app_context=app_context))
 
 def can_view_activities(app_context):
-    return not courses.has_only_new_style_activities(
+    return app_context and not courses.has_only_new_style_activities(
         courses.Course(None, app_context=app_context))
 
 def on_module_enabled():

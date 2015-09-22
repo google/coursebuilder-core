@@ -841,7 +841,7 @@ class ConsentBannerTests(UsageReportingTestBase):
         self.assertEqual(2, len(banner.findall('.//button')))
 
     def test_banner_with_buttons_shown_to_super_user_on_global_admin(self):
-        dom = self.parse_html_string(self.get('/admin/global').body)
+        dom = self.parse_html_string(self.get('/modules/admin').body)
         banner = dom.find('.//div[@class="consent-banner"]')
         self.assertIsNotNone(banner)
         self.assertIn(self.SUPER_MESSAGE, banner.find('.//h1').text)
@@ -861,7 +861,7 @@ class ConsentBannerTests(UsageReportingTestBase):
         config.set_report_allowed(False)
 
         # Check super-user role; global admin
-        dom = self.parse_html_string(self.get('/admin/global').body)
+        dom = self.parse_html_string(self.get('/modules/admin').body)
         self.assertIsNone(dom.find('.//div[@class="consent-banner"]'))
 
         # check super-user role; dashboard
@@ -952,7 +952,7 @@ class DevServerTests(UsageReportingTestBase):
 
     def test_consent_banner_not_shown_in_dev(self):
         # First check banner is present in test mode
-        dom = self.parse_html_string(self.get('/admin/global').body)
+        dom = self.parse_html_string(self.get('/modules/admin').body)
         banner = dom.find('.//div[@class="consent-banner"]')
         self.assertIsNotNone(banner)
 
@@ -960,6 +960,6 @@ class DevServerTests(UsageReportingTestBase):
         messaging.ENABLED_IN_DEV_FOR_TESTING = False
 
         # Expect to see banner missing
-        dom = self.parse_html_string(self.get('/admin/global').body)
+        dom = self.parse_html_string(self.get('/modules/admin').body)
         banner = dom.find('.//div[@class="consent-banner"]')
         self.assertIsNone(banner)

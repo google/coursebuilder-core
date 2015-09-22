@@ -708,13 +708,13 @@ class DashboardAccessTestCase(actions.TestBase):
     def test_course_picker(self):
         actions.login(self.USER_EMAIL, is_admin=False)
         picker_options = self._get_all_picker_options()
-        self.assertEquals(len(list(picker_options)), 0)
+        self.assertEquals(len(list(picker_options)), 1)
         actions.logout()
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         picker_options = self._get_all_picker_options()
         # Expect 3 courses, as the default one is also considered for the picker
-        self.assertEquals(len(picker_options), 2)
+        self.assertEquals(len(picker_options), 3)
         actions.logout()
 
     def _get_right_nav_links(self):

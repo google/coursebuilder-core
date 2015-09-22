@@ -1,14 +1,6 @@
+{% import 'menu_macros.html' as menu_macros with context %}
 <!DOCTYPE html>
-<html class="google
-    {%- if current_menu_item and current_menu_item.group.group.name == 'admin' %}
-      gcb-page--admin
-    {%- endif %}
-    {%- if is_global_admin %}
-      gcb-page--global-admin
-    {%- else %}
-      gcb-page--dashboard
-    {%- endif %}
-    " lang="en">
+<html class="google" lang="en">
   <head>
     <base href="{{ gcb_course_base }}" />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -69,8 +61,10 @@
         <div class="mdl-layout__header-row">
           <span class="mdl-layout-title">
             {% if current_menu_item %}
-              {{current_menu_item.group.group.title}}
-              &gt;
+              {% if current_menu_item.group and current_menu_item.group.group %}
+                {{current_menu_item.group.group.title}}
+                &gt;
+              {% endif %}
               {{current_menu_item.title}}
             {% endif %}
           </span>
@@ -91,100 +85,51 @@
       <nav class="mdl-layout__drawer">
         <header class="gcb-drawer-header">
           <h1 class="mdl-layout-title">Course Builder</h1>
+        </header>
 
-          {% if course_app_contexts|length %}
-            <div class="gcb-collapse mdl-navigation gcb-menu gcb-course-picker">
-              <div id="course-picker" class="mdl-navigation__link gcb-collapse__button">
-                <i class="gcb-collapse__icon material-icons">expand_more</i>
-                <span class="gcb-course-picker__text">
-                {% if current_course %}
-                  {{ course_title }}
-                {% else %}
-                  Course Picker
-                {% endif %}
-                </span>
-              </div>
+        <div class="mdl-navigation gcb-accordion">
 
-              <div id="gcb-course-picker-menu" class="gcb-collapse__content-wrapper">
-                <div class="gcb-collapse__content mdl-animation--default">
-                  {% for course_app_context in course_app_contexts %}
-                    {% if not current_course or course_app_context != current_course.app_context %}
+          {% if courses_menu_item %}
+            <div class="gcb-menu gcb-menu__section">
+              {{menu_macros.render_menu_item(courses_menu_item)}}
+            </div>
+          {% endif %}
+
+          {% if app_context and course_app_contexts|length %}
+            <div class="gcb-menu gcb-menu__section">
+              <div class="gcb-collapse gcb-course-picker">
+                <div id="course-picker" class="mdl-navigation__link gcb-collapse__button">
+                  <i class="gcb-collapse__icon material-icons">expand_more</i>
+                  <span class="gcb-course-picker__text">
+                  {% if current_course %}
+                    {{ course_title }}
+                  {% else %}
+                    Course Picker
+                  {% endif %}
+                  </span>
+                </div>
+
+                <div id="gcb-course-picker-menu" class="gcb-collapse__content-wrapper gcb-menu">
+                  <div class="gcb-collapse__content mdl-animation--default">
+                    {% for course_app_context in course_app_contexts %}
                       <a
                           class="mdl-navigation__link"
-                          {% if current_course and current_menu_item %}
+                          {% if app_context and current_menu_item %}
                           href="{{course_app_context.canonicalize_url('/' + current_menu_item.computed_href(app_context))}}"
                           {% else %}
                           href="{{course_app_context.canonicalize_url('/dashboard?action=outline')}}"
                           {% endif %}
                           >{{course_app_context.get_title()}}</a>
-                    {% endif %}
-                  {% endfor %}
+                    {% endfor %}
+                  </div>
                 </div>
               </div>
             </div>
           {% endif %}
-        </header>
 
-        {% macro render_menu_item(item, qualifier) %}
-          {% if item.can_view(app_context) %}
-            <a
-                id="menu-item__{{qualifier}}{{item.name}}"
-                href="{{item.computed_href(app_context)}}"
-                class="mdl-navigation__link
-                {%- if current_menu_item == item %}
-                  gcb-active
-                {%- endif %}
-                "
-                {% if item.target %}
-                  target="{{item.target}}"
-                {% endif %}
-                >{{item.title}}</a>
-          {% endif %}
-        {% endmacro %}
-
-        {% macro render_menu_sub_groups(group, qualifier) %}
-          {% for sub_group in group.children %}
-            {% if sub_group.children|length %}
-              <div class="gcb-menu__sub-group">
-                {% for item in sub_group.children %}
-                  {{render_menu_item(item, qualifier)}}
-                {% endfor %}
-              </div>
-            {% endif %}
-          {% endfor %}
-        {% endmacro %}
-
-        {% macro render_menu_group(group, qualifier) %}
-          <div class="gcb-accordion">
-          {% for item in group.children %}
-            {% if item.can_view(app_context) %}
-              {% if item.is_group() %}
-                <div
-                    class="gcb-collapse
-                    {%- if current_menu_item and item == current_menu_item.group.group %}
-                      gcb-collapse--opened gcb-active-group
-                    {%- endif %}"
-                    id="menu-group__{{qualifier + item.name}}">
-                  <a class="mdl-navigation__link gcb-collapse__button">
-                    <i class="material-icons gcb-collapse__icon mdl-animation--default">expand_more</i>
-                    {{item.title}}
-                  </a>
-                  <div class="gcb-menu gcb-collapse__content-wrapper">
-                    <div class="gcb-collapse__content mdl-animation--default">
-                      {{render_menu_sub_groups(item, qualifier + item.name + '__')}}
-                    </div>
-                  </div>
-                </div>
-              {% else %}
-                {{render_menu_item(item, qualifier)}}
-              {% endif %}
-            {% endif %}
-          {% endfor %}
+          <div class="gcb-menu gcb-menu__section" id="nav-menu">
+            {{menu_macros.render_menu_group(root_menu_group, '')}}
           </div>
-        {% endmacro %}
-
-        <div class="mdl-navigation gcb-menu" id="nav-menu">
-          {{render_menu_group(root_menu_group, '')}}
         </div>
       </nav>
 

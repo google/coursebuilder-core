@@ -47,15 +47,20 @@ class AdminDashboardTabTests(actions.TestBase):
     def test_admin_tab_not_present_for_non_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=False)
         dom = self.parse_html_string(self.get('/dashboard').body)
+        self.assertIsNone(dom.find('.//a[@href="admin?action=settings"]'))
         self.assertIsNone(dom.find('.//a[@href="admin?action=courses"]'))
 
     def test_admin_tab_is_present_for_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         dom = self.parse_html_string(self.get('/dashboard').body)
+        self.assertIsNotNone(dom.find('.//a[@href="admin?action=settings"]'))
         self.assertIsNotNone(dom.find('.//a[@href="admin?action=courses"]'))
 
     def test_admin_actions_unavailable_for_non_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=False)
+
+        response = self.get('admin?action=settings')
+        self.assertEqual(302, response.status_int)
 
         response = self.get('admin?action=courses')
         self.assertEqual(302, response.status_int)
@@ -68,5 +73,9 @@ class AdminDashboardTabTests(actions.TestBase):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
 
         dom = self.parse_html_string(self.get('admin').body)
-        group = dom.find('.//*[@id="menu-group__admin"]')
-        self.assertIsNotNone(group)
+        site_settings_item = dom.find(
+            './/*[@id="menu-item__settings__site"]')
+        self.assertIsNotNone(site_settings_item)
+
+        courses_item = dom.find('.//*[@id="menu-item__courses"]')
+        self.assertIsNotNone(courses_item)

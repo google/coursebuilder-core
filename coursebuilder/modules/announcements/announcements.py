@@ -356,8 +356,8 @@ def register_module():
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'analytics', 'announcements', 'Announcements',
-        action='edit_announcements', href='announcements', placement=1000,
-        sub_group_name='pinned')
+        action='edit_announcements', href='announcements', is_external=True,
+        placement=1000, sub_group_name='pinned')
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

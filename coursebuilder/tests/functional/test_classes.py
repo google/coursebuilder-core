@@ -1408,12 +1408,10 @@ class AdminAspectTest(actions.TestBase):
 
     def test_default_admin_tab_is_courses(self):
         actions.login('test_appstats@google.com', is_admin=True)
-        response = self.testapp.get('/admin/global')
-        dom = self.parse_html_string(self.testapp.get('/admin/global').body)
+        response = self.testapp.get('/modules/admin')
+        dom = self.parse_html_string(self.testapp.get('/modules/admin').body)
 
-        group = dom.find('.//*[@id="menu-group__admin"]')
-        item = dom.find('.//*[@id="menu-item__admin__courses"]')
-        self.assertIn('gcb-active-group', group.get('class'))
+        item = dom.find('.//*[@id="menu-item__courses"]')
         self.assertIn('gcb-active', item.get('class'))
 
     def test_appstats(self):
@@ -1422,25 +1420,21 @@ class AdminAspectTest(actions.TestBase):
 
         # check appstats is disabled by default
         actions.login(email, is_admin=True)
-        response = self.testapp.get('/admin/global')
+        response = self.testapp.get('/modules/admin')
         assert_equals(response.status_int, 200)
         assert_does_not_contain('>Appstats</a>', response.body)
         assert_does_not_contain('/admin/stats/', response.body)
 
         # enable and check appstats is now enabled
-        modules.admin.admin.notify_module_disabled()
         os.environ['GCB_APPSTATS_ENABLED'] = 'True'
-        modules.admin.admin.notify_module_enabled()
-        response = self.testapp.get('/admin/global')
+        response = self.testapp.get('/modules/admin')
         assert_equals(response.status_int, 200)
         dom = self.parse_html_string(response.body)
-        stats_menu_item = dom.find('.//*[@id="menu-item__admin__stats"]')
+        stats_menu_item = dom.find('.//*[@id="menu-item__analytics__stats"]')
         self.assertIsNotNone(stats_menu_item)
         self.assertEqual(stats_menu_item.get('href'), '/admin/stats/')
 
-        modules.admin.admin.notify_module_disabled()
         del os.environ['GCB_APPSTATS_ENABLED']
-        modules.admin.admin.notify_module_enabled()
 
     def test_courses_page_for_multiple_courses(self):
         """Tests /admin page showing multiple courses."""
@@ -1478,7 +1472,7 @@ class AdminAspectTest(actions.TestBase):
         actions.login(email, is_admin=True)
 
         # Check the course listing page.
-        response = self.testapp.get('/admin')
+        response = self.testapp.get('/modules/admin')
         assert_contains_all_of([
             'Course AAA',
             '/aaa/dashboard',
@@ -1497,27 +1491,25 @@ class AdminAspectTest(actions.TestBase):
         self.assertFalse(modules.admin.admin.DIRECT_CODE_EXECUTION_UI_ENABLED)
 
         # Test the console when it is enabled
-        modules.admin.admin.notify_module_disabled()
         modules.admin.admin.DIRECT_CODE_EXECUTION_UI_ENABLED = True
-        modules.admin.admin.notify_module_enabled()
 
         # Check normal user has no access.
         actions.login(email)
-        response = self.testapp.get('/admin/global?action=console')
+        response = self.testapp.get('/modules/admin?action=console')
         assert_equals(response.status_int, 302)
 
-        response = self.testapp.post('/admin/global?action=console')
+        response = self.testapp.post('/modules/admin?action=console')
         assert_equals(response.status_int, 302)
 
         # Check delegated admin has no access.
         os.environ['gcb_admin_user_emails'] = '[%s]' % email
         actions.login(email)
-        response = self.testapp.get('/admin/global?action=console')
+        response = self.testapp.get('/modules/admin?action=console')
         assert_equals(response.status_int, 200)
         assert_contains(
             'You must be an actual admin user to continue.', response.body)
 
-        response = self.testapp.get('/admin/global?action=console')
+        response = self.testapp.get('/modules/admin?action=console')
         assert_equals(response.status_int, 200)
         assert_contains(
             'You must be an actual admin user to continue.', response.body)
@@ -1526,7 +1518,7 @@ class AdminAspectTest(actions.TestBase):
 
         # Check actual admin has access.
         actions.login(email, is_admin=True)
-        response = self.testapp.get('/admin/global?action=console')
+        response = self.testapp.get('/modules/admin?action=console')
         assert_equals(response.status_int, 200)
 
         response.forms[0].set('code', 'print "foo" + "bar"')
@@ -1534,13 +1526,11 @@ class AdminAspectTest(actions.TestBase):
         assert_contains('foobar', response.body)
 
         # Finally, test that the console is not found when it is disabled
-        modules.admin.admin.notify_module_disabled()
         modules.admin.admin.DIRECT_CODE_EXECUTION_UI_ENABLED = False
-        modules.admin.admin.notify_module_enabled()
 
         actions.login(email, is_admin=True)
-        self.testapp.get('/admin/global?action=console', status=404)
-        self.testapp.post('/admin/global?action=console_run', status=404)
+        self.testapp.get('/modules/admin?action=console', status=302)
+        self.testapp.post('/modules/admin?action=console_run', status=302)
 
     def test_non_admin_has_no_access(self):
         """Test non admin has no access to pages or REST endpoints."""
@@ -1556,15 +1546,15 @@ class AdminAspectTest(actions.TestBase):
         prop.put()
 
         # Check user has no access to specific pages and actions.
-        response = self.testapp.get('/admin/global?action=settings')
+        response = self.testapp.get('/modules/admin?action=settings')
         assert_equals(response.status_int, 302)
 
         response = self.testapp.get(
-            '/admin/global?action=config_edit&name=gcb_admin_user_emails')
+            '/modules/admin?action=config_edit&name=gcb_admin_user_emails')
         assert_equals(response.status_int, 302)
 
         response = self.testapp.post(
-            '/admin/global?action=config_reset&name=gcb_admin_user_emails')
+            '/modules/admin?action=config_reset&name=gcb_admin_user_emails')
         assert_equals(response.status_int, 302)
 
         # Check user has no rights to GET verb.
@@ -1622,41 +1612,41 @@ class AdminAspectTest(actions.TestBase):
         prop.put()
 
         # Check user has access now.
-        response = self.testapp.get('/admin/global?action=settings')
+        response = self.testapp.get('/modules/admin?action=settings')
         assert_equals(response.status_int, 200)
 
         # Check overrides are active and have proper management actions.
         assert_contains('gcb_admin_user_emails', response.body)
         assert_contains('[test_admin_list@google.com]', response.body)
         assert_contains(
-            '/admin/global?action=config_override&amp;'
+            'admin?action=config_override&amp;'
             'name=gcb_admin_user_emails',
             response.body)
         assert_contains(
-            '/admin/global?action=config_edit&amp;'
+            'admin?action=config_edit&amp;'
             'name=gcb_config_update_interval_sec',
             response.body)
 
         # Check editor page has proper actions.
         response = self.testapp.get(
-            '/admin/global?action=config_edit&amp;'
+            '/modules/admin?action=config_edit&amp;'
             'name=gcb_config_update_interval_sec')
         assert_equals(response.status_int, 200)
-        assert_contains('/admin/global?action=config_reset', response.body)
+        assert_contains('admin?action=config_reset', response.body)
         assert_contains('name=gcb_config_update_interval_sec', response.body)
 
         # Remove override.
         del os.environ['gcb_admin_user_emails']
 
         # Check user has no access.
-        response = self.testapp.get('/admin/global?action=settings')
+        response = self.testapp.get('/modules/admin?action=settings')
         assert_equals(response.status_int, 302)
 
     def test_access_to_admin_pages(self):
         """Test access to admin pages."""
 
         # assert anonymous user has no access
-        response = self.testapp.get('/admin/global?action=settings')
+        response = self.testapp.get('/modules/admin?action=settings')
         assert_equals(response.status_int, 302)
 
         # assert admin user has access
@@ -1666,18 +1656,18 @@ class AdminAspectTest(actions.TestBase):
         actions.login(email, is_admin=True)
         actions.register(self, name)
 
-        response = self.testapp.get('/admin/global')
+        response = self.testapp.get('/modules/admin')
         assert_contains('Power Searching with Google', response.body)
 
-        response = self.testapp.get('/admin/global?action=settings')
+        response = self.testapp.get('/modules/admin?action=settings')
         assert_contains('gcb_admin_user_emails', response.body)
         assert_contains('gcb_config_update_interval_sec', response.body)
 
-        response = self.testapp.get('/admin/global?action=perf')
+        response = self.testapp.get('/modules/admin?action=perf')
         assert_contains('gcb-admin-uptime-sec:', response.body)
         assert_contains('In-process Performance Counters', response.body)
 
-        response = self.testapp.get('/admin/global?action=deployment')
+        response = self.testapp.get('/modules/admin?action=deployment')
         assert_contains('application_id: testbed-test', response.body)
         assert_contains('About the Application', response.body)
 
@@ -1687,7 +1677,7 @@ class AdminAspectTest(actions.TestBase):
         # assert not-admin user has no access
         actions.login(email)
         actions.register(self, name)
-        response = self.testapp.get('/admin/global?action=settings')
+        response = self.testapp.get('/modules/admin?action=settings')
         assert_equals(response.status_int, 302)
 
     def test_multiple_courses(self):
@@ -1699,7 +1689,7 @@ class AdminAspectTest(actions.TestBase):
         email = 'test_multiple_courses@google.com'
 
         actions.login(email, is_admin=True)
-        response = self.testapp.get('/admin/global')
+        response = self.testapp.get('/modules/admin')
         assert_contains('Course Builder &gt; Admin &gt; Courses', response.body)
         assert_contains('Total: 2 item(s)', response.body)
 
@@ -2056,7 +2046,7 @@ class CourseAuthorCourseDeletionTest(actions.TestBase):
                                  'is_selected_course': 'True'
                              })
         self.assertEqual(302, response.status_int)
-        self.assertEqual('http://localhost/admin/global?action=courses',
+        self.assertEqual('http://localhost/modules/admin?action=courses',
                          response.location)
 
     def test_redirect_to_referer_when_deleting_selected_course(self):

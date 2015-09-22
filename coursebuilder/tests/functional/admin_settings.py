@@ -83,7 +83,6 @@ class WelcomePageTests(actions.TestBase):
         assert_contains('action="/admin/welcome"', response.body)
         assert_contains('Create Empty Course', response.body)
         assert_contains('Explore Sample Course', response.body)
-        assert_contains('Configure Settings', response.body)
 
     def test_explore_sample_course(self):
         actions.login(ADMIN_EMAIL, is_admin=True)
@@ -120,7 +119,7 @@ class WelcomePageTests(actions.TestBase):
                 'configure_settings')})
         self.assertEqual(302, response.status_int)
         self.assertEqual(
-            response.headers['location'], 'http://localhost/admin/global')
+            response.headers['location'], 'http://localhost/modules/admin')
 
     def test_explore_sample_course_not_idempotent(self):
         for uid in ['sample', 'sample_%s' % os.environ[

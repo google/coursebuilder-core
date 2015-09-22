@@ -232,11 +232,11 @@ class RootPage(PageObject):
 
         # deploy it
         LoginPage(self._tester).login('test@example.com', admin=True)
-        self.get(base_url + '/admin/global?action=settings')
+        self.get(base_url + '/modules/admin?action=settings')
         AdminSettingsPage(self._tester).click_override(
             'gcb_courses_config'
         ).set_status('Active').click_save()
-        self.get(base_url + '/admin/global?action=courses')
+        self.get(base_url + '/modules/admin?action=courses')
         self.find_element_by_link_text('Logout').click()
 
     def load(self, base_url):
@@ -410,9 +410,8 @@ class DashboardPage(PageObject):
             self.wait(1000).until(lambda s: content.is_displayed())
 
     def click_admin(self):
-        self.ensure_menu_group_is_open('admin')
         self.find_element_by_link_text('Courses').click()
-        return AdminPage(self._tester)
+        return self
 
     def click_import(self):
         self.find_element_by_css_selector('#import_course').click()
@@ -483,6 +482,17 @@ class DashboardPage(PageObject):
         clickable = self.find_element_by_link_text('Translations')
         self.wait_for_page_load_after(clickable.click)
         return self
+
+    def click_add_course(self):
+        # assuming you're already looking at the Courses page
+        button = self.find_element_by_id('add_course')
+        self.wait_for_page_load_after(button.click)
+        return AddCourseEditorPage(self._tester)
+
+    def click_site_settings(self):
+        self.ensure_menu_group_is_open('settings')
+        self.find_element_by_link_text('Site settings').click()
+        return AdminSettingsPage(self._tester)
 
 
 class CourseContentPage(RootPage):
@@ -1231,20 +1241,6 @@ class AddLesson(CourseContentElement):
         return self
 
 
-class AdminPage(DashboardPage):
-    """Page object to model the interactions with the admin landing page."""
-
-    def click_add_course(self):
-        button = self.find_element_by_id('add_course')
-        self.wait_for_page_load_after(button.click)
-        return AddCourseEditorPage(self._tester)
-
-    def click_settings(self):
-        self.ensure_menu_group_is_open('admin')
-        self.find_element_by_link_text('Site settings').click()
-        return AdminSettingsPage(self._tester)
-
-
 class AdminSettingsPage(PageObject):
     """Page object for the admin settings."""
 
@@ -1309,7 +1305,7 @@ class AddCourseEditorPage(EditorPageObject):
         return self
 
     def click_close(self):
-        return self._close_and_return_to(AdminPage)
+        return self._close_and_return_to(DashboardPage)
 
 
 class AnalyticsPage(PageObject):

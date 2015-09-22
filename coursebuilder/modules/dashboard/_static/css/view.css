@@ -553,7 +553,7 @@ Minimal Example:
 }
 
 /* Drawer menu adjustments */
-.mdl-layout__drawer .mdl-navigation.gcb-menu .mdl-navigation__link {
+.mdl-layout__drawer .mdl-navigation .gcb-menu .mdl-navigation__link {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 30px;
@@ -568,14 +568,38 @@ Minimal Example:
   background-color: rgba(0, 0, 0, 0.05);
 }
 
+.mdl-layout__drawer .mdl-navigation .gcb-menu .gcb-collapse--disabled .mdl-navigation__link {
+  opacity: .53;
+  cursor: auto;
+}
+
+.mdl-layout__drawer .gcb-collapse--disabled .mdl-navigation__link:hover {
+  background: transparent;
+}
+
+
 /* current page indication */
-.mdl-layout__drawer .mdl-navigation.gcb-menu .mdl-navigation__link.gcb-active,
-.mdl-layout__drawer .mdl-navigation.gcb-menu .mdl-navigation__link.gcb-active:hover {
+.mdl-layout__drawer .mdl-navigation .gcb-menu .mdl-navigation__link.gcb-active,
+.mdl-layout__drawer .mdl-navigation .gcb-menu .mdl-navigation__link.gcb-active:hover {
   background: rgba(0, 0, 0, 0.08);
 }
 
-.mdl-navigation.gcb-menu .gcb-active-group .gcb-collapse__button {
+.mdl-navigation .gcb-menu .gcb-active-group .gcb-collapse__button {
   color: rgb(0, 150, 136);
+}
+
+/* Make the Courses menu item look like the others despite not being a group */
+#menu-item__courses {
+  font-weight: bold;
+}
+
+#menu-item__courses.gcb-active {
+  background: inherit;
+  color: rgb(0, 150, 136);
+}
+
+#menu-item__courses:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 /* adjustments for the header */
@@ -622,7 +646,7 @@ Minimal Example:
 }
 
 /* indent sub-menus */
-.mdl-layout__drawer .mdl-navigation.gcb-menu .gcb-menu .mdl-navigation__link {
+.mdl-layout__drawer .mdl-navigation .gcb-menu .gcb-menu .mdl-navigation__link {
   padding-left: 45px;
 }
 
@@ -635,46 +659,18 @@ Minimal Example:
   border-top: 1px dotted #e0e0e0;
 }
 
-/* Course Picker stuff */
-.gcb-course-picker.mdl-navigation.gcb-menu {
-  padding-top: 0;
+/* etc */
+.gcb-menu__section + .gcb-menu__section {
+  margin-top: 16px;
 }
 
-.gcb-course-picker.gcb-collapse.gcb-collapse--opened {
-  border-bottom: none;
-  border-top: none;
-  margin-top: 0;
+#menu-group__help {
+  margin-top: 16px;
 }
 
-/* eliminate extra borders in the menu */
-
-#nav-menu .gcb-collapse:first-of-type {
-  border-top: 0;
-  margin-top: 0;
+.external-link {
+  font-size: 16px;
+  vertical-align: top;
+  opacity: 0.83;
 }
 
-#nav-menu .gcb-collapse:last-of-type {
-  border-bottom: 0;
-}
-
-/* Call out the Site Admin menu */
-
-.gcb-page--dashboard #menu-group__admin {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.gcb-page--dashboard #menu-group__help {
-  border-bottom: 0;
-}
-
-/* Stuff on the site-admin page */
-
-.gcb-page--admin .mdl-layout__header {
-  background-color: rgb(103, 58, 183);
-}
-
-.gcb-page--admin .mdl-navigation.gcb-menu .gcb-active-group .gcb-collapse__button {
-  color: rgb(103, 58, 183);
-}

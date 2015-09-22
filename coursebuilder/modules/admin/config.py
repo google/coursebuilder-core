@@ -385,7 +385,7 @@ class CourseDeleteHandler(utils.BaseHandler):
         if self.request.get('is_selected_course') == 'True':
             # If we are deleting the course the UI is currently selected for,
             # redirect to the global handler.
-            self.redirect('/admin/global?action=courses', normalize=False)
+            self.redirect('/modules/admin?action=courses', normalize=False)
         else:
             self.redirect(self.request.referer)
 

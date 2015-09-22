@@ -157,7 +157,7 @@ class BaseIntegrationTest(suite.TestBase):
         self.load_root_page(
         ).click_dashboard(
         ).click_admin(
-        ).click_settings(
+        ).click_site_settings(
         ).click_override(
             setting_name
         ).set_value(
@@ -489,7 +489,7 @@ class SampleCourseTests(BaseIntegrationTest):
             login, admin=True
         ).click_dashboard(
         ).click_admin(
-        ).click_settings(
+        ).click_site_settings(
         ).click_override_admin_user_emails(
         ).set_value(
             email
@@ -1302,7 +1302,7 @@ class EventsTest(BaseIntegrationTest):
         thing = self.load_root_page(
         ).click_dashboard(
         ).click_admin(
-        ).click_settings(
+        ).click_site_settings(
         ).click_override(
             'gcb_can_persist_tag_events'
         ).set_value(

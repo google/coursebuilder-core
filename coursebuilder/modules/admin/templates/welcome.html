@@ -73,14 +73,8 @@
           $('#action').attr('value', 'explore_sample');
           $('#xsrf_token').attr('value', '{{ explore_sample_xsrf|js_string }}');
         }
-        function do_configure_settings(event) {
-          $('#action').attr('value', 'configure_settings');
-          $('#xsrf_token').attr('value', '{{ configure_settings_xsrf|js_string }}');
-        }
-
         $('#create_new').click(do_add_first_course).keydown(do_add_first_course);
         $('#explore').click(do_explore_sample).keydown(do_explore_sample);
-        $('#configure_settings').click(do_configure_settings).keydown(do_configure_settings);
       });
     </script>
   </head>
@@ -109,7 +103,6 @@
             <button id="create_new" type="submit">Create Empty Course</button>
           {% endif %}
           <button id="explore" type="submit">Explore Sample Course</button>
-          <button id="configure_settings" type="submit">Configure Settings</button>
           {% for item in welcome_form_content %}
             {% if item %}{{ item }}{% endif %}
           {% endfor %}

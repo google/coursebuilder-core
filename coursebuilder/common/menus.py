@@ -57,6 +57,8 @@ class BaseMenu(object):
 
         if group:
             group.add_child(self)
+        else:
+            self.group = None
 
     def can_view(self, app_context, exclude_links=False):
         if self._can_view:
@@ -91,23 +93,29 @@ class MenuGroup(BaseMenu):
             if child.name == name:
                 return child
 
-    def first_visible_child(self, app_context, exclude_links=False):
+    def first_visible_child(
+            self, app_context, exclude_names=None, exclude_links=False):
         if super(MenuGroup, self).can_view(app_context):
             for child in self.children:
                 if exclude_links and child.is_link():
                     continue
+                if exclude_names and child.name in exclude_names:
+                    continue
                 if child.can_view(app_context):
                     return child
 
-    def first_visible_item(self, app_context, exclude_links=False):
+    def first_visible_item(
+            self, app_context, exclude_names=None, exclude_links=False):
         child = self.first_visible_child(
-            app_context, exclude_links=exclude_links)
+            app_context, exclude_names=exclude_names,
+            exclude_links=exclude_links)
         if child:
             if isinstance(child, MenuItem):
                 return child
             else:
                 return child.first_visible_item(
-                    app_context, exclude_links=exclude_links)
+                    app_context, exclude_names=exclude_names,
+                    exclude_links=exclude_links)
 
     def can_view(self, app_context, exclude_links=False):
         return bool(
@@ -127,14 +135,15 @@ class MenuGroup(BaseMenu):
 
 class MenuItem(BaseMenu):
     def __init__(
-            self, name, title, group, action=None, can_view=None, href=None,
-            placement=None, target=None):
+            self, name, title, action=None, can_view=None, group=None,
+            href=None, is_external=False, placement=None, target=None):
         assert can_view
         super(MenuItem, self).__init__(
             name, title, group=group, can_view=can_view, placement=placement)
         self.action = action
         self.href = href
         self.target = target
+        self.is_external = is_external or bool(target)
 
     def computed_href(self, app_context):
         return self.href

@@ -143,19 +143,21 @@ class DashboardHandler(
     @classmethod
     def add_nav_mapping(cls, name, title, **kwargs):
         """Create a top level nav item."""
-        group = cls.root_menu_group.get_child(name)
-        if group is None:
+        menu_item = cls.root_menu_group.get_child(name)
+        if menu_item is None:
             is_link = kwargs.get('href')
             menu_cls = menus.MenuItem if is_link else menus.MenuGroup
-            group = menu_cls(name, title, group=cls.root_menu_group, **kwargs)
+            menu_item = menu_cls(
+                name, title, group=cls.root_menu_group, **kwargs)
             if not is_link:
                 # create the basic buckets
                 pinned = menus.MenuGroup(
-                    'pinned', None, placement=1000, group=group)
+                    'pinned', None, placement=1000, group=menu_item)
                 default = menus.MenuGroup(
-                    'default', None, placement=2000, group=group)
+                    'default', None, placement=2000, group=menu_item)
                 advanced = menus.MenuGroup(
-                    'advanced', None, placement=3000, group=group)
+                    'advanced', None, placement=3000, group=menu_item)
+        return menu_item
 
     @classmethod
     def get_nav_title(cls, action):
@@ -168,7 +170,8 @@ class DashboardHandler(
     @classmethod
     def add_sub_nav_mapping(
             cls, group_name, item_name, title, action=None, contents=None,
-            can_view=None, href=None, sub_group_name=None, **kwargs):
+            can_view=None, href=None, no_app_context=False,
+            sub_group_name=None, **kwargs):
         """Create a second level nav item.
 
         Args:
@@ -215,9 +218,17 @@ class DashboardHandler(
             href = "dashboard?action={}".format(action)
 
         def combined_can_view(app_context):
-            if not cls.can_view(action):
-                return False
+            if action:
+                # Current design disallows actions at the global level.
+                # This might change in the future.
+                if not app_context and not no_app_context:
+                    return False
 
+                # Check permissions in the dashboard
+                if not cls.can_view(action):
+                    return False
+
+            # Additional custom visibility check
             if can_view and not can_view(app_context):
                 return False
 
@@ -389,13 +400,15 @@ class DashboardHandler(
         template_values['course_title'] = self.app_context.get_title()
 
         current_action = in_action or self._get_current_menu_action()
-        current_menu_item = self.actions_to_menu_items.get(current_action)
+        template_values['current_menu_item'] = self.actions_to_menu_items.get(
+            current_action)
+        template_values['courses_menu_item'] = self.actions_to_menu_items.get(
+            'courses')
         template_values['root_menu_group'] = self.root_menu_group
-        template_values['current_menu_item'] = current_menu_item
-        template_values['app_context'] = self.app_context
-        template_values['course_app_contexts'] = get_visible_courses()
-        template_values['current_course'] = self.get_course()
 
+        template_values['course_app_contexts'] = get_visible_courses()
+        template_values['app_context'] = self.app_context
+        template_values['current_course'] = self.get_course()
         template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = safe_dom.NodeList().append(
             safe_dom.Text('%s | ' % users.get_current_user().email())
@@ -416,8 +429,13 @@ class DashboardHandler(
             template_values['sections'] = []
         if not appengine_config.PRODUCTION_MODE:
             template_values['page_uuid'] = str(uuid.uuid1())
+
         self.response.write(
             self.get_template('view.html', []).render(template_values))
+
+    @classmethod
+    def register_courses_menu_item(cls, menu_item):
+        cls.actions_to_menu_items['courses'] = menu_item
 
     def format_title(self, text):
         """Formats standard title with or without course picker."""
@@ -580,39 +598,24 @@ class DashboardHandler(
         return []
 
 
-def make_help_menu(root_group):
-    anyone_can_view = lambda x: True
+def make_help_menu():
+    DashboardHandler.add_nav_mapping('help', 'Help', placement=6000)
 
-    group = menus.MenuGroup('help', 'Help', group=root_group, placement=6000)
-    sub_group = menus.MenuGroup('default', None, group=group, placement=2000)
+    DashboardHandler.add_sub_nav_mapping(
+        'help', 'documentation', 'Documentation',
+        href='https://code.google.com/p/course-builder/wiki/CourseBuilderCheckl'
+        'ist', target='_blank')
 
-    menus.MenuItem(
-        'documentation', 'Documentation',
-        href='https://www.google.com/edu/openonline/tech/index.html',
-        can_view=anyone_can_view, group=sub_group, placement=1000,
+    DashboardHandler.add_sub_nav_mapping(
+        'help', 'forum', 'Support',
+        href='https://groups.google.com/forum/?fromgroups#!categories/'
+        'course-builder-forum/general-troubleshooting',
         target='_blank')
 
-    menus.MenuItem(
-        'videos', 'Demo videos',
+    DashboardHandler.add_sub_nav_mapping(
+        'help', 'videos', 'Videos',
         href='https://www.youtube.com/playlist?list=PLFB_aGY5EfxeltJfJZwkjqDLAW'
-        'dMfSpES',
-        can_view=anyone_can_view, group=sub_group, placement=2000,
-        target='_blank')
-
-    menus.MenuItem(
-        'showcase', 'Showcase courses',
-        href='https://www.google.com/edu/openonline/index.html',
-        can_view=anyone_can_view, group=sub_group, placement=3000,
-        target='_blank')
-
-    menus.MenuItem(
-        'forum', 'Support forum',
-        href=(
-            'https://groups.google.com/forum/?fromgroups#!categories/'
-            'course-builder-forum/general-troubleshooting'),
-        can_view=anyone_can_view, group=sub_group, placement=4000,
-        target='_blank')
-
+        'dMfSpES', target='_blank')
 
 def get_visible_courses():
     result = []
@@ -632,7 +635,7 @@ def register_module():
     DashboardHandler.add_nav_mapping('analytics', 'Manage', placement=4000)
     DashboardHandler.add_nav_mapping('settings', 'Settings', placement=5000)
 
-    make_help_menu(DashboardHandler.root_menu_group)
+    make_help_menu()
 
     # pylint: disable=protected-access
     DashboardHandler.add_sub_nav_mapping(

@@ -1,0 +1,70 @@
+{% macro render_menu_item(item, qualifier) %}
+  {% if item.can_view(app_context) %}
+    <a
+        id="menu-item__{{qualifier}}{{item.name}}"
+        href="{{item.computed_href(app_context)}}"
+        class="mdl-navigation__link
+        {%- if current_menu_item == item %}
+          gcb-active
+        {%- endif %}
+        "
+        {% if item.target %}
+          target="{{item.target}}"
+        {% endif %}
+        >{{item.title}}
+        {% if item.is_external %}
+          <i class="material-icons external-link">open_in_new</i>
+        {% endif %}
+        </a>
+  {% endif %}
+{% endmacro %}
+
+{% macro render_menu_sub_groups(group, qualifier) %}
+  {% for sub_group in group.children %}
+    {% if sub_group.can_view(app_context) %}
+      <div class="gcb-menu__sub-group">
+        {% for item in sub_group.children %}
+          {{render_menu_item(item, qualifier)}}
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_menu_group(group, qualifier) %}
+  {% for item in group.children %}
+    {% if item.is_group() %}
+      {% if item.can_view(app_context) %}
+        <div
+            class="gcb-collapse
+            {%- if current_menu_item and current_menu_item.group and current_menu_item.group.group and item == current_menu_item.group.group %}
+              gcb-collapse--opened gcb-active-group
+            {%- endif %}"
+            id="menu-group__{{qualifier + item.name}}">
+          <a class="mdl-navigation__link gcb-collapse__button">
+            <i class="material-icons gcb-collapse__icon mdl-animation--default">expand_more</i>
+            {{item.title}}
+          </a>
+          <div class="gcb-menu gcb-collapse__content-wrapper">
+            <div class="gcb-collapse__content mdl-animation--default">
+              {{render_menu_sub_groups(item, qualifier + item.name + '__')}}
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div
+            class="gcb-collapse gcb-collapse--disabled"
+            id="menu-group__{{qualifier + item.name}}">
+          <a class="mdl-navigation__link gcb-collapse__button">
+            <i class="material-icons gcb-collapse__icon mdl-animation--default">expand_more</i>
+            {{item.title}}
+          </a>
+        </div>
+      {% endif %}
+    {% else %}
+      {% if item.can_view(app_context) %}
+        {{render_menu_item(item, qualifier)}}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}

@@ -539,6 +539,9 @@ function setUpCollapse() {
     var button = $(this);
     var collapse = button.parents('.gcb-collapse:first');
     var accordion = collapse.parents('.gcb-accordion:first');
+    if (collapse.hasClass('gcb-collapse--disabled')) {
+      return;
+    }
     if (!collapse.is('.gcb-collapse--opened')) {
       accordion.find('.gcb-collapse').removeClass('gcb-collapse--opened');
     }
