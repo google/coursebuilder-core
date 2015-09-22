@@ -248,15 +248,10 @@ class I18nDashboardHandlerTests(actions.TestBase):
             '',
             'Settings',
             'Assessments',
-            'Course',
-            'Data Pump',
-            'Data Removal',
             'Forums',
             'Homepage',
-            'Translations',
             'Invitations',
             'Registration',
-            'Units & lessons',
             '',
             'Create > Outline',
             'Unit 1 - Test Unit',
@@ -2355,7 +2350,7 @@ class TranslationImportExportTests(actions.TestBase):
         self.assertIn('Did not find translation for "Lesson Title"', messages)
 
     def test_upload_ui_with_blank_translation(self):
-        resource_count = 24
+        resource_count = 19
 
         # Do export to force creation of progress, bundle entities
         self._do_download({'locales': [{'locale': 'de', 'checked': True}],

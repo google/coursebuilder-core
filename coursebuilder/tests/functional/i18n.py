@@ -26,6 +26,7 @@ from common import schema_fields
 from common import xcontent
 from models import courses
 from modules.dashboard.question_editor import McQuestionRESTHandler
+from modules.i18n_dashboard import i18n_dashboard
 from tests.functional import actions
 
 
@@ -37,16 +38,10 @@ BASE_URL = '/' + COURSE_NAME
 STUDENT_EMAIL = 'foo@foo.com'
 
 
-FIELD_FILTER = schema_fields.FieldFilter(
-    type_names=['string', 'html', 'url'],
-    hidden_values=[False],
-    i18n_values=[None, True],
-    editable_values=[True])
-
-
 def _filter(binding):
     """Filter out translatable strings."""
-    return FIELD_FILTER.filter_value_to_type_binding(binding)
+    return i18n_dashboard.TRANSLATABLE_FIELDS_FILTER.\
+        filter_value_to_type_binding(binding)
 
 
 class I18NCourseSettingsTests(actions.TestBase):

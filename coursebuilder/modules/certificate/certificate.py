@@ -290,28 +290,29 @@ def get_criteria_editor_schema(course):
             ' [Peer Graded]' if course.needs_human_grader(unit) else '')))
 
     criterion_type.add_property(schema_fields.SchemaField(
-        'assessment_id', 'Requirement', 'string', optional=True,
+        'assessment_id', 'Requirement', 'string',
         # The JS will only reveal the following description
         # for peer-graded assessments
         description='When specifying a peer graded assessment as criterion, '
             'the student should complete both the assessment '
             'and the minimum of peer reviews.',
-        select_data=select_data,
         extra_schema_dict_values={
-            'className': 'inputEx-Field assessment-dropdown'}))
+            'className': 'inputEx-Field assessment-dropdown'
+        }, i18n=False, optional=True, select_data=select_data))
 
     criterion_type.add_property(schema_fields.SchemaField(
-        'pass_percent', 'Passing Percentage', 'string', optional=True,
+        'pass_percent', 'Passing Percentage', 'string',
         extra_schema_dict_values={
-            'className': 'pass-percent'}))
+            'className': 'pass-percent'
+        }, i18n=False, optional=True))
 
     select_data = [('', '-- Select criterion method--')] + [(
         x, x) for x in custom_criteria.registration_table]
     criterion_type.add_property(schema_fields.SchemaField(
-        'custom_criteria', 'Custom Criterion', 'string', optional=True,
-        select_data=select_data,
+        'custom_criteria', 'Custom Criterion', 'string',
         extra_schema_dict_values={
-            'className': 'custom-criteria'}))
+            'className': 'custom-criteria'
+        }, i18n=False, optional=True, select_data=select_data))
 
     is_peer_assessment_table = {}
     for unit in course.get_assessment_list():

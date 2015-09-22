@@ -1704,6 +1704,12 @@ class TranslatableResourceRegistry(object):
         return ret
 
 
+def has_translatable_fields(schema):
+    index = schema_fields.FieldRegistryIndex(schema)
+    index.rebuild()
+    return bool(TRANSLATABLE_FIELDS_FILTER.filter_field_registry_index(index))
+
+
 class TranslatableResourceCourseSettings(AbstractTranslatableResourceType):
 
     @classmethod
@@ -1718,12 +1724,14 @@ class TranslatableResourceCourseSettings(AbstractTranslatableResourceType):
     def get_resources_and_keys(cls, course):
         ret = []
         for section_name in sorted(courses.Course.get_schema_sections()):
-            ret.append((
-                resources_display.ResourceCourseSettings.get_resource(
-                    course, section_name),
-                resource.Key(resources_display.ResourceCourseSettings.TYPE,
-                    section_name, course),
-                ))
+            schema = resources_display.ResourceCourseSettings.get_resource(
+                course, section_name)
+            if has_translatable_fields(schema):
+                ret.append((
+                    schema,
+                    resource.Key(resources_display.ResourceCourseSettings.TYPE,
+                        section_name, course),
+                    ))
         return ret
 
 
@@ -1974,21 +1982,22 @@ class TranslationConsole(BaseDashboardExtension):
             'key': key})
 
     def render(self):
-        main_content = oeditor.ObjectEditor.get_html_for(
-            self.handler,
-            TranslationConsoleRestHandler.SCHEMA.get_json_schema(),
-            TranslationConsoleRestHandler.SCHEMA.get_schema_dict(),
-            self.handler.request.get('key'),
-            self.handler.canonicalize_url(TranslationConsoleRestHandler.URL),
-            self.handler.get_action_url(I18nDashboardHandler.ACTION),
-            auto_return=False,
-            required_modules=TranslationConsoleRestHandler.REQUIRED_MODULES,
-            extra_css_files=['translation_console.css'],
-            extra_js_files=['translation_console.js'],
-            additional_dirs=[TEMPLATES_DIR])
-
         if self.is_readonly(self.handler.get_course()):
             main_content = self.format_readonly_message()
+        else:
+            main_content = oeditor.ObjectEditor.get_html_for(
+                self.handler,
+                TranslationConsoleRestHandler.SCHEMA.get_json_schema(),
+                TranslationConsoleRestHandler.SCHEMA.get_schema_dict(),
+                self.handler.request.get('key'),
+                self.handler.canonicalize_url(
+                    TranslationConsoleRestHandler.URL),
+                self.handler.get_action_url(I18nDashboardHandler.ACTION),
+                auto_return=False,
+                required_modules=TranslationConsoleRestHandler.REQUIRED_MODULES,
+                extra_css_files=['translation_console.css'],
+                extra_js_files=['translation_console.js'],
+                additional_dirs=[TEMPLATES_DIR])
 
         self.handler.render_page({
             'page_title': self.handler.format_title('Translation workflow'),
