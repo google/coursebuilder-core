@@ -2,7 +2,7 @@ describe('certificate criteria user interface', function() {
   window.cb_global = {
     schema: {
       properties: {
-        course: {
+        certificates: {
           properties: {
             certificate_criteria: {
               _inputex : {
@@ -22,7 +22,7 @@ describe('certificate criteria user interface', function() {
     beforeEach(function() {
       window.cb_global.form = {
         inputsNames: {
-          course: {
+          certificates: {
             inputsNames: {
               certificate_criteria: {
                 on: function() {}
@@ -78,7 +78,7 @@ describe('certificate criteria user interface', function() {
       window.cb_global.form = {
         getValue : function() {
           return {
-            course: {
+            certificates: {
               certificate_criteria : criteria
             }
           }

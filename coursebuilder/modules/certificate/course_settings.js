@@ -3,7 +3,7 @@ var isPeerAssessmentTable;
 $(onReady);
 
 function onReady() {
-  if (cb_global.schema.properties.course) {
+  if (cb_global.schema.properties.certificates) {
     // Only activate this functionality on the Settings > Course view
     init();
   }
@@ -16,12 +16,12 @@ function updateCriterionDivs(){
 }
 
 function init() {
-  isPeerAssessmentTable = cb_global.schema.properties.course.properties
+  isPeerAssessmentTable = cb_global.schema.properties.certificates.properties
       .certificate_criteria._inputex.is_peer_assessment_table;
 
   // Pre-run event handlers on existing and newly created records
   updateCriterionDivs();
-  cb_global.form.inputsNames.course.inputsNames.certificate_criteria
+  cb_global.form.inputsNames.certificates.inputsNames.certificate_criteria
     .on("updated", function(){
       updateCriterionDivs();
     });
@@ -74,7 +74,7 @@ function onAssignmentDropdownChanged(selectElement) {
  * Validate the certificate criteria before submission.
  */
 function onCourseSettingsSave() {
-  var formValues = cb_global.form.getValue()["course"]["certificate_criteria"];
+  var formValues = cb_global.form.getValue().certificates.certificate_criteria;
   for (var i = 0; i < formValues.length; ++i) {
     var assessmentId = formValues[i]["assessment_id"];
     if (assessmentId === "default") {

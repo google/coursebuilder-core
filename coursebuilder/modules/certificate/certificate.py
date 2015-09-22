@@ -60,6 +60,8 @@ from modules.certificate import custom_criteria
 from modules.courses import settings
 from modules.dashboard import dashboard
 
+MODULE_NAME = 'certificates'
+MODULE_TITLE = 'Certificates'
 CERTIFICATE_HANDLER_PATH = 'certificate'
 CERTIFICATE_PDF_HANDLER_PATH = 'certificate.pdf'
 RESOURCES_PATH = '/modules/certificate/resources'
@@ -468,9 +470,12 @@ def register_module():
         register_analytic()
         settings.CourseSettingsRESTHandler.REQUIRED_MODULES.append(
             'inputex-list')
-        courses.Course.OPTIONS_SCHEMA_PROVIDERS[
-            courses.Course.SCHEMA_SECTION_COURSE].append(
-                get_criteria_editor_schema)
+        courses.Course.OPTIONS_SCHEMA_PROVIDERS[MODULE_NAME].append(
+            get_criteria_editor_schema)
+        courses.Course.OPTIONS_SCHEMA_PROVIDER_TITLES[
+            MODULE_NAME] = MODULE_TITLE
+        settings.CourseSettingsHandler.register_settings_section(
+            MODULE_NAME, title=MODULE_TITLE)
         settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
             os.path.dirname(__file__))
         settings.CourseSettingsHandler.EXTRA_CSS_FILES.append(
@@ -491,7 +496,7 @@ def register_module():
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
-        'Show Certificate',
+        MODULE_TITLE,
         'A page to show student certificate.',
         global_routes, namespaced_routes,
         notify_module_enabled=on_module_enabled)
