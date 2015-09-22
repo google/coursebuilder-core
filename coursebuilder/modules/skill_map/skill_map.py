@@ -48,6 +48,7 @@ from models import roles
 from models import transforms
 from modules.admin.admin import WelcomeHandler
 from modules.courses import outline
+from modules.courses import settings
 from modules.courses.unit_lesson_editor import LessonRESTHandler
 from modules.dashboard import dashboard
 from modules.dashboard.question_editor import BaseQuestionRESTHandler
@@ -70,6 +71,8 @@ TEMPLATES_DIR = os.path.join(
 
 # URI for skill map css, js, amd img assets.
 RESOURCES_URI = '/modules/skill_map/resources'
+MODULE_NAME = 'skill_map'
+MODULE_TITLE = 'Skills'
 
 # Flag turning faker on
 _USE_FAKE_DATA_IN_SKILL_COMPETENCY_ANALYTICS = False
@@ -2028,9 +2031,12 @@ def notify_module_enabled():
         welcome_handler_import_skills_callback)
     courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.add(_SkillEntity)
 
-    courses.Course.OPTIONS_SCHEMA_PROVIDERS.setdefault(
-        courses.Course.SCHEMA_SECTION_COURSE, []).append(
-            widget_display_flag_schema_provider)
+    courses.Course.OPTIONS_SCHEMA_PROVIDERS[MODULE_NAME].append(
+        widget_display_flag_schema_provider)
+    courses.Course.OPTIONS_SCHEMA_PROVIDER_TITLES[
+        MODULE_NAME] = MODULE_TITLE
+    settings.CourseSettingsHandler.register_settings_section(
+        MODULE_NAME, title=MODULE_TITLE)
 
     progress.UnitLessonCompletionTracker.POST_UPDATE_PROGRESS_HOOK.append(
         post_update_progress)
@@ -2082,7 +2088,7 @@ def register_module():
 
     global skill_mapping_module  # pylint: disable=global-statement
     skill_mapping_module = custom_modules.Module(
-        'Skill Mapping Module',
+        MODULE_TITLE,
         'Provide skill mapping of course content',
         global_routes,
         namespaced_routes,
