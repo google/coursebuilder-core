@@ -52,7 +52,6 @@ class BaseIntegrationTest(suite.TestBase):
         super(BaseIntegrationTest, self).setUp()
         chrome_options = options.Options()
         chrome_options.add_argument('--disable-extensions')
-        chrome_options.binary_location = os.environ.get('CB_CHROMIUM_BROWSER')
 
         # Sadly, the max wait for the driver to become ready is hard-coded at
         # 30 seconds.  However, that seems like it'd be enough for our
@@ -313,8 +312,6 @@ class EmbedModuleTest(BaseIntegrationTest):
 class IntegrationServerInitializationTask(BaseIntegrationTest):
 
     def test_setup_default_course(self):
-        assert os.environ.get('CB_CHROMIUM_BROWSER'), (
-            'Integration tests require Chromium browser to be installed.')
         self.load_root_page()._add_default_course_if_needed(
             suite.TestBase.INTEGRATION_SERVER_BASE_URL)
 

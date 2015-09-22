@@ -29,29 +29,6 @@ else
   exit -1
 fi
 
-CHROMIUM_TARGET_VERSION=44.0.2403.89
-set +e
-cb_chromium_browser=`which chromium-browser`
-set -e
-if [[ -z "$cb_chromium_browser" ]] ; then
-  echo
-  echo "==================================================================="
-  echo "WARNING: No Chromium browser found, integration tests will not run."
-  echo "==================================================================="
-  echo
-else
-  export CB_CHROMIUM_BROWSER="$cb_chromium_browser"
-  chromium_version=`chromium-browser --product-version`
-  if [[ "$chromium_version" != "$CHROMIUM_TARGET_VERSION" ]] ; then
-    echo
-    echo "=============================================================="
-    echo "WARNING: Running Chromium version $chromium_version for tests."
-    echo "The target version is $CHROMIUM_TARGET_VERSION."
-    echo "=============================================================="
-    echo
-  fi
-fi
-
 # Ensure that ~/coursebuilder_resources is available to write
 if [[ -e $COURSEBUILDER_RESOURCES && \
     ( ! -d $COURSEBUILDER_RESOURCES || ! -w $COURSEBUILDER_RESOURCES ) ]]; then
