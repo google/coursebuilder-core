@@ -386,8 +386,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
             contents=cls.get_settings, placement=2000,
             sub_group_name='advanced')
 
-        bind('help', 'welcome', 'Welcome', href='/admin/welcome',
-            is_external=True, placement=1000)
+        bind('help', 'welcome', 'Welcome', action='welcome',
+            href='/admin/welcome', is_external=True, placement=1000)
         bind('help', 'perf', 'Metrics', action='perf', contents=cls.get_perf,
             sub_group_name='advanced')
         bind('help', 'deployment', 'Deployment', action='deployment',
