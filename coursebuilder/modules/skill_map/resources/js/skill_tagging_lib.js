@@ -827,7 +827,10 @@ EditSkillPopup.prototype = {
       });
     }, '+ Add Skill');
     this._skillList.eachSkill(function(skill) {
+      if ($.inArray(that._skillId, skill.successor_ids) == -1 &&
+          that._skillId != skill.id) {
         that._prereqSelector.add(skill.id, skill.name);
+      }
     });
 
     this._form.find('.skill-prerequisites')
