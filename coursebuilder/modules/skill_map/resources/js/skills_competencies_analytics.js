@@ -184,7 +184,7 @@ ChartTable.prototype = {
 
       // build unit selector label
       var label = $('<label class="unit-label"></label>');
-      var spanTitle = $('<span"></span>').text(unitTitle);
+      var spanTitle = $('<span></span>').text(unitTitle);
       label.append(radiobutton);
       label.append(spanTitle).append(' ');
       label.append(

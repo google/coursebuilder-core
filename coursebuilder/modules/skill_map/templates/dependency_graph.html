@@ -7,6 +7,9 @@
     view_list
   </button>
   <button class="material-icons selected" disabled>insert_chart</button>
+  <button class="material-icons clickable reset-layout" title="Reset Graph Layout">
+    restore
+  </button>
 </div>
 
 <div class="control-zoom">
@@ -26,8 +29,8 @@
       'directed': true,
       'multigraph': false,
       'graph': [],
-      'nodes': $('div.graph').data('nodes'),
-      'links': $('div.graph').data('links')
+      'nodes': $.extend(true, [], $('div.graph').data('nodes')),
+      'links': $.extend(true, [], $('div.graph').data('links'))
     };
   };
 
@@ -37,6 +40,11 @@
     });
 
     setupGraph();
+
+    $('.reset-layout').on('click', function () {
+      $('.graph').empty();
+      setupGraph();
+    });
   });
 </script>
 
