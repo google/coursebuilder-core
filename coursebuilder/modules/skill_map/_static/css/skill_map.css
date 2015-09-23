@@ -40,8 +40,6 @@ table.skill-map-table td .diagnosis.icon {
   width: 25px;
   padding: 0 2px 0 0;
   font-size: 15px;
-  opacity: 0;
-  transition: opacity 400ms;
   cursor: inherit;
 }
 table.skill-map-table td.skill span.skill-name {
@@ -55,10 +53,7 @@ table.skill-map-table td .diagnosis.icon.md-error {
   color: #c00;
 }
 table.skill-map-table td .diagnosis.icon.md-warning {
-  color: #ccb800;
-}
-table.skill-map-table td .diagnosis.icon.active {
-  opacity: 1;
+  color: #aaaaaa;
 }
 table.skill-map-table td.description {
   overflow: hidden;

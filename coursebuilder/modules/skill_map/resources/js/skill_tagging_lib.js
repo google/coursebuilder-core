@@ -143,7 +143,7 @@ SkillTable.prototype = {
     }
 
     tbody.tooltip({
-      items: '.diagnosis.active',
+      items: '.diagnosis',
       content: function() {
         var skillId = $(this).data('id');
         var diagnosis = that._skills.diagnosis(skillId);
@@ -172,18 +172,9 @@ SkillTable.prototype = {
     return tbody;
   },
 
-  _showHideDiagnosis: function() {
-    if (this._content.find('.health-checkbox').is(':checked')) {
-      this._content.find('.diagnosis.icon').addClass('active');
-    } else {
-      this._content.find('.diagnosis.icon').removeClass('active');
-    }
-  },
-
   _refresh: function() {
     this._table.find('tbody').remove();
     this._table.append(this._buildBody());
-    this._showHideDiagnosis();
   },
 
   buildTable: function() {
@@ -191,10 +182,6 @@ SkillTable.prototype = {
 
     this._content = $(
       '<div class="controls gcb-button-toolbar">' +
-      '  <label class="show-warnings gcb-pull-right">' +
-      '    <input type="checkbox" class="health-checkbox" checked>' +
-      '    Show warnings' +
-      '  </label>' +
       '  <button class="material-icons selected" disabled>view_list</button>' +
       '  <button class="material-icons graph-view clickable" title="Show Skills graph">' +
       '    insert_chart' +
@@ -212,10 +199,6 @@ SkillTable.prototype = {
 
     this._content.find('.graph-view').on("click", function() {
       window.location.href = 'modules/skill_map?action=edit_dependency_graph';
-    });
-
-    this._content.find('.health-checkbox').on("change", function() {
-      that._showHideDiagnosis();
     });
 
     this._content.find('.add-new-skill').on("click", function() {
@@ -844,7 +827,7 @@ EditSkillPopup.prototype = {
       });
     }, '+ Add Skill');
     this._skillList.eachSkill(function(skill) {
-      that._prereqSelector.add(skill.id, skill.name);
+        that._prereqSelector.add(skill.id, skill.name);
     });
 
     this._form.find('.skill-prerequisites')
