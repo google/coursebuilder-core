@@ -517,9 +517,9 @@ describe('The skill tagging library', function() {
       // Click the selector to select skill "s122" ("Ice Skating")
       var items = prerequisites
           .find('.item-selector-root .selector .item-list li');
-      expect($(items[1]).text()).toBe('ice skating');
-      $(items[1]).find('input').click();
-      expect($(items[1]).find('input').length).toBe(1);
+      expect($(items[0]).text()).toBe('ice skating');
+      $(items[0]).find('input').click();
+      expect($(items[0]).find('input').length).toBe(1);
       prerequisites.find('.item-selector-root .selector button.select')
           .click();
 
