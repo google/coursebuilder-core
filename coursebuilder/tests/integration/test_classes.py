@@ -740,11 +740,10 @@ class AdminTests(BaseIntegrationTest):
         ).click_rte_save(
         ).click_plain_text(
         ).ensure_lesson_body_textarea_matches_regex(
+            'YouTube:<gcb-youtube videoid="321" %s></gcb-youtube>'
             'Google Group:'
-            '<gcb-googlegroup group="abc" category="def" %s></gcb-googlegroup>'
-            'YouTube:<gcb-youtube videoid="321" %s></gcb-youtube>' % (
-                instanceid_regex, instanceid_regex
-            )
+            '<gcb-googlegroup group="abc" category="def" %s>'
+            '</gcb-googlegroup>' % (instanceid_regex, instanceid_regex)
         ).click_save(
         #---------- Test editor state is saved ----------
         ).click_close(
@@ -881,7 +880,7 @@ class QuestionsTest(BaseIntegrationTest):
             '.sa-container [name="graders[0]response"]', 'woof'
         ).click_rte_save(
         ).doubleclick_rte_element(
-            'img', index=0
+            'img:nth-of-type(2)', index=0
         ).ensure_rte_lightbox_field_has_value(
             '.sa-container [name="description"]', 'sa question'
         ).ensure_rte_lightbox_field_has_value(

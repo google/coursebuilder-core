@@ -151,6 +151,32 @@ function bindEditorField(Y) {
     });
     this.editorIsVisible = $.Deferred();
 
+    // Reveal the toolbar on focus and hide it on blur
+    this.toolbarSlideInProgress = false;
+    function slideToolbarInOut(slideIn) {
+      var toolbar = $(that.editor.toolbar.get('element'));
+      var editorContainer =$(that.root).find('.yui-editor-editable-container');
+      var editorHeight = editorContainer.height();
+      var toolbarHeight = toolbar.find('fieldset').height();
+      if (slideIn) {
+        toolbar.css('height', toolbarHeight);
+        that.editor.set('height', (editorHeight - toolbarHeight) + 'px');
+      } else {
+        toolbar.css('height', 0);
+        that.editor.set('height', (editorHeight + toolbarHeight) + 'px');
+      }
+      that.toolbarSlideInProgress = true;
+      editorContainer.addClass('slow-transition');
+      that.toolbarSlideFinished = $.Deferred(function(def) {
+        setTimeout(function() {
+          that.toolbarSlideInProgress = false;
+          editorContainer.removeClass('slow-transition');
+        }, 500);
+      });
+    }
+    this.editor.on('editorWindowFocus', function() { slideToolbarInOut(true) });
+    this.editor.on('editorWindowBlur', function() { slideToolbarInOut(false) });
+
     this._customTagManager = new DummyCustomTagManager();
     if (options.supportCustomTags) {
       $.when(this.editorIsRendered).then(function() {
@@ -238,6 +264,11 @@ function bindEditorField(Y) {
   };
   RichTextEditor.prototype.setSize = function(width, height) {
     var that = this;
+
+    if (this.toolbarSlideInProgress) {
+      return;
+    }
+
     $.when(this.editorIsRendered, this.editorIsVisible).then(function() {
       if (width) {
         that.editor.set('width', width + 'px');

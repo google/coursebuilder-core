@@ -1022,6 +1022,10 @@ class CourseContentElement(DashboardEditor):
         return self
 
     def click_rte_add_custom_tag(self, button_text, index=0):
+        iframe = self.find_element_by_css_selector(
+            'iframe.yui-editor-editable', index=index)
+        iframe.click()
+        iframe.send_keys(keys.Keys.END)
         self.find_element_by_link_text(button_text, index).click()
         return self
 
@@ -1079,7 +1083,8 @@ class CourseContentElement(DashboardEditor):
 
     def send_rte_text(self, text):
         iframe = self.find_element_by_css_selector('.yui-editor-editable')
-        iframe.send_keys(keys.Keys.HOME)
+        iframe.click()
+        iframe.send_keys(keys.Keys.END)
         iframe.send_keys(text)
         return self
 

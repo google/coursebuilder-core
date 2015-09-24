@@ -658,12 +658,24 @@ div.CodeMirror {
   border-radius: 2px;
 }
 #cb-oeditor-form .yui-toolbar-container {
+  height: 0;
+  position: relative;
+  overflow-y: hidden;
   background-color: #f9f9f9;
+}
+#cb-oeditor-form .yui-toolbar-container,
+#cb-oeditor-form .yui-editor-editable-container.slow-transition {
+  -webkit-transition: height 300ms cubic-bezier(.4,0,.2,1);
+  -moz-transition: height 300ms cubic-bezier(.4,0,.2,1);
+  transition: height 300ms cubic-bezier(.4,0,.2,1);
 }
 #cb-oeditor-form .yui-toolbar-container > fieldset {
   padding: 0;
   margin: 0;
   border: 0;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
 }
 #cb-oeditor-form .yui-toolbar-container .yui-toolbar-subcont {
   border-bottom-color: #ccc;
