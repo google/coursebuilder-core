@@ -665,8 +665,6 @@ def on_module_enabled(courses_custom_module, perms):
     CourseSettingsHandler.register_settings_section(
         'homepage', placement=1000, sub_group_name='pinned')
     CourseSettingsHandler.register_settings_section(
-        'course', placement=2000, sub_group_name='pinned')
-    CourseSettingsHandler.register_settings_section(
         'unit', placement=3000, sub_group_name='pinned')
     CourseSettingsHandler.register_settings_section('registration')
     CourseSettingsHandler.register_settings_section('assessment')

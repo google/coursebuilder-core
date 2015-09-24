@@ -65,7 +65,6 @@ def notify_module_enabled():
         settings.SCOPE_COURSE_SETTINGS,
         permissions.SimpleSchemaPermission(
             custom_module, TA_PERMISSION_NAME, editable_list=[
-                'course/course:start_date',
                 'course/course:now_available',
                 'course/course:browsable',
                 ]))

@@ -2188,8 +2188,7 @@ class Course(object):
     # Data which is patched onto the course environment - for testing use only.
     ENVIRON_TEST_OVERRIDES = {}
 
-    SCHEMA_SECTION_COURSE = 'course'
-    SCHEMA_SECTION_HOMEPAGE = 'homepage'
+    SCHEMA_SECTION_COURSE = 'homepage'
     SCHEMA_SECTION_REGISTRATION = 'registration'
     SCHEMA_SECTION_UNITS_AND_LESSONS = 'unit'
     SCHEMA_SECTION_ASSESSMENT = 'assessment'
@@ -2208,7 +2207,6 @@ class Course(object):
     def get_schema_sections(cls):
         ret = set([
             cls.SCHEMA_SECTION_COURSE,
-            cls.SCHEMA_SECTION_HOMEPAGE,
             cls.SCHEMA_SECTION_REGISTRATION,
             cls.SCHEMA_SECTION_UNITS_AND_LESSONS,
             cls.SCHEMA_SECTION_ASSESSMENT,
@@ -2307,46 +2305,88 @@ class Course(object):
             'domain, but must correspond to a Google Group.', i18n=True))
 
     @classmethod
-    def create_base_settings_schema(cls):
-        """Create the registry for course properties."""
-
-        reg = schema_fields.FieldRegistry('Settings',
-            extra_schema_dict_values={
-                'className': 'inputEx-Group new-form-layout hidden-header'})
-
-        cls.create_forum_settings_schema(reg)
-
-        course_opts = reg.add_sub_registry(
+    def create_course_settings_schema(cls, reg):
+        opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_COURSE, 'Course',
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:now_available', 'Availability', 'boolean',
-            description='Make the course available to students.',
-            hidden=True))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:browsable', 'Make Course Browsable', 'boolean',
-            description='Allow non-registered users to view course content.'))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:admin_user_emails', 'Course Admin Emails', 'string',
-            i18n=False,
+
+        opts.add_property(schema_fields.SchemaField(
+            'institution:name', 'Organization Name', 'string', optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            'institution:url', 'Organization URL', 'string', optional=True))
+
+        opts.add_property(schema_fields.SchemaField(
+            'base:privacy_terms_url', 'Privacy Terms URL', 'string',
+            description='Link to your privacy policy and terms of service',
+            optional=True))
+
+        opts.add_property(schema_fields.SchemaField(
+            'base:nav_header', 'Site Name', 'string',
+            description='Header phrase for the main navigation bar',
+            optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            'institution:logo:url', 'Site Logo', 'string', optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            'institution:logo:alt_text', 'Site Logo Alt Text', 'string',
+            optional=True))
+
+        opts.add_property(schema_fields.SchemaField(
+            'course:title', 'Course Name', 'string'))
+
+        opts.add_property(schema_fields.SchemaField(
+            'course:admin_user_emails', 'Course Admins', 'string',
             description='A list of email addresses of course administrators.  '
             'Syntax: Entries may be separated with any combination of '
             'tabs, spaces, commas, or newlines.  Existing values using "[" and '
             '"]" around email addresses continues to be supported.  '
-            'Regular expressions are not supported.'))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:start_date', 'Course Start Date', 'string', optional=True,
-            i18n=False))
-        course_opts.add_property(schema_fields.SchemaField(
+            'Regular expressions are not supported.', i18n=False))
+
+        opts.add_property(schema_fields.SchemaField(
+            'course:browsable', 'Make Course Browsable', 'boolean',
+            description='Allow non-registered users to view course content.'))
+
+        opts.add_property(schema_fields.SchemaField(
+            'course:blurb', 'Course Details', 'html',
+            description='Text, shown on the course homepage, that explains '
+            'what the course is about.',
+            extra_schema_dict_values={
+                'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags':
+                common.tags.EditorBlacklists.COURSE_SCOPE},
+            optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            'course:instructor_details', 'Course Instructor Details', 'html',
+            optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            'course:main_video:url', 'Course Video', 'url',
+            description='URL for the preview video shown on the course '
+            'homepage (e.g. https://www.youtube.com/embed/Kdg2drcUjYI ).',
+            optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            'course:main_image:url', 'Course Image', 'string',
+            description='URL for the preview image shown on the course '
+            'homepage. This will only be shown if no course video is '
+            'specified.', optional=True,))
+        opts.add_property(schema_fields.SchemaField(
+            'course:main_image:alt_text', 'Course Image Alt Text', 'string',
+            description='Alt text for the preview image on the course '
+            'homepage.', optional=True))
+
+        opts.add_property(schema_fields.SchemaField(
+            'base:show_gplus_button', 'Show G+ Button', 'boolean',
+            optional=True, description='Whether to show a G+ button on the '
+            'header of all pages.'))
+
+        opts.add_property(schema_fields.SchemaField(
             'course:google_analytics_id', 'ID for Google Analytics', 'string',
             optional=True, i18n=False,
             description='This ID tells Google Analytics who is '
             'calling, and allows it to string together routes that visitors '
             'take through pages.  Obtain this ID by signing up at '
             'http://www.google.com/analytics'))
-        course_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'course:google_tag_manager_id', 'ID for Google Tag Manager',
             'string', optional=True, i18n=False,
             description='This ID tells Google Tag '
@@ -2355,50 +2395,25 @@ class Course(object):
             'site.  Obtain this ID by signing up at '
             'http://www.google.com/tagmanager'))
 
-        homepage_opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_HOMEPAGE, 'Homepage',
+        # Course-level Google API configuration settings.
+        if COURSES_CAN_USE_GOOGLE_APIS.value:
+            opts.add_property(schema_fields.SchemaField(
+                CONFIG_KEY_GOOGLE_API_KEY, 'Google API Key', 'string',
+                optional=True, i18n=False, description='Google API Key'))
+            opts.add_property(schema_fields.SchemaField(
+                CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client Id', 'string',
+                optional=True, i18n=False, description='Google Client Id'))
+
+    @classmethod
+    def create_base_settings_schema(cls):
+        """Create the registry for course properties."""
+
+        reg = schema_fields.FieldRegistry('Settings',
             extra_schema_dict_values={
-                'className': 'inputEx-Group hidden-header'
-            })
-        homepage_opts.add_property(schema_fields.SchemaField(
-            'base:show_gplus_button', 'Show G+ Button', 'boolean',
-            optional=True, description='Whether to show a G+ button on the '
-            'header of all pages.'))
-        homepage_opts.add_property(schema_fields.SchemaField(
-            'base:nav_header', 'Organization Name', 'string',
-            optional=True,
-            description='Header phrase for the main navigation bar'))
-        homepage_opts.add_property(schema_fields.SchemaField(
-            'course:title', 'Course Name', 'string'))
-        homepage_opts.add_property(schema_fields.SchemaField(
-            'course:blurb', 'Course Abstract', 'html', optional=True,
-            description='Text, shown on the course homepage, that explains '
-            'what the course is about.',
-            extra_schema_dict_values={
-                'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags':
-                common.tags.EditorBlacklists.COURSE_SCOPE}))
-        homepage_opts.add_property(schema_fields.SchemaField(
-            'course:instructor_details', 'Instructor Details', 'html',
-            optional=True))
-        homepage_opts.add_property(schema_fields.SchemaField(
-            'course:main_video:url', 'Course Video', 'url', optional=True,
-            description='URL for the preview video shown on the course '
-            'homepage (e.g. https://www.youtube.com/embed/Kdg2drcUjYI ).'))
-        homepage_opts.add_property(schema_fields.SchemaField(
-            'course:main_image:url', 'Course Image', 'string', optional=True,
-            description='URL for the preview image shown on the course '
-            'homepage. This will only be shown if no course video is '
-            'specified.'))
-        homepage_opts.add_property(schema_fields.SchemaField(
-            'course:main_image:alt_text', 'Alternate Text', 'string',
-            optional=True,
-            description='Alt text for the preview image on the course '
-            'homepage.'))
-        homepage_opts.add_property(schema_fields.SchemaField(
-            'base:privacy_terms_url', 'Privacy Terms URL', 'string',
-            optional=True, description='Link to your privacy policy '
-            'and terms of service'))
+                'className': 'inputEx-Group new-form-layout hidden-header'})
+
+        cls.create_forum_settings_schema(reg)
+        cls.create_course_settings_schema(reg)
 
         registration_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_REGISTRATION, 'Registration',
@@ -2455,15 +2470,6 @@ class Course(object):
             'avoid spamming, you should always include the string '
             '{{unsubscribe_url}} in your message to include a link which the '
             'recipient can use to unsubscribe from future mailings.'))
-
-        # Course-level Google API configuration settings.
-        if COURSES_CAN_USE_GOOGLE_APIS.value:
-            course_opts.add_property(schema_fields.SchemaField(
-                CONFIG_KEY_GOOGLE_API_KEY, 'Google API Key', 'string',
-                optional=True, i18n=False, description='Google API Key'))
-            course_opts.add_property(schema_fields.SchemaField(
-                CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client Id', 'string',
-                optional=True, i18n=False, description='Google Client Id'))
 
         # Unit level settings.
         unit_opts = reg.add_sub_registry(

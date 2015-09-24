@@ -50,9 +50,6 @@ course:
     url: /assets/img/banner1.png
     alt_text: Photo of Dan Russell
 
-  # Course start date.
-  start_date: 'July 10, 2012'
-
   # Forum email. For details, see
   #
   #     http://code.google.com/p/course-builder/wiki/WebForums.

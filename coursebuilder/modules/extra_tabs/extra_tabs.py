@@ -141,14 +141,14 @@ def register_module():
 
     def on_module_enabled():
         courses.Course.OPTIONS_SCHEMA_PROVIDERS.setdefault(
-            courses.Course.SCHEMA_SECTION_HOMEPAGE, []).append(
+            courses.Course.SCHEMA_SECTION_COURSE, []).append(
                 options_schema_provider)
         utils.CourseHandler.LEFT_LINKS.append(left_links)
         utils.CourseHandler.RIGHT_LINKS.append(right_links)
 
     def on_module_disabled():
         courses.Course.OPTIONS_SCHEMA_PROVIDERS.setdefault(
-            courses.Course.SCHEMA_SECTION_HOMEPAGE, []).remove(
+            courses.Course.SCHEMA_SECTION_COURSE, []).remove(
                 options_schema_provider)
         utils.CourseHandler.LEFT_LINKS.remove(left_links)
         utils.CourseHandler.RIGHT_LINKS.remove(right_links)

@@ -202,7 +202,7 @@ class Message(object):
         """If not yet chosen, randomly select an identifier for this course."""
 
         all_settings = course.get_environ(course.app_context)
-        course_settings = all_settings[courses.Course.SCHEMA_SECTION_COURSE]
+        course_settings = all_settings['course']
         reporting_id = course_settings.get(USAGE_REPORTING_FIELD_ID)
         if not reporting_id or reporting_id == 'None':
             reporting_id = str(uuid.uuid4())
@@ -257,7 +257,7 @@ class Message(object):
         # tests/functional/modules_usage_reporting.py to always expect
         # these extra data.
         all_settings = course.get_environ(course.app_context)
-        course_settings = all_settings[courses.Course.SCHEMA_SECTION_COURSE]
+        course_settings = all_settings['course']
         admin_email_str = course_settings.get(roles.KEY_ADMIN_USER_EMAILS)
         addrs = common_utils.text_to_list(
             admin_email_str,

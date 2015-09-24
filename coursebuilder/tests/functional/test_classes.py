@@ -596,8 +596,7 @@ class InfrastructureTest(actions.TestBase):
 
         new_course_keys = [
             'admin_user_emails', 'blurb', 'forum_email', 'google_analytics_id',
-            'google_tag_manager_id', 'instructor_details', 'main_video',
-            'start_date']
+            'google_tag_manager_id', 'instructor_details', 'main_video']
         init_settings = dst_course_a.app_context.get_environ()
         assert 'assessment_confirmations' not in init_settings
         for key in new_course_keys:

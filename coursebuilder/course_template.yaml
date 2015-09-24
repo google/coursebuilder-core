@@ -35,7 +35,7 @@ institution:
   # Link and alt text for the logo of the course or your institution
   logo:
     url: 'assets/img/your_logo_here.png'
-    alt_text: YOUR_LOGO_HERE
+    alt_text:
 
 
 ####################

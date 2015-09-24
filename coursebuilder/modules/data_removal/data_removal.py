@@ -37,7 +37,6 @@ from models import jobs
 from models import models
 from models import transforms
 from modules.admin import admin
-from modules.courses import settings
 from modules.data_removal import removal_models
 
 from google.appengine.api import namespace_manager
@@ -756,9 +755,7 @@ def register_module():
             lambda course: _build_removal_policy_schema(),
             )
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
-            DATA_REMOVAL_SETTINGS_SECTION].extend(course_settings_fields)
-        settings.CourseSettingsHandler.register_settings_section(
-            DATA_REMOVAL_SETTINGS_SECTION, title=MODULE_TITLE)
+            courses.Course.SCHEMA_SECTION_COURSE].extend(course_settings_fields)
 
         # Register available cleanup policies.
         DataRemovalPolicyRegistry.register(IndefiniteRetentionPolicy)

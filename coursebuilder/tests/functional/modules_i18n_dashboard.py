@@ -249,7 +249,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Settings',
             'Assessments',
             'Forums',
-            'Homepage',
+            'Course',
             'Invitations',
             'Registration',
             '',
@@ -1118,7 +1118,15 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
                 'data': [{
                     'source_value': 'Privacy Policy',
                     'target_value': 'PRIVACY_POLICY'}]
-            }
+            },
+            'institution:logo:url': {
+                'type': 'string',
+                'source_value': 'assets/img/your_logo_here.png',
+                'data': [{
+                    'source_value': 'assets/img/your_logo_here.png',
+                    'target_value': 'assets/img/your_greek_logo_here.png',
+                }],
+            },
         }
         homepage_key = resource.Key(
             resources_display.ResourceCourseSettings.TYPE, 'homepage')
@@ -2680,7 +2688,7 @@ class TranslationImportExportTests(actions.TestBase):
                     num_translations += 1
                     self.assertNotEquals(msg.id, msg.string)
                     self.assertEquals(msg.id.upper() * 2, msg.string)
-            self.assertEquals(30, num_translations)
+            self.assertEquals(31, num_translations)
 
         # And verify the presence of the translated versions on actual
         # course pages.
@@ -2887,10 +2895,10 @@ class TranslatorRoleTests(actions.TestBase):
             for index, expected in enumerate(expected_col_data):
                 self.assertEquals(expected, columns[index].text)
             response = self.get('%s?key=%s' % (
-                self.CONSOLE_REST_URL, 'course_settings%3Acourse%3Aru'))
+                self.CONSOLE_REST_URL, 'course_settings%3Ahomepage%3Aru'))
             self.assertEquals(transforms.loads(response.body)['status'], 401)
             response = self.get('%s?key=%s' % (
-                self.CONSOLE_REST_URL, 'course_settings%3Acourse%3Ael'))
+                self.CONSOLE_REST_URL, 'course_settings%3Ahomepage%3Ael'))
             self.assertEquals(transforms.loads(response.body)['status'], 200)
 
 

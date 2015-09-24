@@ -86,7 +86,7 @@ class I18NCourseSettingsTests(actions.TestBase):
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
             self.course_yaml, self.schema)
 
-        expected_unmapped = [
+        expected_unmapped = set([
             'html_hooks:preview:after_main_content_ends',
             'html_hooks:preview:after_top_content_ends',
             'html_hooks:unit:after_content_begins',
@@ -94,8 +94,8 @@ class I18NCourseSettingsTests(actions.TestBase):
             'html_hooks:unit:before_content_ends',
             'html_hooks:unit:before_leftnav_ends',
             'reg_form:whitelist',
-          ]
-        self.assertEqual(expected_unmapped, sorted(binding.unmapped_names))
+          ])
+        assert expected_unmapped.issubset(set(binding.unmapped_names))
         self.assertEqual(len(binding.name_to_field), len(binding.name_to_value))
 
         value = binding.find_value('test:i18n_test')
@@ -114,8 +114,6 @@ class I18NCourseSettingsTests(actions.TestBase):
         self.assertEquals('string', forum_email_field.type)
         blurb_field = binding.find_field('course:blurb')
         self.assertEquals('html', blurb_field.type)
-        now_avail_field = binding.find_field('course:now_available')
-        self.assertEquals('boolean', now_avail_field.type)
 
     def test_extract_translatable_fields(self):
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(

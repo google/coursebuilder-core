@@ -64,8 +64,7 @@ def is_consent_set():
 
 def notify_module_enabled():
     course_random_id = schema_fields.SchemaField(
-        courses.Course.SCHEMA_SECTION_COURSE + ':' +
-        messaging.USAGE_REPORTING_FIELD_ID,
+        'course:{}'.format(messaging.USAGE_REPORTING_FIELD_ID),
         'Usage Reporting ID', 'string',
         optional=True, editable=False, i18n=False, hidden=True,
         description='When usage reporting for CourseBuilder is enabled, this '

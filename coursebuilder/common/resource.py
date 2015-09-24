@@ -195,6 +195,9 @@ class Key(object):
     def __str__(self):
         return '%s:%s' % (self._type, self._key)
 
+    def __repr__(self):
+        return "<{} {}>".format(self.__class__.__name__, str(self))
+
     @property
     def type(self):
         return self._type
