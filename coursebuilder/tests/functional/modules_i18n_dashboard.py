@@ -3846,6 +3846,8 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                 _profile('sample/dashboard', 'Dashboard', quota=(150, 60))
                 _profile('sample/dashboard?action=edit_questions',
                     'Questions')
+                _profile('sample/dashboard?action=edit_question_groups',
+                    'Question Groups')
                 _profile(
                     'sample/dashboard?action=i18n_dashboard',
                     'I18N Dashboard')

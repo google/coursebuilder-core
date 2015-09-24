@@ -495,6 +495,11 @@ def _get_assets_questions(handler, items, name, all_paths):
     locations = courses.Course(handler).get_component_locations()
     items.append(_list_questions(
         handler, all_questions, all_question_groups, locations))
+
+def _get_assets_question_groups(handler, items, name, all_paths):
+    all_questions = models.QuestionDAO.get_all()
+    all_question_groups = models.QuestionGroupDAO.get_all()
+    locations = courses.Course(handler).get_component_locations()
     items.append(_list_question_groups(
         handler, all_questions, all_question_groups, locations[1]))
 
@@ -567,9 +572,16 @@ def _get_style_tab(handler, add_assets):
         handler.request.get('action') or 'style_css']
     return _get_tab_content(tab, handler, add_assets)
 
+
+# TODO(tlarsen): add default_action, reuse more; tracked here: http://b/24375971
 def _get_edit_tab(handler, add_assets):
     tab = dashboard.DashboardHandler.actions_to_menu_items[
         handler.request.get('action') or 'edit_questions']
+    return _get_tab_content(tab, handler, add_assets)
+
+def _get_groups_tab(handler, add_assets):
+    tab = dashboard.DashboardHandler.actions_to_menu_items[
+        handler.request.get('action') or 'edit_question_groups']
     return _get_tab_content(tab, handler, add_assets)
 
 def can_view_assessments(app_context):
@@ -586,6 +598,10 @@ def on_module_enabled():
         'edit', 'questions', 'Questions', action='edit_questions',
         contents=lambda h: _get_edit_tab(h, _get_assets_questions),
         placement=2000, sub_group_name='pinned')
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'groups', 'Question Groups', action='edit_question_groups',
+        contents=lambda h: _get_groups_tab(h, _get_assets_question_groups),
+        placement=2001, sub_group_name='pinned')
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'html', 'HTML', action='edit_html',
         contents=lambda h: _get_style_tab(h, _get_assets_html))

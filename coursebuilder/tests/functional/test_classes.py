@@ -3789,6 +3789,8 @@ class I18NTest(MultipleCoursesTestBase):
         assert_page_contains(
             'edit_questions', [self.course_ru.title])
         assert_page_contains(
+            'edit_question_groups', [self.course_ru.title])
+        assert_page_contains(
             '', [self.course_ru.title])
         assert_contains(
                 vfs.AbstractFileSystem.normpath(self.course_ru.home),

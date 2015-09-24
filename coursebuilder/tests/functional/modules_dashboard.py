@@ -124,7 +124,7 @@ class QuestionDashboardTestCase(actions.TestBase):
         # Get the Assets > Question tab
         dom = self.parse_html_string(self.get(self.URL).body)
         asset_tables = dom.findall('.//table[@class="assets-table"]')
-        self.assertEquals(len(asset_tables), 2)
+        self.assertEquals(len(asset_tables), 1)
 
         # First check Question Bank table
         questions_table = asset_tables[0]
@@ -151,38 +151,16 @@ class QuestionDashboardTestCase(actions.TestBase):
         # Check whether the containing Question Group is listed
         self.assertEquals(second_row[1].find('ul/li').text, qg_description)
 
-        # Now check Question Group table
-        question_groups_table = asset_tables[1]
-        row = question_groups_table.find('./tbody/tr')
-        # Check edit link and description
-        edit_link = row[0].find('a')
-        self.assertEquals(edit_link.tail, qg_description)
-        self.assertEquals(edit_link.get('href'), (
-            'dashboard?action=edit_question_group&key=%s' % qg_id))
-
-        # The question that is part of this group, should be listed
-        self.assertEquals(row[1].find('ul/li').text, sa_question_description)
-
-        # Assessment where this Question Group is located, should be linked
-        location_link = row[2].find('ul/li/a')
-        self.assertEquals(location_link.get('href'), (
-            'assessment?name=%s' % assessment_two.unit_id))
-        self.assertEquals(location_link.text, assessment_two.title)
-
-    def _load_tables(self):
+    def _load_table(self):
         asset_tables = self.parse_html_string(self.get(self.URL).body).findall(
             './/table[@class="assets-table"]')
-        self.assertEquals(len(asset_tables), 2)
-        return asset_tables
+        self.assertEquals(len(asset_tables), 1)
+        return asset_tables[0]
 
-    def test_no_questions_and_question_groups(self):
-        asset_tables = self._load_tables()
+    def test_no_questions(self):
+        questions_table = self._load_table()
         self.assertEquals(
-            asset_tables[0].find('./tfoot/tr/td').text, 'No questions available'
-        )
-        self.assertEquals(
-            asset_tables[1].find('./tfoot/tr/td').text,
-            'No question groups available'
+            questions_table.find('./tfoot/tr/td').text, 'No questions available'
         )
 
     def test_no_question_groups(self):
@@ -190,26 +168,9 @@ class QuestionDashboardTestCase(actions.TestBase):
         models.QuestionDAO.save(models.QuestionDTO(None, {
             'description': description
         }))
-        asset_tables = self._load_tables()
+        questions_table = self._load_table()
         self.assertEquals(
-            asset_tables[0].findall('./tbody/tr/td/a')[1].tail, description
-        )
-        self.assertEquals(
-            asset_tables[1].find('./tfoot/tr/td').text,
-            'No question groups available'
-        )
-
-    def test_no_questions(self):
-        description = 'Group description'
-        models.QuestionGroupDAO.save(models.QuestionGroupDTO(None, {
-                    'description': description
-        }))
-        asset_tables = self._load_tables()
-        self.assertEquals(
-            asset_tables[0].find('./tfoot/tr/td').text, 'No questions available'
-        )
-        self.assertEquals(
-            asset_tables[1].find('./tbody/tr/td/a').tail, description
+            questions_table.findall('./tbody/tr/td/a')[1].tail, description
         )
 
     def test_if_buttons_are_present(self):
@@ -221,30 +182,6 @@ class QuestionDashboardTestCase(actions.TestBase):
         body = self.get(self.URL).body
         self.assertIn('Add Short Answer', body)
         self.assertIn('Add Multiple Choice', body)
-        self.assertIn('Add Question Group', body)
-
-    def test_adding_empty_question_group(self):
-        QG_URL = '/%s%s' % (self.COURSE_NAME, QuestionGroupRESTHandler.URI)
-        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
-            QuestionGroupRESTHandler.XSRF_TOKEN)
-        description = 'Question Group'
-        payload = {
-            'description': description,
-            'version': QuestionGroupRESTHandler.SCHEMA_VERSIONS[0],
-            'introduction': '',
-            'items': []
-        }
-        response = self.put(QG_URL, {'request': transforms.dumps({
-            'xsrf_token': cgi.escape(xsrf_token),
-            'payload': transforms.dumps(payload)})})
-        self.assertEquals(response.status_int, 200)
-        payload = transforms.loads(response.body)
-        self.assertEquals(payload['status'], 200)
-        self.assertEquals(payload['message'], 'Saved.')
-        asset_tables = self._load_tables()
-        self.assertEquals(
-            asset_tables[1].find('./tbody/tr/td/a').tail, description
-        )
 
     def test_last_modified_timestamp(self):
         begin_time = time.time()
@@ -253,21 +190,11 @@ class QuestionDashboardTestCase(actions.TestBase):
         self.assertTrue((begin_time <= question_dto.last_modified) and (
             question_dto.last_modified <= time.time()))
 
-        qg_dto = models.QuestionGroupDTO(None, {})
-        models.QuestionGroupDAO.save(qg_dto)
-        self.assertTrue((begin_time <= qg_dto.last_modified) and (
-            question_dto.last_modified <= time.time()))
-
-        asset_tables = self._load_tables()
+        questions_table = self._load_table()
         self.assertEquals(
-            asset_tables[0].find('./tbody/tr/td[@data-timestamp]').get(
+            questions_table.find('./tbody/tr/td[@data-timestamp]').get(
                 'data-timestamp', ''),
             str(question_dto.last_modified)
-        )
-        self.assertEquals(
-            asset_tables[1].find('./tbody/tr/td[@data-timestamp]').get(
-                'data-timestamp', ''),
-            str(qg_dto.last_modified)
         )
 
     def test_question_clone(self):
@@ -314,7 +241,7 @@ class QuestionDashboardTestCase(actions.TestBase):
         question_id = models.QuestionDAO.save(question_dto)
 
         # No groups are present so no add_to_group icon should be present
-        self.assertIsNone(self._load_tables()[0].find('./tbody/tr/td[ul]div'))
+        self.assertIsNone(self._load_table().find('./tbody/tr/td[ul]/div'))
 
         # Create a group
         qg_description = 'Question Group'
@@ -326,24 +253,20 @@ class QuestionDashboardTestCase(actions.TestBase):
 
         # Since we now have a group, the add_to_group icon should be visible
         self.assertIsNotNone(
-            self._load_tables()[0].find('./tbody/tr/td[ul]/div'))
+            self._load_table().find('./tbody/tr/td[ul]/div'))
 
         # Add Question to Question Group via post_add_to_question_group
-        asset_tables = self._load_tables()
-        xsrf_token = asset_tables[0].get('data-qg-xsrf-token', '')
+        questions_table = self._load_table()
+        xsrf_token = questions_table.get('data-qg-xsrf-token', '')
         response = self._call_add_to_question_group(
             question_id, qg_id, 1, xsrf_token)
 
         # Check if operation was successful
         self.assertEquals(response.status_int, 200)
-        asset_tables = self._load_tables()
+        questions_table = self._load_table()
         self.assertEquals(
-            asset_tables[0].find('./tbody/tr/td/ul/li').text,
+            questions_table.find('./tbody/tr/td/ul/li').text,
             qg_description
-        )
-        self.assertEquals(
-            asset_tables[1].find('./tbody/tr/td/ul/li').text,
-            question_description
         )
 
         # Check a bunch of calls that should fail
@@ -366,6 +289,157 @@ class QuestionDashboardTestCase(actions.TestBase):
             question_id, qg_id, 'a', xsrf_token).body)
         self.assertEquals(response['status'], 500)
 
+
+class QuestionGroupDashboardTestCase(actions.TestBase):
+    """Tests Assets > Question Groups."""
+    COURSE_NAME = 'question_group_dashboard'
+    ADMIN_EMAIL = 'admin@foo.com'
+    URL = 'dashboard?action=edit_question_groups'
+
+    def setUp(self):
+        super(QuestionGroupDashboardTestCase, self).setUp()
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.base = '/' + self.COURSE_NAME
+        context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Question Groups Dashboard')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.course = courses.Course(None, context)
+
+    def tearDown(self):
+        namespace_manager.set_namespace(self.old_namespace)
+        super(QuestionGroupDashboardTestCase, self).tearDown()
+
+    def test_table_entries(self):
+        # Create a question
+        mc_question_description = 'Test MC Question'
+        mc_question_dto = models.QuestionDTO(None, {
+            'description': mc_question_description,
+            'type': 0  # MC
+        })
+        mc_question_id = models.QuestionDAO.save(mc_question_dto)
+
+        # Create a question group and add the question
+        qg_description = 'Question Group'
+        qg_dto = models.QuestionGroupDTO(None, {
+              'description': qg_description,
+             'items': [{'question': str(mc_question_id)}]
+        })
+        qg_id = models.QuestionGroupDAO.save(qg_dto)
+
+        # Create a second assessment and add the question group to the content
+        assessment_two = self.course.add_assessment()
+        assessment_two.title = 'Test Assessment'
+        assessment_two.html_content = """
+            <question-group qgid="%s" instanceid="QG"></question-group>
+        """ % qg_id
+
+        self.course.save()
+
+        # Get the Assets > Question Groups tab
+        dom = self.parse_html_string(self.get(self.URL).body)
+        asset_tables = dom.findall('.//table[@class="assets-table"]')
+        self.assertEquals(len(asset_tables), 1)
+
+        # Check Question Group table
+        question_groups_table = asset_tables[0]
+        row = question_groups_table.find('./tbody/tr')
+        # Check edit link and description
+        edit_link = row[0].find('a')
+        self.assertEquals(edit_link.tail, qg_description)
+        self.assertEquals(edit_link.get('href'), (
+            'dashboard?action=edit_question_group&key=%s' % qg_id))
+
+        # The question that is part of this group, should be listed
+        self.assertEquals(row[1].find('ul/li').text, mc_question_description)
+
+        # Assessment where this Question Group is located, should be linked
+        location_link = row[2].find('ul/li/a')
+        self.assertEquals(location_link.get('href'), (
+            'assessment?name=%s' % assessment_two.unit_id))
+        self.assertEquals(location_link.text, assessment_two.title)
+
+    def _load_table(self):
+        asset_tables = self.parse_html_string(self.get(self.URL).body).findall(
+            './/table[@class="assets-table"]')
+        self.assertEquals(len(asset_tables), 1)
+        return asset_tables[0]
+
+    def test_no_question_groups(self):
+        question_groups_table = self._load_table()
+        self.assertEquals(
+            question_groups_table.find('./tfoot/tr/td').text,
+            'No question groups available'
+        )
+
+    def test_no_questions(self):
+        description = 'Group description'
+        models.QuestionGroupDAO.save(models.QuestionGroupDTO(None, {
+                    'description': description
+        }))
+        question_groups_table = self._load_table()
+        self.assertEquals(
+            question_groups_table.find('./tbody/tr/td/a').tail, description
+        )
+
+    def test_if_buttons_are_present(self):
+        """Tests if all buttons are present.
+
+            In the past it wasn't allowed to add a question group when there
+            were no questions yet.
+        """
+        body = self.get(self.URL).body
+        self.assertIn('Add Question Group', body)
+
+    def test_adding_empty_question_group(self):
+        QG_URL = '/%s%s' % (self.COURSE_NAME, QuestionGroupRESTHandler.URI)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            QuestionGroupRESTHandler.XSRF_TOKEN)
+        description = 'Question Group'
+        payload = {
+            'description': description,
+            'version': QuestionGroupRESTHandler.SCHEMA_VERSIONS[0],
+            'introduction': '',
+            'items': []
+        }
+        response = self.put(QG_URL, {'request': transforms.dumps({
+            'xsrf_token': cgi.escape(xsrf_token),
+            'payload': transforms.dumps(payload)})})
+        self.assertEquals(response.status_int, 200)
+        payload = transforms.loads(response.body)
+        self.assertEquals(payload['status'], 200)
+        self.assertEquals(payload['message'], 'Saved.')
+        question_groups_table = self._load_table()
+        self.assertEquals(
+            question_groups_table.find('./tbody/tr/td/a').tail, description
+        )
+
+    def test_last_modified_timestamp(self):
+        begin_time = time.time()
+        qg_dto = models.QuestionGroupDTO(None, {})
+        models.QuestionGroupDAO.save(qg_dto)
+        self.assertTrue((begin_time <= qg_dto.last_modified) and (
+            qg_dto.last_modified <= time.time()))
+
+        question_groups_table = self._load_table()
+        self.assertEquals(
+            question_groups_table.find('./tbody/tr/td[@data-timestamp]').get(
+                'data-timestamp', ''),
+            str(qg_dto.last_modified)
+        )
+
+    def _call_add_to_question_group(self, qu_id, qg_id, weight, xsrf_token):
+        return self.post('dashboard', {
+            'action': 'add_to_question_group',
+            'question_id': qu_id,
+            'group_id': qg_id,
+            'weight': weight,
+            'xsrf_token': xsrf_token,
+        }, True)
+
+    # TODO(tlarsen): add Question Group tests; tracked here: http://b/24373601
 
 class CourseOutlineTestCase(actions.TestBase):
     """Tests the Course Outline."""

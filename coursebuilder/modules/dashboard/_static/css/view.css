@@ -212,9 +212,7 @@ div#formContainer div.settings-list-item fieldset legend span {
   cursor: auto;
 }
 .assets-table-container {
-  max-height: 400px;
   overflow: auto;
-  overflow-y: scroll;
   margin: 0px 0px 20px 0px;
   border: solid 1px;
 }
@@ -673,4 +671,3 @@ Minimal Example:
   vertical-align: top;
   opacity: 0.83;
 }
-
