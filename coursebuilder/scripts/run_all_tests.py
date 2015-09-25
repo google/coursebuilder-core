@@ -63,6 +63,8 @@ ALL_INTEGRATION_TEST_CLASSES = {
     'tests.integration.test_classes.EmbedModuleTest': 3,
 }
 
+ALL_COURSE_TESTS_COUNT = 45
+
 # here we list all functional and unit tests that run in-process
 ALL_TEST_CLASSES = {
     'tests.functional.admin_settings.AdminSettingsTests': 1,
@@ -275,26 +277,30 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.CourseAuthorAspectTest': 4,
     'tests.functional.test_classes.CourseAuthorCourseCreationTest': 1,
     'tests.functional.test_classes.CourseAuthorCourseDeletionTest': 7,
-    'tests.functional.test_classes.CourseUrlRewritingTest': 44,
+    'tests.functional.test_classes.CourseUrlRewritingTest':
+        ALL_COURSE_TESTS_COUNT,
     'tests.functional.test_classes.DatastoreBackedCustomCourseTest': 6,
-    'tests.functional.test_classes.DatastoreBackedSampleCourseTest': 44,
+    'tests.functional.test_classes.DatastoreBackedSampleCourseTest':
+        ALL_COURSE_TESTS_COUNT,
     'tests.functional.test_classes.EtlMainTestCase': 46,
     'tests.functional.test_classes.EtlRemoteEnvironmentTestCase': 0,
     'tests.functional.test_classes.ExtensionSwitcherTests': 2,
     'tests.functional.test_classes.InfrastructureTest': 21,
     'tests.functional.test_classes.I18NTest': 2,
-    'tests.functional.test_classes.LegacyEMailAsKeyNameTest': 44,
+    'tests.functional.test_classes.LegacyEMailAsKeyNameTest':
+        ALL_COURSE_TESTS_COUNT,
     'tests.functional.test_classes.LessonComponentsTest': 3,
-    'tests.functional.test_classes.MemcacheTest': 65,
+    'tests.functional.test_classes.MemcacheTest': ALL_COURSE_TESTS_COUNT + 21,
     'tests.functional.test_classes.MultipleCoursesTest': 1,
     'tests.functional.test_classes.NamespaceTest': 2,
     'tests.functional.test_classes.StaticHandlerTest': 1,
-    'tests.functional.test_classes.StudentAspectTest': 19,
+    'tests.functional.test_classes.StudentAspectTest': 20,
     'tests.functional.test_classes.StudentKeyNameTest': 8,
     'tests.functional.test_classes.StudentUnifiedProfileTest': 19,
     'tests.functional.test_classes.TransformsEntitySchema': 1,
     'tests.functional.test_classes.TransformsJsonFileTestCase': 3,
-    'tests.functional.test_classes.VirtualFileSystemTest': 44,
+    'tests.functional.test_classes.VirtualFileSystemTest':
+        ALL_COURSE_TESTS_COUNT,
     'tests.functional.test_classes.ImportActivityTests': 7,
     'tests.functional.test_classes.ImportAssessmentTests': 3,
     'tests.functional.test_classes.ImportGiftQuestionsTests': 1,
