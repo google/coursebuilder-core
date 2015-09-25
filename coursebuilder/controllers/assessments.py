@@ -156,7 +156,7 @@ class AnswerHandler(BaseHandler):
 
         grader = unit.workflow.get_grader()
 
-        # Scores are not recorded for human-reviewed assignments.
+        # Scores are not recorded for peer-reviewed assignments.
         score = 0
         if grader == courses.AUTO_GRADER:
             score = int(round(float(self.request.get('score'))))

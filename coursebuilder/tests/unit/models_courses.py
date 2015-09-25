@@ -31,7 +31,7 @@ DATE_FORMAT_ERROR = (
 
 ERROR_HEADER = 'Error validating workflow specification: '
 
-MISSING_KEYS_PREFIX = 'missing key(s) for a human-reviewed assessment:'
+MISSING_KEYS_PREFIX = 'missing key(s) for a peer-reviewed assessment:'
 
 
 class DateTimeConversionTests(unittest.TestCase):

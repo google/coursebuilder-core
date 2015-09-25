@@ -564,7 +564,7 @@ class UnitTools(object):
         parent_unit = self._course.get_parent_unit(assessment.unit_id)
         if parent_unit and parent_unit.unit_id != unit.unit_id:
             errors.append(
-                'Assessment "%s" is already asssociated to unit "%s"' % (
+                'Assessment "%s" is already associated to unit "%s"' % (
                     assessment.title, parent_unit.title))
             return False
         return True

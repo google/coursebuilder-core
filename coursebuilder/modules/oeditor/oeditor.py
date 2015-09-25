@@ -123,7 +123,7 @@ class ObjectEditor(object):
         if not delete_message:
             kind = transforms.loads(schema_json).get('description')
             if not kind:
-                kind = 'Generic Object'
+                kind = 'content'
             delete_message = 'Are you sure you want to delete this %s?' % kind
 
         # construct parameters

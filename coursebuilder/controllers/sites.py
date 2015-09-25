@@ -214,6 +214,8 @@ COUNTER_BY_HTTP_CODE = {
     200: HTTP_STATUS_200, 300: HTTP_STATUS_300, 400: HTTP_STATUS_400,
     500: HTTP_STATUS_500}
 
+_NAMESPACE_MAX_LENGTH = 100
+
 
 class BaseZipHandler(zipserve.ZipHandler, utils.StarRouteHandlerMixin):
     """Base class for zip handlers."""
@@ -1063,10 +1065,14 @@ def validate_new_course_entry_attributes(name, title, admin_email, errors):
         errors.append(
             'The unique name associated with the course must be at least '
             'three characters long.')
+
     if not re.match('[_a-z0-9]+$', name, re.IGNORECASE):
         errors.append(
             'The unique name associated with the course should contain only '
             'lowercase letters, numbers, or underscores.')
+
+    if len(name) >= _NAMESPACE_MAX_LENGTH:
+        errors.append('The unique name cannot be longer than 99 characters.')
 
     if not title or len(title) < 3:
         errors.append('The course title is too short.')

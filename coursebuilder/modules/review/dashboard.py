@@ -112,10 +112,10 @@ def _parse_request(course, unit_id, reviewee_id, reviewer_id=None):
     reviewee, unique = models.Student.get_first_by_email(reviewee_id)
     if reviewee and not unique:
         return (request_params,
-                '412: Several students with this email address exist.')
+                'Several students with this email address exist.')
     if not reviewee or not reviewee.is_enrolled:
         return (request_params,
-                '412: No student with this email address exists.')
+                'No student with this email address exists.')
     request_params['reviewee'] = reviewee
 
     # Check reviewer validity, if applicable.
@@ -256,7 +256,7 @@ def _get_readonly_review_1_5(handler, unit, review_content):
 
 
 def post_add_reviewer(handler):
-    """Adds a new reviewer to a human-reviewed assignment."""
+    """Adds a new reviewer to a peer-reviewed assignment."""
     if not AssignmentsRights.can_edit(handler):
         handler.error(401)
         return
@@ -299,7 +299,7 @@ def post_add_reviewer(handler):
     handler.redirect('/dashboard?%s' % urllib.urlencode(redirect_params))
 
 def post_delete_reviewer(handler):
-    """Deletes a reviewer from a human-reviewed assignment."""
+    """Deletes a reviewer from a peer-reviewed assignment."""
     if not AssignmentsRights.can_edit(handler):
         handler.error(401)
         return

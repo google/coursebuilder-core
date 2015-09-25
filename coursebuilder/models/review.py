@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Review processor that is used for managing human-reviewed assessments."""
+"""Review processor that is used for managing peer-reviewed assessments."""
 
 __author__ = [
     'sll@google.com (Sean Lip)',

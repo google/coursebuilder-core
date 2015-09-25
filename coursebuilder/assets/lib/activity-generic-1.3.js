@@ -748,7 +748,7 @@ function renderAssessment(assessment, domRoot) {
 
     var isSaveDraftReview = (!submitAnswers && assessmentGlobals.isReviewForm);
 
-    // Show a confirmation message when submitting a human-reviewed asseessment,
+    // Show a confirmation message when submitting a peer-reviewed assessment,
     // since this action is non-reversible.
     if (!assessmentGlobals.isReviewForm && assessmentGlobals.grader == 'human') {
       if (!window.confirm(

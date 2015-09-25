@@ -461,9 +461,9 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             }, errors)
         self.assertEquals(
             ['Assessment "Assessment One" is already '
-             'asssociated to unit "No Lessons"',
+             'associated to unit "No Lessons"',
              'Assessment "Assessment Two" is already '
-             'asssociated to unit "No Lessons"'], errors)
+             'associated to unit "No Lessons"'], errors)
         self.assertEquals(self.unit_one_lesson.pre_assessment, None)
         self.assertEquals(self.unit_one_lesson.post_assessment, None)
         self.course.save()

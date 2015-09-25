@@ -214,7 +214,7 @@ DEFAULT_AUTO_GRADER_WORKFLOW = yaml.safe_dump({
     GRADER_KEY: AUTO_GRADER
 }, default_flow_style=False)
 
-# This value is meant to be used only for the human-reviewed assessments in the
+# This value is meant to be used only for the peer-reviewed assessments in the
 # sample v1.2 Power Searching course.
 LEGACY_HUMAN_GRADER_WORKFLOW = yaml.safe_dump({
     GRADER_KEY: HUMAN_GRADER,
@@ -2107,7 +2107,7 @@ class Workflow(object):
                         missing_keys.append(key)
 
                 assert not missing_keys, (
-                    'missing key(s) for a human-reviewed assessment: %s.' %
+                    'missing key(s) for a peer-reviewed assessment: %s.' %
                     ', '.join(missing_keys))
 
                 if (workflow_dict[MATCHER_KEY] not in
@@ -2946,7 +2946,7 @@ class Course(object):
                 completed = progress_tracker.is_custom_unit_completed(
                     student_progress, unit.unit_id)
 
-            # If a human-reviewed assessment is completed, ensure that the
+            # If a peer-reviewed assessment is completed, ensure that the
             # required reviews have also been completed.
             if completed and self.needs_human_grader(unit):
                 reviews = self.get_reviews_processor().get_review_steps_by(

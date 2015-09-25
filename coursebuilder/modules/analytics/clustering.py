@@ -446,8 +446,8 @@ class ClusterRESTHandler(dto_editor.BaseDatastoreRestHandler):
                 dim[DIM_LOW] = None
             if (_has_left_side(dim) and _has_right_side(dim)
                 and dim[DIM_HIGH] < dim[DIM_LOW]):
-                errors.append('Wrong range interval in dimension'
-                              'number {}'.format(index))
+                errors.append(
+                    'Wrong range interval in dimension number {}'.format(index))
             # Unpack the select id.
             dim[DIM_ID], dim[DIM_TYPE] = ClusterRESTHandler.unpack_id(
                 dim[DIM_ID])

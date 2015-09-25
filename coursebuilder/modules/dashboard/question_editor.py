@@ -161,10 +161,10 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
 
     def _validate15(self, question_dict, key, errors):
         if not question_dict['question'].strip():
-            errors.append('The question must have a non-empty body.')
+            errors.append('The question can\'t be blank.')
 
         if not question_dict['description']:
-            errors.append('The description must be non-empty.')
+            errors.append('The description can\'t be blank.')
 
         self.validate_no_description_collision(
             question_dict['description'], key, errors)
@@ -233,10 +233,10 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
 
     def _validate15(self, question_dict, key, errors):
         if not question_dict['question'].strip():
-            errors.append('The question must have a non-empty body.')
+            errors.append('The question can\'t be blank.')
 
         if not question_dict['description']:
-            errors.append('The description must be non-empty.')
+            errors.append('The description can\'t be blank.')
 
         self.validate_no_description_collision(
             question_dict['description'], key, errors)

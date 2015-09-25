@@ -312,7 +312,7 @@ class CoursesItemRESTHandler(utils.BaseRESTHandler):
         # Add the new course entry.
         errors = []
         entry = sites.add_new_course_entry(name, title, admin_email, errors)
-        if not entry:
+        if not entry and not errors:
             errors.append('Error adding a new course entry.')
         if errors:
             transforms.send_json_response(self, 412, '\n'.join(errors))
