@@ -2296,6 +2296,52 @@ class StudentKeyNameTest(actions.TestBase):
 class StudentAspectTest(actions.TestBase):
     """Test the site from the Student perspective."""
 
+    def test_course_page_content(self):
+        institution_link_selector = './/a[@id="institution-link"]'
+        policy_link_selector = './/a[@id="privacy-policy-link"]'
+
+        # Legacy values should be ignored
+        with actions.OverriddenEnvironment({
+            'base': {
+                'privacy_terms_url': 'PRIVACY_POLICY_AND_TERMS_OF_SERVICE',
+            },
+            'institution': {
+                'url': 'LINK_TO_YOUR_INSTITUTION_HERE',
+                'name': 'Add Your Institution Here',
+            },
+        }):
+            response = self.get('course')
+            course_page = self.parse_html_string(response.body)
+
+            institution_link = course_page.find(institution_link_selector)
+            self.assertIsNone(institution_link)
+
+            policy_link = course_page.find(policy_link_selector)
+            self.assertIsNone(policy_link)
+
+        # Custom values should be visible
+        with actions.OverriddenEnvironment({
+            'base': {
+                'privacy_terms_url': 'http://example.com/privacy',
+            },
+            'institution': {
+                'url': 'http://example.com',
+                'name': 'Example Institution',
+            },
+        }):
+            response = self.get('course')
+            course_page = self.parse_html_string(response.body)
+
+            institution_link = course_page.find(institution_link_selector)
+            self.assertIsNotNone(institution_link)
+            self.assertIn('Example Institution', institution_link.itertext())
+            self.assertEqual(institution_link.get('href'), 'http://example.com')
+
+            policy_link = course_page.find(policy_link_selector)
+            self.assertIsNotNone(policy_link)
+            self.assertEqual(
+                policy_link.get('href'), 'http://example.com/privacy')
+
     def test_view_announcements(self):
         """Test student aspect of announcements."""
 
