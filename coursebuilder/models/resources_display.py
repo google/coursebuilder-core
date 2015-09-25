@@ -1049,7 +1049,7 @@ class ResourceLesson(resource.AbstractResourceHandler):
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value}))
         lesson.add_property(schema_fields.SchemaField(
-            'notes', 'Notes', 'string', optional=True,
+            'notes', 'Text Version URL', 'string', optional=True,
             description=messages.LESSON_NOTES_DESCRIPTION))
         lesson.add_property(schema_fields.SchemaField(
             'auto_index', 'Auto Number', 'boolean',

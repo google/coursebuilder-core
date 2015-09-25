@@ -70,9 +70,9 @@ template.
 """
 
 LESSON_NOTES_DESCRIPTION = """
-Provide a URL that points to the notes for this lesson (if applicable). These
-notes can be accessed by clicking on the 'Text Version' button on the lesson
-page.
+This is the URL to the text version of this lesson's content. If present, it is
+accessed by clicking on the "Text Version" button on the lesson page. Links to
+other sites must start with "http" or "https".
 """
 
 LESSON_AUTO_INDEX_DESCRIPTION = """
