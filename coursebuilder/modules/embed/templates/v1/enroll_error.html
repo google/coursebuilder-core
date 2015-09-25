@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="{{ embed_child_js_url }}" type="text/javascript"></script>
+    {# I18N: Page title when there is a problem enrolling the user in the course
+             that contains their requested content. #}
+    <title>{{ gettext("Enrollment error") }}</title>
+  </head>
+  <body>
+    <p><strong>{{ email }}</strong>
+    {# I18N: Sentence fragment printed after the current user's email address,
+             indicating they have no rights to see the requested content, and
+             that they should contact an administrator to ask for access if they
+             think they should be able to see the content. #}
+    {{ gettext("has no rights to see this content. Please contact the content
+                owner to request access." )}}</p>
+  </body>
+</html>

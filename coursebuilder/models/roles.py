@@ -113,8 +113,8 @@ class Roles(object):
 
     @classmethod
     def _user_email_in(cls, user, text):
-        return user and user.email() in utils.text_to_list(
-            text, utils.BACKWARD_COMPATIBLE_SPLITTER)
+        return bool(user and user.email() in utils.text_to_list(
+            text, utils.BACKWARD_COMPATIBLE_SPLITTER))
 
     @classmethod
     def update_permissions_map(cls):

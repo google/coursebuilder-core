@@ -16,7 +16,8 @@
 
 Start your development appserver and visit
 http://localhost:8081/modules/embed/v1/demo for documentation with a live demo.
-The live demo will 404 in prod.
+To demo embed with child courses, visit
+http://localhost:8081/modules/embed/v1/demo/child. Both demos will 404 in prod.
 
 Embeds are pieces of Course Builder content that live inside iframes inside
 static pages. They are valuable because they allow people who aren't running
@@ -64,7 +65,10 @@ import jinja2
 from common import jinja_utils
 from common import tags
 from common import users
-from controllers import utils
+from common import utils as common_utils
+from controllers import sites
+from controllers import utils as controllers_utils
+from models import courses
 from models import custom_modules
 from models import models
 from models import transforms
@@ -78,8 +82,12 @@ _BASE_URL_V1 = '%s/%s' % (_BASE_URL, _V1)
 _STATIC = 'static'
 _STATIC_BASE_URL_V1 = '%s/%s/%s' % (_BASE_URL, _STATIC, _V1)
 
+_CHILD_COURSES_NAME = 'child_courses'
+_COURSE_NAME = 'course'
 _COURSE_TITLE_NAME = 'course_title'
+_DEFAULT_LOCALE = 'en_US'
 _DEMO_URL = _BASE_URL_V1 + '/demo'
+_DEMO_CHILD_URL = _BASE_URL_V1 + '/demo/child'
 _DISPATCH_INFIX = '/resource'
 _DISPATCH_URL = _BASE_URL_V1 + _DISPATCH_INFIX
 _EMAIL_NAME = 'email'
@@ -95,6 +103,8 @@ _EMBED_JS_URL = '%s/%s' % (_BASE_URL_V1, _EMBED_JS_NAME)
 _EMBED_LIB_JS_NAME = 'embed_lib.js'
 _EMBED_LIB_JS_URL = '%s/%s' % (_BASE_URL_V1, _EMBED_LIB_JS_NAME)
 _EMBED_LIB_JS_URL_NAME = 'embed_lib_js_url'
+_ENROLL_ERROR_NAME = 'enroll_error.html'
+_ENROLL_ERROR_URL = _BASE_URL_V1 + '/enroll_error'
 _ENV_NAME = 'env'
 _ERRORS_DEMO_URL = _DEMO_URL + '/errors'
 _EXAMPLE_NAME = 'example.html'
@@ -120,6 +130,7 @@ _STATIC_URL = '%s/%s/.*' % (_BASE_URL, _STATIC)
 _LOG = logging.getLogger('modules.embed.embed')
 
 _TEMPLATES_DIR_V1 = os.path.join(_BASE_DIR, 'templates', _V1)
+_DEMO_CHILD_HTML_PATH = os.path.join(_TEMPLATES_DIR_V1, 'demo_child.html')
 _DEMO_HTML_PATH = os.path.join(_TEMPLATES_DIR_V1, 'demo.html')
 _GLOBAL_ERRORS_DEMO_HTML_PATH = os.path.join(
     _TEMPLATES_DIR_V1, 'global_errors.html')
@@ -159,6 +170,22 @@ class AbstractEmbed(object):
     See _ExampleEmbed|Handler below for a reference implementation.
     Additionally, your handlers that serve embedded content must inherit from
     BaseHandler.
+
+    The job of this class is to enroll the student and then to redirect to the
+    embedded resource. If your course has no children (meaning that the
+    'child_courses' member in course.yaml is missing or empty), the
+    ENROLLMENT_POLICY will be applied against your course, and the user will be
+    redirected to the desired resource.
+
+    If 'child_courses' is present and non-empty, each item is a string denoting
+    the namespace of all courses which are children of the target course. In
+    that case, we first validate the child course state to make sure the student
+    can be enrolled. To pass validation, exactly one active course must exist
+    with the student on its whitelist. If this is not the case, we redirect to
+    an error rather than the desired resource.
+
+    If the system's state is valid, we find the correct child course and apply
+    the ENROLLMENT_POLICY to it, then redirect to the desired resource.
     """
 
     # TODO(johncox): add method for generating HTML embed snippet once we have
@@ -177,24 +204,145 @@ class AbstractEmbed(object):
 
     @classmethod
     def dispatch(cls, handler):
-        cls.ENROLLMENT_POLICY.apply(handler)
-        handler.redirect(cls.get_redirect_url(handler))
+        child_course_namespaces = cls._get_child_course_namespaces(
+            handler.app_context.get_environ())
+
+        if not cls._namespaces_valid(child_course_namespaces):
+            _LOG.error(
+                '%s invalid; must contain list of child course namespaces. '
+                'Got: %s', _CHILD_COURSES_NAME, child_course_namespaces)
+            handler.error(500)
+            return
+
+        if child_course_namespaces:
+            cls._child_courses_dispatch(handler, child_course_namespaces)
+        else:
+            cls._default_dispatch(handler)
 
     @classmethod
-    def get_redirect_url(cls, unused_handler):
-        """Given dispatch handler, returns URL of resource we 302 to."""
+    def get_redirect_url(cls, handler, target_slug=None):
+        """Given dispatch handler, returns URL of resource we 302 to.
+
+        Args:
+            handler: webapp2.RequestHandler. The handler for the current
+                request.
+            target_slug: string or None. If None, the course of the embed target
+                matches the course referenced by handler.request.url. Otherwise,
+                the slug of the child course we resolved the user into during
+                dispatch().
+
+        Returns.
+            String. The URL of the desired embed resource.
+        """
         raise NotImplementedError
 
+    @classmethod
+    def get_slug(cls, handler, target_slug=None):
+        """Gets target_slug, falling back to slug of handler's app_context."""
+        if target_slug is not None:
+            return target_slug
 
-class BaseHandler(utils.BaseHandler):
+        return handler.get_course().app_context.get_slug()
+
+    @classmethod
+    def _check_redirect_url(cls, url):
+        assert isinstance(url, str), 'URL must be str, not unicode'
+
+    @classmethod
+    def _child_courses_dispatch(cls, handler, child_course_namespaces):
+        # First, resolve the target course. The parent has >= 1 candidate
+        # children. A candidate course is a match for dispatch if both the
+        # course is currently available, and the current user is on the
+        # whitelist.
+        #
+        # If we find a namespace we cannot resolve into a course, child_courses
+        # is misconfigured by the admin. We log and 500.
+        #
+        # If we find any number of matches other than 1, the system is
+        # misconfigured by the admin *for a particular user*. In that case, we
+        # show the user an error message and encourage them to report the
+        # problem to the admin.
+        #
+        # If we resolve into exactly one course, we apply ENROLLMENT_POLICY to
+        # that course and proceed with the redirect flow, passing the slug of
+        # the matched course along to get_redirect_url() for handling in
+        # concrete AbstractEmbed implementations.
+        all_contexts = []
+        for namespace in child_course_namespaces:
+            child_app_context = sites.get_app_context_for_namespace(namespace)
+            if not child_app_context:
+                _LOG.error(
+                    '%s contains namespace with no associated course: %s',
+                    _CHILD_COURSES_NAME, namespace)
+                handler.error(500)
+                return
+
+            all_contexts.append(child_app_context)
+
+        matches = []
+        for app_context in all_contexts:
+            course = courses.Course.get(app_context)
+            if course.can_enroll_current_user():
+                matches.append(course.app_context)
+
+        num_matches = len(matches)
+        if num_matches != 1:
+            _LOG.error(
+                'Must have exactly 1 enrollment target; got %s', num_matches)
+            handler.redirect(_ENROLL_ERROR_URL, normalize=False)
+            return
+
+        child_app_context = matches[0]
+        with common_utils.Namespace(child_app_context.get_namespace_name()):
+            cls.ENROLLMENT_POLICY.apply(handler)
+
+        return cls._redirect(
+            handler, normalize=False, target_slug=child_app_context.get_slug())
+
+    @classmethod
+    def _default_dispatch(cls, handler):
+        cls.ENROLLMENT_POLICY.apply(handler)
+        return cls._redirect(handler)
+
+    @classmethod
+    def _get_child_course_namespaces(cls, course_environ):
+        return course_environ.get(_COURSE_NAME, {}).get(_CHILD_COURSES_NAME, [])
+
+    @classmethod
+    def _namespaces_valid(cls, namespaces):
+        if not isinstance(namespaces, list):
+            return False
+
+        for namespace in namespaces:
+            if not isinstance(namespace, basestring):
+                return False
+
+        return True
+
+    @classmethod
+    def _redirect(cls, handler, normalize=True, target_slug=None):
+        redirect_url = cls.get_redirect_url(handler, target_slug=target_slug)
+        cls._check_redirect_url(redirect_url)
+        return handler.redirect(redirect_url, normalize=normalize)
+
+
+class _EmbedHeaderMixin(object):
+
+    def _set_headers(self, headers):
+        # Explicitly tell browsers this content may be framed.
+        headers['X-Frame-Options'] = 'ALLOWALL'
+
+
+class BaseHandler(controllers_utils.BaseHandler, _EmbedHeaderMixin):
     """Base class for handlers that serve embedded content.
 
-    All your handlers should inherit from this class.
+    All namespaced handlers should inherit from this class; non-namespaced
+    handlers that expect to render in an embed should instead inherit from
+    _EmbedHeaderMixin and call _set_headers() on all responses.
     """
 
     def before_method(self, unused_verb, unused_path):
-        # Explicitly tell browsers this content may be framed.
-        self.response.headers['X-Frame-Options'] = 'ALLOWALL'
+        self._set_headers(self.response.headers)
 
 
 class Registry(object):
@@ -258,7 +406,7 @@ class UrlParser(object):
         return tuple([value.strip() for value in [id_or_name, kind]])
 
 
-class _AbstractJsHandler(utils.ApplicationHandler):
+class _AbstractJsHandler(controllers_utils.ApplicationHandler):
 
     _TEMPLATE_NAME = None
 
@@ -340,7 +488,7 @@ class _EmbedJsHandler(_AbstractJsHandler):
         }
 
 
-class _AbstractDemoHandler(utils.BaseHandler):
+class _AbstractDemoHandler(controllers_utils.BaseHandler):
 
     _TEMPLATE_PATH = None
 
@@ -360,6 +508,11 @@ class _AbstractDemoHandler(utils.BaseHandler):
         return not appengine_config.PRODUCTION_MODE
 
 
+class _ChildCoursesDemoHandler(_AbstractDemoHandler):
+
+    _TEMPLATE_PATH = _DEMO_CHILD_HTML_PATH
+
+
 class _DemoHandler(_AbstractDemoHandler):
 
     _TEMPLATE_PATH = _DEMO_HTML_PATH
@@ -375,7 +528,8 @@ class _LocalErrorsDemoHandler(_AbstractDemoHandler):
     _TEMPLATE_PATH = _LOCAL_ERRORS_DEMO_HTML_PATH
 
 
-class _DispatchHandler(utils.BaseHandler, utils.StarRouteHandlerMixin):
+class _DispatchHandler(
+        controllers_utils.BaseHandler, controllers_utils.StarRouteHandlerMixin):
 
     def get(self):
         kind = UrlParser.get_kind(self.request.url)
@@ -397,7 +551,20 @@ class _DispatchHandler(utils.BaseHandler, utils.StarRouteHandlerMixin):
         return embed.dispatch(self)
 
 
-class _FinishAuthHandler(utils.BaseHandler):
+class _EnrollErrorHandler(
+        controllers_utils.LocalizedGlobalHandler, _EmbedHeaderMixin):
+
+    def get(self):
+        user = users.get_current_user()
+        self._set_headers(self.response.headers)
+        template = self.get_template(_ENROLL_ERROR_NAME, [_TEMPLATES_DIR_V1])
+        self.response.out.write(template.render({
+            _EMBED_CHILD_JS_URL_NAME: _EMBED_CHILD_JS_URL,
+            _EMAIL_NAME: user.email() if user else None,
+        }))
+
+
+class _FinishAuthHandler(controllers_utils.BaseHandler):
 
     def get(self):
         template = _TEMPLATES_ENV.get_template(_FINISH_AUTH_NAME)
@@ -409,19 +576,25 @@ class _FinishAuthHandler(utils.BaseHandler):
 
 
 class _ExampleEmbed(AbstractEmbed):
-    """Reference implementation of an Embed."""
+    """Reference implementation of an Embed.
+
+    Supports both standalone courses and those with children.
+    """
 
     ENROLLMENT_POLICY = AutomaticEnrollmentPolicy
 
     @classmethod
-    def get_redirect_url(cls, handler):
+    def get_redirect_url(cls, handler, target_slug=None):
         query = {
             _ID_OR_NAME_NAME: UrlParser.get_id_or_name(handler.request.url),
             _KIND_NAME: UrlParser.get_kind(handler.request.url),
         }
-        return '%s%s?%s' % (
-            handler.get_course().app_context.get_slug(), _EXAMPLE_URL,
-            urllib.urlencode(query))
+        # Note that because redirect URLs may span course boundaries, they must
+        # be absolute. Use the get_slug() convenience method to determine the
+        # target course of the embedded resource.
+        return str('%s%s?%s' % (
+            cls.get_slug(handler, target_slug=target_slug), _EXAMPLE_URL,
+            urllib.urlencode(query)))
 
 
 class _ExampleHandler(BaseHandler):
@@ -454,9 +627,11 @@ custom_module = None
 
 _GLOBAL_HANDLERS = [
     (_DEMO_URL, _DemoHandler),
+    (_DEMO_CHILD_URL, _ChildCoursesDemoHandler),
     (_EMBED_CHILD_JS_URL, _EmbedChildJsHandler),
     (_EMBED_JS_URL, _EmbedJsHandler),
     (_EMBED_LIB_JS_URL, _EmbedLibJsHandler),
+    (_ENROLL_ERROR_URL, _EnrollErrorHandler),
     (_FINISH_AUTH_URL, _FinishAuthHandler),
     (_GLOBAL_ERRORS_DEMO_URL, _GlobalErrorsDemoHandler),
     (_LOCAL_ERRORS_DEMO_URL, _LocalErrorsDemoHandler),

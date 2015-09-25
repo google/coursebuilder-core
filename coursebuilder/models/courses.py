@@ -31,6 +31,7 @@ import custom_units
 import messages
 import progress
 import review
+import roles
 import transforms
 import utils
 import vfs
@@ -2720,6 +2721,11 @@ class Course(object):
     @property
     def title(self):
         return self._app_context.get_title()
+
+    def can_enroll_current_user(self):
+        return (
+            self._app_context.now_available and
+            roles.Roles.is_user_whitelisted(self._app_context))
 
     def to_json(self):
         return self._model.to_json()

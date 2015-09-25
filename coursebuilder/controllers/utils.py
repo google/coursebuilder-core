@@ -1257,6 +1257,48 @@ class ForumHandler(BaseHandler):
             name=name, domain_portion=domain_portion)
 
 
+class LocalizedGlobalHandler(ApplicationHandler):
+    """A handler not scoped to a course that supports template localization."""
+
+    _DEFAULT_LOCALE = 'en_US'
+
+    def get_template(self, template_file, additional_dirs=None):
+        assert additional_dirs, 'Must specify template dirs'
+
+        locale = self._get_locale(
+            accept_language_header=self._get_accept_language(
+                self.request.headers))
+        return self._get_template_env(
+            additional_dirs, locale=locale).get_template(template_file)
+
+    @classmethod
+    def _get_accept_language(cls, headers):
+        return headers.get('Accept-Language')
+
+    @classmethod
+    def _get_locale(cls, accept_language_header=None):
+        # Gets the locale. Because we are not scoped to a course, we cannot
+        # consult datastore to learn the user's preferences. We can, however,
+        # get the value sent by their browser and take the highest-priority
+        # value found. If no header is sent, we fall back to the declared
+        # default.
+        locale = cls._DEFAULT_LOCALE
+        pairs = []
+        if accept_language_header:
+            pairs = locales.parse_accept_language(accept_language_header)
+
+        if pairs:
+            locale = sorted(pairs, key=lambda t: t[1], reverse=True)[0][0]
+
+        return locale
+
+    @classmethod
+    def _get_template_env(cls, templates_dirs, locale=None):
+        return jinja_utils.create_jinja_environment(
+            jinja2.FileSystemLoader(templates_dirs),
+            locale=locale if locale else cls._DEFAULT_LOCALE, autoescape=True)
+
+
 class StudentProfileHandler(BaseHandler):
     """Handles the click to 'Progress' link in the nav bar."""
 

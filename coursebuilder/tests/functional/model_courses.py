@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Functional tests for VFS features."""
+"""Functional tests for models/courses.py."""
 
 __author__ = [
     'mgainer@google.com (Mike Gainer)',
 ]
 
 from common import utils as common_utils
+from controllers import sites
 from models import config
 from models import courses
 from models import models
@@ -184,3 +185,47 @@ class CourseCachingTest(actions.TestBase):
             memcache_keys[0:1],
             memcache_values.keys(),
             'Only shard zero should be present in memcache.')
+
+
+class PermissionsTest(actions.TestBase):
+
+    def setUp(self):
+        super(PermissionsTest, self).setUp()
+        self.app_context = sites.get_all_courses()[0]
+        self.email = 'test@example.com'
+        actions.login(self.email)
+
+    def get_env(self, now_available=None, whitelist=None):
+        now_available = now_available if now_available is not None else False
+        whitelist = whitelist if whitelist is not None else ''
+        return {
+            'course': {
+                'now_available': now_available,
+                'whitelist': whitelist,
+            }
+        }
+
+    def test_can_enroll_false_when_whitelist_empty_and_course_unavailable(self):
+        with actions.OverriddenEnvironment(self.get_env()):
+            self.assertFalse(
+                courses.Course.get(self.app_context).can_enroll_current_user())
+
+    def test_can_enroll_false_when_not_in_whitelist_course_unavailable(self):
+        with actions.OverriddenEnvironment(self.get_env(
+                whitelist='other@example.com')):
+            self.assertFalse(
+                courses.Course.get(self.app_context).can_enroll_current_user())
+
+    def test_can_enroll_true_when_whitelist_empty_and_course_available(self):
+        with actions.OverriddenEnvironment(self.get_env(now_available=True)):
+            self.assertTrue(
+                courses.Course.get(self.app_context).can_enroll_current_user())
+
+    def test_can_enroll_true_when_in_whitelist_and_course_available(self):
+        complex_whitelist = (
+            ' foo@example.com, %s \n bar@example.com' % self.email)
+
+        with actions.OverriddenEnvironment(self.get_env(
+                now_available=True, whitelist=complex_whitelist)):
+            self.assertTrue(
+                courses.Course.get(self.app_context).can_enroll_current_user())

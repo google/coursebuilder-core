@@ -20,6 +20,8 @@ __author__ = [
 
 from common import users
 from common import utils
+from controllers import sites
+from models import courses
 from models import models
 from modules.embed import embed
 
@@ -91,33 +93,211 @@ class LocalErrorsDemoHandlerTest(DemoHandlerTestBase):
         self.assert_get_returns_404_in_prod()
 
 
-class ExampleEmbedAndHandlerV1Test(actions.TestBase):
+class ExampleEmbedTestBase(actions.TestBase):
 
     def setUp(self):
-        super(ExampleEmbedAndHandlerV1Test, self).setUp()
+        super(ExampleEmbedTestBase, self).setUp()
         self.admin_email = 'admin@example.com'
-        actions.login(self.admin_email, is_admin=True)
-        actions.simple_add_course('course', self.admin_email, 'Course')
-        self.user = users.get_current_user()
 
-    def assert_current_user_enrolled(self):
-        self.assertTrue(bool(self.get_student_for_current_user()))
+    def assert_child_course_namespaces_malformed(self, response):
+        self.assertEquals(500, response.status_code)
+        self.assertLogContains('child_courses invalid')
 
-    def assert_current_user_not_enrolled(self):
-        self.assertFalse(bool(self.get_student_for_current_user()))
+    def assert_current_user_enrolled(self, namespace):
+        self.assertTrue(bool(self.get_student_for_current_user(namespace)))
+
+    def assert_current_user_not_enrolled(self, namespace):
+        self.assertFalse(bool(self.get_student_for_current_user(namespace)))
+
+    def assert_embed_rendered(self, response, email, course_title):
+        self.assert_expected_headers_present(response.headers)
+        self.assertEquals(200, response.status_code)
+        # Frame resizing JS present.
+        self.assertIn(embed._EMBED_CHILD_JS_URL, response.body)
+        # The desired user is authenticated.
+        self.assertIn(email, response.body)
+        # The id and type of the embedded resource are correct.
+        self.assertIn('<strong>example</strong>', response.body)
+        self.assertIn('<strong>1</strong>', response.body)
+        # We're in the correct target course, verified by its title.
+        self.assertIn('<strong>%s</strong>' % course_title, response.body)
+
+    def assert_enrollment_error(self, response, email, num_matches):
+        self.assert_expected_headers_present(response.headers)
+        self.assertEquals(200, response.status_code)
+        self.assertIn('Enrollment error', response.body)
+        self.assertIn(email, response.body)
+        self.assertLogContains(
+            'Must have exactly 1 enrollment target; got %s' % num_matches)
 
     def assert_expected_headers_present(self, headers):
         self.assertEquals(headers.get('X-Frame-Options'), 'ALLOWALL')
 
-    def get_student_for_current_user(self):
+    def get_env(self, child_courses=None):
+        env = {'course': {}}
+        if child_courses:
+            env['course']['child_courses'] = child_courses
+
+        return env
+
+    def get_student_for_current_user(self, namespace):
         user = users.get_current_user()
         assert user
 
-        with utils.Namespace('ns_course'):
+        with utils.Namespace(namespace):
             return models.Student.get_enrolled_student_by_user(user)
 
+    def set_course_setting(self, namespace, name, value):
+        app_context = sites.get_app_context_for_namespace(namespace)
+        course = courses.Course.get(app_context)
+        settings = course.app_context.get_environ()
+        settings['course'][name] = value
+        course.save_settings(settings)
+
+    def set_now_available(self, namespace, value):
+        self.set_course_setting(namespace, 'now_available', value)
+
+    def set_whitelist(self, namespace, value):
+        self.set_course_setting(namespace, 'whitelist', value)
+
+
+class ExampleEmbedAndHandlerV1ChildCoursesTest(ExampleEmbedTestBase):
+    """Tests example embed with child courses."""
+
+    def setUp(self):
+        super(ExampleEmbedAndHandlerV1ChildCoursesTest, self).setUp()
+        self.student_email = 'student@example.com'
+        actions.login(self.student_email)
+        actions.simple_add_course('parent', self.admin_email, 'Parent')
+        actions.simple_add_course('child1', self.admin_email, 'Child1')
+        actions.simple_add_course('child2', self.admin_email, 'Child2')
+
+    def assert_user_only_enrolled_in(self, enrolled_namespace):
+        not_enrolled = ['ns_parent', 'ns_child1', 'ns_child2']
+        not_enrolled.remove(enrolled_namespace)
+
+        for namespace in not_enrolled:
+            self.assert_current_user_not_enrolled(namespace)
+
+        self.assert_current_user_enrolled(enrolled_namespace)
+
+    def assert_user_not_enrolled_in_any_course(self):
+        self.assert_current_user_not_enrolled('ns_parent')
+        self.assert_current_user_not_enrolled('ns_child1')
+        self.assert_current_user_not_enrolled('ns_child2')
+
+    def test_get_renders_error_when_no_available_child_courses(self):
+        self.set_now_available('ns_child1', False)
+        self.set_now_available('ns_child2', False)
+
+        self.assert_user_not_enrolled_in_any_course()
+
+        with actions.OverriddenEnvironment(self.get_env(
+                ['ns_child1', 'ns_child2'])):
+            redirect = self.testapp.get(
+                '/parent/modules/embed/v1/resource/example/1',
+                expect_errors=True)
+            redirect_url = redirect.headers.get('Location')
+
+            self.assertEquals(302, redirect.status_code)
+            self.assertTrue(redirect_url)
+
+            response = self.testapp.get(redirect_url)
+
+            self.assert_enrollment_error(response, self.student_email, 0)
+            self.assert_user_not_enrolled_in_any_course()
+
+    def test_get_renders_error_when_whitelists_empty(self):
+        self.set_now_available('ns_child1', True)
+        self.set_now_available('ns_child2', True)
+
+        self.assert_user_not_enrolled_in_any_course()
+
+        # Both whitelists are empty, so the user may be enrolled in either.
+        with actions.OverriddenEnvironment(self.get_env(
+                ['ns_child1', 'ns_child2'])):
+            redirect = self.testapp.get(
+                '/parent/modules/embed/v1/resource/example/1',
+                expect_errors=True)
+            redirect_url = redirect.headers.get('Location')
+
+            self.assertEquals(302, redirect.status_code)
+            self.assertTrue(redirect_url)
+
+            response = self.testapp.get(redirect_url)
+
+            self.assert_enrollment_error(response, self.student_email, 2)
+            self.assert_user_not_enrolled_in_any_course()
+
+    def test_get_renders_error_when_user_on_multiple_whitelists(self):
+        self.set_now_available('ns_child1', True)
+        self.set_now_available('ns_child2', True)
+        self.set_whitelist('ns_child1', self.student_email)
+        self.set_whitelist('ns_child2', self.student_email)
+
+        self.assert_user_not_enrolled_in_any_course()
+
+        with actions.OverriddenEnvironment(self.get_env(
+                ['ns_child1', 'ns_child2'])):
+            redirect = self.testapp.get(
+                '/parent/modules/embed/v1/resource/example/1',
+                expect_errors=True)
+            redirect_url = redirect.headers.get('Location')
+
+            self.assertEquals(302, redirect.status_code)
+            self.assertTrue(redirect_url)
+
+            response = self.testapp.get(redirect_url)
+
+            self.assert_enrollment_error(response, self.student_email, 2)
+            self.assert_user_not_enrolled_in_any_course()
+
+    def test_get_succeeds_when_exactly_one_enrollment_target(self):
+        self.set_now_available('ns_child1', True)
+        self.set_now_available('ns_child2', True)
+        self.set_whitelist('ns_child1', 'not_' + self.student_email)
+        self.set_whitelist('ns_child2', self.student_email)
+
+        self.assert_user_not_enrolled_in_any_course()
+
+        with actions.OverriddenEnvironment(self.get_env(
+                ['ns_child1', 'ns_child2'])):
+            redirect = self.testapp.get(
+                '/parent/modules/embed/v1/resource/example/1',
+                expect_errors=True)
+            redirect_url = redirect.headers.get('Location')
+
+            self.assertEquals(302, redirect.status_code)
+            self.assertTrue(redirect_url)
+
+            response = self.testapp.get(redirect_url)
+
+            self.assert_embed_rendered(response, self.student_email, 'Child2')
+            self.assert_user_only_enrolled_in('ns_child2')
+
+    def test_get_returns_500_when_child_courses_malformed(self):
+        self.assert_user_not_enrolled_in_any_course()
+
+        with actions.OverriddenEnvironment(self.get_env('bad')):
+            response = self.testapp.get(
+                '/parent/modules/embed/v1/resource/example/1',
+                expect_errors=True)
+
+        self.assert_child_course_namespaces_malformed(response)
+        self.assert_user_not_enrolled_in_any_course()
+
+
+class ExampleEmbedAndHandlerV1SingleCourseTest(ExampleEmbedTestBase):
+    """Tests example embed with no child courses."""
+
+    def setUp(self):
+        super(ExampleEmbedAndHandlerV1SingleCourseTest, self).setUp()
+        actions.login(self.admin_email, is_admin=True)
+        actions.simple_add_course('course', self.admin_email, 'Course')
+        self.user = users.get_current_user()
+
     def test_get_returns_302_to_200_with_good_payload_and_enrolls_student(self):
-        self.assert_current_user_not_enrolled()
+        self.assert_current_user_not_enrolled('ns_course')
 
         redirect = self.testapp.get(
             '/course/modules/embed/v1/resource/example/1')
@@ -125,21 +305,11 @@ class ExampleEmbedAndHandlerV1Test(actions.TestBase):
 
         self.assertEquals(302, redirect.status_code)
         self.assertTrue(redirect_url)
-        self.assert_current_user_enrolled()
+        self.assert_current_user_enrolled('ns_course')
 
         response = self.testapp.get(redirect_url)
 
-        self.assert_expected_headers_present(response.headers)
-        self.assertEquals(200, response.status_code)
-        # Required for frame resizing.
-        self.assertIn(embed._EMBED_CHILD_JS_URL, response.body)
-        # An email means the user is in session.
-        self.assertIn(self.admin_email, response.body)
-        # Data about the type and identifier of the embed instance.
-        self.assertIn('<strong>example</strong>', response.body)
-        self.assertIn('<strong>1</strong>', response.body)
-        # The course title means app context is visible to the embed handler.
-        self.assertIn('<strong>Course</strong>', response.body)
+        self.assert_embed_rendered(response, self.admin_email, 'Course')
 
     def test_get_returns_404_if_kind_not_in_registry(self):
         response = self.testapp.get(

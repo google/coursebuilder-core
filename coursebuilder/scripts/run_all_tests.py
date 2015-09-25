@@ -60,7 +60,7 @@ import yaml
 ALL_INTEGRATION_TEST_CLASSES = {
     'tests.integration.test_classes.IntegrationTestBundle1': 16,
     'tests.integration.test_classes.VisualizationsTest': 5,
-    'tests.integration.test_classes.EmbedModuleTest': 3,
+    'tests.integration.test_classes.EmbedModuleTest': 4,
 }
 
 # here we list all functional and unit tests that run in-process
@@ -85,6 +85,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.controllers_review.PeerReviewControllerTest': 7,
     'tests.functional.controllers_review.PeerReviewDashboardAdminTest': 1,
     'tests.functional.controllers_review.PeerReviewDashboardStudentTest': 2,
+    'tests.functional.controllers_utils.LocalizedGlobalHandlersTest': 4,
     'tests.functional.i18n.I18NCourseSettingsTests': 7,
     'tests.functional.i18n.I18NMultipleChoiceQuestionTests': 6,
     'tests.functional.model_analytics.AnalyticsTabsWithNoJobs': 8,
@@ -94,6 +95,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_analytics.QuestionAnalyticsTest': 3,
     'tests.functional.model_config.ValueLoadingTests': 2,
     'tests.functional.model_courses.CourseCachingTest': 5,
+    'tests.functional.model_courses.PermissionsTest': 4,
     'tests.functional.model_data_sources.PaginatedTableTest': 17,
     'tests.functional.model_data_sources.PiiExportTest': 4,
     'tests.functional.model_entities.BaseEntityTestCase': 3,
@@ -161,7 +163,10 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
     'tests.functional.modules_embed.DemoHandlerTest': 2,
-    'tests.functional.modules_embed.ExampleEmbedAndHandlerV1Test': 3,
+    'tests.functional.modules_embed'
+        '.ExampleEmbedAndHandlerV1ChildCoursesTest': 5,
+    'tests.functional.modules_embed'
+        '.ExampleEmbedAndHandlerV1SingleCourseTest': 3,
     'tests.functional.modules_embed.FinishAuthHandlerTest': 1,
     'tests.functional.modules_embed.GlobalErrorsDemoHandlerTest': 2,
     'tests.functional.modules_embed.JsHandlersTest': 3,

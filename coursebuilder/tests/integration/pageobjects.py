@@ -21,6 +21,7 @@ __author__ = [
 from contextlib import contextmanager
 import re
 import time
+import yaml
 
 from selenium.common import exceptions
 from selenium.webdriver.common import action_chains
@@ -454,6 +455,11 @@ class DashboardPage(PageObject):
         self.find_element_by_link_text('Outline').click()
         return AssetsPage(self._tester)
 
+    def click_advanced_settings(self):
+        self.ensure_menu_group_is_open('settings')
+        self.find_element_by_link_text('Advanced').click()
+        return AdvancedSettingsPage(self._tester)
+
     def click_settings(self):
         self.ensure_menu_group_is_open('settings')
         self.find_element_by_link_text('Course').click()
@@ -493,6 +499,27 @@ class DashboardPage(PageObject):
         self.ensure_menu_group_is_open('settings')
         self.find_element_by_link_text('Site settings').click()
         return AdminSettingsPage(self._tester)
+
+    def click_lock(self):
+        self.find_element_by_css_selector('button.md-lock').click()
+        return self
+
+    def click_registration(self):
+        self.ensure_menu_group_is_open('settings')
+        self.find_element_by_link_text('Registration').click()
+        return RegistrationPage(self._tester)
+
+
+class RegistrationPage(EditorPageObject):
+    """Page object for the registration admin page."""
+
+    def set_whitelisted_students(self, emails):
+        textarea = self.find_element_by_css_selector(
+            'textarea[name="course:whitelist"]')
+        textarea.clear()
+        textarea.send_keys('\n'.join(emails))
+        self.click_save()
+        return self
 
 
 class CourseContentPage(RootPage):
@@ -687,6 +714,24 @@ class SettingsPage(PageObject):
             return 'selected' == tab.get_attribute('class')
 
         self.wait().until(successful_load)
+
+
+class AdvancedSettingsPage(EditorPageObject):
+
+    def click_advanced_edit(self):
+        self.find_element_by_css_selector('.gcb-button').click()
+        return self
+
+    def set_child_courses(self, child_courses):
+        textarea = self.find_element_by_css_selector('textarea[name="content"]')
+        old_value = textarea.get_attribute('value')
+        new_value = yaml.safe_load(old_value)
+        new_value['course']['child_courses'] = [
+            'ns_' + name for name in child_courses]
+        textarea.clear()
+        textarea.send_keys(yaml.safe_dump(new_value))
+        self.click_save()
+        return self
 
 
 class CourseOptionsEditorPage(EditorPageObject):

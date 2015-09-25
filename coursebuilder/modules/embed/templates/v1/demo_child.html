@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Embed child courses demo</title>
+    <script type="text/javascript">
+      // When running as an integration test, we need a way to inject the
+      // expected slug for the embed, so we pass it via the query string.
+      function getVars() {
+        var vars = {}
+        var href = window.location.href;
+        var parts = href.replace(
+          /[?&]+([^=&]+)=([^&]*)/gi, function(unused, key, value) {
+            vars[key] = value;
+        });
+        return vars;
+      }
+      function getEmbedUrl(slug) {
+        return (
+          'http://localhost:8081/' + slug + '/modules/embed/v1/resource' +
+          '/example/1');
+      }
+      function setCbEmbedSrc() {
+        var slug = getVars()['slug'] || 'parent';
+        if (slug) {
+          // Running as integration test.
+          var e = document.getElementsByTagName('cb-embed')[0];
+          e.setAttribute('src', getEmbedUrl(slug));
+        }
+      }
+    </script>
+  </head>
+  <body onload="setCbEmbedSrc();">
+
+    <h1>Embed child courses demo</h1>
+
+    <p>This is an entirely static web page that uses CB embeds. It demos using
+       embeds across course boundaries and assumes you are running the dev
+       appserver at
+       <code><a href="http://localhost:8081">http://localhost:8081</a></code>.
+       This demo is not available in production.</p>
+    <p>Before the embeds in this demo will render correctly, you must set up two
+       courses in <a href="http://localhost:8081/admin/global">admin</a>: one at
+       <code>/parent</code>, and one at <code>/child</code>. Do that now.
+    <p>For
+       <code><a href="http://localhost:8081/parent/dashboard">/parent</code></a>,
+       make the course available by clicking the lock. Then, in
+       <a href="http://localhost:8081/child/dashboard?action=settings_advanced">advanced
+       settings</a>, add <code>child_courses: ['ns_child']</code> to the
+       <code>course:</code> stanza of <code>course.yaml</code>.</p>
+    <p>For
+       <code><a href="http://localhost:8081/child/dashboard">/child</a></code>,
+       add the email address of the current user (by default, <code>
+       test@example.com</code>) to the
+       <a href="http://localhost:8081/child/dashboard?action=settings_registration">registration
+       whitelist</a>.</p>
+    <p>Now the embed below will render successfully:</p>
+
+    <script src='http://localhost:8081/modules/embed/v1/embed.js'></script>
+    <cb-embed
+      src='http://localhost:8081/parent/modules/embed/v1/resource/example/1'>
+    </cb-embed>
+
+    <p>Note that the embed below shows the user is in the child course, not the
+       parent, even though the source code for this embed is</p>
+
+    <pre>
+    &lt;script src='http://localhost:8081/modules/embed/v1/embed.js'&gt;&lt;/script&gt;
+    &lt;cb-embed
+      src='http://localhost:8081/parent/modules/embed/v1/resource/example/1'&gt;
+    &lt;/cb-embed&gt;</pre>
+
+    <p>If you view <code>child's</code> datastore in the
+       <a href="http://localhost:8000/datastore?namespace=ns_child&kind=ConfigPropertyEntity">App
+       Engine dev admin console</a>, you'll see the user has been enrolled into
+       the <code>ns_child</code> namespace instead of
+       <code>ns_parent</code>.</p>
+
+  </body>
+</html>
