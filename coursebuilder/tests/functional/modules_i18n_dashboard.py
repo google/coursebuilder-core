@@ -31,6 +31,8 @@ import zipfile
 
 from babel.messages import pofile
 
+import appengine_config
+
 from common import crypto
 from common import resource
 from common import tags
@@ -3704,6 +3706,27 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
             self.assertNotIn('action=i18n_upload', response.body)
             self.assertNotIn('action=i18n_reverse_case', response.body)
             self.assertNotIn('action=i18_console', response.body)
+
+    def test_dev_only_button_visibility(self):
+        self._import_sample_course()
+        extra_env = {
+            'extra_locales': [
+                {'locale': 'de', 'availability': 'available'},
+            ]}
+        with actions.OverriddenEnvironment(extra_env):
+            response = self.get('sample/dashboard?action=i18n_dashboard')
+            self.assertIn('action=i18n_download', response.body)
+            self.assertIn('action=i18n_upload', response.body)
+            self.assertIn('action=i18n_reverse_case', response.body)
+
+            try:
+                appengine_config.PRODUCTION_MODE = True
+                response = self.get('sample/dashboard?action=i18n_dashboard')
+                self.assertNotIn('action=i18n_download', response.body)
+                self.assertNotIn('action=i18n_upload', response.body)
+                self.assertNotIn('action=i18n_reverse_case', response.body)
+            finally:
+                appengine_config.PRODUCTION_MODE = False
 
     def test_rpc_performance(self):
         """Tests various common actions for the number of memcache/db rpc."""

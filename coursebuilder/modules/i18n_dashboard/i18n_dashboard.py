@@ -1902,66 +1902,45 @@ class I18nDashboardHandler(BaseDashboardExtension):
 
         main_content = self.handler.get_template(
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
-        edit_actions = [
-            {
-                'id': 'delete_translation',
-                'caption': 'Delete Translations',
-                'href': self.handler.get_action_url(
-                    I18nDeletionHandler.ACTION),
-                },
-            {
-                'id': 'upload_translation_files',
-                'caption': 'Upload Translation Files',
-                'href': self.handler.get_action_url(
-                    I18nUploadHandler.ACTION),
-                },
-            {
-                'id': 'download_translation_files',
-                'caption': 'Download Translation Files',
-                'href': self.handler.get_action_url(
-                    I18nDownloadHandler.ACTION),
-                },
-            ]
-
-        translate_actions = [
-            {
-                'id': 'translate_to_reverse_case',
-                'caption': '"Translate" to rEVERSED cAPS',
-                'href': self.handler.get_action_url(
-                    I18nReverseCaseHandler.ACTION),
-                },
-            ]
         actions = []
         if not self.is_readonly(self.course):
-            actions += translate_actions
             if len(self.course.all_locales) > 1:
-                actions += edit_actions
-        if appengine_config.PRODUCTION_MODE:
-            message = (
-                'This operation takes a substantial amount of time, and '
-                'is very likely to time out when executed from a web '
-                'browser talking to a production server.  Alternatives '
-                'are to work with a development server or use the ETL '
-                'scripts to do translation upload/download.  See the '
-                'file .../scripts/etl.sh in your Course Builder download for '
-                'complete instructions on usage. ')
-            disabled_alert = 'javascript: alert("%s")' % message
-            for action in actions:
-                del action['href']
-                action['action'] = disabled_alert
-
-        if self.handler.can_view('settings_i18n'):
-            actions += [
-                {
-                    'id': 'edit_18n_settings',
-                    'caption': 'Settings',
+                actions.append({
+                    'id': 'delete_translation',
+                    'caption': 'Delete Translations',
                     'href': self.handler.get_action_url(
-                        'settings_i18n', extra_args={
-                            'exit_url': 'dashboard?action=' + self.ACTION,
+                        I18nDeletionHandler.ACTION),
+                    })
+            if (not appengine_config.PRODUCTION_MODE and
+                len(self.course.all_locales) > 1):
+                actions.append({
+                    'id': 'upload_translation_files',
+                    'caption': 'Upload Translation Files',
+                    'href': self.handler.get_action_url(
+                        I18nUploadHandler.ACTION),
+                    })
+                actions.append({
+                    'id': 'download_translation_files',
+                    'caption': 'Download Translation Files',
+                    'href': self.handler.get_action_url(
+                    I18nDownloadHandler.ACTION),
+                    })
+            if not appengine_config.PRODUCTION_MODE:
+                actions.append({
+                    'id': 'translate_to_reverse_case',
+                    'caption': '"Translate" to rEVERSED cAPS',
+                    'href': self.handler.get_action_url(
+                        I18nReverseCaseHandler.ACTION),
+                    })
+        if self.handler.can_view('settings_i18n'):
+            actions.append({
+                'id': 'edit_18n_settings',
+                'caption': 'Settings',
+                'href': self.handler.get_action_url(
+                    'settings_i18n', extra_args={
+                        'exit_url': 'dashboard?action=' + self.ACTION,
                         })
-                    },
-                ]
-
+                })
         self.handler.render_page({
             'page_title': self.handler.format_title('Translation workflow'),
             'main_content': jinja2.utils.Markup(main_content),
