@@ -114,7 +114,7 @@ class CourseSettingsHandler(object):
     @staticmethod
     def _show_settings_tab(handler, section_names):
         menu_item = dashboard.DashboardHandler.actions_to_menu_items[
-            handler.request.get('action') or 'settings_course']
+            handler.request.get('action')]
         template_values = {
             'page_title': handler.format_title(
                 'Settings > {}'.format(urllib.unquote(menu_item.title))),
