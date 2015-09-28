@@ -137,7 +137,7 @@ function bindEditorField(Y) {
       extracss: this.EXTRA_CSS,
     };
     if (options['rteButtonSet'] == 'reduced') {
-      attrs.toolbar = {buttons: this.REDUCED_BUTTON_SET};
+      attrs.toolbar = {buttons: $.extend({}, this.REDUCED_BUTTON_SET)};
     }
     this.editor = new Y.YUI2.widget.Editor(textarea, attrs);
     this._disableHtmlCleaning();
