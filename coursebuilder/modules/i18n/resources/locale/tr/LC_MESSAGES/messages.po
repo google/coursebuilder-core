@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-21 07:58-0700\n"
+"POT-Creation-Date: 2015-09-28 07:50-0700\n"
 "PO-Revision-Date: 2015-09-21 07:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: tr <LL@li.org>\n"
@@ -144,48 +144,48 @@ msgstr " İpucu "
 
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:115
+#: experimental/coursebuilder/modules/certificate/certificate.py:117
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "Tamamlama Sertifikası"
 
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:120
+#: experimental/coursebuilder/modules/certificate/certificate.py:122
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "Bu sertifika,"
 
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:123
+#: experimental/coursebuilder/modules/certificate/certificate.py:125
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "adlı öğrenciye"
 
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:124
+#: experimental/coursebuilder/modules/certificate/certificate.py:126
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "%(course)s kursunu başarıyla tamamladığı için verilmiştir"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:252
+#: experimental/coursebuilder/modules/certificate/certificate.py:254
 msgid "Certificate"
 msgstr "Sertifika"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:261
+#: experimental/coursebuilder/modules/certificate/certificate.py:263
 msgid "Click for certificate"
 msgstr "Sertifikayı tıklayın"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:269
+#: experimental/coursebuilder/modules/certificate/certificate.py:271
 msgid "Download PDF"
 msgstr "PDF'yi indir"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:276
+#: experimental/coursebuilder/modules/certificate/certificate.py:278
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -294,7 +294,7 @@ msgstr "Adı Değiştir"
 #. course soon after un-enrolling.  It takes up to several
 #. hours to remove their data, and they are prevented from
 #. re-enrolling during that time to prevent problems.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:272
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:271
 msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
@@ -307,14 +307,14 @@ msgstr ""
 #. to delete their personal data.  This link only appears for users
 #. who are currently enrolled in the course or who were enrolled
 #. but still have personal data present in the course.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:426
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:425
 msgid "Delete My Data"
 msgstr "Verilerimi Sil"
 
 #. Shown when a student is unenrolling from a
 #. course.  Gives the student the option to have all
 #. their data permanently removed.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:445
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:444
 msgid "Delete all associated data"
 msgstr "İlişkilendirilmiş tüm verileri sil"
 
@@ -365,6 +365,22 @@ msgstr "Tamam"
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:63
 msgid "Cancel"
 msgstr "İptal"
+
+#. Page title when there is a problem enrolling the user in the course
+#. that contains their requested content.
+#: experimental/coursebuilder/modules/embed/templates/v1/enroll_error.html:7
+msgid "Enrollment error"
+msgstr ""
+
+#. Sentence fragment printed after the current user's email address,
+#. indicating they have no rights to see the requested content, and
+#. that they should contact an administrator to ask for access if they
+#. think they should be able to see the content.
+#: experimental/coursebuilder/modules/embed/templates/v1/enroll_error.html:15
+msgid ""
+"has no rights to see this content. Please contact the content\n"
+"                owner to request access."
+msgstr ""
 
 #. When a user is authenticating with an external identity provider    (e.g.,
 #. Facebook, Twitter), this prompt indicates the user should select    one of
@@ -818,8 +834,10 @@ msgstr "Önceki sayfaya dön."
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:18
-msgid "Go back and try again."
-msgstr "Geri dön ve tekrar dene."
+msgid ""
+"Go back and try again. If the problem persists, contact your "
+"administrator."
+msgstr ""
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1529,4 +1547,5 @@ msgstr "Sonraki Sayfa"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "Son"
+
 
