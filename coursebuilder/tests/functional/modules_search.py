@@ -78,59 +78,22 @@ class SearchTest(search_unit_test.SearchTestBase):
         response = self.get('dashboard?action=settings_search')
         self.assertIn('Google &gt; Dashboard &gt; Search', response.body)
         self.assertIn('Index Course', response.body)
-        self.assertIn('Clear Index', response.body)
 
-    def test_indexing_and_clearing_buttons(self):
+    def test_indexing_button(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
 
         response = self.get('dashboard?action=settings_search')
 
         index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
-        clear_token = self.get_xsrf_token(response.body, 'gcb-clear-index')
 
         response = self.post('dashboard?action=index_course',
                              {'xsrf_token': index_token})
-        self.assertEqual(response.status_int, 302)
-
-        response = self.post('dashboard?action=clear_index',
-                             {'xsrf_token': clear_token})
         self.assertEqual(response.status_int, 302)
 
         response = self.post('dashboard?action=index_course', {},
                              expect_errors=True)
         assert response.status_int == 403
-        response = self.post('dashboard?action=clear_index', {},
-                             expect_errors=True)
-        assert response.status_int == 403
-
-    def test_index_search_clear(self):
-        email = 'admin@google.com'
-        actions.login(email, is_admin=True)
-
-        response = self.get('dashboard?action=settings_search')
-        index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
-        clear_token = self.get_xsrf_token(response.body, 'gcb-clear-index')
-        response = self.post('dashboard?action=index_course',
-                             {'xsrf_token': index_token})
-        self.execute_all_deferred_tasks()
-
-        # weather is a term found in the Power Searching Course and should not
-        # be in the HTML returned by the patched urlfetch in SearchTestBase
-        response = self.get('search?query=weather')
-        self.assertNotIn('gcb-search-result', response.body)
-
-        # This term should be present as it is in the dummy content.
-        response = self.get('search?query=cogito%20ergo%20sum')
-        self.assertIn('gcb-search-result', response.body)
-
-        response = self.post('dashboard?action=clear_index',
-                             {'xsrf_token': clear_token})
-        self.execute_all_deferred_tasks()
-
-        # After the index is cleared, it shouldn't match anything
-        response = self.get('search?query=cogito%20ergo%20sum')
-        self.assertNotIn('gcb-search-result', response.body)
 
     def test_bad_search(self):
         email = 'user@google.com'

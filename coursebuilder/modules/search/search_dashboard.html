@@ -8,6 +8,14 @@
         The index was last updated on {{ last_updated }}.
         Indexing the course took {{ '%.2f' % index_info['indexing_time_secs'] }}
         seconds.
+        {% if index_info['deleted_docs'] %}
+          {% if index_info['deleted_docs'] == 1%}
+            1 previous entry was cleared before re-indexing.
+          {% else %}
+            {{ index_info['deleted_docs'] }} previous entries were cleared
+            before re-indexing.
+          {% endif %}
+        {% endif %}
       </div>
       <table>
         <tr class="gcb-bold-row">
@@ -38,40 +46,9 @@
     <div class="gcb-button-toolbar">
       <form id="gcb-index-course" action="dashboard?action=index_course" method="POST">
         <input type="hidden" name="xsrf_token" value="{{index_course_xsrf_token}}">
-        <input type="hidden" name="incremental" value="true">
         <button class="gcb-button">Index Course</button>
       </form>
-
-      <form id="gcb-reindex-course" action="dashboard?action=index_course" method="POST">
-        <input type="hidden" name="xsrf_token" value="{{index_course_xsrf_token}}">
-        <input type="hidden" name="incremental" value="false">
-        <button class="gcb-button">Reindex Course</button>
-      </form>
-
-      <form id="gcb-clear-index" action="dashboard?action=clear_index" method="POST">
-        <input type="hidden" name="xsrf_token" value="{{clear_index_xsrf_token}}">
-        <button class="gcb-button">Clear Index</button>
-      </form>
     </div>
-
-    <ul>
-      <li>
-        <strong>Index Course</strong> triggers an incremental indexing job in
-        which course documents are added to the search index if they have not been
-        recently indexed.
-      </li>
-      <li>
-        <strong>Reindex Course</strong> triggers a full indexing job in which
-        course documents are added to the search index regardless of whether or
-        not they were recently indexed.
-      </li>
-      Neither <strong>Reindex Course</strong> nor <strong>Index Course</strong>
-      removes course documents from the index, even if items have been removed
-      from the course.
-      <li>
-        <strong>Clear Index</strong> removes all documents from the index.
-      </li>
-    </ul>
   {% endif %}
   <p>
     If <strong title="gcb_can_index_automatically">Automatically index search</strong> is enabled on the Admin >

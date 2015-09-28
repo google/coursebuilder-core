@@ -364,9 +364,7 @@ def _get_search(handler):
     mc_template_value = {}
     mc_template_value['module_enabled'] = custom_module.enabled
     indexing_job = IndexCourse(handler.app_context).load()
-    clearing_job = ClearIndex(handler.app_context).load()
-    if indexing_job and (not clearing_job or
-                         indexing_job.updated_on > clearing_job.updated_on):
+    if indexing_job:
         if indexing_job.status_code in [jobs.STATUS_CODE_STARTED,
                                         jobs.STATUS_CODE_QUEUED]:
             mc_template_value['status_message'] = 'Indexing in progress.'
@@ -381,25 +379,12 @@ def _get_search(handler):
         elif indexing_job.status_code == jobs.STATUS_CODE_FAILED:
             mc_template_value['status_message'] = (
                 'Indexing job failed with error: %s' % indexing_job.output)
-    elif clearing_job:
-        if clearing_job.status_code in [jobs.STATUS_CODE_STARTED,
-                                        jobs.STATUS_CODE_QUEUED]:
-            mc_template_value['status_message'] = 'Clearing in progress.'
-            mc_template_value['job_in_progress'] = True
-        elif clearing_job.status_code == jobs.STATUS_CODE_COMPLETED:
-            mc_template_value['status_message'] = (
-                'The index has been cleared.')
-        elif clearing_job.status_code == jobs.STATUS_CODE_FAILED:
-            mc_template_value['status_message'] = (
-                'Clearing job failed with error: %s' % clearing_job.output)
     else:
         mc_template_value['status_message'] = (
             'No indexing job has been run yet.')
 
     mc_template_value['index_course_xsrf_token'] = (
         crypto.XsrfTokenManager.create_xsrf_token('index_course'))
-    mc_template_value['clear_index_xsrf_token'] = (
-        crypto.XsrfTokenManager.create_xsrf_token('clear_index'))
 
     template_values['main_content'] = jinja2.Markup(handler.get_template(
         'search_dashboard.html', [os.path.dirname(__file__)]
@@ -410,19 +395,7 @@ def _get_search(handler):
 def _post_index_course(handler):
     """Submits a new indexing operation."""
     try:
-        incremental = handler.request.get('incremental') == 'true'
-        check_jobs_and_submit(IndexCourse(handler.app_context, incremental),
-                              handler.app_context)
-    except db.TransactionFailedError:
-        # Double submission from multiple browsers, just pass
-        pass
-    handler.redirect('/dashboard?action=settings_search')
-
-def _post_clear_index(handler):
-    """Submits a new indexing operation."""
-    try:
-        check_jobs_and_submit(ClearIndex(handler.app_context),
-                              handler.app_context)
+        check_job_and_submit(handler.app_context, incremental=False)
     except db.TransactionFailedError:
         # Double submission from multiple browsers, just pass
         pass
@@ -432,7 +405,7 @@ def _post_clear_index(handler):
 class CronHandler(utils.BaseHandler):
     """Iterates through all courses and starts an indexing job for each one.
 
-    All jobs should be submitted through the transactional check_jobs_and_submit
+    All jobs should be submitted through the transactional check_job_and_submit
     method to prevent multiple index operations from running at the same time.
     If an index job is currently running when this cron job attempts to start
     one, this operation will be a noop for that course.
@@ -449,7 +422,7 @@ class CronHandler(utils.BaseHandler):
                 namespace = context.get_namespace_name()
                 counter += 1
                 try:
-                    check_jobs_and_submit(IndexCourse(context), context)
+                    check_job_and_submit(context, incremental=True)
                 except db.TransactionFailedError as e:
                     cron_logger.info(
                         'Failed to submit job #%s in namespace %s: %s',
@@ -466,17 +439,16 @@ class CronHandler(utils.BaseHandler):
 
 
 @db.transactional(xg=True)
-def check_jobs_and_submit(job, app_context):
+def check_job_and_submit(app_context, incremental=True):
     """Determines whether an indexing job is running and submits if not."""
-    indexing_job = IndexCourse(app_context).load()
-    clearing_job = ClearIndex(app_context).load()
+    indexing_job = IndexCourse(app_context, incremental=False)
+    job_entity = IndexCourse(app_context).load()
 
     bad_status_codes = [jobs.STATUS_CODE_STARTED, jobs.STATUS_CODE_QUEUED]
-    if ((indexing_job and indexing_job.status_code in bad_status_codes) or
-        (clearing_job and clearing_job.status_code in bad_status_codes)):
+    if job_entity and job_entity.status_code in bad_status_codes:
         raise db.TransactionFailedError('Index job is currently running.')
-    else:
-        job.non_transactional_submit()
+
+    indexing_job.non_transactional_submit()
 
 
 class IndexCourse(jobs.DurableJob):
@@ -501,11 +473,15 @@ class IndexCourse(jobs.DurableJob):
         sites.set_path_info(app_context.slug)
 
         indexing_stats = {
+            'deleted_docs': 0,
             'num_indexed_docs': 0,
             'doc_types': collections.Counter(),
             'indexing_time_secs': 0,
             'locales': []
         }
+        for locale in app_context.get_allowed_locales():
+            stats = clear_index(namespace, locale)
+            indexing_stats['deleted_docs'] += stats['deleted_docs']
         for locale in app_context.get_allowed_locales():
             app_context.set_current_locale(locale)
             course = courses.Course(None, app_context=app_context)
@@ -514,33 +490,7 @@ class IndexCourse(jobs.DurableJob):
             indexing_stats['doc_types'] += stats['doc_types']
             indexing_stats['indexing_time_secs'] += stats['indexing_time_secs']
             indexing_stats['locales'].append(locale)
-
         return indexing_stats
-
-
-class ClearIndex(jobs.DurableJob):
-    """A job that clears the index for a course."""
-
-    @staticmethod
-    def get_description():
-        return 'clear course index'
-
-    def run(self):
-        """Clear the index."""
-        namespace = namespace_manager.get_namespace()
-        logging.info('Running clearing job for namespace %s.', namespace)
-        app_context = sites.get_app_context_for_namespace(namespace)
-
-        clear_stats = {
-            'deleted_docs': 0,
-            'locales': []
-        }
-        for locale in app_context.get_allowed_locales():
-            stats = clear_index(namespace, locale)
-            clear_stats['deleted_docs'] += stats['deleted_docs']
-            clear_stats['locales'].append(locale)
-
-        return clear_stats
 
 
 # Module registration
@@ -564,8 +514,6 @@ def register_module():
             contents=_get_search, placement=1000)
         dashboard.DashboardHandler.add_custom_post_action(
             'index_course', _post_index_course)
-        dashboard.DashboardHandler.add_custom_post_action(
-            'clear_index', _post_clear_index)
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
