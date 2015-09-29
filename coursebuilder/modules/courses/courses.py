@@ -32,8 +32,9 @@ from modules.courses import settings
 from modules.courses import unit_lesson_editor
 from tools import verify
 
-custom_module = None
+MODULE_NAME = 'Course'
 
+custom_module = None
 
 
 def register_module():
@@ -55,11 +56,11 @@ def register_module():
         resource.Registry.register(resources_display.ResourceQuestionGroup)
         resource.Registry.register(utils.ResourceHtmlHook)
 
-        outline.on_module_enabled()
+        outline.on_module_enabled(custom_module, permissions)
         assets.on_module_enabled()
         admin_preferences_editor.on_module_enabled()
         settings.on_module_enabled(custom_module, permissions)
-        unit_lesson_editor.on_module_enabled()
+        unit_lesson_editor.on_module_enabled(custom_module, permissions)
 
         roles.Roles.register_permissions(custom_module, permissions_callback)
 
@@ -92,7 +93,7 @@ def register_module():
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
-        'Course',
+        MODULE_NAME,
         'A set of pages for delivering an online course.',
         [], courses_routes,
         notify_module_enabled=on_module_enabled)

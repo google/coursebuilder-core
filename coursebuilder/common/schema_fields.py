@@ -420,22 +420,32 @@ class FieldRegistry(Registry):
             self._sub_registries[key].convert_entity_to_json_entity(
                 entity, json_entry[key])
 
-    def redact_entity_to_schema(self, entity):
+    def redact_entity_to_schema(self, entity, only_writable=True):
         property_names = {p.name: p for p in self._properties}
         registry_names = set(self._sub_registries.keys())
         for name in copy.copy(entity.keys()):
             if name not in property_names and name not in registry_names:
                 del entity[name]
             elif name in registry_names:
-                self._sub_registries[name].redact_entity_to_schema(entity[name])
+                self._sub_registries[name].redact_entity_to_schema(
+                    entity[name], only_writable)
+                if not entity[name]:
+                    del entity[name]
             elif name in property_names:
                 prop = property_names[name]
-                if not prop.editable:
+                if not prop.editable and only_writable:
                     del entity[name]
                 elif (isinstance(prop, FieldArray) and
                       isinstance(prop.item_type, Registry)):
+                    all_empty = True
                     for item in entity[name]:
-                        prop.item_type.redact_entity_to_schema(item)
+                        prop.item_type.redact_entity_to_schema(
+                            item, only_writable)
+                        if item:
+                            all_empty = False
+                    if all_empty:
+                        del entity[name]
+
 
     def validate(self, payload, errors):
         for schema_field in self._properties:

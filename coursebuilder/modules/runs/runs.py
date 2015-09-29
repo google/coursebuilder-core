@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc. All Rights Reserved.
+# Copyright 2015 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module providing handlers for URLs related to map/reduce and pipelines."""
+"""Module providing limited permissions for individual runs of courses."""
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+from models import courses
 from models import custom_modules
 from models import models
 from models import permissions
+from models import resources_display
 from models import roles
-from modules.courses import settings
+from modules.courses import constants
+from modules.courses import courses as modules_courses
 
 MODULE_NAME = 'Runs'
 TA_PERMISSION_NAME = 'teaching_assistant'
@@ -39,7 +42,12 @@ def maybe_create_teaching_assistant_role():
 
     role_dto = models.RoleDTO(None, {
         'name': TA_ROLE_NAME,
-        'permissions': {MODULE_NAME: [TA_PERMISSION_NAME]},
+        'permissions': {
+            MODULE_NAME: [
+                TA_PERMISSION_NAME],
+            modules_courses.MODULE_NAME: [
+                constants.COURSE_OUTLINE_REORDER_PERMISSION],
+            },
         'description': ('Limited permissions to modify short-running '
                         'courses copied from master versions.  This '
                         'includes re-setting assignment due dates to '
@@ -62,11 +70,70 @@ def notify_module_enabled():
 
     # Roles with TA permission can edit course availability, start/end dates.
     permissions.SchemaPermissionRegistry.add(
-        settings.SCOPE_COURSE_SETTINGS,
+        constants.SCOPE_COURSE_SETTINGS,
         permissions.SimpleSchemaPermission(
             custom_module, TA_PERMISSION_NAME, editable_list=[
                 'course/course:now_available',
                 'course/course:browsable',
+                ]))
+
+    # Roles with TA permission can edit unit availability, start/end dates.
+    permissions.SchemaPermissionRegistry.add(
+        constants.SCOPE_UNIT,
+        permissions.SimpleSchemaPermission(
+            custom_module, TA_PERMISSION_NAME,
+            readable_list=[
+                'type',
+                'title',
+                'description',
+                ],
+            editable_list=[
+                'is_draft',
+                'shown_when_unavailable',
+                ]))
+    permissions.SchemaPermissionRegistry.add(
+        constants.SCOPE_LINK,
+        permissions.SimpleSchemaPermission(
+            custom_module, TA_PERMISSION_NAME,
+            readable_list=[
+                'type',
+                'title',
+                'description',
+                ],
+            editable_list=[
+                'is_draft',
+                'shown_when_unavailable',
+                ]))
+    permissions.SchemaPermissionRegistry.add(
+        constants.SCOPE_ASSESSMENT,
+        permissions.SimpleSchemaPermission(
+            custom_module, TA_PERMISSION_NAME,
+            readable_list=[
+                'type',
+                'title',
+                'description',
+                ],
+            editable_list=[
+                'assessment/is_draft',
+                'assessment/shown_when_unavailable',
+                'assessment/%s' % resources_display.workflow_key(
+                    courses.SINGLE_SUBMISSION_KEY),
+                'assessment/%s' % resources_display.workflow_key(
+                    courses.SUBMISSION_DUE_DATE_KEY),
+                'assessment/%s' % resources_display.workflow_key(
+                    courses.SHOW_FEEDBACK_KEY),
+                'assessment/%s' % resources_display.workflow_key(
+                    courses.SHOW_SCORE_KEY),
+                'assessment/%s' % resources_display.workflow_key(
+                    courses.GRADER_KEY),
+                'review_opts/%s' % resources_display.workflow_key(
+                    courses.MATCHER_KEY),
+                'assessment/%s' % resources_display.workflow_key(
+                    courses.REVIEW_DUE_DATE_KEY),
+                'assessment/%s' % resources_display.workflow_key(
+                    courses.REVIEW_MIN_COUNT_KEY),
+                'assessment/%s' % resources_display.workflow_key(
+                    courses.REVIEW_WINDOW_MINS_KEY),
                 ]))
 
 

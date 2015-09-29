@@ -34,6 +34,7 @@ import main
 from models import config
 from models import courses
 from models import custom_modules
+from models import permissions
 from models import transforms
 from models import vfs
 from tests import suite
@@ -155,6 +156,53 @@ class OverriddenConfig(object):
             del config.Registry.test_overrides[self._name]
         else:
             config.Registry.test_overrides[self._name] = self._prev_value
+
+
+class OverriddenSchemaPermission(permissions.SimpleSchemaPermission):
+    """Bind read/write permissions to a single email address for testing.
+
+    Using this class does not require construction and registering
+    permissions and roles, just an email address.  This is useful when what
+    you're testing is not the permissions/roles setup, but page appearance due
+    to presence/absence of read/edit authority on one or more properties.
+
+    This class also supports Python's context-manager idiom, and so this
+    class can be used in a "with" statement, as:
+
+    def test_foo(self):
+        with OverriddenSchemaPermission(
+            'fake_course_perm', constants.SCOPE_COURSE_SETTINGS, 'foo@bar.com',
+            editable_perms=['course/course:now_available']):
+
+            actions.login('foo@bar.com')
+            response = self.get('dashboard?action=outline')
+            .... verify dashboard UI when user may edit course availability...
+
+            actions.login('not-foo@bar.com')
+            response = self.get('dashboard?action=outline')
+            .... verify dashboard UI when course availability not editable...
+
+    """
+
+    def __init__(self, permission_name, scope, email_address,
+                 readable_perms=None, editable_perms=None):
+        super(OverriddenSchemaPermission, self).__init__(
+            None, permission_name, readable_list=readable_perms,
+            editable_list=editable_perms)
+        self._scope = scope
+        self._email_address = email_address
+
+    def applies_to_current_user(self, unused_app_context):
+        return users.get_current_user().email() == self._email_address
+
+    def __enter__(self):
+        permissions.SchemaPermissionRegistry.add(self._scope, self)
+        return self
+
+    def __exit__(self, *unused_exception_info):
+        permissions.SchemaPermissionRegistry.remove(self._scope,
+                                                    self._permission_name)
+        return False
 
 
 class PreserveUser(object):

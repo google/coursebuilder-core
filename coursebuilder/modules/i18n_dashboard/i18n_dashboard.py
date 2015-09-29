@@ -431,7 +431,7 @@ class IsTranslatableRestHandler(utils.BaseRESTHandler):
                 request, self.XSRF_TOKEN_NAME, {}):
             return
 
-        if not unit_lesson_editor.CourseOutlineRights.can_edit(self):
+        if not roles.Roles.is_course_admin(self.app_context):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 

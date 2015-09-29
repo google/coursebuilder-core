@@ -24,7 +24,7 @@ from models import permissions
 from models import custom_modules
 from models import models
 from models import roles
-from modules.courses import settings
+from modules.courses import constants
 from tests.functional import actions
 
 
@@ -97,27 +97,27 @@ class PermissionsTests(actions.TestBase):
     def test_admin_has_permissions_with_no_configuration_needed(self):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         self.assertTrue(permissions.can_view(
-            self.app_context, settings.SCOPE_COURSE_SETTINGS))
+            self.app_context, constants.SCOPE_COURSE_SETTINGS))
         self.assertTrue(permissions.can_edit(
-            self.app_context, settings.SCOPE_COURSE_SETTINGS))
+            self.app_context, constants.SCOPE_COURSE_SETTINGS))
         self.assertTrue(permissions.can_view_property(
-            self.app_context, settings.SCOPE_COURSE_SETTINGS,
+            self.app_context, constants.SCOPE_COURSE_SETTINGS,
             'absolutely/anything'))
         self.assertTrue(permissions.can_edit_property(
-            self.app_context, settings.SCOPE_COURSE_SETTINGS,
+            self.app_context, constants.SCOPE_COURSE_SETTINGS,
             'absolutely/anything'))
 
     def test_non_admin_has_no_permissions_with_no_configuration_needed(self):
         actions.login(self.IN_ROLE_EMAIL)
         self.assertFalse(permissions.can_view(
-            self.app_context, settings.SCOPE_COURSE_SETTINGS))
+            self.app_context, constants.SCOPE_COURSE_SETTINGS))
         self.assertFalse(permissions.can_edit(
-            self.app_context, settings.SCOPE_COURSE_SETTINGS))
+            self.app_context, constants.SCOPE_COURSE_SETTINGS))
         self.assertFalse(permissions.can_view_property(
-            self.app_context, settings.SCOPE_COURSE_SETTINGS,
+            self.app_context, constants.SCOPE_COURSE_SETTINGS,
             'absolutely/anything'))
         self.assertFalse(permissions.can_edit_property(
-            self.app_context, settings.SCOPE_COURSE_SETTINGS,
+            self.app_context, constants.SCOPE_COURSE_SETTINGS,
             'absolutely/anything'))
 
     def test_role_permissions(self):
@@ -220,3 +220,115 @@ class PermissionsTests(actions.TestBase):
             self.assertIsNone(ret.get_property('a'))
             self.assertIsNone(ret.get_property('b'))
             self.assertIsNone(ret.get_property('c'))
+
+
+class SimpleSchemaPermissionTests(actions.TestBase):
+
+    def test_no_args_equals_no_permissions(self):
+        p = permissions.SimpleSchemaPermission(None, None)
+        self.assertFalse(p.can_view('a'))
+        self.assertFalse(p.can_edit('a'))
+
+    def test_read_some_write_none(self):
+        p = permissions.SimpleSchemaPermission(None, None, readable_list=['a'])
+        self.assertTrue(p.can_view('a'))
+        self.assertFalse(p.can_edit('a'))
+        self.assertFalse(p.can_view('b'))
+        self.assertFalse(p.can_edit('b'))
+
+    def test_read_write_some(self):
+        p = permissions.SimpleSchemaPermission(None, None,
+                                               readable_list=['a'],
+                                               editable_list=['a'])
+        self.assertTrue(p.can_view('a'))
+        self.assertTrue(p.can_edit('a'))
+        self.assertFalse(p.can_view('b'))
+        self.assertFalse(p.can_edit('b'))
+
+    def test_writability_implies_readability(self):
+        p = permissions.SimpleSchemaPermission(None, None, editable_list=['a'])
+        self.assertTrue(p.can_view('a'))
+        self.assertTrue(p.can_edit('a'))
+        self.assertFalse(p.can_view('b'))
+        self.assertFalse(p.can_edit('b'))
+
+    def test_some_readable_some_writable(self):
+        p = permissions.SimpleSchemaPermission(None, None,
+                                               readable_list=['b'],
+                                               editable_list=['a'])
+        self.assertTrue(p.can_view('a'))
+        self.assertTrue(p.can_edit('a'))
+        self.assertTrue(p.can_view('b'))
+        self.assertFalse(p.can_edit('b'))
+        self.assertFalse(p.can_view('c'))
+        self.assertFalse(p.can_edit('c'))
+
+    def test_read_any(self):
+        p = permissions.SimpleSchemaPermission(None, None, all_readable=True)
+        self.assertTrue(p.can_view('a'))
+        self.assertFalse(p.can_edit('a'))
+        self.assertTrue(p.can_view('b'))
+        self.assertFalse(p.can_edit('b'))
+
+    def test_write_any(self):
+        p = permissions.SimpleSchemaPermission(None, None, all_writable=True)
+        self.assertTrue(p.can_view('a'))
+        self.assertTrue(p.can_edit('a'))
+        self.assertTrue(p.can_view('b'))
+        self.assertTrue(p.can_edit('b'))
+
+    def test_read_even_one_with_no_readable(self):
+        p = permissions.SimpleSchemaPermission(None, None)
+        self.assertFalse(p.can_view())
+
+    def test_read_even_one_with_one_readable(self):
+        p = permissions.SimpleSchemaPermission(None, None, readable_list=['a'])
+        self.assertTrue(p.can_view())
+
+    def test_read_even_one_with_all_readable(self):
+        p = permissions.SimpleSchemaPermission(None, None, all_readable=True)
+        self.assertTrue(p.can_view())
+
+    def test_read_even_one_with_one_writable(self):
+        p = permissions.SimpleSchemaPermission(None, None, editable_list=['a'])
+        self.assertTrue(p.can_view())
+
+    def test_read_even_one_with_all_writable(self):
+        p = permissions.SimpleSchemaPermission(None, None, all_writable=True)
+        self.assertTrue(p.can_view())
+
+    def test_write_even_one_with_no_writable(self):
+        p = permissions.SimpleSchemaPermission(None, None, all_readable=True)
+        self.assertFalse(p.can_edit())
+
+    def test_write_even_one_with_one_writable(self):
+        p = permissions.SimpleSchemaPermission(None, None, editable_list=['a'])
+        self.assertTrue(p.can_edit())
+
+    def test_write_even_one_with_all_writable(self):
+        p = permissions.SimpleSchemaPermission(None, None, all_writable=True)
+        self.assertTrue(p.can_edit())
+
+    def test_containing_schema(self):
+        p = permissions.SimpleSchemaPermission(
+            None, None, readable_list=['a/b/c'], editable_list=['d/e/f'])
+        self.assertTrue(p.can_view('a'))
+        self.assertTrue(p.can_view('a/b'))
+        self.assertTrue(p.can_view('a/b/c'))
+        self.assertFalse(p.can_edit('a'))
+        self.assertFalse(p.can_edit('a/b'))
+        self.assertFalse(p.can_edit('a/b/c'))
+
+        self.assertTrue(p.can_view('d'))
+        self.assertTrue(p.can_view('d/e'))
+        self.assertTrue(p.can_view('d/e/f'))
+        self.assertTrue(p.can_edit('d'))
+        self.assertTrue(p.can_edit('d/e'))
+        self.assertTrue(p.can_edit('d/e/f'))
+
+        self.assertFalse(p.can_view('g'))
+        self.assertFalse(p.can_view('g/h'))
+        self.assertFalse(p.can_view('g/h/i'))
+        self.assertFalse(p.can_edit('g'))
+        self.assertFalse(p.can_edit('g/h'))
+        self.assertFalse(p.can_edit('g/h/i'))
