@@ -297,15 +297,15 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
         gift_questions.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         gift_questions.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True,
+            'description', 'Group description', 'string', optional=True,
             extra_schema_dict_values={'className': 'gift-description'}))
         gift_questions.add_property(schema_fields.SchemaField(
             'questions', 'Questions', 'text', optional=True,
             description=(
-                'List of <a href="https://docs.moodle.org/23/en/GIFT_format" '
-                'target="_blank"> GIFT question-types</a> supported by Course '
-                'Builder: Multiple choice, True-false, Short answer, and '
-                'Numerical.'),
+                'Supported question types: Multiple choice, True-false, '
+                'Short answer, and Numerical, '
+                '<a href="https://docs.moodle.org/23/en/GIFT_format" '
+                'target="_blank">GIFT format description.</a>'),
             extra_schema_dict_values={'className': 'gift-questions'}))
         return gift_questions
 

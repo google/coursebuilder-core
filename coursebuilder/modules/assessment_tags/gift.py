@@ -486,6 +486,8 @@ class GiftParser(object):
 
     @classmethod
     def parse(cls, text):
+        if not text:
+            raise ValueError('Questions field can\'t be blank.')
         try:
             return cls.bnf.parseString(text)
         except ParseException as e:
@@ -518,7 +520,8 @@ class GiftAdapter(object):
         """Builds a question dictionary from a ParseResult object."""
         if src['type'] not in self.QUESTION_TYPES:
             raise ValueError(
-                'Unsupported question type: %s' % src['type'])
+                'Unsupported question type: %s' % src['type'].replace(
+                    '_', ' '))
         question = {}
         question['type'] = src['type']
         question['question'] = src['task']
@@ -538,7 +541,8 @@ class GiftAdapter(object):
             return self.add_numeric_choices(question)
         else:
             raise ParseError(
-                'Unsupported question type: %s' % question['type'])
+                'Unsupported question type: %s' % question['type'].replace(
+                    '_', ' '))
 
     def add_true_false_choices(self, question):
         question['type'] = 'multi_choice'
