@@ -3,11 +3,7 @@
 {% macro render_row(item) -%}
   <div class="row {{ item.class }}">
     <div class="left-matter">
-      {% if course.can_reorder %}
-        <div class="reorder icon row-hover md md-view-headline"></div>
-      {% else %}
-        <div class="icon inactive"></div>
-      {% endif %}
+      <div class="reorder icon row-hover md md-view-headline"></div>
       {% for action in item.actions %}
         {{ action }}
       {% endfor %}
@@ -23,11 +19,8 @@
   </div>
 {%- endmacro %}
 
-<div class="course-outline {% if course.can_add_or_remove %}editable{% else %}read-only{% endif %} {% if course.can_reorder %}reorderable{% endif %}"
-    data-status-xsrf-token-unit="{{ status_xsrf_token_unit }}"
-    data-status-xsrf-token-assessment="{{ status_xsrf_token_assessment }}"
-    data-status-xsrf-token-link="{{ status_xsrf_token_link }}"
-    data-status-xsrf-token-lesson="{{ status_xsrf_token_lesson }}"
+<div class="course-outline {% if course.is_editable %}editable{% else %}read-only{% endif %}"
+    data-status-xsrf-token="{{ status_xsrf_token }}"
     data-unit-lesson-title-xsrf-token={{ unit_lesson_title_xsrf_token }}
     data-unit-title-template="{{ unit_title_template }}">
   <div class="row">
@@ -40,26 +33,12 @@
   </div>
   <div class="row course">
     <div class="left-matter">
-      {% if course.availability.is_editable %}
-        <form action="{{ course.availability.url }}" method="POST">
-          <input type="hidden" name="xsrf_token"
-                 value="{{ course.availability.xsrf_token }}">
-          <input type="hidden" name="availability"
-                 value="{{ course.availability.param }}">
-          <button class="{{ course.availability.class }}" type="submit">
-          </button>
-        </form>
-      {% else %}
-        <div class="{{ course.availability.class }} read-only inactive"></div>
-      {% endif %}
-      {% if course.settings_viewable %}
-        <a alt="Edit"
-           class="icon row-hover md-mode-edit"
-           href="dashboard?action=settings_homepage"
-           title="Edit"></a>
-      {% else %}
-        <div class="icon inactive"></div>
-      {% endif %}
+      <form action="{{ course.availability.url }}" method="POST">
+        <input type="hidden" name="xsrf_token" value="{{ course.availability.xsrf_token }}">
+        <input type="hidden" name="availability" value="{{ course.availability.param }}">
+        <button class="{{ course.availability.class }}" type="submit"></button>
+      </form>
+      <a alt="Edit" class="icon row-hover md-mode-edit" href="dashboard?action=settings_homepage" title="Edit"></a>
       <div class="name"><a href="course">Course - {{ course.title }}</a></div>
     </div>
   </div>
@@ -89,19 +68,17 @@
                 {{ render_row(unit.post_assessment) }}
               </li>
             {% endif %}
-            {% if course.can_add_or_remove %}
-              <li class="add-lesson">
-                <div class="row add-lesson">
-                  <div class="left-matter">
-                    <form action="dashboard?action=add_lesson" method="POST">
-                      <input type="hidden" name="xsrf_token" value="{{ add_lesson_xsrf_token }}">
-                      <input type="hidden" name="unit_id" value="{{ unit.unit_id }}">
-                      <button class="" type="submit">+ Add Lesson</button>
-                  </form>
-                  </div>
+            <li class="add-lesson">
+              <div class="row add-lesson">
+                <div class="left-matter">
+                  <form action="dashboard?action=add_lesson" method="POST">
+                    <input type="hidden" name="xsrf_token" value="{{ add_lesson_xsrf_token }}">
+                    <input type="hidden" name="unit_id" value="{{ unit.unit_id }}">
+                    <button class="" type="submit">+ Add Lesson</button>
+                </form>
                 </div>
-              </li>
-            {% endif %}
+              </div>
+            </li>
           </ol>
         {% endif %}
       </li>

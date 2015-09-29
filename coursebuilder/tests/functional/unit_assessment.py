@@ -316,7 +316,6 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         return ret
 
     def test_old_assessment_availability(self):
-        actions.login(ADMIN_EMAIL, is_admin=True)
         new_course_context = actions.simple_add_course(
             'new_course', ADMIN_EMAIL, 'My New Course')
         new_course = courses.Course(None, new_course_context)
@@ -332,8 +331,8 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         unit = new_course.get_units_of_type(verify.UNIT_TYPE_UNIT)[0]
 
         unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
-        schema = unit_rest_handler.get_schema(
-            new_course, unit.unit_id).get_schema_dict()
+        schema = unit_rest_handler.get_annotations_dict(
+            new_course, unit.unit_id)
 
         # Verify that there are 4 valid choices for pre- or post-asssments
         # for this unit
@@ -380,11 +379,10 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         assert not errors
 
     def test_new_assessment_availability(self):
-        actions.login(ADMIN_EMAIL, is_admin=True)
         unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
 
-        schema = unit_rest_handler.get_schema(
-            self.course, self.unit_no_lessons.unit_id).get_schema_dict()
+        schema = unit_rest_handler.get_annotations_dict(
+            self.course, self.unit_no_lessons.unit_id)
         choices = self._get_selection_choices(
             schema, ['properties', 'pre_assessment', '_inputex'])
         self.assertEquals({
@@ -400,7 +398,6 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             self.assessment_two.title: self.assessment_two.unit_id}, choices)
 
     def test_rest_unit_assignment(self):
-        actions.login(ADMIN_EMAIL, is_admin=True)
         unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
         unit_rest_handler.app_context = self.course.app_context
         # Use REST handler function to save pre/post handlers on one unit.
@@ -428,16 +425,16 @@ class UnitPrePostAssessmentTest(actions.TestBase):
 
         # Verify that the assessments are no longer available for choosing
         # on the other unit.
-        schema = unit_rest_handler.get_schema(
-            self.course, self.unit_one_lesson.unit_id).get_schema_dict()
+        schema = unit_rest_handler.get_annotations_dict(
+            self.course, self.unit_one_lesson.unit_id)
         choices = self._get_selection_choices(
             schema, ['properties', 'pre_assessment', '_inputex'])
         self.assertEquals({'-- None --': -1}, choices)
 
         # Verify that they are available for choosing on the unit where
         # they are assigned.
-        schema = unit_rest_handler.get_schema(
-            self.course, self.unit_no_lessons.unit_id).get_schema_dict()
+        schema = unit_rest_handler.get_annotations_dict(
+            self.course, self.unit_no_lessons.unit_id)
         choices = self._get_selection_choices(
             schema, ['properties', 'pre_assessment', '_inputex'])
         self.assertEquals({
@@ -721,74 +718,3 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             self.unit_one_lesson.unit_id, self.assessment_two.unit_id))
         self.assertIn(self.assessment_two.html_content, response.body,
             msg='Private post-assessment content should be visible to admin')
-
-
-class UnitPartialUpdateTests(actions.TestBase):
-
-    def setUp(self):
-        super(UnitPartialUpdateTests, self).setUp()
-        context = actions.simple_add_course(
-            COURSE_NAME, ADMIN_EMAIL, COURSE_TITLE)
-        self.course = courses.Course(None, context)
-        self.unit = self.course.add_unit()
-        self.assessment = self.course.add_assessment()
-        self.link = self.course.add_link()
-        self.course.save()
-        actions.login(ADMIN_EMAIL, is_admin=True)
-
-        self.rest_handler = unit_lesson_editor.CommonUnitRESTHandler()
-        self.rest_handler.app_context = self.course.app_context
-
-    def test_set_none(self):
-        errors = []
-        self.rest_handler.apply_updates(self.unit, {}, errors)
-        self.rest_handler.apply_updates(self.assessment, {}, errors)
-        self.rest_handler.apply_updates(self.link, {}, errors)
-        self.assertEquals(0, len(errors))
-
-    def test_set_only_title(self):
-        errors = []
-        self.rest_handler.apply_updates(
-            self.unit, {'title': 'Title'}, errors)
-        self.rest_handler.apply_updates(
-            self.assessment, {'title': 'Title'}, errors)
-        self.rest_handler.apply_updates(
-            self.link, {'title': 'Title'}, errors)
-        self.assertEquals(self.unit.title, 'Title')
-        self.assertEquals(self.assessment.title, 'Title')
-        self.assertEquals(self.link.title, 'Title')
-        self.assertEquals(0, len(errors))
-
-    def test_set_only_is_draft(self):
-        errors = []
-        self.rest_handler.apply_updates(
-            self.unit, {'is_draft': False}, errors)
-        self.rest_handler.apply_updates(
-            self.assessment, {'is_draft': False}, errors)
-        self.rest_handler.apply_updates(
-            self.link, {'is_draft': False}, errors)
-        self.assertEquals(self.unit.now_available, True)
-        self.assertEquals(self.assessment.now_available, True)
-        self.assertEquals(self.link.now_available, True)
-        self.assertEquals(0, len(errors))
-
-    def test_set_only_unit_header(self):
-        errors = []
-        self.rest_handler.apply_updates(
-            self.unit, {'unit_header': 'content'}, errors)
-        self.assertEquals(self.unit.unit_header, 'content')
-        self.assertEquals(0, len(errors))
-
-    def test_set_only_assessment_weight(self):
-        errors = []
-        self.rest_handler.apply_updates(
-            self.assessment, {'weight': '123.4'}, errors)
-        self.assertEquals(self.assessment.weight, 123.4)
-        self.assertEquals(0, len(errors))
-
-    def test_set_only_link_href(self):
-        errors = []
-        self.rest_handler.apply_updates(
-            self.link, {'url': 'foo'}, errors)
-        self.assertEquals(self.link.href, 'foo')
-        self.assertEquals(0, len(errors))

@@ -1,5 +1,5 @@
-var COURSE_SORTABLE_SELECTOR = 'div.course-outline.reorderable ol.course';
-var UNIT_SORTABLE_SELECTOR = 'div.course-outline.reorderable ol.unit';
+var COURSE_SORTABLE_SELECTOR = 'div.course-outline.editable ol.course';
+var UNIT_SORTABLE_SELECTOR = 'div.course-outline.editable ol.unit';
 var UNIT_LESSON_TITLE_REST_HANDLER_URL = 'rest/course/outline';
 var UNIT_LESSON_TITLE_XSRF_TOKEN = $('.course-outline')
     .data('unitLessonTitleXsrfToken');

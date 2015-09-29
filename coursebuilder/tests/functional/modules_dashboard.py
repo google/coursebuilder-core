@@ -475,10 +475,8 @@ class CourseOutlineTestCase(actions.TestBase):
         self.assertIn(lock_class, padlock.get('class', ''))
 
     def _get_item_for(self, get_what):
-        response = self.get(self.URL)
-        dom = self.parse_html_string(response.body)
-        course_outline = dom.find(
-            './/div[@class="course-outline editable reorderable"]')
+        dom = self.parse_html_string(self.get(self.URL).body)
+        course_outline = dom.find('.//div[@class="course-outline editable"]')
         lis = course_outline.findall('.//ol[@class="course"]/li')
         self.assertEquals(len(lis), 3)
 
@@ -538,7 +536,7 @@ class CourseOutlineTestCase(actions.TestBase):
                 unit.shown_when_unavailable = shown
                 self.course.save()
                 item = self._get_item_for(kind)
-                self._check_private_setting(item, kind, unit.unit_id, private)
+                self._check_private_setting(item, 'unit', unit.unit_id, private)
                 self._check_syllabus_for_admin(private, unit.title)
                 self._check_syllabus_for_student(private, shown, unit.title)
 

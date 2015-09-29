@@ -172,7 +172,7 @@ describe('draft status toggling', function() {
     this.oldPost = $.post;
     $.post = jasmine.createSpy("$.post");
     var content = $(
-        '<div class="course-outline" data-status-xsrf-token-lesson="token">' +
+        '<div class="course-outline" data-status-xsrf-token="token">' +
         '  <div class="icon md-lock"' +
         '      data-key="9" data-component-type="lesson"></div>' +
         '</div>');
@@ -190,7 +190,7 @@ describe('draft status toggling', function() {
     expect($.post).toHaveBeenCalledWith(
       'dashboard',
       {
-        action: 'set_draft_status_lesson',
+        action: 'set_draft_status',
         set_draft: 0,
         'key': 9,
         'type': 'lesson',

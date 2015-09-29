@@ -33,7 +33,6 @@ from models import permissions
 from models import roles
 from models import transforms
 from models import vfs
-from modules.courses import constants
 from modules.courses import messages
 from modules.dashboard import dashboard
 from modules.dashboard import utils as dashboard_utils
@@ -41,6 +40,12 @@ from modules.oeditor import oeditor
 
 # Internal name for the settings top-level Dashboard tab
 SETTINGS_TAB_NAME = 'settings'
+
+# Name for the permission for read-only access to all course settings.
+VIEW_ALL_SETTINGS_PERMISSION = 'settings_viewer'
+
+# Permssions scope name for permissions relating to course settings
+SCOPE_COURSE_SETTINGS = 'course_settings'
 
 # Reference to custom_module registered in modules/courses/courses.py
 custom_module = None
@@ -92,7 +97,7 @@ class CourseSettingsHandler(object):
         schema = handler.get_course().create_settings_schema()
         schema = schema.clone_only_items_named(section_names)
         permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
-            handler.app_context, constants.SCOPE_COURSE_SETTINGS, schema)
+            handler.app_context, SCOPE_COURSE_SETTINGS, schema)
 
         rest_url = handler.canonicalize_url(CourseSettingsRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
@@ -177,7 +182,7 @@ class CourseSettingsHandler(object):
             dashboard.DashboardHandler.map_get_action_to_permission_checker(
                 action_name,
                 permissions.SchemaPermissionRegistry.build_view_checker(
-                    constants.SCOPE_COURSE_SETTINGS,
+                    SCOPE_COURSE_SETTINGS,
                     cls.GROUP_SETTINGS_LISTS[name]))
 
 
@@ -193,8 +198,7 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
 
         key = self.request.get('key')
 
-        if not permissions.can_view(self.app_context,
-                                    constants.SCOPE_COURSE_SETTINGS):
+        if not permissions.can_view(self.app_context, SCOPE_COURSE_SETTINGS):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -253,8 +257,7 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
         if not self.assert_xsrf_token_or_fail(
                 request, self.XSRF_ACTION, {'key': key}):
             return
-        if not permissions.can_edit(self.app_context,
-                                    constants.SCOPE_COURSE_SETTINGS):
+        if not permissions.can_edit(self.app_context, SCOPE_COURSE_SETTINGS):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -263,7 +266,7 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
 
         schema = self.get_course().create_settings_schema()
         permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
-            self.app_context, constants.SCOPE_COURSE_SETTINGS, schema)
+            self.app_context, SCOPE_COURSE_SETTINGS, schema)
         schema.redact_entity_to_schema(payload)
 
         if request_data:
@@ -287,8 +290,7 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
                 self.request, self.XSRF_ACTION, {'key': key}):
             return
 
-        if (not permissions.can_edit(self.app_context,
-                                     constants.SCOPE_COURSE_SETTINGS)
+        if (not permissions.can_edit(self.app_context, SCOPE_COURSE_SETTINGS)
             or not self.is_deletion_allowed()):
 
             transforms.send_json_response(
@@ -317,7 +319,7 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
         entity = {}
         schema = self.get_course().create_settings_schema()
         permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
-            self.app_context, constants.SCOPE_COURSE_SETTINGS, schema)
+            self.app_context, SCOPE_COURSE_SETTINGS, schema)
         schema.convert_entity_to_json_entity(
             self.get_course_dict(), entity)
         json_payload = transforms.dict_to_json(
@@ -613,12 +615,11 @@ class ViewAllSettingsPermission(permissions.AbstractSchemaPermission):
     """
 
     def get_name(self):
-        return constants.VIEW_ALL_SETTINGS_PERMISSION
+        return VIEW_ALL_SETTINGS_PERMISSION
 
     def applies_to_current_user(self, application_context):
         return roles.Roles.is_user_allowed(
-            application_context, custom_module,
-            constants.VIEW_ALL_SETTINGS_PERMISSION)
+            application_context, custom_module, VIEW_ALL_SETTINGS_PERMISSION)
 
     def can_view(self, prop_name=None):
         return True
@@ -637,28 +638,26 @@ def get_namespaced_handlers():
 def on_module_enabled(courses_custom_module, perms):
     global custom_module  # pylint: disable=global-statement
     custom_module = courses_custom_module
-    perms.append(roles.Permission(constants.VIEW_ALL_SETTINGS_PERMISSION,
+    perms.append(roles.Permission(VIEW_ALL_SETTINGS_PERMISSION,
                                   'Can view all course settings'))
     permissions.SchemaPermissionRegistry.add(
-        constants.SCOPE_COURSE_SETTINGS,
-        permissions.CourseAdminSchemaPermission())
+        SCOPE_COURSE_SETTINGS, permissions.CourseAdminSchemaPermission())
     permissions.SchemaPermissionRegistry.add(
-        constants.SCOPE_COURSE_SETTINGS,
-        ViewAllSettingsPermission())
+        SCOPE_COURSE_SETTINGS, ViewAllSettingsPermission())
 
     dashboard.DashboardHandler.add_custom_post_action(
         'course_availability', CourseSettingsHandler.post_course_availability)
     dashboard.DashboardHandler.map_post_action_to_permission_checker(
         'course_availability',
         permissions.SchemaPermissionRegistry.build_edit_checker(
-            constants.SCOPE_COURSE_SETTINGS, ['course/course:now_available']))
+            SCOPE_COURSE_SETTINGS, ['course/course:now_available']))
 
     dashboard.DashboardHandler.add_custom_post_action(
         'course_browsability', CourseSettingsHandler.post_course_browsability)
     dashboard.DashboardHandler.map_post_action_to_permission_checker(
         'course_browsability',
         permissions.SchemaPermissionRegistry.build_edit_checker(
-            constants.SCOPE_COURSE_SETTINGS, ['course/course:browsable']))
+            SCOPE_COURSE_SETTINGS, ['course/course:browsable']))
 
     dashboard.DashboardHandler.add_custom_get_action(
         'edit_html_hook', HtmlHookHandler.get_edit_html_hook)

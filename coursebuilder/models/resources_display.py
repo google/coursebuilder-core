@@ -497,28 +497,23 @@ class UnitTools(object):
 
     def _apply_updates_common(self, unit, updated_unit_dict, errors):
         """Apply changes common to all unit types."""
-        if 'title' in updated_unit_dict:
-            unit.title = updated_unit_dict['title']
-        if 'description' in updated_unit_dict:
-            unit.description = updated_unit_dict['description']
-        if 'is_draft' in updated_unit_dict:
-            unit.now_available = not updated_unit_dict['is_draft']
-        if 'shown_when_unavailable' in updated_unit_dict:
-            unit.shown_when_unavailable = updated_unit_dict[
-                'shown_when_unavailable']
+        unit.title = updated_unit_dict.get('title')
+        unit.description = updated_unit_dict.get('description')
+        unit.now_available = not updated_unit_dict.get('is_draft')
+        unit.shown_when_unavailable = updated_unit_dict.get(
+            'shown_when_unavailable')
 
-        if 'label_groups' in updated_unit_dict:
-            labels = LabelGroupsHelper.decode_labels_group(
-                updated_unit_dict['label_groups'])
+        labels = LabelGroupsHelper.decode_labels_group(
+            updated_unit_dict['label_groups'])
 
-            if self._course.get_parent_unit(unit.unit_id):
-                track_label_ids = models.LabelDAO.get_set_of_ids_of_type(
-                    models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
-                if track_label_ids.intersection(labels):
-                    errors.append('Cannot set track labels on entities which '
-                                  'are used within other units.')
+        if self._course.get_parent_unit(unit.unit_id):
+            track_label_ids = models.LabelDAO.get_set_of_ids_of_type(
+                models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
+            if track_label_ids.intersection(labels):
+                errors.append('Cannot set track labels on entities which '
+                              'are used within other units.')
 
-            unit.labels = common_utils.list_to_text(labels)
+        unit.labels = common_utils.list_to_text(labels)
 
     def _apply_updates_to_assessment(self, unit, updated_unit_dict, errors):
         """Store the updated assessment."""
@@ -528,50 +523,42 @@ class UnitTools(object):
             updated_unit_dict, entity_dict)
 
         self._apply_updates_common(unit, entity_dict, errors)
-        if 'weight' in entity_dict:
-            try:
-                unit.weight = float(entity_dict['weight'])
-                if unit.weight < 0:
-                    errors.append('The weight must be a non-negative integer.')
-            except ValueError:
-                errors.append('The weight must be an integer.')
-        if 'content' in entity_dict:
-            content = entity_dict['content']
-            if content:
-                self._course.set_assessment_content(
-                    unit, content, errors=errors)
+        try:
+            unit.weight = float(entity_dict.get('weight'))
+            if unit.weight < 0:
+                errors.append('The weight must be a non-negative integer.')
+        except ValueError:
+            errors.append('The weight must be an integer.')
+        content = entity_dict.get('content')
+        if content:
+            self._course.set_assessment_content(
+                unit, entity_dict.get('content'), errors=errors)
 
-        if 'html_content' in entity_dict:
-            unit.html_content = entity_dict['html_content']
-        if 'html_check_answers' in entity_dict:
-            unit.html_check_answers = entity_dict['html_check_answers']
+        unit.html_content = entity_dict.get('html_content')
+        unit.html_check_answers = entity_dict.get('html_check_answers')
 
-        if 'workflow' in entity_dict:
-            workflow_dict = entity_dict['workflow']
-            if len(courses.ALLOWED_MATCHERS_NAMES) == 1:
-                workflow_dict[courses.MATCHER_KEY] = (
-                    courses.ALLOWED_MATCHERS_NAMES.keys()[0])
-            unit.workflow_yaml = yaml.safe_dump(workflow_dict)
-            unit.workflow.validate(errors=errors)
+        workflow_dict = entity_dict.get('workflow')
+        if len(courses.ALLOWED_MATCHERS_NAMES) == 1:
+            workflow_dict[courses.MATCHER_KEY] = (
+                courses.ALLOWED_MATCHERS_NAMES.keys()[0])
+        unit.workflow_yaml = yaml.safe_dump(workflow_dict)
+        unit.workflow.validate(errors=errors)
 
         # Only save the review form if the assessment needs human grading.
         if not errors:
             if self._course.needs_human_grader(unit):
-                if 'review_form' in entity_dict:
-                    review_form = entity_dict['review_form']
-                    if review_form:
-                        self._course.set_review_form(
-                            unit, review_form, errors=errors)
-                if 'html_review_form' in entity_dict:
-                    unit.html_review_form = entity_dict['html_review_form']
+                review_form = entity_dict.get('review_form')
+                if review_form:
+                    self._course.set_review_form(
+                        unit, review_form, errors=errors)
+                unit.html_review_form = entity_dict.get('html_review_form')
             elif entity_dict.get('review_form'):
                 errors.append(
                     'Review forms for auto-graded assessments should be empty.')
 
     def _apply_updates_to_link(self, unit, updated_unit_dict, errors):
         self._apply_updates_common(unit, updated_unit_dict, errors)
-        if 'url' in updated_unit_dict:
-            unit.href = updated_unit_dict['url']
+        unit.href = updated_unit_dict.get('url')
 
     def _is_assessment_unused(self, unit, assessment, errors):
         parent_unit = self._course.get_parent_unit(assessment.unit_id)
@@ -610,40 +597,33 @@ class UnitTools(object):
 
     def _apply_updates_to_unit(self, unit, updated_unit_dict, errors):
         self._apply_updates_common(unit, updated_unit_dict, errors)
-        if 'unit_header' in updated_unit_dict:
-            unit.unit_header = updated_unit_dict['unit_header']
-        if 'unit_footer' in updated_unit_dict:
-            unit.unit_footer = updated_unit_dict['unit_footer']
-        if 'manual_progress' in updated_unit_dict:
-            unit.manual_progress = updated_unit_dict['manual_progress']
-        if 'pre_assessment' in updated_unit_dict:
-            unit.pre_assessment = None
-            pre_assessment_id = updated_unit_dict['pre_assessment']
-            if pre_assessment_id >= 0:
-                assessment = self._course.find_unit_by_id(pre_assessment_id)
-                if (self._is_assessment_unused(unit, assessment, errors) and
-                    self._is_assessment_version_ok(assessment, errors) and
-                    not self._is_assessment_on_track(assessment, errors)):
-                    unit.pre_assessment = pre_assessment_id
-        if 'post_assessment' in updated_unit_dict:
-            unit.post_assessment = None
-            post_assessment_id = updated_unit_dict['post_assessment']
-            if (post_assessment_id >= 0 and
-                pre_assessment_id == post_assessment_id):
+        unit.unit_header = updated_unit_dict['unit_header']
+        unit.unit_footer = updated_unit_dict['unit_footer']
+        unit.pre_assessment = None
+        unit.post_assessment = None
+        unit.manual_progress = updated_unit_dict['manual_progress']
+        pre_assessment_id = updated_unit_dict['pre_assessment']
+        if pre_assessment_id >= 0:
+            assessment = self._course.find_unit_by_id(pre_assessment_id)
+            if (self._is_assessment_unused(unit, assessment, errors) and
+                self._is_assessment_version_ok(assessment, errors) and
+                not self._is_assessment_on_track(assessment, errors)):
+                unit.pre_assessment = pre_assessment_id
 
-                errors.append(
-                    'The same assessment cannot be used as both the pre '
-                    'and post assessment of a unit.')
-            elif post_assessment_id >= 0:
-                assessment = self._course.find_unit_by_id(post_assessment_id)
-                if (assessment and
-                    self._is_assessment_unused(unit, assessment, errors) and
-                    self._is_assessment_version_ok(assessment, errors) and
-                    not self._is_assessment_on_track(assessment, errors)):
-                    unit.post_assessment = post_assessment_id
-        if 'show_contents_on_one_page' in updated_unit_dict:
-            unit.show_contents_on_one_page = (
-                updated_unit_dict['show_contents_on_one_page'])
+        post_assessment_id = updated_unit_dict['post_assessment']
+        if post_assessment_id >= 0 and pre_assessment_id == post_assessment_id:
+            errors.append(
+                'The same assessment cannot be used as both the pre '
+                'and post assessment of a unit.')
+        elif post_assessment_id >= 0:
+            assessment = self._course.find_unit_by_id(post_assessment_id)
+            if (assessment and
+                self._is_assessment_unused(unit, assessment, errors) and
+                self._is_assessment_version_ok(assessment, errors) and
+                not self._is_assessment_on_track(assessment, errors)):
+                unit.post_assessment = post_assessment_id
+        unit.show_contents_on_one_page = (
+            updated_unit_dict['show_contents_on_one_page'])
 
     def unit_to_dict(self, unit, keys=None):
         if unit.type == verify.UNIT_TYPE_ASSESSMENT:

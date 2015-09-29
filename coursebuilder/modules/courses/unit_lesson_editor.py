@@ -27,15 +27,31 @@ from controllers import utils
 from models import courses
 from models import resources_display
 from models import custom_units
-from models import permissions
 from models import roles
 from models import transforms
-from modules.courses import constants
 from modules.dashboard import dashboard
 from modules.oeditor import oeditor
 from tools import verify
 
-custom_module = None  # reference to modules.courses.courses.custom_module
+
+class CourseOutlineRights(object):
+    """Manages view/edit rights for course outline."""
+
+    @classmethod
+    def can_view(cls, handler):
+        return cls.can_edit(handler)
+
+    @classmethod
+    def can_edit(cls, handler):
+        return roles.Roles.is_course_admin(handler.app_context)
+
+    @classmethod
+    def can_delete(cls, handler):
+        return cls.can_edit(handler)
+
+    @classmethod
+    def can_add(cls, handler):
+        return cls.can_edit(handler)
 
 
 class UnitLessonEditor(object):
@@ -60,18 +76,6 @@ class UnitLessonEditor(object):
     ACTION_POST_ADD_CUSTOM_UNIT = 'add_custom_unit'
     ACTION_GET_EDIT_CUSTOM_UNIT = 'edit_custom_unit'
     ACTION_POST_SET_DRAFT_STATUS = 'set_draft_status'
-
-    # Permissions checkers for whether admin is allowed to edit draft status
-    # on various types of course sub-entity.
-    CAN_EDIT_DRAFT = {
-        'unit': lambda app_context: permissions.can_edit_property(
-            app_context, constants.SCOPE_UNIT, 'is_draft'),
-        'assessment': lambda app_context: permissions.can_edit_property(
-            app_context, constants.SCOPE_ASSESSMENT, 'assessment/is_draft'),
-        'link': lambda app_context: permissions.can_edit_property(
-            app_context, constants.SCOPE_LINK, 'is_draft'),
-        'lesson': roles.Roles.is_course_admin,
-    }
 
     @classmethod
     def on_module_enabled(cls):
@@ -100,31 +104,6 @@ class UnitLessonEditor(object):
                     action, callback)
             else:
                 raise ValueError('Callback names must start with get_ or post_')
-
-        # Set up different POST action names for different kinds of items'
-        # draft_status.  (This is necessary since we need a different action so
-        # we can distinguish between the POSTS without actually inspecting the
-        # content of the request at permission-checking time -- permissions
-        # checkers only get app_context parameters, not the WebApp handler
-        # as well)
-        for item_type, checker in cls.CAN_EDIT_DRAFT.iteritems():
-            action = '%s_%s' % (
-                cls.ACTION_POST_SET_DRAFT_STATUS, item_type)
-            dashboard.DashboardHandler.add_custom_post_action(
-                action, cls.post_set_draft_status)
-            dashboard.DashboardHandler.map_post_action_to_permission_checker(
-                action, checker)
-
-        # Tell dashboard we want to handle authorization of viewing of
-        # unit/assessment/link editors ourselves, rather than using a single
-        # permission name.  (This uses detailed schema permissions authority
-        # checks instead.)
-        dashboard.DashboardHandler.map_get_action_to_permission_checker(
-            cls.ACTION_GET_EDIT_UNIT, UnitRESTHandler.can_view)
-        dashboard.DashboardHandler.map_get_action_to_permission_checker(
-            cls.ACTION_GET_EDIT_LINK, LinkRESTHandler.can_view)
-        dashboard.DashboardHandler.map_get_action_to_permission_checker(
-            cls.ACTION_GET_EDIT_ASSESSMENT, AssessmentRESTHandler.can_view)
 
     @classmethod
     def get_import_course(cls, handler):
@@ -225,16 +204,14 @@ class UnitLessonEditor(object):
         is only called with this type of courses.
         """
         key = handler.request.get('key')
-        component_type = handler.request.get('type')
-
-        # Verify access to this item type.
-        if not cls.CAN_EDIT_DRAFT[component_type](handler.app_context):
+        if not CourseOutlineRights.can_edit(handler):
             transforms.send_json_response(
                 handler, 401, 'Access denied.', {'key': key})
             return
 
         course = courses.Course(handler)
-        if component_type in ('unit', 'assessment', 'link'):
+        component_type = handler.request.get('type')
+        if component_type == 'unit':
             course_component = course.find_unit_by_id(key)
         elif component_type == 'lesson':
             course_component = course.find_lesson_by_id(None, key)
@@ -272,13 +249,18 @@ class UnitLessonEditor(object):
 
     @classmethod
     def _render_edit_form_for(
-        cls, handler, rest_handler_cls, title, schema, additional_dirs=None,
+        cls, handler, rest_handler_cls, title, additional_dirs=None,
         annotations_dict=None, delete_xsrf_token='delete-unit',
-        extra_js_files=None, extra_css_files=None):
+        extra_js_files=None, extra_css_files=None, schema=None):
         """Renders an editor form for a given REST handler class."""
         annotations_dict = annotations_dict or []
-        schema_json = schema.get_json_schema()
-        annotations_dict = schema.get_schema_dict() + annotations_dict
+        if schema:
+            schema_json = schema.get_json_schema()
+            annotations_dict = schema.get_schema_dict() + annotations_dict
+        else:
+            schema_json = rest_handler_cls.SCHEMA_JSON
+            if not annotations_dict:
+                annotations_dict = rest_handler_cls.SCHEMA_ANNOTATIONS_DICT
 
         key = handler.request.get('key')
 
@@ -288,17 +270,13 @@ class UnitLessonEditor(object):
 
         exit_url = handler.canonicalize_url('/dashboard')
         rest_url = handler.canonicalize_url(rest_handler_cls.URI)
-        delete_method = None
-        delete_url = None
-        if roles.Roles.is_course_admin(handler.app_context):
-            delete_method = 'delete'
-            delete_url = '%s?%s' % (
-                handler.canonicalize_url(rest_handler_cls.URI),
-                urllib.urlencode({
-                    'key': key,
-                    'xsrf_token': cgi.escape(
-                        handler.create_xsrf_token(delete_xsrf_token))
-                    }))
+        delete_url = '%s?%s' % (
+            handler.canonicalize_url(rest_handler_cls.URI),
+            urllib.urlencode({
+                'key': key,
+                'xsrf_token': cgi.escape(
+                    handler.create_xsrf_token(delete_xsrf_token))
+                }))
 
         def extend_list(target_list, ext_name):
             # Extend the optional arg lists such as extra_js_files by an
@@ -315,7 +293,7 @@ class UnitLessonEditor(object):
             annotations_dict,
             key, rest_url, exit_url,
             extra_args=extra_args,
-            delete_url=delete_url, delete_method=delete_method,
+            delete_url=delete_url, delete_method='delete',
             read_only=not handler.app_context.is_editable_fs(),
             required_modules=rest_handler_cls.REQUIRED_MODULES,
             additional_dirs=extend_list(additional_dirs, 'ADDITIONAL_DIRS'),
@@ -331,7 +309,8 @@ class UnitLessonEditor(object):
     def get_edit_unit(cls, handler):
         """Shows unit editor."""
         return cls._render_edit_form_for(
-            handler, UnitRESTHandler, 'Unit', UnitRESTHandler.get_schema(
+            handler, UnitRESTHandler, 'Unit',
+            annotations_dict=UnitRESTHandler.get_annotations_dict(
                 courses.Course(handler), int(handler.request.get('key'))))
 
     @classmethod
@@ -341,23 +320,22 @@ class UnitLessonEditor(object):
         custom_unit = custom_units.UnitTypeRegistry.get(custom_unit_type)
         rest_handler = custom_unit.rest_handler
         return cls._render_edit_form_for(
-            handler, rest_handler, custom_unit.name,
-            rest_handler.get_schema(courses.Course(handler)))
+            handler,
+            rest_handler,
+            custom_unit.name,
+            annotations_dict=rest_handler.get_schema_annotations_dict(
+                courses.Course(handler)))
 
     @classmethod
     def get_edit_link(cls, handler):
         """Shows link editor."""
-        return cls._render_edit_form_for(
-            handler, LinkRESTHandler, 'Link', LinkRESTHandler.get_schema(
-                courses.Course(handler), int(handler.request.get('key'))))
+        return cls._render_edit_form_for(handler, LinkRESTHandler, 'Link')
 
     @classmethod
     def get_edit_assessment(cls, handler):
         """Shows assessment editor."""
         return cls._render_edit_form_for(
             handler, AssessmentRESTHandler, 'Assessment',
-            AssessmentRESTHandler.get_schema(
-                courses.Course(handler), int(handler.request.get('key'))),
             extra_js_files=['assessment_editor_lib.js', 'assessment_editor.js'])
 
     @classmethod
@@ -367,14 +345,16 @@ class UnitLessonEditor(object):
         course = courses.Course(handler)
         lesson = course.find_lesson_by_id(None, key)
         annotations_dict = (
-            None if lesson.has_activity else cls.HIDE_ACTIVITY_ANNOTATIONS)
+            None if lesson.has_activity
+            else UnitLessonEditor.HIDE_ACTIVITY_ANNOTATIONS)
         schema = LessonRESTHandler.get_schema(course, key)
         if courses.has_only_new_style_activities(course):
             schema.get_property('objectives').extra_schema_dict_values[
               'excludedCustomTags'] = set(['gcb-activity'])
         return cls._render_edit_form_for(
             handler,
-            LessonRESTHandler, 'Lessons and Activities', schema,
+            LessonRESTHandler, 'Lessons and Activities',
+            schema=schema,
             annotations_dict=annotations_dict,
             delete_xsrf_token='delete-lesson',
             extra_js_files=['lesson_editor.js'])
@@ -391,7 +371,8 @@ class UnitLessonEditor(object):
         course = courses.Course(handler)
         lesson = course.find_lesson_by_id(None, key)
         annotations_dict = (
-            None if lesson.has_activity else cls.HIDE_ACTIVITY_ANNOTATIONS)
+            None if lesson.has_activity
+            else UnitLessonEditor.HIDE_ACTIVITY_ANNOTATIONS)
         schema = LessonRESTHandler.get_schema(course, key)
         annotations_dict = schema.get_schema_dict() + annotations_dict
 
@@ -437,27 +418,16 @@ class CommonUnitRESTHandler(utils.BaseRESTHandler):
         resources_display.UnitTools(courses.Course(self)).apply_updates(
             unit, updated_unit_dict, errors)
 
-    def can_view(self):
-        raise NotImplementedError()
-
-    def can_edit(self):
-        raise NotImplementedError()
-
-    @classmethod
-    def get_schema(cls, course, key):
-        raise NotImplementedError()
-
     def get(self):
         """A GET REST method shared by all unit types."""
         key = self.request.get('key')
 
-        if not self.can_view(self.app_context):
+        if not CourseOutlineRights.can_view(self):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
 
-        course = courses.Course(self)
-        unit = course.find_unit_by_id(key)
+        unit = courses.Course(self).find_unit_by_id(key)
         if not unit:
             transforms.send_json_response(
                 self, 404, 'Object not found.', {'key': key})
@@ -469,12 +439,9 @@ class CommonUnitRESTHandler(utils.BaseRESTHandler):
             message.append(
                 'New %s has been created and saved.' % unit_type)
 
-        entity = self.unit_to_dict(unit)
-        schema = self.get_schema(course, key)
-        schema.redact_entity_to_schema(entity, only_writable=False)
-
         transforms.send_json_response(
-            self, 200, '\n'.join(message), payload_dict=entity,
+            self, 200, '\n'.join(message),
+            payload_dict=self.unit_to_dict(unit),
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token('put-unit'))
 
     def put(self):
@@ -486,7 +453,7 @@ class CommonUnitRESTHandler(utils.BaseRESTHandler):
                 request, 'put-unit', {'key': key}):
             return
 
-        if not self.can_edit(self.app_context):
+        if not CourseOutlineRights.can_edit(self):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -500,17 +467,15 @@ class CommonUnitRESTHandler(utils.BaseRESTHandler):
         payload = request.get('payload')
         errors = []
 
-        course = courses.Course(self)
         try:
-            schema = self.get_schema(course, key)
             updated_unit_dict = transforms.json_to_dict(
-                transforms.loads(payload), schema.get_json_schema_dict())
-            schema.redact_entity_to_schema(updated_unit_dict)
+                transforms.loads(payload), self.SCHEMA_DICT)
             self.apply_updates(unit, updated_unit_dict, errors)
         except (TypeError, ValueError), ex:
             errors.append(str(ex))
 
         if not errors:
+            course = courses.Course(self)
             assert course.update_unit(unit)
             course.save()
             common_utils.run_hooks(self.POST_SAVE_HOOKS, unit)
@@ -526,7 +491,7 @@ class CommonUnitRESTHandler(utils.BaseRESTHandler):
                 self.request, 'delete-unit', {'key': key}):
             return
 
-        if not roles.Roles.is_course_admin(self.app_context):
+        if not CourseOutlineRights.can_delete(self):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -548,21 +513,16 @@ class UnitRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to unit."""
 
     URI = '/rest/course/unit'
+    SCHEMA = resources_display.ResourceUnit.get_schema(course=None, key=None)
+    SCHEMA_JSON = SCHEMA.get_json_schema()
+    SCHEMA_DICT = SCHEMA.get_json_schema_dict()
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'gcb-uneditable',
         'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-integer',
         'inputex-checkbox', 'gcb-rte']
 
     @classmethod
-    def can_view(cls, app_context):
-        return permissions.can_view(app_context, constants.SCOPE_UNIT)
-
-    @classmethod
-    def can_edit(cls, app_context):
-        return permissions.can_edit(app_context, constants.SCOPE_UNIT)
-
-    @classmethod
-    def get_schema(cls, course, this_unit_id):
+    def get_annotations_dict(cls, course, this_unit_id):
         # The set of available assesments needs to be dynamically
         # generated and set as selection choices on the form.
         # We want to only show assessments that are not already
@@ -597,36 +557,23 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         schema.get_property('pre_assessment').set_select_data(choices)
         schema.get_property('post_assessment').set_select_data(choices)
 
-        permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
-            course.app_context, constants.SCOPE_UNIT, schema)
-        return schema
+        return schema.get_schema_dict()
 
 
 class LinkRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to link."""
 
     URI = '/rest/course/link'
+    SCHEMA = resources_display.ResourceLink.get_schema(course=None, key=None)
+    SCHEMA_JSON = SCHEMA.get_json_schema()
+    SCHEMA_DICT = SCHEMA.get_json_schema_dict()
+    SCHEMA_ANNOTATIONS_DICT = SCHEMA.get_schema_dict()
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'gcb-uneditable',
         'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-checkbox']
 
-    @classmethod
-    def can_view(cls, app_context):
-        return permissions.can_view(app_context, constants.SCOPE_LINK)
 
-    @classmethod
-    def can_edit(cls, app_context):
-        return permissions.can_edit(app_context, constants.SCOPE_LINK)
-
-    @classmethod
-    def get_schema(cls, course, key):
-        schema = resources_display.ResourceLink.get_schema(course, key)
-        permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
-            course.app_context, constants.SCOPE_LINK, schema)
-        return schema
-
-
-class ImportCourseRESTHandler(utils.BaseRESTHandler):
+class ImportCourseRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to course import."""
 
     URI = '/rest/course/import'
@@ -682,7 +629,7 @@ class ImportCourseRESTHandler(utils.BaseRESTHandler):
 
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
-        if not roles.Roles.is_course_admin(self.app_context):
+        if not CourseOutlineRights.can_view(self):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 
@@ -702,7 +649,7 @@ class ImportCourseRESTHandler(utils.BaseRESTHandler):
                 request, 'import-course', {'key': None}):
             return
 
-        if not roles.Roles.is_course_admin(self.app_context):
+        if not CourseOutlineRights.can_edit(self):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 
@@ -741,25 +688,20 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to assessment."""
 
     URI = '/rest/course/assessment'
+
+    SCHEMA = resources_display.ResourceAssessment.get_schema(
+        course=None, key=None)
+
+    SCHEMA_JSON = SCHEMA.get_json_schema()
+
+    SCHEMA_DICT = SCHEMA.get_json_schema_dict()
+
+    SCHEMA_ANNOTATIONS_DICT = SCHEMA.get_schema_dict()
+
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-textarea',
         'gcb-uneditable', 'inputex-integer', 'inputex-number', 'inputex-hidden',
         'inputex-checkbox', 'inputex-list']
-
-    @classmethod
-    def get_schema(cls, course, key):
-        schema = resources_display.ResourceAssessment.get_schema(course, key)
-        permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
-            course.app_context, constants.SCOPE_ASSESSMENT, schema)
-        return schema
-
-    @classmethod
-    def can_view(cls, app_context):
-        return permissions.can_view(app_context, constants.SCOPE_ASSESSMENT)
-
-    @classmethod
-    def can_edit(cls, app_context):
-        return permissions.can_edit(app_context, constants.SCOPE_ASSESSMENT)
 
 
 class UnitLessonTitleRESTHandler(utils.BaseRESTHandler):
@@ -807,13 +749,9 @@ class UnitLessonTitleRESTHandler(utils.BaseRESTHandler):
                 request, self.XSRF_TOKEN, {'key': None}):
             return
 
-        if not roles.Roles.is_user_allowed(
-            self.app_context, custom_module,
-            constants.COURSE_OUTLINE_REORDER_PERMISSION):
-
+        if not CourseOutlineRights.can_edit(self):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
-
 
         payload = request.get('payload')
         payload_dict = transforms.json_to_dict(
@@ -885,7 +823,7 @@ class LessonRESTHandler(utils.BaseRESTHandler):
     def get(self):
         """Handles GET REST verb and returns lesson object as JSON payload."""
 
-        if not roles.Roles.is_course_admin(self.app_context):
+        if not CourseOutlineRights.can_view(self):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 
@@ -913,7 +851,7 @@ class LessonRESTHandler(utils.BaseRESTHandler):
                 request, 'lesson-edit', {'key': key}):
             return
 
-        if not roles.Roles.is_course_admin(self.app_context):
+        if not CourseOutlineRights.can_edit(self):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -974,7 +912,7 @@ class LessonRESTHandler(utils.BaseRESTHandler):
                 self.request, 'delete-lesson', {'key': key}):
             return
 
-        if not roles.Roles.is_course_admin(self.app_context):
+        if not CourseOutlineRights.can_delete(self):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -999,26 +937,9 @@ def get_namespaced_handlers():
         (LessonRESTHandler.URI, LessonRESTHandler),
         (LinkRESTHandler.URI, LinkRESTHandler),
         (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
-        (UnitRESTHandler.URI, UnitRESTHandler),
+        (UnitRESTHandler.URI, UnitRESTHandler)
     ]
 
 
-def on_module_enabled(courses_custom_module, module_permissions):
-    global custom_module  # pylint: disable=global-statement
-    custom_module = courses_custom_module
-
+def on_module_enabled():
     UnitLessonEditor.on_module_enabled()
-
-    module_permissions.extend([
-        roles.Permission(
-            constants.COURSE_OUTLINE_REORDER_PERMISSION,
-            'Can re-order units and lessons'),
-        ])
-
-    # Course admins can always edit all fields in units/assessments/links
-    permissions.SchemaPermissionRegistry.add(
-        constants.SCOPE_UNIT, permissions.CourseAdminSchemaPermission())
-    permissions.SchemaPermissionRegistry.add(
-        constants.SCOPE_ASSESSMENT, permissions.CourseAdminSchemaPermission())
-    permissions.SchemaPermissionRegistry.add(
-        constants.SCOPE_LINK, permissions.CourseAdminSchemaPermission())
