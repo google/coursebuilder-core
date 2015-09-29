@@ -1,0 +1,10 @@
+<div style="width: 60%; margin: 0 auto">
+    <div style="float: left; width: 10%">
+        <input type="checkbox" name="{{name}}" value="{{value}}"
+        {% if checked %}checked="checked"{% endif %}>
+    </div>
+    <div style="float: left; width: 90%; text-align: left">
+        {% include 'message.html' %}
+    </div>
+    <div style="clear: both; "></div>
+</div>

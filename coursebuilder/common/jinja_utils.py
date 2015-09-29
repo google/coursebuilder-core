@@ -162,7 +162,7 @@ def create_jinja_environment(loader, locale=None, autoescape=True):
 
 
 def get_template(
-    template_name, dirs, handler=None, autoescape=True):
+    template_name, dirs, autoescape=True, handler=None, default_locale='en_US'):
     """Sets up an environment and gets jinja template."""
 
     # Defer to avoid circular import.
@@ -175,7 +175,7 @@ def get_template(
         if not locale:
             locale = app_context.default_locale
     if not locale:
-        locale = 'en_US'
+        locale = default_locale
 
     jinja_environment = create_jinja_environment(
         jinja2.FileSystemLoader(dirs), locale=locale, autoescape=autoescape)

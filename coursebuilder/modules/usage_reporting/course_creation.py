@@ -18,10 +18,13 @@ __author__ = [
     'Michael Gainer (mgainer@google.com)',
 ]
 
-from common import safe_dom
+import jinja2
+
+from common import jinja_utils
 from modules.admin import admin
 from modules.usage_reporting import config
 from modules.usage_reporting import messaging
+from modules.usage_reporting import constants
 
 USAGE_REPORTING_CONSENT_CHECKBOX_NAME = 'usage_reporting_consent'
 USAGE_REPORTING_CONSENT_CHECKBOX_VALUE = 'accepted'
@@ -43,56 +46,14 @@ def _make_welcome_form_content():
     if messaging.is_disabled():
         return None
 
-    checkbox = safe_dom.Element(
-        'input'
-    ).set_attribute(
-        'type', 'checkbox'
-    ).set_attribute(
-        'name', USAGE_REPORTING_CONSENT_CHECKBOX_NAME
-    ).set_attribute(
-        'value', USAGE_REPORTING_CONSENT_CHECKBOX_VALUE
-    )
-    if config.REPORT_ALLOWED.value or not config.is_consent_set():
-        checkbox.set_attribute('checked', 'checked')
+    checked = config.REPORT_ALLOWED.value or not config.is_consent_set()
 
-    return safe_dom.Element(
-        'div'
-        ).set_attribute(
-            'style', 'width: 60%; margin: 0 auto; '
-        ).append(
-            safe_dom.Element(
-                'div'
-                ).set_attribute(
-                    'style', 'float: left; width: 10%; '
-                ).add_child(checkbox)
-        ).append(
-            safe_dom.Element(
-                'div'
-                ).set_attribute(
-                    'style', 'float: left; width: 90%; text-align: left'
-                ).add_text(
-                    'I agree that Google may collect information about this '
-                    'deployment of Course Builder to help improve Google\'s '
-                    'products and services and for research purposes.  '
-                    'Google will maintain this data in acccordance with '
-                ).add_child(
-                    safe_dom.A(
-                        'http://www.google.com/policies/privacy/'
-                        ).add_text(
-                            'Google\'s privacy policy'
-                        )
-                ).add_text(
-                    ' and will not associate the data it collects with '
-                    'this course or a user.  Your response to this question '
-                    'will be sent to Google.'
-                )
-        ).append(
-            safe_dom.Element(
-                'div'
-                ).set_attribute(
-                    'style', 'clear: both; '
-                )
-        )
+    return jinja2.Markup(
+        jinja_utils.get_template(
+            'course_creation.html', [constants.TEMPLATES_DIR]).render(
+        name=USAGE_REPORTING_CONSENT_CHECKBOX_NAME,
+        value=USAGE_REPORTING_CONSENT_CHECKBOX_VALUE,
+        checked=checked))
 
 
 def notify_module_enabled():

@@ -19,9 +19,7 @@ __author__ = [
 ]
 
 import jinja2
-import os
 
-import appengine_config
 from controllers import utils
 from models import roles
 from models import transforms
@@ -29,10 +27,7 @@ from modules.admin import admin
 from modules.dashboard import dashboard
 from modules.usage_reporting import config
 from modules.usage_reporting import messaging
-
-TEMPLATES_DIR = os.path.join(
-    appengine_config.BUNDLE_ROOT, 'modules', 'usage_reporting', 'templates')
-
+from modules.usage_reporting import constants
 
 def _make_consent_banner(handler):
     if config.is_consent_set() or messaging.is_disabled():
@@ -44,7 +39,7 @@ def _make_consent_banner(handler):
         'is_super_admin': roles.Roles.is_super_admin()
     }
     return jinja2.Markup(
-        handler.get_template('consent_banner.html', [TEMPLATES_DIR]
+        handler.get_template('consent_banner.html', [constants.TEMPLATES_DIR]
     ).render(template_values))
 
 

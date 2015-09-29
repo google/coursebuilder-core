@@ -19,11 +19,14 @@ __author__ = [
 ]
 
 import appengine_config
+from common import jinja_utils
+from common import safe_dom
 from common import schema_fields
 from common import utils as common_utils
 from models import config
 from models import courses
 from modules.usage_reporting import messaging
+from modules.usage_reporting import constants
 
 
 def _on_change_report_allowed(config_property, unused_old_value):
@@ -35,13 +38,10 @@ def _on_change_report_allowed(config_property, unused_old_value):
 
 REPORT_ALLOWED = config.ConfigProperty(
     'gcb_report_usage_permitted', bool,
-        'Whether anonymized per-course usage statistics should be sent to the '
-        'CourseBuilder team.  The report contains randomly chosen identifiers '
-        'for the installation and course (to correlate reports) '
-        'hour-by-hour data on enrollments/unenrollments, and current number of '
-        'students.  This report is sent once a week.',
-        after_change=_on_change_report_allowed, default_value=False,
-        label='Usage reporting')
+    safe_dom.Template(jinja_utils.get_template(
+        'message.html', [constants.TEMPLATES_DIR], default_locale=None)),
+    after_change=_on_change_report_allowed, default_value=False,
+    label='Usage reporting')
 
 
 def set_report_allowed(value):
