@@ -13,7 +13,7 @@ div.item-selector-root button.add {
   outline: none;
 }
 div.item-selector-root button.add[disabled] {
-  color: #acacac;
+  color: #b8b8b8;
 }
 div.item-selector-root div.selector {
   position: absolute;
