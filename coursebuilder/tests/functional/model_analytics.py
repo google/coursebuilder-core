@@ -216,10 +216,15 @@ class ProgressAnalyticsTest(actions.TestBase):
         assert_contains('is running', response.body)
         assert_contains('Cancel', response.body)
 
-        # Now that all analytics are pending, ensure that we do _not_ have
-        # an update-all button.
-        with self.assertRaises(KeyError):
-            response = response.forms['gcb-generate-analytics-data']
+        # Now that all analytics are pending, ensure that update-all button
+        # is hidden.
+        dom = self.parse_html_string(response.body)
+        update_all = dom.find('.//div[@id="analytics-update-all"]')
+        cancel_all = dom.find('.//div[@id="analytics-cancel-all"]')
+        self.assertEquals(update_all.get('class'),
+                          'gcb-button-toolbar not-displayed')
+        self.assertEquals(cancel_all.get('class'),
+                          'gcb-button-toolbar ')
 
         # Click the cancel button for one of the slower jobs.
         response = response.forms[
@@ -236,9 +241,14 @@ class ProgressAnalyticsTest(actions.TestBase):
         response = response.forms[
             'gcb-run-visualization-peer_review'].submit().follow()
 
-        # All jobs should now again be running, and update-all button gone.
-        with self.assertRaises(KeyError):
-            response = response.forms['gcb-generate-analytics-data']
+        # All jobs should now again be running, and update-all button hidden.
+        dom = self.parse_html_string(response.body)
+        update_all = dom.find('.//div[@id="analytics-update-all"]')
+        cancel_all = dom.find('.//div[@id="analytics-cancel-all"]')
+        self.assertEquals(update_all.get('class'),
+                          'gcb-button-toolbar not-displayed')
+        self.assertEquals(cancel_all.get('class'),
+                          'gcb-button-toolbar ')
 
     def test_cancel_map_reduce(self):
         email = 'admin@google.com'

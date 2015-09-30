@@ -29,10 +29,9 @@ from models.analytics import utils as analytics_utils
 from models import data_sources
 from models import transforms
 
-by_name = {}
-
 
 class Visualization(object):
+    registry = {}
 
     def __init__(self, name, title, html_template_name,
                  data_source_classes=None):
@@ -71,7 +70,7 @@ class Visualization(object):
             raise ValueError(
                 'name "%s" must contain only lowercase letters, ' % name +
                 'numbers or underscore characters')
-        if name in by_name:
+        if name in self.registry:
             raise ValueError(
                 'Visualization %s is already registered' % name)
         data_source_classes = data_source_classes or []
@@ -86,7 +85,7 @@ class Visualization(object):
         self._title = title
         self._template_name = html_template_name
         self._data_source_classes = data_source_classes
-        by_name[name] = self
+        self.registry[name] = self
 
     @property
     def name(self):
@@ -116,6 +115,9 @@ class Visualization(object):
         return set([c for c in self._data_source_classes
                     if issubclass(c, data_sources.AbstractRestDataSource)])
 
+    @classmethod
+    def for_name(cls, name):
+        return cls.registry.get(name)
 
 class _TemplateRenderer(object):
     """Insulate display code from knowing about handlers and Jinja.
@@ -193,7 +195,8 @@ class AnalyticsHandler(controllers_utils.ReflectiveRequestHandler,
     def _get_generator_classes(self):
         # pylint: disable=protected-access
         return analytics_utils._generators_for_visualizations(
-            [by_name[name] for name in self.request.get_all('visualization')])
+            [Visualization.for_name(name)
+             for name in self.request.get_all('visualization')])
 
     def post_run_visualizations(self):
         for generator_class in self._get_generator_classes():
@@ -207,31 +210,55 @@ class AnalyticsHandler(controllers_utils.ReflectiveRequestHandler,
 
 
 class AnalyticsStatusRESTHandler(controllers_utils.BaseRESTHandler):
-    def get(self):
-        finished_jobs = [
-            name for name in self.request.get_all('visualization')
-            if self._is_finished(name)
-        ]
+    URL = '/analytics/rest/status'
 
+    def get(self):
+        generator_classes = set()
+        for visualization_name in self.request.get_all('visualization'):
+            visualization = Visualization.for_name(visualization_name)
+            generator_classes.update(visualization.generator_classes)
+
+        generator_status = {}
+        for generator_class in generator_classes:
+            job = generator_class(self.app_context).load()
+            generator_status[generator_class] = job and job.has_finished
+
+
+        finished_visualizations = set()
+        finished_sources = set()
+        finished_generators = set()
+        all_visualizations_finished = True
+        for visualization_name in self.request.get_all('visualization'):
+            all_sources_finished = True
+            visualization = Visualization.for_name(visualization_name)
+            for data_source_class in visualization.data_source_classes:
+                all_generators_finished = True
+                for generator_class in data_source_class.required_generators():
+                    all_generators_finished &= generator_status[generator_class]
+                all_sources_finished &= all_generators_finished
+                if all_generators_finished:
+                    if issubclass(data_source_class,
+                                  data_sources.AbstractRestDataSource):
+                        finished_sources.add(data_source_class.get_name())
+                    else:
+                        finished_sources.add(data_source_class.__name__)
+            all_visualizations_finished &= all_sources_finished
+            if all_sources_finished:
+                finished_visualizations.add(visualization_name)
         result = {
-            "finished": finished_jobs,
+            'finished_visualizations': finished_visualizations,
+            'finished_sources': finished_sources,
+            'finished_generators': finished_generators,
+            'finished_all': all_visualizations_finished,
         }
 
         transforms.send_json_response(self, 200, "Success.", result)
-
-    def _is_finished(self, name):
-        visualization = by_name[name]
-        for generator_class in visualization.generator_classes:
-            job = generator_class(self.app_context).load()
-            if job and not job.has_finished:
-                return False
-        return True
 
 
 def get_namespaced_handlers():
     return [
         ('/analytics', AnalyticsHandler),
-        ('/analytics/rest/status', AnalyticsStatusRESTHandler),
+        (AnalyticsStatusRESTHandler.URL, AnalyticsStatusRESTHandler),
     ]
 
 

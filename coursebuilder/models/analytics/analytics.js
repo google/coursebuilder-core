@@ -28,19 +28,16 @@ $(function() {
   function applyChange(data) {
     // update state
     runningVisNames = $.grep(runningVisNames, function(item) {
-      return data.finished.indexOf(item) === -1;
+      return data.finished_visualizations.indexOf(item) === -1;
     });
 
     // render new state
-    data.finished.forEach(function(name) {
+    data.finished_visualizations.forEach(function(name) {
       // change status message
       var button = $('#' + prefix + name);
       button.closest('.section').find('.status-message').text(
         "Job is finished."
       );
-
-      // remove global status message
-      $('#gcb_log_rest_source_' + name).hide()
 
       // change cancel button
       var reloader = $(
@@ -53,6 +50,19 @@ $(function() {
       });
       button.replaceWith(reloader);
     });
+
+    data.finished_sources.forEach(function(name) {
+      // remove global status message
+      $('#gcb_log_rest_source_' + name).hide()
+    });
+
+    if (data.finished_all) {
+      $('#analytics-update-all').show()
+      $('#analytics-cancel-all').hide()
+    } else {
+      $('#analytics-update-all').hide()
+      $('#analytics-cancel-all').show()
+    }
   }
   function repeat() {
     setTimeout(checkAnalyticsProgress, REFRESH_RATE_MS);

@@ -34,14 +34,16 @@ def _generate_display_html(template_renderer, xsrf, app_context,
     # First, load jobs for all generators required for an visualization.
     # Jobs may directly contain small results, just hold references to
     # larger results, or both.
-    any_generator_not_running = False
+    any_generators = False
+    any_generator_running = False
     data_source_jobs = {}
     for generator_class in analytics_utils._generators_for_visualizations(
         visualizations):
+        any_generators = True
         job = generator_class(app_context).load()
         data_source_jobs[generator_class] = job
-        if not job or job.has_finished:
-            any_generator_not_running = True
+        if job and not job.has_finished:
+            any_generator_running = True
 
     # Generate HTML section for each visualization.
     html_sections = []
@@ -76,8 +78,11 @@ def _generate_display_html(template_renderer, xsrf, app_context,
         None, 'models/analytics/display.html',
         {
             'sections': html_sections,
-            'any_generator_not_running': any_generator_not_running,
+            'any_generators': any_generators,
+            'any_generator_running': any_generator_running,
             'xsrf_token_run': xsrf.create_xsrf_token('run_visualizations'),
+            'xsrf_token_cancel': xsrf.create_xsrf_token(
+                'cancel_visualizations'),
             'visualizations': names_of_visualizations_with_generators,
             'rest_sources': rest_sources,
             'r': template_renderer.get_current_url(),

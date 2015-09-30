@@ -252,7 +252,7 @@ class AnalyticsTests(unittest.TestCase):
 
     def setUp(self):
         super(AnalyticsTests, self).setUp()
-        analytics.by_name.clear()
+        analytics.Visualization.registry.clear()
         MockJobBase.clear_jobs()
         self._mock_app_context = MockAppContext('testing')
         self._mock_handler = MockHandler(self._mock_app_context)
