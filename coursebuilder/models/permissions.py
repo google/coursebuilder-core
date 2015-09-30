@@ -79,7 +79,7 @@ class SimpleSchemaPermission(AbstractSchemaPermission):
     """Convenience: bind a permission to list of readable/writable settings."""
 
     def __init__(self, module, permission_name, readable_list=None,
-                 editable_list=None):
+                 editable_list=None, all_readable=False, all_writable=False):
         """Configure settings wich may be read/edited with a given permission.
 
         Permission names are of the form 'container/subcontainer/property'.
@@ -95,12 +95,17 @@ class SimpleSchemaPermission(AbstractSchemaPermission):
           permission_name: The permission name.
           readable_list: List of properties whose values may be viewed.
           editable_list: List of properties whose values may be edited.
-
+          all_readable: When true, all properties are readable; readable_list
+            is ignored.
+          all_writable: When true, all properties are readable and writable;
+            all other parameters controlling read-/write-ability are ignored.
         """
         self._module = module
         self._permission_name = permission_name
         self._readable = self._build_tree(readable_list or [])
         self._editable = self._build_tree(editable_list or [])
+        self._all_readable = all_readable
+        self._all_writable = all_writable
 
     def get_name(self):
         return self._permission_name
@@ -132,12 +137,16 @@ class SimpleSchemaPermission(AbstractSchemaPermission):
             application_context, self._module, self._permission_name)
 
     def can_view(self, prop_name=None):
+        if self._all_writable or self._all_readable:
+            return True
         if prop_name is None:
             return len(self._readable) > 0 or len(self._editable) > 0
         return (self.can_edit(prop_name) or
                 self._tree_matches(self._readable, prop_name))
 
     def can_edit(self, prop_name=None):
+        if self._all_writable:
+            return True
         if prop_name is None:
             return len(self._editable) > 0
         return self._tree_matches(self._editable, prop_name)

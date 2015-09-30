@@ -16,6 +16,7 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import copy
 import json
 import unittest
 from common import schema_fields
@@ -694,3 +695,22 @@ class RedactEntityTests(StructureRecursionTests):
                 }
             ]
         }, self.entity)
+
+    def test_redact_only_readable(self):
+        def make_readonly(schema):
+            for prop in schema._properties:
+                prop._editable = False
+                if (isinstance(prop, schema_fields.FieldArray) and
+                    isinstance(prop.item_type, schema_fields.Registry)):
+                    make_readonly(prop.item_type)
+            for sub_schema in schema._sub_registries.itervalues():
+                make_readonly(sub_schema)
+        make_readonly(self.schema)
+
+        readable = copy.deepcopy(self.entity)
+        self.schema.redact_entity_to_schema(readable, only_writable=False)
+        self.assertEquals(readable, self.entity)
+
+        writable = copy.deepcopy(self.entity)
+        self.schema.redact_entity_to_schema(writable, only_writable=True)
+        self.assertEquals(writable, {})

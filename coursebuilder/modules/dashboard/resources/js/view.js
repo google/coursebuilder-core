@@ -50,12 +50,12 @@ function onDraftStatusClick() {
   $.post(
     "dashboard",
     {
-      action: "set_draft_status",
+      action: "set_draft_status_" + $(this).data("component-type"),
       key: $(this).data("key"),
       type: $(this).data("component-type"),
       set_draft: setDraft ? 1 : 0,
       xsrf_token: $(this).parents(".course-outline").data(
-        "status-xsrf-token")
+        "status-xsrf-token-" + $(this).data("component-type"))
     },
     function(data) {
       setDraftStatusCallback(data, padlock);
