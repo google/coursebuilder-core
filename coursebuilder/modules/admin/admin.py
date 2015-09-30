@@ -47,6 +47,7 @@ import modules.admin.config
 from modules.admin.config import ConfigPropertyEditor
 from modules.admin.config import CourseDeleteHandler
 from modules.dashboard import dashboard
+from modules.dashboard import utils as dashboard_utils
 from common import menus
 
 import google.appengine.api.app_identity as app
@@ -233,6 +234,10 @@ def can_view_admin_action(action):
     if action in ['console', 'console_run']:
         if not DIRECT_CODE_EXECUTION_UI_ENABLED:
             return False
+    if action in ['deployment']:
+        # Visibility for this action is enforced in the dashboard.
+        # Additional elements are hidden by the action handler
+        return dashboard.DashboardHandler.can_view(action)
     return roles.Roles.is_super_admin()
 
 
@@ -249,7 +254,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
     LINK_URL = 'admin'
 
     default_action = 'courses'
-    get_actions = ['courses', 'add_course', 'config_edit', 'settings', 'perf',
+    get_actions = ['courses', 'add_course', 'config_edit', 'settings',
         'deployment', 'console']
     post_actions = ['config_override', 'config_reset', 'console_run']
 
@@ -348,8 +353,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
     @classmethod
     def install_menu(cls):
 
-        def bind(group_name, item_name, label, action=None, contents=None,
-                href=None, can_view=None, **kwargs):
+        def bind(group_name, item_name, label, action=None, can_view=None,
+                contents=None, href=None, **kwargs):
             if href:
                 target = '_blank'
             else:
@@ -388,10 +393,10 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
         bind('help', 'welcome', 'Welcome', action='welcome',
             href='/admin/welcome', is_external=True, placement=1000)
-        bind('help', 'perf', 'Metrics', action='perf', contents=cls.get_perf,
+
+        bind('help', 'deployment', 'About', action='deployment',
+            contents=cls.get_deployment,
             sub_group_name='advanced')
-        bind('help', 'deployment', 'Deployment', action='deployment',
-            contents=cls.get_deployment, sub_group_name='advanced')
 
         bind('analytics', 'console', 'Console', action='console',
             contents=cls.get_console, sub_group_name='advanced')
@@ -429,11 +434,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 safe_dom.Element('li').add_text('%s: %s' % (key, value)))
         return content
 
-    def get_perf(self):
+    def _render_perf(self):
         """Shows server performance counters page."""
-        template_values = {}
-        template_values['page_title'] = self.format_title('Metrics')
-
         perf_counters = {}
 
         # built in counters
@@ -457,10 +459,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 global_value = 'NA'
             perf_counters[name] = '%s / %s' % (
                 all_counters[name].value, global_value)
-
-        template_values['main_content'] = self.render_dict(
+        return self.render_dict(
             perf_counters, 'In-process Performance Counters (local/global)')
-        self.render_page(template_values)
 
     def _make_routes_dom(self, parent_element, routes, caption):
         """Renders routes as DOM."""
@@ -482,12 +482,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 if route:
                     ul2.add_child(safe_dom.Element('li').add_text(route))
 
-    def get_deployment(self):
-        """Shows server environment and deployment information page."""
-        template_values = {}
-        template_values['page_title'] = self.format_title('Deployment')
-
-        # modules
+    def _render_modules(self):
         module_content = safe_dom.NodeList()
         module_content.append(
             safe_dom.Element('h3').add_text('Modules'))
@@ -506,8 +501,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 li, amodule.global_routes, 'Global Routes')
             self._make_routes_dom(
                 li, amodule.namespaced_routes, 'Namespaced Routes')
+        return module_content
 
-        # Custom tags.
+    def _render_custom_tags(self):
         tag_content = safe_dom.NodeList()
         tag_content.append(
             safe_dom.Element('h3').add_text('Custom Tags'))
@@ -520,8 +516,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
             vendor = tag.vendor()
             ol.add_child(safe_dom.Element('li').add_text(
                 '%s: %s: %s' % (name, tag.__class__.__name__, vendor)))
+        return tag_content
 
-        # Yaml file content.
+    def _render_yaml(self):
         yaml_content = safe_dom.NodeList()
         yaml_content.append(
             safe_dom.Element('h3').add_text('Contents of ').add_child(
@@ -532,14 +529,17 @@ class BaseAdminHandler(ConfigPropertyEditor):
             __file__), '../../app.yaml'), 'r').readlines()
         for line in yaml_lines:
             ol.add_child(safe_dom.Element('li').add_text(line))
+        return yaml_content
 
-        # Describe DB entity types
+    def _render_db_entity_types(self):
         entity_content = safe_dom.NodeList()
         entity_content.append(
             safe_dom.Element('h3').add_text('Database Entities'))
         entity_content.append(self._describe_db_types())
         entity_content.append(safe_dom.Element('p'))
+        return entity_content
 
+    def _render_application_identity(self):
         # Application identity and users service information.
         app_id = app.get_application_id()
         app_dict = {}
@@ -548,7 +548,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
             app.get_default_version_hostname())
         app_dict['users_service_name'] = escape(
             users.UsersServiceManager.get().get_service_name())
+        return self.render_dict(app_dict, 'About the Application')
 
+    def _render_sys_path(self):
         # sys.path information.
         sys_path_content = safe_dom.NodeList()
         sys_path_content.append(
@@ -558,22 +560,38 @@ class BaseAdminHandler(ConfigPropertyEditor):
         sys_path_content.append(ol)
         for path in sys.path:
             ol.add_child(safe_dom.Element('li').add_text(path))
+        return sys_path_content
 
-        template_values['main_content'] = safe_dom.NodeList().append(
-            self.render_dict(app_dict, 'About the Application')
-        ).append(
-            module_content
-        ).append(
-            entity_content
-        ).append(
-            tag_content
-        ).append(
-            yaml_content
-        ).append(
-            self.render_dict(os.environ, 'Server Environment Variables')
-        ).append(
-            sys_path_content
-        )
+    def get_deployment(self):
+        """Shows server environment and deployment information page."""
+        template_values = {}
+        template_values['page_title'] = self.format_title('Deployment')
+        template_values['main_content'] = content = safe_dom.NodeList()
+
+        if roles.Roles.is_super_admin():
+            content.append(
+                self._render_application_identity()
+            )
+
+        content.append(self._render_about_courses())
+
+        if roles.Roles.is_super_admin():
+            content.append(
+                self._render_modules()
+            ).append(
+                self._render_db_entity_types()
+            ).append(
+                self._render_custom_tags()
+            ).append(
+                self._render_yaml()
+            ).append(
+                self.render_dict(os.environ, 'Server Environment Variables')
+            ).append(
+                self._render_sys_path()
+            ).append(
+                self._render_perf()
+            )
+
         self.render_page(template_values)
 
     def _recurse_subclasses(self, entity_type, entity_types):
@@ -609,6 +627,25 @@ class BaseAdminHandler(ConfigPropertyEditor):
                     td.add_child(content)
 
         return table
+
+    def _render_about_courses(self):
+        courses_list = (
+            courses.Course(None, app_context=app_context)
+            for app_context in dashboard.get_visible_courses())
+
+        def list_files(app_context):
+            return dashboard_utils.list_files(app_context, '/data/')
+
+        def get_filesystem_type(app_context):
+            return app_context.fs.impl.__class__.__name__
+
+        def get_home_folder(app_context):
+            return sites.abspath(app_context.get_home_folder(), '/')
+
+        return safe_dom.Template(
+            self.get_template('course_infos.html', []), courses=courses_list,
+            get_filesystem_type=get_filesystem_type,
+            get_home_folder=get_home_folder, list_files=list_files)
 
     def get_settings(self):
         """Shows configuration properties information page."""

@@ -1662,11 +1662,9 @@ class AdminAspectTest(actions.TestBase):
         assert_contains('gcb_admin_user_emails', response.body)
         assert_contains('gcb_config_update_interval_sec', response.body)
 
-        response = self.testapp.get('/modules/admin?action=perf')
+        response = self.testapp.get('/modules/admin?action=deployment')
         assert_contains('gcb-admin-uptime-sec:', response.body)
         assert_contains('In-process Performance Counters', response.body)
-
-        response = self.testapp.get('/modules/admin?action=deployment')
         assert_contains('application_id: testbed-test', response.body)
         assert_contains('About the Application', response.body)
 
@@ -3823,6 +3821,7 @@ class I18NTest(MultipleCoursesTestBase):
             self.course_ru, first_time=False, is_admin=True, logout=False)
 
         dashboard_url = '/courses/%s/dashboard' % self.course_ru.path
+        admin_url = '/courses/%s/admin' % self.course_ru.path
 
         def assert_page_contains(page_name, text_array):
             response = self.get('%s?action=%s' % (dashboard_url, page_name))
@@ -3839,7 +3838,7 @@ class I18NTest(MultipleCoursesTestBase):
             '', [self.course_ru.title])
         assert_contains(
                 vfs.AbstractFileSystem.normpath(self.course_ru.home),
-                self.get('%s?action=settings_about' % dashboard_url).body)
+                self.get('{}?action=deployment'.format(admin_url)).body)
 
         # Clean up.
         actions.logout()

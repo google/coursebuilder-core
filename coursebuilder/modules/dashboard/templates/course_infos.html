@@ -1,0 +1,26 @@
+<h3>Courses</h3>
+
+<ol>
+  {% for course in courses %}
+    <li>
+      {{course.title}}
+      <ul>
+        <li>Schema Version: {{course.version}}</li>
+        <li>Context Path: {{course.app_context.get_slug()}}</li>
+        <li>Datastore Namespace: {{course.app_context.get_namespace_name()}}</li>
+        <li>File System: {{get_filesystem_type(course.app_context)}}</li>
+
+        {% if not course.app_context.fs.is_read_write() %}
+          <li>Home Folder: {{get_home_folder(course.app_context)}}</li>
+          <li>Data Files:
+            <ul>
+              {% for file_name in list_files(course.app_context) %}
+                <li>{{file_name}}</li>
+              {% endfor %}
+            </ul>
+           </li>
+         {% endif %}
+      </ul>
+    </li>
+  {% endfor %}
+</ol>

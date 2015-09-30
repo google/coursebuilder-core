@@ -79,3 +79,26 @@ class AdminDashboardTabTests(actions.TestBase):
 
         courses_item = dom.find('.//*[@id="menu-item__courses"]')
         self.assertIsNotNone(courses_item)
+
+    def test_debug_info_not_present_for_non_admin(self):
+        # NOTE: the is_admin=True version of this test is
+        # functional.test_classes.AdminAspectTest.test_access_to_admin_pages
+
+        # create another course which you shouldn't see
+        actions.simple_add_course(
+            'other-course', 'other-admin@example.com', 'Other Course')
+
+        actions.login(self.ADMIN_EMAIL, is_admin=False)
+
+        response = self.get('admin?action=deployment')
+        dom = self.parse_html_string(response.body)
+
+        # we should see our own course
+        self.assertIn(self.COURSE_NAME, response.body)
+
+        # we should not see other courses
+        self.assertNotIn('Other Course', response.body)
+
+        # we should not see admin features
+        self.assertNotIn('application_id', response.body)
+        self.assertNotIn('Modules', response.body)

@@ -46,13 +46,14 @@ def _list_and_format_file_list(
     unmerged_files = {}
     if merge_local_files:
         unmerged_files = dashboard_utils.list_files(
-            handler, subfolder, merge_local_files=False, all_paths=all_paths)
+            handler.app_context, subfolder, all_paths=all_paths,
+            merge_local_files=False)
 
     items = safe_dom.NodeList()
     count = 0
     for filename in dashboard_utils.list_files(
-            handler, subfolder, merge_local_files=merge_local_files,
-            all_paths=all_paths):
+            handler.app_context, subfolder, all_paths=all_paths,
+            merge_local_files=merge_local_files):
         if prefix and not filename.startswith(prefix):
             continue
 

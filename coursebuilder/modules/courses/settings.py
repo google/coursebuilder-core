@@ -26,17 +26,14 @@ from common import crypto
 from common import safe_dom
 from common import schema_fields
 from controllers import utils as controllers_utils
-from controllers import sites
 from models import courses
 from models import models
 from models import permissions
 from models import roles
 from models import transforms
-from models import vfs
 from modules.courses import constants
 from modules.courses import messages
 from modules.dashboard import dashboard
-from modules.dashboard import utils as dashboard_utils
 from modules.oeditor import oeditor
 
 # Internal name for the settings top-level Dashboard tab
@@ -484,49 +481,6 @@ class HtmlHookRESTHandler(CourseYamlRESTHandler):
         return course_dict
 
 
-def _get_about_course(handler):
-
-    # Basic course info.
-    template_values = {}
-    course_info = []
-    course_actions = []
-    app_context = handler.app_context
-
-    if not app_context.is_editable_fs():
-        course_info.append('The course is read-only.')
-
-    currentCourse = courses.Course(handler)
-    course_info.append('Schema Version: %s' % currentCourse.version)
-    course_info.append('Context Path: %s' % app_context.get_slug())
-    course_info.append('Datastore Namespace: %s' %
-                       app_context.get_namespace_name())
-
-    # Course file system.
-    fs = app_context.fs.impl
-    course_info.append(('File System: %s' % fs.__class__.__name__))
-    if fs.__class__ == vfs.LocalReadOnlyFileSystem:
-        course_info.append(('Home Folder: %s' % sites.abspath(
-            app_context.get_home_folder(), '/')))
-
-    data_info = dashboard_utils.list_files(handler, '/data/')
-
-    sections = [
-        {
-            'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
-            'actions': course_actions,
-            'children': course_info},]
-
-    if currentCourse.version == courses.COURSE_MODEL_VERSION_1_2:
-        sections.append({
-            'title': 'Data Files',
-            'description': messages.DATA_FILES_DESCRIPTION,
-            'children': data_info})
-
-    template_values['alerts'] = handler.get_alerts()
-    template_values['sections'] = sections
-    return template_values
-
-
 def _text_file_to_safe_dom(reader, content_if_empty):
     """Load text file and convert it to safe_dom tree for display."""
     info = []
@@ -674,6 +628,3 @@ def on_module_enabled(courses_custom_module, perms):
     dashboard.DashboardHandler.add_sub_nav_mapping(
         SETTINGS_TAB_NAME, 'advanced', 'Advanced', action='settings_advanced',
         contents=_get_settings_advanced, sub_group_name='advanced')
-    dashboard.DashboardHandler.add_sub_nav_mapping(
-        'help', 'about', 'Debug info', action='settings_about',
-        contents=_get_about_course, sub_group_name='advanced')
