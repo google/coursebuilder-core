@@ -173,6 +173,8 @@ SkillTable.prototype = {
   },
 
   _refresh: function() {
+    this._table.find('thead').remove();
+    this._table.append(this._buildHeader());
     this._table.find('tbody').remove();
     this._table.append(this._buildBody());
   },
