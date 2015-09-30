@@ -21,6 +21,9 @@
 #       TEMPLATE FOR ALL COURSES        #
 #########################################
 
+course:
+  can_student_change_locale: true
+
 ####################################
 # Information about your institution
 ####################################

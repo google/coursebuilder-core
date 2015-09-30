@@ -290,7 +290,7 @@
               </a>
             </li>
             {% endif %}
-            {% if available_locales %}
+            {% if available_locales and available_locales|length > 1 %}
               <li>
                 {# I18N: Text describing the locale selector. #}
                 {{ gettext('Language:') }}

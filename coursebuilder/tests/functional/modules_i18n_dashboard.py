@@ -3158,7 +3158,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
         with actions.OverriddenEnvironment(
             {'course': {
                 'now_available': True, 'can_student_change_locale': True}}):
-            self._assert_picker(True, ['en_US'])
+            self._assert_picker(False)
         with actions.OverriddenEnvironment(
             {'course': {
                 'now_available': True, 'can_student_change_locale': False}}):

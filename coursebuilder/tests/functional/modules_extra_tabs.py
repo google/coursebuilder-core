@@ -109,8 +109,8 @@ class ExtraTabsTests(actions.TestBase):
         self.assertIn('gcb-pull-right', resources_li.attrib['class'])
 
     def test_tabs_are_translated(self):
-        courses.Course.ENVIRON_TEST_OVERRIDES['extra_locales'] = {
-            'availability': 'available', 'locale': 'el'}
+        courses.Course.ENVIRON_TEST_OVERRIDES['extra_locales'] = [{
+            'availability': 'available', 'locale': 'el'}]
 
         prefs = models.StudentPreferencesDAO.load_or_default()
         prefs.locale = 'el'
