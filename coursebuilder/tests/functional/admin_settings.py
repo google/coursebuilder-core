@@ -566,8 +566,8 @@ class ExitUrlTest(actions.TestBase):
         base_url = '/%s/dashboard?action=settings_data_pump' % COURSE_NAME
         url = base_url + '&' + urllib.urlencode({
             'exit_url': 'dashboard?%s' % urllib.urlencode({
-                'action': 'analytics_data_pump'})})
+                'action': 'data_pump'})})
         response = self.get(url)
         self.assertIn(
-            'cb_global.exit_url = \'dashboard?action=analytics_data_pump',
+            'cb_global.exit_url = \'dashboard?action=data_pump',
             response.body)

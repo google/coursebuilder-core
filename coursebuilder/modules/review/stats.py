@@ -110,6 +110,6 @@ def register_analytic():
         name, title, 'stats.html',
         data_source_classes=[PeerReviewStatsSource])
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'analytics', name, title, action='analytics_peer_review',
+        'analytics', name, title, action=name,
         contents=analytics.TabRenderer([peer_review]),
-        placement=2000, sub_group_name='advanced')
+        placement=2000, sub_group_name=name)

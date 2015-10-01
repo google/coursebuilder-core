@@ -54,7 +54,7 @@ class PeerReviewAnalyticsTest(actions.TestBase):
 
         # The admin looks at the analytics page on the dashboard.
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics_peer_review')
+        response = self.get('dashboard?action=peer_review')
         assert_contains(
             'Google &gt; Dashboard &gt; Manage &gt; Peer review',
             response.body)
@@ -91,7 +91,7 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         actions.logout()
 
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics_peer_review')
+        response = self.get('dashboard?action=peer_review')
         assert_contains(
             'Google &gt; Dashboard &gt; Manage &gt; Peer review',
             response.body)

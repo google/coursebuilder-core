@@ -156,7 +156,9 @@ class DashboardHandler(
                 default = menus.MenuGroup(
                     'default', None, placement=2000, group=menu_item)
                 advanced = menus.MenuGroup(
-                    'advanced', None, placement=3000, group=menu_item)
+                    'advanced', None,
+                    placement=menus.MenuGroup.DEFAULT_PLACEMENT * 2,
+                    group=menu_item)
         return menu_item
 
     @classmethod

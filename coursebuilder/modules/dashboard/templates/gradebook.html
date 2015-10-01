@@ -90,7 +90,7 @@
   {% else %}
     More than {{ max_interactive_download_size }} students' grades are
     present.  For larger volumes of gradebook data, you can
-    <a href='dashboard?action=analytics_data_pump'>send the data to BigQuery</a>
+    <a href='dashboard?action=data_pump'>send the data to BigQuery</a>
     or download it to your own desktop, by using the ETL script run from your
     Course Builder download directory:
     <pre>./scripts/etl.sh run modules.analytics.gradebook.DownloadAsCsv {{course_slug}} {{app_id}} {{hostname}} --job_args='--mode=scores --save_as=total_scores.csv'</pre>

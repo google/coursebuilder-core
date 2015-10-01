@@ -54,8 +54,9 @@ from google.appengine.ext import db
 from google.appengine.ext import deferred
 
 # CourseBuilder setup strings
-XSRF_ACTION_NAME = 'data_pump'
-DASHBOARD_ACTION = 'data_pump'
+MODULE_NAME = 'data_pump'
+XSRF_ACTION_NAME = MODULE_NAME
+DASHBOARD_ACTION = MODULE_NAME
 MODULE_TITLE = 'Data pump'
 
 # Connection parameters for discovering and auth to BigQuery.
@@ -90,7 +91,7 @@ ITEMS_UPLOADED = 'items_uploaded'
 PII_SECRET = 'pii_secret'
 
 # Constants for items within course settings schema
-DATA_PUMP_SETTINGS_SCHEMA_SECTION = 'data_pump'
+DATA_PUMP_SETTINGS_SCHEMA_SECTION = MODULE_NAME
 PROJECT_ID = 'project_id'
 DATASET_NAME = 'dataset_name'
 JSON_KEY = 'json_key'
@@ -1066,7 +1067,7 @@ class DataPumpJobsDataSource(data_sources.SynchronousQuery):
             crypto.XsrfTokenManager.create_xsrf_token(XSRF_ACTION_NAME))
         template_values['exit_url'] = urllib.urlencode({
             'exit_url': 'dashboard?%s' % urllib.urlencode({
-                'action': 'analytics_data_pump'})})
+                'action': DASHBOARD_ACTION})})
         source_classes = [
           ds for ds in data_sources.Registry.get_rest_data_source_classes()
           if ds.exportable()]
@@ -1103,13 +1104,13 @@ class DashboardExtension(object):
         # Register a new Analytics sub-tab for showing data pump status and
         # start/stop buttons.
         data_pump_visualization = analytics.Visualization(
-            'data_pumps', MODULE_TITLE, 'data_pump.html',
+            MODULE_NAME, MODULE_TITLE, 'data_pump.html',
             data_source_classes=[DataPumpJobsDataSource])
         dashboard.DashboardHandler.add_sub_nav_mapping(
-            'analytics', 'data_pump', MODULE_TITLE,
-            action='analytics_data_pump',
+            'analytics', MODULE_NAME, MODULE_TITLE,
+            action=DASHBOARD_ACTION,
             contents=analytics.TabRenderer([data_pump_visualization]),
-             placement=1000, sub_group_name='advanced')
+            placement=1000, sub_group_name=MODULE_NAME)
 
         def post_action(handler):
             cls(handler).post_data_pump()
@@ -1142,7 +1143,7 @@ class DashboardExtension(object):
                 for generator_class in data_source_class.required_generators():
                     generator_class(self.handler.app_context).cancel()
         self.handler.redirect(self.handler.get_action_url(
-            'analytics_data_pump', fragment=source_name))
+            DASHBOARD_ACTION, fragment=source_name))
 
     def __init__(self, handler):
         self.handler = handler

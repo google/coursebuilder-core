@@ -72,7 +72,7 @@ class AnalyticsTabsWithNoJobs(actions.TestBase):
     def test_blank_peer_review_tab_no_mr(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics_peer_review')
+        self.get('dashboard?action=peer_review')
 
     def test_blank_students_tab_with_mr(self):
         config.Registry.test_overrides[
@@ -100,7 +100,7 @@ class AnalyticsTabsWithNoJobs(actions.TestBase):
             mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.name] = True
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        self.get('dashboard?action=analytics_peer_review')
+        self.get('dashboard?action=peer_review')
 
 
 class ProgressAnalyticsTest(actions.TestBase):
@@ -208,7 +208,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         # Submit all analytics.
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics_peer_review')
+        response = self.get('dashboard?action=peer_review')
         response = response.forms[
             'gcb-generate-analytics-data'].submit().follow()
 
@@ -253,7 +253,7 @@ class ProgressAnalyticsTest(actions.TestBase):
     def test_cancel_map_reduce(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics_peer_review')
+        response = self.get('dashboard?action=peer_review')
         response = response.forms[
             'gcb-run-visualization-peer_review'].submit().follow()
 

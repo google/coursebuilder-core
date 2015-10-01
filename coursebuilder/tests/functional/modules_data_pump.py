@@ -1184,7 +1184,7 @@ class BigQueryInteractionTests(InteractionTests):
 
 class UserInteractionTests(InteractionTests):
 
-    URL = '/data_pump/dashboard?action=analytics_data_pump'
+    URL = '/data_pump/dashboard?action=data_pump'
 
     def test_no_data_pump_settings(self):
         course_settings = self.app_context.get_environ()
