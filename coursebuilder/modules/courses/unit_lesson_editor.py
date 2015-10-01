@@ -274,7 +274,7 @@ class UnitLessonEditor(object):
     def _render_edit_form_for(
         cls, handler, rest_handler_cls, title, schema, additional_dirs=None,
         annotations_dict=None, delete_xsrf_token='delete-unit',
-        extra_js_files=None, extra_css_files=None):
+        delete_message=None, extra_js_files=None, extra_css_files=None):
         """Renders an editor form for a given REST handler class."""
         annotations_dict = annotations_dict or []
         schema_json = schema.get_json_schema()
@@ -316,6 +316,7 @@ class UnitLessonEditor(object):
             key, rest_url, exit_url,
             extra_args=extra_args,
             delete_url=delete_url, delete_method=delete_method,
+            delete_message=delete_message,
             read_only=not handler.app_context.is_editable_fs(),
             required_modules=rest_handler_cls.REQUIRED_MODULES,
             additional_dirs=extend_list(additional_dirs, 'ADDITIONAL_DIRS'),
@@ -332,7 +333,9 @@ class UnitLessonEditor(object):
         """Shows unit editor."""
         return cls._render_edit_form_for(
             handler, UnitRESTHandler, 'Unit', UnitRESTHandler.get_schema(
-                courses.Course(handler), int(handler.request.get('key'))))
+                courses.Course(handler), int(handler.request.get('key'))),
+            delete_message='Are you sure you want to delete this unit? '
+            'Deleting the unit will also delete any lessons it contains.')
 
     @classmethod
     def get_edit_custom_unit(cls, handler):
