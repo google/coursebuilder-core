@@ -739,6 +739,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
         for name in sorted(registered.keys()):
             count += 1
             item = registered[name]
+            if item.deprecated:
+                continue
+
             has_environ_value, unused_environ_value = item.get_environ_value()
 
             # figure out what kind of override this is

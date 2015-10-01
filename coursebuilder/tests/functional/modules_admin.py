@@ -17,6 +17,7 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 from controllers import sites
+from models import config
 from models import courses
 from tests.functional import actions
 
@@ -102,3 +103,27 @@ class AdminDashboardTabTests(actions.TestBase):
         # we should not see admin features
         self.assertNotIn('application_id', response.body)
         self.assertNotIn('Modules', response.body)
+
+    def test_deprecated_setting_hidden(self):
+
+        def add_setting(deprecated):
+            return config.ConfigProperty(
+                'gcb_test_property', bool, 'doc string',
+                label='Test Property Label', deprecated=deprecated)
+
+        def delete_setting(setting):
+            del config.Registry.registered[setting.name]
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+
+        # Setting should be visible when not deprecated.
+        setting = add_setting(deprecated=False)
+        response = self.get('admin?action=settings')
+        self.assertIn(setting.label, response.body)
+        delete_setting(setting)
+
+        # Setting should not be shown when deprecated.
+        setting = add_setting(deprecated=True)
+        response = self.get('admin?action=settings')
+        self.assertNotIn(setting.label, response.body)
+        delete_setting(setting)

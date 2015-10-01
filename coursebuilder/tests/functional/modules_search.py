@@ -437,3 +437,23 @@ class SearchTest(search_unit_test.SearchTestBase):
             self.assertEquals(2, len(snippets))  # Expect no Engish hits
             self.assertIn('page about French dogs', _text(snippets[0]))
             self.assertIn('lesson about French dogs', _text(snippets[1]))
+
+    def test_cron(self):
+        app_context = sites.get_all_courses()[0]
+        app_context.set_current_locale('en_US')
+        course = courses.Course(None, app_context=app_context)
+        actions.login('admin@google.com', is_admin=True)
+
+        # Call cron URL without indexing enabled; expect 0 results found.
+        self.get(search.CronIndexCourse.URL)
+        self.execute_all_deferred_tasks()
+        response = search.fetch(course, 'color')
+        self.assertEquals(0, response['total_found'])
+
+        # Call cron URL with indexing enabled; expect results.
+        with actions.OverriddenEnvironment(
+            {'course': {search.AUTO_INDEX_SETTING: 'True'}}):
+            self.get(search.CronIndexCourse.URL)
+        self.execute_all_deferred_tasks()
+        response = search.fetch(course, 'color')
+        self.assertEquals(1, response['total_found'])

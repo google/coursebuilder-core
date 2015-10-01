@@ -32,6 +32,7 @@ import webapp2
 import appengine_config
 from common import crypto
 from common import safe_dom
+from common import schema_fields
 from controllers import sites
 from controllers import utils
 from models import config
@@ -48,12 +49,11 @@ from google.appengine.ext import db
 
 MODULE_NAME = 'Full Text Search'
 
-CAN_INDEX_ALL_COURSES_IN_CRON = config.ConfigProperty(
+DEPRECATED = config.ConfigProperty(
     'gcb_can_index_automatically', bool, safe_dom.Text(
-        'Whether the search module can automatically index the course daily '
-        'using a cron job. If enabled, this job would index the course '
-        'incrementally so that only new items or items which have not been '
-        'recently indexed are indexed.'),
+        'This property has been deprecated; it is retained so that we '
+        'will not generate no-such-variable error messages for existing '
+        'installations that have this property set.'),
     default_value=False, label='Automatically index search')
 SEARCH_QUERIES_MADE = counters.PerfCounter(
     'gcb-search-queries-made',
@@ -71,6 +71,9 @@ RESULTS_LIMIT = 10
 GCB_SEARCH_FOLDER_NAME = os.path.normpath('/modules/search/')
 
 MAX_RETRIES = 5
+
+# Name of a per-course setting determining whether automatic indexing is enabled
+AUTO_INDEX_SETTING = 'auto_index'
 
 # I18N: Message displayed on search results page when error occurs.
 SEARCH_ERROR_TEXT = gettext.gettext('Search is currently unavailable.')
@@ -402,40 +405,34 @@ def _post_index_course(handler):
     handler.redirect('/dashboard?action=settings_search')
 
 
-class CronHandler(utils.BaseHandler):
-    """Iterates through all courses and starts an indexing job for each one.
+class CronIndexCourse(utils.AbstractAllCoursesCronHandler):
+    """Index courses where auto-indexing is enabled.
 
     All jobs should be submitted through the transactional check_job_and_submit
     method to prevent multiple index operations from running at the same time.
     If an index job is currently running when this cron job attempts to start
     one, this operation will be a noop for that course.
     """
+    URL = '/cron/search/index_courses'
 
-    def get(self):
-        """Start an index job for each course."""
-        cron_logger = logging.getLogger('modules.search.cron')
-        self.response.headers['Content-Type'] = 'text/plain'
+    @classmethod
+    def is_globally_enabled(cls):
+        return True
 
-        if CAN_INDEX_ALL_COURSES_IN_CRON.value:
-            counter = 0
-            for context in sites.get_all_courses():
-                namespace = context.get_namespace_name()
-                counter += 1
-                try:
-                    check_job_and_submit(context, incremental=True)
-                except db.TransactionFailedError as e:
-                    cron_logger.info(
-                        'Failed to submit job #%s in namespace %s: %s',
-                        counter, namespace, e)
-                else:
-                    cron_logger.info(
-                        'Index job #%s submitted for namespace %s.',
-                        counter, namespace)
-            cron_logger.info('All %s indexing jobs started; cron job complete.',
-                             counter)
-        else:
-            cron_logger.info('Automatic indexing disabled. Cron job halting.')
-        self.response.write('OK\n')
+    @classmethod
+    def is_enabled_for_course(cls, app_context):
+        course_settings = app_context.get_environ().get('course')
+        return course_settings and course_settings.get(AUTO_INDEX_SETTING)
+
+    def cron_action(self, app_context, unused_global_state):
+        try:
+            check_job_and_submit(app_context, incremental=True)
+            logging.info('Index submitted for namespace %s.',
+                        app_context.get_namespace_name())
+        except db.TransactionFailedError as e:
+            logging.info(
+                'Failed to submit re-index job in namespace %s: %s',
+                app_context.get_namespace_name(), e)
 
 
 @db.transactional(xg=True)
@@ -502,11 +499,22 @@ def register_module():
 
     global_routes = [
         ('/modules/search/assets/.*', AssetsHandler),
-        ('/cron/search/index_courses', CronHandler)
+        (CronIndexCourse.URL, CronIndexCourse)
     ]
     namespaced_routes = [
         ('/search', SearchHandler)
     ]
+
+    auto_index_enabled = schema_fields.SchemaField(
+        'course:' + AUTO_INDEX_SETTING, 'Auto-Index Course', 'boolean',
+        description='Whether the search module can automatically index the '
+        'course daily using a cron job. If enabled, this job will index the '
+        'course incrementally so that only new items or items which have not '
+        'been recently indexed are added.',
+        i18n=False, optional=True)
+    course_settings_fields = [
+        lambda course: auto_index_enabled
+        ]
 
     def notify_module_enabled():
         dashboard.DashboardHandler.add_sub_nav_mapping(
@@ -514,6 +522,8 @@ def register_module():
             contents=_get_search, placement=1000)
         dashboard.DashboardHandler.add_custom_post_action(
             'index_course', _post_index_course)
+        courses.Course.OPTIONS_SCHEMA_PROVIDERS[
+            courses.Course.SCHEMA_SECTION_COURSE] += course_settings_fields
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

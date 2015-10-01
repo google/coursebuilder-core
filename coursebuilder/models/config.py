@@ -57,7 +57,7 @@ class ConfigProperty(object):
     def __init__(
         self, name, value_type, doc_string,
         default_value=None, multiline=False, validator=None,
-        after_change=None, label=None):
+        after_change=None, label=None, deprecated=False):
         """Create a new global config property.
 
         These properties are persisted as ConfigPropertyEntity in the default
@@ -85,6 +85,10 @@ class ConfigProperty(object):
               directly modified).  This function takes two one parameters:
               the ConfigProperty instance, and the previous value.
           label: A friendly display name.
+          deprecated: True/False.  When a property is logically removed,
+              it should be marked as deprecated.  This will leave the name
+              known to the system so that we do not issue spurious warnings
+              about unknown properties (once per minute, on property refresh)
         """
 
         if value_type not in ALLOWED_TYPES:
@@ -98,6 +102,7 @@ class ConfigProperty(object):
         self._doc_string = doc_string
         self._default_value = value_type(default_value)
         self._after_change = after_change
+        self._deprecated = deprecated
 
         errors = []
         if self._validator and self._default_value:
@@ -191,6 +196,9 @@ class ConfigProperty(object):
     def value(self):
         return self.get_value(db_overrides=Registry.get_overrides())
 
+    @property
+    def deprecated(self):
+        return self._deprecated
 
 class ValidateLength(object):
 
