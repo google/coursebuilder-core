@@ -407,3 +407,42 @@ describe('editing a role in the role editor', function() {
     expect($("#b").is(":visible")).toBe(false);
   })
 });
+
+describe('the toggle feedback button', function() {
+  beforeEach(function() {
+    this.fixture = $(
+      '<div>' +
+      '  <div class="feedback"></div>' +
+      '</div>'
+    );
+    $('body').empty().append(this.fixture);
+    this.feedbackField = {
+      divEl: this.fixture.find('.feedback').get(0),
+      getValue: function() {},
+      setValue: function(value) {}
+    };
+  });
+  it('is a button in the DOM', function() {
+    expect(this.fixture.find('button')).not.toExist();
+    addToggleFeedbackButton(this.feedbackField);
+    expect(this.fixture.find('button')).toExist();
+  });
+  it('is only added once', function() {
+    addToggleFeedbackButton(this.feedbackField);
+    expect(this.fixture.find('button').length).toEqual(1);
+    addToggleFeedbackButton(this.feedbackField);
+    expect(this.fixture.find('button').length).toEqual(1);
+    addToggleFeedbackButton(this.feedbackField);
+    expect(this.fixture.find('button').length).toEqual(1);
+  });
+  it('toggles the feedback visibility', function() {
+    addToggleFeedbackButton(this.feedbackField);
+    var button = this.fixture.find('button');
+    var feedback = this.fixture.find('.feedback');
+    expect(feedback).toBeVisible();
+    button.click();
+    expect(feedback).not.toBeVisible();
+    button.click();
+    expect(feedback).toBeVisible();
+  });
+});

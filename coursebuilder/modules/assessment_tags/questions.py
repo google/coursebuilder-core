@@ -241,7 +241,9 @@ class QuestionTag(tags.BaseTag):
 
     @classmethod
     def extra_js_files(cls):
-        return ['questions_popup.js', 'mc_question_editor_lib.js']
+        return [
+            'question_editor_lib.js', 'mc_question_editor_lib.js',
+            'sa_question_editor_lib.js', 'questions_popup.js']
 
     @classmethod
     def extra_css_files(cls):

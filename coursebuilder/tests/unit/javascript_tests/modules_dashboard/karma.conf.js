@@ -51,6 +51,7 @@ module.exports = function(config) {
         served: true
       },
       'modules/dashboard/templates/mc_question_editor_lib.js',
+      'modules/dashboard/templates/question_editor_lib.js',
       'modules/dashboard/resources/js/view.js',
       'modules/dashboard/templates/role_editor.js',
     ],

@@ -62,11 +62,13 @@ $(function() {
       $('#sa_tab').hide();
       $('#select_tab').text(CHANGE_QUESTION_TAB_LABEL);
       $('#cb-oeditor-form .mc-container').addClass('is-active');
+      mcUpdateToggleFeedbackButtons(_env.form.getFieldByName('mc_tab'));
     } else if (quType == 'sa') {
       $('#mc_tab').hide();
       $('#sa_tab').text(EDIT_TAB_LABEL).addClass('is-active');
       $('#select_tab').text(CHANGE_QUESTION_TAB_LABEL);
       $('#cb-oeditor-form .sa-container').addClass('is-active');
+      saUpdateToggleFeedbackButtons(_env.form.getFieldByName('sa_tab'));
     } else {
       $('#mc_tab').text(CREATE_MC_TAB_LABEL);
       $('#sa_tab').text(CREATE_SA_TAB_LABEL);
@@ -160,6 +162,7 @@ $(function() {
     bindSelect();
     getFormData(formData.quid).then(function() {
         initMcQuestionEditor(_env.form.getFieldByName('mc_tab'));
+        initSaQuestionEditor(_env.form.getFieldByName('sa_tab'));
     });
     _env.onSaveClick = saveFormData;
   }

@@ -124,7 +124,9 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
         'array-extras', 'gcb-rte', 'inputex-radio', 'inputex-select',
         'inputex-string', 'inputex-list', 'inputex-number', 'inputex-hidden',
         'inputex-checkbox']
-    EXTRA_JS_FILES = ['mc_question_editor_lib.js', 'mc_question_editor.js']
+    EXTRA_JS_FILES = [
+        'question_editor_lib.js', 'mc_question_editor_lib.js',
+        'mc_question_editor.js']
 
     ADDITIONAL_DIRS = []
 
@@ -194,8 +196,9 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list',
         'inputex-hidden', 'inputex-integer', 'inputex-number']
 
-    EXTRA_JS_FILES = ['sa_question_editor.js']
-
+    EXTRA_JS_FILES = [
+        'question_editor_lib.js', 'sa_question_editor.js',
+        'sa_question_editor_lib.js']
 
     ADDITIONAL_DIRS = []
 

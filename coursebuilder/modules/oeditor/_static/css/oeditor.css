@@ -486,7 +486,9 @@ div.sa-grader-text input {
   width: 506px;  /* allow for 2px padding */
   margin: 0;
 }
-div.sa-grader-text, div.sa-grader-feedback {
+div.sa-grader-text,
+div.sa-grader-feedback,
+.sa-grader-container .toggle-feedback {
   margin-left: 67px;
 }
 div.sa-grader-question {
