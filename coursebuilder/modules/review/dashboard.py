@@ -19,13 +19,13 @@ __author__ = 'Sean Lip (sll@google.com)'
 import os
 import urllib
 
-from controllers.lessons import create_readonly_assessment_params
 from models import courses
 from models import models
 from models import review
 from models import roles
 from models import student_work
 from models import transforms
+from modules.assessments.assessments import create_readonly_assessment_params
 from modules.review import domain
 
 

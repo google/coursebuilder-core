@@ -1098,6 +1098,45 @@ def set_image_or_video_exists(template_value, course):
             template_value['show_image'] = True
 
 
+class UnitLeftNavElements(object):
+
+    def __init__(self, course, unit):
+        self._urls = []
+        self._index_by_label = {}
+
+        if unit.pre_assessment:
+            self._index_by_label['assessment.%d' % unit.pre_assessment] = (
+                len(self._urls))
+            self._urls.append('unit?unit=%s&assessment=%d' % (
+                unit.unit_id, unit.pre_assessment))
+
+        for lesson in course.get_lessons(unit.unit_id):
+            self._index_by_label['lesson.%s' % lesson.lesson_id] = (
+                len(self._urls))
+            self._urls.append('unit?unit=%s&lesson=%s' % (
+                unit.unit_id, lesson.lesson_id))
+
+            if lesson.activity and lesson.activity_listed:
+                self._index_by_label['activity.%s' % lesson.lesson_id] = (
+                    len(self._urls))
+                self._urls.append('unit?unit=%s&lesson=%s&activity=true' % (
+                    unit.unit_id, lesson.lesson_id))
+
+        if unit.post_assessment:
+            self._index_by_label['assessment.%d' % unit.post_assessment] = (
+                len(self._urls))
+            self._urls.append('unit?unit=%s&assessment=%d' % (
+                unit.unit_id, unit.post_assessment))
+
+    def get_url_by(self, item_type, item_id, offset):
+        index = self._index_by_label['%s.%s' % (item_type, item_id)]
+        index += offset
+        if index >= 0 and index < len(self._urls):
+            return self._urls[index]
+        else:
+            return None
+
+
 class PreviewHandler(BaseHandler):
     """Handler for viewing course preview."""
 

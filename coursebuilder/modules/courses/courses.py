@@ -17,7 +17,6 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 from common import resource
-from controllers import assessments
 from controllers import lessons
 from controllers import utils
 from models import content
@@ -71,8 +70,6 @@ def register_module():
     courses_routes = [
         ('/', lessons.CourseHandler),
         ('/activity', lessons.UnitHandler),
-        ('/answer', assessments.AnswerHandler),
-        ('/assessment', lessons.AssessmentHandler),
         ('/course', lessons.CourseHandler),
         ('/forum', utils.ForumHandler),
         ('/preview', utils.PreviewHandler),

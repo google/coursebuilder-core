@@ -29,6 +29,7 @@ from utils import CAN_PERSIST_TAG_EVENTS
 from utils import HUMAN_READABLE_DATETIME_FORMAT
 from utils import set_image_or_video_exists
 from utils import TRANSIENT_STUDENT
+from utils import UnitLeftNavElements
 from utils import XsrfTokenManager
 
 from common import jinja_utils
@@ -44,6 +45,8 @@ from models.models import Student
 from models.models import StudentProfileDAO
 from models.review import ReviewUtils
 from models.student_work import StudentWorkUtils
+from modules.assessments.assessments import AssessmentHandler
+from modules.assessments.assessments import create_readonly_assessment_params
 from modules.review import domain
 from tools import verify
 
@@ -156,16 +159,6 @@ def get_unit_and_lesson_id_from_url(handler, url):
         lesson_id = get_first_lesson(handler, unit_id).lesson_id
 
     return unit_id, lesson_id
-
-
-def create_readonly_assessment_params(content, answers):
-    """Creates parameters for a readonly assessment in the view templates."""
-    assessment_params = {
-        'preamble': content['assessment']['preamble'],
-        'questionsList': content['assessment']['questionsList'],
-        'answers': answers,
-    }
-    return assessment_params
 
 
 def filter_assessments_used_within_units(units):
@@ -337,44 +330,6 @@ class UnitHandler(BaseHandler):
     # safe_dom object. If it returns None, the default title is used instead.
     _LESSON_TITLE_PROVIDER = None
 
-    class UnitLeftNavElements(object):
-
-        def __init__(self, course, unit):
-            self._urls = []
-            self._index_by_label = {}
-
-            if unit.pre_assessment:
-                self._index_by_label['assessment.%d' % unit.pre_assessment] = (
-                    len(self._urls))
-                self._urls.append('unit?unit=%s&assessment=%d' % (
-                    unit.unit_id, unit.pre_assessment))
-
-            for lesson in course.get_lessons(unit.unit_id):
-                self._index_by_label['lesson.%s' % lesson.lesson_id] = (
-                    len(self._urls))
-                self._urls.append('unit?unit=%s&lesson=%s' % (
-                    unit.unit_id, lesson.lesson_id))
-
-                if lesson.activity and lesson.activity_listed:
-                    self._index_by_label['activity.%s' % lesson.lesson_id] = (
-                        len(self._urls))
-                    self._urls.append('unit?unit=%s&lesson=%s&activity=true' % (
-                        unit.unit_id, lesson.lesson_id))
-
-            if unit.post_assessment:
-                self._index_by_label['assessment.%d' % unit.post_assessment] = (
-                    len(self._urls))
-                self._urls.append('unit?unit=%s&assessment=%d' % (
-                    unit.unit_id, unit.post_assessment))
-
-        def get_url_by(self, item_type, item_id, offset):
-            index = self._index_by_label['%s.%s' % (item_type, item_id)]
-            index += offset
-            if index >= 0 and index < len(self._urls):
-                return self._urls[index]
-            else:
-                return None
-
     @classmethod
     def set_lesson_title_provider(cls, lesson_title_provider):
         if cls._LESSON_TITLE_PROVIDER:
@@ -470,7 +425,7 @@ class UnitHandler(BaseHandler):
         self.init_template_values(self.app_context.get_environ())
 
         display_content = []
-        left_nav_elements = UnitHandler.UnitLeftNavElements(
+        left_nav_elements = UnitLeftNavElements(
             self.get_course(), unit)
 
         if unit.unit_header:
@@ -579,7 +534,7 @@ class UnitHandler(BaseHandler):
 
     def _show_single_element(self, student, unit, lesson, assessment):
         # Add markup to page which depends on the kind of content.
-        left_nav_elements = UnitHandler.UnitLeftNavElements(
+        left_nav_elements = UnitLeftNavElements(
             self.get_course(), unit)
 
         # need 'activity' to be True or False, and not the string 'true' or None
@@ -705,211 +660,6 @@ class UnitHandler(BaseHandler):
             # after the student visits the page for the first time.
             self.get_course().get_progress_tracker().put_html_accessed(
                 student, unit.unit_id, lesson.lesson_id)
-
-
-class AssessmentHandler(BaseHandler):
-    """Handler for generating assessment page."""
-
-    # pylint: disable=too-many-statements
-    def get(self):
-        """Handles GET requests."""
-        student = self.personalize_page_and_get_enrolled(
-            supports_transient_student=True)
-        if not student:
-            return
-
-        # Extract incoming args, binding to self if needed.
-        assessment_name = self.request.get('name')
-        self.unit_id = assessment_name
-        course = self.get_course()
-        unit = course.find_unit_by_id(self.unit_id)
-        if not unit:
-            self.error(404)
-            return
-
-        # If assessment is used as a pre/post within a unit, go see that view.
-        parent_unit = course.get_parent_unit(self.unit_id)
-        if parent_unit:
-            self.redirect('/unit?unit=%s&assessment=%s' %
-                          (parent_unit.unit_id, self.unit_id))
-            return
-
-        # If the assessment is not currently available, and the user does not
-        # have the permission to see drafts redirect to the main page.
-        if (not unit.now_available and
-            not custom_modules.can_see_drafts(self.app_context)):
-            self.redirect('/')
-            return
-
-        self.template_value['main_content'] = (
-            self.get_assessment_content(student, course, unit, as_lesson=False))
-        self.template_value['assessment_name'] = assessment_name
-        self.template_value['unit_id'] = self.unit_id
-        self.template_value['navbar'] = {'course': True}
-        self.render('assessment_page.html')
-
-    def get_assessment_content(self, student, course, unit, as_lesson):
-        model_version = course.get_assessment_model_version(unit)
-        assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
-        self.template_value['model_version'] = model_version
-
-        if model_version == courses.ASSESSMENT_MODEL_VERSION_1_4:
-            configure_readonly_view = self.configure_readonly_view_1_4
-            configure_active_view = self.configure_active_view_1_4
-            get_review_received = self.get_review_received_1_4
-        elif model_version == courses.ASSESSMENT_MODEL_VERSION_1_5:
-            configure_readonly_view = self.configure_readonly_view_1_5
-            configure_active_view = self.configure_active_view_1_5
-            get_review_received = self.get_review_received_1_5
-        else:
-            raise ValueError('Bad assessment model version: %s' % model_version)
-
-        self.template_value['unit_id'] = unit.unit_id
-        self.template_value['now_available'] = unit.now_available
-        self.template_value['transient_student'] = student.is_transient
-        self.template_value['as_lesson'] = as_lesson
-        self.template_value['assessment_title'] = unit.title
-        self.template_value['assessment_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('assessment-post'))
-        self.template_value['event_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('event-post'))
-
-        self.template_value['grader'] = unit.workflow.get_grader()
-
-        readonly_view = False
-        due_date_exceeded = False
-        submission_contents = None
-        review_steps_for = []
-
-        submission_due_date = unit.workflow.get_submission_due_date()
-        if submission_due_date:
-            self.template_value['submission_due_date'] = (
-                submission_due_date.strftime(HUMAN_READABLE_DATETIME_FORMAT))
-
-            time_now = datetime.datetime.now()
-            if time_now > submission_due_date:
-                readonly_view = True
-                due_date_exceeded = True
-                self.template_value['due_date_exceeded'] = True
-
-        if course.needs_human_grader(unit) and not student.is_transient:
-            self.template_value['matcher'] = unit.workflow.get_matcher()
-
-            rp = course.get_reviews_processor()
-            review_steps_by = rp.get_review_steps_by(
-                unit.unit_id, student.get_key())
-
-            # Determine if the student can see others' reviews of his/her work.
-            if (ReviewUtils.has_completed_enough_reviews(
-                    review_steps_by, unit.workflow.get_review_min_count())):
-                submission_and_review_steps = (
-                    rp.get_submission_and_review_steps(
-                        unit.unit_id, student.get_key()))
-
-                if submission_and_review_steps:
-                    submission_contents = submission_and_review_steps[0]
-                    review_steps_for = submission_and_review_steps[1]
-
-                review_keys_for_student = []
-                for review_step in review_steps_for:
-                    can_show_review = (
-                        review_step.state == domain.REVIEW_STATE_COMPLETED
-                        and not review_step.removed
-                        and review_step.review_key
-                    )
-
-                    if can_show_review:
-                        review_keys_for_student.append(review_step.review_key)
-
-                reviews_for_student = rp.get_reviews_by_keys(
-                    unit.unit_id, review_keys_for_student)
-
-                self.template_value['reviews_received'] = [get_review_received(
-                    unit, review) for review in reviews_for_student]
-            else:
-                submission_contents = student_work.Submission.get_contents(
-                    unit.unit_id, student.get_key())
-
-            # Determine whether to show the assessment in readonly mode.
-            if submission_contents or due_date_exceeded:
-                readonly_view = True
-                configure_readonly_view(unit, submission_contents)
-
-        if not course.needs_human_grader(unit):
-            if not student.is_transient:
-                submission = student_work.Submission.get(
-                    unit.unit_id, student.get_key())
-                if submission is not None:
-                    submission_contents = transforms.loads(submission.contents)
-                    if submission.updated_on is not None:
-                        self.template_value['submission_date'] = (
-                            submission.updated_on.strftime(
-                                HUMAN_READABLE_DATETIME_FORMAT))
-                    if due_date_exceeded and unit.workflow.show_score():
-                        score = submission_contents.get('rawScore', 0)
-                        weight = submission_contents.get('totalWeight', 0)
-                        percent = submission_contents.get('percentScore', 0)
-                        self.template_value['show_score'] = True
-                        self.template_value['score'] = '%d/%d (%d%%)' % (
-                            score, weight, percent)
-                    if due_date_exceeded and unit.workflow.show_feedback():
-                        self.template_value['show_feedback'] = True
-
-            if unit.workflow.is_single_submission() and submission is not None:
-                readonly_view = True
-
-            if readonly_view:
-                configure_readonly_view(unit, submission_contents)
-
-        if not readonly_view:
-            if not student.is_transient:
-                submission_contents = student_work.Submission.get_contents(
-                    unit.unit_id, student.get_key())
-            configure_active_view(unit, submission_contents)
-
-        self.template_value['assessment_attempted'] = bool(submission_contents)
-
-        return self.render_template_to_html(
-            self.template_value, 'assessment.html')
-
-    def configure_readonly_view_1_4(self, unit, submission_contents):
-        self.template_value['readonly_student_assessment'] = (
-            create_readonly_assessment_params(
-                self.get_course().get_assessment_content(unit),
-                StudentWorkUtils.get_answer_list(submission_contents)))
-
-    def configure_readonly_view_1_5(self, unit, submission_contents):
-        self.template_value['readonly_student_assessment'] = True
-        self.template_value['html_content'] = unit.html_content
-        self.template_value['html_saved_answers'] = transforms.dumps(
-            submission_contents)
-
-    def configure_active_view_1_4(self, unit, submission_contents):
-        self.template_value['assessment_script_src'] = (
-            self.get_course().get_assessment_filename(unit.unit_id))
-        if submission_contents:
-            # If a previous submission exists, reinstate it.
-            self.template_value['saved_answers'] = transforms.dumps(
-                StudentWorkUtils.get_answer_list(submission_contents))
-
-    def configure_active_view_1_5(self, unit, submission_contents):
-        self.template_value['html_content'] = unit.html_content
-        self.template_value['html_check_answers'] = unit.html_check_answers
-        if submission_contents:
-            # If a previous submission exists, reinstate it.
-            self.template_value['html_saved_answers'] = transforms.dumps(
-                submission_contents)
-
-    def get_review_received_1_4(self, unit, review):
-        return create_readonly_assessment_params(
-            self.get_course().get_review_content(unit),
-            StudentWorkUtils.get_answer_list(review))
-
-    def get_review_received_1_5(self, unit, review):
-        return {
-            'content': unit.html_review_form,
-            'saved_answers': transforms.dumps(review)
-        }
 
 
 class ReviewDashboardHandler(BaseHandler):

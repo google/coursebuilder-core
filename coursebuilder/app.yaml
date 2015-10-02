@@ -20,6 +20,7 @@ env_variables:
     modules.activity_tag.activity_tag
     modules.admin.admin
     modules.announcements.announcements
+    modules.assessments.assessments
     modules.assessment_tags.questions
     modules.balancer.balancer
     modules.code_tags.code_tags
