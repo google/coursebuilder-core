@@ -18,6 +18,7 @@ $(function() {
       // we can at least ensure that it disappears briskly.
       cbShowMsg = function() { ; }
     }
+    return do_delete;
   }
 
   cb_global.onSaveComplete = function() {
