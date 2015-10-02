@@ -2363,17 +2363,11 @@ class Course(object):
             'course:instructor_details', 'Course Instructor Details', 'html',
             optional=True))
         opts.add_property(schema_fields.SchemaField(
-            'course:main_video:url', 'Course Video', 'url',
-            description='URL for the preview video shown on the course '
-            'homepage (e.g. https://www.youtube.com/embed/Kdg2drcUjYI ).',
-            optional=True))
+            'course:main_image:url', 'Image or Video', 'string',
+            description='URL for the preview image or YouTube video shown on '
+            'the course homepage.', optional=True,))
         opts.add_property(schema_fields.SchemaField(
-            'course:main_image:url', 'Course Image', 'string',
-            description='URL for the preview image shown on the course '
-            'homepage. This will only be shown if no course video is '
-            'specified.', optional=True,))
-        opts.add_property(schema_fields.SchemaField(
-            'course:main_image:alt_text', 'Course Image Alt Text', 'string',
+            'course:main_image:alt_text', 'Image Description', 'string',
             description='Alt text for the preview image on the course '
             'homepage.', optional=True))
 

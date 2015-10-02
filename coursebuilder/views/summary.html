@@ -18,24 +18,22 @@
 
 </div>
 
-{% if video_exists or image_exists %}
-  <div class="gcb-col-5">
-
-    {% if video_exists %}
-      {# I18N: Alt text for an embedded YouTube video player. #}
-      <div class="gcb-video-container">
-          <iframe class="youtube-player" type="text/html"
-              title="{{ gettext('YouTube Video Player') }}"
-              src="{{course_info.course.main_video.url}}"
-              frameborder="0"
-              allowfullscreen="allowfullscreen">
-          </iframe>
-      </div>
-    {% else%}
-      <img height="300"
-          alt="{{course_info.course.main_image.alt_text}}"
-          src="{{course_info.course.main_image.url}}">
-    {% endif %}
-
+{% if show_video %}
+  <div id="main-image" class="gcb-col-5">
+    {# I18N: Alt text for an embedded YouTube video player. #}
+    <div class="gcb-video-container">
+        <iframe class="youtube-player" type="text/html"
+            title="{{ gettext('YouTube Video Player') }}"
+            src="{{course_info.course.main_image.url}}"
+            frameborder="0"
+            allowfullscreen="allowfullscreen">
+        </iframe>
+    </div>
+  </div>
+{% elif show_image %}
+  <div id="main-image" class="gcb-col-5">
+    <img height="300"
+        alt="{{course_info.course.main_image.alt_text}}"
+        src="{{course_info.course.main_image.url}}">
   </div>
 {% endif %}

@@ -27,6 +27,7 @@ from utils import CAN_PERSIST_ACTIVITY_EVENTS
 from utils import CAN_PERSIST_PAGE_EVENTS
 from utils import CAN_PERSIST_TAG_EVENTS
 from utils import HUMAN_READABLE_DATETIME_FORMAT
+from utils import set_image_or_video_exists
 from utils import TRANSIENT_STUDENT
 from utils import XsrfTokenManager
 
@@ -313,14 +314,7 @@ class CourseHandler(BaseHandler):
             self.template_value['transient_student'] = student.is_transient
             self.template_value['progress'] = tracker.get_unit_progress(student)
             course = self.app_context.get_environ()['course']
-            self.template_value['video_exists'] = bool(
-                'main_video' in course and
-                'url' in course['main_video'] and
-                course['main_video']['url'])
-            self.template_value['image_exists'] = bool(
-                'main_image' in course and
-                'url' in course['main_image'] and
-                course['main_image']['url'])
+            set_image_or_video_exists(self.template_value, course)
 
             self.template_value['is_progress_recorded'] = is_progress_recorded(
                 self, student)

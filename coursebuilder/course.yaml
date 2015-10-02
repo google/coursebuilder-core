@@ -41,14 +41,12 @@ course:
   instructor_details: 'Daniel Russell <br> Senior Research Scientist <br> Google, Inc.'
 
   # You can choose whether you want a video or an image on the main page.
-  # If you specify both a video and an image link, then the video will take
-  # priority. The image alt text allows the image to be understood by text-only
-  # screen readers.
-  main_video:
-    url: https://www.youtube.com/embed/Kdg2drcUjYI?rel=0
+  # If you specify a URL for a YouTube video then the video will be displayed
+  # in a video player. Otherwide the URL will be shown as an image. The image
+  # alt text allows the image to be understood by text-only screen readers.
   main_image:
-    url: /assets/img/banner1.png
-    alt_text: Photo of Dan Russell
+    url: https://www.youtube.com/embed/Kdg2drcUjYI?rel=0
+    alt_text:
 
   # Forum email. For details, see
   #

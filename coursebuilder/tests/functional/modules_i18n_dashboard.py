@@ -1086,7 +1086,6 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
                 'course:title': 'My New Course',
                 'course:blurb': 'Awesome course',
                 'course:instructor_details': '',
-                'course:main_video:url': '',
                 'course:main_image:url': '',
                 'course:main_image:alt_text': '',
                 'base:privacy_terms_url': 'Privacy Policy'}

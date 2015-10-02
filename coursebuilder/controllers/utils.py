@@ -64,6 +64,8 @@ COURSE_INFO_KEY = 'course_info'
 GUEST_LOCALE_COOKIE = 'cb-user-locale'
 GUEST_LOCALE_COOKIE_MAX_AGE_SEC = 48 * 60 * 60  # 48 hours
 
+_YOUTUBE_URL_REGEX = r'//(www\.youtube\.com|youtu\.be)/'
+
 TRANSIENT_STUDENT = TransientStudent()
 
 # Whether to output debug info into the page.
@@ -1083,6 +1085,19 @@ class BaseRESTHandler(CourseHandler, RESTHandlerMixin):
             transforms.send_json_response(self, 412, message)
 
 
+def set_image_or_video_exists(template_value, course):
+    """Insert template settings for course main image or main video."""
+    show_image_or_video = bool(
+        'main_image' in course and
+        'url' in course['main_image'] and
+        course['main_image']['url'])
+    if show_image_or_video:
+        if re.search(_YOUTUBE_URL_REGEX, unicode(course['main_image']['url'])):
+            template_value['show_video'] = True
+        else:
+            template_value['show_image'] = True
+
+
 class PreviewHandler(BaseHandler):
     """Handler for viewing course preview."""
 
@@ -1111,14 +1126,7 @@ class PreviewHandler(BaseHandler):
         self.template_value['show_registration_page'] = True
 
         course = self.app_context.get_environ()['course']
-        self.template_value['video_exists'] = bool(
-            'main_video' in course and
-            'url' in course['main_video'] and
-            course['main_video']['url'])
-        self.template_value['image_exists'] = bool(
-            'main_image' in course and
-            'url' in course['main_image'] and
-            course['main_image']['url'])
+        set_image_or_video_exists(self.template_value, course)
 
         if user:
             profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())

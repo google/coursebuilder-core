@@ -596,7 +596,7 @@ class InfrastructureTest(actions.TestBase):
 
         new_course_keys = [
             'admin_user_emails', 'blurb', 'forum_email', 'google_analytics_id',
-            'google_tag_manager_id', 'instructor_details', 'main_video']
+            'google_tag_manager_id', 'instructor_details']
         init_settings = dst_course_a.app_context.get_environ()
         assert 'assessment_confirmations' not in init_settings
         for key in new_course_keys:
@@ -2339,6 +2339,31 @@ class StudentAspectTest(actions.TestBase):
             self.assertIsNotNone(policy_link)
             self.assertEqual(
                 policy_link.get('href'), 'http://example.com/privacy')
+
+        # Course video should be shown if present
+        with actions.OverriddenEnvironment({
+            'course': {
+                'main_image': {
+                    'url': 'https://www.youtube.com/embed/Kdg2drcUjYI'}}
+        }):
+            course_page = self.parse_html_string(self.get('course').body)
+            self.assertEquals(
+                'https://www.youtube.com/embed/Kdg2drcUjYI',
+                course_page.find(
+                    './/*[@id="main-image"]//*[@class="gcb-video-container"]'
+                    '//iframe').get('src'))
+
+        # Course image should be shown if present
+        with actions.OverriddenEnvironment({
+            'course': {
+                'main_image': {
+                    'url': '/assets/img/banner1.png'}}
+        }):
+            course_page = self.parse_html_string(self.get('course').body)
+            self.assertEquals(
+                '/assets/img/banner1.png',
+                course_page.find('.//*[@id="main-image"]//img').get('src'))
+
 
     def test_view_announcements(self):
         """Test student aspect of announcements."""
