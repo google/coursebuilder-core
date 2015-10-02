@@ -332,7 +332,8 @@ def get_criteria_editor_schema(course):
             'is_peer_assessment_table': is_peer_assessment_table,
             'className': 'settings-list',
             'listAddLabel': 'Add a criterion',
-            'listRemoveLabel': 'Delete criterion'})
+            'listRemoveLabel': 'Delete criterion'},
+        optional=True)
 
 
 TOTAL_CERTIFICATES = 'total_certificates'

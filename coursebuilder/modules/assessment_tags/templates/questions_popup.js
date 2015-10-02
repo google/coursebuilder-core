@@ -53,6 +53,9 @@ $(function() {
     _env.form.setValue(payload);
     _env.form.getFieldByName('weight_holder').setValue({weight: weight});
 
+    // InputEx sets invalid field class on load but we want this only on submit
+    $('.inputEx-invalid').removeClass('inputEx-invalid');
+
     tabBar.find('a').show().removeClass('is-active');
     $('#cb-oeditor-form .mdl-tabs__panel').removeClass('is-active');
 
@@ -77,9 +80,15 @@ $(function() {
     }
   }
 
+  function validateFormData() {
+    // Validate only the form fields in the selected tab
+    var activeTab = tabBar.find('.is-active').attr('id');
+    return _env.form.getFieldByName(activeTab).validate();
+  }
+
   function saveFormData() {
     var finishSave = $.Deferred();
-    activeTab = tabBar.find('.is-active').attr('id');
+    var activeTab = tabBar.find('.is-active').attr('id');
 
     if (activeTab == 'select_tab') {
       _env.form.getFieldByName('quid').setValue(_env.form
@@ -164,6 +173,7 @@ $(function() {
         initMcQuestionEditor(_env.form.getFieldByName('mc_tab'));
         initSaQuestionEditor(_env.form.getFieldByName('sa_tab'));
     });
+    _env.validate = validateFormData;
     _env.onSaveClick = saveFormData;
   }
 

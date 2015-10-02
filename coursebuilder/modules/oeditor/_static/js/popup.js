@@ -19,6 +19,13 @@ FramedEditorControls.prototype = {
       value: 'Save',
       className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
       onClick: function() {
+        var valid = that._env.validate
+            ? that._env.validate() : that._env.form.validate();
+        if (! valid) {
+          cbShowMsg('Cannot save because some required fields have not been ' +
+              'set.');
+          return;
+        }
         that._maybePerformAction(that._env.onSaveClick, function() {
           that._frameProxy.setValue(that._env.form.getValue());
           that._frameProxy.submit();
@@ -50,6 +57,10 @@ FramedEditorControls.prototype = {
   populateForm: function() {
     this._frameProxy.init(this._env.schema);
     this._env.form.setValue(this._frameProxy.getValue());
+
+    // InputEx sets invalid field class on load but we want this only on submit
+    this._Y.all('.inputEx-invalid').removeClass('inputEx-invalid');
+
     cbHideMsg();
     document.getElementById("formContainer").style.display = "block";
     this._frameProxy.onLoad();

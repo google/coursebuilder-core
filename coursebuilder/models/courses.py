@@ -2342,11 +2342,13 @@ class Course(object):
             'Syntax: Entries may be separated with any combination of '
             'tabs, spaces, commas, or newlines.  Existing values using "[" and '
             '"]" around email addresses continues to be supported.  '
-            'Regular expressions are not supported.', i18n=False))
+            'Regular expressions are not supported.', i18n=False,
+            optional=True))
 
         opts.add_property(schema_fields.SchemaField(
             'course:browsable', 'Make Course Browsable', 'boolean',
-            description='Allow non-registered users to view course content.'))
+            description='Allow non-registered users to view course content.',
+            optional=True))
 
         opts.add_property(schema_fields.SchemaField(
             'course:blurb', 'Course Details', 'html',
@@ -2431,7 +2433,8 @@ class Course(object):
             'page encouraging them to sign up for the course.'))
         registration_opts.add_property(schema_fields.SchemaField(
             'reg_form:additional_registration_fields', 'Additional Fields',
-            'html', description='Additional registration text or questions.'))
+            'html', description='Additional registration text or questions.',
+            optional=True))
         registration_opts.add_property(schema_fields.SchemaField(
             'course:whitelist', 'Whitelisted Students', 'text',
             description='A list of email addresses of students who may register'
@@ -2444,7 +2447,7 @@ class Course(object):
             'the course. Must also set "Welcome notifications sender" for '
             'messages to be sent successfully, and you must have both the '
             'notifications and unsubscribe modules active (which is the '
-            'default)'))
+            'default)', optional=True))
         registration_opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_sender',
             'Welcome notifications sender', 'string', optional=True,
@@ -2482,20 +2485,24 @@ class Course(object):
             'unit:hide_lesson_navigation_buttons',
             'Hide Lesson Navigation Buttons',
             'boolean', description='Whether to hide the \'Previous Page\' and '
-            ' \'Next Page\' buttons below lesson and activity pages'))
+            ' \'Next Page\' buttons below lesson and activity pages',
+            optional=True))
         unit_opts.add_property(schema_fields.SchemaField(
             'unit:hide_assessment_navigation_buttons',
             'Hide Assessment Navigation Buttons',
             'boolean', description='Whether to hide the \'Previous Page\' and '
-            ' \'Next Page\' buttons below pre/post assessments within units'))
+            ' \'Next Page\' buttons below pre/post assessments within units',
+            optional=True))
         unit_opts.add_property(schema_fields.SchemaField(
             'unit:show_unit_links_in_leftnav', 'Show Units in Side Bar',
             'boolean', description='Whether to show the unit links in the side '
-            'navigation bar.'))
+            'navigation bar.',
+            optional=True))
         unit_opts.add_property(schema_fields.SchemaField(
             'course:display_unit_title_without_index',
             'Hide Unit Numbering', 'boolean',
-            description='Omit the unit number when displaying unit titles.'))
+            description='Omit the unit number when displaying unit titles.',
+            optional=True))
 
         def must_contain_one_string_substitution(value, errors):
             if value and len(re.findall(r'%s', value)) != 1:
@@ -2532,7 +2539,8 @@ class Course(object):
         i18n_opts.add_property(schema_fields.SchemaField(
             'course:locale', 'Base language', 'string',
             description=messages.BASE_LANGUAGE_DESCRIPTION, i18n=False,
-            select_data=locale_data_for_select))
+            select_data=locale_data_for_select,
+            optional=True))
         locale_type = schema_fields.FieldRegistry(
             'Language',
             extra_schema_dict_values={'className': 'settings-list-item'})
@@ -2556,7 +2564,8 @@ class Course(object):
             extra_schema_dict_values={
                 'className': 'settings-list',
                 'listAddLabel': 'Add a language',
-                'listRemoveLabel': 'Delete language'}))
+                'listRemoveLabel': 'Delete language'},
+            optional=True))
         i18n_opts.add_property(schema_fields.SchemaField(
             'course:prevent_translation_edits',
             'Prevent translation edits',

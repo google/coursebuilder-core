@@ -282,7 +282,7 @@ def get_course_settings_fields(unused_course):
     return schema_fields.SchemaField(
         'unit:ratings_module:enabled', 'Ratings widget', 'boolean',
         description='Whether to show user rating widget at the bottom of '
-        'each unit and lesson.')
+        'each unit and lesson.', optional=True)
 
 
 def register_module():

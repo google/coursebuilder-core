@@ -93,7 +93,8 @@ def options_schema_provider(unused_course):
         extra_schema_dict_values={
             'className': 'settings-list wide',
             'listAddLabel': 'Add a tab',
-            'listRemoveLabel': 'Delete tab'})
+            'listRemoveLabel': 'Delete tab'},
+        optional=True)
 
 
 def _get_current_student():

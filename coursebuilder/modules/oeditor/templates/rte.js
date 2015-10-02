@@ -541,7 +541,8 @@ function bindEditorField(Y) {
     // editors. Poll the div to catch all possible changes.
     setInterval(function() {
       var rect = that.editorsDiv.getBoundingClientRect();
-      that.activeEditor.setSize(rect.width, rect.height);
+      that.activeEditor.setSize(
+          rect.width - 2 /* border */, rect.height - 2 /* border */);
     }, 100);
   };
   EditorField.prototype.setValue = function(value, sendUpdatedEvt) {

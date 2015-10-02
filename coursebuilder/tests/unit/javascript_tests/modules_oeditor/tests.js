@@ -133,7 +133,13 @@ describe('FramedEditorControls', function() {
   };
 
   beforeEach(function() {
-    Y = {};
+    Y = {
+      all: function(selector) {
+        return {
+          removeClass: function(className) {}
+        };
+      }
+    };
 
     frameProxy = {
       init: function() {},
@@ -146,7 +152,8 @@ describe('FramedEditorControls', function() {
     env = {
       form: {
         getValue: function() {},
-        setValue: function() {}
+        setValue: function() {},
+        validate: function() { return true }
       },
       schema: {},
       onFormLoad: function() {}

@@ -71,6 +71,26 @@ div.inputEx-CheckBox input {
 div.inputEx-DateField {
   width: 480px;
 }
+.inputEx-required > .inputEx-label > label:after {
+  /* Mark required fields */
+  content: "*";
+  color: #f00;
+}
+div.inputEx-invalid > div.inputEx-label label {
+  /* Supress inputEx's error-bang image. */
+  background: inherit;
+  padding-left: inherit;
+}
+div.inputEx-invalid > div.inputEx-label {
+  /* Supress inputEx's changes to label style. */
+  color: inherit;
+  font-weight: inherit;
+}
+.inputEx-invalid > .inputEx-Field > .inputEx-StringField-wrapper > input[type="text"],
+.inputEx-invalid > .cb-editor-field .editors-div {
+  border: solid 1px red !important;
+  box-shadow: 0 0 5px #f00;
+}
 button.oeditor-control,
 a.inputEx-Button,
 div.inputEx-Button,
@@ -102,6 +122,12 @@ a.inputEx-Button.inputEx-Button-disabled {
   transition: background 200ms;
   -webkit-transition: background 200ms;
   -moz-transition: background 200ms;
+}
+.required-fields-message {
+  margin: 10px 0;
+}
+.required-fields-message .asterisk {
+  color: #f00;
 }
 
 .gcb-pull-right {
@@ -377,6 +403,7 @@ div.mc-selection,
 div.set-scores-toggle,
 .toggle-feedback {
   margin-left: 87px;
+  float: none;
 }
 div.mc-bool-option {
   margin-left: 115px;
@@ -399,9 +426,10 @@ div.mc-container div.inputEx-label {
   height: 100px;
 }
 
-div.mc-description input {
+#cb-oeditor-form .mc-description input {
   width: 546px;  /* allow for 2px padding */
   margin: 0;
+  border: solid 1px #999;
 }
 div.set-scores-toggle {
   margin-top: 10px;
@@ -480,16 +508,19 @@ div.sa-description,
 div.sa-rows,
 div.sa-columns {
   margin-left: 87px;
+  float: none;
 }
-div.sa-description input,
-div.sa-grader-text input {
+#cb-oeditor-form .sa-description input,
+#cb-oeditor-form .sa-grader-text input {
   width: 506px;  /* allow for 2px padding */
   margin: 0;
+  border: solid 1px #999;
 }
 div.sa-grader-text,
 div.sa-grader-feedback,
 .sa-grader-container .toggle-feedback {
   margin-left: 67px;
+  float: none;
 }
 div.sa-grader-question {
   width: 660px;
@@ -645,7 +676,6 @@ div.label-none-in-group {
 }
 
 div.CodeMirror {
-  border: solid 1px #999999;
   height: 200px;
 }
 
@@ -655,9 +685,16 @@ div.CodeMirror {
   z-index: 10;
 }
 
-#cb-oeditor-form .yui-editor-container {
-  border-color: #ccc;
+#cb-oeditor-form .editors-div {
+  /* Add a border to the CB Editor Field */
+  border: solid 1px #ccc;
   border-radius: 2px;
+}
+#cb-oeditor-form .yui-editor-container,
+.preview-editor > iframe,
+.CodeMirror {
+  /* Remove borders from the CB Editor Field subcomponents */
+  border: none;
 }
 #cb-oeditor-form .yui-toolbar-container {
   height: 0;

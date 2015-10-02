@@ -305,6 +305,15 @@ function moveMarkedFormElementsOutOfFieldset(Y) {
   });
 }
 
+function addRequiredFieldsMessage(Y) {
+  var buttonBar = Y.one('#cb-oeditor-form > div.inputEx-Form-buttonBar');
+  var requiredFieldsMessage = '<div class="required-fields-message">' +
+      'Fields marked with an asterisk (<span class="asterisk">*</span>) ' +
+      'are required.' +
+      '</div>';
+  Y.one('#cb-oeditor-form').insertBefore(requiredFieldsMessage, buttonBar);
+}
+
 function getEditCustomTagUrl(env, tagName) {
   var url = 'oeditorpopup?action=edit_custom_tag';
   url += '&tag_name=' + escape(tagName);
@@ -494,6 +503,7 @@ function mainYuiFunction(Y) {
   editorControls.populateForm(Y);
 
   moveMarkedFormElementsOutOfFieldset(Y);
+  addRequiredFieldsMessage(Y);
 
   // Show a confirmation box if there are unsaved changes.
   if (! isFramed()) {
@@ -531,6 +541,13 @@ TopLevelEditorControls.prototype = {
   },
 
   _onSaveClick: function() {
+    var valid = this._env.validate
+        ? this._env.validate() : this._env.form.validate();
+    if (! valid) {
+      cbShowMsg('Cannot save because some required fields have not been set.');
+      return;
+    }
+
     cbShowMsg("Saving...");
     disableAllControlButtons(this._env.form);
 
@@ -857,6 +874,10 @@ TopLevelEditorControls.prototype = {
     var payload = parseJson(json.payload);
     this._env.form.setValue(payload);
     this._restoreEditorFieldState();
+
+    // InputEx sets classes on invalid fields on load but we want this only
+    // on submit
+    this._Y.all('.inputEx-invalid').removeClass('inputEx-invalid');
 
     // Put some hints on the field wrapper divs about what type of input field
     // is being used.

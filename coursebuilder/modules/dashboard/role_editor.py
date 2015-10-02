@@ -80,7 +80,8 @@ class RoleRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
         item_array = schema_fields.FieldArray(
             module_name, module_name, item_type=item_type,
-            extra_schema_dict_values={'className': 'permission-module'})
+            extra_schema_dict_values={'className': 'permission-module'},
+            optional=True)
 
         subschema.add_property(item_array)
 
@@ -93,7 +94,7 @@ class RoleRESTHandler(dto_editor.BaseDatastoreRestHandler):
         schema.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         schema.add_property(schema_fields.SchemaField(
-            'name', 'Name', 'string', optional=True))
+            'name', 'Name', 'string', optional=False))
         schema.add_property(schema_fields.SchemaField(
             'description', 'Description', 'text', optional=True))
         # TODO(gdejonghe) Use user.id instead of user.email

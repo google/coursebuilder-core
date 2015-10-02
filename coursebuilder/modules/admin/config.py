@@ -46,10 +46,10 @@ SCHEMA_JSON_TEMPLATE = """
         "type": "object",
         "description": "Configuration Property Override",
         "properties": {
-            "label" : {"type": "string"},
-            "name" : {"type": "string"},
+            "label" : {"optional": true, "type": "string"},
+            "name" : {"optional": true, "type": "string"},
             "value": {"optional": true, "type": "%s"},
-            "is_draft": {"type": "boolean"}
+            "is_draft": {"optional": true, "type": "boolean"}
         }
     }
     """

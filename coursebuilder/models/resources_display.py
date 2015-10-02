@@ -95,9 +95,9 @@ class ResourceQuestionBase(resource.AbstractResourceHandler):
     @classmethod
     def _add_html_field_to(
             cls, registry, name, label, class_name, supportCustomTags,
-            description=None):
+            description=None, optional=True):
         registry.add_property(schema_fields.SchemaField(
-            name, label, 'html', optional=True,
+            name, label, 'html', optional=optional,
             extra_schema_dict_values={
                 'supportCustomTags': supportCustomTags,
                 'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
@@ -130,7 +130,7 @@ class ResourceSAQuestion(ResourceQuestionBase):
             'version', '', 'string', optional=True, hidden=True))
         cls._add_html_field_to(
             sa_question, 'question', 'Question', 'sa-question',
-            supportCustomTags)
+            supportCustomTags, optional=False)
         cls._add_html_field_to(
             sa_question, 'hint', 'Hint', 'sa-hint', supportCustomTags)
         cls._add_html_field_to(
@@ -168,8 +168,9 @@ class ResourceSAQuestion(ResourceQuestionBase):
             select_data=cls.GRADER_TYPES,
             extra_schema_dict_values={'className': 'sa-grader-score'}))
         grader_type.add_property(schema_fields.SchemaField(
-            'response', 'Response', 'string', optional=True,
-            extra_schema_dict_values={'className': 'sa-grader-text'}))
+            'response', 'Response', 'string', optional=False,
+            extra_schema_dict_values={
+                'className': 'inputEx-Field sa-grader-text'}))
         cls._add_html_field_to(
             grader_type, 'feedback', 'Feedback', 'sa-grader-feedback',
             supportCustomTags)
@@ -179,13 +180,15 @@ class ResourceSAQuestion(ResourceQuestionBase):
             extra_schema_dict_values={
                 'className': 'sa-grader-container',
                 'listAddLabel': 'Add an answer',
-                'listRemoveLabel': 'Delete this answer'})
+                'listRemoveLabel': 'Delete this answer'},
+            optional=True)
 
         sa_question.add_property(graders_array)
 
         sa_question.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True,
-            extra_schema_dict_values={'className': 'sa-description'},
+            'description', 'Description', 'string', optional=False,
+            extra_schema_dict_values={
+                'className': 'inputEx-Field sa-description'},
             description=messages.QUESTION_DESCRIPTION))
 
         return sa_question
@@ -210,7 +213,7 @@ class ResourceMCQuestion(ResourceQuestionBase):
             'version', '', 'string', optional=True, hidden=True))
         cls._add_html_field_to(
             mc_question, 'question', 'Question', 'mc-question',
-            supportCustomTags)
+            supportCustomTags, optional=False)
         cls._add_html_field_to(
             mc_question, 'defaultFeedback', 'Feedback', 'mc-question',
             supportCustomTags)
@@ -249,13 +252,14 @@ class ResourceMCQuestion(ResourceQuestionBase):
             extra_schema_dict_values={
                 'className': 'mc-choice-score', 'value': '0'}))
         cls._add_html_field_to(
-            choice_type, 'text', 'Text', 'mc-choice-text', supportCustomTags)
+            choice_type, 'text', 'Text', 'mc-choice-text', supportCustomTags,
+            optional=False)
         cls._add_html_field_to(
             choice_type, 'feedback', 'Feedback', 'mc-choice-feedback',
             supportCustomTags)
 
         choices_array = schema_fields.FieldArray(
-            'choices', '', item_type=choice_type,
+            'choices', '', item_type=choice_type, optional=True,
             extra_schema_dict_values={
                 'className': 'mc-choice-container',
                 'listAddLabel': 'Add a choice',
@@ -264,8 +268,9 @@ class ResourceMCQuestion(ResourceQuestionBase):
         mc_question.add_property(choices_array)
 
         mc_question.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'string', optional=True,
-            extra_schema_dict_values={'className': 'mc-description'},
+            'description', 'Description', 'string', optional=False,
+            extra_schema_dict_values={
+                'className': 'inputEx-Field mc-description'},
             description=messages.QUESTION_DESCRIPTION))
 
         return mc_question
@@ -808,7 +813,7 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
         ret.add_property(schema_fields.SchemaField(
             'type', 'Type', 'string', editable=False, hidden=True))
         ret.add_property(schema_fields.SchemaField(
-            'title', 'Title', 'string', optional=True))
+            'title', 'Title', 'string', optional=False))
         ret.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string',
             description=str(messages.UNIT_DESCRIPTION_DESCRIPTION),
@@ -817,7 +822,8 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
             'label_groups', 'Labels',
             item_type=LabelGroupsHelper.make_labels_group_schema_field(),
             extra_schema_dict_values={
-                'className': 'inputEx-Field label-group-list'}))
+                'className': 'inputEx-Field label-group-list'},
+            optional=True))
         ret.add_property(schema_fields.SchemaField(
             'is_draft', 'Status', 'boolean',
             select_data=[(True, DRAFT_TEXT),
@@ -898,7 +904,7 @@ class ResourceAssessment(ResourceUnitBase):
         course_opts.add_property(schema_fields.SchemaField(
             'weight', 'Weight', 'number',
             description=str(messages.ASSESSMENT_WEIGHT_DESCRIPTION),
-            i18n=False, optional=True))
+            i18n=False, optional=False))
         course_opts.add_property(schema_fields.SchemaField(
             'content', 'Assessment Content (JavaScript)', 'text', optional=True,
             description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION),
