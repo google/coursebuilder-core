@@ -123,7 +123,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.module_config_test.ManipulateAppYamlFileTest': 8,
     'tests.functional.module_config_test.ModuleIncorporationTest': 12,
     'tests.functional.module_config_test.ModuleManifestTest': 7,
-    'tests.functional.modules_admin.AdminDashboardTabTests': 5,
+    'tests.functional.modules_admin.AdminDashboardTabTests': 6,
     'tests.functional.modules_analytics.ClusterRESTHandlerTest': 29,
     'tests.functional.modules_analytics.ClusteringGeneratorTests': 6,
     'tests.functional.modules_analytics.ClusteringTabTests': 7,
