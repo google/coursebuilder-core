@@ -12,42 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module providing limited permissions for individual runs of courses."""
+"""Limited role for teaching assistants to modify availability/grading."""
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 from models import courses
-from models import custom_modules
 from models import models
 from models import permissions
 from models import resources_display
 from models import roles
 from modules.courses import constants
-from modules.courses import courses as modules_courses
-
-MODULE_NAME = 'Runs'
-TA_PERMISSION_NAME = 'teaching_assistant'
-TA_ROLE_NAME = 'Teaching Assistant'
-IS_RUN = 'is_run'
 
 custom_module = None
 
 
 def maybe_create_teaching_assistant_role():
-    # TODO(mgainer): Hook this up to code that creates a run.
+    # TODO(mgainer): Hook this up to code that creates a run.  Must be called
+    # from a context that has the course namespace already set.
+
     for role in models.RoleDAO.get_all():
-        if (role.name == TA_ROLE_NAME and
-            role.permissions.get(MODULE_NAME, []) == [TA_ROLE_NAME]):
+        if (role.name == constants.TEACHING_ASSISTANT_ROLE_NAME and
+            role.permissions.get(custom_module.name, []) ==
+            constants.TEACHING_ASSISTANT_ROLE_PERMISSIONS):
             return
 
     role_dto = models.RoleDTO(None, {
-        'name': TA_ROLE_NAME,
+        'name': constants.TEACHING_ASSISTANT_ROLE_NAME,
         'permissions': {
-            MODULE_NAME: [
-                TA_PERMISSION_NAME],
-            modules_courses.MODULE_NAME: [
-                constants.COURSE_OUTLINE_REORDER_PERMISSION],
-            },
+            custom_module.name: constants.TEACHING_ASSISTANT_ROLE_PERMISSIONS
+        },
         'description': ('Limited permissions to modify short-running '
                         'courses copied from master versions.  This '
                         'includes re-setting assignment due dates to '
@@ -56,23 +49,22 @@ def maybe_create_teaching_assistant_role():
     roles.RoleDAO.save(role_dto)
 
 
-def permissions_callback(app_context):
-    return [roles.Permission(
-        TA_PERMISSION_NAME,
-        'Limited permissions to modify settings on short-running courses.')
-    ]
+def on_module_enabled(courses_custom_module, course_permissions):
+    global custom_module  # pylint: disable=global-statement
+    custom_module = courses_custom_module
 
-
-def notify_module_enabled():
-
-    # Roles configuration
-    roles.Roles.register_permissions(custom_module, permissions_callback)
+    course_permissions.append(roles.Permission(
+        constants.TEACHING_ASSISTANT_PERMISSION,
+        'Set unit availability and grading.  '
+        'Suitable for teaching assistants.'))
 
     # Roles with TA permission can edit course availability, start/end dates.
     permissions.SchemaPermissionRegistry.add(
         constants.SCOPE_COURSE_SETTINGS,
         permissions.SimpleSchemaPermission(
-            custom_module, TA_PERMISSION_NAME, editable_list=[
+            custom_module, constants.TEACHING_ASSISTANT_PERMISSION,
+            editable_list=[
+                'course/course:start_date',
                 'course/course:now_available',
                 'course/course:browsable',
                 ]))
@@ -81,7 +73,7 @@ def notify_module_enabled():
     permissions.SchemaPermissionRegistry.add(
         constants.SCOPE_UNIT,
         permissions.SimpleSchemaPermission(
-            custom_module, TA_PERMISSION_NAME,
+            custom_module, constants.TEACHING_ASSISTANT_PERMISSION,
             readable_list=[
                 'type',
                 'title',
@@ -94,7 +86,7 @@ def notify_module_enabled():
     permissions.SchemaPermissionRegistry.add(
         constants.SCOPE_LINK,
         permissions.SimpleSchemaPermission(
-            custom_module, TA_PERMISSION_NAME,
+            custom_module, constants.TEACHING_ASSISTANT_PERMISSION,
             readable_list=[
                 'type',
                 'title',
@@ -107,11 +99,11 @@ def notify_module_enabled():
     permissions.SchemaPermissionRegistry.add(
         constants.SCOPE_ASSESSMENT,
         permissions.SimpleSchemaPermission(
-            custom_module, TA_PERMISSION_NAME,
+            custom_module, constants.TEACHING_ASSISTANT_PERMISSION,
             readable_list=[
-                'type',
-                'title',
-                'description',
+                'assessment/type',
+                'assessment/title',
+                'assessment/description',
                 ],
             editable_list=[
                 'assessment/is_draft',
@@ -135,15 +127,3 @@ def notify_module_enabled():
                 'assessment/%s' % resources_display.workflow_key(
                     courses.REVIEW_WINDOW_MINS_KEY),
                 ]))
-
-
-def register_module():
-    global custom_module  # pylint: disable=global-statement
-    custom_module = custom_modules.Module(
-        MODULE_NAME,
-        'Reduced editing privileges for short-lived runs of courses cloned '
-        'from a master version.',
-        [],
-        [],
-        notify_module_enabled=notify_module_enabled)
-    return custom_module

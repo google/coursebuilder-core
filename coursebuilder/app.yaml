@@ -43,7 +43,6 @@ env_variables:
     modules.questionnaire.questionnaire
     modules.rating.rating
     modules.review.review
-    modules.runs.runs
     modules.search.search
     modules.skill_map.skill_map
     modules.unsubscribe.unsubscribe

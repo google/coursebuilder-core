@@ -27,6 +27,7 @@ from models import student_labels
 from modules.courses import admin_preferences_editor
 from modules.courses import assets
 from modules.courses import outline
+from modules.courses import roles as course_roles
 from modules.courses import settings
 from modules.courses import unit_lesson_editor
 from tools import verify
@@ -58,6 +59,7 @@ def register_module():
         outline.on_module_enabled(custom_module, permissions)
         assets.on_module_enabled()
         admin_preferences_editor.on_module_enabled()
+        course_roles.on_module_enabled(custom_module, permissions)
         settings.on_module_enabled(custom_module, permissions)
         unit_lesson_editor.on_module_enabled(custom_module, permissions)
 
