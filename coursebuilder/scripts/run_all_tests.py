@@ -147,6 +147,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_core_tags.TagsInclude': 8,
     'tests.functional.modules_core_tags.TagsMarkdown': 1,
     'tests.functional.modules_courses.AccessDraftsTestCase': 2,
+    'tests.functional.modules_courses.BackgroundImportTests': 7,
     'tests.functional.modules_courses.CourseAccessPermissionsTests': 7,
     'tests.functional.modules_courses.ReorderAccess': 2,
     'tests.functional.modules_courses.UnitLessonEditorAccess': 3,

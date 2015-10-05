@@ -1,0 +1,58 @@
+<style>
+  .not-displayed {
+    display: none;
+  }
+</style>
+<div id="import-course-cancel">
+  <form id="import-course-cancel-form" action="dashboard" method="POST">
+    <input type="hidden" name="action" value="cancel_import">
+    <input type="hidden" name="xsrf_token" value="{{ xsrf_token }}">
+    <button class="gcb-button gcb-icon-button" type="submit">
+      <span class="icon spinner md md-settings md-spin"></span>
+      <span>Cancel Course Import</span>
+    </button>
+  </form>
+</div>
+<div id="import-course-ready" class="not-displayed">
+  <a href="dashboard?action=outline">
+    <button class="gcb-button gcb-icon-button" type="submit">
+      <span class="icon md-refresh"></span>
+      <span>View Imported Course Content</span>
+    </button>
+  </a>
+</div>
+<script>
+$(function() {
+  var REFRESH_RATE_MS = 5000;
+  var is_running = true;
+
+  function checkImportProgress() {
+    if (is_running) {
+      $.ajax({
+        method: 'GET',
+        url: 'rest/core/jobs/status',
+        traditional: true,
+        data: {'name': '{{ job_name }}'},
+        dataType: 'text',
+        success: function(text) {
+          response = parseAjaxResponsePayload(text);
+          if (response.payload.running) {
+            $('#import-course-cancel').show()
+            $('#import-course-ready').hide()
+          } else {
+            $('#import-course-cancel').hide()
+            $('#import-course-ready').show()
+            is_running = false;
+          }
+          repeat();
+        }
+      });
+    }
+  }
+
+  function repeat() {
+    setTimeout(checkImportProgress, REFRESH_RATE_MS);
+  }
+  repeat();
+})
+</script>

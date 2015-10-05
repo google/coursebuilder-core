@@ -21,6 +21,7 @@ import urllib
 
 import jinja2
 
+from common import crypto
 from common import safe_dom
 from models import courses
 from models import custom_units
@@ -289,8 +290,13 @@ def _get_outline(handler):
     """Renders course outline view."""
 
     currentCourse = courses.Course(handler)
+    import_job = unit_lesson_editor.ImportCourseBackgroundJob(
+        handler.app_context, from_namespace=None)
+    import_job_running = import_job.is_active()
     can_add_to_course = (roles.Roles.is_course_admin(handler.app_context) and
-                         handler.app_context.is_editable_fs())
+                         handler.app_context.is_editable_fs() and
+                         not import_job_running)
+    sections = []
     outline_actions = []
     if can_add_to_course:
         outline_actions.append({
@@ -324,12 +330,22 @@ def _get_outline(handler):
                 'caption': 'Import',
                 'href': handler.get_action_url('import_course')
                 })
+    elif import_job_running:
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            unit_lesson_editor.UnitLessonEditor.ACTION_POST_CANCEL_IMPORT)
+        sections.append({
+            'pre': jinja2.Markup(
+                handler.get_template(
+                    'import_running.html', [os.path.dirname(__file__)]
+                    ).render({
+                        'xsrf_token': xsrf_token,
+                        'job_name': import_job.name,
+                    }))})
 
-    sections = [
-        {
-            'actions': outline_actions,
-            'pre': _render_course_outline_to_html(handler, currentCourse)}]
-
+    sections.append({
+        'actions': outline_actions,
+        'pre': _render_course_outline_to_html(handler, currentCourse)
+        })
     template_values = {
         'page_title': handler.format_title('Outline'),
         'alerts': handler.get_alerts(),

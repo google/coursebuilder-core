@@ -44,8 +44,10 @@ from common import utils as common_utils
 from common.crypto import XsrfTokenManager
 from models import courses
 from models import custom_modules
-from models import resources_display
+from models import jobs
 from models import models
+from models import resources_display
+from models import roles
 from models import transforms
 from models.config import ConfigProperty
 from models.courses import Course
@@ -1599,3 +1601,23 @@ class StudentLocaleRESTHandler(BaseRESTHandler):
                 max_age=GUEST_LOCALE_COOKIE_MAX_AGE_SEC)
 
         transforms.send_json_response(self, 200, 'OK')
+
+
+class JobStatusRESTHandler(BaseRESTHandler):
+    URL = '/rest/core/jobs/status'
+
+    def get(self):
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(self, 401, 'Unauthorized.')
+            return
+        # pylint: disable=protected-access
+        job_entity = jobs.DurableJobEntity._get_by_name(
+            self.request.get('name'))
+        result = {'running': bool(job_entity and not job_entity.has_finished)}
+        transforms.send_json_response(self, 200, 'Success.', result)
+
+
+def get_namespaced_handlers():
+    return [
+        (JobStatusRESTHandler.URL, JobStatusRESTHandler)
+    ]

@@ -19,6 +19,7 @@ __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 from common import utils as common_utils
 from common import crypto
 from controllers import sites
+from controllers import utils
 from models import courses
 from models import custom_modules
 from models import models
@@ -29,6 +30,7 @@ from modules.courses import unit_lesson_editor
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
+from google.appengine.ext import deferred
 
 
 class AccessDraftsTestCase(actions.TestBase):
@@ -591,3 +593,202 @@ class ReorderAccess(actions.TestBase):
             self.assertEquals(self.link.unit_id, units[0].unit_id)
             self.assertEquals(self.unit.unit_id, units[1].unit_id)
             self.assertEquals(self.assessment.unit_id, units[2].unit_id)
+
+
+class BackgroundImportTests(actions.TestBase):
+
+    FROM_COURSE_NAME = 'from_background_import'
+    FROM_NAMESPACE = 'ns_%s' % FROM_COURSE_NAME
+    TO_COURSE_NAME = 'to_background_import'
+    TO_NAMESPACE = 'ns_%s' % TO_COURSE_NAME
+    ADMIN_EMAIL = 'admin@foo.com'
+    UNIT_TITLE = 'Jabberwocky'
+
+    def setUp(self):
+        super(BackgroundImportTests, self).setUp()
+        self.from_context = actions.simple_add_course(
+            self.FROM_COURSE_NAME, self.ADMIN_EMAIL, 'From Course')
+        from_course = courses.Course(None, app_context=self.from_context)
+        unit = from_course.add_unit()
+        unit.title = self.UNIT_TITLE
+        from_course.save()
+
+        self.to_context = actions.simple_add_course(
+            self.TO_COURSE_NAME, self.ADMIN_EMAIL, 'To Course')
+        actions.login(self.ADMIN_EMAIL, is_admin=False)
+        self.import_start_url = '%s%s' % (
+            self.TO_COURSE_NAME,
+            unit_lesson_editor.ImportCourseRESTHandler.URI)
+        job_name = unit_lesson_editor.ImportCourseBackgroundJob(
+            self.to_context, None).name
+        self.import_status_url = '%s%s?name=%s' % (
+            self.TO_COURSE_NAME,
+            utils.JobStatusRESTHandler.URL,
+            job_name)
+        self.dashboard_url = '%s/dashboard' % self.TO_COURSE_NAME
+
+    def _initiate_import(self):
+        # GET and then POST to the clone-a-course REST handler.
+        response = transforms.loads(self.get(self.import_start_url).body)
+        payload = transforms.loads(response['payload'])
+        content = transforms.dumps({
+            'course': payload['course'],
+            })
+        request = transforms.dumps({
+            'xsrf_token': response['xsrf_token'],
+            'payload': content,
+            })
+        response = self.put(self.import_start_url, {'request': request})
+        self.assertEquals(transforms.loads(response.body)['status'], 200)
+
+    def _complete_import(self):
+        # Allow the import to complete.
+        self.execute_all_deferred_tasks()
+
+    def _cancel_import(self):
+        self.post(self.dashboard_url, {
+            'action':
+                unit_lesson_editor.UnitLessonEditor.ACTION_POST_CANCEL_IMPORT,
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                unit_lesson_editor.UnitLessonEditor.ACTION_POST_CANCEL_IMPORT),
+            })
+
+    def _verify_normal_add_controls_and_import_controls(self):
+        # Verify dashboard page has normal buttons as well as Import button
+        # when course is blank.  We should _not_ have wait-for-it buttons for
+        # import.
+        response = self.get(self.dashboard_url)
+        dom = self.parse_html_string(response.body)
+        controls = dom.findall('.//div[@class="gcb-button-toolbar"]/*')
+        control_ids = [f.get('id') for f in controls]
+        self.assertIn('add_unit', control_ids)
+        self.assertIn('add_assessment', control_ids)
+        self.assertIn('add_link', control_ids)
+        self.assertIn('import_course', control_ids)
+        self.assertIsNone(dom.find('.//div[@id="import-course-cancel"]'))
+        self.assertIsNone(dom.find('.//div[@id="import-course-ready"]'))
+
+    def _verify_normal_add_controls_with_no_import_controls(self):
+        # Verify dashboard page has normal Add buttons.  All import-related
+        # buttons should now be gone.
+        response = self.get(self.dashboard_url)
+        dom = self.parse_html_string(response.body)
+        controls = dom.findall('.//div[@class="gcb-button-toolbar"]/*')
+        control_ids = [f.get('id') for f in controls]
+        self.assertIn('add_unit', control_ids)
+        self.assertIn('add_assessment', control_ids)
+        self.assertIn('add_link', control_ids)
+        self.assertNotIn('import_course', control_ids)
+        self.assertIsNone(dom.find('.//div[@id="import-course-cancel"]'))
+        self.assertIsNone(dom.find('.//div[@id="import-course-ready"]'))
+
+    def _verify_imported_course_content_present(self):
+        # Also verify that the imported course's unit is there.
+        response = self.get(self.dashboard_url)
+        dom = self.parse_html_string(response.body)
+        name_items = dom.findall('.//div[@class="name"]/a')
+        names = [ni.text for ni in name_items]
+        self.assertIn(self.UNIT_TITLE, names)
+
+    def _verify_imported_course_content_absent(self):
+        # Also verify that the imported course's unit is there.
+        response = self.get(self.dashboard_url)
+        dom = self.parse_html_string(response.body)
+        name_items = dom.findall('.//div[@class="name"]/a')
+        names = [ni.text for ni in name_items]
+        self.assertNotIn(self.UNIT_TITLE, names)
+
+    def _verify_import_wait_controls_and_no_add_controls(self):
+        # Verify that the usual add/import buttons are *NOT* present.  Verify
+        # that while course import is pending, we have wait-for-it buttons.
+        response = self.get(self.dashboard_url)
+        dom = self.parse_html_string(response.body)
+        controls = dom.findall('.//div[@class="gcb-button-toolbar"]/*')
+        control_ids = [f.get('id') for f in controls]
+        self.assertNotIn('add_unit', control_ids)
+        self.assertNotIn('add_assessment', control_ids)
+        self.assertNotIn('add_link', control_ids)
+        self.assertNotIn('import_course', control_ids)
+        self.assertIsNotNone(dom.find('.//div[@id="import-course-cancel"]'))
+        self.assertIsNotNone(dom.find('.//div[@id="import-course-ready"]'))
+
+    def test_import_success(self):
+        self._verify_normal_add_controls_and_import_controls()
+        self._initiate_import()
+        self._verify_import_wait_controls_and_no_add_controls()
+        self._complete_import()
+        self._verify_normal_add_controls_with_no_import_controls()
+        self._verify_imported_course_content_present()
+
+    def test_import_cancel(self):
+        self._initiate_import()
+        self._verify_import_wait_controls_and_no_add_controls()
+        self._cancel_import()
+
+        # We should get our add controls back on the dashboard immediately,
+        # despite having the task still pending on the deferred queue.
+        # Should still have import controls, since we don't have any
+        # units in the course.
+        self._verify_normal_add_controls_and_import_controls()
+        self._verify_imported_course_content_absent()
+
+        # Run the queue to completion; we should *not* now see new course
+        # content; the queue handler should notice the cancellation and
+        # not commit the updated version of the course.
+        self._complete_import()
+        self._verify_imported_course_content_absent()
+
+    def test_import_cancel_import(self):
+        self._initiate_import()
+        self._cancel_import()
+        self._initiate_import()
+        self._complete_import()
+        self._verify_normal_add_controls_with_no_import_controls()
+        self._verify_imported_course_content_present()
+
+    def test_import_has_errors(self):
+        self._initiate_import()
+        try:
+            save_import_from = courses.Course.import_from
+            def fake_import_from(slf, src, errors):
+                errors.append('Fake error')
+            courses.Course.import_from = fake_import_from
+            with self.assertRaises(deferred.PermanentTaskFailure):
+                self._complete_import()
+        finally:
+            courses.Course.import_from = save_import_from
+        self._verify_normal_add_controls_and_import_controls()
+        self._verify_imported_course_content_absent()
+
+    def test_import_canceled_while_import_running(self):
+        self._initiate_import()
+        try:
+            save_import_from = courses.Course.import_from
+            def fake_import_from(slf, src, err):
+                job = unit_lesson_editor.ImportCourseBackgroundJob(
+                    self.to_context, None)
+                job.cancel()
+            courses.Course.import_from = fake_import_from
+            with self.assertRaises(deferred.PermanentTaskFailure):
+                self._complete_import()
+        finally:
+            courses.Course.import_from = save_import_from
+        self._verify_normal_add_controls_and_import_controls()
+        self._verify_imported_course_content_absent()
+
+    def test_cancel_import_not_admin(self):
+        actions.logout()
+        response = self.post(self.dashboard_url, {
+            'action':
+                unit_lesson_editor.UnitLessonEditor.ACTION_POST_CANCEL_IMPORT,
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                unit_lesson_editor.UnitLessonEditor.ACTION_POST_CANCEL_IMPORT),
+            })
+        self.assertEquals(302, response.status_int)
+
+    def test_cancel_import_no_xsrf(self):
+        response = self.post(self.dashboard_url, {
+            'action':
+                unit_lesson_editor.UnitLessonEditor.ACTION_POST_CANCEL_IMPORT,
+            }, expect_errors=True)
+        self.assertEquals(403, response.status_int)

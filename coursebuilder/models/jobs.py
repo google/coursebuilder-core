@@ -135,11 +135,22 @@ class DurableJobBase(object):
     def _pre_transaction_setup(self):
         return True  # All is well.
 
+    @property
+    def name(self):
+        return self._job_name
+
 
 class DurableJob(DurableJobBase):
 
     def run(self):
         """Override this method to provide actual business logic."""
+
+    @db.transactional
+    def _already_finished(self, sequence_num):
+        current_status = self.load()
+        return (sequence_num < current_status.sequence_num or
+                (sequence_num == current_status.sequence_num and
+                 current_status.has_finished))
 
     def main(self, sequence_num):
         """Main method of the deferred task."""
@@ -150,6 +161,13 @@ class DurableJob(DurableJobBase):
 
             time_started = time.time()
             try:
+                # Check we haven't been canceled before we start.
+                if self._already_finished(sequence_num):
+                    logging.info(
+                        'Job %s sequence %d already canceled or subsequent '
+                        'run completed; not running this version.',
+                        self._job_name, sequence_num)
+                    return
                 db.run_in_transaction(DurableJobEntity._start_job,
                                       self._job_name, sequence_num)
                 result = self.run()

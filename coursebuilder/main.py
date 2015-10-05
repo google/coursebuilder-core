@@ -42,7 +42,8 @@ custom_modules.register_core_module(
     analytics.get_global_handlers() +
     models.get_global_handlers(),
     analytics.get_namespaced_handlers() +
-    data_sources.get_namespaced_handlers())
+    data_sources.get_namespaced_handlers() +
+    utils.get_namespaced_handlers())
 
 # Register core components for data removal.
 models.register_for_data_removal()

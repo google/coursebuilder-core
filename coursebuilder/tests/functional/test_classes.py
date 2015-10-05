@@ -4075,7 +4075,8 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
                 {'request': transforms.dumps(request)}))
         response = self.put(import_put_url, {})
         assert_equals(200, response.status_int)
-        assert_contains('Imported.', response.body)
+        assert_contains('Importing.', response.body)
+        self.execute_all_deferred_tasks()
 
         # Check course is not empty.
         response = self.get('dashboard')

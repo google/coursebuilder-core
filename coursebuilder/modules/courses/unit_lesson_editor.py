@@ -27,6 +27,7 @@ from controllers import utils
 from models import courses
 from models import resources_display
 from models import custom_units
+from models import jobs
 from models import permissions
 from models import roles
 from models import transforms
@@ -34,6 +35,8 @@ from modules.courses import constants
 from modules.dashboard import dashboard
 from modules.oeditor import oeditor
 from tools import verify
+
+from google.appengine.ext import db
 
 custom_module = None  # reference to modules.courses.courses.custom_module
 
@@ -48,6 +51,7 @@ class UnitLessonEditor(object):
     ]
 
     ACTION_GET_IMPORT_COURSE = 'import_course'
+    ACTION_POST_CANCEL_IMPORT = 'cancel_import'
     ACTION_POST_ADD_UNIT = 'add_unit'
     ACTION_GET_EDIT_UNIT = 'edit_unit'
     ACTION_POST_ADD_LESSON = 'add_lesson'
@@ -77,6 +81,7 @@ class UnitLessonEditor(object):
     def on_module_enabled(cls):
         for action, callback in (
             (cls.ACTION_GET_IMPORT_COURSE, cls.get_import_course),
+            (cls.ACTION_POST_CANCEL_IMPORT, cls.post_cancel_import),
             (cls.ACTION_POST_ADD_UNIT, cls.post_add_unit),
             (cls.ACTION_GET_EDIT_UNIT, cls.get_edit_unit),
             (cls.ACTION_POST_ADD_LESSON, cls.post_add_lesson),
@@ -153,6 +158,12 @@ class UnitLessonEditor(object):
         template_values['page_title'] = handler.format_title('Import Course')
         template_values['main_content'] = form_html
         return template_values
+
+    @classmethod
+    def post_cancel_import(cls, handler):
+        # Dashboard dispatch will have checked XSRF and admin privileges.
+        ImportCourseBackgroundJob(handler.app_context, None).cancel()
+        handler.redirect('/dashboard?action=outline')
 
     @classmethod
     def post_add_lesson(cls, handler):
@@ -633,6 +644,7 @@ class ImportCourseRESTHandler(utils.BaseRESTHandler):
     """Provides REST API to course import."""
 
     URI = '/rest/course/import'
+    ACTION = 'import-course'
 
     SCHEMA_JSON = """
     {
@@ -694,15 +706,14 @@ class ImportCourseRESTHandler(utils.BaseRESTHandler):
         transforms.send_json_response(
             self, 200, None,
             payload_dict={'course': first_course_in_dropdown},
-            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
-                'import-course'))
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(self.ACTION))
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
         request = transforms.loads(self.request.get('request'))
 
         if not self.assert_xsrf_token_or_fail(
-                request, 'import-course', {'key': None}):
+                request, self.ACTION, {'key': None}):
             return
 
         if not roles.Roles.is_course_admin(self.app_context):
@@ -724,20 +735,59 @@ class ImportCourseRESTHandler(utils.BaseRESTHandler):
                 self, 404, 'Object not found.', {'raw': course_raw})
             return
 
-        course = courses.Course(self)
-        errors = []
+        import_job = ImportCourseBackgroundJob(
+            self.app_context, source.get_namespace_name())
+        if import_job.is_active():
+            transforms.send_json_response(
+                self, 503, 'Import already in progress.', {'raw': course_raw})
+            return
         try:
-            course.import_from(source, errors)
-        except Exception as e:  # pylint: disable=broad-except
-            logging.exception(e)
-            errors.append('Import failed: %s' % e)
-
-        if errors:
-            transforms.send_json_response(self, 412, '\n'.join(errors))
+            status = import_job.submit()
+            error_starting = (status < 0)
+        except Exception:  # pylint: disable=broad-except
+            error_starting = True
+        if error_starting:
+            transforms.send_json_response(
+                self, 500, 'Could not start import.', {'raw': course_raw})
             return
 
-        course.save()
-        transforms.send_json_response(self, 200, 'Imported.')
+        transforms.send_json_response(self, 200, 'Importing.')
+
+class ImportCourseBackgroundJob(jobs.DurableJob):
+
+    def __init__(self, app_context, from_namespace):
+        super(ImportCourseBackgroundJob, self).__init__(app_context)
+        self._from_namespace = from_namespace
+
+    @db.transactional
+    def load_status(self, context):
+        return ImportCourseBackgroundJob(context, None).load()
+
+    def run(self):
+        to_context = sites.get_app_context_for_namespace(self._namespace)
+        course = courses.Course(None, app_context=to_context)
+        from_context = sites.get_app_context_for_namespace(self._from_namespace)
+        start_status = self.load()
+        errors = []
+        course.import_from(from_context, errors)
+        if errors:
+            for error in errors:
+                logging.error(error)
+            raise RuntimeError(
+                'Import course from %s to %s job encountered errors; see '
+                'App Engine logs for details.' %
+                (self._from_namespace, self._namespace))
+        elif self._already_finished(start_status.sequence_num):
+            # Importing a course takes a good long time -- over 60s
+            # for a large course on an F1 instance.  Entirely concievable
+            # that an import may have been canceled while import_from()
+            # was working.
+            raise RuntimeError(
+                'Import course from %s to %s job was canceled or '
+                'a subsequent run has already completed; not saving '
+                'this work.' % (self._from_namespace, self._namespace))
+        else:
+            course.save()
 
 
 class AssessmentRESTHandler(CommonUnitRESTHandler):
