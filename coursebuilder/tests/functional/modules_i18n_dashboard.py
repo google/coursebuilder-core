@@ -419,7 +419,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
             [s['name'] for s in sections])
 
         self.assertEquals(
-            ['Title', 'Unit Header'],
+            ['Title', 'Header'],
             [s['label'] for s in sections])
 
         expected_values = [
@@ -481,7 +481,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         # Confirm there is a translation for one of the two paragraphs
         header_section = sections[1]
         self.assertEquals('unit_header', header_section['name'])
-        self.assertEquals('Unit Header', header_section['label'])
+        self.assertEquals('Header', header_section['label'])
         self.assertEquals(2, len(header_section['data']))
         self.assertEquals(VERB_CURRENT, header_section['data'][0]['verb'])
         self.assertEquals('a', header_section['data'][0]['source_value'])
@@ -529,7 +529,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         # Confirm there is a translation for one of the two paragraphs
         header_section = sections[1]
         self.assertEquals('unit_header', header_section['name'])
-        self.assertEquals('Unit Header', header_section['label'])
+        self.assertEquals('Header', header_section['label'])
         self.assertEquals(2, len(header_section['data']))
         self.assertEquals(VERB_CHANGED, header_section['data'][0]['verb'])
         self.assertEquals('a', header_section['data'][0]['source_value'])

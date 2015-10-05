@@ -1227,7 +1227,7 @@ class AddUnit(CourseContentElement):
         labels = self._tester.driver.find_elements_by_tag_name('label')
         one_page_label = None
         for label in labels:
-            if label.text == 'Show Contents on One Page':
+            if label.text == 'Show on One Page':
                 one_page_label = label
                 break
         label_div = one_page_label.find_element_by_xpath('..')
@@ -1695,4 +1695,3 @@ class EmbedModuleSignInPage(EmbedModuleAbstractIframeContentsPageObject):
 
         raise exceptions.InvalidSwitchToTargetException(
             'Unable to find login window')
-

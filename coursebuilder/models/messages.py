@@ -18,6 +18,8 @@ __author__ = 'Boris Roussev (borislavr@google.com)'
 
 from common import safe_dom
 
+DRAFT_TEXT = 'Private'
+PUBLISHED_TEXT = 'Public'
 
 PEER_MATCHER_NAME = 'Peer'
 
@@ -140,8 +142,52 @@ Show students the total score on the assignment after the due date is passed.
 If no due date is set, this flag has no effect.
 """
 
+UNIT_TITLE_DESCRIPTION = """
+The unit title is displayed to students on the syllabus page.
+"""
+
 UNIT_DESCRIPTION_DESCRIPTION = """
-Students see this description on the syllabus page.
+The unit description is displayed to students on the syllabus page.
+"""
+
+UNIT_AVAILABILITY_DESCRIPTION = """
+If this unit is "%s", only admins can see it. If it is "%s", then
+anyone who has access to the course can see it.
+""" % (DRAFT_TEXT, PUBLISHED_TEXT)
+
+UNIT_SYLLABUS_VISIBILITY_DESCRIPTION = """
+If this unit is "%s", this controls whether or not its title is still
+shown to students on the syllabus page.
+""" % DRAFT_TEXT
+
+UNIT_PRE_ASSESSMENT_DESCRIPTION = """
+This assessment is given to students at the start of this unit.
+"""
+
+UNIT_POST_ASSESSMENT_DESCRIPTION = """
+This assessment is given to students at the end of this unit.
+"""
+
+UNIT_SHOW_ON_ONE_PAGE_DESCRIPTION = """
+If checked, all assessments, lessons, and activties in this unit are shown on
+one page. Otherwise, each is shown on its own page.
+"""
+
+# TODO(tlarsen): Per Notes in http://b/24176227 spreadsheet:
+#   "Learn more..." links to the docs (tbd)
+UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = """
+If checked, the manual progress REST API permits users to manually mark a
+unit or lesson as complete, overriding the automatic progress tracking.
+<a href="https://code.google.com/p/course-builder/wiki/Dashboard"
+ target="_blank">Learn more...</a>
+"""
+
+UNIT_HEADER_DESCRIPTION = """
+This content appears at the top of the unit page.
+"""
+
+UNIT_FOOTER_DESCRIPTION = """
+This content appears at the bottom of the unit page.
 """
 
 SHORT_ANSWER_SCORE_DESCRIPTION = """

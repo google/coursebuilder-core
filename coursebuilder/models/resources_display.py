@@ -30,8 +30,8 @@ from common import tags
 from common import utils as common_utils
 from tools import verify
 
-DRAFT_TEXT = 'Private'
-PUBLISHED_TEXT = 'Public'
+DRAFT_TEXT = messages.DRAFT_TEXT
+PUBLISHED_TEXT = messages.PUBLISHED_TEXT
 
 SHOWN_WHEN_UNAVAILABLE_TEXT = 'Shown When Private'
 HIDDEN_WHEN_UNAVAILABLE_TEXT = 'Hidden When Private'
@@ -813,7 +813,8 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
         ret.add_property(schema_fields.SchemaField(
             'type', 'Type', 'string', editable=False, hidden=True))
         ret.add_property(schema_fields.SchemaField(
-            'title', 'Title', 'string', optional=False))
+            'title', 'Title', 'string',
+            description=str(messages.UNIT_TITLE_DESCRIPTION), optional=False))
         ret.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string',
             description=str(messages.UNIT_DESCRIPTION_DESCRIPTION),
@@ -825,7 +826,8 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
                 'className': 'inputEx-Field label-group-list'},
             optional=True))
         ret.add_property(schema_fields.SchemaField(
-            'is_draft', 'Status', 'boolean',
+            'is_draft', 'Availability', 'boolean',
+            description=str(messages.UNIT_AVAILABILITY_DESCRIPTION),
             select_data=[(True, DRAFT_TEXT),
                          (False, PUBLISHED_TEXT)],
             extra_schema_dict_values={
@@ -835,10 +837,7 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
             optional=True,
             select_data=[(True, SHOWN_WHEN_UNAVAILABLE_TEXT),
                          (False, HIDDEN_WHEN_UNAVAILABLE_TEXT)],
-            description='When a unit is marked as %s, ' % DRAFT_TEXT +
-            'this setting controls whether the title is still shown '
-            'to students on the syllabus overview page when this item '
-            'is marked as private.',
+            description=str(messages.UNIT_SYLLABUS_VISIBILITY_DESCRIPTION),
             extra_schema_dict_values={
                 'className': 'split-from-main-group'}))
         return ret
@@ -852,28 +851,29 @@ class ResourceUnit(ResourceUnitBase):
     def get_schema(cls, course, key):
         schema = cls._generate_common_schema('Unit')
         schema.add_property(schema_fields.SchemaField(
-            'pre_assessment', 'Pre Assessment', 'integer', optional=True))
+            'pre_assessment', 'Pre-Assessment', 'integer', optional=True,
+            description=str(messages.UNIT_PRE_ASSESSMENT_DESCRIPTION)))
         schema.add_property(schema_fields.SchemaField(
-            'post_assessment', 'Post Assessment', 'integer', optional=True))
+            'post_assessment', 'Post-Assessment', 'integer', optional=True,
+            description=str(messages.UNIT_POST_ASSESSMENT_DESCRIPTION)))
         schema.add_property(schema_fields.SchemaField(
-            'show_contents_on_one_page', 'Show Contents on One Page', 'boolean',
-            optional=True,
-            description='Whether to show all assessments, lessons, '
-            'and activities in a Unit on one page, or to show each on '
-            'its own page.'))
+            'show_contents_on_one_page', 'Show on One Page', 'boolean',
+            description=str(messages.UNIT_SHOW_ON_ONE_PAGE_DESCRIPTION),
+            optional=True))
         schema.add_property(schema_fields.SchemaField(
-            'manual_progress', 'Manual Progress', 'boolean', optional=True,
-            description='When set, the manual progress REST API permits '
-            'users to manually mark a unit or lesson as complete, '
-            'overriding the automatic progress tracking.'))
+            'manual_progress', 'Allow Progress Override', 'boolean',
+            description=str(messages.UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION),
+            optional=True))
         schema.add_property(schema_fields.SchemaField(
-            'unit_header', 'Unit Header', 'html', optional=True,
+            'unit_header', 'Header', 'html', optional=True,
+            description=str(messages.UNIT_HEADER_DESCRIPTION),
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.DESCRIPTIVE_SCOPE,
                 'className': 'inputEx-Field html-content cb-editor-small'}))
         schema.add_property(schema_fields.SchemaField(
-            'unit_footer', 'Unit Footer', 'html', optional=True,
+            'unit_footer', 'Footer', 'html', optional=True,
+            description=str(messages.UNIT_FOOTER_DESCRIPTION),
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.DESCRIPTIVE_SCOPE,
