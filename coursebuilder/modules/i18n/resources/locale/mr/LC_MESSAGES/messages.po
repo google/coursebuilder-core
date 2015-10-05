@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-28 07:50-0700\n"
-"PO-Revision-Date: 2015-09-21 07:58-0700\n"
+"POT-Creation-Date: 2015-10-05 07:08-0700\n"
+"PO-Revision-Date: 2015-10-05 07:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: mr <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1126
+#: experimental/coursebuilder/models/resources_display.py:1151
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "एकक %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "एकक %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1146
+#: experimental/coursebuilder/models/resources_display.py:1171
 #, python-format
 msgid "Unit %s"
 msgstr "एकक %s"
@@ -141,6 +141,153 @@ msgstr " उत्तर तपासा "
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:32
 msgid " Hint "
 msgstr " इशारा "
+
+#. Text shown to students when they visit an assignment page for which the due
+#. date has passed.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:38
+#, python-format
+msgid ""
+"The due date for submitting this assignment has passed. It was due on "
+"%(submission_due_date)s."
+msgstr ""
+"हे अभिहस्तांकन सबमिट करण्याची निहित तारीख निघून गेली आहे. ते "
+"%(submission_due_date)s रोजी निहित होते."
+
+#. Shown to the student on the assignment page.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:43
+msgid "Due date for this assignment: "
+msgstr "या अभिहस्तांकनाची निहित तारीख: "
+
+#. Text telling students what their total score is.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:54
+msgid "Score:"
+msgstr "स्कोअर:"
+
+#. Instructions to the student for a peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:65
+msgid ""
+"You may only submit this assignment once. After you submit it, the "
+"assignment will become read-only, and you will not be able to modify your"
+" answers. The answers you submit here will be reviewed by your peers."
+msgstr ""
+"आपण हे अभिहस्तांकन फक्त एकदाच सबमिट करू शकता. आपण हे सबमिट केल्यानंतर, "
+"अभिहस्तांकन केवळ-वाचनीय होईल, आणि आपली उत्तरे सुधारित करण्यास आपण सक्षम "
+"राहणार नाही. आपण येथे सबमिट केलेल्या उत्तरांचे पुनरावलोकन आपल्या "
+"समवयस्कद्वारे केले जाईल."
+
+#. Header text for a previously-submitted assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:80
+msgid "Submitted assignment"
+msgstr "सादर केलेले अभिहस्तांकन"
+
+#. Text telling students the date their answers were submitted
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:85
+msgid "Submitted on"
+msgstr "या रोजी सबमिट केले"
+
+#. Header text for the list of reviews received for an assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:110
+msgid "Reviews received"
+msgstr "प्राप्त झालेली पुनरावलोकने"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:117
+msgid ""
+"After you have completed the required number of peer reviews for this "
+"assignment, the reviews you have received will appear here."
+msgstr ""
+"या अभिहस्‍तांकनासाठी आवश्‍यक असलेली समवयस्‍क पुनरावलोकने पूर्ण "
+"केल्‍यानंतर आपण प्राप्त केलेली पुनरावलोकने येथे दिसून येतील."
+
+#. Text shown on a button that allows the student to navigate from an
+#. assignment submission page to the peer review dashboard for that assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:124
+msgid "Go to the review dashboard"
+msgstr "पुनरावलोकन डॅशबोर्डकडे जा"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:129
+msgid "You have not received any peer reviews yet."
+msgstr "आपण अद्याप कोणतीही समवयस्‍क पुनरावलोकने प्राप्त केली नाहीत."
+
+#. Text shown for an assessment that has not been made public.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:161
+msgid "This assessment is not available."
+msgstr "हे मूल्यांकन उपलब्ध नाही."
+
+#. Text on the button for saving a draft answer.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:35
+#: experimental/coursebuilder/views/base.html:35
+msgid " Save Draft "
+msgstr " मसुदा जतन करा "
+
+#. Text on the button for submitting a peer review.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:38
+#: experimental/coursebuilder/views/base.html:47
+msgid " Submit Review "
+msgstr "पुनरावलोकन सबमिट करा"
+
+#. Text on the button for checking a set of answers.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:46
+#: experimental/coursebuilder/views/base.html:23
+msgid " Check Answers "
+msgstr " उत्तरे तपासा "
+
+#. Text on the button for submitting answers.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:55
+#: experimental/coursebuilder/views/base.html:39
+msgid " Submit Answers "
+msgstr "उत्तरे सबमिट करा"
+
+#. Title of the webpage.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_page.html:15
+msgid "Assessment"
+msgstr "मूल्यांकन"
+
+#. Shown on the assignment submission confirmation page when the student has
+#. submitted a duplicate assignment.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:25
+msgid ""
+"You have already submitted this assignment. Your latest attempt has not "
+"been saved."
+msgstr ""
+"आपण हे अभिहस्तांकन आधीपासून सादर केले आहे. आपला नवीनतम प्रयत्न जतन केला "
+"गेला नाही."
+
+#. Shown on the assignment submission confirmation page when the student has
+#. successfully submitted an assignment.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:28
+msgid ""
+"Thank you for completing this assignment. Your work was successfully "
+"submitted."
+msgstr ""
+"हे अभिहस्तांकन पूर्ण केल्याबद्दल धन्यवाद. आपले कार्य यशस्वीरित्या सादर "
+"करण्यात आले."
+
+#. Text shown on the assignment submission confirmation page after the student
+#. has submitted a peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:32
+msgid "Review your peers' assignments by clicking on the button below."
+msgstr ""
+"खालील बटणावर क्लिक करून आपल्या समवयस्कांच्या अभिहस्तांकनांचे पुनरावलोकन "
+"करा."
+
+#. Text for the button on the assignment submission confirmation page.
+#. Displayed in the course contents page. Indicates a page to which students
+#. can go to review other students' assignments.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
+#: experimental/coursebuilder/views/macros.html:99
+#: experimental/coursebuilder/views/macros.html:106
+msgid "Review peer assignments"
+msgstr "समवयस्कांच्या अभिहस्तांकनांचे पुनरावलोकन करा"
+
+#. Text for the button on the assignment submission confirmation page.
+#. Shown after the student has submitted an assessment. This button allows the
+#. student to navigate back to the main course page.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:44
+#: experimental/coursebuilder/modules/assessments/templates/test_confirmation.html:27
+msgid "Back to Course page"
+msgstr "अभ्यासक्रम पृष्ठावर परत या"
 
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
@@ -374,7 +521,7 @@ msgstr "रद्द करा"
 #. that contains their requested content.
 #: experimental/coursebuilder/modules/embed/templates/v1/enroll_error.html:7
 msgid "Enrollment error"
-msgstr ""
+msgstr "नावनोंदणीत त्रुटी"
 
 #. Sentence fragment printed after the current user's email address,
 #. indicating they have no rights to see the requested content, and
@@ -700,7 +847,7 @@ msgid "No results for \"%(query)s\""
 msgstr "\"%(query)s\" साठी कोणतेही परिणाम नाहीत"
 
 #. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.py:76
+#: experimental/coursebuilder/modules/search/search.py:79
 msgid "Search is currently unavailable."
 msgstr "सध्या शोध अनुपलब्ध आहे."
 
@@ -850,6 +997,8 @@ msgid ""
 "Go back and try again. If the problem persists, contact your "
 "administrator."
 msgstr ""
+"मागे जा आणि पुन्हा प्रयत्न करा. समस्या कायम राहिल्यास, आपल्या प्रशासकाशी "
+"संपर्क साधा."
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -862,108 +1011,6 @@ msgstr "घोषणा"
 #: experimental/coursebuilder/views/announcements.html:30
 msgid "Currently, there are no announcements."
 msgstr "सध्‍या, कोणत्याही घोषणा नाहीत."
-
-#. Text shown to students when they visit an assignment page for which the due
-#. date has passed.
-#: experimental/coursebuilder/views/assessment.html:38
-#, python-format
-msgid ""
-"The due date for submitting this assignment has passed. It was due on "
-"%(submission_due_date)s."
-msgstr ""
-"हे अभिहस्तांकन सबमिट करण्याची निहित तारीख निघून गेली आहे. ते "
-"%(submission_due_date)s रोजी निहित होते."
-
-#. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:43
-msgid "Due date for this assignment: "
-msgstr "या अभिहस्तांकनाची निहित तारीख: "
-
-#. Text telling students what their total score is.
-#: experimental/coursebuilder/views/assessment.html:54
-msgid "Score:"
-msgstr "स्कोअर:"
-
-#. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:65
-msgid ""
-"You may only submit this assignment once. After you submit it, the "
-"assignment will become read-only, and you will not be able to modify your"
-" answers. The answers you submit here will be reviewed by your peers."
-msgstr ""
-"आपण हे अभिहस्तांकन फक्त एकदाच सबमिट करू शकता. आपण हे सबमिट केल्यानंतर, "
-"अभिहस्तांकन केवळ-वाचनीय होईल, आणि आपली उत्तरे सुधारित करण्यास आपण सक्षम "
-"राहणार नाही. आपण येथे सबमिट केलेल्या उत्तरांचे पुनरावलोकन आपल्या "
-"समवयस्कद्वारे केले जाईल."
-
-#. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:80
-msgid "Submitted assignment"
-msgstr "सादर केलेले अभिहस्तांकन"
-
-#. Text telling students the date their answers were submitted
-#: experimental/coursebuilder/views/assessment.html:85
-msgid "Submitted on"
-msgstr "या रोजी सबमिट केले"
-
-#. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:110
-msgid "Reviews received"
-msgstr "प्राप्त झालेली पुनरावलोकने"
-
-#. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:117
-msgid ""
-"After you have completed the required number of peer reviews for this "
-"assignment, the reviews you have received will appear here."
-msgstr ""
-"या अभिहस्‍तांकनासाठी आवश्‍यक असलेली समवयस्‍क पुनरावलोकने पूर्ण "
-"केल्‍यानंतर आपण प्राप्त केलेली पुनरावलोकने येथे दिसून येतील."
-
-#. Text shown on a button that allows the student to navigate from an
-#. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:124
-msgid "Go to the review dashboard"
-msgstr "पुनरावलोकन डॅशबोर्डकडे जा"
-
-#. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:129
-msgid "You have not received any peer reviews yet."
-msgstr "आपण अद्याप कोणतीही समवयस्‍क पुनरावलोकने प्राप्त केली नाहीत."
-
-#. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/views/assessment.html:161
-msgid "This assessment is not available."
-msgstr "हे मूल्यांकन उपलब्ध नाही."
-
-#. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/views/assessment_html_content.html:35
-#: experimental/coursebuilder/views/base.html:35
-msgid " Save Draft "
-msgstr " मसुदा जतन करा "
-
-#. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/views/assessment_html_content.html:38
-#: experimental/coursebuilder/views/base.html:47
-msgid " Submit Review "
-msgstr "पुनरावलोकन सबमिट करा"
-
-#. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:46
-#: experimental/coursebuilder/views/base.html:23
-msgid " Check Answers "
-msgstr " उत्तरे तपासा "
-
-#. Text on the button for submitting answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:55
-#: experimental/coursebuilder/views/base.html:39
-msgid " Submit Answers "
-msgstr "उत्तरे सबमिट करा"
-
-#. Title of the webpage.
-#: experimental/coursebuilder/views/assessment_page.html:15
-msgid "Assessment"
-msgstr "मूल्यांकन"
 
 #. Text on the button for showing the answer to a question.
 #: experimental/coursebuilder/views/base.html:27
@@ -1183,7 +1230,7 @@ msgstr "प्रश्नांना दर्जा द्या"
 
 #. Alt text for an embedded YouTube video player.
 #: experimental/coursebuilder/views/lesson.html:23
-#: experimental/coursebuilder/views/summary.html:28
+#: experimental/coursebuilder/views/summary.html:26
 msgid "YouTube Video Player"
 msgstr "YouTube व्हिडिओ प्लेअर"
 
@@ -1208,15 +1255,6 @@ msgstr "अद्याप सादर केले नाही"
 #: experimental/coursebuilder/views/macros.html:22
 msgid "In progress"
 msgstr "प्रगतीपथावर"
-
-#. Displayed in the course contents page. Indicates a page to which students
-#. can go to review other students' assignments.
-#. Text for the button on the assignment submission confirmation page.
-#: experimental/coursebuilder/views/macros.html:99
-#: experimental/coursebuilder/views/macros.html:106
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:39
-msgid "Review peer assignments"
-msgstr "समवयस्कांच्या अभिहस्तांकनांचे पुनरावलोकन करा"
 
 #. Menu item.
 #. Navigation breadcrumb.
@@ -1393,42 +1431,6 @@ msgid ""
 msgstr ""
 "क्षमस्व, यावेळी पुनरावलोकन करण्यासाठी आपल्याकरिता कोणतीही नवीन सबमिशन "
 "उपलब्ध नाहीत."
-
-#. Shown on the assignment submission confirmation page when the student has
-#. submitted a duplicate assignment.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:25
-msgid ""
-"You have already submitted this assignment. Your latest attempt has not "
-"been saved."
-msgstr ""
-"आपण हे अभिहस्तांकन आधीपासून सादर केले आहे. आपला नवीनतम प्रयत्न जतन केला "
-"गेला नाही."
-
-#. Shown on the assignment submission confirmation page when the student has
-#. successfully submitted an assignment.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:28
-msgid ""
-"Thank you for completing this assignment. Your work was successfully "
-"submitted."
-msgstr ""
-"हे अभिहस्तांकन पूर्ण केल्याबद्दल धन्यवाद. आपले कार्य यशस्वीरित्या सादर "
-"करण्यात आले."
-
-#. Text shown on the assignment submission confirmation page after the student
-#. has submitted a peer-reviewed assignment.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:32
-msgid "Review your peers' assignments by clicking on the button below."
-msgstr ""
-"खालील बटणावर क्लिक करून आपल्या समवयस्कांच्या अभिहस्तांकनांचे पुनरावलोकन "
-"करा."
-
-#. Text for the button on the assignment submission confirmation page.
-#. Shown after the student has submitted an assessment. This button allows the
-#. student to navigate back to the main course page.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:44
-#: experimental/coursebuilder/views/test_confirmation.html:27
-msgid "Back to Course page"
-msgstr "अभ्यासक्रम पृष्ठावर परत या"
 
 #. Table header that states when a student enrolled in a course.
 #: experimental/coursebuilder/views/student_data_table.html:9

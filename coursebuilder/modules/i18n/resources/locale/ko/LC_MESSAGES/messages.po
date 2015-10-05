@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-28 07:50-0700\n"
-"PO-Revision-Date: 2015-09-21 07:58-0700\n"
+"POT-Creation-Date: 2015-10-05 07:08-0700\n"
+"PO-Revision-Date: 2015-10-05 07:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ko <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1126
+#: experimental/coursebuilder/models/resources_display.py:1151
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "%(index)s단원 - %(title)s"
@@ -31,7 +31,7 @@ msgstr "%(index)s단원 - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1146
+#: experimental/coursebuilder/models/resources_display.py:1171
 #, python-format
 msgid "Unit %s"
 msgstr "단원 %s"
@@ -141,6 +141,141 @@ msgstr " 정답 확인 "
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:32
 msgid " Hint "
 msgstr " 힌트 "
+
+#. Text shown to students when they visit an assignment page for which the due
+#. date has passed.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:38
+#, python-format
+msgid ""
+"The due date for submitting this assignment has passed. It was due on "
+"%(submission_due_date)s."
+msgstr "과제물 제출 마감 시한이 지났습니다. 마감 시한은 %(submission_due_date)s이었습니다."
+
+#. Shown to the student on the assignment page.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:43
+msgid "Due date for this assignment: "
+msgstr "과제 제출 마감 시한: "
+
+#. Text telling students what their total score is.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:54
+msgid "Score:"
+msgstr "점수:"
+
+#. Instructions to the student for a peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:65
+msgid ""
+"You may only submit this assignment once. After you submit it, the "
+"assignment will become read-only, and you will not be able to modify your"
+" answers. The answers you submit here will be reviewed by your peers."
+msgstr ""
+"이 과제는 한 번만 제출할 수 있습니다. 과제를 제출하고 나면 읽기전용으로 바뀌며 답안을 수정할 수 없게 됩니다. 여기서 제출한 "
+"답안은 다른 사람이 검토할 것입니다."
+
+#. Header text for a previously-submitted assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:80
+msgid "Submitted assignment"
+msgstr "제출한 과제"
+
+#. Text telling students the date their answers were submitted
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:85
+msgid "Submitted on"
+msgstr "제출 날짜:"
+
+#. Header text for the list of reviews received for an assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:110
+msgid "Reviews received"
+msgstr "수신한 검토물"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:117
+msgid ""
+"After you have completed the required number of peer reviews for this "
+"assignment, the reviews you have received will appear here."
+msgstr "이 과제에 대한 필수 상호 검토 횟수가 충족되면 수신한 검토물이 여기 표시됩니다."
+
+#. Text shown on a button that allows the student to navigate from an
+#. assignment submission page to the peer review dashboard for that assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:124
+msgid "Go to the review dashboard"
+msgstr "검토 대시보드로 이동"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:129
+msgid "You have not received any peer reviews yet."
+msgstr "수신한 상호 검토물이 아직 없습니다."
+
+#. Text shown for an assessment that has not been made public.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:161
+msgid "This assessment is not available."
+msgstr "사용할 수 없는 평가입니다."
+
+#. Text on the button for saving a draft answer.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:35
+#: experimental/coursebuilder/views/base.html:35
+msgid " Save Draft "
+msgstr " 임시저장 "
+
+#. Text on the button for submitting a peer review.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:38
+#: experimental/coursebuilder/views/base.html:47
+msgid " Submit Review "
+msgstr " 검토물 제출 "
+
+#. Text on the button for checking a set of answers.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:46
+#: experimental/coursebuilder/views/base.html:23
+msgid " Check Answers "
+msgstr " 정답 확인 "
+
+#. Text on the button for submitting answers.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:55
+#: experimental/coursebuilder/views/base.html:39
+msgid " Submit Answers "
+msgstr " 답안 제출 "
+
+#. Title of the webpage.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_page.html:15
+msgid "Assessment"
+msgstr "평가"
+
+#. Shown on the assignment submission confirmation page when the student has
+#. submitted a duplicate assignment.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:25
+msgid ""
+"You have already submitted this assignment. Your latest attempt has not "
+"been saved."
+msgstr "이미 이 과제를 제출했습니다. 최근 시도는 저장되지 않았습니다."
+
+#. Shown on the assignment submission confirmation page when the student has
+#. successfully submitted an assignment.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:28
+msgid ""
+"Thank you for completing this assignment. Your work was successfully "
+"submitted."
+msgstr "과제를 완료해 주셔서 감사합니다. 과제가 제출되었습니다."
+
+#. Text shown on the assignment submission confirmation page after the student
+#. has submitted a peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:32
+msgid "Review your peers' assignments by clicking on the button below."
+msgstr "아래 버튼을 클릭하여 다른 사람의 과제를 검토하세요."
+
+#. Text for the button on the assignment submission confirmation page.
+#. Displayed in the course contents page. Indicates a page to which students
+#. can go to review other students' assignments.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
+#: experimental/coursebuilder/views/macros.html:99
+#: experimental/coursebuilder/views/macros.html:106
+msgid "Review peer assignments"
+msgstr "과제 검토"
+
+#. Text for the button on the assignment submission confirmation page.
+#. Shown after the student has submitted an assessment. This button allows the
+#. student to navigate back to the main course page.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:44
+#: experimental/coursebuilder/modules/assessments/templates/test_confirmation.html:27
+msgid "Back to Course page"
+msgstr "교육 과정 페이지로 돌아가기"
 
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
@@ -364,7 +499,7 @@ msgstr "취소"
 #. that contains their requested content.
 #: experimental/coursebuilder/modules/embed/templates/v1/enroll_error.html:7
 msgid "Enrollment error"
-msgstr ""
+msgstr "등록 오류"
 
 #. Sentence fragment printed after the current user's email address,
 #. indicating they have no rights to see the requested content, and
@@ -683,7 +818,7 @@ msgid "No results for \"%(query)s\""
 msgstr "'%(query)s'에 대한 검색결과 없음"
 
 #. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.py:76
+#: experimental/coursebuilder/modules/search/search.py:79
 msgid "Search is currently unavailable."
 msgstr "현재 검색을 사용할 수 없습니다."
 
@@ -824,7 +959,7 @@ msgstr "이전 페이지로 돌아가기"
 msgid ""
 "Go back and try again. If the problem persists, contact your "
 "administrator."
-msgstr ""
+msgstr "뒤로 돌아가서 다시 시도해 주세요. 문제가 지속되면 관리자에게 문의하세요."
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -837,102 +972,6 @@ msgstr "공지사항"
 #: experimental/coursebuilder/views/announcements.html:30
 msgid "Currently, there are no announcements."
 msgstr "현재 공지사항이 없습니다."
-
-#. Text shown to students when they visit an assignment page for which the due
-#. date has passed.
-#: experimental/coursebuilder/views/assessment.html:38
-#, python-format
-msgid ""
-"The due date for submitting this assignment has passed. It was due on "
-"%(submission_due_date)s."
-msgstr "과제물 제출 마감 시한이 지났습니다. 마감 시한은 %(submission_due_date)s이었습니다."
-
-#. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:43
-msgid "Due date for this assignment: "
-msgstr "과제 제출 마감 시한: "
-
-#. Text telling students what their total score is.
-#: experimental/coursebuilder/views/assessment.html:54
-msgid "Score:"
-msgstr "점수:"
-
-#. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:65
-msgid ""
-"You may only submit this assignment once. After you submit it, the "
-"assignment will become read-only, and you will not be able to modify your"
-" answers. The answers you submit here will be reviewed by your peers."
-msgstr ""
-"이 과제는 한 번만 제출할 수 있습니다. 과제를 제출하고 나면 읽기전용으로 바뀌며 답안을 수정할 수 없게 됩니다. 여기서 제출한 "
-"답안은 다른 사람이 검토할 것입니다."
-
-#. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:80
-msgid "Submitted assignment"
-msgstr "제출한 과제"
-
-#. Text telling students the date their answers were submitted
-#: experimental/coursebuilder/views/assessment.html:85
-msgid "Submitted on"
-msgstr "제출 날짜:"
-
-#. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:110
-msgid "Reviews received"
-msgstr "수신한 검토물"
-
-#. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:117
-msgid ""
-"After you have completed the required number of peer reviews for this "
-"assignment, the reviews you have received will appear here."
-msgstr "이 과제에 대한 필수 상호 검토 횟수가 충족되면 수신한 검토물이 여기 표시됩니다."
-
-#. Text shown on a button that allows the student to navigate from an
-#. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:124
-msgid "Go to the review dashboard"
-msgstr "검토 대시보드로 이동"
-
-#. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:129
-msgid "You have not received any peer reviews yet."
-msgstr "수신한 상호 검토물이 아직 없습니다."
-
-#. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/views/assessment.html:161
-msgid "This assessment is not available."
-msgstr "사용할 수 없는 평가입니다."
-
-#. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/views/assessment_html_content.html:35
-#: experimental/coursebuilder/views/base.html:35
-msgid " Save Draft "
-msgstr " 임시저장 "
-
-#. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/views/assessment_html_content.html:38
-#: experimental/coursebuilder/views/base.html:47
-msgid " Submit Review "
-msgstr " 검토물 제출 "
-
-#. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:46
-#: experimental/coursebuilder/views/base.html:23
-msgid " Check Answers "
-msgstr " 정답 확인 "
-
-#. Text on the button for submitting answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:55
-#: experimental/coursebuilder/views/base.html:39
-msgid " Submit Answers "
-msgstr " 답안 제출 "
-
-#. Title of the webpage.
-#: experimental/coursebuilder/views/assessment_page.html:15
-msgid "Assessment"
-msgstr "평가"
 
 #. Text on the button for showing the answer to a question.
 #: experimental/coursebuilder/views/base.html:27
@@ -1137,7 +1176,7 @@ msgstr "문항 채점"
 
 #. Alt text for an embedded YouTube video player.
 #: experimental/coursebuilder/views/lesson.html:23
-#: experimental/coursebuilder/views/summary.html:28
+#: experimental/coursebuilder/views/summary.html:26
 msgid "YouTube Video Player"
 msgstr "YouTube 동영상 플레이어"
 
@@ -1162,15 +1201,6 @@ msgstr "제출하지 않음"
 #: experimental/coursebuilder/views/macros.html:22
 msgid "In progress"
 msgstr "진행 중"
-
-#. Displayed in the course contents page. Indicates a page to which students
-#. can go to review other students' assignments.
-#. Text for the button on the assignment submission confirmation page.
-#: experimental/coursebuilder/views/macros.html:99
-#: experimental/coursebuilder/views/macros.html:106
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:39
-msgid "Review peer assignments"
-msgstr "과제 검토"
 
 #. Menu item.
 #. Navigation breadcrumb.
@@ -1336,36 +1366,6 @@ msgid ""
 "Sorry, there are no new submissions available for you to review at this "
 "time."
 msgstr "현재는 검토할 수 있는 새로운 제출물이 없습니다."
-
-#. Shown on the assignment submission confirmation page when the student has
-#. submitted a duplicate assignment.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:25
-msgid ""
-"You have already submitted this assignment. Your latest attempt has not "
-"been saved."
-msgstr "이미 이 과제를 제출했습니다. 최근 시도는 저장되지 않았습니다."
-
-#. Shown on the assignment submission confirmation page when the student has
-#. successfully submitted an assignment.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:28
-msgid ""
-"Thank you for completing this assignment. Your work was successfully "
-"submitted."
-msgstr "과제를 완료해 주셔서 감사합니다. 과제가 제출되었습니다."
-
-#. Text shown on the assignment submission confirmation page after the student
-#. has submitted a peer-reviewed assignment.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:32
-msgid "Review your peers' assignments by clicking on the button below."
-msgstr "아래 버튼을 클릭하여 다른 사람의 과제를 검토하세요."
-
-#. Text for the button on the assignment submission confirmation page.
-#. Shown after the student has submitted an assessment. This button allows the
-#. student to navigate back to the main course page.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:44
-#: experimental/coursebuilder/views/test_confirmation.html:27
-msgid "Back to Course page"
-msgstr "교육 과정 페이지로 돌아가기"
 
 #. Table header that states when a student enrolled in a course.
 #: experimental/coursebuilder/views/student_data_table.html:9

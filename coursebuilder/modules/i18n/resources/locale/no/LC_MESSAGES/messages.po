@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-09-28 07:50-0700\n"
-"PO-Revision-Date: 2015-09-21 07:58-0700\n"
+"POT-Creation-Date: 2015-10-05 07:08-0700\n"
+"PO-Revision-Date: 2015-10-05 07:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: no <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1126
+#: experimental/coursebuilder/models/resources_display.py:1151
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "Enhet %(index)s – %(title)s"
@@ -31,7 +31,7 @@ msgstr "Enhet %(index)s – %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1146
+#: experimental/coursebuilder/models/resources_display.py:1171
 #, python-format
 msgid "Unit %s"
 msgstr "Enhet %s"
@@ -141,6 +141,148 @@ msgstr " Sjekk svaret "
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:32
 msgid " Hint "
 msgstr " Hint "
+
+#. Text shown to students when they visit an assignment page for which the due
+#. date has passed.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:38
+#, python-format
+msgid ""
+"The due date for submitting this assignment has passed. It was due on "
+"%(submission_due_date)s."
+msgstr ""
+"Fristen for å sende inn denne oppgaven har utløpt. Fristen var "
+"%(submission_due_date)s."
+
+#. Shown to the student on the assignment page.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:43
+msgid "Due date for this assignment: "
+msgstr "Frist for denne oppgaven: "
+
+#. Text telling students what their total score is.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:54
+msgid "Score:"
+msgstr "Resultat:"
+
+#. Instructions to the student for a peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:65
+msgid ""
+"You may only submit this assignment once. After you submit it, the "
+"assignment will become read-only, and you will not be able to modify your"
+" answers. The answers you submit here will be reviewed by your peers."
+msgstr ""
+"Du kan bare sende inn denne oppgaven én gang. Når du har sendt den inn, "
+"blir den skrivebeskyttet, og du kan ikke endre svarene dine. Svarene du "
+"sender inn blir vurdert av andre studenter."
+
+#. Header text for a previously-submitted assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:80
+msgid "Submitted assignment"
+msgstr "Innsendt oppgave"
+
+#. Text telling students the date their answers were submitted
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:85
+msgid "Submitted on"
+msgstr "Sendt inn"
+
+#. Header text for the list of reviews received for an assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:110
+msgid "Reviews received"
+msgstr "Mottatte vurderinger"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:117
+msgid ""
+"After you have completed the required number of peer reviews for this "
+"assignment, the reviews you have received will appear here."
+msgstr ""
+"Når du har fullført de påkrevde vurderingene for denne oppgaven, vises "
+"vurderingene du har mottatt her."
+
+#. Text shown on a button that allows the student to navigate from an
+#. assignment submission page to the peer review dashboard for that assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:124
+msgid "Go to the review dashboard"
+msgstr "Gå til vurderingsoversikten"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:129
+msgid "You have not received any peer reviews yet."
+msgstr "Du har ikke fått noen vurderinger fra andre studenter ennå."
+
+#. Text shown for an assessment that has not been made public.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:161
+msgid "This assessment is not available."
+msgstr "Denne vurderingen er ikke tilgjengelig."
+
+#. Text on the button for saving a draft answer.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:35
+#: experimental/coursebuilder/views/base.html:35
+msgid " Save Draft "
+msgstr " Lagre utkast "
+
+#. Text on the button for submitting a peer review.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:38
+#: experimental/coursebuilder/views/base.html:47
+msgid " Submit Review "
+msgstr " Send inn vurdering "
+
+#. Text on the button for checking a set of answers.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:46
+#: experimental/coursebuilder/views/base.html:23
+msgid " Check Answers "
+msgstr " Sjekk svar "
+
+#. Text on the button for submitting answers.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:55
+#: experimental/coursebuilder/views/base.html:39
+msgid " Submit Answers "
+msgstr " Send inn svar "
+
+#. Title of the webpage.
+#: experimental/coursebuilder/modules/assessments/templates/assessment_page.html:15
+msgid "Assessment"
+msgstr "Prøve"
+
+#. Shown on the assignment submission confirmation page when the student has
+#. submitted a duplicate assignment.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:25
+msgid ""
+"You have already submitted this assignment. Your latest attempt has not "
+"been saved."
+msgstr ""
+"Du har allerede sendt inn denne oppgaven. Det siste forsøket ble ikke "
+"lagret."
+
+#. Shown on the assignment submission confirmation page when the student has
+#. successfully submitted an assignment.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:28
+msgid ""
+"Thank you for completing this assignment. Your work was successfully "
+"submitted."
+msgstr "Takk for at du fullførte denne oppgaven. Arbeidet ditt er innsendt."
+
+#. Text shown on the assignment submission confirmation page after the student
+#. has submitted a peer-reviewed assignment.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:32
+msgid "Review your peers' assignments by clicking on the button below."
+msgstr "Vurder andre studenters oppgaver ved å klikke på knappen nedenfor."
+
+#. Text for the button on the assignment submission confirmation page.
+#. Displayed in the course contents page. Indicates a page to which students
+#. can go to review other students' assignments.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
+#: experimental/coursebuilder/views/macros.html:99
+#: experimental/coursebuilder/views/macros.html:106
+msgid "Review peer assignments"
+msgstr "Vurder oppgavene til andre studenter"
+
+#. Text for the button on the assignment submission confirmation page.
+#. Shown after the student has submitted an assessment. This button allows the
+#. student to navigate back to the main course page.
+#: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:44
+#: experimental/coursebuilder/modules/assessments/templates/test_confirmation.html:27
+msgid "Back to Course page"
+msgstr "Tilbake til kurssiden"
 
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
@@ -371,7 +513,7 @@ msgstr "Avbryt"
 #. that contains their requested content.
 #: experimental/coursebuilder/modules/embed/templates/v1/enroll_error.html:7
 msgid "Enrollment error"
-msgstr ""
+msgstr "Registreringsfeil"
 
 #. Sentence fragment printed after the current user's email address,
 #. indicating they have no rights to see the requested content, and
@@ -695,7 +837,7 @@ msgid "No results for \"%(query)s\""
 msgstr "Ingen resultater for «%(query)s»"
 
 #. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.py:76
+#: experimental/coursebuilder/modules/search/search.py:79
 msgid "Search is currently unavailable."
 msgstr "Søk er for øyeblikket utilgjengelig."
 
@@ -843,6 +985,8 @@ msgid ""
 "Go back and try again. If the problem persists, contact your "
 "administrator."
 msgstr ""
+"Gå tilbake og prøv på nytt. Hvis problemet vedvarer, kan du ta kontakt "
+"med administratoren."
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -855,107 +999,6 @@ msgstr "Kunngjøringer"
 #: experimental/coursebuilder/views/announcements.html:30
 msgid "Currently, there are no announcements."
 msgstr "Det er ingen kunngjøringer for øyeblikket."
-
-#. Text shown to students when they visit an assignment page for which the due
-#. date has passed.
-#: experimental/coursebuilder/views/assessment.html:38
-#, python-format
-msgid ""
-"The due date for submitting this assignment has passed. It was due on "
-"%(submission_due_date)s."
-msgstr ""
-"Fristen for å sende inn denne oppgaven har utløpt. Fristen var "
-"%(submission_due_date)s."
-
-#. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:43
-msgid "Due date for this assignment: "
-msgstr "Frist for denne oppgaven: "
-
-#. Text telling students what their total score is.
-#: experimental/coursebuilder/views/assessment.html:54
-msgid "Score:"
-msgstr "Resultat:"
-
-#. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:65
-msgid ""
-"You may only submit this assignment once. After you submit it, the "
-"assignment will become read-only, and you will not be able to modify your"
-" answers. The answers you submit here will be reviewed by your peers."
-msgstr ""
-"Du kan bare sende inn denne oppgaven én gang. Når du har sendt den inn, "
-"blir den skrivebeskyttet, og du kan ikke endre svarene dine. Svarene du "
-"sender inn blir vurdert av andre studenter."
-
-#. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:80
-msgid "Submitted assignment"
-msgstr "Innsendt oppgave"
-
-#. Text telling students the date their answers were submitted
-#: experimental/coursebuilder/views/assessment.html:85
-msgid "Submitted on"
-msgstr "Sendt inn"
-
-#. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:110
-msgid "Reviews received"
-msgstr "Mottatte vurderinger"
-
-#. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:117
-msgid ""
-"After you have completed the required number of peer reviews for this "
-"assignment, the reviews you have received will appear here."
-msgstr ""
-"Når du har fullført de påkrevde vurderingene for denne oppgaven, vises "
-"vurderingene du har mottatt her."
-
-#. Text shown on a button that allows the student to navigate from an
-#. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:124
-msgid "Go to the review dashboard"
-msgstr "Gå til vurderingsoversikten"
-
-#. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:129
-msgid "You have not received any peer reviews yet."
-msgstr "Du har ikke fått noen vurderinger fra andre studenter ennå."
-
-#. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/views/assessment.html:161
-msgid "This assessment is not available."
-msgstr "Denne vurderingen er ikke tilgjengelig."
-
-#. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/views/assessment_html_content.html:35
-#: experimental/coursebuilder/views/base.html:35
-msgid " Save Draft "
-msgstr " Lagre utkast "
-
-#. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/views/assessment_html_content.html:38
-#: experimental/coursebuilder/views/base.html:47
-msgid " Submit Review "
-msgstr " Send inn vurdering "
-
-#. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:46
-#: experimental/coursebuilder/views/base.html:23
-msgid " Check Answers "
-msgstr " Sjekk svar "
-
-#. Text on the button for submitting answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:55
-#: experimental/coursebuilder/views/base.html:39
-msgid " Submit Answers "
-msgstr " Send inn svar "
-
-#. Title of the webpage.
-#: experimental/coursebuilder/views/assessment_page.html:15
-msgid "Assessment"
-msgstr "Prøve"
 
 #. Text on the button for showing the answer to a question.
 #: experimental/coursebuilder/views/base.html:27
@@ -1172,7 +1215,7 @@ msgstr "Bedøm spørsmål"
 
 #. Alt text for an embedded YouTube video player.
 #: experimental/coursebuilder/views/lesson.html:23
-#: experimental/coursebuilder/views/summary.html:28
+#: experimental/coursebuilder/views/summary.html:26
 msgid "YouTube Video Player"
 msgstr "YouTube-videoavspilleren"
 
@@ -1197,15 +1240,6 @@ msgstr "Ennå ikke levert"
 #: experimental/coursebuilder/views/macros.html:22
 msgid "In progress"
 msgstr "Pågår"
-
-#. Displayed in the course contents page. Indicates a page to which students
-#. can go to review other students' assignments.
-#. Text for the button on the assignment submission confirmation page.
-#: experimental/coursebuilder/views/macros.html:99
-#: experimental/coursebuilder/views/macros.html:106
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:39
-msgid "Review peer assignments"
-msgstr "Vurder oppgavene til andre studenter"
 
 #. Menu item.
 #. Navigation breadcrumb.
@@ -1379,38 +1413,6 @@ msgid ""
 "Sorry, there are no new submissions available for you to review at this "
 "time."
 msgstr "Det er ingen nye innleveringer å vurdere for øyeblikket."
-
-#. Shown on the assignment submission confirmation page when the student has
-#. submitted a duplicate assignment.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:25
-msgid ""
-"You have already submitted this assignment. Your latest attempt has not "
-"been saved."
-msgstr ""
-"Du har allerede sendt inn denne oppgaven. Det siste forsøket ble ikke "
-"lagret."
-
-#. Shown on the assignment submission confirmation page when the student has
-#. successfully submitted an assignment.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:28
-msgid ""
-"Thank you for completing this assignment. Your work was successfully "
-"submitted."
-msgstr "Takk for at du fullførte denne oppgaven. Arbeidet ditt er innsendt."
-
-#. Text shown on the assignment submission confirmation page after the student
-#. has submitted a peer-reviewed assignment.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:32
-msgid "Review your peers' assignments by clicking on the button below."
-msgstr "Vurder andre studenters oppgaver ved å klikke på knappen nedenfor."
-
-#. Text for the button on the assignment submission confirmation page.
-#. Shown after the student has submitted an assessment. This button allows the
-#. student to navigate back to the main course page.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:44
-#: experimental/coursebuilder/views/test_confirmation.html:27
-msgid "Back to Course page"
-msgstr "Tilbake til kurssiden"
 
 #. Table header that states when a student enrolled in a course.
 #: experimental/coursebuilder/views/student_data_table.html:9
