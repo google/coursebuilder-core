@@ -97,7 +97,7 @@
             html_assessment.render(
                 unit_id, assessment_xsrf_token, html_saved_answers, html_content,
                 readonly=True, show_feedback=show_feedback,
-                transient_student=transient_student)
+                transient_student=transient_student, embedded=embedded)
           }}
         {% endif %}
       </div>
@@ -137,7 +137,7 @@
               {{
                   html_assessment.render(unit_id, assessment_xsrf_token,
                       review['saved_answers'], review['content'], readonly=True,
-                      transient_student=transient_student)
+                      transient_student=transient_student, embedded=embedded)
               }}
             {% endif %}
           </div>
@@ -152,7 +152,8 @@
       {{
         html_assessment.render(
             unit_id, assessment_xsrf_token, html_saved_answers, html_content,
-            check_answers=html_check_answers, transient_student=transient_student)
+            check_answers=html_check_answers, transient_student=transient_student,
+            embedded=embedded)
       }}
     {% endif %}
   {% else %}

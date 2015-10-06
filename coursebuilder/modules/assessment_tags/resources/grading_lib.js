@@ -552,7 +552,7 @@ function gradeScoredLesson(questions, messages, question_batch_id) {
   });
 }
 
-function gradeAssessment(questions, unitId, xsrfToken) {
+function gradeAssessment(questions, unitId, xsrfToken, graderUri) {
   var score = 0.0;
   // The following prevents division-by-zero errors.
   var totalWeight = 1e-12;
@@ -588,7 +588,7 @@ function gradeAssessment(questions, unitId, xsrfToken) {
   answers.totalWeight = roundToTwoDecimalPlaces(totalWeight);
   answers.percentScore = roundToTwoDecimalPlaces(percentScore);
 
-  submitForm('answer', {
+  submitForm(graderUri || 'answer', {
     'assessment_type': unitId,
     'score': percentScore.toFixed(2),
     'answers': JSON.stringify(answers),
@@ -718,7 +718,9 @@ function findGcbQuestions() {
           var questionBatchId = dataDiv.data('question-batch-id');
           var unitId = dataDiv.data('unit-id');
           var xsrfToken = dataDiv.data('xsrf-token');
-          gradeAssessment(gcbQuestions[questionBatchId], unitId, xsrfToken);
+          var graderUri = dataDiv.data('grader-uri');
+          gradeAssessment(gcbQuestions[questionBatchId], unitId, xsrfToken,
+              graderUri);
         });
     $('button.qt-save-draft')
         .click(function(event) {

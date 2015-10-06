@@ -139,6 +139,9 @@ _LOCAL_ERRORS_DEMO_HTML_PATH = os.path.join(
 _TEMPLATES_ENV = jinja_utils.create_jinja_environment(
     jinja2.FileSystemLoader([_TEMPLATES_DIR_V1]))
 
+# Exported public variables
+EMBED_CHILD_JS_URL = _EMBED_CHILD_JS_URL
+
 
 class AbstractEnrollmentPolicy(object):
     """Abstract parent for business logic run during resource dispatch."""

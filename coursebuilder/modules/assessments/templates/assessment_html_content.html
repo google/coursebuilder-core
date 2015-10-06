@@ -2,16 +2,19 @@
   macro render(
       unit_id, xsrf_token, saved_answers, content, readonly=False,
       show_feedback=False, check_answers=False, is_review_form=False,
-      review_key=None, transient_student=False)
+      review_key=None, transient_student=False, embedded=False)
 %}
 <div
    data-xsrf-token="{{ xsrf_token }}"
    data-unit-id="{{ unit_id }}"
    data-question-batch-id="A{{ unit_id }}"
    data-scored="True"
-   {% if is_review_form and review_key %}
+   {% if is_review_form and review_key -%}
      data-review-key = "{{ review_key }}"
-   {% endif %}
+   {%- endif %}
+   {% if embedded -%}
+     data-grader-uri = "answer?embedded=true"
+   {%- endif %}
 >
   <script>
     var questionData = questionData || {};

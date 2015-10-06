@@ -20,6 +20,24 @@
 
 {% block assets %}
   {{ super() }}
+  {% if embed_child_js_url -%}
+    <script src="{{ embed_child_js_url }}"></script>
+  {%- endif %}
+  {% if show_onsubmit_message %}
+    <script>
+      $(function() {
+        setTimeout(function() {  // Wait for question layout
+          var buttonBar = $('.qt-assessment-button-bar:last');
+          var buttonBarBottom = buttonBar.offset().top + buttonBar.height();
+          $('.gcb-butterbar-container')
+              .css('position', 'fixed')
+              .css('bottom', $(window).height() - buttonBarBottom);
+          $('.gcb-butterbar').css('margin', 0);
+          cbShowMsgAutoHide('{{ gettext("Assessment submitted.") | js_string }}');
+        }, 0);
+      });
+    </script>
+  {% endif %}
   <link rel="stylesheet" type="text/css"
       href="/modules/dashboard/resources/material-design-icons/css/material-design-iconic-font.min.css">
 {% endblock %}

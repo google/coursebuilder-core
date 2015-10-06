@@ -934,8 +934,8 @@ html.hide-controls body > .is-wrapper > .gcb-aux,
 html.hide-controls body > .is-wrapper > .gcb-aux > #gcb-main,
 html.hide-controls body > .is-wrapper > .gcb-aux > #gcb-main > #gcb-main-article,
 html.hide-controls body > .is-wrapper > .gcb-aux > #gcb-main > #gcb-main-article > .gcb-aside {
-  height: 100%;
-  width: 100%;
+  height: auto;
+  width: auto;
 }
 
 html.hide-controls .gcb-aux {
@@ -969,4 +969,10 @@ html.hide-controls #gcb-footer,
 html.hide-controls #base-before-body-tag-ends,
 html.hide-lesson-title #lesson-title {
   display: none;
+}
+
+html.hide-controls .gcb-assessment-contents .gcb-border-box {
+  border: none;
+  margin: 0;
+  padding: 0;
 }

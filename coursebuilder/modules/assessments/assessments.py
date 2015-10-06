@@ -19,6 +19,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import datetime
 import logging
 import os
+import urllib
 
 import appengine_config
 from controllers import utils
@@ -31,6 +32,7 @@ from models import transforms
 from models import utils as models_utils
 from models.models import Student
 from models.models import StudentAnswersEntity
+from modules.embed import embed
 from modules.review import domain
 from tools import verify
 
@@ -66,6 +68,8 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
     # pylint: disable=too-many-statements
     def get(self):
         """Handles GET requests."""
+        embedded = bool(self.request.get('embedded'))
+
         student = self.personalize_page_and_get_enrolled(
             supports_transient_student=True)
         if not student:
@@ -94,14 +98,23 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
             self.redirect('/')
             return
 
-        self.template_value['main_content'] = (
-            self.get_assessment_content(student, course, unit, as_lesson=False))
+        self.template_value['main_content'] = self.get_assessment_content(
+            student, course, unit, as_lesson=False, embedded=embedded)
         self.template_value['assessment_name'] = assessment_name
         self.template_value['unit_id'] = self.unit_id
         self.template_value['navbar'] = {'course': True}
+        if embedded:
+            self.template_value['embed_child_js_url'] = embed.EMBED_CHILD_JS_URL
+            self.template_value['gcb_html_element_class'] = 'hide-controls'
+
         self.render('assessment_page.html')
 
-    def get_assessment_content(self, student, course, unit, as_lesson):
+    def get_assessment_content(
+            self, student, course, unit, as_lesson, embedded=False):
+        if embedded and course.needs_human_grader(unit):
+            return self.app_context.gettext(
+                'Peer-review assignments cannot be embedded')
+
         model_version = course.get_assessment_model_version(unit)
         assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
         self.template_value['model_version'] = model_version
@@ -117,6 +130,9 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
         else:
             raise ValueError('Bad assessment model version: %s' % model_version)
 
+        self.template_value['embedded'] = embedded
+        if self.request.get('onsubmit'):
+            self.template_value['show_onsubmit_message'] = True
         self.template_value['unit_id'] = unit.unit_id
         self.template_value['now_available'] = unit.now_available
         self.template_value['transient_student'] = student.is_transient
@@ -355,6 +371,8 @@ class AnswerHandler(AssignmentsModuleMixin, utils.BaseHandler):
     # pylint: disable=too-many-statements
     def post(self):
         """Handles POST requests."""
+        embedded = bool(self.request.get('embedded'))
+
         student = self.personalize_page_and_get_enrolled()
         if not student:
             return
@@ -457,6 +475,15 @@ class AnswerHandler(AssignmentsModuleMixin, utils.BaseHandler):
                     'assessment', unit.unit_id, 0) + '&confirmation'
                 self.redirect('/' + next_url)
             else:
+                if embedded:
+                    self.redirect('/%s?%s' %(
+                        'assessment',
+                        urllib.urlencode({
+                            'embedded': 'true',
+                            'onsubmit': 'true',
+                            'name': unit.unit_id})))
+                    return
+
                 self.template_value['result'] = course.get_overall_result(
                     student)
                 self.template_value['score'] = score
@@ -465,8 +492,22 @@ class AnswerHandler(AssignmentsModuleMixin, utils.BaseHandler):
                 self.render('test_confirmation.html')
 
 
+class AssessmentEmbed(embed.AbstractEmbed):
+    ENROLLMENT_POLICY = embed.AutomaticEnrollmentPolicy
+
+    @classmethod
+    def get_redirect_url(cls, handler, target_slug=None):
+        assessment_id = handler.request.path.split('/')[-1]
+        return str('%s/%s?%s' % (
+            cls.get_slug(handler, target_slug=target_slug),
+            'assessment',
+            urllib.urlencode({
+                'name': assessment_id,
+                'embedded': 'true'})))
+
+
 def notify_module_enabled():
-    pass
+    embed.Registry.bind('assessment', AssessmentEmbed)
 
 
 def register_module():
