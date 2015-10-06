@@ -21,10 +21,9 @@ import re
 from common import crypto
 from common import utils as common_utils
 from controllers import sites
-from controllers import utils
-from models import config
 from models import courses
 from models import models
+from modules.analytics import analytics
 from modules.courses import unit_lesson_editor
 from tests.functional import actions
 from tools import verify
@@ -73,8 +72,9 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.course.save()
         actions.login(STUDENT_EMAIL)
         actions.register(self, STUDENT_EMAIL, COURSE_NAME)
-        config.Registry.test_overrides[
-            utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+        self.overridden_environment = actions.OverriddenEnvironment(
+            {'course': {analytics.CAN_RECORD_STUDENT_EVENTS: 'true'}})
+        self.overridden_environment.__enter__()
 
         with common_utils.Namespace(NAMESPACE):
             self.track_one_id = models.LabelDAO.save(models.LabelDTO(
@@ -85,6 +85,10 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 None, {'title': 'Track One',
                        'descripton': 'track_one',
                        'type': models.LabelDTO.LABEL_TYPE_GENERAL}))
+
+    def tearDown(self):
+        self.overridden_environment.__exit__()
+        super(UnitPrePostAssessmentTest, self).tearDown()
 
     def _get_unit_page(self, unit):
         return self.get(BASE_URL + '/unit?unit=' + str(unit.unit_id))

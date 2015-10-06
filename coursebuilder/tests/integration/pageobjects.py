@@ -702,18 +702,49 @@ class AssessmentConfirmationPage(RootPage):
         return LessonPage(self._tester)
 
 
-class SettingsPage(PageObject):
+class SettingsPage(EditorPageObject):
     """Page object for the dashboard's course settings tab."""
 
     def __init__(self, tester):
         super(SettingsPage, self).__init__(tester)
 
         def successful_load(unused_driver):
-            tab = self.find_element_by_link_text('Homepage')
-            print tab, tab.get_attribute('class'), tab.get_attribute('href')
-            return 'selected' == tab.get_attribute('class')
+            tab = self.find_element_by_link_text('Course')
+            return 'gcb-active' in tab.get_attribute('class')
 
         self.wait().until(successful_load)
+
+    def _find_setting_by_title(self, title):
+
+        def find_setting(driver):
+            labels = driver.find_elements_by_tag_name('label')
+            for label in labels:
+                if label.text == title:
+                    return label
+            return False
+        self.wait().until(find_setting)
+        return find_setting(self._tester.driver)
+
+    def set_checkbox_by_title(self, title, value):
+        label = self._find_setting_by_title(title)
+        checkbox = label.find_element_by_xpath(
+            '../../div[@class="inputEx-Field inputEx-CheckBox"]'
+            '/input[@type="checkbox"]')
+        checked = checkbox.get_attribute('checked')
+        if (not checked and value) or (checked and not value):
+            checkbox.click()
+        return self
+
+    def set_text_field_by_title(self, title, value):
+        label = self._find_setting_by_title(title)
+        field = label.find_element_by_xpath(
+            '../..'
+            '/div[@class="inputEx-Field"]'
+            '/div[@class="inputEx-StringField-wrapper"]'
+            '/input[@type="text"]')
+        field.clear()
+        field.send_keys(value)
+        return self
 
 
 class AdvancedSettingsPage(EditorPageObject):
@@ -1223,7 +1254,6 @@ class AddUnit(CourseContentElement):
         return self
 
     def set_contents_on_one_page(self, setting):
-        print
         labels = self._tester.driver.find_elements_by_tag_name('label')
         one_page_label = None
         for label in labels:

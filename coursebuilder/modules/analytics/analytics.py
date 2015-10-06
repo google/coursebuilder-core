@@ -16,7 +16,9 @@
 
 __author__ = ['Michael Gainer (mgainer@google.com)']
 
+from common import schema_fields
 from models import analytics
+from models import courses
 from models import custom_modules
 from models import data_sources
 from models import data_removal
@@ -34,6 +36,10 @@ from modules.analytics import youtube_event_aggregator
 from modules.dashboard import dashboard
 
 ANALYTICS = 'analytics'
+
+# Name for a course level setting: whether to record events for student
+# interaction with course: page views, widget interactions, question answers.
+CAN_RECORD_STUDENT_EVENTS = 'can_record_student_events'
 
 custom_module = None
 
@@ -157,6 +163,20 @@ def get_namespaced_handlers():
 
 def register_module():
 
+    can_record_student_events = schema_fields.SchemaField(
+        'course:' + CAN_RECORD_STUDENT_EVENTS, 'Record Student Events',
+        'boolean',
+        description='Whether or not to record student interactions in a '
+        'datastore.  Without event recording, you cannot analyze student '
+        'interactions (page views, interactive widgets, question answers, '
+        'and the like.)  On the other hand, no event recording reduces '
+        'the number of datastore operations and minimizes the use of Google '
+        'App Engine quota. Turn event recording on if you want to analyze '
+        'this data.', i18n=False, optional=True)
+    course_settings_fields = [
+        lambda course: can_record_student_events
+    ]
+
     def on_module_enabled():
         page_event_aggregator.register_base_course_matchers()
         student_aggregate.StudentAggregateComponentRegistry.register_component(
@@ -212,6 +232,9 @@ def register_module():
             student_aggregate.StudentAggregateEntity.delete_by_key)
         data_removal.Registry.register_indexed_by_user_id_remover(
             student_answers.QuestionAnswersEntity.delete_by_key)
+
+        courses.Course.OPTIONS_SCHEMA_PROVIDERS[
+            courses.Course.SCHEMA_SECTION_COURSE] += course_settings_fields
 
         register_tabs()
         add_actions()

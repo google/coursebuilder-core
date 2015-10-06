@@ -100,14 +100,8 @@
 
     <script>
       var eventXsrfToken = '{{ event_xsrf_token }}';
-      {% if record_tag_events %}
-        var gcbCanPostTagEvents = true;
-      {% endif %}
-      {% if record_page_events %}
-        var gcbCanPostPageEvents = true;
-      {% endif %}
-      {% if record_events %}
-        var gcbCanPostEvents = true;
+      {% if can_record_student_events %}
+        var gcbCanRecordStudentEvents = true;
       {% endif %}
 
       {% if transient_student %}

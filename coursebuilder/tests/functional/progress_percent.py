@@ -21,10 +21,9 @@ import re
 from common import crypto
 from common import users
 from common.utils import Namespace
-from controllers import utils
-from models import config
 from models import courses
 from models import models
+from modules.analytics import analytics
 from tests.functional import actions
 
 COURSE_NAME = 'percent_completion'
@@ -76,12 +75,17 @@ class ProgressPercent(actions.TestBase):
         self.course.save()
         actions.login(STUDENT_EMAIL)
         actions.register(self, STUDENT_EMAIL, COURSE_NAME)
-        config.Registry.test_overrides[
-            utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+        self.overridden_environment = actions.OverriddenEnvironment(
+            {'course': {analytics.CAN_RECORD_STUDENT_EVENTS: 'true'}})
+        self.overridden_environment.__enter__()
 
         self.tracker = self.course.get_progress_tracker()
         with Namespace(NAMESPACE):
             self.student = models.Student.get_by_user(users.get_current_user())
+
+    def tearDown(self):
+        self.overridden_environment.__exit__()
+        super(ProgressPercent, self).tearDown()
 
     def _get_unit_page(self, unit):
         return self.get(BASE_URL + '/unit?unit=' + str(unit.unit_id))

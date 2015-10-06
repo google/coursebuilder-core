@@ -18,11 +18,10 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 from common import crypto
 from common import utils as common_utils
-from controllers import utils
-from models import config
 from models import courses
 from models import models
 from models import transforms
+from modules.analytics import analytics
 from modules.manual_progress import manual_progress
 from tests.functional import actions
 
@@ -105,9 +104,14 @@ class ManualProgressTest(actions.TestBase):
                 None, {'title': 'Bar',
                        'descripton': 'bar',
                        'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+        self.overridden_environment = actions.OverriddenEnvironment(
+            {'course': {analytics.CAN_RECORD_STUDENT_EVENTS: 'true'}})
+        self.overridden_environment.__enter__()
 
-        config.Registry.test_overrides[
-            utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+    def tearDown(self):
+        self.overridden_environment.__exit__()
+        super(ManualProgressTest, self).tearDown()
+
 
     def _expect_response(self, response, status, message, html_status=200):
         content = transforms.loads(response.body)

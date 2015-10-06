@@ -928,6 +928,10 @@ class CourseHandler(ApplicationHandler):
 
         return template_environ.get_template(template_file)
 
+    def can_record_student_events(self):
+        settings = self.app_context.get_environ().get('course')
+        return settings and settings.get('can_record_student_events')
+
 
 class BaseHandler(CourseHandler):
     """Base handler."""
@@ -969,12 +973,8 @@ class BaseHandler(CourseHandler):
             self.template_value['transient_student'] = False
 
             # configure page events
-            self.template_value['record_tag_events'] = (
-                CAN_PERSIST_TAG_EVENTS.value)
-            self.template_value['record_page_events'] = (
-                CAN_PERSIST_PAGE_EVENTS.value)
-            self.template_value['record_events'] = (
-                CAN_PERSIST_ACTIVITY_EVENTS.value)
+            self.template_value['can_record_student_events'] = (
+                self.can_record_student_events())
             self.template_value['event_xsrf_token'] = (
                 XsrfTokenManager.create_xsrf_token('event-post'))
         else:
@@ -1059,7 +1059,6 @@ class BaseHandler(CourseHandler):
                 prefs.last_location != self.request.path_qs):
                 return prefs.last_location
         return None
-
 
 class BaseRESTHandler(CourseHandler, RESTHandlerMixin):
     """Base REST handler."""

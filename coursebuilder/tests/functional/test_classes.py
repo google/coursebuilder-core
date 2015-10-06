@@ -47,7 +47,6 @@ from common import crypto
 from common.utils import Namespace
 from common import tags
 from common import users
-from controllers import lessons
 from controllers import sites
 from controllers import utils
 from controllers.utils import XsrfTokenManager
@@ -64,6 +63,7 @@ from models import vfs
 from models.courses import Course
 import modules.admin.admin
 import modules.admin.config
+from modules.analytics import analytics
 from modules.announcements.announcements import AnnouncementEntity
 from modules import course_explorer
 from modules import search
@@ -2794,42 +2794,40 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name)
 
         # Enable event recording.
-        config.Registry.test_overrides[
-            lessons.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+        with actions.OverriddenEnvironment(
+            {'course': {analytics.CAN_RECORD_STUDENT_EVENTS: 'true'}}):
 
-        # Prepare event.
-        request = {}
-        request['source'] = 'test-source'
-        request['payload'] = transforms.dumps({'Alice': u'Bob (тест данные)'})
+            # Prepare event.
+            request = {}
+            request['source'] = 'test-source'
+            request['payload'] = transforms.dumps(
+                {'Alice': u'Bob (тест данные)'})
 
-        # Check XSRF token is required.
-        response = self.post('rest/events?%s' % urllib.urlencode(
-            {'request': transforms.dumps(request)}), {})
-        assert_equals(response.status_int, 200)
-        assert_contains('"status": 403', response.body)
+            # Check XSRF token is required.
+            response = self.post('rest/events?%s' % urllib.urlencode(
+                {'request': transforms.dumps(request)}), {})
+            assert_equals(response.status_int, 200)
+            assert_contains('"status": 403', response.body)
 
-        # Check PUT works.
-        request['xsrf_token'] = XsrfTokenManager.create_xsrf_token(
-            'event-post')
-        response = self.post('rest/events?%s' % urllib.urlencode(
-            {'request': transforms.dumps(request)}), {})
-        assert_equals(response.status_int, 200)
-        assert not response.body
+            # Check PUT works.
+            request['xsrf_token'] = XsrfTokenManager.create_xsrf_token(
+                'event-post')
+            response = self.post('rest/events?%s' % urllib.urlencode(
+                {'request': transforms.dumps(request)}), {})
+            assert_equals(response.status_int, 200)
+            assert not response.body
 
-        # Check event is properly recorded.
-        old_namespace = namespace_manager.get_namespace()
-        namespace_manager.set_namespace(self.namespace)
-        try:
-            events = models.EventEntity.all().fetch(1000)
-            assert 1 == len(events)
-            assert_contains(
-                u'Bob (тест данные)',
-                transforms.loads(events[0].data)['Alice'])
-        finally:
-            namespace_manager.set_namespace(old_namespace)
-
-        # Clean up.
-        config.Registry.test_overrides = {}
+            # Check event is properly recorded.
+            old_namespace = namespace_manager.get_namespace()
+            namespace_manager.set_namespace(self.namespace)
+            try:
+                events = models.EventEntity.all().fetch(1000)
+                assert 1 == len(events)
+                assert_contains(
+                    u'Bob (тест данные)',
+                    transforms.loads(events[0].data)['Alice'])
+            finally:
+                namespace_manager.set_namespace(old_namespace)
 
     def test_two_students_dont_see_each_other_pages(self):
         """Test a user can't see another user pages."""
@@ -3007,56 +3005,52 @@ class ActivityTest(actions.TestBase):
         actions.register(self, name)
 
         # Enable event recording.
-        config.Registry.test_overrides[
-            lessons.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+        with actions.OverriddenEnvironment(
+            {'course': {analytics.CAN_RECORD_STUDENT_EVENTS: 'true'}}):
 
-        # Navigate to the course overview page, and check that the unit shows
-        # no progress yet.
-        response = self.get('course')
-        assert_equals(response.status_int, 200)
-        assert_contains(
-            u'id="progress-notstarted-%s"' % unit_id, response.body)
-
-        old_namespace = namespace_manager.get_namespace()
-        namespace_manager.set_namespace(self.namespace)
-        try:
-            response, args = self.get_activity(unit_id, lesson_id, {})
-
-            # Check that the current activity shows no progress yet.
-            assert_contains(
-                u'id="progress-notstarted-%s-activity"' %
-                lesson_id, response.body)
-
-            # Prepare activity submission event.
-            args['source'] = 'attempt-activity'
-            lesson_key = '%s.%s' % (unit_id, lesson_id)
-            assert lesson_key in activity_submissions
-            args['payload'] = activity_submissions[lesson_key]
-            args['payload']['location'] = (
-                'http://localhost:8080/activity?unit=%s&lesson=%s' %
-                (unit_id, lesson_id))
-            args['payload'] = transforms.dumps(args['payload'])
-
-            # Submit the request to the backend.
-            response = self.post('rest/events?%s' % urllib.urlencode(
-                {'request': transforms.dumps(args)}), {})
-            assert_equals(response.status_int, 200)
-            assert not response.body
-
-            # Check that the current activity shows partial progress.
-            response, args = self.get_activity(unit_id, lesson_id, {})
-            assert_contains(
-                u'id="progress-inprogress-%s-activity"' %
-                lesson_id, response.body)
-
-            # Navigate to the course overview page and check that the unit shows
-            # partial progress.
+            # Navigate to the course overview page, and check that the unit
+            # shows no progress yet.
             response = self.get('course')
             assert_equals(response.status_int, 200)
             assert_contains(
-                u'id="progress-inprogress-%s"' % unit_id, response.body)
-        finally:
-            namespace_manager.set_namespace(old_namespace)
+                u'id="progress-notstarted-%s"' % unit_id, response.body)
+
+            with Namespace(self.namespace):
+                response, args = self.get_activity(unit_id, lesson_id, {})
+
+                # Check that the current activity shows no progress yet.
+                assert_contains(
+                    u'id="progress-notstarted-%s-activity"' %
+                    lesson_id, response.body)
+
+                # Prepare activity submission event.
+                args['source'] = 'attempt-activity'
+                lesson_key = '%s.%s' % (unit_id, lesson_id)
+                assert lesson_key in activity_submissions
+                args['payload'] = activity_submissions[lesson_key]
+                args['payload']['location'] = (
+                    'http://localhost:8080/activity?unit=%s&lesson=%s' %
+                    (unit_id, lesson_id))
+                args['payload'] = transforms.dumps(args['payload'])
+
+                # Submit the request to the backend.
+                response = self.post('rest/events?%s' % urllib.urlencode(
+                    {'request': transforms.dumps(args)}), {})
+                assert_equals(response.status_int, 200)
+                assert not response.body
+
+                # Check that the current activity shows partial progress.
+                response, args = self.get_activity(unit_id, lesson_id, {})
+                assert_contains(
+                    u'id="progress-inprogress-%s-activity"' %
+                    lesson_id, response.body)
+
+                # Navigate to the course overview page and check that the unit
+                # shows partial progress.
+                response = self.get('course')
+                assert_equals(response.status_int, 200)
+                assert_contains(
+                    u'id="progress-inprogress-%s"' % unit_id, response.body)
 
     # pylint: disable=too-many-statements
     def test_progress(self):

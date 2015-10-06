@@ -23,9 +23,6 @@ import urlparse
 
 from utils import BaseHandler
 from utils import BaseRESTHandler
-from utils import CAN_PERSIST_ACTIVITY_EVENTS
-from utils import CAN_PERSIST_PAGE_EVENTS
-from utils import CAN_PERSIST_TAG_EVENTS
 from utils import HUMAN_READABLE_DATETIME_FORMAT
 from utils import set_image_or_video_exists
 from utils import TRANSIENT_STUDENT
@@ -201,7 +198,7 @@ def augment_assessment_units(course, student):
 def is_progress_recorded(handler, student):
     if student.is_transient:
         return False
-    if CAN_PERSIST_ACTIVITY_EVENTS:
+    if handler.can_record_student_events():
         return True
     course = handler.get_course()
     units = handler.get_track_matching_student(student)
@@ -1041,11 +1038,7 @@ class EventsRESTHandler(BaseRESTHandler):
         """Receives event and puts it into datastore."""
 
         COURSE_EVENTS_RECEIVED.inc()
-        can = (
-            CAN_PERSIST_ACTIVITY_EVENTS.value or
-            CAN_PERSIST_PAGE_EVENTS.value or
-            CAN_PERSIST_TAG_EVENTS.value)
-        if not can:
+        if not self.can_record_student_events():
             return
 
         request = transforms.loads(self.request.get('request'))

@@ -464,9 +464,9 @@ class YouTube(CoreTag):
     def name(cls):
         return 'YouTube Video'
 
-    def render(self, node, unused_handler):
+    def render(self, node, handler):
         video_id = node.attrib.get('videoid')
-        if utils.CAN_PERSIST_TAG_EVENTS.value:
+        if handler.can_record_student_events():
             return self._render_with_tracking(video_id)
         else:
             return self._render_no_tracking(video_id)
@@ -518,8 +518,8 @@ class Html5Video(CoreTag):
     def name(cls):
         return 'HTML5 Video'
 
-    def render(self, node, unused_handler):
-        if utils.CAN_PERSIST_TAG_EVENTS.value:
+    def render(self, node, handler):
+        if handler.can_record_student_events():
             tracking_text = (
                 '<script src="' + os.path.join(
                     _STATIC_URL, 'js', 'html5_video.js') + '">' +

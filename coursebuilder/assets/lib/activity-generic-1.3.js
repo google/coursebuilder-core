@@ -32,32 +32,30 @@ function getFreshTag() {
 }
 
 // controls sending events to the server; off by default; override to enable
-var gcbCanPostTagEvents = false;
-var gcbCanPostPageEvents = false;
-var gcbCanPostEvents = false;
+var gcbCanRecordStudentEvents = false;
 
 // various XSRF tokens
 var eventXsrfToken = '';
 var assessmentXsrfToken = '';
 
 function gcbTagEventAudit(data_dict, name) {
-  gcbAudit(gcbCanPostTagEvents, data_dict, 'tag-' + name, true);
+  gcbAudit(gcbCanRecordStudentEvents, data_dict, 'tag-' + name, true);
 }
 
 function gcbPageEventAudit(data_dict, name) {
-  gcbAudit(gcbCanPostPageEvents, data_dict, name, false);
+  gcbAudit(gcbCanRecordStudentEvents, data_dict, name, false);
 }
 
 function gcbActivityAudit(data_dict) {
-  gcbAudit(gcbCanPostEvents, data_dict, 'attempt-activity', true);
+  gcbAudit(gcbCanRecordStudentEvents, data_dict, 'attempt-activity', true);
 }
 
 function gcbLessonAudit(data_dict) {
-  gcbAudit(gcbCanPostEvents, data_dict, 'attempt-lesson', true);
+  gcbAudit(gcbCanRecordStudentEvents, data_dict, 'attempt-lesson', true);
 }
 
 function gcbAssessmentAudit(data_dict) {
-  gcbAudit(gcbCanPostEvents, data_dict, 'attempt-assessment', true);
+  gcbAudit(gcbCanRecordStudentEvents, data_dict, 'attempt-assessment', true);
 }
 
 function gcbAudit(can_post, data_dict, source, is_async) {

@@ -33,7 +33,6 @@ from pipeline import pipeline
 import appengine_config
 from common import utils as common_utils
 from controllers import sites
-from controllers import utils
 from models import config
 from models import courses
 from models import entities
@@ -42,6 +41,7 @@ from models import models
 from models import transforms
 from models.progress import ProgressStats
 from models.progress import UnitLessonCompletionTracker
+from modules.analytics import analytics
 from modules.analytics import rest_providers
 from modules.analytics import synchronous_providers
 from modules.mapreduce import mapreduce_module
@@ -108,10 +108,6 @@ class ProgressAnalyticsTest(actions.TestBase):
 
     EXPECTED_TASK_COUNT = 3
 
-    def enable_progress_tracking(self):
-        config.Registry.test_overrides[
-            utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
-
     def test_empty_student_progress_stats_analytics_displays_nothing(self):
         """Test analytics page on course dashboard when no progress stats."""
 
@@ -148,59 +144,61 @@ class ProgressAnalyticsTest(actions.TestBase):
     def test_student_progress_stats_analytics_displays_on_dashboard(self):
         """Test analytics page on course dashboard."""
 
-        self.enable_progress_tracking()
+        with actions.OverriddenEnvironment(
+            {'course': {analytics.CAN_RECORD_STUDENT_EVENTS: 'true'}}):
 
-        student1 = 'student1@google.com'
-        name1 = 'Test Student 1'
-        student2 = 'student2@google.com'
-        name2 = 'Test Student 2'
+            student1 = 'student1@google.com'
+            name1 = 'Test Student 1'
+            student2 = 'student2@google.com'
+            name2 = 'Test Student 2'
 
-        # Student 1 completes a unit.
-        actions.login(student1)
-        actions.register(self, name1)
-        actions.view_unit(self)
-        actions.logout()
+            # Student 1 completes a unit.
+            actions.login(student1)
+            actions.register(self, name1)
+            actions.view_unit(self)
+            actions.logout()
 
-        # Student 2 completes a unit.
-        actions.login(student2)
-        actions.register(self, name2)
-        actions.view_unit(self)
-        actions.logout()
+            # Student 2 completes a unit.
+            actions.login(student2)
+            actions.register(self, name2)
+            actions.view_unit(self)
+            actions.logout()
 
-        # Admin logs back in and checks if progress exists.
-        email = 'admin@google.com'
-        actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics_students')
-        assert_contains(
-            'Google &gt; Dashboard &gt; Manage &gt; Students', response.body)
-        assert_contains('have not been calculated yet', response.body)
+            # Admin logs back in and checks if progress exists.
+            email = 'admin@google.com'
+            actions.login(email, is_admin=True)
+            response = self.get('dashboard?action=analytics_students')
+            assert_contains(
+                'Google &gt; Dashboard &gt; Manage &gt; Students',
+                response.body)
+            assert_contains('have not been calculated yet', response.body)
 
-        response = response.forms[
-            'gcb-generate-analytics-data'].submit().follow()
-        assert len(self.taskq.GetTasks('default')) == (
-            ProgressAnalyticsTest.EXPECTED_TASK_COUNT)
+            response = response.forms[
+                'gcb-generate-analytics-data'].submit().follow()
+            assert len(self.taskq.GetTasks('default')) == (
+                ProgressAnalyticsTest.EXPECTED_TASK_COUNT)
 
-        response = self.get('dashboard?action=analytics_students')
-        assert_contains('is running', response.body)
+            response = self.get('dashboard?action=analytics_students')
+            assert_contains('is running', response.body)
 
-        self.execute_all_deferred_tasks()
+            self.execute_all_deferred_tasks()
 
-        response = self.get('dashboard?action=analytics_students')
-        assert_contains('were last updated at', response.body)
-        assert_contains('currently enrolled: 2', response.body)
-        assert_contains('total: 2', response.body)
+            response = self.get('dashboard?action=analytics_students')
+            assert_contains('were last updated at', response.body)
+            assert_contains('currently enrolled: 2', response.body)
+            assert_contains('total: 2', response.body)
 
-        assert_contains('Student Progress', response.body)
-        assert_does_not_contain(
-            'No student progress has been recorded for this course.',
-            response.body)
-        # JSON code for the completion statistics.
-        assert_contains(
-            '\\"u.1.l.1\\": {\\"progress\\": 0, \\"completed\\": 2}',
-            response.body)
-        assert_contains(
-            '\\"u.1\\": {\\"progress\\": 2, \\"completed\\": 0}',
-            response.body)
+            assert_contains('Student Progress', response.body)
+            assert_does_not_contain(
+                'No student progress has been recorded for this course.',
+                response.body)
+            # JSON code for the completion statistics.
+            assert_contains(
+                '\\"u.1.l.1\\": {\\"progress\\": 0, \\"completed\\": 2}',
+                response.body)
+            assert_contains(
+                '\\"u.1\\": {\\"progress\\": 2, \\"completed\\": 0}',
+                response.body)
 
     def test_analytics_are_individually_cancelable_and_runnable(self):
         """Test run/cancel controls for individual analytics jobs."""
@@ -558,10 +556,6 @@ class ProgressAnalyticsTest(actions.TestBase):
 
 class QuestionAnalyticsTest(actions.TestBase):
     """Tests the question analytics page from Course Author dashboard."""
-
-    def _enable_activity_tracking(self):
-        config.Registry.test_overrides[
-            utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
 
     def _get_sample_v15_course(self):
         """Creates a course with different types of questions and returns it."""

@@ -1360,16 +1360,10 @@ class EventsTest(BaseIntegrationTest):
 
         # Set gcb_can_persist_tag_events so we will track video events.
 
-        thing = self.load_root_page(
-        ).click_dashboard(
-        ).click_admin(
-        ).click_site_settings(
-        ).click_override(
-            'gcb_can_persist_tag_events'
-        ).set_value(
-            True
-        ).set_status(
-            'Active'
+        self.load_dashboard(name
+        ).click_settings(
+        ).set_checkbox_by_title(
+            'Record Student Events', True
         ).click_save()
 
         # Add a unit with a video.
@@ -1425,9 +1419,8 @@ class EventsTest(BaseIntegrationTest):
         ).get_items(
         )
 
-        events = []
-        for datum in data:
-            events.append(transforms.loads(datum['data']))
+        events = [transforms.loads(d['data']) for d in data]
+        events = [e for e in events if 'event_id' in e]
         events.sort(key=lambda event: event['event_id'])
 
         # Sometimes get this, sometimes don't.  Don't check for this to

@@ -61,6 +61,6 @@ fi
 echo Running functional tests
 python "$SOURCE_DIR/scripts/run_all_tests.py" \
   --skip_pylint \
-  --test_class_name "$1"
+  --test_class_name "$@"
 
 echo Done!

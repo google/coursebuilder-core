@@ -22,11 +22,8 @@ from actions import assert_contains
 from actions import assert_does_not_contain
 from actions import assert_equals
 from controllers import sites
-from controllers import utils
-from models import config
 from models import courses
 from models import transforms
-
 
 # The unit id for the peer review assignment in the default course.
 LEGACY_REVIEW_UNIT_ID = 'ReviewAssessmentExample'
@@ -674,8 +671,6 @@ class PeerReviewDashboardStudentTest(actions.TestBase):
         self.course.save()
         actions.login(self.STUDENT_EMAIL)
         actions.register(self, self.STUDENT_EMAIL)
-        config.Registry.test_overrides[
-            utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
 
         actions.submit_assessment(
             self,

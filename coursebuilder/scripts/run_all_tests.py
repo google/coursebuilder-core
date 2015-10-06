@@ -393,6 +393,12 @@ def make_default_parser():
         '--verbose',
         help='Print more verbose output to help diagnose problems',
         action='store_true')
+    parser.add_argument(
+        '--server_log_file',
+        help='If present, capture stdout and stderr from integration server '
+        'to the named file.  This is helpful when diagnosing a problem with '
+        'the server that does not manifest when the server is started outside '
+        'tests.')
     return parser
 
 
@@ -442,18 +448,19 @@ def ensure_port_available(port_number):
     s.close()
 
 
-def start_integration_server():
+def start_integration_server(server_log_file):
     ensure_port_available(8081)
     ensure_port_available(8000)
     server_cmd = os.path.join(
         os.path.dirname(__file__), 'start_in_shell.sh')
-    server = start_integration_server_process(
+    return start_integration_server_process(
         server_cmd,
-        set(['tests.integration.fake_visualizations']))
-    return server
+        set(['tests.integration.fake_visualizations']),
+        server_log_file)
 
 
-def start_integration_server_process(integration_server_start_cmd, modules):
+def start_integration_server_process(integration_server_start_cmd, modules,
+                                     server_log_file):
     if modules:
         _fn = os.path.join(os.path.dirname(__file__), '..', 'custom.yaml')
         _st = os.stat(_fn)
@@ -466,17 +473,31 @@ def start_integration_server_process(integration_server_start_cmd, modules):
         fp.close()
 
     logging.info('Starting external server: %s', integration_server_start_cmd)
-    devnull = open(os.devnull, 'w')
+
+    if server_log_file:
+        if not server_log_file.startswith('/tmp'):
+            raise ValueError(
+                'Server log file name should start with /tmp; '
+                'if it is in the local directory, the dev_appserver runtime '
+                'will notice the file contents change, and attempt to '
+                're-parse it, just-in-case.  This will add some log lines, '
+                'so the file will change again, and will trigger a '
+                're-parse, which....   Just put the file in /tmp/...')
+        logfile = open(server_log_file, 'w')
+    else:
+        logfile = open(os.devnull, 'w')
+
     server = subprocess.Popen(
-        integration_server_start_cmd, preexec_fn=os.setsid, stdout=devnull,
-        stderr=devnull)
+        integration_server_start_cmd, preexec_fn=os.setsid, stdout=logfile,
+        stderr=logfile)
     time.sleep(3)  # Wait for server to start up
 
-    return server
+    return server, logfile
 
 
-def stop_integration_server(server, modules):
+def stop_integration_server(server, logfile, modules):
     server.kill()  # dev_appserver.py itself.
+    logfile.close()
 
     # The new dev appserver starts a _python_runtime.py process that isn't
     # captured by start_integration_server and so doesn't get killed. Until it's
@@ -765,7 +786,7 @@ def run_all_tests(parsed_args, setup_deps=True):
 
     server = None
     if integration_tests:
-        server = start_integration_server()
+        server, logfile = start_integration_server(parsed_args.server_log_file)
         run_tests({
             'tests.integration.test_classes.'
             'IntegrationServerInitializationTask': 1},
@@ -782,7 +803,7 @@ def run_all_tests(parsed_args, setup_deps=True):
     finally:
         if server:
             stop_integration_server(
-                server,
+                server, logfile,
                 set(['tests.integration.fake_visualizations']))
 
 
