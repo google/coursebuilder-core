@@ -19,10 +19,10 @@ Total Certificates:
      being a little white lie. -->
 <p>
 % Total Students with Certificate:
-{{ total_certificates * 100 / (total_students or 1) }}
+{{ (total_certificates * 100 / (total_students or 1))|round(2) }}
 </p>
 
 <p>
 % Active Students with Certificate:
-{{ total_certificates * 100 / (total_active_students or 1) }}
+{{ (total_certificates * 100 / (total_active_students or 1))|round(2) }}
 </p>
