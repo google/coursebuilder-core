@@ -175,12 +175,10 @@ one page. Otherwise, each is shown on its own page.
 
 # TODO(tlarsen): Per Notes in http://b/24176227 spreadsheet:
 #   "Learn more..." links to the docs (tbd)
-UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = """
+UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = safe_dom.assemble_text_message("""
 If checked, the manual progress REST API permits users to manually mark a
 unit or lesson as complete, overriding the automatic progress tracking.
-<a href="https://code.google.com/p/course-builder/wiki/Dashboard"
- target="_blank">Learn more...</a>
-"""
+""", "https://code.google.com/p/course-builder/wiki/Dashboard")
 
 UNIT_HEADER_DESCRIPTION = """
 This content appears at the top of the unit page.
