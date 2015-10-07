@@ -23,40 +23,6 @@ PUBLISHED_TEXT = 'Public'
 
 PEER_MATCHER_NAME = 'Peer'
 
-ASSESSMENT_CONTENT_DESCRIPTION = safe_dom.assemble_text_message("""
-Assessment questions and answers (JavaScript format).
-""", 'https://code.google.com/p/course-builder/wiki/CreateAssessments')
-
-ASSESSMENT_DETAILS_DESCRIPTION = safe_dom.assemble_text_message("""
-Properties and restrictions of your assessment.
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
-DUE_DATE_FORMAT_DESCRIPTION = safe_dom.assemble_text_message("""
-Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
-in the UTC timezone.""", None)
-
-REVIEWER_FEEDBACK_FORM_DESCRIPTION = safe_dom.assemble_text_message("""
-Review form questions and answers (JavaScript format).
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
-REVIEWER_FEEDBACK_FORM_HTML_DESCRIPTION = """
-Add the content that reviewers of a Peer Review assignment see.
-"""
-
-REVIEW_DUE_DATE_FORMAT_DESCRIPTION = safe_dom.assemble_text_message("""
-The review date must be later than the Submission Date.
-Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
-in the UTC timezone.
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
-REVIEW_MIN_COUNT_DESCRIPTION = safe_dom.assemble_text_message(
-    None, 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
-REVIEW_TIMEOUT_IN_MINUTES = safe_dom.assemble_text_message("""
-How long a reviewer has to review an assignment once the reviewer accepts the
-assignment.  This value should be specified in minutes.
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
 LESSON_VIDEO_ID_DESCRIPTION = """
 Provide a YouTube video ID to embed a video.
 """
@@ -139,27 +105,96 @@ This is the URL to which this link goes. Links to other sites must start
 with "http" or "https".
 """
 
-ASSESSMENT_WEIGHT_DESCRIPTION = """
-Specify how many points to assign to this assessment.
+ASSESSMENT_TITLE_DESCRIPTION = """
+The assessment title is displayed to students on the syllabus page.
 """
 
-CHECK_ANSWERS_DESCRIPTION = """
-Choose whether your students can get feedback on whether the answer is correct.
+ASSESSMENT_DESCRIPTION_DESCRIPTION = """
+The assessment description is displayed to students on the syllabus page.
 """
 
-SINGLE_SUBMISSION_DESCRIPTION = """
+ASSESSMENT_AVAILABILITY_DESCRIPTION = """
+If this assessment is "%s", only admins can see it. If it is "%s",
+then anyone who has access to the course can see it.
+""" % (DRAFT_TEXT, PUBLISHED_TEXT)
+
+ASSESSMENT_SYLLABUS_VISIBILITY_DESCRIPTION = """
+If this assessment is "%s", this controls whether or not its title is
+still shown to students on the syllabus page.
+""" % DRAFT_TEXT
+
+ASSESSMENT_CONTENT_DESCRIPTION_TEXT = "Assessment questions and answers."
+
+ASSESSMENT_CONTENT_DESCRIPTION = safe_dom.assemble_text_message(
+    ASSESSMENT_CONTENT_DESCRIPTION_TEXT,
+    'https://code.google.com/p/course-builder/wiki/CreateAssessments')
+
+ASSESSMENT_CONTENT_JAVASCRIPT_DESCRIPTION = safe_dom.assemble_text_message(
+    "%s (JavaScript format)." % ASSESSMENT_CONTENT_DESCRIPTION_TEXT,
+    'https://code.google.com/p/course-builder/wiki/CreateAssessments')
+
+ASSESSMENT_POINTS_DESCRIPTION = """
+This is the number of points to assign to this assessment.
+"""
+
+ASSESSMENT_SHOW_CORRECT_ANSWER_DESCRIPTION = """
+If checked, students will see "Check Answers" buttons which indicate if the
+correct answer is given when pressed.
+"""
+
+ASSESSMENT_SINGLE_SUBMISSION_DESCRIPTION = """
 Allow students only one opportunity to submit the answers.
 """
 
-SHOW_FEEDBACK_DESCRIPTION = """
+ASSESSMENT_DUE_DATE_FORMAT_DESCRIPTION = safe_dom.assemble_text_message("""
+Should be formatted as YYYY-MM-DD hh:mm (e.g. 2013-07-16 19:20) and be specified
+in the UTC timezone.""", None)
+
+
+ASSESSMENT_SHOW_FEEDBACK_DESCRIPTION = """
 Show students the feedback on their answers after the due date is passed.
 If no due date is set, this flag has no effect.
 """
 
-SHOW_SCORE_DESCRIPTION = """
+ASSESSMENT_SHOW_SCORE_DESCRIPTION = """
 Show students the total score on the assignment after the due date is passed.
 If no due date is set, this flag has no effect.
 """
+
+# TODO(tlarsen): Per Notes in http://b/24176227 spreadsheet:
+#   "Learn more..." links to the docs (tbd)
+ASSESSMENT_GRADING_METHOD_DESCRIPTION = safe_dom.assemble_text_message("""
+If this is set to "Peer review", this assessment will use the Peer Review
+module. Otherwise, it will be graded automatically.
+""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+
+ASSESSMENT_DETAILS_DESCRIPTION = safe_dom.assemble_text_message("""
+Properties and restrictions of your assessment.
+""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
+
+ASSESSMENT_REVIEWER_FEEDBACK_FORM_DESCRIPTION = safe_dom.assemble_text_message(
+"""
+Review form questions and answers (JavaScript format).
+""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
+
+ASSESSMENT_REVIEWER_FEEDBACK_FORM_HTML_DESCRIPTION = """
+Add the content that reviewers of a Peer Review assignment see.
+"""
+
+ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION = safe_dom.assemble_text_message(
+"""
+The review date must be later than the Submission Date.
+Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
+in the UTC timezone.
+""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
+
+ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION = safe_dom.assemble_text_message(
+    None, 'https://code.google.com/p/course-builder/wiki/PeerReview')
+
+ASSESSMENT_REVIEW_TIMEOUT_IN_MINUTES = safe_dom.assemble_text_message("""
+How long a reviewer has to review an assignment once the reviewer accepts the
+assignment.  This value should be specified in minutes.
+""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
 UNIT_TITLE_DESCRIPTION = """
 The unit title is displayed to students on the syllabus page.

@@ -898,6 +898,12 @@ class ResourceAssessment(ResourceUnitBase):
 
     TYPE = ResourceUnitBase.ASSESSMENT_TYPE
 
+    TITLE_DESCRIPTION = messages.ASSESSMENT_TITLE_DESCRIPTION
+    DESCRIPTION_DESCRIPTION = messages.ASSESSMENT_DESCRIPTION_DESCRIPTION
+    AVAILABILITY_DESCRIPTION = messages.ASSESSMENT_AVAILABILITY_DESCRIPTION
+    SYLLABUS_VISIBILITY_DESCRIPTION = (
+        messages.ASSESSMENT_SYLLABUS_VISIBILITY_DESCRIPTION)
+
     @classmethod
     def get_schema(cls, course, key):
         reg = schema_fields.FieldRegistry('Assessment',
@@ -908,44 +914,47 @@ class ResourceAssessment(ResourceUnitBase):
         course_opts = cls._generate_common_schema(
             'Assessment Config', hidden_header=True)
         course_opts.add_property(schema_fields.SchemaField(
-            'weight', 'Weight', 'number',
-            description=str(messages.ASSESSMENT_WEIGHT_DESCRIPTION),
+            'weight', 'Points', 'number',
+            description=messages.ASSESSMENT_POINTS_DESCRIPTION,
             i18n=False, optional=False))
         course_opts.add_property(schema_fields.SchemaField(
             'content', 'Assessment Content (JavaScript)', 'text', optional=True,
-            description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION),
+            description=str(messages.ASSESSMENT_CONTENT_JAVASCRIPT_DESCRIPTION),
             extra_schema_dict_values={'className': 'inputEx-Field content'}))
         course_opts.add_property(schema_fields.SchemaField(
             'html_content', 'Assessment Content', 'html', optional=True,
+            description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION),
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.ASSESSMENT_SCOPE,
                 'className': 'inputEx-Field html-content'}))
         course_opts.add_property(schema_fields.SchemaField(
-            'html_check_answers', '"Check Answers" Buttons', 'boolean',
-            description=str(messages.CHECK_ANSWERS_DESCRIPTION),
+            'html_check_answers', "Show Correct Answer", 'boolean',
+            description=messages.ASSESSMENT_SHOW_CORRECT_ANSWER_DESCRIPTION,
             extra_schema_dict_values={
-                'className': 'inputEx-Field assessment-editor-check-answers'},
+                'className': ('inputEx-Field inputEx-CheckBox'
+                              ' assessment-editor-check-answers')},
             optional=True))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SINGLE_SUBMISSION_KEY), 'Single Submission',
-            'boolean', description=str(messages.SINGLE_SUBMISSION_DESCRIPTION),
-            optional=True))
+            'boolean', optional=True,
+            description=messages.ASSESSMENT_SINGLE_SUBMISSION_DESCRIPTION))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SUBMISSION_DUE_DATE_KEY),
             'Submission Due Date', 'string', optional=True,
-            description=str(messages.DUE_DATE_FORMAT_DESCRIPTION)))
+            description=str(messages.ASSESSMENT_DUE_DATE_FORMAT_DESCRIPTION)))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SHOW_FEEDBACK_KEY), 'Show Feedback',
-            'boolean', description=str(messages.SHOW_FEEDBACK_DESCRIPTION),
-            optional=True))
+            'boolean', optional=True,
+            description=messages.ASSESSMENT_SHOW_FEEDBACK_DESCRIPTION))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SHOW_SCORE_KEY), 'Show Score',
-            'boolean', description=str(messages.SHOW_SCORE_DESCRIPTION),
+            'boolean', description=messages.ASSESSMENT_SHOW_SCORE_DESCRIPTION,
             optional=True))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.GRADER_KEY), 'Grading Method', 'string',
-            select_data=ALLOWED_GRADERS_NAMES.items()))
+            select_data=ALLOWED_GRADERS_NAMES.items(),
+            description=str(messages.ASSESSMENT_GRADING_METHOD_DESCRIPTION)))
         reg.add_sub_registry('assessment', 'Assessment Config',
                              registry=course_opts)
 
@@ -962,13 +971,15 @@ class ResourceAssessment(ResourceUnitBase):
         review_opts.add_property(schema_fields.SchemaField(
             'review_form', 'Reviewer Feedback Form (JavaScript)', 'text',
             optional=True,
-            description=str(messages.REVIEWER_FEEDBACK_FORM_DESCRIPTION),
+            description=str(
+                messages.ASSESSMENT_REVIEWER_FEEDBACK_FORM_DESCRIPTION),
             extra_schema_dict_values={
                 'className': 'inputEx-Field review-form'}))
         review_opts.add_property(schema_fields.SchemaField(
             'html_review_form', 'Reviewer Feedback Form', 'html',
             optional=True,
-            description=str(messages.REVIEWER_FEEDBACK_FORM_HTML_DESCRIPTION),
+            description=(
+                messages.ASSESSMENT_REVIEWER_FEEDBACK_FORM_HTML_DESCRIPTION),
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.ASSESSMENT_SCOPE,
@@ -976,15 +987,17 @@ class ResourceAssessment(ResourceUnitBase):
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_DUE_DATE_KEY),
             'Review Due Date', 'string', optional=True,
-            description=str(messages.REVIEW_DUE_DATE_FORMAT_DESCRIPTION)))
+            description=str(
+                messages.ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION)))
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_MIN_COUNT_KEY),
             'Review Min Count', 'integer', optional=True,
-            description=str(messages.REVIEW_MIN_COUNT_DESCRIPTION)))
+            description=str(
+                messages.ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION)))
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_WINDOW_MINS_KEY),
             'Review Window Timeout', 'integer', optional=True,
-            description=str(messages.REVIEW_TIMEOUT_IN_MINUTES)))
+            description=str(messages.ASSESSMENT_REVIEW_TIMEOUT_IN_MINUTES)))
         return reg
 
 
