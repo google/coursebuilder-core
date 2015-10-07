@@ -1001,12 +1001,18 @@ class ResourceLink(ResourceUnitBase):
 
     TYPE = ResourceUnitBase.LINK_TYPE
 
+    TITLE_DESCRIPTION = messages.LINK_TITLE_DESCRIPTION
+    DESCRIPTION_DESCRIPTION = messages.LINK_DESCRIPTION_DESCRIPTION
+    AVAILABILITY_DESCRIPTION = messages.LINK_AVAILABILITY_DESCRIPTION
+    SYLLABUS_VISIBILITY_DESCRIPTION = (
+        messages.LINK_SYLLABUS_VISIBILITY_DESCRIPTION)
+
     @classmethod
     def get_schema(cls, course, key):
         schema = cls._generate_common_schema('Link')
         schema.add_property(schema_fields.SchemaField(
             'url', 'URL', 'string', optional=True,
-            description=messages.LINK_EDITOR_URL_DESCRIPTION))
+            description=messages.LINK_URL_DESCRIPTION))
         return schema
 
     @classmethod

@@ -116,8 +116,27 @@ INPUT_FIELD_WIDTH_DESCRIPTION = """
 Width of the input field, measured in columns.
 """
 
-LINK_EDITOR_URL_DESCRIPTION = """
-Links to external sites must start with 'http' or https'.
+LINK_TITLE_DESCRIPTION = """
+The link title is displayed to students on the syllabus page.
+"""
+
+LINK_DESCRIPTION_DESCRIPTION = """
+The link description is displayed to students on the syllabus page.
+"""
+
+LINK_AVAILABILITY_DESCRIPTION = """
+If this link is "%s", only admins can see it. If it is "%s", then
+anyone who has access to the course can see it.
+""" % (DRAFT_TEXT, PUBLISHED_TEXT)
+
+LINK_SYLLABUS_VISIBILITY_DESCRIPTION = """
+If this link is "%s", this controls whether or not its title is still
+shown to students on the syllabus page.
+""" % DRAFT_TEXT
+
+LINK_URL_DESCRIPTION = """
+This is the URL to which this link goes. Links to other sites must start
+with "http" or "https".
 """
 
 ASSESSMENT_WEIGHT_DESCRIPTION = """
