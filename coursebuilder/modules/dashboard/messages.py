@@ -16,6 +16,7 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+from common import safe_dom
 
 ROLES_DESCRIPTION = """
 Manage the different roles associated with your course.
@@ -27,3 +28,16 @@ LABELS_TYPE_DESCRIPTION = """
 You can put students in different <b>Course tracks</b> to show them different
 units.
 """
+
+GIFT_GROUP_DESCRIPTION_DESCRIPTION = """
+This is the description of the question group created for the imported
+questions.
+"""
+
+# TODO(tlarsen): Per Notes in http://b/24176227 spreadsheet:
+#   "Learn more..." links to the docs (tbd)
+GIFT_QUESTIONS_DESCRIPTION = safe_dom.assemble_text_message("""
+Each question is imported as a separate question (named Q1, Q2, etc.).
+Additionally, a question group is added with all the questions. Course Builder
+supports multiple choice, true-false, short answer, and numerical questions.
+""", "https://code.google.com/p/course-builder/wiki/Dashboard")

@@ -26,6 +26,7 @@ from models import resources_display
 from modules.assessment_tags import gift
 from modules.dashboard import dto_editor
 from modules.dashboard import utils as dashboard_utils
+from modules.dashboard import messages
 
 
 class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
@@ -301,14 +302,11 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
             'version', '', 'string', optional=True, hidden=True))
         gift_questions.add_property(schema_fields.SchemaField(
             'description', 'Group description', 'string', optional=True,
+            description=messages.GIFT_GROUP_DESCRIPTION_DESCRIPTION,
             extra_schema_dict_values={'className': 'gift-description'}))
         gift_questions.add_property(schema_fields.SchemaField(
             'questions', 'Questions', 'text', optional=True,
-            description=(
-                'Supported question types: Multiple choice, True-false, '
-                'Short answer, and Numerical, '
-                '<a href="https://docs.moodle.org/23/en/GIFT_format" '
-                'target="_blank">GIFT format description.</a>'),
+            description=str(messages.GIFT_QUESTIONS_DESCRIPTION),
             extra_schema_dict_values={'className': 'gift-questions'}))
         return gift_questions
 
