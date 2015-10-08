@@ -45,7 +45,10 @@ if [ ! -x "$SOURCE_DIR/scripts/start_in_shell.sh" ]; then
 fi
 
 # Configures the runtime environment.
-export PYTHONPATH=$SOURCE_DIR:$GOOGLE_APP_ENGINE_HOME:$RUNTIME_HOME/oauth2client
+export PYTHONPATH=$SOURCE_DIR\
+:$GOOGLE_APP_ENGINE_HOME\
+:$RUNTIME_HOME/oauth2client\
+:$RUNTIME_HOME/pycrypto-2.6.1
 PATH=$RUNTIME_HOME/node/node_modules/karma/bin\
 :$RUNTIME_HOME/node/bin\
 :$RUNTIME_HOME/phantomjs/bin\
@@ -70,6 +73,22 @@ if [ ! -d "$GOOGLE_APP_ENGINE_HOME" ]; then
   mv $RUNTIME_HOME/google_appengine $GOOGLE_APP_ENGINE_HOME
   rm google_appengine_1.9.21.zip
 fi
+
+function handle_build_error() {
+  local package_name=$1 && shift
+  local package_version=$1 && shift
+
+  echo "
+Compilation error building $package_name-$package_version. Please ensure a C
+compiler is installed and functional on your system. On OS X, the most likely
+cause of this problem is that you don't have the XCode Command Line Tools
+installed. To fix this, run
+
+  $ xcode-select --install
+
+and follow the instructions that appear, then re-run this command."
+  exit -1
+}
 
 function need_install() {
   local package_name=$1 && shift
@@ -97,6 +116,37 @@ function need_install() {
   fi
   return 1
 }
+
+# Probe for file not present in the archive, but present in the folder we make
+# *from* the archive.
+if [ ! -f $RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded ]; then
+  # PyCrypto is included in the prod bundle, but we need to supply it in dev
+  # mode. It contains native code and must be built on the user's platform.
+  echo Installing PyCrypto '(a crypto library needed in dev mode)'
+
+  # Clean up any old artifacts (for example, from failed builds).
+  if [ -d $RUNTIME_HOME/pycrypto-2.6.1 ]; then
+    rm -r $RUNTIME_HOME/pycrypto-2.6.1
+  fi
+
+  curl --location --silent https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.1.tar.gz -o pycrypto-2.6.1.tar.gz
+  tar --gunzip --extract --verbose --directory $RUNTIME_HOME --file pycrypto-2.6.1.tar.gz
+  rm pycrypto-2.6.1.tar.gz
+  pushd .
+  cd $RUNTIME_HOME/pycrypto-2.6.1
+  echo Building PyCrypto
+  python setup.py build || handle_build_error pycrypto 2.6.1
+  echo Installing PyCrypto
+  python setup.py install --home=$RUNTIME_HOME/pycrypto_build_tmp
+  rm -r $RUNTIME_HOME/pycrypto-2.6.1
+  mkdir $RUNTIME_HOME/pycrypto-2.6.1
+  touch $RUNTIME_HOME/pycrypto-2.6.1/__init__.py
+  mv $RUNTIME_HOME/pycrypto_build_tmp/lib/python/* $RUNTIME_HOME/pycrypto-2.6.1
+  rm -r $RUNTIME_HOME/pycrypto_build_tmp
+  # Now that we know we've succeeded, create the needle for later probes.
+  touch $RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded
+  popd
+fi
 
 if need_install webtest PKG-INFO Version: 2.0.14 ; then
   curl --location --silent https://pypi.python.org/packages/source/W/WebTest/WebTest-2.0.14.zip -o webtest-download.zip
