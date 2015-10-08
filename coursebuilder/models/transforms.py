@@ -72,7 +72,7 @@ JSON_XSSI_PREFIX = ")]}'\n"
 CUSTOM_JSON_ENCODERS = []
 
 
-def dict_to_json(source_dict, unused_schema):
+def dict_to_json(source_dict, schema=None):
     """Converts Python dictionary into JSON dictionary using schema."""
     output = {}
     for key, value in source_dict.items():

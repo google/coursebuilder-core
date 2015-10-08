@@ -1655,7 +1655,7 @@ def _validate_arguments(parsed_args):
 
 def _write_model_to_json_file(json_file, privacy_transform_fn, model):
     entity_dict = _get_entity_dict(model, privacy_transform_fn)
-    json_file.write(transforms.dict_to_json(entity_dict, None))
+    json_file.write(transforms.dict_to_json(entity_dict))
 
 
 def main(parsed_args, environment_class=None):

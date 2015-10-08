@@ -61,7 +61,7 @@ class KeyPropertyTest(actions.TestBase):
         restored = transforms.dict_to_entity(entity, transformed)
         self.assertEqual(new_key, restored.referenced_model_key)
 
-        json = transforms.dict_to_json(transformed, None)
+        json = transforms.dict_to_json(transformed)
         self.assertEqual(str(new_key), json['referenced_model_key'])
 
         from_json = transforms.json_to_dict(

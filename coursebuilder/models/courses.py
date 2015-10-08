@@ -2337,6 +2337,13 @@ class Course(object):
             'course:title', 'Course Name', 'string'))
 
         opts.add_property(schema_fields.SchemaField(
+            '_reserved:context_path', 'Course URL Component', 'uneditable',
+            optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            '_reserved:namespace', 'Course Namespace', 'uneditable',
+            optional=True))
+
+        opts.add_property(schema_fields.SchemaField(
             'course:admin_user_emails', 'Course Admins', 'string',
             description='A list of email addresses of course administrators.  '
             'Syntax: Entries may be separated with any combination of '

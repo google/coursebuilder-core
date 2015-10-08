@@ -449,10 +449,7 @@ class ConfigPropertyItemRESTHandler(utils.BaseRESTHandler):
                 'is_draft': entity.is_draft}
             entity_dict['value'] = transforms.string_to_value(
                 entity.value, item.value_type)
-            json_payload = transforms.dict_to_json(
-                entity_dict,
-                transforms.loads(
-                    ConfigPropertyEditor.get_schema_json(item)))
+            json_payload = transforms.dict_to_json(entity_dict)
             transforms.send_json_response(
                 self, 200, 'Success.',
                 payload_dict=json_payload,

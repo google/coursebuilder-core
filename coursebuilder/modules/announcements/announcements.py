@@ -267,8 +267,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
         entity_dict['label_groups'] = (
             LabelGroupsHelper.announcement_labels_to_dict(entity))
 
-        json_payload = transforms.dict_to_json(
-            entity_dict, schema.get_json_schema_dict())
+        json_payload = transforms.dict_to_json(entity_dict)
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,

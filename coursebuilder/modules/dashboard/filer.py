@@ -488,9 +488,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
             entity['content'] = base64.b64encode(stream.read())
 
         # Render JSON response.
-        json_payload = transforms.dict_to_json(
-            entity,
-            FilesItemRESTHandler.SCHEMA_DICT)
+        json_payload = transforms.dict_to_json(entity)
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,

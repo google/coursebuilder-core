@@ -184,7 +184,7 @@ class QuestionnaireHandler(BaseRESTHandler):
 
         transforms.send_json_response(
             self, 200, None,
-            payload_dict=transforms.dict_to_json(form_dict, self.SCHEMA))
+            payload_dict=transforms.dict_to_json(form_dict))
 
     def post(self):
         """POST method called when the student submits answers."""

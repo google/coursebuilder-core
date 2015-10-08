@@ -109,7 +109,7 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
         else:
             entities = [row.for_export(transform_fn) for row in rows]
         dicts = [transforms.entity_to_dict(entity) for entity in entities]
-        return [transforms.dict_to_json(d, schema) for d in dicts]
+        return [transforms.dict_to_json(d) for d in dicts]
 
     @classmethod
     def _build_query(cls, source_context, schema, page_number, log):

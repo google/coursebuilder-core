@@ -317,8 +317,14 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
             self.app_context, constants.SCOPE_COURSE_SETTINGS, schema)
         schema.convert_entity_to_json_entity(
             self.get_course_dict(), entity)
-        json_payload = transforms.dict_to_json(
-            entity, schema.get_json_schema_dict())
+
+        if 'homepage' in entity:
+            data = entity['homepage']
+            data['_reserved:context_path'] = self.app_context.get_slug()
+            data['_reserved:namespace'] = \
+                self.app_context.get_namespace_name()
+
+        json_payload = transforms.dict_to_json(entity)
 
         return json_payload
 
