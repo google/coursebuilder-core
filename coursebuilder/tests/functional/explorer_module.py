@@ -241,7 +241,7 @@ class CourseExplorerDisabledTest(actions.TestBase):
         response = self.get('/explorer')
         assert_contains('Explore Courses', response.body)
         assert_does_not_contain('My Courses', response.body)
-        assert_does_not_contain('Site admin', response.body)
+        assert_does_not_contain('Dashboard', response.body)
 
         # login and check logged in student perspective
         config.Registry.test_overrides[
@@ -252,7 +252,7 @@ class CourseExplorerDisabledTest(actions.TestBase):
         response = self.get('/explorer')
         assert_contains('Explore Courses', response.body)
         assert_contains('My Courses', response.body)
-        assert_does_not_contain('Site admin', response.body)
+        assert_does_not_contain('Dashboard', response.body)
 
     def test_admin_access(self):
         # enable course explorer
@@ -263,7 +263,8 @@ class CourseExplorerDisabledTest(actions.TestBase):
         # check the admin site link
         actions.login('admin@test.foo', is_admin=True)
         response = self.get('/explorer')
-        assert_contains('Site admin', response.body)
+        assert_contains(
+            '<a href="/modules/admin">Dashboard</a>', response.body)
 
 
 class GlobalProfileTest(BaseExplorerTest):
