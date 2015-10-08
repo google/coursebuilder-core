@@ -23,28 +23,33 @@ PUBLISHED_TEXT = 'Public'
 
 PEER_MATCHER_NAME = 'Peer'
 
+LESSON_TITLE_DESCRIPTION = """
+The lesson title is displayed to students on the unit page.
+"""
+
+LESSON_PARENT_UNIT_DESCRIPTION = """
+This lesson is part of this unit.
+"""
+
 LESSON_VIDEO_ID_DESCRIPTION = """
 Provide a YouTube video ID to embed a video.
 """
 
 LESSON_SCORED_DESCRIPTION = """
-Whether questions in this lesson will be scored (summative) or only
-provide textual feedback (formative).
+If this is set to "Questions are scored", the questions in this lesson will
+be scored (summative). Otherwise, they will only provide textual feedback
+(formative).
 """
 
-LESSON_OBJECTIVES_DESCRIPTION = """
-The lesson body is displayed to students above the video in the default
-template.
-"""
-
-LESSON_NOTES_DESCRIPTION = """
+LESSON_TEXT_VERSION_URL_DESCRIPTION = """
 This is the URL to the text version of this lesson's content. If present, it is
 accessed by clicking on the "Text Version" button on the lesson page. Links to
 other sites must start with "http" or "https".
 """
 
-LESSON_AUTO_INDEX_DESCRIPTION = """
-Assign a sequential number to this lesson automatically.
+LESSON_AUTO_NUMBER_DESCRIPTION = """
+If checked, this lesson will be numbered in sequence in the list of lessons
+in this unit.
 """
 
 LESSON_ACTIVITY_TITLE_DESCRIPTION = """
@@ -62,11 +67,17 @@ converted during "Import Course".
 """, ('https://code.google.com/p/course-builder/wiki/CreateActivities'
       '#Writing_activities'))
 
-LESSON_MANUAL_PROGRESS_DESCRIPTION = """
-When set, the manual progress REST API permits
-users to manually mark a unit or lesson as complete,
-overriding the automatic progress tracking.
-"""
+# TODO(tlarsen): Per Notes in http://b/24176227 spreadsheet:
+#   "Learn more..." links to the docs (tbd)
+LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = safe_dom.assemble_text_message("""
+If checked, the manual progress REST API permits users to manually mark a
+unit or lesson as complete, overriding the automatic progress tracking.
+""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+
+LESSON_AVAILABILITY_DESCRIPTION = """
+If this lesson is "%s", only admins can see it. If it is "%s", then anyone
+who has access to the course can see it.
+""" % (DRAFT_TEXT, PUBLISHED_TEXT)
 
 QUESTION_DESCRIPTION = 'Shown when selecting questions for quizzes, etc.'
 

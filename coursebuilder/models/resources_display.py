@@ -1080,30 +1080,31 @@ class ResourceLesson(resource.AbstractResourceHandler):
             hidden=True))
         lesson.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string', extra_schema_dict_values={
-                'className': 'inputEx-Field title-holder'}))
+                'className': 'inputEx-Field title-holder'},
+            description=messages.LESSON_TITLE_DESCRIPTION))
         lesson.add_property(schema_fields.SchemaField(
-            'unit_id', 'Parent Unit', 'string', i18n=False,
+            'unit_id', 'Unit', 'string', i18n=False,
+            description=messages.LESSON_PARENT_UNIT_DESCRIPTION,
             select_data=unit_list))
         lesson.add_property(schema_fields.SchemaField(
             'video', 'Video ID', 'string', hidden=not has_video_id,
             optional=True, description=messages.LESSON_VIDEO_ID_DESCRIPTION))
         lesson.add_property(schema_fields.SchemaField(
-            'scored', 'Scored', 'string', optional=True, i18n=False,
+            'scored', 'Question Scoring', 'string', optional=True, i18n=False,
             description=messages.LESSON_SCORED_DESCRIPTION,
             select_data=[
                 ('scored', 'Questions are scored'),
                 ('not_scored', 'Questions only give feedback')]))
         lesson.add_property(schema_fields.SchemaField(
             'objectives', 'Lesson Body', 'html', optional=True,
-            description=messages.LESSON_OBJECTIVES_DESCRIPTION,
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value}))
         lesson.add_property(schema_fields.SchemaField(
             'notes', 'Text Version URL', 'string', optional=True,
-            description=messages.LESSON_NOTES_DESCRIPTION))
+            description=messages.LESSON_TEXT_VERSION_URL_DESCRIPTION))
         lesson.add_property(schema_fields.SchemaField(
-            'auto_index', 'Auto Number', 'boolean',
-            description=messages.LESSON_AUTO_INDEX_DESCRIPTION))
+            'auto_index', 'Auto-Number', 'boolean',
+            description=messages.LESSON_AUTO_NUMBER_DESCRIPTION))
         lesson.add_property(schema_fields.SchemaField(
             'activity_title', 'Activity Title', 'string', optional=True,
             description=messages.LESSON_ACTIVITY_TITLE_DESCRIPTION))
@@ -1116,13 +1117,16 @@ class ResourceLesson(resource.AbstractResourceHandler):
             extra_schema_dict_values={
                 'className': 'inputEx-Field activityHolder'}))
         lesson.add_property(schema_fields.SchemaField(
-            'manual_progress', 'Manual Progress', 'boolean', optional=True,
-            description=messages.LESSON_MANUAL_PROGRESS_DESCRIPTION))
+            'manual_progress', 'Allow Progress Override', 'boolean',
+            description=str(
+                messages.LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION),
+            optional=True))
         lesson.add_property(schema_fields.SchemaField(
-            'is_draft', 'Status', 'boolean',
+            'is_draft', 'Availability', 'boolean',
             select_data=[(True, DRAFT_TEXT), (False, PUBLISHED_TEXT)],
             extra_schema_dict_values={
-                'className': 'split-from-main-group'}))
+                'className': 'split-from-main-group'},
+            description=messages.LESSON_AVAILABILITY_DESCRIPTION))
         return lesson
 
     @classmethod
