@@ -709,9 +709,11 @@ function EditSkillPopup(skillList, locationList, skillId) {
   this._skillId = skillId;
   this._skillList = skillList;
   this._locations = locationList;
-  this._prerequisiteIds = $.map(this._skillList, function(skill) {
-    return $.inArray(that._skillId, skill.successor_ids) >= 0
-      ? skill.id : null
+  this._prerequisiteIds = [];
+  this._skillList.eachSkill(function(skill) {
+    if ($.inArray(that._skillId, skill.successor_ids) >= 0) {
+      that._prerequisiteIds.push(skill.id);
+    }
   });
 
   this._documentBody = $(document.body);
