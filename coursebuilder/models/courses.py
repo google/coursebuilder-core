@@ -2369,10 +2369,13 @@ class Course(object):
         opts.add_property(schema_fields.SchemaField(
             'course:instructor_details', 'Course Instructor Details', 'html',
             optional=True))
+
         opts.add_property(schema_fields.SchemaField(
             'course:main_image:url', 'Image or Video', 'string',
             description='URL for the preview image or YouTube video shown on '
-            'the course homepage.', optional=True,))
+            'the course homepage.', optional=True,
+            extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
+
         opts.add_property(schema_fields.SchemaField(
             'course:main_image:alt_text', 'Image Description', 'string',
             description='Alt text for the preview image on the course '

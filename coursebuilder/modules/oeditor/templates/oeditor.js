@@ -713,15 +713,14 @@ TopLevelEditorControls.prototype = {
   },
 
   _onSaveComplete: function(status, message, payload) {
-    enableAllControlButtons(this._env.form)
+    enableAllControlButtons(this._env.form);
     if (! status) {
       cbShowMsg("Server did not respond. Please reload the page to try again.");
       return;
     }
 
     if (status != 200) {
-      cbShowMsg(formatServerErrorMessage(
-          status, message));
+      cbShowMsg(formatServerErrorMessage(status, message));
       return;
     }
 
@@ -740,7 +739,7 @@ TopLevelEditorControls.prototype = {
 
     // Also store the state of the EditorField tabs. (Note this must come after
     // save_args.key is updated.)
-    this._storeEditorFieldState()
+    this._storeEditorFieldState();
 
     // update UI
     if (this._env.auto_return) {

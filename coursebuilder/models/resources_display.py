@@ -1027,7 +1027,8 @@ class ResourceLink(ResourceUnitBase):
         schema = cls._generate_common_schema('Link')
         schema.add_property(schema_fields.SchemaField(
             'url', 'URL', 'string', optional=True,
-            description=messages.LINK_URL_DESCRIPTION))
+            description=messages.LINK_URL_DESCRIPTION,
+            extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
         return schema
 
     @classmethod
@@ -1103,7 +1104,8 @@ class ResourceLesson(resource.AbstractResourceHandler):
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value}))
         lesson.add_property(schema_fields.SchemaField(
             'notes', 'Text Version URL', 'string', optional=True,
-            description=messages.LESSON_TEXT_VERSION_URL_DESCRIPTION))
+            description=messages.LESSON_TEXT_VERSION_URL_DESCRIPTION,
+            extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
         lesson.add_property(schema_fields.SchemaField(
             'auto_index', 'Auto-Number', 'boolean',
             description=messages.LESSON_AUTO_NUMBER_DESCRIPTION))

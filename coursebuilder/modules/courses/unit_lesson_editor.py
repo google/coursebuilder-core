@@ -622,7 +622,8 @@ class LinkRESTHandler(CommonUnitRESTHandler):
     URI = '/rest/course/link'
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'gcb-uneditable',
-        'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-checkbox']
+        'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-checkbox',
+        'inputex-url']
 
     @classmethod
     def can_view(cls, app_context):
@@ -885,7 +886,8 @@ class LessonRESTHandler(utils.BaseRESTHandler):
 
     REQUIRED_MODULES = [
         'inputex-string', 'gcb-rte', 'inputex-select', 'inputex-textarea',
-        'gcb-uneditable', 'inputex-checkbox', 'inputex-hidden']
+        'gcb-uneditable', 'inputex-checkbox', 'inputex-hidden',
+        'inputex-url']
 
     # Enable modules to specify locations to load JS and CSS files
     ADDITIONAL_DIRS = []

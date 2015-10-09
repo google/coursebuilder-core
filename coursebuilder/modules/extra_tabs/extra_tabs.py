@@ -82,7 +82,8 @@ def options_schema_provider(unused_course):
     extra_tab_type.add_property(schema_fields.SchemaField(
         URL_KEY, 'Tab URL', 'string', optional=True,
         description='If a URL is provided, the tab will link to that URL. '
-        'Otherwise it will display the "tab content" in a page.'))
+        'Otherwise it will display the "tab content" in a page.',
+        extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
     extra_tab_type.add_property(schema_fields.SchemaField(
         CONTENT_KEY, 'Tab Content', 'html', optional=True))
     return schema_fields.FieldArray(
