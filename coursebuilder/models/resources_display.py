@@ -838,14 +838,14 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
             select_data=[(True, DRAFT_TEXT),
                          (False, PUBLISHED_TEXT)],
             extra_schema_dict_values={
-                'className': 'split-from-main-group'}))
+                'className': 'split-from-main-group inputEx-Field'}))
         ret.add_property(schema_fields.SchemaField(
             'shown_when_unavailable', 'Syllabus Visibility', 'boolean',
             select_data=[(True, SHOWN_WHEN_UNAVAILABLE_TEXT),
                          (False, HIDDEN_WHEN_UNAVAILABLE_TEXT)],
             description=cls.SYLLABUS_VISIBILITY_DESCRIPTION, optional=True,
             extra_schema_dict_values={
-                'className': 'split-from-main-group'}))
+                'className': 'split-from-main-group inputEx-Field'}))
         return ret
 
 
@@ -1127,7 +1127,7 @@ class ResourceLesson(resource.AbstractResourceHandler):
             'is_draft', 'Availability', 'boolean',
             select_data=[(True, DRAFT_TEXT), (False, PUBLISHED_TEXT)],
             extra_schema_dict_values={
-                'className': 'split-from-main-group'},
+                'className': 'split-from-main-group inputEx-Field'},
             description=messages.LESSON_AVAILABILITY_DESCRIPTION))
         return lesson
 
