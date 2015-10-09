@@ -1,5 +1,5 @@
 // Variables required in global scope
-var cbShowMsg, cbShowMsgAutoHide;
+var cbShowMsg, cbShowMsgAutoHide, cbHideMsg;
 
 function MockSkillList(list, locationList) {
   this.idCounter = 0;
@@ -97,6 +97,7 @@ describe('The skill tagging library', function() {
   beforeEach(function() {
     showMsg = jasmine.createSpy('showMsg');
     showMsgAutoHide = jasmine.createSpy('showMsgAutoHide');
+    hideMsg = jasmine.createSpy('hideMsg');
 
     jasmine.getFixtures().fixturesPath = 'base/';
     loadFixtures('tests/unit/javascript_tests/modules_skill_map/' +
@@ -108,6 +109,7 @@ describe('The skill tagging library', function() {
     delete parseAjaxResponse;
     delete showMsg;
     delete showMsgAutoHide;
+    delete hideMsg;
 
     // Tidy up any leftover lightboxes
     $(document.body).empty();
@@ -184,6 +186,7 @@ describe('The skill tagging library', function() {
       it('PUTs to the skill REST service', function() {
         this.skillList.createOrUpdateSkill(
             this.callback, 'ice skating', 'can skate');
+        expect(hideMsg).toHaveBeenCalled();
         expect($.ajax).toHaveBeenCalled();
         var arg = $.ajax.calls.argsFor(0)[0];
         expect(arg.type).toEqual('PUT');
@@ -504,14 +507,14 @@ describe('The skill tagging library', function() {
       popup.open(this.callback);
 
       var popupDiv = $('div.edit-skill-popup');
-      var prerequisites = popupDiv.find('.skill-prerequisites');
+      var prerequisites = popupDiv.find('.prerequisites');
 
       // Expect the popup is not displaying any prerequisites yet
       expect(prerequisites.find('ol.skill-display-root li').length).toBe(0);
 
       // Click the "Add Skill" button in the "Prerequisites" section
       expect(prerequisites.find('button.add').text()).toBe('+ Add Skill');
-      popupDiv.find('.skill-prerequisites button.add').click();
+      popupDiv.find('.prerequisites button.add').click();
       expect(prerequisites.find('.item-selector-root .selector')).toBeVisible();
 
       // Click the selector to select skill "s122" ("Ice Skating")

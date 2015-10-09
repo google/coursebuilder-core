@@ -798,6 +798,12 @@ class SkillRestHandlerTests(BaseSkillMapTests):
 
         self.assertEqual(412, response['status'])
         self.assertEqual('Name must be unique', response['message'])
+        payload = json.loads(response['payload'])
+        assert payload.has_key('messages')
+        assert payload['messages'].has_key('skill-name')
+        self.assertEqual(1, len(payload['messages']['skill-name']))
+        self.assertEqual('Name must be unique',
+                         payload['messages']['skill-name'][0])
         skill_graph = skill_graph.load()
         self.assertEqual(1, len(skill_graph.skills))
 
@@ -819,6 +825,13 @@ class SkillRestHandlerTests(BaseSkillMapTests):
 
         self.assertEqual(412, response['status'])
         self.assertEqual('Prerequisites must be unique', response['message'])
+        payload = json.loads(response['payload'])
+        assert payload.has_key('key')
+        assert payload['messages'].has_key('skill-prerequisites')
+        self.assertEqual(1, len(payload['messages']['skill-prerequisites']))
+        self.assertEqual('Prerequisites must be unique',
+                         payload['messages']['skill-prerequisites'][0])
+
 
     def test_reject_update_prerequisites_with_self_loop(self):
         skill_graph = SkillGraph.load()
@@ -836,6 +849,13 @@ class SkillRestHandlerTests(BaseSkillMapTests):
         self.assertEqual(412, response['status'])
         self.assertEqual(
             'A skill cannot be its own prerequisite', response['message'])
+
+        payload = json.loads(response['payload'])
+        self.assertEqual(1, len(payload['messages']['skill-prerequisites']))
+        self.assertEqual('A skill cannot be its own prerequisite',
+                         payload['messages']['skill-prerequisites'][0])
+
+
         skill_graph = SkillGraph.load()
         skill = skill_graph.get(skill.id)
         self.assertEqual(set(), skill.prerequisite_ids)

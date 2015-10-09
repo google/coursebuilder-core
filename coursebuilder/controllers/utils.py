@@ -1077,13 +1077,28 @@ class BaseRESTHandler(CourseHandler, RESTHandlerMixin):
             return False
         return True
 
-    def validation_error(self, message, key=None):
-        """Deliver a validation message."""
+    def validation_error(self, message, key=None, errors=None):
+        """Deliver validation error messages.
+
+        Args:
+            message. Concatenation of all error messages separated with
+                        new lines.
+            key.     The id of the validated object.
+            errors.  A list of key-value pair, where the key is a property and
+                        the value is an error message for that property,
+                        for example, [('skill-name', 'Name must be unique')].
+                        There can be multiple pairs with the same key.
+        """
+        payload_dict = {}
         if key:
-            transforms.send_json_response(
-                self, 412, message, payload_dict={'key': key})
-        else:
-            transforms.send_json_response(self, 412, message)
+            payload_dict['key'] = key
+        if errors:
+            error_messages = {}
+            for k, v in errors:
+                error_messages.setdefault(k, []).append(v)
+            payload_dict['messages'] = error_messages
+        transforms.send_json_response(
+            self, 412, message, payload_dict=payload_dict or None)
 
 
 def set_image_or_video_exists(template_value, course):

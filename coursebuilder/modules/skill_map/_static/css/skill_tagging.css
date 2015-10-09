@@ -79,7 +79,7 @@ div.lightbox > div.background {
   background-color: #000;
   opacity: 0.5;
   filter: alpha(opacity=50);
-  z-index: 1000;
+  z-index: 2;
 }
 div.lightbox > div.content {
   position: absolute;
@@ -109,6 +109,9 @@ div.edit-skill-popup div.form-row > label {
 div.edit-skill-popup div.form-row > label.strong {
   font-weight: bold;
 }
+div.edit-skill-popup div.form-row > label.invalid {
+  color: #f00;
+}
 div.edit-skill-popup div.form-row > input,
 div.edit-skill-popup div.form-row > textarea {
   width: 300px;
@@ -117,6 +120,12 @@ div.edit-skill-popup div.form-row > textarea {
   border-radius: 3px;
   font-family: arial, sans-serif;
   font-size: 13px;
+}
+/* keep the error style in sync with oeditor.css error style */
+div.edit-skill-popup div.form-row > input.invalid,
+div.edit-skill-popup div.form-row > textarea.invalid {
+  border: solid 1px red;
+  box-shadow: 0 0 5px #f00;
 }
 div.edit-skill-popup div.form-row > textarea {
   height: 5em;

@@ -77,13 +77,16 @@ MODULE_TITLE = 'Skills'
 # Flag turning faker on
 _USE_FAKE_DATA_IN_SKILL_COMPETENCY_ANALYTICS = False
 
-def _assert(condition, message, errors):
+def _assert(condition, message, errors, target_field):
     """Assert a condition and either log exceptions or raise AssertionError."""
     if not condition:
         if errors is not None:
-            errors.append(message)
+            errors.append((target_field, message))
         else:
-            raise AssertionError(message)
+            raise AssertionError('%s:%s' % (target_field, message))
+
+def _error_message(errors):
+    return '\n'.join([x[1] for x in errors])
 
 
 class _SkillEntity(models.BaseEntity):
@@ -303,12 +306,13 @@ class SkillGraph(caching.RequestScopedSingleton):
 
     def add(self, skill, errors=None):
         """Add a skill to the skill map."""
-        _assert(skill.id is None, 'Skill has already been added', errors)
+        _assert(skill.id is None, 'Skill has already been added', errors,
+                'skill-id')
 
         for prerequisite_id in skill.prerequisite_ids:
-            _assert(
-                prerequisite_id in self._skills,
-                'Skill has non-existent prerequisite', errors)
+            _assert(prerequisite_id in self._skills,
+                    'Skill has non-existent prerequisite', errors,
+                    'skill-prerequisites')
 
         self.validate_unique_skill_name(skill.id, skill.name, errors)
 
@@ -325,7 +329,7 @@ class SkillGraph(caching.RequestScopedSingleton):
     def update(self, sid, attributes, errors):
         skill = Skill(sid, attributes)
 
-        _assert(self.get(sid), 'Skill does not exist', errors)
+        _assert(self.get(sid), 'Skill does not exist', errors, 'skill-id')
         prerequisite_ids = [
             x['id'] for x in attributes.get('prerequisites', [])]
         for pid in prerequisite_ids:
@@ -350,7 +354,8 @@ class SkillGraph(caching.RequestScopedSingleton):
         """Remove a skill from the skill map."""
         _assert(
             skill_id in self._skills,
-            'Skill is not present in the skill map', errors)
+            'Skill is not present in the skill map', errors,
+            'skill-prerequisites')
 
         successors = self.successors(skill_id)
         # pylint: disable=protected-access
@@ -385,33 +390,35 @@ class SkillGraph(caching.RequestScopedSingleton):
         are distinct."""
 
         _assert(
-            sid in self._skills, 'Skill does not exist', errors)
-        _assert(
-            pid in self._skills,
-            'Prerequisite does not exist', errors)
+            sid in self._skills, 'Skill does not exist', errors, 'skill-id')
+        _assert(pid in self._skills,
+            'Prerequisite does not exist', errors, 'skill-prerequisites')
         # No length-1 cycles (ie skill which is its own prerequisite)  allowed
         _assert(
             sid != pid,
-            'A skill cannot be its own prerequisite', errors)
+            'A skill cannot be its own prerequisite', errors,
+            'skill-prerequisites')
 
     def validate_unique_skill_name(self, skill_id, name, errors):
         for other_skill in self.skills:
             if other_skill.id == skill_id:
                 continue
             _assert(
-                name != other_skill.name, 'Name must be unique', errors)
+                name != other_skill.name, 'Name must be unique', errors,
+                'skill-name')
 
     def validate_prerequisite_not_set(
             self, skill, prerequisite_skill_id, errors):
         _assert(
             prerequisite_skill_id not in skill.prerequisite_ids,
-            'This prerequisite has already been set', errors)
+            'This prerequisite has already been set', errors,
+            'skill-prerequisites')
 
     @classmethod
     def validate_no_duplicate_prerequisites(cls, prerequisite_ids, errors):
         _assert(
             len(set(prerequisite_ids)) == len(prerequisite_ids),
-            'Prerequisites must be unique', errors)
+            'Prerequisites must be unique', errors, 'skill-prerequisites')
 
     def add_prerequisite(self, skill_id, prerequisite_skill_id, errors=None):
         self.validate_distinct(skill_id, prerequisite_skill_id, errors)
@@ -431,7 +438,8 @@ class SkillGraph(caching.RequestScopedSingleton):
         prerequisite_skills = skill.prerequisite_ids
         _assert(
             prerequisite_skill_id in prerequisite_skills,
-            'Cannot delete an unset prerequisite.', errors)
+            'Cannot delete an unset prerequisite.', errors,
+            'skill-prerequisites')
         prerequisite_skills.remove(prerequisite_skill_id)
         # pylint: disable=protected-access
         skill._set_prerequisite_ids(prerequisite_skills)
@@ -1118,7 +1126,8 @@ class SkillRestHandler(utils.BaseRESTHandler):
         skill_map = SkillMap.load(self.get_course())
 
         if errors:
-            self.validation_error('\n'.join(errors), key=key)
+            self.validation_error(
+                _error_message(errors), key=key, errors=errors)
             return
 
         payload_dict = {
@@ -1171,7 +1180,8 @@ class SkillRestHandler(utils.BaseRESTHandler):
             skill = skill_graph.add(skill, errors=errors)
 
         if errors:
-            self.validation_error('\n'.join(errors), key=skill.id)
+            self.validation_error(
+                _error_message(errors), key=skill.id, errors=errors)
             return
 
         key_after_save = skill.id
@@ -1183,10 +1193,6 @@ class SkillRestHandler(utils.BaseRESTHandler):
 
         skill_map.delete_skill_from_questions(skill)
         skill_map.add_skill_to_questions(skill, question_locations)
-
-        if errors:
-            self.validation_error('\n'.join(errors), key=key)
-            return
 
         payload_dict = {
             'key': key_after_save,

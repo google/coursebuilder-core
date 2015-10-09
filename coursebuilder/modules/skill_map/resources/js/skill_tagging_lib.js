@@ -10,6 +10,7 @@ var ESC_KEY = 27;
 //   cbShowMsg, cbShowMsgAutoHide
 var showMsg = cbShowMsg;
 var showMsgAutoHide = cbShowMsgAutoHide;
+var hideMsg = cbHideMsg;
 /************************ End Dependencies ************************************/
 
 function parseAjaxResponse(s) {
@@ -430,6 +431,7 @@ SkillList.prototype = {
 
     if (! name) {
       showMsg('Name can\'t be empty');
+      $('.form-row .skill-name').addClass('invalid');
       return;
     }
 
@@ -463,6 +465,8 @@ SkillList.prototype = {
       requestDict['key'] = skillId;
     }
 
+    this._clearErrors();
+
     var request = JSON.stringify(requestDict);
     $.ajax({
       type: 'PUT',
@@ -473,6 +477,11 @@ SkillList.prototype = {
         that._onCreateOrUpdateSkill(callback, data);
       }
     });
+  },
+
+  _clearErrors: function() {
+    $('.form-row .invalid').removeClass('invalid');
+    hideMsg();
   },
 
   /**
@@ -554,15 +563,23 @@ SkillList.prototype = {
 
   _onCreateOrUpdateSkill: function(callback, data) {
     data = parseAjaxResponse(data);
-    if  (data.status != 200) {
+    if (data.status != 200) {
       showMsg(data.message);
+      if (data.payload) {
+        var payload = JSON.parse(data.payload);
+        if (payload.messages) {
+          $.each(payload.messages, function(key, val) {
+            $('.form-row .' + key).addClass('invalid')
+          })
+        }
+      }
       return;
     }
     var payload = JSON.parse(data.payload);
     this._updateFromPayload(payload);
 
     if (callback) {
-      callback(payload.skill, data.message);
+      callback(payload.skill, data.message, data.status == 200);
     }
   }
 };
@@ -681,6 +698,7 @@ Lightbox.prototype = {
    */
   close: function() {
     this._container.remove();
+    hideMsg();
     return this;
   },
   /**
@@ -732,15 +750,15 @@ function EditSkillPopup(skillList, locationList, skillId) {
       '        placeholder="e.g. Structure data into tables"></textarea>' +
       '  </div>' +
       '  <div class="form-row">' +
-      '    <label class="strong">Prerequisites</label>' +
-      '    <div class="skill-prerequisites"></div>' +
+      '    <label class="strong skill-prerequisites">Prerequisites</label>' +
+      '    <div class="prerequisites"></div>' +
       '  </div>' +
       '  <div class="form-row lesson-row">' +
-      '    <label class="strong">Lessons</label>' +
+      '    <label class="strong skill-lessons">Lessons</label>' +
       '    <div class="lessons"></div>' +
       '  </div>' +
       '  <div class="form-row question-row">' +
-      '    <label class="strong">Questions</label>' +
+      '    <label class="strong skill-questions">Questions</label>' +
       '    <div class="questions"></div>' +
       '  </div>' +
       '  <div class="controls">' +
@@ -857,7 +875,7 @@ EditSkillPopup.prototype = {
     }, '+ Add Skill');
     this._resetPrereqSelector();
 
-    this._form.find('.skill-prerequisites')
+    this._form.find('.prerequisites')
         .append(this._prereqDisplay.element())
         .append(this._prereqSelector.element());
   },
@@ -914,14 +932,16 @@ EditSkillPopup.prototype = {
     var questionIds = this._questionDisplay ?
         this._questionDisplay.items() : [];
 
-    function onSkillCreatedOrUpdated(skill, message) {
+    function onSkillCreatedOrUpdated(skill, message, closePopup) {
       showMsgAutoHide(message);
       that._onAjaxCreateSkillCallback(skill);
+      if (closePopup) {
+        that._lightbox.close()
+      }
     }
-    this._skillList.createOrUpdateSkill(onSkillCreatedOrUpdated, name,
-        description, prerequisiteIds, locationKeys, questionIds,
+    this._skillList.createOrUpdateSkill(onSkillCreatedOrUpdated,
+        name, description, prerequisiteIds, locationKeys, questionIds,
         that._skillId);
-    this._lightbox.close();
   },
 
   _onCancel: function() {
