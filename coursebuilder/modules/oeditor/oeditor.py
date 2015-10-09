@@ -51,7 +51,7 @@ ALL_MODULES = [
     'inputex-list', 'inputex-color', 'gcb-rte', 'inputex-textarea',
     'inputex-url', 'gcb-uneditable', 'inputex-integer', 'inputex-hidden',
     'inputex-file', 'io-upload-iframe', 'inputex-number', 'array-extras',
-    'gcb-code']
+    'gcb-code', 'inputex-datetime', 'gcb-datetime']
 
 _DEPRECATED_STATIC_URI = '/modules/oeditor/resources'
 _STATIC_URI = '/modules/oeditor/_static'

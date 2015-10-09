@@ -239,13 +239,13 @@ class SearchTest(search_unit_test.SearchTestBase):
 
         self._add_announcement({
             'title': 'My Test Title',
-            'date': '2015/02/03',
+            'date': '2015-02-03 00:00',
             'is_draft': False,
             'html': 'Four score and seven years ago, our founding fathers'
             })
         self._add_announcement({
             'title': 'My Test Title',
-            'date': '2015/02/03',
+            'date': '2015-02-03 00:00',
             'is_draft': True,
             'html': 'Standing beneath this serene sky, overlooking these',
             })

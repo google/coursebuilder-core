@@ -68,9 +68,65 @@ div.inputEx-Field div.inputEx-StringField-wrapper > input {
 div.inputEx-CheckBox input {
   width: auto;
 }
-div.inputEx-DateField {
-  width: 480px;
+
+
+/* Styles for the gcb-datetime component */
+
+.gcb-datetime > .inputEx-label {
+  margin-top: 7px;
 }
+.gcb-datetime > .inputEx-CombineField {
+  margin-top: 5px;
+}
+.inputEx-DateField .inputEx-StringField-wrapper {
+  position: relative;
+}
+.inputEx-DateField .inputEx-StringField-wrapper > input[type="text"],
+.new-form-layout .inputEx-DateField .inputEx-StringField-wrapper > input[type="text"] {
+  width: 85px;
+  background-color: #f8f8f8;
+  padding: 5px 5px 5px 25px;
+  border-left: solid 1px #999;
+}
+.inputEx-DateField .inputEx-DatePicker-button {
+  position: absolute;
+  left: 0px;
+  top: 8px;
+  border: none;
+  background-color: transparent;
+}
+.gcb-datetime .inputEx-Field {
+  width: inherit;
+}
+.gcb-datetime .inputEx-CombineField-separator + .inputEx-fieldWrapper + .inputEx-CombineField-separator,
+.gcb-datetime .inputEx-CombineField-separator + .inputEx-fieldWrapper + .inputEx-CombineField-separator + .inputEx-fieldWrapper {
+  /* Hide the seconds selector for datetime. */
+  display: none;
+}
+.yui3-calendar-grid th,
+.yui3-calendar-grid td {
+  /* Override styles from main.css for all th, td */
+  border: inherit;
+  padding: inherit;
+  vertical-align: inherit;
+}
+
+.new-form-layout .gcb-datetime > .inputEx-label {
+  margin-top: 8px;
+}
+.new-form-layout .gcb-datetime > .inputEx-CombineField {
+  margin-top: 5px;
+}
+
+.gcb-datetime.date-only select,
+.gcb-datetime.date-only .inputEx-CombineField-separator {
+  /* Hide the time selector for date-only. */
+  display: none;
+}
+
+/* End styles for the gcb-datetime component */
+
+
 .inputEx-required > .inputEx-label > label:after {
   /* Mark required fields */
   content: "*";

@@ -797,7 +797,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-textarea',
         'gcb-uneditable', 'inputex-integer', 'inputex-number', 'inputex-hidden',
-        'inputex-checkbox', 'inputex-list']
+        'inputex-checkbox', 'inputex-list', 'inputex-datetime', 'gcb-datetime']
 
     @classmethod
     def get_schema(cls, course, key):

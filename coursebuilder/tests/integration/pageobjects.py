@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 from contextlib import contextmanager
+import datetime
 import re
 import time
 import yaml
@@ -339,9 +340,29 @@ class AnnouncementsEditorPage(EditorPageObject):
             title_el.clear()
             title_el.send_keys(title)
         if date:
-            date_el = self.find_element_by_name('date')
-            date_el.clear()
-            date_el.send_keys(date)
+            date = datetime.datetime.strptime(date, '%Y-%m-%d')
+
+            date_picker_button = self.find_element_by_css_selector(
+                '.inputEx-DatePicker-button')
+            date_picker_button.click()
+
+            calendar_label = self.find_element_by_css_selector(
+                '.yui3-calendar-header-label')
+            target_calendar_label = date.strftime('%B %Y')
+            calendar_back_button = self.find_element_by_css_selector(
+                '.yui3-calendar-header > a:first-child')
+
+            while calendar_label.text != target_calendar_label:
+                calendar_back_button.click()
+
+            calendar_days = self.find_elements_by_css_selector(
+                '.yui3-calendar-day')
+            target_calendar_day = str(date.day)
+
+            for td in calendar_days:
+                if td.text == target_calendar_day:
+                    td.click()
+                    break
         if body:
             # Select HTML entry
             self.find_element_by_css_selector(

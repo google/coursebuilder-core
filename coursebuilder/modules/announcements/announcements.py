@@ -30,6 +30,7 @@ from controllers.utils import BaseRESTHandler
 from controllers.utils import ReflectiveRequestHandler
 from controllers.utils import XsrfTokenManager
 from models.resources_display import LabelGroupsHelper
+from models import courses
 from models import custom_modules
 from models import entities
 from models import models
@@ -207,7 +208,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
     REQUIRED_MODULES = [
         'inputex-date', 'gcb-rte', 'inputex-select', 'inputex-string',
         'gcb-uneditable', 'inputex-checkbox', 'inputex-list',
-        'inputex-hidden']
+        'inputex-hidden', 'inputex-datetime', 'gcb-datetime']
 
     @classmethod
     def SCHEMA(cls):
@@ -223,10 +224,11 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.COURSE_SCOPE}))
         schema.add_property(SchemaField(
-            'date', 'Date', 'date',
+            'date', 'Date', 'string',
             optional=True, extra_schema_dict_values={
-                '_type': 'date', 'dateFormat': 'Y-m-d',
-                'valueFormat': 'Y-m-d'}))
+                '_type': 'datetime',
+                'className': 'inputEx-CombineField gcb-datetime '
+                'inputEx-fieldWrapper date-only'}))
         schema.add_property(FieldArray(
             'label_groups', 'Labels',
              item_type=LabelGroupsHelper.make_labels_group_schema_field(),
@@ -264,6 +266,13 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
         schema = AnnouncementsItemRESTHandler.SCHEMA()
 
         entity_dict = transforms.entity_to_dict(entity)
+
+        # Format the internal date object as ISO 8601 datetime, with time
+        # defaulting to 00:00:00
+        date = entity_dict['date']
+        date = datetime.datetime(date.year, date.month, date.day)
+        entity_dict['date'] = date.strftime(courses.ISO_8601_DATE_FORMAT)
+
         entity_dict['label_groups'] = (
             LabelGroupsHelper.announcement_labels_to_dict(entity))
 
@@ -299,6 +308,10 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
         payload = request.get('payload')
         update_dict = transforms.json_to_dict(
             transforms.loads(payload), schema.get_json_schema_dict())
+
+        # The datetime widget returns a datetime object and we need a UTC date.
+        update_dict['date'] = datetime.datetime.strptime(
+            update_dict['date'], courses.ISO_8601_DATE_FORMAT).date()
 
         entity.labels = utils.list_to_text(
             LabelGroupsHelper.decode_labels_group(

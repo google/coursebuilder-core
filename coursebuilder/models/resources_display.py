@@ -942,7 +942,8 @@ class ResourceAssessment(ResourceUnitBase):
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SUBMISSION_DUE_DATE_KEY),
             'Submission Due Date', 'string', optional=True,
-            description=str(messages.ASSESSMENT_DUE_DATE_FORMAT_DESCRIPTION)))
+            description=str(messages.ASSESSMENT_DUE_DATE_FORMAT_DESCRIPTION),
+            extra_schema_dict_values={'_type': 'datetime'}))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SHOW_FEEDBACK_KEY), 'Show Feedback',
             'boolean', optional=True,
@@ -988,7 +989,8 @@ class ResourceAssessment(ResourceUnitBase):
             workflow_key(courses.REVIEW_DUE_DATE_KEY),
             'Review Due Date', 'string', optional=True,
             description=str(
-                messages.ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION)))
+                messages.ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION),
+            extra_schema_dict_values={'_type': 'datetime'}))
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_MIN_COUNT_KEY),
             'Review Min Count', 'integer', optional=True,

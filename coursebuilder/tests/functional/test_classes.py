@@ -2395,7 +2395,7 @@ class StudentAspectTest(actions.TestBase):
         json_dict = transforms.loads(response.body)
         payload_dict = transforms.loads(json_dict['payload'])
         payload_dict['title'] = u'My Test Title'
-        payload_dict['date'] = '2015/02/03'
+        payload_dict['date'] = '2015-02-03 00:00'
         payload_dict['is_draft'] = False
         request = {}
         request['key'] = key

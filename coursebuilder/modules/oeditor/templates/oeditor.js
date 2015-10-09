@@ -346,6 +346,9 @@ function onPageLoad(env) {
   YUI.add("gcb-uneditable", bindUneditableField, '3.1.0', {
     requires: ['inputex-uneditable']
   });
+  YUI.add("gcb-datetime", bindDatetimeField, '3.1.0', {
+    requires: ['inputex-datetime']
+  });
   YUI(getYuiConfig(env.bundle_lib_files)).use(
     env.required_modules,
     mainYuiFunction);

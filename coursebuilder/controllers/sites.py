@@ -428,13 +428,14 @@ class CssComboZipHandler(BaseZipHandler):
             try:
                 content = zipfile_object.read(name)
                 if content_type == 'text/css':
-                    content = self._fix_css_paths(
+                    content = self.fix_css_paths(
                         name, content, static_file_handler)
                 self.response.out.write(content)
             except (KeyError, RuntimeError), err:
                 logging.error('Not found %s in %s', name, zipfilename)
 
-    def _fix_css_paths(self, path, css, static_file_handler):
+    @classmethod
+    def fix_css_paths(cls, path, css, static_file_handler):
         """Transform relative url() settings in CSS to absolute.
 
         This is necessary because a url setting, e.g., url(foo.png), is
@@ -460,7 +461,8 @@ class CssComboZipHandler(BaseZipHandler):
         """
         base = static_file_handler + posixpath.split(path)[0] + '/'
         css = css.decode('utf-8')
-        css = re.sub(r'url\(([^http|^https]\S+)\)', r'url(%s\1)' % base, css)
+        css = re.sub(
+            r'url\(((?!(http:|https:|data:))\S+)\)', r'url(%s\1)' % base, css)
         return css
 
 
@@ -2000,6 +2002,20 @@ def test_star_handler():
     assert_handled('/a/b/2/bar/baz?alive=1&john=2', None)
 
 
+def test_css_combo_fix_css_paths():
+    def assert_fixed_css(expected_css, orig_css):
+        assert (
+            expected_css
+            == CssComboZipHandler.fix_css_paths(
+                'a/b/c/foo.css', orig_css, '/yui/'))
+
+    assert_fixed_css('url(/yui/a/b/c/foo.png)', 'url(foo.png)')
+    assert_fixed_css('url(/yui/a/b/c/d/e/foo.png)', 'url(d/e/foo.png)')
+    assert_fixed_css('url(http://x.org/foo.png)', 'url(http://x.org/foo.png)')
+    assert_fixed_css('url(https://x.org/foo.png)', 'url(https://x.org/foo.png)')
+    assert_fixed_css('url(data:00001111)', 'url(data:00001111)')
+
+
 def run_all_unit_tests():
     assert not ApplicationRequestHandler.CAN_IMPERSONATE
 
@@ -2015,6 +2031,7 @@ def run_all_unit_tests():
     test_path_construction()
     test_rule_validations()
     test_star_handler()
+    test_css_combo_fix_css_paths()
 
 if __name__ == '__main__':
     run_all_unit_tests()
