@@ -1214,7 +1214,7 @@ function SkillEditorForOeditor(env) {
   });
   newSkillDiv.append(newSkillButton);
 
-  this._skillWidgetDiv = $('<div class="inputEx-Field"></div>');
+  this._skillWidgetDiv = $('<div class="inputEx-Field skill-widget"></div>');
   this._skillWidgetDiv.append(this._prereqDisplay.element());
 
   var buttonDiv = $('<div class="skill-map-buttons"></div>');

@@ -173,3 +173,17 @@ div.inputEx-Field div.skill-map-buttons > div {
   display: inline-block;
 }
 
+/*
+ * Disable all of the ListField elements inside the skill-panel <div>,
+ * except for the inputEx-description <div>.
+ */
+div.skill-panel span,
+div.skill-panel div.inputEx-ListField-childContainer,
+div.skill-panel a.inputEx-List-link {
+  display: none;
+}
+
+div.skill-panel div.inputEx-description {
+  display: block;
+  max-width: 500px;
+}

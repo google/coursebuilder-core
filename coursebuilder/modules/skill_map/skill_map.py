@@ -59,6 +59,7 @@ from modules.skill_map import competency
 from modules.skill_map import constants
 from modules.skill_map import skill_map_metrics
 from modules.skill_map import recommender
+from modules.skill_map import messages
 
 from google.appengine.ext import db
 from google.appengine.api import namespace_manager
@@ -1753,6 +1754,7 @@ def lesson_rest_handler_schema_load_hook(lesson_field_registry):
         'skill', 'Skill', 'integer', optional=True, i18n=False))
     lesson_field_registry.add_property(schema_fields.FieldArray(
         'skills', 'Skills', optional=True, item_type=skill_type,
+        description=messages.SKILLS_LESSON_DESCRIPTION,
         extra_schema_dict_values={
             'className': 'skill-panel inputEx-Field inputEx-ListField'}))
 
@@ -1788,6 +1790,7 @@ def question_rest_handler_schema_load_hook(question_field_registry):
         'skill', 'Skill', 'integer', optional=True, i18n=False))
     question_field_registry.add_property(schema_fields.FieldArray(
         'skills', 'Skills', optional=True, item_type=skill_type,
+        description=messages.SKILLS_QUESTION_DESCRIPTION,
         extra_schema_dict_values={
             'className': 'skill-panel inputEx-Field inputEx-ListField'}))
 
