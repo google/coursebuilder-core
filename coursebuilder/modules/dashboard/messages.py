@@ -24,6 +24,14 @@ A role binds a set of permissions to a set of users. The role editor allows you
 to assign any of the permissions currently registered by the enabled modules.
 """
 
+LABELS_TITLE_DESCRIPTION = """
+This is the name of this label.
+"""
+
+LABELS_DESCRIPTION_DESCRIPTION = """
+This is the description of this label.
+"""
+
 LABELS_TYPE_DESCRIPTION = """
 You can put students in different <b>Course tracks</b> to show them different
 units.

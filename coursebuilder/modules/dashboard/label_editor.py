@@ -70,11 +70,11 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
         schema.add_property(schema_fields.SchemaField(
             'id', 'ID', 'string', editable=False, hidden=True, optional=True))
         schema.add_property(schema_fields.SchemaField(
-            'title', 'Title', 'string'))
+            'title', 'Title', 'string',
+            description=messages.LABELS_TITLE_DESCRIPTION))
         schema.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string', optional=True,
-            description='A brief statement outlining similarities among '
-            'items marked with this label.'))
+            description=messages.LABELS_DESCRIPTION_DESCRIPTION))
         schema.add_property(schema_fields.SchemaField(
             'type', 'Type', 'integer',
             description=messages.LABELS_TYPE_DESCRIPTION,
