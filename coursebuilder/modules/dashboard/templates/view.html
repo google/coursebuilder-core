@@ -113,7 +113,10 @@
                   <div class="gcb-collapse__content mdl-animation--default">
                     {% for course_app_context in course_app_contexts %}
                       <a
-                          class="mdl-navigation__link"
+                          class="mdl-navigation__link
+                          {%- if course_app_context == app_context %}
+                            gcb-active
+                          {%- endif %}"
                           {% if app_context and current_menu_item %}
                           href="{{course_app_context.canonicalize_url('/' + current_menu_item.computed_href(app_context))}}"
                           {% else %}
