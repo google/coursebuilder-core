@@ -101,5 +101,5 @@ class EmbeddedAssessmentTests(actions.TestBase):
         dom = self.parse_html_string(self.get(redirect_url).body)
         self.assertEquals('hide-controls', dom.attrib['class'])
         self.assertEquals(
-            'Peer-review assignments cannot be embedded',
+            'Peer-review assignments cannot be embedded in external pages.',
             dom.find('.//*[@class="gcb-article"]').text.strip())
