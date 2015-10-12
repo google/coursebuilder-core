@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-05 07:08-0700\n"
+"POT-Creation-Date: 2015-10-12 09:16-0700\n"
 "PO-Revision-Date: 2015-10-05 07:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ja <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1151
+#: experimental/coursebuilder/models/resources_display.py:1184
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "ユニット %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "ユニット %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1171
+#: experimental/coursebuilder/models/resources_display.py:1204
 #, python-format
 msgid "Unit %s"
 msgstr "ユニット %s"
@@ -142,6 +142,16 @@ msgstr " 解答を確認 "
 msgid " Hint "
 msgstr " ヒント "
 
+#. This is an error message to an author of an online course.
+#. The problem is that course assignments that are to be graded
+#. by other students (peers) cannot be configured to be added
+#. as content to external web pages. (I.e., some external site wants
+#. to use this assignment as part of a page's content, but this
+#. is not permitted)
+#: experimental/coursebuilder/modules/assessments/assessments.py:121
+msgid "Peer-review assignments cannot be embedded in external pages."
+msgstr ""
+
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:38
@@ -203,30 +213,30 @@ msgid "You have not received any peer reviews yet."
 msgstr "まだ他のメンバーからのレビューを受け取っていません。"
 
 #. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:161
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:162
 msgid "This assessment is not available."
 msgstr "この評価は利用できません。"
 
 #. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:35
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:38
 #: experimental/coursebuilder/views/base.html:35
 msgid " Save Draft "
 msgstr " 下書きを保存 "
 
 #. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:38
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:41
 #: experimental/coursebuilder/views/base.html:47
 msgid " Submit Review "
 msgstr " レビューを送信 "
 
 #. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:46
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:49
 #: experimental/coursebuilder/views/base.html:23
 msgid " Check Answers "
 msgstr " 解答を確認 "
 
 #. Text on the button for submitting answers.
-#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:55
+#: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:58
 #: experimental/coursebuilder/views/base.html:39
 msgid " Submit Answers "
 msgstr " 解答を送信 "
@@ -235,6 +245,13 @@ msgstr " 解答を送信 "
 #: experimental/coursebuilder/modules/assessments/templates/assessment_page.html:15
 msgid "Assessment"
 msgstr "評価"
+
+#. Message to a student taking a course that they have
+#. successfully submitted answers to an assessment (an assessment
+#. is an examination, test, quiz, or similar.)
+#: experimental/coursebuilder/modules/assessments/templates/assessment_page.html:39
+msgid "Assessment submitted."
+msgstr ""
 
 #. Shown on the assignment submission confirmation page when the student has
 #. submitted a duplicate assignment.
@@ -842,8 +859,8 @@ msgstr "習得できるスキル:"
 
 #. Describe an empty set of follow-on skills
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:68
-msgid "This lesson isn't a prerequisite for any other skills."
-msgstr "このレッスンに続くレッスンはありません。"
+msgid "This lesson isn't a prerequisite for any other lesson."
+msgstr ""
 
 #. Header for list of links to lessons
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:15
@@ -1049,28 +1066,28 @@ msgstr " いったん送信すると、編集も削除もできなくなりま�
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:236
+#: experimental/coursebuilder/views/base.html:230
 msgid "Not registered"
 msgstr "未登録"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:242
+#: experimental/coursebuilder/views/base.html:236
 msgid "Logout"
 msgstr "ログアウト"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:248
+#: experimental/coursebuilder/views/base.html:242
 msgid "Login"
 msgstr "ログイン"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:289
+#: experimental/coursebuilder/views/base.html:283
 msgid "Privacy & Terms"
 msgstr "プライバシーと利用規約"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:296
+#: experimental/coursebuilder/views/base.html:290
 msgid "Language:"
 msgstr "言語:"
 
@@ -1498,5 +1515,4 @@ msgstr "次のページ"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "最後"
-
 

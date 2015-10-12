@@ -112,8 +112,14 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
     def get_assessment_content(
             self, student, course, unit, as_lesson, embedded=False):
         if embedded and course.needs_human_grader(unit):
+            # I18N: This is an error message to an author of an online course.
+            # The problem is that course assignments that are to be graded
+            # by other students (peers) cannot be configured to be added
+            # as content to external web pages. (I.e., some external site wants
+            # to use this assignment as part of a page's content, but this
+            # is not permitted)
             return self.app_context.gettext(
-                'Peer-review assignments cannot be embedded')
+                'Peer-review assignments cannot be embedded in external pages.')
 
         model_version = course.get_assessment_model_version(unit)
         assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
