@@ -1898,9 +1898,9 @@ def lesson_title_provider(handler, app_context, lesson, student):
 
 def widget_display_flag_schema_provider(unused_course):
     return schema_fields.SchemaField(
-        'course:display_skill_widget', 'Student Skill Widget',
-        'boolean', optional=True, description='Display the skills taught in '
-        'each lesson.')
+        'course:display_skill_widget', 'Show Skills',
+        'boolean', optional=True,
+        description=messages.SKILLS_SHOW_SKILLS_DESCRIPTION)
 
 
 def import_skill_map(app_ctx):

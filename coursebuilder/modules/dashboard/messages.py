@@ -42,8 +42,7 @@ This is the description of the question group created for the imported
 questions.
 """
 
-# TODO(tlarsen): Per Notes in http://b/24176227 spreadsheet:
-#   "Learn more..." links to the docs (tbd)
+# TODO(johncox): replace placeholder URL once target link is determined.
 GIFT_QUESTIONS_DESCRIPTION = safe_dom.assemble_text_message("""
 Each question is imported as a separate question (named Q1, Q2, etc.).
 Additionally, a question group is added with all the questions. Course Builder

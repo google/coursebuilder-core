@@ -57,6 +57,7 @@ from models import jobs
 from models import models
 from modules.analytics import student_aggregate
 from modules.certificate import custom_criteria
+from modules.certificate import messages
 from modules.courses import settings
 from modules.dashboard import dashboard
 
@@ -324,10 +325,7 @@ def get_criteria_editor_schema(course):
     return schema_fields.FieldArray(
         'certificate_criteria', 'Certificate Criteria',
         item_type=criterion_type,
-        description='Certificate award criteria. Add the criteria which '
-            'students must meet to be awarded a certificate of completion. '
-            'In order to receive a certificate, '
-            'the student must meet all the criteria.',
+        description=str(messages.CERTIFICATE_CRITERIA_DESCRIPTION),
         extra_schema_dict_values={
             'is_peer_assessment_table': is_peer_assessment_table,
             'className': 'settings-list',

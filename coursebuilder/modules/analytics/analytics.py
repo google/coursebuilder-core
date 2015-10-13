@@ -16,6 +16,7 @@
 
 __author__ = ['Michael Gainer (mgainer@google.com)']
 
+import messages
 from common import schema_fields
 from models import analytics
 from models import courses
@@ -164,15 +165,9 @@ def get_namespaced_handlers():
 def register_module():
 
     can_record_student_events = schema_fields.SchemaField(
-        'course:' + CAN_RECORD_STUDENT_EVENTS, 'Record Student Events',
-        'boolean',
-        description='Whether or not to record student interactions in a '
-        'datastore.  Without event recording, you cannot analyze student '
-        'interactions (page views, interactive widgets, question answers, '
-        'and the like.)  On the other hand, no event recording reduces '
-        'the number of datastore operations and minimizes the use of Google '
-        'App Engine quota. Turn event recording on if you want to analyze '
-        'this data.', i18n=False, optional=True)
+        'course:' + CAN_RECORD_STUDENT_EVENTS, 'Enable Student Analytics',
+        'boolean', i18n=False, optional=True,
+        description=str(messages.ANALYTICS_ENABLE_STUDENT_DESCRIPTION))
     course_settings_fields = [
         lambda course: can_record_student_events
     ]

@@ -1363,7 +1363,7 @@ class EventsTest(BaseIntegrationTest):
         self.load_dashboard(name
         ).click_settings(
         ).set_checkbox_by_title(
-            'Record Student Events', True
+            'Enable Student Analytics', True
         ).click_save()
 
         # Add a unit with a video.

@@ -12,19 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Messages used where the skill map widget is present."""
+"""Messages used by certificate management."""
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
-SKILLS_LESSON_DESCRIPTION = """
-These are the skills taught in this lesson.
-"""
+from common import safe_dom
 
-SKILLS_QUESTION_DESCRIPTION = """
-These are the skills evaluated by this question.
-"""
-
-SKILLS_SHOW_SKILLS_DESCRIPTION = """
-If checked, the skills taught in each lesson will be displayed to students
-at the top of the lesson.
-"""
+# TODO(johncox): replace placeholder URL once target link is determined.
+CERTIFICATE_CRITERIA_DESCRIPTION = safe_dom.assemble_text_message("""
+These are the criteria which students must meet to be awarded a certificate
+of completion. To receive a certificate, a student must meet all criteria.
+""", "https://code.google.com/p/course-builder/wiki/Dashboard")

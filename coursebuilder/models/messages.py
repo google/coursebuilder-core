@@ -67,8 +67,7 @@ converted during "Import Course".
 """, ('https://code.google.com/p/course-builder/wiki/CreateActivities'
       '#Writing_activities'))
 
-# TODO(tlarsen): Per Notes in http://b/24176227 spreadsheet:
-#   "Learn more..." links to the docs (tbd)
+# TODO(johncox): replace placeholder URL once target link is determined.
 LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = safe_dom.assemble_text_message("""
 If checked, the manual progress REST API permits users to manually mark a
 unit or lesson as complete, overriding the automatic progress tracking.
@@ -172,8 +171,7 @@ Show students the total score on the assignment after the due date is passed.
 If no due date is set, this flag has no effect.
 """
 
-# TODO(tlarsen): Per Notes in http://b/24176227 spreadsheet:
-#   "Learn more..." links to the docs (tbd)
+# TODO(johncox): replace placeholder URL once target link is determined.
 ASSESSMENT_GRADING_METHOD_DESCRIPTION = safe_dom.assemble_text_message("""
 If this is set to "Peer review", this assessment will use the Peer Review
 module. Otherwise, it will be graded automatically.
@@ -238,11 +236,25 @@ If checked, all assessments, lessons, and activties in this unit are shown on
 one page. Otherwise, each is shown on its own page.
 """
 
-# TODO(tlarsen): Per Notes in http://b/24176227 spreadsheet:
-#   "Learn more..." links to the docs (tbd)
+# TODO(johncox): replace placeholder URL once target link is determined.
 UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = safe_dom.assemble_text_message("""
 If checked, the manual progress REST API permits users to manually mark a
 unit or lesson as complete, overriding the automatic progress tracking.
+""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+
+COURSE_ADMIN_EMAILS_DESCRIPTION = """
+This list of email addresses represents the administrators for this course.
+Separate addresses with a comma, space, or newline.
+"""
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+COURSE_GOOGLE_ANALYTICS_ID_DESCRIPTION = safe_dom.assemble_text_message("""
+This ID is used to add Google Analytics functionality to this course.
+""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+COURSE_GOOGLE_TAG_MANAGER_ID_DESCRIPTION = safe_dom.assemble_text_message("""
+This ID is used to add Google Tag Manager functionality to this course.
 """, "https://code.google.com/p/course-builder/wiki/Dashboard")
 
 UNIT_HEADER_DESCRIPTION = """

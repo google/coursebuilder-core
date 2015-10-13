@@ -2344,12 +2344,8 @@ class Course(object):
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
-            'course:admin_user_emails', 'Course Admins', 'string',
-            description='A list of email addresses of course administrators.  '
-            'Syntax: Entries may be separated with any combination of '
-            'tabs, spaces, commas, or newlines.  Existing values using "[" and '
-            '"]" around email addresses continues to be supported.  '
-            'Regular expressions are not supported.', i18n=False,
+            'course:admin_user_emails', 'Course Admin Emails', 'string',
+            description=messages.COURSE_ADMIN_EMAILS_DESCRIPTION, i18n=False,
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
@@ -2387,20 +2383,13 @@ class Course(object):
             'header of all pages.'))
 
         opts.add_property(schema_fields.SchemaField(
-            'course:google_analytics_id', 'ID for Google Analytics', 'string',
-            optional=True, i18n=False,
-            description='This ID tells Google Analytics who is '
-            'calling, and allows it to string together routes that visitors '
-            'take through pages.  Obtain this ID by signing up at '
-            'http://www.google.com/analytics'))
+            'course:google_analytics_id', 'Google Analytics ID', 'string',
+            optional=True, i18n=False, description=str(
+                messages.COURSE_GOOGLE_ANALYTICS_ID_DESCRIPTION)))
         opts.add_property(schema_fields.SchemaField(
-            'course:google_tag_manager_id', 'ID for Google Tag Manager',
-            'string', optional=True, i18n=False,
-            description='This ID tells Google Tag '
-            'Manager who is calling.  This allows the Tag Manager to notify '
-            'other site use tracking services what users are doing on the '
-            'site.  Obtain this ID by signing up at '
-            'http://www.google.com/tagmanager'))
+            'course:google_tag_manager_id', 'Google Tag Manager ID',
+            'string', optional=True, i18n=False, description=str(
+                messages.COURSE_GOOGLE_TAG_MANAGER_ID_DESCRIPTION)))
 
         # Course-level Google API configuration settings.
         if COURSES_CAN_USE_GOOGLE_APIS.value:

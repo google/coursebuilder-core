@@ -26,6 +26,7 @@ import time
 import traceback
 
 import jinja2
+import messages
 import resources
 import webapp2
 
@@ -507,10 +508,7 @@ def register_module():
 
     auto_index_enabled = schema_fields.SchemaField(
         'course:' + AUTO_INDEX_SETTING, 'Auto-Index Course', 'boolean',
-        description='Whether the search module can automatically index the '
-        'course daily using a cron job. If enabled, this job will index the '
-        'course incrementally so that only new items or items which have not '
-        'been recently indexed are added.',
+        description=str(messages.SEARCH_AUTO_INDEX_DESCRIPTION),
         i18n=False, optional=True)
     course_settings_fields = [
         lambda course: auto_index_enabled
