@@ -282,7 +282,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.upload_module.TextFileUploadTagTestCase': 2,
     'tests.functional.test_classes.ActivityTest': 2,
     'tests.functional.test_classes.AdminAspectTest': 9,
-    'tests.functional.test_classes.AssessmentPolicyTests': 5,
+    'tests.functional.test_classes.AssessmentPolicyTests': 6,
     'tests.functional.test_classes.AssessmentTest': 2,
     'tests.functional.test_classes.CourseAuthorAspectTest': 4,
     'tests.functional.test_classes.CourseAuthorCourseCreationTest': 1,

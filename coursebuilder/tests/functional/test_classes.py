@@ -3527,6 +3527,56 @@ class AssessmentPolicyTests(actions.TestBase):
         dom = self.parse_html_string(response.body)
         self.assertIsNone(dom.find('.//*[@class="total-score"]'))
 
+    def test_assessment_pass_fail_messages(self):
+        def assert_assessment_confirmation(payload, expected_message):
+            with actions.OverriddenEnvironment(assessment_confirmations):
+                resp = actions.submit_assessment(
+                    self, self.assessment.unit_id, payload)
+                dom = self.parse_html_string(resp.body)
+                if expected_message:
+                    self.assertEquals(expected_message, dom.find(
+                        './/*[@id="assessment-confirmations-result"]'
+                    ).text.strip())
+                else:
+                    self.assertIsNone(dom.find(
+                        './/*[@id="assessment-confirmations-result"]'))
+
+        # Check pass and fail message shown when set
+
+        assessment_confirmations = {
+            'assessment_confirmations': {
+                'result_text': {
+                    'fail': 'Failed with %s',
+                    'pass': 'Passed with %s'}}}
+        payload = {
+            'assessment_type': self.assessment.unit_id,
+            'score': '25.0',
+            'answers': transforms.dumps({
+                'rawScore': 1,
+                'totalWeight': 4,
+                'percentScore': 25})
+        }
+        assert_assessment_confirmation(payload, 'Failed with 25')
+
+        payload = {
+            'assessment_type': self.assessment.unit_id,
+            'score': '75.0',
+            'answers': transforms.dumps({
+                'rawScore': 3,
+                'totalWeight': 4,
+                'percentScore': 75})
+        }
+        assert_assessment_confirmation(payload, 'Passed with 75')
+
+        # Check no messages shown when set to empty strings
+
+        assessment_confirmations = {
+            'assessment_confirmations': {
+                'result_text': {
+                    'fail': '',
+                    'pass': ''}}}
+        assert_assessment_confirmation(payload, None)
+
 
 def remove_dir(dir_name):
     """Delete a directory."""

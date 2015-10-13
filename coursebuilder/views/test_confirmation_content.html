@@ -4,10 +4,13 @@
 </p>
 
 <br>
-
-{% if 'assessment_confirmations' in course_info and is_last_assessment and overall_score != None and result %}
+{% if 'assessment_confirmations' in course_info
+       and is_last_assessment
+       and overall_score != None
+       and result
+       and course_info.assessment_confirmations['result_text'][result] %}
   <!-- Displays result-specific text for the final assessment. -->
-  <p class="gcb-top-content">
+  <p id="assessment-confirmations-result" class="gcb-top-content">
     {{course_info.assessment_confirmations['result_text'][result] % overall_score}}
   </p>
 {% endif %}
