@@ -123,15 +123,20 @@ class TextFileUploadTag(tags.BaseTag):
         """Renders the custom tag."""
         student = handler.personalize_page_and_get_enrolled(
             supports_transient_student=True)
+        enabled = (
+            not isinstance(student, models.TransientStudent)
+            and hasattr(handler, 'unit_id'))
+        handler.template_value['enabled'] = enabled
 
         template = jinja_utils.get_template(
             'templates/form.html', os.path.dirname(__file__))
 
         already_submitted = False
-        if not isinstance(student, models.TransientStudent):
+        if enabled:
             already_submitted = bool(
                 db.get(student_work.Submission.get_key(
                     handler.unit_id, student.get_key())))
+            handler.template_value['unit_id'] = handler.unit_id
 
         handler.template_value['action'] = self._get_action(
             handler.app_context.get_slug())
@@ -141,7 +146,6 @@ class TextFileUploadTag(tags.BaseTag):
         handler.template_value['form_xsrf_token'] = (
             utils.XsrfTokenManager.create_xsrf_token(
                 _XSRF_TOKEN_NAME))
-        handler.template_value['unit_id'] = handler.unit_id
 
         return tags.html_string_to_element_tree(
             jinja2.utils.Markup(template.render(handler.template_value))

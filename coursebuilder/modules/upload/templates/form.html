@@ -6,7 +6,7 @@
             value='{{ form_xsrf_token }}'/>
         <input type='hidden' name='unit_id' value='{{ unit_id }}'/>
         <input
-            {% if transient_student %}disabled='disabled'{% endif %}
+            {% if not enabled %}disabled='disabled'{% endif %}
             name='contents'
             size='{{ display_length }}'
             type='file'/>
@@ -24,6 +24,6 @@
         </p>
         <input
             type='submit'
-            {% if transient_student %}disabled='disabled'{% endif %}/>
+            {% if not enabled %}disabled='disabled'{% endif %}/>
     </form>
 </div>

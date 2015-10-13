@@ -18,9 +18,12 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+from common import crypto
 from common import users
+from controllers import sites
 from controllers import utils
 from models import models
+from models import courses
 from models import student_work
 from modules.upload import upload
 from tests.functional import actions
@@ -155,3 +158,64 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
             upload._POST_ACTION_SUFFIX, params, self.headers,
             expect_errors=True)
         self.assertEqual(400, response.status_int)
+
+
+class TextFileUploadTagTestCase(actions.TestBase):
+    _ADMIN_EMAIL = 'admin@foo.com'
+    _COURSE_NAME = 'upload_test'
+    _STUDENT_EMAIL = 'student@foo.com'
+
+    def setUp(self):
+        super(TextFileUploadTagTestCase, self).setUp()
+
+        self.base = '/' + self._COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self._COURSE_NAME, self._ADMIN_EMAIL, 'Upload File Tag Test')
+
+        self.course = courses.Course(None, self.app_context)
+
+        actions.login(self._STUDENT_EMAIL, is_admin=True)
+        actions.register(self, 'S. Tudent')
+
+    def tearDown(self):
+        sites.reset_courses()
+        super(TextFileUploadTagTestCase, self).tearDown()
+
+    def test_tag_in_assessment(self):
+        assessment = self.course.add_assessment()
+        assessment.html_content = (
+            '<text-file-upload-tag '
+            '    display_length="100" instanceid="this-tag-id">'
+            '</text-file-upload-tag>')
+        self.course.save()
+        response = self.get('assessment?name=%s' % assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        form = dom.find('.//div[@class="user-upload-form"]')
+        file_input = form.find('.//input[@type="file"]')
+        submit = form.find('.//input[@type="submit"]')
+        self.assertIsNotNone(file_input)
+        self.assertIsNotNone(submit)
+        self.assertEquals('100', file_input.attrib['size'])
+        # The tag is not disabled
+        self.assertNotIn('disabled', file_input.attrib)
+        self.assertNotIn('disabled', submit.attrib)
+
+    def test_tag_in_oeditor_preview_is_visible_but_disabled(self):
+        response = self.post('oeditor/preview', {
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'oeditor-preview-handler'),
+            'value': (
+                '<text-file-upload-tag '
+                '    display_length="100" instanceid="this-tag-id">'
+                '</text-file-upload-tag>')
+        })
+        dom = self.parse_html_string(response.body)
+        form = dom.find('.//div[@class="user-upload-form"]')
+        file_input = form.find('.//input[@type="file"]')
+        submit = form.find('.//input[@type="submit"]')
+        self.assertIsNotNone(file_input)
+        self.assertIsNotNone(submit)
+        self.assertEquals('100', file_input.attrib['size'])
+        # The tag is disabled
+        self.assertEquals('disabled', file_input.attrib['disabled'])
+        self.assertEquals('disabled', submit.attrib['disabled'])
