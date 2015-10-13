@@ -269,8 +269,21 @@ function setUpQuestionPreview() {
         action: "question_preview",
         quid: $(this).closest("tr").data("quid")
     };
-    $("#question-preview").html($("<iframe />").attr(
-      {id: "question-preview", src: "dashboard?" + $.param(params)})).show();
+    $("#modal-body").html($("<iframe />").attr(
+      {src: "dashboard?" + $.param(params)})).show();
+  });
+}
+
+function setUpQuestionGroupPreview() {
+  // Bind preview button to show question preview
+  $("table.assets-table .preview-question-group").on("click", function(e) {
+    openModal();
+    var params = {
+        action: "question_group_preview",
+        qgid: $(this).closest("tr").data("qgid")
+    };
+    $("#modal-body").html($("<iframe />").attr(
+      {src: "dashboard?" + $.param(params)})).show();
   });
 }
 
@@ -541,6 +554,7 @@ function init() {
   setUpLocalTimes();
   setUpModalWindow();
   setUpQuestionPreview();
+  setUpQuestionGroupPreview();
   setUpAddToGroup();
   setUpTableSorting();
   setUpFiltering();

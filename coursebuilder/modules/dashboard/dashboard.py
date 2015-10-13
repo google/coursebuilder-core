@@ -85,7 +85,7 @@ class DashboardHandler(
         'manage_asset', 'manage_text_asset',
         'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
-        'add_label', 'edit_label', 'question_preview',
+        'add_label', 'edit_label', 'question_preview', 'question_group_preview',
         'add_role', 'edit_role',
         'import_gift_questions']
     # Requests to these handlers automatically go through an XSRF token check
@@ -452,14 +452,6 @@ class DashboardHandler(
         ret.append(safe_dom.Entity('&gt;'))
         ret.append(safe_dom.Text(' %s' % text))
         return ret
-
-    def get_question_preview(self):
-        template_values = {}
-        template_values['gcb_course_base'] = self.get_base_href(self)
-        template_values['question'] = tags.html_to_safe_dom(
-            '<question quid="%s">' % self.request.get('quid'), self)
-        self.response.write(self.get_template(
-            'question_preview.html').render(template_values))
 
     def get_action_url(self, action, key=None, extra_args=None, fragment=None):
         args = {'action': action}

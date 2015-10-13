@@ -16,6 +16,7 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+from common import tags
 from models import transforms
 from models import models
 from models import resources_display
@@ -92,6 +93,14 @@ class QuestionGroupManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
             }
         )
         return
+
+    def get_question_group_preview(self):
+        template_values = {}
+        template_values['gcb_course_base'] = self.get_base_href(self)
+        template_values['question'] = tags.html_to_safe_dom(
+            '<question-group qgid="{}">'.format(self.request.get('qgid')), self)
+        self.response.write(self.get_template(
+            'question_preview.html').render(template_values))
 
 
 class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):

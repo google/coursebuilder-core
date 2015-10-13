@@ -243,6 +243,17 @@ div#formContainer div.settings-list-item fieldset legend span {
 #modal-window {
   display: none;
 }
+#modal-wrapper {
+  z-index: 1010;
+  overflow: auto;
+  display: flex;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+}
 #modal-background {
   position: fixed;
   top: 0;
@@ -255,14 +266,11 @@ div#formContainer div.settings-list-item fieldset legend span {
   z-index: 1000;
 }
 #modal-container {
+  margin: auto;
+
   border: 2px inset;
   border-radius: 10px;
-  position: fixed;
-  top: 50%;
-  margin-top: -250px;
-  left: 50%;
   width: 780px;
-  margin-left: -410px;
   z-index: 1010;
   background-color: #fff;
   padding: 20px;

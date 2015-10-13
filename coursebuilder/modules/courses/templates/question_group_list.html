@@ -3,13 +3,16 @@
 <h3>Question Groups ({{question_groups|length}})</h3>
 
 <div class="gcb-button-toolbar">
-  <a class="gcb-button" href="dashboard?action=add_question_group">Add Question Group</a>
+  <a class="gcb-button" href="dashboard?action=add_question_group">
+    Add Question Group
+  </a>
 </div>
 
 <div class="gcb-list gcb-list--autostripe assets-table-container">
   <table id="question-group-table" class="assets-table">
     <thead>
       <tr>
+        <th class="gcb-list__cell--icon"></th>
         <th>Description</th>
         <th>Questions</th>
         <th>Course Locations</th>
@@ -21,7 +24,14 @@
       {% for item in question_groups %}
 
         <tr data-qgid="{{ item.id }}">
-          <td class="description-cell gcb-list__cell--word-wrap"><a href="{{ item.url }}">{{ item.description }}</a></td>
+          <td>
+            <a class="gcb-list__icon gcb-list__icon--rowhover material-icons
+                preview-question-group" title="Preview">visibility</a>
+          </td>
+
+          <td class="description-cell gcb-list__cell--word-wrap">
+            <a href="{{ item.url }}">{{ item.description }}</a>
+          </td>
 
           <td class="questions-cell gcb-list__cell--word-wrap">
             <ul>

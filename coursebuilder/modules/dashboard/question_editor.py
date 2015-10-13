@@ -18,6 +18,7 @@ __author__ = 'John Orr (jorr@google.com)'
 
 from common import schema_fields
 from common.crypto import XsrfTokenManager
+from common import tags
 from common import utils as common_utils
 from models import roles
 from models import transforms
@@ -80,6 +81,14 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         cloned_question = models.QuestionDAO.clone(original_question)
         cloned_question.description += ' (clone)'
         models.QuestionDAO.save(cloned_question)
+
+    def get_question_preview(self):
+        template_values = {}
+        template_values['gcb_course_base'] = self.get_base_href(self)
+        template_values['question'] = tags.html_to_safe_dom(
+            '<question quid="{}">'.format(self.request.get('quid')), self)
+        self.response.write(self.get_template(
+            'question_preview.html').render(template_values))
 
 
 class BaseQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):

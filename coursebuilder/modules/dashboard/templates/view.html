@@ -212,11 +212,13 @@
     </div>
 
     <div id='modal-window'>
-      <div id='modal-background'></div>
-      <div id="modal-container">
-        <button class="close-button">X</button>
-        <div id='question-preview'></div>
-        <div id="add-to-group">{% include 'add_to_group.html' %}</div>
+      <div id="modal-wrapper">
+        <div id='modal-background'></div>
+        <div id="modal-container">
+          <button class="close-button">X</button>
+          <div id='modal-body'></div>
+          <div id="add-to-group">{% include 'add_to_group.html' %}</div>
+        </div>
       </div>
     </div>
 
