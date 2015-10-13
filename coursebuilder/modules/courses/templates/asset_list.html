@@ -1,0 +1,51 @@
+{% if can_upload %}
+  <div class="gcb-button-toolbar">
+    <a  id="upload-button"
+        class="gcb-button gcb-icon-button"
+        href="{{ upload_url }}">
+      <span class="icon md-file-upload"></span>
+      <span> Upload</span>
+    </a>
+  </div>
+{% endif %}
+
+<div class="gcb-list gcb-list--autostripe">
+  <table>
+    <thead>
+      <tr>
+        <th class="gcb-list__cell--icon"></th>
+        <th>Name</th>
+        <th>Overridden</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for asset in assets %}
+        <tr>
+          <td>
+            <a
+              href="{{asset.external_url}}"
+              target="_blank"
+              class="material-icons gcb-list__icon gcb-list__icon--rowhover">
+              open_in_new
+            </a>
+          </td>
+          <td>
+            <a href="{{asset.edit_url}}">
+              {{asset.name}}
+            </a>
+          </td>
+          <td>
+            {% if asset.overridden %}
+              <i class="material-icons">done</i>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if not assets|length %}
+    <div class="gcb-list__empty-message-wrapper">
+      <div class="gcb-list__empty-message">No items</div>
+    </div>
+  {% endif %}
+</div>

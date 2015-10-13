@@ -173,18 +173,18 @@ describe('draft status toggling', function() {
     $.post = jasmine.createSpy("$.post");
     var content = $(
         '<div class="course-outline" data-status-xsrf-token-lesson="token">' +
-        '  <div class="icon md-lock"' +
+        '  <div class="private icon-draft-status"' +
         '      data-key="9" data-component-type="lesson"></div>' +
         '</div>');
-    this.padlock = content.find('div.md-lock');
+    this.padlock = content.find('.icon-draft-status');
     onDraftStatusClick.call(this.padlock);
   });
   afterEach(function() {
     $.post = this.oldPost;
   });
   it('optimistically changes the draft status icon', function() {
-    expect(this.padlock.hasClass("md-lock-open")).toBe(true);
-    expect(this.padlock.hasClass("md-lock")).toBe(false);
+    expect(this.padlock.hasClass("public")).toBe(true);
+    expect(this.padlock.hasClass("private")).toBe(false);
   });
   it('makes a POST request to the server', function() {
     expect($.post).toHaveBeenCalledWith(
@@ -203,21 +203,21 @@ describe('draft status toggling', function() {
   it('verifies the server response and shows a message', function() {
     setDraftStatusCallback(
       '{"status": 200, "payload":"{\\"is_draft\\":false}"}', this.padlock);
-    expect(this.padlock.hasClass("md-lock-open")).toBe(true);
-    expect(this.padlock.hasClass("md-lock")).toBe(false);
+    expect(this.padlock.hasClass("public")).toBe(true);
+    expect(this.padlock.hasClass("private")).toBe(false);
     expect(cbShowMsgAutoHide).toHaveBeenCalled();
   });
   it('resets the draft status icon when an error is received', function() {
     setDraftStatusCallback('{"status": 401}', this.padlock);
-    expect(this.padlock.hasClass("md-lock-open")).toBe(false);
-    expect(this.padlock.hasClass("md-lock")).toBe(true);
+    expect(this.padlock.hasClass("public")).toBe(false);
+    expect(this.padlock.hasClass("private")).toBe(true);
     expect(cbShowAlert).toHaveBeenCalled();
   });
   it('adjusts the draft status icon upon a server inconsistency', function() {
     setDraftStatusCallback(
       '{"status": 200, "payload":"{\\"is_draft\\":true}"}', this.padlock);
-    expect(this.padlock.hasClass("md-lock-open")).toBe(false);
-    expect(this.padlock.hasClass("md-lock")).toBe(true);
+    expect(this.padlock.hasClass("public")).toBe(false);
+    expect(this.padlock.hasClass("private")).toBe(true);
     expect(cbShowAlert).toHaveBeenCalled();
   });
 });

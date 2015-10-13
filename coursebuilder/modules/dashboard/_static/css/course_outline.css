@@ -1,144 +1,55 @@
-
-div.course-outline {
+.course-outline {
   border: solid #ccc 1px;
+  overflow: hidden;
 }
-div.course-outline a {
-  text-decoration: none;
+.course-outline__content {
+  min-width: 1000px;
 }
-div.course-outline div.header {
-  background-color: #aaa;
-  text-align: center;
-  font-weight: bold;
-}
-div.course-outline div.header.left-matter {
-  float:left;
-}
-div.course-outline div.row > div.header {
-  display: block;
-}
-div.course-outline ol.course,
-div.course-outline ol.unit {
+.course-outline ol.course,
+.course-outline ol.unit {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-div.course-outline ol.course > li.ui-sortable-helper > ol.unit > li {
-  /* Hide the contents of a unit while it's moving */
-  height: 0;
-  overflow-y: hidden;
-  transition: height 300ms;
-}
-div.course-outline ol.unit > li {
-  height: 28px;
-}
-.course-outline .add-lesson button {
-  line-height: 28px;
-}
-div.course-outline .placeholder {
+.course-outline .placeholder {
   border: solid #ffffc0 1px;
   background-color: #f8f8f0;
-  height: 28px;
-  line-height: 1.2em;
 }
-div.course-outline li {
+.course-outline li {
   margin: 0 !important;
   padding: 0;
 }
-div.course-outline div.row {
-  transition: background-color 200ms;
-  height: 28px;
-  white-space: nowrap;
-  overflow-x: hidden;
-  position: relative;
-}
-div.course-outline div.row > div > div {
-  vertical-align: top;
-  padding-top: 2px;
-  padding-bottom: 2px;
-  line-height: 24px;
-}
-div.course-outline div.row.even {
-  background-color: #f0f0f0;
-}
-div.course-outline div.row:hover {
-  background-color: #e0e0e0;
-}
-div.course-outline div.left-matter {
-  display: inline-block;
-  width: 580px;
-  border-right: solid #ccc 1px;
-  box-sizing: border-box;
-}
-div.course-outline div.row.custom-unit > div > div.name {
-  font-weight: bold;
-}
-.course-outline .row .name {
-  margin-left: 20px;
-}
-.course-outline .row.course .name {
-  margin-left: 0;
-}
-div.course-outline div.row.lesson > div > div.name,
-div.course-outline div.row.pre-assessment > div > div.name,
-div.course-outline div.row.post-assessment > div > div.name {
-  margin-left: 40px;
-  max-width: 300px;
-  white-space: nowrap;
-  overflow-x: hidden;
-  text-overflow: ellipsis;
-}
-div.course-outline.read-only div.row:hover div.reorder,
-div.course-outline div.row.pre-assessment > div > div.reorder,
-div.course-outline div.row.post-assessment > div > div.reorder {
-  opacity: 0;
-  cursor: inherit;
-}
-div.course-outline button {
+.course-outline button {
   background-color: inherit;
   border: none;
-  line-height: 24px;
   padding: 0;
 }
-div.course-outline div.row.add-lesson button {
+.course-outline .add-lesson button {
   font-style: italic;
   color: #777;
   margin-left: 110px;
 }
-div.course-outline div.row > div,
-div.course-outline div.row > div > div {
-  display: inline-block;
-}
-div.course-outline .icon {
-  display: inline-block;
-  vertical-align: top;
-  font-size: 16px;
-  margin: 0;
-  height: 24px;
-  width: 20px;
-  line-height: 24px;
-  padding: 2px 4px 2px 0;
-  text-decoration: none;
-  box-sizing: border-box;
-}
-.course-outline .row-hover.icon {
-  color: #ccc;
-  transition: color 200ms;
-}
-.course-outline .row:hover .row-hover.icon,
-.course-outline .row .row-hover.icon.md-lock {
-  /* locked locks are dark even when not hovered */
+.icon-draft-status.private:before {
+  content: 'lock';
   color: #555;
 }
-div.course-outline div.reorder {
+.icon-draft-status.public:before {
+  content: 'lock_open';
+}
+.reorder {
   cursor: move;
 }
-div.course-outline div.left-matter {
-    margin-left: 6px;
+.course-outline .gcb-list__cell--header {
+  white-space: nowrap;
 }
-div.course-outline div.extras {
-  padding-right: 20px;
+.name {
+  flex: 0 0 580px !important;
+  box-sizing: border-box;
+  padding-left: 30px;
 }
-div.course-outline div.row.course div.left-matter {
-  /* account for the lack of a reorder icon */
-  padding-left: 23.9931px;
+.name.indent-course {
+  padding-left: 8px;
+}
+.name.indent-lesson {
+  padding-left: 50px;
 }

@@ -39,8 +39,14 @@ from modules.dashboard.role_editor import RoleRESTHandler
 
 from google.appengine.api import namespace_manager
 
+class QuestionTablesTests(actions.TestBase):
+    def _soup_table(self):
+        asset_tables = self.parse_html_string_to_soup(
+            self.get(self.URL).body).select('.assets-table')
+        self.assertEquals(len(asset_tables), 1)
+        return asset_tables[0]
 
-class QuestionDashboardTestCase(actions.TestBase):
+class QuestionDashboardTestCase(QuestionTablesTests):
     """Tests Assets > Questions."""
     COURSE_NAME = 'question_dashboard'
     ADMIN_EMAIL = 'admin@foo.com'
@@ -121,57 +127,48 @@ class QuestionDashboardTestCase(actions.TestBase):
 
         self.course.save()
 
-        # Get the Assets > Question tab
-        dom = self.parse_html_string(self.get(self.URL).body)
-        asset_tables = dom.findall('.//table[@class="assets-table"]')
-        self.assertEquals(len(asset_tables), 1)
-
         # First check Question Bank table
-        questions_table = asset_tables[0]
-        question_rows = questions_table.findall('./tbody/tr[@data-filter]')
+        questions_table = self._soup_table()
+        question_rows = questions_table.select('tr[data-filter]')
         self.assertEquals(len(question_rows), 2)
 
         # Check edit link and description of the first question
-        first_row = list(question_rows[0])
-        first_cell = first_row[0]
-        self.assertEquals(first_cell.findall('a')[1].tail,
-                          mc_question_description)
-        self.assertEquals(first_cell.find('a').get('href'), (
-            'dashboard?action=edit_question&key=%s' % mc_question_id))
+        first_row = question_rows[0]
+        description_link = first_row.select('.description-cell a')[0]
+        self.assertEquals(
+            description_link.text.strip(), mc_question_description)
+        self.assertEquals(description_link.get('href'), (
+            'dashboard?action=edit_question&key={}'.format(mc_question_id)))
+
         # Check if the assessment is listed
-        location_link = first_row[2].find('ul/li/a')
-        self.assertEquals(location_link.get('href'), (
-            'assessment?name=%s' % assessment_one.unit_id))
-        self.assertEquals(location_link.text, assessment_one.title)
+        location_link = first_row.select('.locations-cell a')[0]
+        self.assertEquals(location_link.get('href'),
+            'assessment?name={}'.format(assessment_one.unit_id))
+        self.assertEquals(assessment_one.title, location_link.text.strip())
 
         # Check second question (=row)
-        second_row = list(question_rows[1])
+        second_row = question_rows[1]
         self.assertEquals(
-            second_row[0].findall('a')[1].tail, sa_question_description)
+            second_row.select('.description-cell a')[0].text.strip(),
+            sa_question_description)
         # Check whether the containing Question Group is listed
-        self.assertEquals(second_row[1].find('ul/li').text, qg_description)
-
-    def _load_table(self):
-        asset_tables = self.parse_html_string(self.get(self.URL).body).findall(
-            './/table[@class="assets-table"]')
-        self.assertEquals(len(asset_tables), 1)
-        return asset_tables[0]
+        self.assertEquals(second_row.select('.groups-cell li')[0].text.strip(),
+            qg_description)
 
     def test_no_questions(self):
-        questions_table = self._load_table()
+        soup = self.parse_html_string_to_soup(self.get(self.URL).body)
         self.assertEquals(
-            questions_table.find('./tfoot/tr/td').text, 'No questions available'
-        )
+            1, len(soup.select('.gcb-list__empty-message')))
 
     def test_no_question_groups(self):
         description = 'Question description'
         models.QuestionDAO.save(models.QuestionDTO(None, {
             'description': description
         }))
-        questions_table = self._load_table()
+
+        table = self._soup_table()
         self.assertEquals(
-            questions_table.findall('./tbody/tr/td/a')[1].tail, description
-        )
+            description, table.select('.description-cell a')[0].text.strip())
 
     def test_if_buttons_are_present(self):
         """Tests if all buttons are present.
@@ -190,9 +187,9 @@ class QuestionDashboardTestCase(actions.TestBase):
         self.assertTrue((begin_time <= question_dto.last_modified) and (
             question_dto.last_modified <= time.time()))
 
-        questions_table = self._load_table()
+        questions_table = self._soup_table()
         self.assertEquals(
-            questions_table.find('./tbody/tr/td[@data-timestamp]').get(
+            questions_table.select('[data-timestamp]')[0].get(
                 'data-timestamp', ''),
             str(question_dto.last_modified)
         )
@@ -208,11 +205,11 @@ class QuestionDashboardTestCase(actions.TestBase):
 
         # On the assets -> questions page, clone the question.
         response = self.get(self.URL)
-        dom = self.parse_html_string(self.get(self.URL).body)
-        clone_link = dom.find('.//a[@class="icon md md-content-copy"]')
+        soup = self.parse_html_string_to_soup(self.get(self.URL).body)
+        clone_link = soup.select('.clone-question')[0]
         question_key = clone_link.get('data-key')
-        xsrf_token = dom.find('.//table[@id="question-table"]'
-                              ).get('data-clone-question-token')
+        xsrf_token = soup.select(
+            '#question-table')[0].get('data-clone-question-token')
         self.post(
             'dashboard?action=clone_question',
             {
@@ -240,8 +237,10 @@ class QuestionDashboardTestCase(actions.TestBase):
         })
         question_id = models.QuestionDAO.save(question_dto)
 
+        add_to_group_selector = '.add-question-to-group'
+
         # No groups are present so no add_to_group icon should be present
-        self.assertIsNone(self._load_table().find('./tbody/tr/td[ul]/div'))
+        self.assertEqual([], self._soup_table().select(add_to_group_selector))
 
         # Create a group
         qg_description = 'Question Group'
@@ -253,19 +252,19 @@ class QuestionDashboardTestCase(actions.TestBase):
 
         # Since we now have a group, the add_to_group icon should be visible
         self.assertIsNotNone(
-            self._load_table().find('./tbody/tr/td[ul]/div'))
+            self._soup_table().select(add_to_group_selector))
 
         # Add Question to Question Group via post_add_to_question_group
-        questions_table = self._load_table()
+        questions_table = self._soup_table()
         xsrf_token = questions_table.get('data-qg-xsrf-token', '')
         response = self._call_add_to_question_group(
             question_id, qg_id, 1, xsrf_token)
 
         # Check if operation was successful
         self.assertEquals(response.status_int, 200)
-        questions_table = self._load_table()
+        questions_table = self._soup_table()
         self.assertEquals(
-            questions_table.find('./tbody/tr/td/ul/li').text,
+            questions_table.select('.groups-cell li')[0].text.strip(),
             qg_description
         )
 
@@ -290,7 +289,7 @@ class QuestionDashboardTestCase(actions.TestBase):
         self.assertEquals(response['status'], 500)
 
 
-class QuestionGroupDashboardTestCase(actions.TestBase):
+class QuestionGroupDashboardTestCase(QuestionTablesTests):
     """Tests Assets > Question Groups."""
     COURSE_NAME = 'question_group_dashboard'
     ADMIN_EMAIL = 'admin@foo.com'
@@ -338,51 +337,42 @@ class QuestionGroupDashboardTestCase(actions.TestBase):
 
         self.course.save()
 
-        # Get the Assets > Question Groups tab
-        dom = self.parse_html_string(self.get(self.URL).body)
-        asset_tables = dom.findall('.//table[@class="assets-table"]')
-        self.assertEquals(len(asset_tables), 1)
-
         # Check Question Group table
-        question_groups_table = asset_tables[0]
-        row = question_groups_table.find('./tbody/tr')
+        question_groups_table = self._soup_table()
+        row = question_groups_table.select('tbody tr')[0]
         # Check edit link and description
-        edit_link = row[0].find('a')
-        self.assertEquals(edit_link.tail, qg_description)
-        self.assertEquals(edit_link.get('href'), (
-            'dashboard?action=edit_question_group&key=%s' % qg_id))
+        edit_link = row.select('.description-cell a')[0]
+        self.assertEquals(edit_link.text.strip(), qg_description)
+        self.assertEquals(
+            edit_link.get('href'),
+            'dashboard?action=edit_question_group&key={}'.format(qg_id))
 
         # The question that is part of this group, should be listed
-        self.assertEquals(row[1].find('ul/li').text, mc_question_description)
+        self.assertEquals(
+            row.select('.questions-cell li')[0].text.strip(),
+            mc_question_description)
 
         # Assessment where this Question Group is located, should be linked
-        location_link = row[2].find('ul/li/a')
-        self.assertEquals(location_link.get('href'), (
-            'assessment?name=%s' % assessment_two.unit_id))
-        self.assertEquals(location_link.text, assessment_two.title)
-
-    def _load_table(self):
-        asset_tables = self.parse_html_string(self.get(self.URL).body).findall(
-            './/table[@class="assets-table"]')
-        self.assertEquals(len(asset_tables), 1)
-        return asset_tables[0]
+        location_link = row.select('.locations-cell a')[0]
+        self.assertEquals(
+            location_link.get('href'),
+            'assessment?name={}'.format(assessment_two.unit_id))
+        self.assertEquals(assessment_two.title, location_link.text.strip())
 
     def test_no_question_groups(self):
-        question_groups_table = self._load_table()
+        soup = self.parse_html_string_to_soup(self.get(self.URL).body)
         self.assertEquals(
-            question_groups_table.find('./tfoot/tr/td').text,
-            'No question groups available'
-        )
+            1, len(soup.select('.gcb-list__empty-message')))
 
     def test_no_questions(self):
         description = 'Group description'
         models.QuestionGroupDAO.save(models.QuestionGroupDTO(None, {
                     'description': description
         }))
-        question_groups_table = self._load_table()
+        question_groups_table = self._soup_table()
         self.assertEquals(
-            question_groups_table.find('./tbody/tr/td/a').tail, description
-        )
+            question_groups_table.select('.description-cell a')[0].text.strip(),
+            description)
 
     def test_if_buttons_are_present(self):
         """Tests if all buttons are present.
@@ -411,10 +401,10 @@ class QuestionGroupDashboardTestCase(actions.TestBase):
         payload = transforms.loads(response.body)
         self.assertEquals(payload['status'], 200)
         self.assertEquals(payload['message'], 'Saved.')
-        question_groups_table = self._load_table()
+        question_groups_table = self._soup_table()
         self.assertEquals(
-            question_groups_table.find('./tbody/tr/td/a').tail, description
-        )
+            question_groups_table.select('.description-cell a')[0].text.strip(),
+            description)
 
     def test_last_modified_timestamp(self):
         begin_time = time.time()
@@ -423,9 +413,9 @@ class QuestionGroupDashboardTestCase(actions.TestBase):
         self.assertTrue((begin_time <= qg_dto.last_modified) and (
             qg_dto.last_modified <= time.time()))
 
-        question_groups_table = self._load_table()
+        question_groups_table = self._soup_table()
         self.assertEquals(
-            question_groups_table.find('./tbody/tr/td[@data-timestamp]').get(
+            question_groups_table.select('[data-timestamp]')[0].get(
                 'data-timestamp', ''),
             str(qg_dto.last_modified)
         )
@@ -441,7 +431,7 @@ class QuestionGroupDashboardTestCase(actions.TestBase):
 
     # TODO(tlarsen): add Question Group tests; tracked here: http://b/24373601
 
-class CourseOutlineTestCase(actions.TestBase):
+class CourseOutlineTestCase(actions.CourseOutlineTest):
     """Tests the Course Outline."""
     COURSE_NAME = 'outline'
     ADMIN_EMAIL = 'admin@foo.com'
@@ -467,31 +457,19 @@ class CourseOutlineTestCase(actions.TestBase):
         self.lesson.title = 'Test Lesson'
         self.course.save()
 
-    def _check_private_setting(self, li, ctype, key, is_private):
-        padlock = li.find('./div/div/div[2]')
-        self.assertEquals(padlock.get('data-component-type', ''), ctype)
-        self.assertEquals(padlock.get('data-key', ''), str(key))
-        lock_class = 'md-lock' if is_private else 'md-lock-open'
-        self.assertIn(lock_class, padlock.get('class', ''))
+    def _check_private_setting(self, soup, component_type, key, is_private):
+        lock = soup.select('[data-key="{}"]'.format(key))[0]
+        self.assertEqual(lock.get('data-component-type'), component_type)
+        self.assertAvailabilityState(lock, available=not is_private)
 
-    def _get_item_for(self, get_what):
+    def _get_item_for(self, component_type, item_id):
+        return self._get_outline().select('[data-{}-id={}]'.format(
+            component_type, item_id))[0]
+
+    def _get_outline(self):
         response = self.get(self.URL)
-        dom = self.parse_html_string(response.body)
-        course_outline = dom.find(
-            './/div[@class="course-outline editable reorderable"]')
-        lis = course_outline.findall('.//ol[@class="course"]/li')
-        self.assertEquals(len(lis), 3)
-
-        if get_what == 'assessment':
-            return lis[0]
-        elif get_what == 'link':
-            return lis[1]
-        elif get_what == 'unit':
-            return lis[2]
-        elif get_what == 'lesson':
-            return lis[2].find('ol/li')
-        else:
-            self.fail('Test trying to find item we do not have')
+        return self.parse_html_string_to_soup(response.body).select(
+            '.course-outline')[0]
 
     def _check_syllabus_for_admin(self, private, title):
         response = self.get('/%s/course' % self.COURSE_NAME)
@@ -537,45 +515,46 @@ class CourseOutlineTestCase(actions.TestBase):
                 unit.now_available = not private
                 unit.shown_when_unavailable = shown
                 self.course.save()
-                item = self._get_item_for(kind)
-                self._check_private_setting(item, kind, unit.unit_id, private)
+                soup = self._get_outline()
+                self._check_private_setting(soup, kind, unit.unit_id, private)
                 self._check_syllabus_for_admin(private, unit.title)
                 self._check_syllabus_for_student(private, shown, unit.title)
 
     def test_lesson_public_private(self):
         self.lesson.now_available = True
         self.course.save()
-        item = self._get_item_for('lesson')
+
         self._check_private_setting(
-            item, 'lesson', self.lesson.lesson_id, False)
+            self._get_outline(), 'lesson', self.lesson.lesson_id, False)
 
         self.lesson.now_available = False
         self.course.save()
-        item = self._get_item_for('lesson')
         self._check_private_setting(
-            item, 'lesson', self.lesson.lesson_id, True)
+            self._get_outline(), 'lesson', self.lesson.lesson_id, True)
 
-    def _check_item_label(self, li, href, title):
-        a = li.find('./div/div/div[@class="name"]/a')
-        self.assertEquals(a.get('href', ''), href)
+    def _check_item_label(self, li, student_url, title):
+        a = li.select('.name a')[0]
         self.assertEquals(a.text, title)
+        self.assertEquals(
+            li.select('.view-icon')[0].get('href', ''), student_url)
 
     def test_title(self):
-        item = self._get_item_for('link')
-        self._check_item_label(item, '', self.link.title)
-
-        item = self._get_item_for('assessment')
         self._check_item_label(
-            item, 'assessment?name=%s' % self.assessment.unit_id,
+            self._get_item_for('unit', self.link.unit_id), '',
+            self.link.title)
+
+        self._check_item_label(
+            self._get_item_for('unit', self.assessment.unit_id),
+            'assessment?name={}'.format(self.assessment.unit_id),
             self.assessment.title)
 
-        item = self._get_item_for('unit')
         self._check_item_label(
-            item, 'unit?unit=%s' % self.unit.unit_id, self.unit.title)
+            self._get_item_for('unit', self.unit.unit_id),
+            'unit?unit={}'.format(self.unit.unit_id), self.unit.title)
 
-        item = self._get_item_for('lesson')
         self._check_item_label(
-            item, 'unit?unit=%s&lesson=%s' % (
+            self._get_item_for('lesson', self.lesson.lesson_id),
+            'unit?unit={}&lesson={}'.format(
                 self.unit.unit_id, self.lesson.lesson_id),
             self.lesson.title)
 
@@ -616,9 +595,10 @@ class RoleEditorTestCase(actions.TestBase):
     def test_roles_tab(self):
         role_name = 'Test Role'
         role_id = self._create_role(role_name)
-        li = self.parse_html_string(self.get(self.URL).body).find('.//ul/li')
-        self.assertEquals(li.text, role_name)
-        self.assertEquals(li.find('a').get('href'), (
+        li = self.parse_html_string(self.get(self.URL).body).find(
+            './/tbody/tr/td/a')
+        self.assertEquals(li.text.strip(), role_name)
+        self.assertEquals(li.get('href'), (
             'dashboard?action=edit_role&key=%s' % role_id))
 
     def test_editor_hooks(self):

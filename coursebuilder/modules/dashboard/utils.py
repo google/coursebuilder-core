@@ -76,6 +76,16 @@ def list_files(app_context, subfolder, merge_local_files=False, all_paths=None):
     return sorted(result)
 
 
+def create_launch_button(url, active=True):
+    if active:
+        return safe_dom.A(
+            href=url,
+            className='icon row-hover material-icons',
+            ).add_text('open_in_new')
+    else:
+        return safe_dom.Element('div', className='icon inactive')
+
+
 def create_edit_button(edit_url, editable=True):
     if editable:
         return safe_dom.A(

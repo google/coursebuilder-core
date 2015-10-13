@@ -24,6 +24,7 @@ import re
 import urllib
 from xml.etree import cElementTree
 
+import bs4
 import html5lib
 
 import appengine_config
@@ -387,6 +388,9 @@ class TestBase(suite.AppEngineTestBase):
             tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
             namespaceHTMLElements=False)
         return parser.parse(html_str)
+
+    def parse_html_string_to_soup(self, html_str):
+        return bs4.BeautifulSoup(html_str)
 
     def execute_all_deferred_tasks(self, queue_name='default',
                                    iteration_limit=None):
@@ -1090,3 +1094,25 @@ def simple_add_course(name, admin_email, title):
                 'browsable': True,
                 },
             })
+
+class CourseOutlineTest(TestBase):
+    def assertAvailabilityState(self, element, available=None, active=None):
+        """Check the state of a lock icon"""
+        if available is True:
+            self.assertIn('public', element.get('class'))
+            self.assertNotIn('private', element.get('class'))
+        elif available is False:
+            self.assertNotIn('public', element.get('class'))
+            self.assertIn('private', element.get('class'))
+
+        if active is True:
+            self.assertNotIn('inactive', element.get('class'))
+        elif active is False:
+            self.assertIn('inactive', element.get('class'))
+
+    def assertEditabilityState(self, element, editable):
+        self.assertIsNotNone(element)
+        count = 1 if editable else 0
+        self.assertEquals(len(element.select('a')), count)
+
+

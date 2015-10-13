@@ -242,46 +242,61 @@ class I18nDashboardHandlerTests(actions.TestBase):
 
     def test_page_data(self):
         response = self.get(self.URL)
-        dom = self.parse_html_string(response.body)
-        table = dom.find('.//table[@class="i18n-progress-table"]')
-        rows = table.findall('./tbody/tr')
+        soup = self.parse_html_string_to_soup(response.body)
+        tables = soup.select('.i18n-progress-table')
 
-        expected_row_data = [
-            '',
-            'Settings',
-            'Assessments',
-            'Forums',
-            'Course',
-            'Invitations',
-            'Registration',
-            '',
-            'Create > Outline',
-            'Unit 1 - Test Unit',
-            '1.1 Test Lesson',
-            'Post Assessment',
-            '',
-            'Questions',
-            'Empty section',
-            '',
-            'Question Groups',
-            'Empty section',
-            '',
-            'Skills',
-            'Empty section',
-            '',
-            'HTML Hooks',
-            'base.after_body_tag_begins',
-            'base.after_main_content_ends',
-            'base.after_navbar_begins',
-            'base.after_top_content_ends',
-            'base.before_body_tag_ends',
-            'base.before_head_tag_ends',
-            'base.before_navbar_ends',
+        expected_tables = [
+            {
+                'title': 'Settings',
+                'rows': [
+                    'Assessments',
+                    'Forums',
+                    'Course',
+                    'Invitations',
+                    'Registration',
+                ],
+            },
+            {
+                'title': 'Create > Outline',
+                'rows': [
+                    'Unit 1 - Test Unit',
+                    '1.1 Test Lesson',
+                    'Post Assessment',
+                ],
+            },
+            {
+                'title': 'Questions',
+                'rows': [],
+            },
+            {
+                'title': 'Question Groups',
+                'rows': [],
+            },
+            {
+                'title': 'Skills',
+                'rows': [],
+            },
+            {
+                'title': 'HTML Hooks',
+                'rows': [
+                    'base.after_body_tag_begins',
+                    'base.after_main_content_ends',
+                    'base.after_navbar_begins',
+                    'base.after_top_content_ends',
+                    'base.before_body_tag_ends',
+                    'base.before_head_tag_ends',
+                    'base.before_navbar_ends',
+                ],
+            },
         ]
-        self.assertEquals(len(expected_row_data), len(rows))
-        for index, expected in enumerate(expected_row_data):
-            td_text = (''.join(rows[index].find('td').itertext())).strip()
-            self.assertEquals(expected, td_text)
+
+        for table, expected_table in zip(tables, expected_tables):
+            self.assertEquals(table.select(
+                'thead .title')[0].text.strip(), expected_table['title'])
+            rows = table.select('tbody tr')
+            self.assertEqual(len(rows), len(expected_table['rows']))
+            for row, row_name in zip(rows, expected_table['rows']):
+                self.assertEquals(row.select('.name')[0].text.strip(), row_name)
 
     def test_multiple_locales(self):
         extra_env = {
@@ -290,12 +305,10 @@ class I18nDashboardHandlerTests(actions.TestBase):
                 {'locale': 'ru', 'availability': 'unavailable'},
             ]}
         with actions.OverriddenEnvironment(extra_env):
-            dom = self.parse_html_string(self.get(self.URL).body)
-            table = dom.find('.//table[@class="i18n-progress-table"]')
-            columns = table.findall('./thead/tr/th')
+            soup = self.parse_html_string_to_soup(self.get(self.URL).body)
+            table = soup.select('.i18n-progress-table')[0]
+            columns = table.select('.language-header')
             expected_col_data = [
-                'Asset',
-                'en_US (Base language)',
                 'el',
                 'ru',
             ]
@@ -304,9 +317,8 @@ class I18nDashboardHandlerTests(actions.TestBase):
                 self.assertEquals(expected, columns[index].text)
 
     def test_is_translatable(self):
-        dom = self.parse_html_string(self.get(self.URL).body)
-        table = dom.find('.//table[@class="i18n-progress-table"]')
-        rows = table.findall('./tbody/tr[@class="not-translatable"]')
+        soup = self.parse_html_string_to_soup(self.get(self.URL).body)
+        rows = soup.select('tbody .not-translatable')
         self.assertEquals(0, len(rows))
 
         dto_key = resource.Key(resources_display.ResourceLesson.TYPE,
@@ -315,19 +327,17 @@ class I18nDashboardHandlerTests(actions.TestBase):
         dto.is_translatable = False
         I18nProgressDAO.save(dto)
 
-        dom = self.parse_html_string(self.get(self.URL).body)
-        table = dom.find('.//table[@class="i18n-progress-table"]')
-        rows = table.findall('./tbody/tr[@class="not-translatable"]')
+        soup = self.parse_html_string_to_soup(self.get(self.URL).body)
+        rows = soup.select('tbody .not-translatable')
         self.assertEquals(1, len(rows))
 
     def test_progress(self):
         def assert_progress(class_name, row, index):
-            td = row.findall('td')[index]
-            self.assertIn(class_name, td.get('class').split())
+            td = row.select('.status')[index]
+            self.assertIn(class_name, td.get('class'))
 
-        lesson_row_xpath = ('.//table[@class="i18n-progress-table"]'
-            '/tbody/tr[@data-resource-key="lesson:{}"]').format(
-            self.lesson.lesson_id)
+        lesson_row_selector = ('.i18n-progress-table > tbody > '
+            'tr[data-resource-key="lesson:{}"]').format(self.lesson.lesson_id)
 
         extra_env = {
             'extra_locales': [
@@ -335,12 +345,12 @@ class I18nDashboardHandlerTests(actions.TestBase):
                 {'locale': 'ru', 'availability': 'unavailable'},
             ]}
         with actions.OverriddenEnvironment(extra_env):
-            dom = self.parse_html_string(self.get(self.URL).body)
-            lesson_row = dom.find(lesson_row_xpath)
-            lesson_title = ''.join(lesson_row.find('td[1]').itertext()).strip()
+            soup = self.parse_html_string_to_soup(self.get(self.URL).body)
+            lesson_row = soup.select(lesson_row_selector)[0]
+            lesson_title = lesson_row.select('.name')[0].getText().strip()
             self.assertEquals('1.1 Test Lesson', lesson_title)
-            assert_progress('not-started', lesson_row, 2)
-            assert_progress('not-started', lesson_row, 3)
+            assert_progress('not-started', lesson_row, 0)
+            assert_progress('not-started', lesson_row, 1)
 
             dto_key = resource.Key(
                 resources_display.ResourceLesson.TYPE, self.lesson.lesson_id)
@@ -349,11 +359,11 @@ class I18nDashboardHandlerTests(actions.TestBase):
             dto.set_progress('ru', I18nProgressDTO.IN_PROGRESS)
             I18nProgressDAO.save(dto)
 
-            dom = self.parse_html_string(self.get(self.URL).body)
-            lesson_row = dom.find(lesson_row_xpath)
+            soup = self.parse_html_string_to_soup(self.get(self.URL).body)
+            lesson_row = soup.select(lesson_row_selector)[0]
 
-            assert_progress('done', lesson_row, 2)
-            assert_progress('in-progress', lesson_row, 3)
+            assert_progress('done', lesson_row, 0)
+            assert_progress('in-progress', lesson_row, 1)
 
 
 class TranslationConsoleRestHandlerTests(actions.TestBase):
@@ -2885,11 +2895,11 @@ class TranslatorRoleTests(actions.TestBase):
         with actions.OverriddenEnvironment(self.ENVIRON):
             self._createTranslatorRole('ElTranslator', ['el'])
             actions.login(self.USER_EMAIL, is_admin=False)
-            dom = self.parse_html_string(self.get(self.DASHBOARD_URL).body)
-            table = dom.find('.//table[@class="i18n-progress-table"]')
-            columns = table.findall('./thead/tr/th')
+            soup = self.parse_html_string_to_soup(
+                self.get(self.DASHBOARD_URL).body)
+            table = soup.select('.i18n-progress-table')[0]
+            columns = table.select('.language-header')
             expected_col_data = [
-                'Asset',
                 'el'
             ]
             self.assertEquals(len(expected_col_data), len(columns))
@@ -3736,7 +3746,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
         self.assertEquals(302, response.status_int)
         response = self.get('sample/dashboard?action=i18n_dashboard')
         self.assertEquals(200, response.status_int)
-        self.assertIn('<th>ln</th>', response.body)
+        self.assertIn('>ln</th>', response.body)
 
         config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
 

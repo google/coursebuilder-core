@@ -1,0 +1,24 @@
+<div class="gcb-list gcb-list--autostripe">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for role in roles %}
+        <tr>
+          <td>
+            <a href="dashboard?action=edit_role&key={{role.id}}">{{role.name}}</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if not roles|length %}
+    <div class="gcb-list__empty-message-wrapper">
+      <div class="gcb-list__empty-message">No items</div>
+    </div>
+  {% endif %}
+</div>

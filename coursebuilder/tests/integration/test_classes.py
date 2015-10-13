@@ -403,7 +403,7 @@ class EtlTranslationRoundTripTest(BaseIntegrationTest):
     def _get_ln_locale_element(self, page, pre_wait=True):
         try:
             return page.find_element_by_css_selector(
-                'thead > tr > th:nth-child(3)', pre_wait=pre_wait)
+                '.language-header', pre_wait=pre_wait)
         except exceptions.NoSuchElementException:
             return None
 
@@ -813,13 +813,13 @@ class AdminTests(BaseIntegrationTest):
         #---------- Test editor state is saved ----------
         ).click_close(
         ).click_edit_lesson(
-            0
+            '1. New Lesson'
         ).assert_editor_mode_is_html(
         ).click_rich_text(
         ).click_save(
         ).click_close(
         ).click_edit_lesson(
-            0
+            '1. New Lesson'
         ).assert_editor_mode_is_rich_text()
 
     def test_add_edit_delete_label(self):

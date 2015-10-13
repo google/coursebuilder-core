@@ -57,11 +57,11 @@ class _JobTestBase(
 
     def assert_ln_locale_in_course(self, response):
         self.assertEqual(200, response.status_int)
-        self.assertIn('<th>ln</th>', response.body)
+        self.assertIn('>ln</th>', response.body)
 
     def assert_ln_locale_not_in_course(self, response):
         self.assertEqual(200, response.status_int)
-        self.assertNotIn('<th>ln</th>', response.body)
+        self.assertNotIn('>ln</th>', response.body)
 
     def assert_zipfile_contains_only_ln_locale(self, filename):
         with zipfile.ZipFile(filename) as zf:

@@ -12,13 +12,16 @@ function parseJson(s) {
 }
 function zebraStripeList() {
   $('.course-outline li > div').each(function(i, elt) {
-    $(elt).removeClass('even odd').addClass(i % 2 == 0 ? 'even' : 'odd')
+    $(elt).removeClass('gcb-list__row--dark-stripe')
+    if (i % 2 == 0) {
+      $(elt).addClass('gcb-list__row--dark-stripe')
+    }
   });
 }
 function addNumbering() {
-  $('.course-outline ol.course > li > div.row.unit').each(function(i) {
+  $('.course-outline ol.course > li > .gcb-list__row.unit').each(function(i) {
     var unitIndex = i + 1;
-    var titleEl = $(this).find('> div.left-matter > div.name > a');
+    var titleEl = $(this).find('.name > a');
     var title = UNIT_TITLE_TEMPLATE
         .replace('%(index)s', unitIndex)
         .replace('%(title)s', titleEl.data('title'))
@@ -28,7 +31,7 @@ function addNumbering() {
     $(this).parent().find('ol.unit:not(.pre, .post) > li').each(function() {
       if ($(this).data('autoIndex') == 'True') {
         var titleEl = $(this)
-            .find('> div.row.lesson > div.left-matter > div.name > a');
+            .find('> .gcb-list__row.lesson .name > a');
         titleEl.text(lessonIndex + '. ' + titleEl.data('title'));
         ++lessonIndex;
       }
@@ -129,14 +132,14 @@ function bindSortableBehavior() {
   $(COURSE_SORTABLE_SELECTOR).sortable({
     cancel: '.add-lesson, .pre-assessment, .post-assessment',
     handle: '.reorder',
-    placeholder: 'placeholder unit',
+    placeholder: 'placeholder unit gcb-list__row',
     update: onUpdate
   }).disableSelection();
   $(UNIT_SORTABLE_SELECTOR).sortable({
     cancel: '.add-lesson, .pre-assessment, .post-assessment',
     connectWith: 'ol.unit:not(.pre, .post)',
     handle: '.reorder',
-    placeholder: 'placeholder lesson',
+    placeholder: 'placeholder lesson gcb-list__row',
     update: onUpdate
   }).disableSelection();
 }

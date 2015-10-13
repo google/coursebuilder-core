@@ -8,60 +8,75 @@
 </div>
 <div style="clear: both; padding-top: 2px;">
 </div>
-<table>
-  <thead>
-    <tr>
-      <th>Course Title</th>
-      <th>Context Path</th>
-      <th>Content Location</th>
-      <th>Student Data Location</th>
-      <th>Delete Course</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for course in courses %}
-    <tr>
-      <td>
-        <a href="{{ course.link }}">
-          {{ course.name }}
-        </a>
-      </td>
-      <td>{{ course.slug }}</td>
-      <td>{{ course.location }}</td>
-      <td>{{ course.namespace }}</td>
-      <td>
-        {% if course.namespace != '' %}
-          <form
-             action="{{ course.slug }}{{ delete_course_link }}"
-             method="POST"
-             delete_course="true">
-            <input
-               type="hidden"
-               name="xsrf_token"
-               value="{{ delete_course_xsrf_token }}">
-            <input
-               type="hidden"
-               name="is_selected_course"
-               value="{{ course.is_selected_course }}">
 
-          </form>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-    <tr>
-      <td colspan="5" align="right">
-        Total: {{ courses|length }} item(s)
-      </td>
-    </tr>
-  </tbody>
-</table>
+<div class="gcb-list gcb-list--autostripe">
+  <table style="table-layout: auto">
+    <thead>
+      <tr>
+        <th>Course Title</th>
+        <th>Context Path</th>
+        <th>Content Location</th>
+        <th>Student Data Location</th>
+        <th class="gcb-list__cell--icon"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for course in courses %}
+      <tr>
+        <td>
+          <a href="{{ course.link }}">
+            {{ course.name }}
+          </a>
+        </td>
+        <td>{{ course.slug }}</td>
+        <td>{{ course.location }}</td>
+        <td>{{ course.namespace }}</td>
+        <td>
+          {% if course.namespace != '' %}
+            <form
+               action="{{ course.slug }}{{ delete_course_link }}"
+               method="POST"
+               delete_course="true">
+              <input
+                 type="hidden"
+                 name="xsrf_token"
+                 value="{{ delete_course_xsrf_token }}">
+              <input
+                 type="hidden"
+                 name="is_selected_course"
+                 value="{{ course.is_selected_course }}">
+
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+
+      {% if courses|length %}
+      <tr>
+        <td colspan="5"style="text-align: right">
+          Total: {{ courses|length }} item(s)
+        </td>
+      </tr>
+      {% endif %}
+
+    </tbody>
+  </table>
+
+  {% if not courses|length %}
+    <div class="gcb-list__empty-message-wrapper">
+      <div class="gcb-list__empty-message">No items</div>
+    </div>
+  {% endif %}
+</div>
 
 <script>
 $(document).ready(function(){
   // Forms have no submit control unless this JS runs successfully to
   // add the are-you-sure safety check.
-  $("[delete_course]").append('<input type="submit" value="Delete Course">')
+  $("[delete_course]").append(
+    '<button class="gcb-list__icon gcb-list__icon--rowhover material-icons">' +
+    'delete</button')
   // Now that we have some submit controls, add the are-you-sure modal dialog.
   $("[delete_course]").submit(function(event){
     return confirm('You are about to permanently and unrecoverably ' +

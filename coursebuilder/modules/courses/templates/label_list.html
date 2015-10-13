@@ -1,0 +1,63 @@
+<div class="gcb-button-toolbar">
+  <a class="gcb-button" href="dashboard?action=add_label">
+    Add Label
+  </a>
+</div>
+
+<div class="gcb-list gcb-list--autostripe">
+  <table>
+    <thead>
+      <tr>
+        <th>General</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in labels %}
+        <tr>
+          <td>
+            <a
+                href="dashboard?action=edit_label&key={{ item.id }}"
+                id="label_{{item.title}}">
+              {{ item.title }}
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if not labels|length %}
+    <div class="gcb-list__empty-message-wrapper">
+      <div class="gcb-list__empty-message">No items</div>
+    </div>
+  {% endif %}
+</div>
+
+<div class="gcb-list gcb-list--autostripe">
+  <table>
+    <thead>
+      <tr>
+        <th>Course Tracks</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in tracks %}
+        <tr>
+          <td>
+            <a
+                href="dashboard?action=edit_label&key={{ item.id }}"
+                id="label_{{item.title}}">
+              {{ item.title }}
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if not tracks|length %}
+    <div class="gcb-list__empty-message-wrapper">
+      <div class="gcb-list__empty-message">No items</div>
+    </div>
+  {% endif %}
+</div>

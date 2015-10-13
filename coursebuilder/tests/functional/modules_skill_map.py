@@ -1977,25 +1977,14 @@ class SkillI18nTests(actions.TestBase):
             })
         _SkillDao.save(skill)
         response = self.get('dashboard?action=i18n_dashboard')
-        dom = self.parse_html_string(response.body)
-        table = dom.find('.//table[@class="i18n-progress-table"]')
-        rows = table.findall('./tbody/tr')
-
-        skills_row_index = -1
-        for index, row in enumerate(rows):
-            td_text = (''.join(row.find('td').itertext())).strip()
-            if td_text == 'Skills':
-                skills_row_index = index
-                break
-
-        self.assertNotEqual(-1, skills_row_index, 'Must have a Skills section')
+        soup = self.parse_html_string_to_soup(response.body)
+        skills_table = soup.select('[data-title="Skills"]')[0]
+        name_cells = skills_table.select('tbody .name')
         self.assertEqual(
-            SKILL_NAME_2,
-            ''.join(rows[skills_row_index + 1].find('td').itertext()).strip(),
+            name_cells[0].text.strip(), SKILL_NAME_2,
             'Skill name 2 added second appears first due to sorting')
         self.assertEqual(
-            SKILL_NAME,
-            ''.join(rows[skills_row_index + 2].find('td').itertext()).strip(),
+            name_cells[1].text.strip(), SKILL_NAME,
             'Skill name added first appears second due to sorting')
 
     def _do_upload(self, contents):

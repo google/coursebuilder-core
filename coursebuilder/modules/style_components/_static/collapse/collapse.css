@@ -1,0 +1,68 @@
+/* Collapse component
+
+Use this to build "zippy" menus.  Some JavaScript in view.js is required to
+calculate element heights on startup.  Re-run updateCollapse to recalculate it
+any time you create or modify some collapsible content.
+
+.gcb-collapse: Container
+.gcb-collapse--opened: Makes the contents visible
+.gcb-collapse__content: The contents that can be hidden
+.gcb-collapse__content-wrapper: Wraps and hides the contents
+.gcb-collapse__icon: An icon that will rotate on open and close
+.gcb-collapse__button: The clickable element
+.gcb-accordion: Wrap multiple collapses in this and they'll collapse their
+  neighbors when you open them.
+
+Minimal Example:
+<div class="gcb-collapse">
+  <a class="gcb-collapse__button">
+    <i class="gcb-collapse__icon material-icons mdl-animation--default">expand_more</i>
+    Click me to see the content
+  </a>
+  <div class="gcb-collapse__content-wrapper">
+    <div class="gcb-collapse__content mdl-animation--default">
+      This is the content
+    </div>
+  </div>
+</div>
+
+*/
+
+.gcb-collapse--opened {
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  margin-top: -1px;
+}
+
+.gcb-collapse--opened + .gcb-collapse--opened {
+  border-top: none;
+  margin-top: 0;
+}
+
+.gcb-collapse__content-wrapper {
+  overflow: hidden;
+}
+
+.gcb-collapse__content {
+  transition-property: margin-top;
+  transition-duration: 0.2s;
+}
+
+.gcb-collapse__button {
+  font-weight: bold;
+}
+
+.gcb-collapse__icon {
+  transition-property: transform;
+  transition-duration: 0.2s;
+  color: rgba(0,0,0,0.3);
+}
+
+.gcb-collapse--opened .gcb-collapse__icon {
+  transform: rotate(-180deg);
+}
+
+.gcb-collapse--opened .gcb-collapse__content {
+  /* Overrides the inline style calculated by the JavaScript on startup */
+  margin-top: 0 !important;
+}

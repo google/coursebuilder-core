@@ -1,0 +1,208 @@
+/* Lists
+ *
+ * This can be used in two ways:
+ *
+ * 1) Apply the gcb-list class and optional gcb-list--autostripe class to the a
+ * parent of a <table> element and ensure any header columns are inside a
+ * <thead>.  Mark any icon column headers with gcb-list__cell--icon.
+ *
+ * 2) If you are unable to use a table, apply individual BEM-style classes to
+ * every list, item, cell, etc and add the gcb-list__row--flex to each row.
+ *
+ * Regardless of which method you use, some classes like
+ * gcb-list__icon and gcb-list__icon--rowhover will still be useful.
+ *
+ * You can manually stripe rows with gcb-list__row--dark-stripe.
+ */
+
+/*** List ***/
+.gcb-list {
+  border: 1px solid #ccc;
+  font-color: #333333;
+}
+
+.gcb-list + .gcb-list {
+  margin-top: 16px;
+}
+
+.gcb-list > table {
+  border: 0;
+  width: 100%;
+  table-layout: fixed;
+  border-spacing: 2px;
+  border-collapse: collapse;
+}
+
+.gcb-list a {
+  text-decoration: none;
+}
+
+ul.gcb-list, ol.gcb-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/*** Row ***/
+
+/* Stripes:
+ *
+ * This can be used in two ways.  Either apply gcb-list__row--dark-stripe to
+ * each item that you want to be dark, or apply gcb-list--autostripe to the
+ * gcb-list element and items will be striped automatically.
+ */
+.gcb-list__row--dark-stripe,
+.gcb-list--autostripe .gcb-list__row:nth-child(even),
+.gcb-list--autostripe > table > tbody > tr:nth-child(even) {
+  background-color:#f0f0f0;
+}
+
+.gcb-list__row,
+.gcb-list > table > tbody > tr {
+  transition: background-color 200ms;
+  height: 36px;
+}
+
+/* Hover needs to beat stripes */
+.gcb-list__row:hover,
+.gcb-list > table > tbody > tr:hover {
+  background-color:#e0e0e0 !important;
+}
+
+/*** Cell ***/
+
+.gcb-list__cell,
+.gcb-list table > tbody > tr > td {
+  padding: 0;
+  padding-left: 8px;
+  vertical-align: middle;
+  border: none;
+  white-space: nowrap;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+}
+
+.gcb-list__cell:last-child,
+.gcb-list table > tbody > tr > td:last-child,
+.gcb-list table > thead > tr > th:last-child {
+  padding-right: 8px;
+}
+
+.gcb-list__cell--word-wrap,
+table > tbody > tr > td.gcb-list__cell--word-wrap  {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  white-space: normal;
+  word-wrap: normal;
+}
+
+/*** Header Row ***/
+
+.gcb-list__header-row,
+.gcb-list > table > thead > tr {
+  border: none;
+  border-bottom: 1px #ccc solid;
+  background-color: #aaa;
+  font-weight: bold;
+  text-align: left;
+  height: 40px;
+}
+
+/* If you aren't a table, use flexbox */
+.gcb-list__row--flex {
+  display: flex;
+  flex-direction: row;
+}
+
+.gcb-list__row--flex > .gcb-list__cell {
+  flex: 1;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.gcb-list__row--flex .gcb-list__cell--icon {
+  flex: 0 0 16px;
+}
+
+/* Or use line height */
+.gcb-list__header-row--lineheight {
+  line-height: 40px;
+}
+
+.gcb-list__row--lineheight {
+  line-height: 36px;
+}
+
+.gcb-list__header-row--lineheight,
+.gcb-list__row--lineheight {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/*** Header Cell ***/
+
+.gcb-list__cell--header,
+.gcb-list > table > thead > tr > th {
+  padding: 0;
+  padding-left: 8px;
+  vertical-align: middle;
+  border: 0;
+}
+
+/*** Icon stuff ***/
+
+.gcb-list__cell--icon {
+  width: 16px;
+}
+
+.gcb-list__icon {
+  font-size: 16px;
+  width: 16px;
+  vertical-align: bottom;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* These icons change color when you hover their containing row */
+.gcb-list__icon--rowhover {
+  color: rgb(204, 204, 204);
+  transition: color 200ms;
+  cursor: pointer;
+}
+
+.gcb-list__row:hover .gcb-list__icon--rowhover,
+.gcb-list > table > tbody > tr:hover .gcb-list__icon--rowhover {
+  color: #555;
+}
+
+/*** Message about an empty list ***/
+
+.gcb-list__empty-message-wrapper {
+  min-height: 100px;
+  box-sizing: border-box;
+  display: flex;
+  vertical-align: middle;
+  text-align: center;
+  padding: 8px;
+}
+
+.gcb-list__empty-message {
+  margin: auto;
+}
+
+/*** Sorting ***/
+
+.gcb-list__sort-indicator {
+  display: inline;
+  font-size: 24px;
+  vertical-align: middle;
+}
+
+.sort-asc .gcb-list__sort-indicator:before {
+  content: 'arrow_drop_down';
+}
+.sort-desc .gcb-list__sort-indicator:before {
+  content: 'arrow_drop_up';
+}
+

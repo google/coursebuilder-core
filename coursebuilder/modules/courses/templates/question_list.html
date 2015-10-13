@@ -1,0 +1,79 @@
+{% import 'question_location_macros.html' as question_location_macros %}
+
+<h3>Questions ({{questions|length}})</h3>
+
+<div class="gcb-button-toolbar">
+  <a class="gcb-button" href="dashboard?action=add_mc_question">Add Multiple Choice</a>
+  <a class="gcb-button" href="dashboard?action=add_sa_question">Add Short Answer</a>
+  <a class="gcb-button" href="dashboard?action=import_gift_questions">Add GIFT Questions</a>
+
+  <div class="filter-container gcb-pull-right" id="question-filter">
+    <button class="gcb-button filter-button">Filter</button>
+  </div>
+</div>
+
+<div class="gcb-list gcb-list--autostripe assets-table-container">
+  <table id="question-table" class="assets-table"
+    {% for attribute, value in table_attributes.iteritems() %}
+      {{ attribute }}="{{ value }}"
+    {% endfor %}
+  >
+    <thead>
+      <tr>
+        <th class="gcb-list__cell--icon"></th>
+        <th class="gcb-list__cell--icon"></th>
+        <th>Description</th>
+        <th class="gcb-list__cell--icon"></th>
+        <th>Question Groups</th>
+        <th>Course Locations</th>
+        <th width="170px">Last Modified</th>
+        <th width="50px">Type</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for question in questions %}
+        <tr data-quid="{{ question.id }}" data-filter="{{ question.filter_info }}">
+          <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons preview-question" title="Preview">visibility</a></td>
+
+          <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons clone-question" title="Clone" data-key="{{ question.id }}">content_copy</a></td>
+
+          <td class="description-cell gcb-list__cell--word-wrap"><a href="{{ question.url }}">{{question.description}}</a></td>
+
+          <td>
+            {% if groups_exist %}
+              <a
+                  class="material-icons gcb-pull-right gcb-list__icon gcb-list__icon--rowhover add-question-to-group"
+                  title="Add to question group"
+                  alt="Add to question group">add_circle</a>
+            {% endif %}
+          </td>
+
+          <td class="groups-cell gcb-list__cell--word-wrap">
+            {% if groups_exist %}
+              <ul>
+                {% for group_description in question.group_descriptions %}
+                  <li>{{ group_description }}
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </td>
+
+          <td class="locations-cell gcb-list__cell--word-wrap">
+            {{ question_location_macros.render_locations(question.locations) }}
+          </td>
+
+          <td data-timestamp="{{ question.last_modified }}" class="timestamp"></td>
+
+          <td>{{ question.type }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if not questions|length %}
+    <div class="gcb-list__empty-message-wrapper">
+      <div class="gcb-list__empty-message">No items</div>
+    </div>
+  {% endif %}
+</div>

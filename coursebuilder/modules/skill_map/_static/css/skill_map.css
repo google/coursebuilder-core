@@ -1,63 +1,16 @@
-#skills-container .controls label.show-warnings {
-  margin-right: 20px;
+.skill-map-table th.skill {
+  width: 185px;
 }
-table.skill-map-table {
-  table-layout: fixed;
-  border: 1px #ccc solid;
-  font-color: #333333;
-}
-table.skill-map-table thead tr th {
-  border-bottom: 1px #ccc solid;
-  background-color: #aaa;
-}
-table.skill-map-table th {
-  padding-top: 12px;
-  padding-bottom: 12px;
-  border: none;
-  background: #fff;
-}
-table.skill-map-table th.skill {
-  width: 270px;
-}
-table.skill-map-table th.lessons {
+.skill-map-table th.lessons {
   width: 5em;
 }
-table.skill-map-table tr {
-  transition: background-color 200ms;
-}
-table.skill-map-table tr.even {
-  background-color:#f0f0f0;
-}
-table.skill-map-table tr:hover {
-  background-color:#e0e0e0;
-}
-table.skill-map-table td {
-  border: none;
-  white-space: nowrap;
-  overflow-x: hidden;
-}
-table.skill-map-table td .diagnosis.icon {
-  width: 25px;
-  padding: 0 2px 0 0;
-  font-size: 15px;
-  cursor: inherit;
-}
-table.skill-map-table td.skill span.skill-name {
-  display: inline-block;
-  vertical-align: middle;
-  max-width: 185px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-table.skill-map-table td .diagnosis.icon.md-error {
+.skill-map-table .diagnosis.error:before {
   color: #c00;
+  content: 'error';
 }
-table.skill-map-table td .diagnosis.icon.md-warning {
+.skill-map-table .diagnosis.warning:before {
   color: #aaaaaa;
-}
-table.skill-map-table td.description {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  content: 'warning';
 }
 table.skill-map-table tr td span.related-skills {
   background: #5cb85c;
@@ -68,18 +21,8 @@ table.skill-map-table tr td span.related-skills {
   padding: 0.1em 0.4em;
   margin: 0 0.2em !important;
 }
-.skill-map-table a {
-  text-decoration: none;
-}
 .skill-map-table button:focus {
   outline: none;
-}
-.skill-map-table .row-hover.icon {
-  color: #ccc;
-  transition: color 200ms;
-}
-.skill-map-table .row:hover .row-hover.icon {
-  color: #555;
 }
 table.skill-map-table ol.comma-list {
   padding: 0;

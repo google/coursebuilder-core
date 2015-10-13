@@ -32,7 +32,6 @@ from tests.functional import actions
 from google.appengine.api import namespace_manager
 from google.appengine.ext import deferred
 
-
 class AccessDraftsTestCase(actions.TestBase):
     COURSE_NAME = 'draft_access'
     ADMIN_EMAIL = 'admin@foo.com'
@@ -94,12 +93,14 @@ class AccessDraftsTestCase(actions.TestBase):
         actions.logout()
 
 
-class CourseAccessPermissionsTests(actions.TestBase):
+class CourseAccessPermissionsTests(actions.CourseOutlineTest):
     COURSE_NAME = 'outline_permissions'
     ADMIN_EMAIL = 'admin@foo.com'
     USER_EMAIL = 'user@foo.com'
     ROLE = 'test_role'
     NAMESPACE = 'ns_%s' % COURSE_NAME
+    COURSE_AVAILABILITY_XPATH = './/*[@id="course-availability"]'
+    COURSE_EDIT_XPATH = './/*[@id="edit-course"]'
 
     def setUp(self):
         super(CourseAccessPermissionsTests, self).setUp()
@@ -153,39 +154,34 @@ class CourseAccessPermissionsTests(actions.TestBase):
             [constants.COURSE_OUTLINE_REORDER_PERMISSION])
         response = self.get('dashboard?action=outline')
         self.assertEquals(200, response.status_int)
-        dom = self.parse_html_string(response.body)
+        soup = self.parse_html_string_to_soup(response.body)
 
         # No buttons for add unit/assessment, import course.
-        toolbar = dom.find('.//div[@class="gcb-button-toolbar"]')
-        self.assertEquals(len(toolbar.getchildren()), 0)
+        self.assertEquals(len(soup.select('.gcb-button-toolbar > *')), 0)
 
         # Should have reorder drag handles
-        handles = dom.findall(
-            './/div[@class="reorder icon row-hover md md-view-headline"]')
-        self.assertGreater(len(handles), 0)
+        self.assertGreater(len(soup.select('.reorder')), 0)
 
         # No add-lesson item.
-        add_lesson = dom.find('.//div[@class="row add-lesson"]')
-        self.assertIsNone(add_lesson)
+        self.assertEquals(len(soup.select('.add-lesson')), 0)
 
-    def _find_element(self, xpath, tag, css_class):
+    def _get_dom(self):
         response = self.get('dashboard?action=outline')
         self.assertEquals(200, response.status_int)
-        dom = self.parse_html_string(response.body)
-        element = dom.find(xpath)
-        self.assertIsNotNone(element)
-        self.assertEquals(element.tag, tag)
-        self.assertEquals(element.get('class'), css_class)
-        return element
+        return self.parse_html_string(response.body)
+
+    def _get_soup(self):
+        response = self.get('dashboard?action=outline')
+        self.assertEquals(200, response.status_int)
+        return self.parse_html_string_to_soup(response.body)
 
     def test_course_availability_icon(self):
         self._add_role_with_permissions(
             [constants.COURSE_OUTLINE_VIEW_PERMISSION])
 
-        self._find_element(
-            './/div[@class="row course"]/div[@class="left-matter"]/div[1]',
-            'div',
-            'row-hover icon md md-lock-open read-only inactive')
+        element = self._get_dom().find(self.COURSE_AVAILABILITY_XPATH)
+        self.assertEquals('div', element.tag)
+        self.assertAvailabilityState(element, available=True, active=False)
 
         # Give this user permission to edit course availability.  Lock should
         # now be a button, with CSS indicating icon clickability.
@@ -193,20 +189,19 @@ class CourseAccessPermissionsTests(actions.TestBase):
             'fake_course_perm', constants.SCOPE_COURSE_SETTINGS,
             self.USER_EMAIL, editable_perms=['course/course:now_available']):
 
-            self._find_element(
-                './/div[@class="row course"]'
-                '/div[@class="left-matter"]/form/button',
-                'button', 'row-hover icon md md-lock-open')
+            element = self._get_dom().find(self.COURSE_AVAILABILITY_XPATH)
+            self.assertEquals('button', element.tag)
+            self.assertAvailabilityState(element, available=True, active=True)
 
-    def test_course_edit_settings_icon(self):
+    def test_course_edit_settings_link(self):
         self._add_role_with_permissions(
             [constants.COURSE_OUTLINE_VIEW_PERMISSION])
 
         # Course-available lock should not be clickable and should not
         # have CSS indicating clickability.
-        self._find_element(
-            './/div[@class="row course"]/div[@class="left-matter"]/div[2]',
-            'div', 'icon inactive')
+        element = self._get_dom().find(self.COURSE_AVAILABILITY_XPATH)
+        self.assertEquals('div', element.tag)
+        self.assertAvailabilityState(element, active=False)
 
         # Give this user permission to *edit* some random course property that's
         # not course-availability
@@ -214,9 +209,8 @@ class CourseAccessPermissionsTests(actions.TestBase):
             'fake_course_perm', constants.SCOPE_COURSE_SETTINGS,
             self.USER_EMAIL, editable_perms=['course/course:title']):
 
-            self._find_element(
-                './/div[@class="row course"]/div[@class="left-matter"]/a',
-                'a', 'icon row-hover md-mode-edit')
+            element = self._get_dom().find(self.COURSE_EDIT_XPATH)
+            self.assertEquals('a', element.tag)
 
         # Give this user permission to *view* some random course property that's
         # not course-availability
@@ -224,67 +218,72 @@ class CourseAccessPermissionsTests(actions.TestBase):
             'fake_course_perm', constants.SCOPE_COURSE_SETTINGS,
             self.USER_EMAIL, readable_perms=['course/course:title']):
 
-            self._find_element(
-                './/div[@class="row course"]/div[@class="left-matter"]/a',
-                'a', 'icon row-hover md-mode-edit')
+            element = self._get_dom().find(self.COURSE_EDIT_XPATH)
+            self.assertEquals('a', element.tag)
 
     def test_edit_unit_availability(self):
         self._add_role_with_permissions(
             [constants.COURSE_OUTLINE_VIEW_PERMISSION])
+
+        UNIT_AVAILABILITY_SELECTOR_TEMPLATE = \
+            '[data-unit-id="{}"] .icon-draft-status'
+        UNIT_SELECTOR = UNIT_AVAILABILITY_SELECTOR_TEMPLATE.format(
+            self.unit.unit_id)
+        ASSESSMENT_SELECTOR = UNIT_AVAILABILITY_SELECTOR_TEMPLATE.format(
+            self.assessment.unit_id)
+        LINK_SELECTOR = UNIT_AVAILABILITY_SELECTOR_TEMPLATE.format(
+            self.link.unit_id)
 
         # Only unit lock editable.
         with actions.OverriddenSchemaPermission(
             'fake_unit_perm', constants.SCOPE_UNIT,
             self.USER_EMAIL, editable_perms=['is_draft']):
 
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[2]' %
-                self.unit.unit_id,
-                'div', 'row-hover icon icon-draft-status md md-lock')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[2]' %
-                self.assessment.unit_id,
-                'div', 'row-hover icon icon-draft-status md inactive md-lock')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[2]' %
-                self.link.unit_id,
-                'div', 'row-hover icon icon-draft-status md inactive md-lock')
+            dom = self._get_soup()
+
+            self.assertAvailabilityState(
+                dom.select(UNIT_SELECTOR)[0], available=False, active=True)
+
+            self.assertAvailabilityState(
+                dom.select(ASSESSMENT_SELECTOR)[0], available=False,
+                active=False)
+
+            self.assertAvailabilityState(
+                dom.select(LINK_SELECTOR)[0], available=False, active=False)
 
         # Only assessment lock editable
         with actions.OverriddenSchemaPermission(
             'fake_unit_perm', constants.SCOPE_ASSESSMENT,
             self.USER_EMAIL, editable_perms=['assessment/is_draft']):
 
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[2]' %
-                self.unit.unit_id,
-                'div', 'row-hover icon icon-draft-status md inactive md-lock')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[2]' %
-                self.assessment.unit_id,
-                'div', 'row-hover icon icon-draft-status md md-lock')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[2]' %
-                self.link.unit_id,
-                'div', 'row-hover icon icon-draft-status md inactive md-lock')
+            dom = self._get_soup()
+
+            self.assertAvailabilityState(
+                dom.select(UNIT_SELECTOR)[0], available=False, active=False)
+
+            self.assertAvailabilityState(
+                dom.select(ASSESSMENT_SELECTOR)[0], available=False,
+                active=True)
+
+            self.assertAvailabilityState(
+                dom.select(LINK_SELECTOR)[0], available=False, active=False)
 
         # Only link lock editable
         with actions.OverriddenSchemaPermission(
             'fake_unit_perm', constants.SCOPE_LINK,
             self.USER_EMAIL, editable_perms=['is_draft']):
 
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[2]' %
-                self.unit.unit_id,
-                'div', 'row-hover icon icon-draft-status md inactive md-lock')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[2]' %
-                self.assessment.unit_id,
-                'div', 'row-hover icon icon-draft-status md inactive md-lock')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[2]' %
-                self.link.unit_id,
-                'div', 'row-hover icon icon-draft-status md md-lock')
+            dom = self._get_soup()
+
+            self.assertAvailabilityState(
+                dom.select(UNIT_SELECTOR)[0], available=False, active=False)
+
+            self.assertAvailabilityState(
+                dom.select(ASSESSMENT_SELECTOR)[0], available=False,
+                active=False)
+
+            self.assertAvailabilityState(
+                dom.select(LINK_SELECTOR)[0], available=False, active=True)
 
     def test_edit_unit_property_editor_link(self):
         # Verify readability on some random property allows pencil icon
@@ -293,59 +292,47 @@ class CourseAccessPermissionsTests(actions.TestBase):
         self._add_role_with_permissions(
             [constants.COURSE_OUTLINE_VIEW_PERMISSION])
 
+        UNIT_EDIT_LINK_SELECTOR = \
+            '[data-unit-id={}] .name'
+        UNIT_SELECTOR = UNIT_EDIT_LINK_SELECTOR.format(
+            self.unit.unit_id)
+        ASSESSMENT_SELECTOR = UNIT_EDIT_LINK_SELECTOR.format(
+            self.assessment.unit_id)
+        LINK_SELECTOR = UNIT_EDIT_LINK_SELECTOR.format(
+            self.link.unit_id)
+
         # Only unit lock editable.
         with actions.OverriddenSchemaPermission(
             'fake_unit_perm', constants.SCOPE_UNIT,
             self.USER_EMAIL, editable_perms=['description']):
 
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/a' %
-                self.unit.unit_id,
-                'a', 'icon md-mode-edit md row-hover')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[3]' %
-                self.assessment.unit_id,
-                'div', 'icon inactive')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[3]' %
-                self.link.unit_id,
-                'div', 'icon inactive')
+            soup = self._get_soup()
+            self.assertEditabilityState(soup.select(UNIT_SELECTOR)[0], True)
+            self.assertEditabilityState(
+                soup.select(ASSESSMENT_SELECTOR)[0], False)
+            self.assertEditabilityState(soup.select(LINK_SELECTOR)[0], False)
 
         # Only assessment lock editable
         with actions.OverriddenSchemaPermission(
             'fake_unit_perm', constants.SCOPE_ASSESSMENT,
             self.USER_EMAIL, editable_perms=['assessment/description']):
 
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[3]' %
-                self.unit.unit_id,
-                'div', 'icon inactive')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/a' %
-                self.assessment.unit_id,
-                'a', 'icon md-mode-edit md row-hover')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[3]' %
-                self.link.unit_id,
-                'div', 'icon inactive')
+            soup = self._get_soup()
+            self.assertEditabilityState(soup.select(UNIT_SELECTOR)[0], False)
+            self.assertEditabilityState(
+                soup.select(ASSESSMENT_SELECTOR)[0], True)
+            self.assertEditabilityState(soup.select(LINK_SELECTOR)[0], False)
 
         # Only link lock editable
         with actions.OverriddenSchemaPermission(
             'fake_unit_perm', constants.SCOPE_LINK,
             self.USER_EMAIL, editable_perms=['description']):
 
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[3]' %
-                self.unit.unit_id,
-                'div', 'icon inactive')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/div[3]' %
-                self.assessment.unit_id,
-                'div', 'icon inactive')
-            self._find_element(
-                './/li[@data-unit-id="%s"]//div[@class="left-matter"]/a' %
-                self.link.unit_id,
-                'a', 'icon md-mode-edit md row-hover')
+            soup = self._get_soup()
+            self.assertEditabilityState(soup.select(UNIT_SELECTOR)[0], False)
+            self.assertEditabilityState(
+                soup.select(ASSESSMENT_SELECTOR)[0], False)
+            self.assertEditabilityState(soup.select(LINK_SELECTOR)[0], True)
 
 class UnitLessonEditorAccess(actions.TestBase):
 
@@ -682,21 +669,19 @@ class BackgroundImportTests(actions.TestBase):
         self.assertIsNone(dom.find('.//div[@id="import-course-cancel"]'))
         self.assertIsNone(dom.find('.//div[@id="import-course-ready"]'))
 
+    def _get_names(self):
+        response = self.get(self.dashboard_url)
+        soup = self.parse_html_string_to_soup(response.body)
+        name_items = soup.select('.name a')
+        return [ni.text.strip() for ni in name_items]
+
     def _verify_imported_course_content_present(self):
         # Also verify that the imported course's unit is there.
-        response = self.get(self.dashboard_url)
-        dom = self.parse_html_string(response.body)
-        name_items = dom.findall('.//div[@class="name"]/a')
-        names = [ni.text for ni in name_items]
-        self.assertIn(self.UNIT_TITLE, names)
+        self.assertIn(self.UNIT_TITLE, self._get_names())
 
     def _verify_imported_course_content_absent(self):
         # Also verify that the imported course's unit is there.
-        response = self.get(self.dashboard_url)
-        dom = self.parse_html_string(response.body)
-        name_items = dom.findall('.//div[@class="name"]/a')
-        names = [ni.text for ni in name_items]
-        self.assertNotIn(self.UNIT_TITLE, names)
+        self.assertNotIn(self.UNIT_TITLE, self._get_names())
 
     def _verify_import_wait_controls_and_no_add_controls(self):
         # Verify that the usual add/import buttons are *NOT* present.  Verify

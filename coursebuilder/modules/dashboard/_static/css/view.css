@@ -15,16 +15,17 @@ table {
 table th {
   border-width: 1px;
   padding: 4px;
-  background-color: #f5f5f5;
   border-style: inset;
   border-color: gray;
-  text-align: center;
 }
 table td {
   border-width: 1px;
   padding: 8px;
   border-style: inset;
   border-color: gray;
+}
+a {
+  cursor: pointer;
 }
 
 div#gcb-main-area {
@@ -39,18 +40,12 @@ div#gcb-main-content {
   padding: 32px;
   text-align: left;
 }
-div#gcb-main-content li {
-  margin: 1px 0px;
-}
 div#gcb-footer {
   text-align: center;
   font-size: smaller;
   padding: 4px;
   border-top: solid 1px #607D8B;
   background-color: #f5f5f5;
-}
-h2 {
-  margin-left: 32px;
 }
 .section + .section {
   margin-top: 40px;
@@ -85,8 +80,8 @@ div#formContainer {
   cursor: default;
 }
 .gcb-button-toolbar {
-  margin-top: 5px;
-  margin-bottom: 5px;
+  margin-top: 8px;
+  margin-bottom: 16px;
 }
 .gcb-icon-button {
   padding-top:0;
@@ -211,11 +206,6 @@ div#formContainer div.settings-list-item fieldset legend span {
 .icon.inactive {
   cursor: auto;
 }
-.assets-table-container {
-  overflow: auto;
-  margin: 0px 0px 20px 0px;
-  border: solid 1px;
-}
 .assets-table {
   border-style: hidden;
   border-right-style: solid;
@@ -232,10 +222,6 @@ div#formContainer div.settings-list-item fieldset legend span {
 .assets-table li {
   margin: 0px;
 }
-.assets-table .md-arrow-drop-up,
-.assets-table .md-arrow-drop-down {
-  display: none;
-}
 .assets-table .sort-asc .md-arrow-drop-up,
 .assets-table .sort-desc .md-arrow-drop-down {
   display: inline;
@@ -245,8 +231,12 @@ div#formContainer div.settings-list-item fieldset legend span {
 .assets-table ul {
   margin: 0px;
   padding: 0px;
-  list-style-type: none;
+  padding-left: 16px;
 }
+.assets-table li + li {
+  margin-top: 6px;
+}
+
 .assets-table span.count {
   font-style: italic;
 }
@@ -468,82 +458,6 @@ label.settings.togglebutton {
   margin-bottom: 1em;
 }
 
-/* Collapse component
-
-Use this to build "zippy" menus.  Some JavaScript in view.js is required to
-calculate element heights on startup.  Re-run updateCollapse to recalculate it
-any time you create or modify some collapsible content.
-
-.gcb-collapse: Container
-.gcb-collapse--opened: Makes the contents visible
-.gcb-collapse__content: The contents that can be hidden
-.gcb-collapse__content-wrapper: Wraps and hides the contents
-.gcb-collapse__icon: An icon that will rotate on open and close
-.gcb-collapse__button: The clickable element
-.gcb-accordion: Wrap multiple collapses in this and they'll collapse their
-  neighbors when you open them.
-
-Minimal Example:
-<div class="gcb-collapse">
-  <a class="gcb-collapse__button">
-    <i class="gcb-collapse__icon material-icons mdl-animation--default">expand_more</i>
-    Click me to see the content
-  </a>
-  <div class="gcb-collapse__content-wrapper">
-    <div class="gcb-collapse__content mdl-animation--default">
-      This is the content
-    </div>
-  </div>
-</div>
-
-*/
-
-.gcb-collapse--opened {
-  border-top: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
-  margin-top: -1px;
-}
-
-.gcb-collapse--opened + .gcb-collapse--opened {
-  border-top: none;
-  margin-top: 0;
-}
-
-.gcb-collapse__content-wrapper {
-  overflow: hidden;
-}
-
-.gcb-collapse__content {
-  transition-property: margin-top;
-  transition-duration: 0.2s;
-}
-
-.gcb-collapse__button {
-  font-weight: bold;
-}
-
-.gcb-collapse__icon {
-  transition-property: transform;
-  transition-duration: 0.2s;
-  color: rgba(0,0,0,0.3);
-
-  /* TODO(nretallack): Some day, MDL should provide some facility for
-  positioning icons inside list items so we don't have to do this */
-  position: absolute;
-  right: 6px;
-  margin-top: -3px;
-}
-
-.gcb-collapse--opened .gcb-collapse__icon {
-  transform: rotate(-180deg);
-}
-
-.gcb-collapse--opened .gcb-collapse__content {
-  /* Overrides the inline style calculated by the JavaScript on startup */
-  margin-top: 0 !important;
-}
-
-/* end of collapse component */
 
 .mdl-layout__content {
   overflow: auto;
@@ -584,6 +498,12 @@ Minimal Example:
 
 .mdl-navigation .gcb-menu .gcb-active-group .gcb-collapse__button {
   color: rgb(0, 150, 136);
+}
+
+.mdl-navigation__link .gcb-collapse__icon {
+  position: absolute;
+  right: 6px;
+  margin-top: -3px;
 }
 
 /* Make the Courses menu item look like the others despite not being a group */

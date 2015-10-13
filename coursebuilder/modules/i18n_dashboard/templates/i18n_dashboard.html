@@ -1,54 +1,70 @@
 <link rel="stylesheet" type="text/css" href="/modules/i18n_dashboard/resources/css/i18n_dashboard.css">
 <script src="/modules/i18n_dashboard/resources/js/i18n_dashboard.js"></script>
-<table class="i18n-progress-table"
-    data-is-translatable-xsrf-token="{{is_translatable_xsrf_token}}">
-  <thead>
-    <tr>
-      <th>Asset</th>
-      {% if main_locale %}
-        <th>{{ main_locale }} (Base language)</th>
-      {% endif %}
-      {% for locale in extra_locales %}
-        <th>{{ locale }}</th>
-      {% endfor %}
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in rows %}
-      <tr class="{{row.class_name}}" data-resource-key="{{row.resource_key}}">
-        {% if row.spans_all_columns %}
-          <td colspan="{{ num_columns }}">{{ row.name }}</td>
-        {% else %}
-          <td>
-            {% if row.base_view_url %}
-              <a href="{{ row.base_view_url }}" target="_blank" class="icon md md-visibility"></a>
-            {% endif %}
-            {% if row.base_edit_url %}
-              <a href="{{ row.base_edit_url }}" class="icon md md-mode-edit"></a>
-            {% endif %}
-            {{ row.name }}
-          </td>
+
+{% for table in tables %}
+  <div class="gcb-list gcb-list--autostripe" data-title="{{ table.section_title }}">
+    <table class="i18n-progress-table"
+        data-is-translatable-xsrf-token="{{is_translatable_xsrf_token}}">
+      <thead>
+        <tr>
+          <th class="gcb-list__cell--icon"></th>
+          <th class="title">{{ table.section_title }}</th>
           {% if main_locale %}
-            <td>
-              <label>
-                <input {{ 'disabled' if is_readonly else '' }} class="is-translatable" type="checkbox" {% if row.is_translatable %}checked="checked"{% endif %}>
-                Translatable
-              </label>
-            </td>
+            <th style="width: 110px">{{ main_locale }} (Base language)</th>
           {% endif %}
           {% for locale in extra_locales %}
-            <td class="resource-locale-entry {{row.status_class(locale)}}">
-              {% if row.view_url(locale): %}
-                <a href="{{ row.view_url(locale) }}" target="_blank" class="icon md md-visibility"></a>
-              {% endif %}
-              {% if not is_readonly %}
-                <a href="{{ row.edit_url(locale) }}" class="icon md md-mode-edit"></a>
-              {% endif %}
-              {{ row.status(locale) }}
-            </td>
+            <th class="gcb-list__cell--icon"></th>
+            <th class="language-header" style="width: 80px">{{ locale }}</th>
           {% endfor %}
-        {% endif %}
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table.rows %}
+          <tr class="{{row.class_name}}" data-resource-key="{{row.resource_key}}">
+            <td>
+              {% if row.base_view_url %}
+                <a href="{{ row.base_view_url }}" target="_blank" class="gcb-list__icon gcb-list__icon--rowhover material-icons">open_in_new</a>
+              {% endif %}
+            </td>
+
+            <td class="name">
+              {% if row.base_edit_url %}
+                <a href="{{ row.base_edit_url }}">{{ row.name }}</a>
+              {% else %}
+                {{ row.name }}
+              {% endif %}
+            </td>
+            {% if main_locale %}
+              <td>
+                <label>
+                  <input {{ 'disabled' if is_readonly else '' }} class="is-translatable" type="checkbox" {% if row.is_translatable %}checked="checked"{% endif %}>
+                  Translatable
+                </label>
+              </td>
+            {% endif %}
+            {% for locale in extra_locales %}
+              <td class="resource-locale-entry {{row.status_class(locale)}}">
+                {% if row.view_url(locale): %}
+                  <a href="{{ row.view_url(locale) }}" target="_blank" class="gcb-list__icon gcb-list__icon--rowhover material-icons">open_in_new</a>
+                {% endif %}
+              </td>
+              <td class="status resource-locale-entry {{row.status_class(locale)}}">
+                {% if not is_readonly %}
+                  <a href="{{ row.edit_url(locale) }}">{{ row.status(locale) }}</a>
+                {% else %}
+                  {{ row.status(locale) }}
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if not table.rows|length %}
+      <div class="gcb-list__empty-message-wrapper">
+        <div class="gcb-list__empty-message">No items</div>
+      </div>
+    {% endif %}
+  </div>
+{% endfor %}

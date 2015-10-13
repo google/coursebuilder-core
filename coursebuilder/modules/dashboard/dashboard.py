@@ -372,10 +372,10 @@ class DashboardHandler(
 
         return super(DashboardHandler, self).post()
 
-    def get_template(self, template_name, dirs):
+    def get_template(self, template_name, dirs=None):
         """Sets up an environment and Gets jinja template."""
         return jinja_utils.get_template(
-            template_name, dirs + [TEMPLATE_DIR], handler=self)
+            template_name, (dirs or []) + [TEMPLATE_DIR], handler=self)
 
     def get_alerts(self):
         alerts = []
@@ -433,7 +433,7 @@ class DashboardHandler(
             template_values['page_uuid'] = str(uuid.uuid1())
 
         self.response.write(
-            self.get_template('view.html', []).render(template_values))
+            self.get_template('view.html').render(template_values))
 
     @classmethod
     def register_courses_menu_item(cls, menu_item):
@@ -459,7 +459,7 @@ class DashboardHandler(
         template_values['question'] = tags.html_to_safe_dom(
             '<question quid="%s">' % self.request.get('quid'), self)
         self.response.write(self.get_template(
-            'question_preview.html', []).render(template_values))
+            'question_preview.html').render(template_values))
 
     def get_action_url(self, action, key=None, extra_args=None, fragment=None):
         args = {'action': action}
@@ -474,21 +474,9 @@ class DashboardHandler(
 
     def _render_roles_list(self):
         """Render roles list to HTML."""
-        all_roles = RoleDAO.get_all()
-        if all_roles:
-            output = safe_dom.Element('ul')
-            for role in sorted(all_roles, key=lambda r: r.name):
-                li = safe_dom.Element('li')
-                output.add_child(li)
-                li.add_text(role.name).add_child(
-                    dashboard_utils.create_edit_button(
-                    'dashboard?action=edit_role&key=%s' % (role.id)
-                ))
-        else:
-            output = safe_dom.Element('div', className='gcb-message').add_text(
-                '< none >')
-
-        return output
+        all_roles = sorted(RoleDAO.get_all(), key=lambda role: role.name)
+        return safe_dom.Template(
+            self.get_template('role_list.html'), roles=all_roles)
 
     def _render_roles_view(self):
         """Renders course roles view."""

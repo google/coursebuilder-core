@@ -19,15 +19,15 @@ window.parseAjaxResponsePayload = function(text) {
 
 function setDraftStatus(padlock, isDraft) {
   if (isDraft) {
-    padlock.removeClass("md-lock-open").addClass("md-lock");
+    padlock.removeClass("public").addClass("private");
   } else {
-    padlock.removeClass("md-lock").addClass("md-lock-open");
+    padlock.removeClass("private").addClass("public");
   }
 }
 
 function setDraftStatusCallback(data, padlock) {
   var response = parseJson(data);
-  var isDraft = padlock.hasClass("md-lock")
+  var isDraft = padlock.hasClass("private")
   if (response.status != 200){
     cbShowAlert("Error: " + response.message);
     setDraftStatus(padlock, ! isDraft);
@@ -44,7 +44,7 @@ function setDraftStatusCallback(data, padlock) {
 
 function onDraftStatusClick() {
   var padlock = $(this);
-  var setDraft = $(this).hasClass("md-lock-open");
+  var setDraft = $(this).hasClass("public");
   // Optimistically update icon and revert if server confirmation not received
   setDraftStatus(padlock, setDraft);
   $.post(
@@ -235,7 +235,7 @@ function setUpDraftStatus() {
 }
 
 function setUpCloneQuestion() {
-  $(".md-content-copy").on("click", onCloneQuestionClick);
+  $(".add-question-to-group").on("click", onCloneQuestionClick);
 }
 
 /**
@@ -263,7 +263,7 @@ function setUpModalWindow() {
 
 function setUpQuestionPreview() {
   // Bind preview button to show question preview
-  $("table.assets-table .md-visibility").on("click", function(e) {
+  $("table.assets-table .preview-question").on("click", function(e) {
     openModal();
     var params = {
         action: "question_preview",
@@ -277,7 +277,7 @@ function setUpQuestionPreview() {
 function setUpAddToGroup() {
 
   function addBindings() {
-    $(".md-add-circle").on("click", function(e) {
+    $(".add-question-to-group").on("click", function(e) {
       openModal();
       var popup = $("#add-to-group");
       var row = $(this).closest("tr");
@@ -317,11 +317,13 @@ function setUpAddToGroup() {
  */
 function setUpTableSorting() {
   // Sort table on header click
-  $(".assets-table th").on("click", sortTableByClick);
+  var headers = $(".assets-table th:not(.gcb-list__cell--icon)")
+  headers.on("click", sortTableByClick);
+  headers.each(function(){
+    $(this).append('<i class="material-icons gcb-list__sort-indicator"></i>')
+  })
   // Default: sort ascending on first column
-  $(".assets-table th:first-child").each(function() {
-    sortTable($(this), true);
-  });
+  sortTable($(headers[0]), true);
 }
 
 function setUpFiltering() {
@@ -521,37 +523,6 @@ function setUpFiltering() {
   setUpFilterBindings();
 }
 
-/* Collapse Component */
-
-/**
-  * Call this whenever you add a new collapsible, or alter the contents of an
-  * existing one.  This calculates its height so it can be hidden.
-  */
-function updateCollapse() {
-  $('.gcb-collapse__content').each(function() {
-    var content = $(this);
-    content.css('margin-top', -content.height());
-  });
-}
-
-function setUpCollapse() {
-  $(document.body).on('click', '.gcb-collapse__button', function() {
-    var button = $(this);
-    var collapse = button.parents('.gcb-collapse:first');
-    var accordion = collapse.parents('.gcb-accordion:first');
-    if (collapse.hasClass('gcb-collapse--disabled')) {
-      return;
-    }
-    if (!collapse.is('.gcb-collapse--opened')) {
-      accordion.find('.gcb-collapse').removeClass('gcb-collapse--opened');
-    }
-    collapse.toggleClass('gcb-collapse--opened');
-  });
-  $(function() {
-    updateCollapse();
-  });
-}
-
 /**
  * Returns a list with 10 different colors. To be used with Google
  * Visualizations graphs.
@@ -573,7 +544,6 @@ function init() {
   setUpAddToGroup();
   setUpTableSorting();
   setUpFiltering();
-  setUpCollapse()
 };
 
 init();

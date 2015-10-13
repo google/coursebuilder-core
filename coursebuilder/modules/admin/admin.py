@@ -643,7 +643,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
             return sites.abspath(app_context.get_home_folder(), '/')
 
         return safe_dom.Template(
-            self.get_template('course_infos.html', []), courses=courses_list,
+            self.get_template('course_infos.html'), courses=courses_list,
             get_filesystem_type=get_filesystem_type,
             get_home_folder=get_home_folder, list_files=list_files)
 
@@ -989,9 +989,9 @@ class AdminHandler(BaseAdminHandler, dashboard.DashboardHandler):
         return super(AdminHandler, self).format_title(
             'Admin > %s' % text)
 
-    def get_template(self, template_name, dirs):
+    def get_template(self, template_name, dirs=None):
         return super(AdminHandler, self).get_template(
-            template_name, [TEMPLATE_DIR] + dirs)
+            template_name, [TEMPLATE_DIR] + (dirs or []))
 
     def get_course_picker(self, destination=None, in_action=None):
         return super(AdminHandler, self).get_course_picker(
@@ -1056,10 +1056,11 @@ class GlobalAdminHandler(
             return
         return super(GlobalAdminHandler, self).post()
 
-    def get_template(self, template_name, dirs):
+    def get_template(self, template_name, dirs=None):
         """Sets up an environment and Gets jinja template."""
         return jinja_utils.get_template(
-            template_name, dirs + [dashboard.TEMPLATE_DIR], handler=self)
+            template_name, (dirs or []) + [dashboard.TEMPLATE_DIR],
+            handler=self)
 
     def render_page(self, template_values, in_action=None):
         page_title = template_values['page_title']
@@ -1098,7 +1099,7 @@ class GlobalAdminHandler(
             template_values['page_uuid'] = str(uuid.uuid1())
 
         self.response.write(
-            self.get_template('view.html', []).render(template_values))
+            self.get_template('view.html').render(template_values))
 
     def get_course(self):
         return None

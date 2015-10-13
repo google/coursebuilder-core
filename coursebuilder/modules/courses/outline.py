@@ -22,7 +22,6 @@ import urllib
 import jinja2
 
 from common import crypto
-from common import safe_dom
 from models import courses
 from models import custom_units
 from models import resources_display
@@ -31,7 +30,6 @@ from models import roles
 from modules.dashboard import dashboard
 from modules.courses import constants
 from modules.courses import unit_lesson_editor
-from modules.dashboard import utils as dashboard_utils
 from tools import verify
 
 # Reference to custom_module registered in modules/courses/courses.py
@@ -51,134 +49,97 @@ COURSE_OUTLINE_EXTRA_INFO_TITLES = []
 ACTION_GET_OUTLINE = 'outline'
 
 
-def _render_status_icon(handler, resource, key, component_type, editable):
-    if not hasattr(resource, 'now_available'):
-        return
-    icon = safe_dom.Element(
-        'div', data_key=str(key), data_component_type=component_type)
-    common_classes = 'row-hover icon icon-draft-status md'
-    if not editable:
-        common_classes += ' inactive'
-    if resource.now_available:
-        icon.add_attribute(
-            alt=resources_display.PUBLISHED_TEXT,
-            title=resources_display.PUBLISHED_TEXT,
-            className=common_classes + ' md-lock-open',
-        )
-    else:
-        icon.add_attribute(
-            alt=resources_display.DRAFT_TEXT,
-            title=resources_display.DRAFT_TEXT,
-            className=common_classes + ' md-lock'
-        )
-    return icon
-
 def _render_assessment_outline(handler, unit):
-    actions = []
-    unit_data = {
-        'title': unit.title,
-        'class': 'assessment',
-        'href': 'assessment?name=%s' % unit.unit_id,
-        'unit_id': unit.unit_id,
-        'actions': actions
-    }
-
     course_writable = handler.app_context.is_editable_fs()
     can_edit_status = course_writable and permissions.can_edit_property(
         handler.app_context, constants.SCOPE_ASSESSMENT, 'assessment/is_draft')
     can_view_props = course_writable and permissions.can_edit(
         handler.app_context, constants.SCOPE_ASSESSMENT)
 
-    actions.append(_render_status_icon(
-        handler, unit, unit.unit_id, 'assessment', can_edit_status))
-    url = handler.canonicalize_url(
-        '/dashboard?%s') % urllib.urlencode({
-            'action': 'edit_assessment',
-            'key': unit.unit_id})
-    actions.append(dashboard_utils.create_edit_button(url, can_view_props))
-    return unit_data
-
-def _render_link_outline(handler, unit):
-    actions = []
-    unit_data = {
+    return {
         'title': unit.title,
-        'class': 'link',
-        'href': unit.href or '',
-        'unit_id': unit.unit_id,
-        'actions': actions
+        'id': unit.unit_id,
+        'component_type': 'assessment',
+        'view_url': 'assessment?name=%s' % unit.unit_id,
+        'href': handler.canonicalize_url(
+            '/dashboard?%s') % urllib.urlencode({
+                'action': 'edit_assessment',
+                'key': unit.unit_id}),
+        'can_edit_status': can_edit_status,
+        'can_view_props': can_view_props,
+        'now_available': unit.now_available,
     }
 
+def _render_link_outline(handler, unit):
     course_writable = handler.app_context.is_editable_fs()
     can_edit_status = course_writable and permissions.can_edit_property(
         handler.app_context, constants.SCOPE_LINK, 'is_draft')
     can_view_props = course_writable and permissions.can_edit(
         handler.app_context, constants.SCOPE_LINK)
 
-    actions.append(_render_status_icon(
-        handler, unit, unit.unit_id, 'link', can_edit_status))
-    url = handler.canonicalize_url(
-        '/dashboard?%s') % urllib.urlencode({
-            'action': 'edit_link',
-            'key': unit.unit_id})
-    actions.append(dashboard_utils.create_edit_button(url, can_view_props))
-    return unit_data
+    return {
+        'title': unit.title,
+        'view_url': unit.href or '',
+        'id': unit.unit_id,
+        'component_type': 'link',
+        'can_edit_status': can_edit_status,
+        'can_view_props': can_view_props,
+        'now_available': unit.now_available,
+        'href': handler.canonicalize_url(
+            '/dashboard?%s') % urllib.urlencode({
+                'action': 'edit_link',
+                'key': unit.unit_id}),
+    }
 
 def _render_custom_unit_outline(handler, course, unit):
-    actions = []
-    unit_data = {
-        'title': unit.title,
-        'class': 'custom-unit',
-        'href': unit.custom_unit_url,
-        'unit_id': unit.unit_id,
-        'actions': actions
-    }
-
     course_writable = handler.app_context.is_editable_fs()
     can_edit_status = course_writable and permissions.can_edit_property(
         handler.app_context, constants.SCOPE_UNIT, 'is_draft')
     can_view_props = course_writable and permissions.can_edit(
         handler.app_context, constants.SCOPE_UNIT)
 
-    actions.append(_render_status_icon(
-        handler, unit, unit.unit_id, 'unit', can_edit_status))
-    url = handler.canonicalize_url(
-        '/dashboard?%s') % urllib.urlencode({
-            'action': 'edit_custom_unit',
-            'key': unit.unit_id,
-            'unit_type': unit.custom_unit_type})
-    actions.append(dashboard_utils.create_edit_button(url, can_view_props))
-    return unit_data
+    return {
+        'title': unit.title,
+        'component_type': 'custom-unit',
+        'view_url': unit.custom_unit_url,
+        'id': unit.unit_id,
+        'can_edit_status': can_edit_status,
+        'can_view_props': can_view_props,
+        'now_available': unit.now_available,
+        'href': handler.canonicalize_url(
+            '/dashboard?%s') % urllib.urlencode({
+                'action': 'edit_custom_unit',
+                'key': unit.unit_id,
+                'unit_type': unit.custom_unit_type})
+    }
 
 def _render_unit_outline(handler, course, unit):
-
-    actions = []
-    unit_data = {
-        'title': unit.title,
-        'class': 'unit',
-        'href': 'unit?unit=%s' % unit.unit_id,
-        'unit_id': unit.unit_id,
-        'actions': actions
-    }
-
     course_writable = handler.app_context.is_editable_fs()
     can_edit_status = course_writable and permissions.can_edit_property(
         handler.app_context, constants.SCOPE_UNIT, 'is_draft')
     can_view_props = course_writable and permissions.can_edit(
         handler.app_context, constants.SCOPE_UNIT)
 
-    actions.append(_render_status_icon(
-        handler, unit, unit.unit_id, 'unit', can_edit_status))
-    url = handler.canonicalize_url(
-        '/dashboard?%s') % urllib.urlencode({
-            'action': 'edit_unit',
-            'key': unit.unit_id})
-    actions.append(dashboard_utils.create_edit_button(url, can_view_props))
+    unit_data = {
+        'title': unit.title,
+        'component_type': 'unit',
+        'view_url': 'unit?unit=%s' % unit.unit_id,
+        'id': unit.unit_id,
+        'can_edit_status': can_edit_status,
+        'can_view_props': can_view_props,
+        'now_available': unit.now_available,
+        'href': handler.canonicalize_url(
+            '/dashboard?%s') % urllib.urlencode({
+                'action': 'edit_unit',
+                'key': unit.unit_id}),
+    }
 
     if unit.pre_assessment:
         assessment = course.find_unit_by_id(unit.pre_assessment)
         if assessment:
             assessment_outline = _render_assessment_outline(handler, assessment)
-            assessment_outline['class'] = 'pre-assessment'
+            assessment_outline['component_type'] = 'pre-assessment'
+            assessment_outline['not_reorderable'] = True
             unit_data['pre_assessment'] = assessment_outline
 
     # Here, just check whether user is course admin to see if lesson contents
@@ -188,14 +149,6 @@ def _render_unit_outline(handler, course, unit):
                         roles.Roles.is_course_admin(handler.app_context))
     lessons = []
     for lesson in course.get_lessons(unit.unit_id):
-        actions = []
-        actions.append(_render_status_icon(
-            handler, lesson, lesson.lesson_id, 'lesson', lessons_editable))
-        url = handler.get_action_url(
-            'edit_lesson', key=lesson.lesson_id)
-        actions.append(dashboard_utils.create_edit_button(
-            url, lessons_editable))
-
         extras = []
         for annotator in COURSE_OUTLINE_EXTRA_INFO_ANNOTATORS:
             extra_info = annotator(course, lesson)
@@ -204,12 +157,15 @@ def _render_unit_outline(handler, course, unit):
 
         lessons.append({
             'title': lesson.title,
-            'class': 'lesson',
-            'href': 'unit?unit=%s&lesson=%s' % (
+            'component_type': 'lesson',
+            'view_url': 'unit?unit=%s&lesson=%s' % (
                 unit.unit_id, lesson.lesson_id),
-            'lesson_id': lesson.lesson_id,
-            'actions': actions,
+            'id': lesson.lesson_id,
+            'href': handler.get_action_url('edit_lesson', key=lesson.lesson_id),
+            'can_edit_status': lessons_editable,
+            'can_view_props': lessons_editable,
             'auto_index': lesson.auto_index,
+            'now_available': lesson.now_available,
             'extras': extras})
 
     unit_data['lessons'] = lessons
@@ -218,7 +174,8 @@ def _render_unit_outline(handler, course, unit):
         assessment = course.find_unit_by_id(unit.post_assessment)
         if assessment:
             assessment_outline = _render_assessment_outline(handler, assessment)
-            assessment_outline['class'] = 'post-assessment'
+            assessment_outline['component_type'] = 'post-assessment'
+            assessment_outline['not_reorderable'] = True
             unit_data['post_assessment'] = assessment_outline
 
     return unit_data
@@ -259,10 +216,7 @@ def _render_course_outline_to_html(handler, course):
                 'url': handler.get_action_url('course_availability'),
                 'xsrf_token': handler.create_xsrf_token('course_availability'),
                 'param': not handler.app_context.now_available,
-                'class': (
-                    'row-hover icon md md-lock-open'
-                    if handler.app_context.now_available else
-                    'row-hover icon md md-lock'),
+                'now_available': handler.app_context.now_available,
                 'is_editable': is_course_availability_editable,
             }
         },

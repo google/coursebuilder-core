@@ -32,28 +32,26 @@ function SkillTable(skills, lessons) {
 
 SkillTable.prototype = {
   _buildRow: function(skill) {
-    var tr = $('<tr class="row"></tr>');
+    var tr = $(
+      '<tr class="row">' +
+      '  <td><i class="diagnosis material-icons gcb-list__icon"></i></td>' +
+      '  <td><a class="delete-skill">' +
+      '    <i class="material-icons gcb-list__icon gcb-list__icon--rowhover">' +
+      '      delete</i></a>' +
+      '  </td> ' +
+      '  <td class="skill-name"><a class="edit-skill">' + skill.name +
+      '  </a></td>' +
+      '</tr>');
 
     // add skill name
-    var td = $(
-        '<td class="skill">' +
-        '  <div class="diagnosis icon md"></div>' +
-        '  <button class="icon md md-delete delete-skill row-hover"></button> ' +
-        '  <button class="icon md md-mode-edit edit-skill row-hover"></button> ' +
-        '  <span class="skill-name"></span> ' +
-        '</td>'
-    );
-    td.find('.diagnosis.icon, button').data('id', skill.id);
+    tr.find('.diagnosis, a').data('id', skill.id);
 
     var diagnosis = this._skills.diagnosis(skill.id);
     if (diagnosis.status == SkillList.WARNING) {
-      td.find('.diagnosis.icon').addClass('md-warning');
+      tr.find('.diagnosis').addClass('warning');
     } else if (diagnosis.status == SkillList.ERROR) {
-      td.find('.diagnosis.icon').addClass('md-error');
+      tr.find('.diagnosis').addClass('error');
     }
-
-    td.find('.skill-name').text(skill.name);
-    tr.append(td);
 
     // add skill description
     var td = $(
@@ -111,6 +109,8 @@ SkillTable.prototype = {
     var thead = $(
       '<thead>' +
       '  <tr>' +
+      '    <th class="gcb-list__cell--icon"></th>' +
+      '    <th class="gcb-list__cell--icon"></th>' +
       '    <th class="skill">Skill <span class="skill-count"></span></th>' +
       '    <th class="description">Description</th>' +
       '    <th class="related-skills">Prerequisites</th>' +
@@ -130,7 +130,6 @@ SkillTable.prototype = {
     var i = 0;
     that._skills.eachSkill(function(skill) {
       var row = that._buildRow(skill);
-      row.addClass( i++ % 2 == 0 ? 'even' : 'odd');
       tbody.append(row);
     });
 
@@ -193,11 +192,12 @@ SkillTable.prototype = {
       '    add_box' +
       '  </button>' +
       '  </form>' +
-
       '</div>' +
-      '<table class="skill-map-table"></table>');
+      '<div class="gcb-list gcb-list--autostripe">' +
+      '  <table class="skill-map-table"></table>' +
+      '</div>');
 
-    this._table = this._content.filter('table.skill-map-table');
+    this._table = this._content.find('.skill-map-table');
     this._table.append(that._buildHeader());
 
     this._content.find('.graph-view').on("click", function() {

@@ -1,0 +1,32 @@
+{% macro render_location_link(url, id, count) %}
+  <li data-count="{{count}}" data-id="{{id}}">
+    <a href="{{url}}">
+      {{ caller() }}
+      <span class="count">
+        {% if count and count > 1 %}
+          ({{ count }})
+        {% endif %}
+      </span>
+    </a>
+  </li>
+{% endmacro %}
+
+{% macro render_locations(locations) %}
+  <ul>
+    {% for assessment, count in locations.get('assessments', {}).iteritems() %}
+      {% call render_location_link(
+          "assessment?name={}".format(assessment.unit_id), assessment.unit_id,
+          count) %}
+        {{ assessment.title }}
+      {% endcall %}
+    {% endfor %}
+
+    {% for ((lesson, unit), count) in locations.get('lessons', {}).iteritems() %}
+      {% call render_location_link(
+          'unit?unit={}&lesson={}'.format(unit.unit_id, lesson.lesson_id),
+          lesson.lesson_id, count) %}
+        {{ unit.title }}: {{lesson.title}}
+      {% endcall %}
+    {% endfor %}
+  </ul>
+{% endmacro %}

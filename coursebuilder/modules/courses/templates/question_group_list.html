@@ -1,0 +1,49 @@
+{% import 'question_location_macros.html' as question_location_macros %}
+
+<h3>Question Groups ({{question_groups|length}})</h3>
+
+<div class="gcb-button-toolbar">
+  <a class="gcb-button" href="dashboard?action=add_question_group">Add Question Group</a>
+</div>
+
+<div class="gcb-list gcb-list--autostripe assets-table-container">
+  <table id="question-group-table" class="assets-table">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Questions</th>
+        <th>Course Locations</th>
+        <th width="170px">Last Modified</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for item in question_groups %}
+
+        <tr data-qgid="{{ item.id }}">
+          <td class="description-cell gcb-list__cell--word-wrap"><a href="{{ item.url }}">{{ item.description }}</a></td>
+
+          <td class="questions-cell gcb-list__cell--word-wrap">
+            <ul>
+              {% for question_description in item.question_descriptions %}
+                <li>{{ question_description }}</li>
+              {% endfor %}
+            </ul>
+          </td>
+
+          <td class="locations-cell gcb-list__cell--word-wrap">
+            {{ question_location_macros.render_locations(item.locations) }}
+          </td>
+
+          <td class="timestamp" data-timestamp="{{ item.last_modified }}"></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if not question_groups|length %}
+    <div class="gcb-list__empty-message-wrapper">
+      <div class="gcb-list__empty-message">No items</div>
+    </div>
+  {% endif %}
+</tbody>

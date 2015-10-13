@@ -443,9 +443,8 @@ class DashboardPage(PageObject):
         self.find_element_by_css_selector('#add_unit > button').click()
         return AddUnit(self._tester, AddUnit.CREATION_MESSAGE)
 
-    def click_edit_unit(self, unit_title):
-        self.find_element_by_link_text(unit_title).click()
-        self.find_element_by_id('gcb-edit-unit-button').click()
+    def click_edit_unit(self, link_text):
+        self.find_element_by_link_text(link_text).click()
         return AddUnit(self._tester, AddUnit.LOADED_MESSAGE)
 
     def click_add_assessment(self):
@@ -461,9 +460,8 @@ class DashboardPage(PageObject):
             'div.course-outline li.add-lesson button').click()
         return AddLesson(self._tester)
 
-    def click_edit_lesson(self, lesson_index):
-        self.find_element_by_css_selector(
-            'div.row.lesson a.md-mode-edit', index=lesson_index).click()
+    def click_edit_lesson(self, link_text):
+        self.find_element_by_link_text(link_text).click()
         return AddLesson(self._tester, expected_message='')
 
     def click_style(self):
@@ -490,8 +488,21 @@ class DashboardPage(PageObject):
         self.find_element_by_link_text(unit_title)
         return self
 
+    def get_other_window_handles(self):
+        return [
+            handle for handle in self._tester.driver.window_handles
+            if handle != self._tester.driver.current_window_handle]
+
+    def switch_to_other_window(self):
+        self.wait().until(lambda x: len(self.get_other_window_handles()) == 1)
+        handle = self.get_other_window_handles()[0]
+        self._tester.driver.close()
+        self._tester.driver.switch_to_window(handle)
+
     def click_on_course_outline_components(self, title):
-        self.find_element_by_link_text(title).click()
+        get_parent_element(get_parent_element(self.find_element_by_link_text(
+            title))).find_element_by_css_selector('.view-icon').click()
+        self.switch_to_other_window()
         return LessonPage(self._tester)
 
     def click_analytics(self, name):
@@ -500,8 +511,8 @@ class DashboardPage(PageObject):
         return AnalyticsPage(self._tester)
 
     def click_course(self):
-        self.find_element_by_css_selector(
-            'div.course-outline div.course div.name a').click()
+        self.find_element_by_css_selector('a[href=course]').click()
+        self.switch_to_other_window()
         return RootPage(self._tester)
 
     def click_i18n(self):
@@ -522,7 +533,7 @@ class DashboardPage(PageObject):
         return AdminSettingsPage(self._tester)
 
     def click_lock(self):
-        self.find_element_by_css_selector('button.md-lock').click()
+        self.find_element_by_css_selector('button.icon-draft-status').click()
         return self
 
     def click_registration(self):
@@ -831,9 +842,7 @@ class AssetsPage(PageObject):
         return self
 
     def click_edit_image(self, name):
-        get_parent_element(
-            self.find_element_by_link_text(name)
-        ).find_element_by_css_selector('a.md-mode-edit').click()
+        self.find_element_by_link_text(name).click()
         return ImageEditorPage(self._tester)
 
     def click_add_short_answer(self):
@@ -867,8 +876,7 @@ class AssetsPage(PageObject):
         raise AssertionError(description + ' not found')
 
     def click_question_preview(self):
-        self.find_element_by_css_selector(
-            '#gcb-main-content tbody td .md-visibility').click()
+        self.find_element_by_css_selector('.preview-question').click()
         return self
 
     def verify_question_preview(self, question_text):

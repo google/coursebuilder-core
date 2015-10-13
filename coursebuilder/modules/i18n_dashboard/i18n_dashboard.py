@@ -1853,18 +1853,8 @@ class I18nDashboardHandler(BaseDashboardExtension):
         self.main_locale = all_locales[0]
         self.extra_locales = all_locales[1:]
 
-    def _make_table_section(self, data_rows, section_title):
-        rows = []
-        rows.append(EmptyRow(name='', class_name='blank-row'))
-        rows.append(SectionRow(section_title))
-        if data_rows:
-            rows += data_rows
-        else:
-            rows.append(EmptyRow())
-        return rows
-
     def render(self):
-        rows = []
+        tables = []
 
         for resource_handler in TranslatableResourceRegistry.get_all():
             data_rows = []
@@ -1872,11 +1862,10 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 self.course):
                 data_rows.append(I18nProgressManager.get(
                     self.course, rsrc, key.type, key.key))
-            rows += self._make_table_section(
-                data_rows, resource_handler.get_title())
-
-        if not [row for row in rows if type(row) is ResourceRow]:
-            rows = [EmptyRow(name='No course content')]
+            tables.append({
+                'section_title': resource_handler.get_title(),
+                'rows': data_rows,
+            })
 
         permitted_locales = []
         for locale in self.extra_locales:
@@ -1888,7 +1877,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
 
         template_values = {
             'extra_locales': permitted_locales,
-            'rows': rows,
+            'tables': tables,
             'num_columns': len(permitted_locales) + 1,
             'is_readonly': self.is_readonly(self.course),
         }

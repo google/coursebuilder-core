@@ -163,12 +163,12 @@ if need_install six PKG-INFO Version: 1.5.2 ; then
   mv $RUNTIME_HOME/six-1.5.2 $RUNTIME_HOME/six
 fi
 
-if need_install beautifulsoup4 PKG-INFO Version: 4.3.2 ; then
+if need_install beautifulsoup4 PKG-INFO Version: 4.4.1 ; then
   echo Installing Beautiful Soup HTML processing library
-  curl --location --silent https://pypi.python.org/packages/source/b/beautifulsoup4/beautifulsoup4-4.3.2.tar.gz -o beautifulsoup4-4.3.2.tar.gz
-  tar --gunzip --extract --verbose --directory $RUNTIME_HOME --file beautifulsoup4-4.3.2.tar.gz
-  rm beautifulsoup4-4.3.2.tar.gz
-  mv $RUNTIME_HOME/beautifulsoup4-4.3.2 $RUNTIME_HOME/beautifulsoup4
+  curl --location --silent https://pypi.python.org/packages/source/b/beautifulsoup4/beautifulsoup4-4.4.1.tar.gz -o beautifulsoup4-4.4.1.tar.gz
+  tar --gunzip --extract --verbose --directory $RUNTIME_HOME --file beautifulsoup4-4.4.1.tar.gz
+  rm beautifulsoup4-4.4.1.tar.gz
+  mv $RUNTIME_HOME/beautifulsoup4-4.4.1 $RUNTIME_HOME/beautifulsoup4
 fi
 
 if need_install selenium PKG-INFO Version: 2.46.1 ; then
