@@ -2319,8 +2319,8 @@ class Course(object):
             'institution:url', 'Organization URL', 'string', optional=True))
 
         opts.add_property(schema_fields.SchemaField(
-            'base:privacy_terms_url', 'Privacy Terms URL', 'string',
-            description='Link to your privacy policy and terms of service',
+            'base:privacy_terms_url', 'Privacy & Terms URL', 'string',
+            description=messages.HOMEPAGE_PRIVACY_URL_DESCRIPTION,
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
@@ -2334,7 +2334,8 @@ class Course(object):
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
-            'course:title', 'Course Name', 'string'))
+            'course:title', 'Title', 'string',
+            description=messages.HOMEPAGE_TITLE_DESCRIPTION))
 
         opts.add_property(schema_fields.SchemaField(
             '_reserved:context_path', 'Course URL Component', 'uneditable',
@@ -2354,16 +2355,16 @@ class Course(object):
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
-            'course:blurb', 'Course Details', 'html',
-            description='Text, shown on the course homepage, that explains '
-            'what the course is about.',
+            'course:blurb', 'Abstract', 'html',
+            description=messages.HOMEPAGE_ABSTRACT_DESCRIPTION,
             extra_schema_dict_values={
                 'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags':
                 common.tags.EditorBlacklists.COURSE_SCOPE},
             optional=True))
         opts.add_property(schema_fields.SchemaField(
-            'course:instructor_details', 'Course Instructor Details', 'html',
+            'course:instructor_details', 'Instructor Details', 'html',
+            description=messages.HOMEPAGE_INSTRUCTOR_DETAILS_DESCRIPTION,
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
@@ -2379,8 +2380,8 @@ class Course(object):
 
         opts.add_property(schema_fields.SchemaField(
             'base:show_gplus_button', 'Show G+ Button', 'boolean',
-            optional=True, description='Whether to show a G+ button on the '
-            'header of all pages.'))
+            description=messages.HOMEPAGE_SHOW_GPLUS_BUTTON_DESCRIPTION,
+            optional=True))
 
         opts.add_property(schema_fields.SchemaField(
             'course:google_analytics_id', 'Google Analytics ID', 'string',

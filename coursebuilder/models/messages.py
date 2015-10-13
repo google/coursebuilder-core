@@ -171,6 +171,28 @@ Show students the total score on the assignment after the due date is passed.
 If no due date is set, this flag has no effect.
 """
 
+HOMEPAGE_PRIVACY_URL_DESCRIPTION = """
+This link to your terms of service and privacy policy is displayed in the
+footer of every page. If blank, the link will be omitted. Links to other
+sites must start with "http" or "https".
+"""
+
+HOMEPAGE_TITLE_DESCRIPTION = """
+The course title is the name of the course.
+"""
+
+HOMEPAGE_ABSTRACT_DESCRIPTION = """
+The course abstract is displayed to students on the course homepage and
+should describe the course.
+"""
+
+HOMEPAGE_INSTRUCTOR_DETAILS_DESCRIPTION = """
+The instructor details are displayed to students on the course homepage.
+"""
+
+HOMEPAGE_SHOW_GPLUS_BUTTON_DESCRIPTION = """
+If checked, a G+ button will be displayed in the header of all pages.
+"""
 # TODO(johncox): replace placeholder URL once target link is determined.
 ASSESSMENT_GRADING_METHOD_DESCRIPTION = safe_dom.assemble_text_message("""
 If this is set to "Peer review", this assessment will use the Peer Review
