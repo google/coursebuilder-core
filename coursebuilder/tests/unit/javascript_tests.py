@@ -33,6 +33,9 @@ class AllJavaScriptTests(unittest.TestCase):
     def test_certificate(self):
         self.karma_test('modules_certificate')
 
+    def test_core_ui(self):
+        self.karma_test('modules_core_ui')
+
     def test_core_tags(self):
         self.karma_test('modules_core_tags')
 

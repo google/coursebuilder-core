@@ -16,6 +16,7 @@ env_variables:
   GCB_APPSTATS_ENABLED: false
 
   GCB_REGISTERED_MODULES:
+    modules.core_ui.core_ui
     modules.dashboard.dashboard
     modules.activity_tag.activity_tag
     modules.admin.admin

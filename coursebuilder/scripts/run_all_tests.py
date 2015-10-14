@@ -339,7 +339,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.common_utils.ParseTimedeltaTests': 8,
     'tests.unit.common_utils.ValidateTimedeltaTests': 6,
     'tests.unit.common_utils.ZipAwareOpenTests': 2,
-    'tests.unit.javascript_tests.AllJavaScriptTests': 9,
+    'tests.unit.javascript_tests.AllJavaScriptTests': 10,
     'tests.unit.models_analytics.AnalyticsTests': 6,
     'tests.unit.models_config.ValidateIntegerRangeTests': 3,
     'tests.unit.models_courses.WorkflowValidationTests': 13,

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="//storage.googleapis.com/code.getmdl.io/1.0.0/material.teal-indigo.min.css" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="/modules/dashboard/_static/css/view.css"/>
+  </head>
+  <body>
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-drawer
+        mdl-layout--fixed-header">
+      <header class="mdl-layout__header">
+        <div class="mdl-layout__header-row">
+          <span class="mdl-layout-title">
+            Style Guide
+          </span>
+        </div>
+      </header>
+      <nav class="mdl-layout__drawer">
+        <header class="gcb-drawer-header">
+          <h1 class="mdl-layout-title">Course Builder</h1>
+        </header>
+
+        <div class="mdl-navigation">
+          <div class="gcb-menu">
+            <a class="mdl-navigation__link" href="#list">List</a>
+            <a class="mdl-navigation__link" href="#collapse">Collapse</a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="mdl-layout__content">
+        <div id='gcb-main-area'>
+          <div id='gcb-main-content'>
+
+            <h1>Style Guide</h1>
+            <p>This page contains example usage for custom course-builder components.</p>
+
+            <h2 id="list">List</h2>
+
+            <h3>Table with automatic striping</h3>
+            <div class="gcb-list gcb-list--autostripe">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="gcb-list__cell--icon"></th>
+                    <th class="gcb-list__cell--icon"></th>
+                    <th class="gcb-list__cell--icon"></th>
+                    <th>Name</th>
+                    <th>Temperature</th>
+                    <th>Color</th>
+                  </tr>
+                </thead>
+
+                <tr class="gcb-list__row">
+                  <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons">reorder</a></td>
+                  <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons">visibility</a></td>
+                  <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons">launch</a></td>
+                  <td>First item</td>
+                  <td>cool</td>
+                  <td>blue</td>
+                </tr>
+
+                <tr class="gcb-list__row">
+                  <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons">reorder</a></td>
+                  <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons">visibility</a></td>
+                  <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons">launch</a></td>
+                  <td>Second item</td>
+                  <td>hot</td>
+                  <td>red</td>
+                </tr>
+
+                <tr class="gcb-list__row">
+                  <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons">reorder</a></td>
+                  <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons">visibility</a></td>
+                  <td><a class="gcb-list__icon gcb-list__icon--rowhover material-icons">launch</a></td>
+                  <td>Third item</td>
+                  <td>warm</td>
+                  <td>orange</td>
+                </tr>
+              </table>
+            </div>
+
+            <h3>Empty Table</h3>
+            <div class="gcb-list">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="gcb-list__cell--icon"></th>
+                    <th class="gcb-list__cell--icon"></th>
+                    <th class="gcb-list__cell--icon"></th>
+                    <th>Name</th>
+                    <th>Temperature</th>
+                    <th>Color</th>
+                  </tr>
+                </thead>
+              </table>
+
+              <div class="gcb-list__empty-message-wrapper">
+                <div class="gcb-list__empty-message">No items</div>
+              </div>
+            </div>
+
+            <h3>List with manual striping and flexbox</h3>
+            <ul class="gcb-list">
+              <li class="gcb-list__header-row gcb-list__row--flex">
+                <div class="gcb-list__cell gcb-list__cell--header gcb-list__cell--icon"></div>
+                <div class="gcb-list__cell gcb-list__cell--header gcb-list__cell--icon"></div>
+                <div class="gcb-list__cell gcb-list__cell--header gcb-list__cell--icon"></div>
+                <div class="gcb-list__cell gcb-list__cell--header">Name</div>
+                <div class="gcb-list__cell gcb-list__cell--header">Temperature</div>
+                <div class="gcb-list__cell gcb-list__cell--header">Color</div>
+              </li>
+
+              <li class="gcb-list__row gcb-list__row--flex">
+                <div class="gcb-list__cell gcb-list__cell--icon">
+                  <a class="gcb-list__icon gcb-list__icon--rowhover material-icons">reorder</a>
+                </div>
+                <div class="gcb-list__cell gcb-list__cell--icon">
+                  <a class="gcb-list__icon gcb-list__icon--rowhover material-icons">visibility</a>
+                </div>
+                <div class="gcb-list__cell gcb-list__cell--icon">
+                  <a class="gcb-list__icon gcb-list__icon--rowhover material-icons">launch</a>
+                </div>
+
+                <div class="gcb-list__cell">First item</div>
+                <div class="gcb-list__cell">cool</div>
+                <div class="gcb-list__cell">blue</div>
+              </li>
+
+              <li class="gcb-list__row gcb-list__row--flex gcb-list__row--dark-stripe">
+                <div class="gcb-list__cell gcb-list__cell--icon">
+                  <a class="gcb-list__icon gcb-list__icon--rowhover material-icons">reorder</a>
+                </div>
+                <div class="gcb-list__cell gcb-list__cell--icon">
+                  <a class="gcb-list__icon gcb-list__icon--rowhover material-icons">visibility</a>
+                </div>
+                <div class="gcb-list__cell gcb-list__cell--icon">
+                  <a class="gcb-list__icon gcb-list__icon--rowhover material-icons">launch</a>
+                </div>
+
+                <div class="gcb-list__cell">Second item</div>
+                <div class="gcb-list__cell">hot</div>
+                <div class="gcb-list__cell">red</div>
+              </li>
+
+              <li class="gcb-list__row gcb-list__row--flex">
+                <div class="gcb-list__cell gcb-list__cell--icon">
+                  <a class="gcb-list__icon gcb-list__icon--rowhover material-icons">reorder</a>
+                </div>
+                <div class="gcb-list__cell gcb-list__cell--icon">
+                  <a class="gcb-list__icon gcb-list__icon--rowhover material-icons">visibility</a>
+                </div>
+                <div class="gcb-list__cell gcb-list__cell--icon">
+                  <a class="gcb-list__icon gcb-list__icon--rowhover material-icons">launch</a>
+                </div>
+
+                <div class="gcb-list__cell">Third item</div>
+                <div class="gcb-list__cell">warm</div>
+                <div class="gcb-list__cell">orange</div>
+              </li>
+            </ul>
+
+            <h2 id="collapse">Collapse</h2>
+
+            <h3>Lone Collapse</h3>
+            <div class="gcb-collapse">
+              <a class="gcb-collapse__button">
+                <i class="gcb-collapse__icon material-icons mdl-animation--default">expand_more</i>
+                Click me to see the content
+              </a>
+              <div class="gcb-collapse__content-wrapper">
+                <div class="gcb-collapse__content mdl-animation--default">
+                  This is the content
+                </div>
+              </div>
+            </div>
+
+            <h3>Accordion</h3>
+
+            <div class="gcb-accordion">
+              <div class="gcb-collapse">
+                <a class="gcb-collapse__button">
+                  <i class="gcb-collapse__icon material-icons mdl-animation--default">expand_more</i>
+                  Click me to see the first content
+                </a>
+                <div class="gcb-collapse__content-wrapper">
+                  <div class="gcb-collapse__content mdl-animation--default">
+                    This is the first content
+                  </div>
+                </div>
+              </div>
+              <div class="gcb-collapse">
+                <a class="gcb-collapse__button">
+                  <i class="gcb-collapse__icon material-icons mdl-animation--default">expand_more</i>
+                  Click me to see the second content
+                </a>
+                <div class="gcb-collapse__content-wrapper">
+                  <div class="gcb-collapse__content mdl-animation--default">
+                    This is the second content
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/modules/core_ui/_static/core-ui.js"></script>
+    <script src="//storage.googleapis.com/code.getmdl.io/1.0.0/material.min.js"></script>
+  </body>
+</html>
