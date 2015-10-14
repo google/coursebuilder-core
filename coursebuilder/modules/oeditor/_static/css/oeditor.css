@@ -761,6 +761,9 @@ div.CodeMirror {
   overflow-y: hidden;
   background-color: #f9f9f9;
 }
+#cb-oeditor-form .yui-toolbar-container.slid-in {
+  overflow-y: inherit;
+}
 #cb-oeditor-form .yui-toolbar-container,
 #cb-oeditor-form .yui-editor-editable-container.slow-transition {
   -webkit-transition: height 300ms cubic-bezier(.4,0,.2,1);
