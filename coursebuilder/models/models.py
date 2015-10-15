@@ -493,10 +493,11 @@ class ContentChunkDAO(object):
 
     @classmethod
     def save(cls, dto):
-        """Saves contents of a DTO and returns the key of the saved entity.
+        """Saves content of DTO and returns the key of the saved entity.
 
-        Handles both creating new and updating existing entities. If the id of
-        the passed DTO is found, the entity will be updated.
+        Handles both creating new and updating existing entities. If the id of a
+        passed DTO is found, the entity will be updated; otherwise, the entity
+        will be created.
 
         Note that this method does not refetch the saved entity from the
         datastore after put since this is impossible in a transaction. This
@@ -506,27 +507,46 @@ class ContentChunkDAO(object):
         this value for our getters.
 
         Args:
-            dto: ContentChunkDTO. last_modified will be ignored.
+            dto: ContentChunkDTO. DTO to save. Its last_modified field is
+                ignored.
 
         Returns:
             db.Key of saved ContentChunkEntity.
         """
-        if dto.id is None:
-            entity = ContentChunkEntity(content_type=dto.content_type)
-        else:
-            entity = ContentChunkEntity.get_by_id(dto.id)
+        return cls.save_all([dto])[0]
 
-            if entity is None:
+    @classmethod
+    def save_all(cls, dtos):
+        """Saves all given DTOs; see save() for semantics.
+
+        Args:
+            dtos: list of ContentChunkDTO. The last_modified field is ignored.
+
+        Returns:
+            List of db.Key of saved ContentChunkEntities, in order of dto input.
+        """
+        entities = []
+        for dto in dtos:
+            if dto.id is None:
                 entity = ContentChunkEntity(content_type=dto.content_type)
+            else:
+                entity = ContentChunkEntity.get_by_id(dto.id)
 
-        entity.contents = dto.contents
-        entity.supports_custom_tags = dto.supports_custom_tags
-        entity.uid = cls.make_uid(dto.type_id, dto.resource_id)
-        entity.put()
-        MemcacheManager.set(
-            cls._get_memcache_key(entity.key().id()), cls._make_dto(entity))
+                if entity is None:
+                    entity = ContentChunkEntity(content_type=dto.content_type)
 
-        return entity.key()
+            entity.content_type = dto.content_type
+            entity.contents = dto.contents
+            entity.supports_custom_tags = dto.supports_custom_tags
+            entity.uid = cls.make_uid(dto.type_id, dto.resource_id)
+            entities.append(entity)
+
+        db.put(entities)
+
+        for entity in entities:
+            MemcacheManager.delete(cls._get_memcache_key(entity.key().id()))
+
+        return [entity.key() for entity in entities]
 
     @classmethod
     def _get_memcache_key(cls, entity_id):

@@ -128,7 +128,7 @@ class ContentChunkTestCase(actions.ExportTestBase):
         self.assert_fuzzy_equal(patched_dto, from_cache)
         self.assertNotEqual(patched_dto.contents, from_datastore.contents)
 
-    def test_dao_get_returns_datastore_entity_and_populates_cache(self):
+    def test_dao_get_returns_dto_and_populates_cache(self):
         self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
 
         key = models.ContentChunkDAO.save(models.ContentChunkDTO({
@@ -138,13 +138,15 @@ class ContentChunkTestCase(actions.ExportTestBase):
             'supports_custom_tags': self.supports_custom_tags,
             'type_id': self.type_id,
         }))
-        expected_dto = models.ContentChunkDAO._make_dto(db.get(key))
-        from_datastore = models.ContentChunkEntity.get_by_id(self.id)
+        from_datastore = models.ContentChunkDAO._make_dto(db.get(key))
+
+        self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
+
+        first_get_result = models.ContentChunkDAO.get(self.id)
         from_cache = models.MemcacheManager.get(self.memcache_key)
 
-        self.assert_fuzzy_equal(
-            expected_dto, models.ContentChunkDAO._make_dto(from_datastore))
-        self.assert_fuzzy_equal(expected_dto, from_cache)
+        self.assert_fuzzy_equal(first_get_result, from_datastore)
+        self.assert_fuzzy_equal(from_cache, from_datastore)
 
     def test_dao_get_returns_none_when_entity_id_none(self):
         self.assertIsNone(models.ContentChunkDAO.get(None))
@@ -240,45 +242,77 @@ class ContentChunkTestCase(actions.ExportTestBase):
         with self.assertRaises(AssertionError):
             models.ContentChunkDAO._split_uid(':foo')
 
-    def test_dao_save_creates_new_object_and_populates_cache(self):
+    def test_dao_save_creates_new_object_and_does_not_populate_cache(self):
         self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
 
-        key = models.ContentChunkDAO.save(models.ContentChunkDTO({
+        dto = models.ContentChunkDTO({
             'content_type': self.content_type,
             'contents': self.contents,
             'id': self.id,
             'resource_id': self.resource_id,
             'supports_custom_tags': self.supports_custom_tags,
             'type_id': self.type_id,
-        }))
-        expected_dto = models.ContentChunkDAO._make_dto(db.get(key))
+        })
+        key = models.ContentChunkDAO.save(dto)
+        saved_dto = models.ContentChunkDAO._make_dto(db.get(key))
 
-        self.assert_fuzzy_equal(
-            expected_dto, models.MemcacheManager.get(self.memcache_key))
+        self.assert_fuzzy_equal(dto, saved_dto)
+        self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
 
-    def test_dao_save_updates_existing_object_and_populates_cache(self):
-        key = models.ContentChunkDAO.save(models.ContentChunkDTO({
+    def test_dao_save_updates_existing_object_and_does_not_populate_cache(self):
+        self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
+
+        dto = models.ContentChunkDTO({
             'content_type': self.content_type,
             'contents': self.contents,
             'id': self.id,
             'resource_id': self.resource_id,
             'supports_custom_tags': self.supports_custom_tags,
             'type_id': self.type_id,
-        }))
-        original_dto = models.ContentChunkDAO._make_dto(db.get(key))
+        })
+        key = models.ContentChunkDAO.save(dto)
+        saved_dto = models.ContentChunkDAO._make_dto(db.get(key))
 
-        self.assert_fuzzy_equal(
-            original_dto, models.MemcacheManager.get(self.memcache_key))
+        self.assert_fuzzy_equal(dto, saved_dto)
+        self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
 
-        original_dto.content_type = 'new_content_type'
-        original_dto.contents = 'new_contents'
-        original_dto.supports_custom_tags = True
-        original_dto.uid = 'new_system_id:new_resource:id'
-        models.ContentChunkDAO.save(original_dto)
-        expected_dto = models.ContentChunkDAO._make_dto(db.get(key))
+        dto.content_type = 'new_content_type'
+        dto.contents = 'new_contents'
+        dto.supports_custom_tags = True
+        dto.uid = 'new_system_id:new_resource:id'
+        models.ContentChunkDAO.save(dto)
+        saved_dto = models.ContentChunkDAO._make_dto(db.get(key))
 
-        self.assert_fuzzy_equal(
-            expected_dto, models.MemcacheManager.get(self.memcache_key))
+        self.assert_fuzzy_equal(dto, saved_dto)
+        self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
+
+    def test_dao_save_all_saves_multiple_dtos(self):
+        # All other behavior of save_all() tested via save() since they share
+        # implementation and save() provides a simpler interface.
+        first_dto = models.ContentChunkDTO({
+            'content_type': self.content_type,
+            'contents': self.contents,
+            'id': self.id,
+            'resource_id': self.resource_id,
+            'supports_custom_tags': self.supports_custom_tags,
+            'type_id': self.type_id,
+        })
+        second_dto = models.ContentChunkDTO({
+            'content_type': 'second_' + self.content_type,
+            'contents': 'second_' + self.contents,
+            'id': self.id + 1,
+            'resource_id': 'resource:second_id',
+            'supports_custom_tags': self.supports_custom_tags,
+            'type_id': 'second_' + self.type_id,
+        })
+        keys = models.ContentChunkDAO.save_all([first_dto, second_dto])
+        saved_dtos = [
+            models.ContentChunkDAO._make_dto(entity) for entity in db.get(keys)]
+
+        self.assertEqual(2, len(keys))
+        self.assertEqual(2, len(saved_dtos))
+        self.assert_fuzzy_equal(first_dto, saved_dtos[0])
+        self.assert_fuzzy_equal(second_dto, saved_dtos[1])
 
 
 class PersonalProfileTestCase(actions.ExportTestBase):
