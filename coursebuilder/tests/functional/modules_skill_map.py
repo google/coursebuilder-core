@@ -53,6 +53,7 @@ from modules.skill_map.skill_map import SkillCompletionTracker
 from modules.skill_map.skill_map_metrics import SkillMapMetrics
 from modules.skill_map.skill_map_metrics import CHAINS_MIN_LENGTH
 from modules.skill_map.recommender import SkillRecommender
+from rdflib import Graph
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
@@ -509,6 +510,86 @@ class SkillMapTests(BaseSkillMapTests):
         self.assertEqual(2, len(recommended))
         self.assertEqual(self.sc.id, recommended[0].id)
         self.assertEqual(self.sd.id, recommended[1].id)
+
+
+class SkillMapRdfHandlerTests(BaseSkillMapTests):
+    DATA_URL = 'modules/skill_map/rdf/v1/data'
+    SCHEMA_URL = '/modules/skill_map/rdf/v1/schema'
+    TYPES = [
+      'http://localhost%s#skill' % SCHEMA_URL,
+      'http://localhost%s#lesson' % SCHEMA_URL,
+      'http://localhost%s#question' % SCHEMA_URL,
+      ]
+
+    def test_access_rights(self):
+        env = {'course': {'browsable': True}}
+        with actions.OverriddenEnvironment(env):
+            response = self.get(self.SCHEMA_URL)
+            self.assertEqual(200, response.status_int)
+
+            response = self.get(self.DATA_URL, expect_errors=True)
+            self.assertEqual(200, response.status_int)
+
+        env = {'course': {'browsable': False}}
+        with actions.OverriddenEnvironment(env):
+            response = self.get(self.SCHEMA_URL)
+            self.assertEqual(200, response.status_int)
+
+            response = self.get(self.DATA_URL, expect_errors=True)
+            self.assertEqual(401, response.status_int)
+
+    def test_schema(self):
+        actions.login(ADMIN_EMAIL)
+
+        response = self.get(self.SCHEMA_URL)
+        self.assertEqual(200, response.status_int)
+        Graph().parse(data=response.body, format="application/rdf+xml")
+
+    def test_data(self):
+        self._build_sample_graph()
+        self._create_lessons()
+
+        skill_graph = SkillGraph.load()
+        skill = skill_graph.add(Skill.build(SKILL_NAME, SKILL_DESC))
+
+        # link a skill to the question
+        question = self._create_mc_question('Test question')
+        question.dict[SKILLS_KEY] = [skill.id]
+        models.QuestionDAO.save(question)
+
+        # links a skill to a lesson
+        self.lesson1.properties[SKILLS_KEY] = [skill.id]
+        self.course.save()
+
+        actions.login(ADMIN_EMAIL)
+
+        response = self.get(self.DATA_URL)
+        self.assertEqual(200, response.status_int)
+        Graph().parse(data=response.body, format="application/rdf+xml")
+
+        node_names = ['a', 'b', 'c', 'd', 'e', 'f']
+
+        imports = [
+            '<rdf:type ',
+            '<rdfs:comment>',
+        ]
+
+        literals = [
+          '<gcbsm:id ',
+          '<gcbsm:prerequisite ',
+          ]
+
+        relations = [
+          '<gcbsm:taught_in ',
+          '<gcbsm:assessed_by ',
+          ]
+
+        actions.assert_contains(self.SCHEMA_URL, response.body)
+        for name in node_names:
+            actions.assert_contains(
+                '<rdfs:label>%s</rdfs:label>' % name, response.body)
+        for term in literals + relations + imports + self.TYPES:
+            actions.assert_contains(term, response.body)
 
 
 class LocationListRestHandlerTests(BaseSkillMapTests):

@@ -60,6 +60,7 @@ from modules.skill_map import constants
 from modules.skill_map import skill_map_metrics
 from modules.skill_map import recommender
 from modules.skill_map import messages
+from modules.skill_map.rdf import RdfBuilder
 
 from google.appengine.ext import db
 from google.appengine.api import namespace_manager
@@ -1269,6 +1270,42 @@ class SkillMapHandler(dashboard.DashboardHandler):
             in_action='edit_skills_table')
 
 
+class SkillMapRdfSchemaHandler(utils.ApplicationHandler):
+    """A handler to output skill map RDF schema."""
+
+    def get(self):
+        self.response.headers['Content-Type'] = 'application/rdf+xml'
+        self.response.write(RdfBuilder().schema_toxml())
+
+
+class SkillMapRdfHandler(utils.BaseHandler):
+    """A handler to output skill map in RDF."""
+
+    def can_view(self):
+        if roles.Roles.is_course_admin(self.app_context):
+            return True, 200
+
+        browsable = self.app_context.get_environ()['course']['browsable']
+        if browsable:
+            return True, True
+
+        user = self.personalize_page_and_get_user()
+        if user is None:
+            return False, 401
+        else:
+            return False, 403
+
+    def get(self):
+        can_view, error = self.can_view()
+        if not can_view:
+            self.error(error)
+            return
+
+        self.response.headers['Content-Type'] = 'application/rdf+xml'
+        self.response.write(RdfBuilder().skills_toxml(
+            SkillMap.load(self.get_course()).skills()))
+
+
 class SkillCompetencyDataSource(data_sources.SynchronousQuery):
 
     @staticmethod
@@ -2085,14 +2122,16 @@ def register_module():
         (RESOURCES_URI + '/d3-3.4.3/(d3.min.js)', d3_js_handler),
         (RESOURCES_URI + '/underscore-1.4.3/(underscore.min.js)',
          underscore_js_handler),
-        (RESOURCES_URI + '/dependo-0.1.4/(.*)', dep_graph_handler)
+        (RESOURCES_URI + '/dependo-0.1.4/(.*)', dep_graph_handler),
+        (RdfBuilder.SCHEMA_URL, SkillMapRdfSchemaHandler),
     ]
 
     namespaced_routes = [
         (LocationListRestHandler.URL, LocationListRestHandler),
         (SkillRestHandler.URL, SkillRestHandler),
         (SkillMapHandler.URL, SkillMapHandler),
-        (SkillAggregateRestHandler.URL, SkillAggregateRestHandler)
+        (SkillAggregateRestHandler.URL, SkillAggregateRestHandler),
+        (RdfBuilder.DATA_URL, SkillMapRdfHandler),
     ]
 
     global skill_mapping_module  # pylint: disable=global-statement

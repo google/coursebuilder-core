@@ -102,6 +102,10 @@ THIRD_PARTY_LIBS = [
     _Library('pyparsing-1.5.7.zip'),
     _Library('reportlab-3.1.8.zip'),
     _Library('simplejson-3.7.1.zip', relative_path='simplejson-3.7.1'),
+
+    # rdflib and deps
+    _Library('isodate-0.5.5.zip', relative_path='src'),
+    _Library('rdflib-4.2.2-dev.zip', relative_path='rdflib'),
 ]
 
 ALL_LIBS = GOOGLE_LIBS + THIRD_PARTY_LIBS

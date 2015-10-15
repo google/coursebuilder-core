@@ -273,6 +273,7 @@ DISTRIBUTED_LIBS="\
   html5lib-0.95.zip \
   identity-toolkit-python-client-0.1.6.zip \
   inputex-3.1.0.zip \
+  isodate-0.5.5.zip \
   markdown-2.5.zip \
   material-design-iconic-font-1.1.1.zip \
   mathjax-2.3.0.zip \
@@ -281,6 +282,7 @@ DISTRIBUTED_LIBS="\
   networkx-1.9.1.zip \
   oauth-1.0.1.zip \
   pyparsing-1.5.7.zip \
+  rdflib-4.2.2-dev.zip \
   reportlab-3.1.8.zip \
   simplejson-3.7.1.zip \
   underscore-1.4.3.zip \
