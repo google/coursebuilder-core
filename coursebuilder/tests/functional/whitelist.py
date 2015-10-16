@@ -178,3 +178,8 @@ class WhitelistTest(actions.TestBase):
             '[%s] ' % NONSTUDENT_EMAIL * 100)
         actions.login(STUDENT_EMAIL)
         self._expect_visible()
+
+    def test_whitelist_is_case_insensitive(self):
+        WhitelistTest._whitelist = STUDENT_WHITELIST
+        actions.login(STUDENT_EMAIL.upper())
+        self._expect_visible()
