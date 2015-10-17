@@ -54,7 +54,7 @@ function onDraftStatusClick() {
       key: $(this).data("key"),
       type: $(this).data("component-type"),
       set_draft: setDraft ? 1 : 0,
-      xsrf_token: $(this).parents(".course-outline").data(
+      xsrf_token: $(this).parents(".xsrf-token-holder").data(
         "status-xsrf-token-" + $(this).data("component-type"))
     },
     function(data) {

@@ -17,9 +17,14 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 
+import cgi
 import datetime
+import os
 import urllib
 
+import jinja2
+
+import appengine_config
 from common import tags
 from common import utils
 from common.schema_fields import FieldArray
@@ -43,6 +48,11 @@ from modules.dashboard import dashboard
 from modules.oeditor import oeditor
 
 from google.appengine.ext import db
+
+MODULE_NAME = 'announcements'
+MODULE_TITLE = 'Announcements'
+TEMPLATE_DIR = os.path.join(
+    appengine_config.BUNDLE_ROOT, 'modules', MODULE_NAME, 'templates')
 
 
 class AnnouncementsRights(object):
@@ -78,24 +88,14 @@ class AnnouncementsRights(object):
         return allowed
 
 
-class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
-    """Handler for announcements."""
-
-    default_action = 'list'
-    get_actions = [default_action, 'edit']
-    post_actions = ['add', 'delete']
-
-    @classmethod
-    def get_child_routes(cls):
-        """Add child handlers for REST."""
-        return [('/rest/announcements/item', AnnouncementsItemRESTHandler)]
-
-    def get_action_url(self, action, key=None):
+class AnnouncementsHandlerMixin(object):
+    def get_announcement_action_url(self, action, key=None):
         args = {'action': action}
         if key:
             args['key'] = key
         return self.canonicalize_url(
-            '/announcements?%s' % urllib.urlencode(args))
+            '{}?{}'.format(
+                AnnouncementsDashboardHandler.URL, urllib.urlencode(args)))
 
     def format_items_for_template(self, items):
         """Formats a list of entities into template values."""
@@ -105,12 +105,14 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
             # add 'edit' actions
             if AnnouncementsRights.can_edit(self):
-                item['edit_action'] = self.get_action_url(
-                    'edit', key=item['key'])
+                item['edit_action'] = self.get_announcement_action_url(
+                    AnnouncementsDashboardHandler.EDIT_ACTION, key=item['key'])
 
-                item['delete_xsrf_token'] = self.create_xsrf_token('delete')
-                item['delete_action'] = self.get_action_url(
-                    'delete', key=item['key'])
+                item['delete_xsrf_token'] = self.create_xsrf_token(
+                    AnnouncementsDashboardHandler.DELETE_ACTION)
+                item['delete_action'] = self.get_announcement_action_url(
+                    AnnouncementsDashboardHandler.DELETE_ACTION,
+                    key=item['key'])
 
             template_items.append(item)
 
@@ -119,14 +121,20 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
         # add 'add' action
         if AnnouncementsRights.can_edit(self):
-            output['add_xsrf_token'] = self.create_xsrf_token('add')
-            output['add_action'] = self.get_action_url('add')
+            output['add_xsrf_token'] = self.create_xsrf_token(
+                AnnouncementsDashboardHandler.ADD_ACTION)
+            output['add_action'] = self.get_announcement_action_url(
+                AnnouncementsDashboardHandler.ADD_ACTION)
 
         return output
 
-    def _render(self):
-        self.template_value['navbar'] = {'announcements': True}
-        self.render('announcements.html')
+
+class AnnouncementsStudentHandler(
+        AnnouncementsHandlerMixin, BaseHandler, ReflectiveRequestHandler):
+    URL = '/announcements'
+    default_action = 'list'
+    get_actions = [default_action]
+    post_actions = []
 
     def get_list(self):
         """Shows a list of announcements."""
@@ -140,7 +148,6 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             if not student:
                 transient_student = True
         self.template_value['transient_student'] = transient_student
-
         items = AnnouncementEntity.get_announcements()
         items = AnnouncementsRights.apply_rights(self, items)
         if not roles.Roles.is_course_admin(self.get_course().app_context):
@@ -151,31 +158,84 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             items)
         self._render()
 
-    def get_edit(self):
+    def _render(self):
+        self.template_value['navbar'] = {'announcements': True}
+        self.render('announcements.html')
+
+
+class AnnouncementsDashboardHandler(
+        AnnouncementsHandlerMixin, dashboard.DashboardHandler):
+    """Handler for announcements."""
+
+    LIST_ACTION = 'edit_announcements'
+    EDIT_ACTION = 'edit_announcement'
+    DELETE_ACTION = 'delete_announcement'
+    ADD_ACTION = 'add_announcement'
+
+    get_actions = [LIST_ACTION, EDIT_ACTION]
+    post_actions = [ADD_ACTION, DELETE_ACTION]
+
+    LINK_URL = 'edit_announcements'
+    URL = '/{}'.format(LINK_URL)
+    LIST_URL = '{}?action={}'.format(LINK_URL, LIST_ACTION)
+
+    @classmethod
+    def get_child_routes(cls):
+        """Add child handlers for REST."""
+        return [
+            (AnnouncementsItemRESTHandler.URL, AnnouncementsItemRESTHandler)]
+
+    def get_edit_announcements(self):
+        """Shows a list of announcements."""
+        items = AnnouncementEntity.get_announcements()
+        items = AnnouncementsRights.apply_rights(self, items)
+
+        main_content = self.get_template(
+            'announcement_list.html', [TEMPLATE_DIR]).render({
+                'announcements': self.format_items_for_template(items),
+                'status_xsrf_token': self.create_xsrf_token(
+                    AnnouncementsItemRESTHandler.STATUS_ACTION)
+            })
+
+        self.render_page({
+            'page_title': self.format_title('Announcements'),
+            'main_content': jinja2.utils.Markup(main_content)})
+
+    def get_edit_announcement(self):
         """Shows an editor for an announcement."""
-        user = self.personalize_page_and_get_user()
-        if not user or not AnnouncementsRights.can_edit(self):
-            self.error(401)
-            return
 
         key = self.request.get('key')
 
         schema = AnnouncementsItemRESTHandler.SCHEMA()
 
-        exit_url = self.canonicalize_url(
-            '/announcements#%s' % urllib.quote(key, safe=''))
+        exit_url = self.canonicalize_url('/{}'.format(self.LIST_URL))
         rest_url = self.canonicalize_url('/rest/announcements/item')
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
             schema.get_json_schema(),
             schema.get_schema_dict(),
             key, rest_url, exit_url,
+            delete_method='delete',
+            delete_message='Are you sure you want to delete this announcement?',
+            delete_url=self._get_delete_url(
+                AnnouncementsItemRESTHandler.URL, key, 'announcement-delete'),
             required_modules=AnnouncementsItemRESTHandler.REQUIRED_MODULES)
 
-        self.template_value['content'] = form_html
-        self._render()
+        self.render_page({
+            'main_content': form_html,
+            'page_title': 'Edit Announcements',
+        }, in_action=self.LIST_ACTION)
 
-    def post_delete(self):
+    def _get_delete_url(self, base_url, key, xsrf_token_name):
+        return '%s?%s' % (
+            self.canonicalize_url(base_url),
+            urllib.urlencode({
+                'key': key,
+                'xsrf_token': cgi.escape(
+                    self.create_xsrf_token(xsrf_token_name)),
+            }))
+
+    def post_delete_announcement(self):
         """Deletes an announcement."""
         if not AnnouncementsRights.can_delete(self):
             self.error(401)
@@ -185,37 +245,40 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         entity = AnnouncementEntity.get(key)
         if entity:
             entity.delete()
-        self.redirect('/announcements')
+        self.redirect('/{}'.format(self.LIST_URL))
 
-    def post_add(self):
+    def post_add_announcement(self):
         """Adds a new announcement and redirects to an editor for it."""
         if not AnnouncementsRights.can_add(self):
             self.error(401)
             return
 
-        entity = AnnouncementEntity()
-        entity.title = 'Sample Announcement'
-        entity.date = datetime.datetime.now().date()
-        entity.html = 'Here is my announcement!'
-        entity.is_draft = True
+        entity = AnnouncementEntity.make('New Announcement', '', True)
         entity.put()
-        self.redirect(self.get_action_url('edit', key=entity.key()))
+
+        self.redirect(self.get_announcement_action_url(
+            self.EDIT_ACTION, key=entity.key()))
 
 
 class AnnouncementsItemRESTHandler(BaseRESTHandler):
     """Provides REST API for an announcement."""
+
+    URL = '/rest/announcements/item'
 
     REQUIRED_MODULES = [
         'inputex-date', 'gcb-rte', 'inputex-select', 'inputex-string',
         'gcb-uneditable', 'inputex-checkbox', 'inputex-list',
         'inputex-hidden', 'inputex-datetime', 'gcb-datetime']
 
+    STATUS_ACTION = 'set_draft_status_announcement'
+
     @classmethod
     def SCHEMA(cls):
-        schema = FieldRegistry('Announcement')
+        schema = FieldRegistry('Announcement',
+            extra_schema_dict_values={
+                'className': 'inputEx-Group new-form-layout'})
         schema.add_property(SchemaField(
-            'key', 'ID', 'string', editable=False,
-            extra_schema_dict_values={'className': 'inputEx-Field keyHolder'}))
+            'key', 'ID', 'string', editable=False, hidden=True))
         schema.add_property(SchemaField(
             'title', 'Title', 'string', optional=True))
         schema.add_property(SchemaField(
@@ -323,6 +386,77 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
 
         transforms.send_json_response(self, 200, 'Saved.')
 
+    def delete(self):
+        """Deletes an announcement."""
+        key = self.request.get('key')
+
+        if not self.assert_xsrf_token_or_fail(
+                self.request, 'announcement-delete', {'key': key}):
+            return
+
+        if not AnnouncementsRights.can_delete(self):
+            self.error(401)
+            return
+
+        entity = AnnouncementEntity.get(key)
+        if not entity:
+            transforms.send_json_response(
+                self, 404, 'Object not found.', {'key': key})
+            return
+
+        entity.delete()
+
+        transforms.send_json_response(self, 200, 'Deleted.')
+
+    @classmethod
+    def post_set_draft_status(cls, handler):
+        """Sets the draft status of a course component.
+
+        Only works with CourseModel13 courses, but the REST handler
+        is only called with this type of courses.
+
+        XSRF is checked in the dashboard.
+        """
+        key = handler.request.get('key')
+
+        if not AnnouncementsRights.can_edit(handler):
+            transforms.send_json_response(
+                handler, 401, 'Access denied.', {'key': key})
+            return
+
+        entity = AnnouncementEntity.get(key)
+        if not entity:
+            transforms.send_json_response(
+                handler, 404, 'Object not found.', {'key': key})
+            return
+
+        set_draft = handler.request.get('set_draft')
+        if set_draft == '1':
+            set_draft = True
+        elif set_draft == '0':
+            set_draft = False
+        else:
+            transforms.send_json_response(
+                handler, 401, 'Invalid set_draft value, expected 0 or 1.',
+                {'set_draft': set_draft}
+            )
+            return
+
+        entity.is_draft = set_draft
+        entity.put()
+
+        transforms.send_json_response(
+            handler,
+            200,
+            'Draft status set to %s.' % (
+                resources_display.DRAFT_TEXT if set_draft else
+                resources_display.PUBLISHED_TEXT
+            ), {
+                'is_draft': set_draft
+            }
+        )
+        return
+
 
 class AnnouncementEntity(entities.BaseEntity):
     """A class that represents a persistent database entity of announcement."""
@@ -346,6 +480,15 @@ class AnnouncementEntity(entities.BaseEntity):
             MemcacheManager.set(cls.memcache_key, items)
         return items
 
+    @classmethod
+    def make(cls, title, html, is_draft):
+        entity = cls()
+        entity.title = title
+        entity.date = datetime.datetime.now().date()
+        entity.html = html
+        entity.is_draft = is_draft
+        return entity
+
     def put(self):
         """Do the normal put() and also invalidate memcache."""
         result = super(AnnouncementEntity, self).put()
@@ -364,16 +507,23 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
 
-    announcement_handlers = [('/announcements', AnnouncementsHandler)]
+    handlers = [
+        (handler.URL, handler) for handler in
+        [AnnouncementsStudentHandler, AnnouncementsDashboardHandler]]
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        'analytics', 'announcements', 'Announcements',
-        action='edit_announcements', href='announcements', is_external=True,
+        'analytics', MODULE_NAME, MODULE_TITLE,
+        action=AnnouncementsDashboardHandler.LIST_ACTION,
+        href=AnnouncementsDashboardHandler.LIST_URL,
         placement=1000, sub_group_name='pinned')
+
+    dashboard.DashboardHandler.add_custom_post_action(
+        AnnouncementsItemRESTHandler.STATUS_ACTION,
+        AnnouncementsItemRESTHandler.post_set_draft_status)
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
-        'Course Announcements',
+        MODULE_TITLE,
         'A set of pages for managing course announcements.',
-        [], announcement_handlers)
+        [], handlers)
     return custom_module

@@ -188,11 +188,8 @@ class SearchTest(search_unit_test.SearchTestBase):
             course.update_unit(unit)
             course.save()
 
-            entity = announcements.AnnouncementEntity()
-            entity.html = '<gcb-youtube videoid="aperature">'
-            entity.title = 'Sample Announcement'
-            entity.date = datetime.datetime.now().date()
-            entity.is_draft = False
+            entity = announcements.AnnouncementEntity.make(
+                'New Announcement', '<gcb-youtube videoid="aperature">', False)
             entity.put()
 
             self.index_test_course()

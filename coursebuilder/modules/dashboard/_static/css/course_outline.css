@@ -29,13 +29,6 @@
   color: #777;
   margin-left: 110px;
 }
-.icon-draft-status.private:before {
-  content: 'lock';
-  color: #555;
-}
-.icon-draft-status.public:before {
-  content: 'lock_open';
-}
 .reorder {
   cursor: move;
 }

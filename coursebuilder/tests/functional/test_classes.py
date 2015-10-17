@@ -1889,7 +1889,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         actions.register(self, name)
 
         # add new
-        response = actions.view_announcements(self)
+        response = self.get('edit_announcements?action=edit_announcements')
         add_form = response.forms['gcb-add-announcement']
         response = self.submit(add_form)
         assert_equals(response.status_int, 302)
@@ -1901,10 +1901,10 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # check added
         response = actions.view_announcements(self)
-        assert_contains('Sample Announcement (Draft)', response.body)
+        assert_contains('New Announcement (Draft)', response.body)
 
         # delete draft
-        response = actions.view_announcements(self)
+        response = self.get('edit_announcements?action=edit_announcements')
         delete_form = response.forms['gcb-delete-announcement-0']
         response = self.submit(delete_form)
         assert_equals(response.status_int, 302)

@@ -203,8 +203,8 @@ div#formContainer div.settings-list-item fieldset legend span {
   text-decoration: none;
   cursor: pointer;
 }
-.icon.inactive {
-  cursor: auto;
+.inactive {
+  cursor: default !important;
 }
 .assets-table {
   border-style: hidden;
@@ -598,4 +598,13 @@ label.settings.togglebutton {
   font-size: 16px;
   vertical-align: top;
   opacity: 0.83;
+}
+
+.icon-draft-status.private:before {
+  content: 'lock';
+  color: #555;
+}
+
+.icon-draft-status.public:before {
+  content: 'lock_open';
 }

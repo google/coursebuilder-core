@@ -317,7 +317,7 @@ class AnnouncementsPage(PageObject):
         """Verify that the announcement has the given fields."""
         if title:
             self._tester.assertEquals(
-                title, self.find_element_by_css_selector(
+                title + ' edit', self.find_element_by_css_selector(
                     'div.gcb-aside h2', index=0).text)
         if date:
             self._tester.assertEquals(
@@ -372,7 +372,7 @@ class AnnouncementsEditorPage(EditorPageObject):
         return self
 
     def click_close(self):
-        return self._close_and_return_to(AnnouncementsPage)
+        return self._close_and_return_to(DashboardPage)
 
 
 class LoginPage(PageObject):
@@ -504,6 +504,12 @@ class DashboardPage(PageObject):
             title))).find_element_by_css_selector('.view-icon').click()
         self.switch_to_other_window()
         return LessonPage(self._tester)
+
+    def click_view_item(self, index, next_page):
+        self.find_elements_by_css_selector(
+            '.gcb-list [target=_blank]')[index].click()
+        self.switch_to_other_window()
+        return next_page(self._tester)
 
     def click_analytics(self, name):
         self.ensure_menu_group_is_open('analytics')

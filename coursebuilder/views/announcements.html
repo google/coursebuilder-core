@@ -20,8 +20,8 @@
       {% if announcements %}
         {% if announcements.add_action %}
           <form id='gcb-add-announcement' action='{{ announcements.add_action }}' method='POST'>
-            <input type="hidden" name="xsrf_token" value="{{ announcements.add_xsrf_token|escape }}">
-            <button class="gcb-button gcb-button-action gcb-button-author" type="submit">Add New</button>
+            <input type="hidden" name="xsrf_token" value="{{ announcements.add_xsrf_token }}">
+            <button class="gcb-button gcb-button-action gcb-button-author" type="submit">Add Announcement</button>
           </form>
           <div style='clear: both; padding-top: 2px;' />
         {% endif %}
@@ -31,23 +31,12 @@
         {% endif %}
         {% for item in announcements.children %}
           <hr>
-          {% if item.delete_action %}
-          <form id='gcb-delete-announcement-{{ loop.index0 }}' action='{{ item.delete_action }}' method='POST'>
-            <input type="hidden" name="xsrf_token" value="{{ item.delete_xsrf_token|escape }}">
-            <button class="gcb-button gcb-button-action gcb-button-author" type="submit"
-              onclick='return confirm("Delete this item?");'>
-              Delete
-            </button>
-          </form>
-          {% endif %}
-          {% if item.edit_action %}
-            <a role="button" href="{{ item.edit_action }}" class="gcb-button gcb-button-action gcb-button-author">
-              Edit
-            </a>
-          {% endif %}
           <h2>
             <a name='{{ item.key }}'></a>
             {{ item.title }} {% if item.is_draft %}(Draft){% endif %}
+            {% if item.edit_action %}
+              <a href="{{ item.edit_action }}" class="gcb-edit-resource-button icon material-icons">edit</a>
+            {% endif %}
           </h2>
           <p>{{ item.date }}</p>
           <p "margin: 20px 0px;">

@@ -536,6 +536,8 @@ class SampleCourseTests(BaseIntegrationTest):
             body='The new announcement'
         ).click_save(
         ).click_close(
+        ).click_view_item(
+            0, pageobjects.AnnouncementsPage
         ).verify_announcement(
             title=title + ' (Draft)', date='2013-03-01',
             body='The new announcement')

@@ -172,7 +172,8 @@ describe('draft status toggling', function() {
     this.oldPost = $.post;
     $.post = jasmine.createSpy("$.post");
     var content = $(
-        '<div class="course-outline" data-status-xsrf-token-lesson="token">' +
+        '<div class="gcb-list xsrf-token-holder"' +
+        '    data-status-xsrf-token-lesson="token">' +
         '  <div class="private icon-draft-status"' +
         '      data-key="9" data-component-type="lesson"></div>' +
         '</div>');

@@ -52,7 +52,7 @@
   </div>
 {%- endmacro %}
 
-<div class="course-outline gcb-list {% if course.can_add_or_remove %}editable{% else %}read-only{% endif %} {% if course.can_reorder %}reorderable{% endif %}"
+<div class="course-outline gcb-list xsrf-token-holder {% if course.can_add_or_remove %}editable{% else %}read-only{% endif %} {% if course.can_reorder %}reorderable{% endif %}"
     data-status-xsrf-token-unit="{{ status_xsrf_token_unit }}"
     data-status-xsrf-token-assessment="{{ status_xsrf_token_assessment }}"
     data-status-xsrf-token-link="{{ status_xsrf_token_link }}"
