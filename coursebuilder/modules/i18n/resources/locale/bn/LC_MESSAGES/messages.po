@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-12 09:16-0700\n"
-"PO-Revision-Date: 2015-10-05 07:08-0700\n"
+"POT-Creation-Date: 2015-10-19 07:52-0700\n"
+"PO-Revision-Date: 2015-10-19 07:52-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: bn <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -151,6 +151,8 @@ msgstr " ইঙ্গিত "
 #: experimental/coursebuilder/modules/assessments/assessments.py:121
 msgid "Peer-review assignments cannot be embedded in external pages."
 msgstr ""
+"সহকর্মীকৃত-পর্যালোচনার অ্যাসাইনমেন্টগুলি বহিঃস্থ পৃষ্ঠাগুলিতে এমবেড করা "
+"যাবে না।"
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
@@ -259,7 +261,7 @@ msgstr "মূল্যায়ন"
 #. is an examination, test, quiz, or similar.)
 #: experimental/coursebuilder/modules/assessments/templates/assessment_page.html:39
 msgid "Assessment submitted."
-msgstr ""
+msgstr "মূল্যায়ন জমা দেওয়া হয়েছে।"
 
 #. Shown on the assignment submission confirmation page when the student has
 #. submitted a duplicate assignment.
@@ -306,48 +308,48 @@ msgstr "কোর্স পৃষ্ঠাতে ফিরে যান"
 
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:117
+#: experimental/coursebuilder/modules/certificate/certificate.py:118
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "সম্পন্ন করার সার্টিফিকেট"
 
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:122
+#: experimental/coursebuilder/modules/certificate/certificate.py:123
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "এনাকে দেওয়া হল,"
 
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:125
+#: experimental/coursebuilder/modules/certificate/certificate.py:126
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "সফলভাবে"
 
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:126
+#: experimental/coursebuilder/modules/certificate/certificate.py:127
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "%(course)s কোর্স সম্পন্ন করার জন্য"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:254
+#: experimental/coursebuilder/modules/certificate/certificate.py:255
 msgid "Certificate"
 msgstr "শংসাপত্র"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:263
+#: experimental/coursebuilder/modules/certificate/certificate.py:264
 msgid "Click for certificate"
 msgstr "শংসাপত্রের জন্য ক্লিক করুন"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:271
+#: experimental/coursebuilder/modules/certificate/certificate.py:272
 msgid "Download PDF"
 msgstr "PDF ডাউনলোড করুন"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:278
+#: experimental/coursebuilder/modules/certificate/certificate.py:279
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -859,7 +861,7 @@ msgid "No results for \"%(query)s\""
 msgstr "\"%(query)s\" এর কোনো ফলাফল নেই"
 
 #. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.py:79
+#: experimental/coursebuilder/modules/search/search.py:80
 msgid "Search is currently unavailable."
 msgstr "অনুসন্ধান বর্তমানে অনুপলব্ধ৷"
 
@@ -886,7 +888,7 @@ msgstr "এতে লিড করে:"
 #. Describe an empty set of follow-on skills
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:68
 msgid "This lesson isn't a prerequisite for any other lesson."
-msgstr ""
+msgstr "এই পাঠটি অন্য কোনো পাঠের জন্য অবশ্যপূরণীয় পূর্বশর্ত নয়।"
 
 #. Header for list of links to lessons
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:15
@@ -1504,7 +1506,7 @@ msgstr ""
 #. Shown after the student has submitted an assessment in a unit that contains
 #. assessments and where all unit contents are shown on a single HTML page.
 #. This button allows the student to navigate back to the unit main page.
-#: experimental/coursebuilder/views/test_confirmation_content.html:20
+#: experimental/coursebuilder/views/test_confirmation_content.html:23
 msgid "Return to Unit"
 msgstr "ইউনিটে ফিরুন"
 
@@ -1583,4 +1585,5 @@ msgstr "পরবর্তী পৃষ্ঠা"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "শেষ"
+
 

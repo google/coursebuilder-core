@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-12 09:16-0700\n"
-"PO-Revision-Date: 2015-10-05 07:08-0700\n"
+"POT-Creation-Date: 2015-10-19 07:52-0700\n"
+"PO-Revision-Date: 2015-10-19 07:52-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: iw <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -150,7 +150,7 @@ msgstr " רמז "
 #. is not permitted)
 #: experimental/coursebuilder/modules/assessments/assessments.py:121
 msgid "Peer-review assignments cannot be embedded in external pages."
-msgstr ""
+msgstr "לא ניתן להטמיע מטלות שיש עליהן ביקורות של חברים ללימודים בדפים חיצוניים."
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
@@ -256,7 +256,7 @@ msgstr "הערכה"
 #. is an examination, test, quiz, or similar.)
 #: experimental/coursebuilder/modules/assessments/templates/assessment_page.html:39
 msgid "Assessment submitted."
-msgstr ""
+msgstr "ההערכה הוגשה."
 
 #. Shown on the assignment submission confirmation page when the student has
 #. submitted a duplicate assignment.
@@ -299,48 +299,48 @@ msgstr "חזרה לדף הקורס"
 
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:117
+#: experimental/coursebuilder/modules/certificate/certificate.py:118
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "אישור סיום קורס"
 
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:122
+#: experimental/coursebuilder/modules/certificate/certificate.py:123
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "מוענק ל:"
 
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:125
+#: experimental/coursebuilder/modules/certificate/certificate.py:126
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "בגין סיום מוצלח של"
 
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:126
+#: experimental/coursebuilder/modules/certificate/certificate.py:127
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "הקורס %(course)s"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:254
+#: experimental/coursebuilder/modules/certificate/certificate.py:255
 msgid "Certificate"
 msgstr "אישור"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:263
+#: experimental/coursebuilder/modules/certificate/certificate.py:264
 msgid "Click for certificate"
 msgstr "לחץ כדי לעבור לאישור"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:271
+#: experimental/coursebuilder/modules/certificate/certificate.py:272
 msgid "Download PDF"
 msgstr "הורד PDF"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:278
+#: experimental/coursebuilder/modules/certificate/certificate.py:279
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -410,7 +410,7 @@ msgstr "שם"
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:21
 #: experimental/coursebuilder/views/student_data_table.html:15
 msgid "Email"
-msgstr "דוא\"ל"
+msgstr "אימייל"
 
 #. Heading on the profile page shown above table of registered courses.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:29
@@ -606,7 +606,7 @@ msgstr "התקבלה בקשה לשינוי הסיסמה בשביל"
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:275
 msgid "Error: Empty email list"
-msgstr "שגיאה: רשימה ריקה של כתובות דוא\"ל"
+msgstr "שגיאה: רשימה ריקה של כתובות אימייל"
 
 #. Error indicating that the user cannot add the desired
 #. list of additional email addresses to the list of invitations;
@@ -633,7 +633,7 @@ msgstr "שגיאה: כתובת אימייל לא חוקית ‎\"%s\"‎"
 #: experimental/coursebuilder/modules/invitation/invitation.py:302
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
-msgstr "שגיאה: כבר שלחת בדוא\"ל הזמנה אל ‎\"%s\"‎"
+msgstr "שגיאה: כבר שלחת באימייל הזמנה אל ‎\"%s\"‎"
 
 #. Error indicating not all email messages were sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:319
@@ -706,7 +706,7 @@ msgid ""
 " you with the text shown below."
 msgstr ""
 "האם אתה מכיר אנשים אחרים שעשויים לרצות להצטרף לקורס הזה? הזן בהמשך את "
-"כתובות האימייל שלהם ולחץ על 'שלח'. הם יקבלו ממך דוא\"ל עם הטקסט שמופיע "
+"כתובות האימייל שלהם ולחץ על 'שלח'. הם יקבלו ממך אימייל עם הטקסט שמופיע "
 "בהמשך."
 
 #. Instructions on how to fill out email addresses in a form.
@@ -848,7 +848,7 @@ msgid "No results for \"%(query)s\""
 msgstr "לא נמצאו תוצאות עבור \"%(query)s\""
 
 #. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.py:79
+#: experimental/coursebuilder/modules/search/search.py:80
 msgid "Search is currently unavailable."
 msgstr "החיפוש אינו זמין כעת."
 
@@ -875,7 +875,7 @@ msgstr "מוביל אל:"
 #. Describe an empty set of follow-on skills
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:68
 msgid "This lesson isn't a prerequisite for any other lesson."
-msgstr ""
+msgstr "שיעור זה אינו תנאי מוקדם לאף שיעור אחר."
 
 #. Header for list of links to lessons
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:15
@@ -1461,7 +1461,7 @@ msgstr ""
 #. Shown after the student has submitted an assessment in a unit that contains
 #. assessments and where all unit contents are shown on a single HTML page.
 #. This button allows the student to navigate back to the unit main page.
-#: experimental/coursebuilder/views/test_confirmation_content.html:20
+#: experimental/coursebuilder/views/test_confirmation_content.html:23
 msgid "Return to Unit"
 msgstr "חזור ליחידה"
 
@@ -1540,4 +1540,5 @@ msgstr "הדף הבא"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "סיום"
+
 
