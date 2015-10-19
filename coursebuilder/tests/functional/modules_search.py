@@ -16,7 +16,6 @@
 
 __author__ = 'Ellis Michael (emichael@google.com)'
 
-import datetime
 import logging
 import re
 import urllib
