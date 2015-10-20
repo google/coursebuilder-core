@@ -20,7 +20,6 @@ from common import safe_dom
 
 DRAFT_TEXT = 'Private'
 PUBLISHED_TEXT = 'Public'
-
 PEER_MATCHER_NAME = 'Peer'
 
 LESSON_TITLE_DESCRIPTION = """
@@ -71,7 +70,7 @@ converted during "Import Course".
 LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = safe_dom.assemble_text_message("""
 If checked, the manual progress REST API permits users to manually mark a
 unit or lesson as complete, overriding the automatic progress tracking.
-""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
 
 LESSON_AVAILABILITY_DESCRIPTION = """
 If this lesson is "%s", only admins can see it. If it is "%s", then anyone
@@ -171,6 +170,14 @@ Show students the total score on the assignment after the due date is passed.
 If no due date is set, this flag has no effect.
 """
 
+ASSESSMENT_FAILING_TEXT = """
+This text is shown to a student upon receiving a failing result.
+"""
+
+ASSESSMENT_PASSING_TEXT = """
+This text is shown to a student upon receiving a passing result.
+"""
+
 HOMEPAGE_PRIVACY_URL_DESCRIPTION = """
 This link to your terms of service and privacy policy is displayed in the
 footer of every page. If blank, the link will be omitted. Links to other
@@ -197,7 +204,7 @@ If checked, a G+ button will be displayed in the header of all pages.
 ASSESSMENT_GRADING_METHOD_DESCRIPTION = safe_dom.assemble_text_message("""
 If this is set to "Peer review", this assessment will use the Peer Review
 module. Otherwise, it will be graded automatically.
-""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
 
 ASSESSMENT_DETAILS_DESCRIPTION = safe_dom.assemble_text_message("""
 Properties and restrictions of your assessment.
@@ -262,7 +269,25 @@ one page. Otherwise, each is shown on its own page.
 UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = safe_dom.assemble_text_message("""
 If checked, the manual progress REST API permits users to manually mark a
 unit or lesson as complete, overriding the automatic progress tracking.
-""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+
+UNIT_HIDE_ASSESSMENT_NAV = """
+If checked, the "Previous Page" and "Next Page" buttons will be omitted from
+pre- and post-assessments within units.
+"""
+
+UNIT_HIDE_LESSON_NAV = """
+If checked, the "Previous Page" and "Next Page" buttons will be omitted from
+lesson and activity pages.
+"""
+
+UNIT_HIDE_UNIT_NUMBERS = """
+If checked, numbers will be omitted when displaying unit titles.
+"""
+
+UNIT_SHOW_UNIT_LINK = """
+If checked, unit links will be displayed in the side navigation bar.
+"""
 
 COURSE_ADMIN_EMAILS_DESCRIPTION = """
 This list of email addresses represents the administrators for this course.
@@ -272,12 +297,12 @@ Separate addresses with a comma, space, or newline.
 # TODO(johncox): replace placeholder URL once target link is determined.
 COURSE_GOOGLE_ANALYTICS_ID_DESCRIPTION = safe_dom.assemble_text_message("""
 This ID is used to add Google Analytics functionality to this course.
-""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
 
 # TODO(johncox): replace placeholder URL once target link is determined.
 COURSE_GOOGLE_TAG_MANAGER_ID_DESCRIPTION = safe_dom.assemble_text_message("""
 This ID is used to add Google Tag Manager functionality to this course.
-""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
 
 UNIT_HEADER_DESCRIPTION = """
 This content appears at the top of the unit page.
@@ -303,4 +328,41 @@ The language your original course content is written in.
 
 PREVENT_TRANSLATION_EDITS_DESCRIPTION = """
 Enable this to boost performance if you are finished translating your course.
+"""
+
+REGISTRATION_EMAIL_BODY = """
+This is the body for welcome emails. Use the string {{student_name}} to include
+the name of the student and {{course_title}} to include the course title. To
+avoid spamming, you should always include {{unsubscribe_url}} in your message to
+add a link which the recipient can use to unsubscribe from future mailings.
+"""
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+REGISTRATION_EMAIL_SENDER = safe_dom.assemble_text_message("""
+This is the "from" email address for welcome emails. It must be set to a valid
+value for App Engine email.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+
+REGISTRATION_EMAIL_SUBJECT = """
+This is the subject line for welcome emails. Use the string {{student_name}} to
+include the name of the student and {{course_title}} to include the course
+title.
+"""
+
+REGISTRATION_INTRODUCTION = """
+This introduction text is shown to students at the top of the registration page.
+"""
+
+REGISTRATION_SEND_WELCOME_EMAIL = """
+If checked, welcome emails will be sent when new students register for the
+course. You must also leave notifications and unsubscribe modules active (this
+is the default). An email sender must also be specified.
+"""
+
+ROLES_PERMISSION_ALL_LOCALES_DESCRIPTION = """
+Can pick all languages, including unavailable ones.
+"""
+
+ROLES_PERMISSION_SEE_DRAFTS_DESCRIPTION = """
+Can see lessons and assessments with draft status.
 """

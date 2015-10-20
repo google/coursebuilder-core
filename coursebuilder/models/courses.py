@@ -2422,9 +2422,8 @@ class Course(object):
             description='Checking this box allows new students to register for '
             'the course.'))
         registration_opts.add_property(schema_fields.SchemaField(
-            'reg_form:header_text', 'Welcome Text', 'string', optional=True,
-            description='Text shown to students at the top of the registration '
-            'page encouraging them to sign up for the course.'))
+            'reg_form:header_text', 'Introduction', 'string', optional=True,
+            description=messages.REGISTRATION_INTRODUCTION))
         registration_opts.add_property(schema_fields.SchemaField(
             'reg_form:additional_registration_fields', 'Additional Fields',
             'html', description='Additional registration text or questions.',
@@ -2436,38 +2435,22 @@ class Course(object):
             i18n=False, optional=True))
         registration_opts.add_property(schema_fields.SchemaField(
             'course:send_welcome_notifications',
-            'Send welcome notifications', 'boolean', description='If enabled, '
-            'welcome notifications will be sent when new users register for '
-            'the course. Must also set "Welcome notifications sender" for '
-            'messages to be sent successfully, and you must have both the '
-            'notifications and unsubscribe modules active (which is the '
-            'default)', optional=True))
+            'Send Welcome Email', 'boolean',
+            description=messages.REGISTRATION_SEND_WELCOME_EMAIL,
+            optional=True))
         registration_opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_sender',
-            'Welcome notifications sender', 'string', optional=True,
+            'Email Sender', 'string', optional=True,
             i18n=False,
-            description='The "From:" email address used on outgoing '
-            'notifications. If "Send welcome notifications" is enabled, you '
-            'must set this to a valid value for App Engine email or outgoing '
-            'messages will fail. Note that you cannot use the user in session. '
-            'See https://developers.google.com/appengine/docs/python/mail/'
-            'emailmessagefields for details'))
+            description=str(messages.REGISTRATION_EMAIL_SENDER)))
         registration_opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_subject',
-            'Welcome notifications subject', 'string', optional=True,
-            description='The subject line in welcome notifications emails for '
-            'this course. Use the string {{student_name}} to include the name '
-            'of the student in the subject line and {{course_title}} to '
-            'include the course title.'))
+            'Email Subject', 'string', optional=True,
+            description=messages.REGISTRATION_EMAIL_SUBJECT))
         registration_opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_body',
-            'Welcome notifications body', 'text', optional=True,
-            description='The body of welcome emails to this course. Use the '
-            'string {{student_name}} to include the name of the student in the '
-            'message and use {{course_title}} to include the course title. To '
-            'avoid spamming, you should always include the string '
-            '{{unsubscribe_url}} in your message to include a link which the '
-            'recipient can use to unsubscribe from future mailings.'))
+            'Email Body', 'text', optional=True,
+            description=messages.REGISTRATION_EMAIL_BODY))
 
         # Unit level settings.
         unit_opts = reg.add_sub_registry(
@@ -2477,26 +2460,21 @@ class Course(object):
             })
         unit_opts.add_property(schema_fields.SchemaField(
             'unit:hide_lesson_navigation_buttons',
-            'Hide Lesson Navigation Buttons',
-            'boolean', description='Whether to hide the \'Previous Page\' and '
-            ' \'Next Page\' buttons below lesson and activity pages',
-            optional=True))
+            'Hide Lesson Nav', 'boolean',
+            description=messages.UNIT_HIDE_LESSON_NAV, optional=True))
         unit_opts.add_property(schema_fields.SchemaField(
             'unit:hide_assessment_navigation_buttons',
-            'Hide Assessment Navigation Buttons',
-            'boolean', description='Whether to hide the \'Previous Page\' and '
-            ' \'Next Page\' buttons below pre/post assessments within units',
+            'Hide Assessment Nav', 'boolean',
+            description=messages.UNIT_HIDE_ASSESSMENT_NAV,
             optional=True))
         unit_opts.add_property(schema_fields.SchemaField(
-            'unit:show_unit_links_in_leftnav', 'Show Units in Side Bar',
-            'boolean', description='Whether to show the unit links in the side '
-            'navigation bar.',
+            'unit:show_unit_links_in_leftnav', 'Show Unit Link',
+            'boolean', description=messages.UNIT_SHOW_UNIT_LINK,
             optional=True))
         unit_opts.add_property(schema_fields.SchemaField(
             'course:display_unit_title_without_index',
-            'Hide Unit Numbering', 'boolean',
-            description='Omit the unit number when displaying unit titles.',
-            optional=True))
+            'Hide Unit Numbers', 'boolean',
+            description=messages.UNIT_HIDE_UNIT_NUMBERS, optional=True))
 
         def must_contain_one_string_substitution(value, errors):
             if value and len(re.findall(r'%s', value)) != 1:
@@ -2507,14 +2485,14 @@ class Course(object):
         assessment_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_ASSESSMENT, 'Assessments')
         assessment_opts.add_property(schema_fields.SchemaField(
-            'assessment_confirmations:result_text:pass', 'Pass', 'string',
-            optional=True,
-            description='Text shown to the student on a passing result.',
+            'assessment_confirmations:result_text:pass', 'Passing Text',
+            'string', optional=True,
+            description=messages.ASSESSMENT_PASSING_TEXT,
             validator=must_contain_one_string_substitution))
         assessment_opts.add_property(schema_fields.SchemaField(
-            'assessment_confirmations:result_text:fail', 'Fail', 'string',
-            optional=True,
-            description='Text shown to the student on a failing result.',
+            'assessment_confirmations:result_text:fail', 'Failing Text',
+            'string', optional=True,
+            description=messages.ASSESSMENT_FAILING_TEXT,
             validator=must_contain_one_string_substitution))
 
         i18n_opts = reg.add_sub_registry(

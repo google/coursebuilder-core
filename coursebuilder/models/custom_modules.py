@@ -16,13 +16,11 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
-All_LOCALES_PERMISSION = 'can_pick_all_locales'
-All_LOCALES_DESCRIPTION = 'Can pick all locales, including unavailable ones.'
-
+ALL_LOCALES_PERMISSION = 'can_pick_all_locales'
 SEE_DRAFTS_PERMISSION = 'can_see_draft_content'
-SEE_DRAFTS_DESCRIPTION = 'Can see lessons and assessments with draft status.'
 
 import collections
+import messages
 import roles
 
 class Module(object):
@@ -114,8 +112,12 @@ def register_core_module(global_handlers, namespaced_handlers):
 
     def permissions_callback(unused_app_context):
         return [
-            roles.Permission(All_LOCALES_PERMISSION, All_LOCALES_DESCRIPTION),
-            roles.Permission(SEE_DRAFTS_PERMISSION, SEE_DRAFTS_DESCRIPTION)
+            roles.Permission(
+                ALL_LOCALES_PERMISSION,
+                messages.ROLES_PERMISSION_ALL_LOCALES_DESCRIPTION),
+            roles.Permission(
+                SEE_DRAFTS_PERMISSION,
+                messages.ROLES_PERMISSION_SEE_DRAFTS_DESCRIPTION)
         ]
 
     def notify_module_enabled():
@@ -130,7 +132,7 @@ def register_core_module(global_handlers, namespaced_handlers):
 
 def can_pick_all_locales(app_context):
     return roles.Roles.is_user_allowed(
-        app_context, core_module, All_LOCALES_PERMISSION)
+        app_context, core_module, ALL_LOCALES_PERMISSION)
 
 
 def can_see_drafts(app_context):

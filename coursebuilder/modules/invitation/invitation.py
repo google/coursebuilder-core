@@ -54,6 +54,7 @@ from models import data_removal
 from models import models
 from models import transforms
 from modules.courses import settings
+from modules.invitation import messages
 from modules.notifications import notifications
 from modules.unsubscribe import unsubscribe
 
@@ -291,15 +292,15 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
                 'invitations: %s. No messages sent.' % missing_count))
             return
 
-        messages = []
+        email_messages = []
         for email in email_set:
             if not is_email_valid(email):
                 # I18N: Error indicating an email addresses is not well-formed.
-                messages.append(self.gettext(
+                email_messages.append(self.gettext(
                     'Error: Invalid email "%s"' % email))
             elif invitation_data.is_in_invited_list(email):
                 # I18N: Error indicating an email addresses is already known.
-                messages.append(self.gettext(
+                email_messages.append(self.gettext(
                     'Error: You have already sent an invitation email to "%s"'
                     % email))
             elif unsubscribe.has_unsubscribed(email):
@@ -314,12 +315,12 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
         invitation_data.append_to_invited_list(email_set)
         invitation_data.put()
 
-        if messages:
+        if email_messages:
             # I18N: Error indicating not all email messages were sent.
-            messages.insert(0, self.gettext(
+            email_messages.insert(0, self.gettext(
                 'Not all messages were sent (%s / %s):') % (
-                    len(email_set) - len(messages), len(email_set)))
-            transforms.send_json_response(self, 400, '\n'.join(messages))
+                    len(email_set) - len(email_messages), len(email_set)))
+            transforms.send_json_response(self, 400, '\n'.join(email_messages))
         else:
             transforms.send_json_response(
                 self, 200,
@@ -330,10 +331,8 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
 def get_course_settings_fields():
     enable = schema_fields.SchemaField(
         'course:invitation_email:enabled',
-        'Enable Invitations', 'boolean',
-        description='Enable students to send emails inviting others to the '
-            'course.',
-        extra_schema_dict_values={
+        'Allow Invitation', 'boolean',
+        description=messages.ALLOW_INVITATION, extra_schema_dict_values={
             'className': 'invitation-enable inputEx-Field inputEx-CheckBox'},
         optional=True)
     sender_email = schema_fields.SchemaField(
@@ -354,12 +353,7 @@ def get_course_settings_fields():
     body_template = schema_fields.SchemaField(
         'course:invitation_email:body_template',
         'Invitation Body', 'text',
-        description='The body of invitation emails to this course. '
-            'Use the string {{sender_name}} to include the name of the student '
-            'issuing the invitation. To avoid spamming, you should always '
-            'include the string {{unsubscribe_url}} in your message to include '
-            'a link which the recipient can use to unsubscribe from future '
-            'invitations.',
+        description=messages.ALLOW_INVITATION,
         extra_schema_dict_values={'className': 'invitation-data inputEx-Field'},
         optional=True)
 

@@ -509,6 +509,7 @@ modules/i18n_dashboard/templates/translation_console.js
 modules/i18n_dashboard/templates/upload_translations.js
 modules/invitation/__init__.py
 modules/invitation/invitation.py
+modules/invitation/messages.py
 modules/invitation/resources/css/invitation.css
 modules/invitation/resources/js/invitation.js
 modules/invitation/templates/invitation.html
@@ -551,6 +552,7 @@ modules/questionnaire/resources/img/icon.png
 modules/questionnaire/resources/js/questionnaire.js
 modules/questionnaire/templates/questionnaire.html
 modules/rating/__init__.py
+modules/rating/messages.py
 modules/rating/rating.py
 modules/rating/resources/css/widget.css
 modules/rating/resources/js/widget.js

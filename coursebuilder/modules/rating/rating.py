@@ -33,6 +33,7 @@ from models import data_removal
 from models import data_sources
 from models import models
 from models import transforms
+from modules.rating import messages
 
 RESOURCES_PATH = '/modules/rating/resources'
 
@@ -280,9 +281,8 @@ def extra_content(app_context):
 
 def get_course_settings_fields(unused_course):
     return schema_fields.SchemaField(
-        'unit:ratings_module:enabled', 'Ratings widget', 'boolean',
-        description='Whether to show user rating widget at the bottom of '
-        'each unit and lesson.', optional=True)
+        'unit:ratings_module:enabled', 'Show Ratings Widget', 'boolean',
+        description=messages.SHOW_RATINGS_WIDGET, optional=True)
 
 
 def register_module():
