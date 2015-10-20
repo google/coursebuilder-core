@@ -315,8 +315,15 @@ def unprefix(path, prefix):
     return path
 
 
+def _add_handler_to_headers(handler):
+    if users.is_current_user_admin():
+        handler.response.headers[
+            'GCB-HANDLER-CLASS'] = handler.__class__.__name__
+
+
 def set_static_resource_cache_control(handler):
     """Properly sets Cache-Control for a WebOb/webapp2 response."""
+    _add_handler_to_headers(handler)
     handler.response.cache_control.no_cache = None
     handler.response.cache_control.public = DEFAULT_CACHE_CONTROL_PUBLIC
     handler.response.cache_control.max_age = DEFAULT_CACHE_CONTROL_MAX_AGE
@@ -324,6 +331,7 @@ def set_static_resource_cache_control(handler):
 
 def set_default_response_headers(handler):
     """Sets the default headers for outgoing responses."""
+    _add_handler_to_headers(handler)
 
     # This conditional is needed for the unit tests to pass, since their
     # handlers do not have a response attribute.
@@ -1465,9 +1473,9 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
     @classmethod
     def _needs_error_handler(cls, request, response, status_code):
-        """Checks if response has a an error, which need to be handled."""
+        """Checks if response has an error, which need to be handled."""
         is_rest_handler = issubclass(cls, utils.RESTHandlerMixin)
-        has_pending_content = len(response.body) > 0
+        has_pending_content = response and len(response.body) > 0
         is_suitable_error_code = status_code >= 400
         return (
             is_suitable_error_code and
@@ -1535,13 +1543,17 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         else:
             self._error_404(path)
 
-    @classmethod
-    def handle_exception(cls, request, response, e):
-        status_code = cls._get_status_code_from_dispatch_exception(
-            request.method.lower(), request.path, e)
+    def handle_exception(self, e, debug_mode):
+        method = None
+        path = None
+        if self.request:
+            method = self.request.method.lower()
+            path = self.request.path
+        status_code = self._get_status_code_from_dispatch_exception(
+            method, path, e)
         if status_code >= 500:
             logging.error(e)
-        cls._finalize_response(request, response, status_code)
+        self._finalize_response(self.request, self.response, status_code)
 
     def get(self, path):
         self.invoke_http_verb('GET', path, self._login_or_404)
