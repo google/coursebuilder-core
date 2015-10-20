@@ -18,6 +18,7 @@ __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
 import collections
 import copy
+import itertools
 import json
 
 
@@ -85,7 +86,7 @@ class Registry(object):
         self._description = description
         if description:
             self._registry['description'] = description
-        self._extra_schema_dict_values = extra_schema_dict_values
+        self._extra_schema_dict_values = extra_schema_dict_values or {}
         self._properties = []
         self._sub_registries = collections.OrderedDict()
 
@@ -228,6 +229,23 @@ class SchemaField(Property):
     def i18n(self):
         return self._i18n
 
+    @property
+    def _override_type(self):
+        """The final type, if it differs from the validation type"""
+        if '_type' in self._extra_schema_dict_values:
+            return self._extra_schema_dict_values['_type']
+        if self._hidden:
+            return 'hidden'
+        elif not self._editable:
+            return 'uneditable'
+        elif self._select_data:
+            return 'select'
+        return None
+
+    def get_display_types(self):
+        """List of types needed to render this"""
+        return [self._override_type or self.type]
+
     def get_json_schema_dict(self):
         """Get the JSON schema for this field."""
         prop = {}
@@ -247,14 +265,12 @@ class SchemaField(Property):
         else:
             schema = {}
         schema['label'] = self._label
-        if self._hidden:
-            schema['_type'] = 'hidden'
-        elif not self._editable:
-            schema['_type'] = 'uneditable'
-        elif self._select_data and '_type' not in schema:
-            schema['_type'] = 'select'
 
-        if 'date' is self._property_type:
+        override_type = self._override_type
+        if override_type:
+            schema['_type'] = override_type
+
+        if self._property_type == 'date':
             if 'dateFormat' not in schema:
                 schema['dateFormat'] = 'Y/m/d'
             if 'valueFormat' not in schema:
@@ -274,6 +290,9 @@ class SchemaField(Property):
     def validate(self, value, errors):
         if self._validator:
             self._validator(value, errors)
+
+    def __repr__(self):
+        return '<{} {}>'.format(self.__class__.__name__, self.name)
 
 
 class FieldArray(SchemaField):
@@ -310,19 +329,56 @@ class FieldArray(SchemaField):
         display_dict['item_type'] = self.item_type.get_display_dict()
         return display_dict
 
+    def get_display_types(self):
+        """List of types needed to render this"""
+        return itertools.chain(
+            super(FieldArray, self).get_display_types(),
+            self.item_type.get_display_types())
+
 
 class FieldRegistry(Registry):
     """FieldRegistry is an object with SchemaField properties."""
 
+    def _iter_fields(self):
+        """Iterate fields like dict.iteritems"""
+        for schema_field in self._properties:
+            yield (schema_field.name, schema_field)
+
+    def _iter_sub_registries(self):
+        """Iterate sub-registries like dict.iteritems"""
+        return self._sub_registries.iteritems()
+
+    def _iter_fields_and_sub_registries(self):
+        """Iterate fields and sub-registries like dict.iteritems"""
+        return itertools.chain(self._iter_fields(), self._iter_sub_registries())
+
+    def _deep_iter_fields(self):
+        """Iterate fields in this registry and its sub-registries recursively.
+
+        Results look like dict.iteritems.  Keys are just the field names.  They
+        don't incorporate parent keys."""
+        # pylint: disable=protected-access
+        return itertools.chain(self._iter_fields(),
+            itertools.chain.from_iterable(
+                item._deep_iter_fields()
+                for (key, item) in self._iter_sub_registries()))
+
+    def _get_display_type(self):
+        return self._extra_schema_dict_values.get('_type', 'group')
+
+    def get_display_types(self):
+        """List of types needed to render this"""
+        return itertools.chain(
+            [self._get_display_type()],
+            itertools.chain.from_iterable([
+                item.get_display_types()
+                for (key, item) in self._deep_iter_fields()]))
+
     def get_json_schema_dict(self):
         schema_dict = dict(self._registry)
-        schema_dict['properties'] = collections.OrderedDict()
-        for schema_field in self._properties:
-            schema_dict['properties'][schema_field.name] = (
-                schema_field.get_json_schema_dict())
-        for key in self._sub_registries.keys():
-            schema_dict['properties'][key] = (
-                self._sub_registries[key].get_json_schema_dict())
+        schema_dict['properties'] = collections.OrderedDict(
+            (key, schema_field.get_json_schema_dict())
+            for key, schema_field in self._iter_fields_and_sub_registries())
         return schema_dict
 
     def get_json_schema(self):
@@ -343,21 +399,11 @@ class FieldRegistry(Registry):
         base_key = list(prefix_key)
         base_key.append('properties')
 
-        # pylint: disable=protected-access
-        for schema_field in self._properties:
-            key = base_key + [schema_field.name]
-            schema_dict += schema_field._get_schema_dict(key)
-        # pylint: enable=protected-access
-
-        for key in self._sub_registries.keys():
-            sub_registry_key_prefix = list(base_key)
-            sub_registry_key_prefix.append(key)
-            sub_registry = self._sub_registries[key]
+        return schema_dict + list(itertools.chain.from_iterable(
             # pylint: disable=protected-access
-            for entry in sub_registry._get_schema_dict(sub_registry_key_prefix):
-                schema_dict.append(entry)
+            item._get_schema_dict(base_key + [key])
             # pylint: enable=protected-access
-        return schema_dict
+            for key, item in self._iter_fields_and_sub_registries()))
 
     def get_schema_dict(self):
         """Get schema dict for this API."""

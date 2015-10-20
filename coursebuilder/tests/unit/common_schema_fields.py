@@ -378,7 +378,7 @@ class StructureRecursionTests(unittest.TestCase):
         child = parent.add_sub_registry('child_dict_name', 'child_dict_title')
 
         simple_array_type = schema_fields.SchemaField(
-            'simple_array_type_name', 'simple_array_type_title', 'string')
+            'simple_array_type_name', 'simple_array_type_title', 'type1')
         parent.add_property(schema_fields.FieldArray(
             'simple_array_prop_name', 'simple_array_prop_label',
             item_type=simple_array_type))
@@ -392,15 +392,15 @@ class StructureRecursionTests(unittest.TestCase):
             'complex_array_prop_name', 'complex_array_prop_label',
             item_type=complex_array_type))
         parent.add_property(schema_fields.SchemaField(
-            'parent_prop', 'X', 'string'))
+            'parent_prop', 'X', 'type2'))
         child.add_property(schema_fields.SchemaField(
-            'child_prop', 'X', 'string'))
+            'child_prop', 'X', 'type3'))
         complex_array_type.add_property(schema_fields.SchemaField(
-            'complex_array_type_prop', 'X', 'string'))
+            'complex_array_type_prop', 'X', 'type4'))
         array_child.add_property(schema_fields.SchemaField(
-            'array_child_p1', 'X', 'string'))
+            'array_child_p1', 'X', 'type5'))
         array_child.add_property(schema_fields.SchemaField(
-            'array_child_p2', 'X', 'string'))
+            'array_child_p2', 'X', 'type6'))
         self.schema = parent
 
         self.entity = {
@@ -437,6 +437,67 @@ class StructureRecursionTests(unittest.TestCase):
                 }
             ]
         }
+
+
+class ComplexDisplayTypeTests(StructureRecursionTests):
+    def test_complex_recursion(self):
+        self.assertEquals(
+            set(self.schema.get_display_types()),
+            set([
+                'array', 'type1', 'type2', 'type3', 'type4', 'type5', 'type6',
+                'group']))
+
+
+class DisplayTypeTests(unittest.TestCase):
+    def test_simple_field(self):
+        self.assertEquals(
+            set(schema_fields.SchemaField(
+                'x', 'x', 'string').get_display_types()),
+            set(['string']))
+
+    def test_automatically_overridden_type(self):
+        self.assertEquals(
+            set(schema_fields.SchemaField(
+                'x', 'x', 'int', select_data={'a':'b'}).get_display_types()),
+            set(['select']))
+
+    def test_manually_overridden_types_are_stronger(self):
+        self.assertEquals(
+            set(schema_fields.SchemaField(
+                'x', 'x', 'int', select_data={'a':'b'},
+                extra_schema_dict_values={"_type": "special-select"}
+                ).get_display_types()),
+            set(['special-select']))
+
+    def test_field_registry(self):
+        registry = schema_fields.FieldRegistry(None, '')
+        registry.add_property(schema_fields.SchemaField('x', 'x', 'string'))
+        registry.add_property(schema_fields.SchemaField('y', 'y', 'datetime'))
+
+        sub_registry = registry.add_sub_registry('sub')
+        sub_registry.add_property(schema_fields.SchemaField(
+            'z', 'z', 'integer'))
+
+        self.assertEquals(
+            set(registry.get_display_types()),
+            set(['string', 'datetime', 'integer', 'group']))
+
+    def test_simple_field_array(self):
+        self.assertEquals(
+            set(schema_fields.FieldArray(
+                'x', 'x', item_type=schema_fields.SchemaField(
+                    None, None, 'string')).get_display_types()),
+            set(['array', 'string']))
+
+    def test_complex_field_array(self):
+        item_type = schema_fields.FieldRegistry(None, '')
+        item_type.add_property(schema_fields.SchemaField('x', 'x', 'string'))
+        item_type.add_property(schema_fields.SchemaField('y', 'y', 'datetime'))
+
+        self.assertEquals(
+            set(schema_fields.FieldArray(
+                'x', 'x', item_type=item_type).get_display_types()),
+            set(['array', 'string', 'datetime', 'group']))
 
 
 class CloneItemsNamedTests(StructureRecursionTests):

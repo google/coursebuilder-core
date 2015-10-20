@@ -2050,8 +2050,6 @@ def notify_module_enabled():
         lesson_rest_handler_pre_load_hook)
     LessonRESTHandler.PRE_SAVE_HOOKS.append(
         lesson_rest_handler_pre_save_hook)
-    LessonRESTHandler.REQUIRED_MODULES.append('inputex-list')
-    LessonRESTHandler.REQUIRED_MODULES.append('inputex-integer')
 
     BaseQuestionRESTHandler.SCHEMA_LOAD_HOOKS.append(
         question_rest_handler_schema_load_hook)
@@ -2066,7 +2064,6 @@ def notify_module_enabled():
 
     McQuestionRESTHandler.ADDITIONAL_DIRS.append(TEMPLATES_DIR)
     McQuestionRESTHandler.EXTRA_JS_FILES.append('skill_tagging.js')
-    McQuestionRESTHandler.REQUIRED_MODULES.append('inputex-integer')
     SaQuestionRESTHandler.ADDITIONAL_DIRS.append(TEMPLATES_DIR)
     SaQuestionRESTHandler.EXTRA_JS_FILES.append('skill_tagging.js')
 

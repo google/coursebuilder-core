@@ -59,7 +59,6 @@ class AdminPreferencesEditor(dto_editor.BaseDatastoreAssetEditor):
 class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     URI = '/rest/admin_prefs'
-    REQUIRED_MODULES = ['inputex-hidden', 'inputex-checkbox']
     EXTRA_JS_FILES = []
     XSRF_TOKEN = 'admin-prefs-edit'
     SCHEMA_VERSIONS = [models.StudentPreferencesDAO.CURRENT_VERSION]

@@ -45,13 +45,26 @@ TEMPLATES_DIR = os.path.join(
 COMMON_REQUIRED_MODULES = [
     'inputex-group', 'inputex-form', 'inputex-jsonschema']
 
-ALL_MODULES = [
-    'querystring-stringify-simple', 'inputex-select', 'inputex-string',
-    'inputex-radio', 'inputex-date', 'inputex-datepicker', 'inputex-checkbox',
-    'inputex-list', 'inputex-color', 'gcb-rte', 'inputex-textarea',
-    'inputex-url', 'gcb-uneditable', 'inputex-integer', 'inputex-hidden',
-    'inputex-file', 'io-upload-iframe', 'inputex-number', 'array-extras',
-    'gcb-code', 'inputex-datetime', 'gcb-datetime']
+TYPES_TO_MODULES = {
+    'select':       'inputex-select',
+    'string':       'inputex-string',
+    'radio':        'inputex-radio',
+    'boolean':      'inputex-checkbox',
+    'array':        'inputex-list',
+    'html':         'gcb-rte',
+    'text':         'inputex-textarea',
+    'url':          'inputex-url',
+    'uneditable':   'gcb-uneditable',
+    'integer':      'inputex-integer',
+    'hidden':       'inputex-hidden',
+    'file':         'inputex-file',
+    'number':       'inputex-number',
+    'code':         'gcb-code',
+    'datetime':     'gcb-datetime',
+    'group':        'inputex-group',
+}
+EXTRA_MODULES = ['array-extras', 'io-upload-iframe']
+ALL_MODULES = TYPES_TO_MODULES.values() + EXTRA_MODULES
 
 _DEPRECATED_STATIC_URI = '/modules/oeditor/resources'
 _STATIC_URI = '/modules/oeditor/_static'
@@ -69,17 +82,20 @@ class ObjectEditor(object):
     def get_html_for(
         cls, handler, schema_json, annotations, object_key,
         rest_url, exit_url,
-        extra_args=None,
-        save_method='put',
+        additional_dirs=None,
+        auto_return=False,
         delete_url=None, delete_message=None, delete_method='post',
-        auto_return=False, read_only=False,
-        required_modules=None,
+        delete_button_caption='Delete',
+        display_types=None,
+        exit_button_caption='Close',
+        extra_args=None,
         extra_css_files=None,
         extra_js_files=None,
-        additional_dirs=None,
-        delete_button_caption='Delete',
+        extra_required_modules=None,
+        read_only=False,
+        required_modules=None,
         save_button_caption='Save',
-        exit_button_caption='Close'):
+        save_method='put'):
         """Creates an HTML code needed to embed and operate this form.
 
         This method creates an HTML, JS and CSS  required to embed JSON
@@ -92,33 +108,43 @@ class ObjectEditor(object):
             object_key: a key of an object being edited
             rest_url: a REST endpoint for object GET/PUT operation
             exit_url: a URL to go to after the editor form is dismissed
-            extra_args: extra request params passed back in GET and POST
-            save_method: how the data should be saved to the server (put|upload)
+            auto_return: whether to return to the exit_url on successful save
+            additional_dirs: list of extra directories to look for
+                Jinja template files, e.g., JS or CSS files included by modules.
             delete_url: optional URL for delete operation
             delete_message: string. Optional custom delete confirmation message
             delete_method: optional HTTP method for delete operation
-            auto_return: whether to return to the exit_url on successful save
-            read_only: optional flag; if set, removes Save and Delete operations
-            required_modules: list of inputex modules required for this editor
+            delete_button_caption: string. A caption for the 'Delete' button
+            display_types: list of strings. All schema field types
+            exit_button_caption: a caption for the 'Close' button
+            extra_args: extra request params passed back in GET and POST
             extra_css_files: list of extra CSS files to be included
             extra_js_files: list of extra JS files to be included
-            additional_dirs: list of extra directories to look for
-                Jinja template files, e.g., JS or CSS files included by modules.
-            delete_button_caption: string. A caption for the 'Delete' button
+            extra_required_modules: list of strings.
+                inputex modules not covered by display_types
+            read_only: optional flag; if set, removes Save and Delete operations
+            required_modules: list of inputex modules required for this editor
             save_button_caption: a caption for the 'Save' button
-            exit_button_caption: a caption for the 'Close' button
+            save_method: how the data should be saved to the server (put|upload)
 
         Returns:
             The HTML, JS and CSS text that will instantiate an object editor.
         """
+
         if required_modules:
             if not set(required_modules).issubset(set(ALL_MODULES)):
                 difference = set(required_modules).difference(set(ALL_MODULES))
                 raise ValueError(
                     "Unsupported inputEx modules were required: {}".format(
                         difference))
+        elif display_types:
+            required_modules = list(set(
+                TYPES_TO_MODULES[type_name] for type_name in display_types))
         else:
             required_modules = ALL_MODULES
+
+        if extra_required_modules:
+            required_modules += extra_required_modules
 
         if not delete_message:
             kind = transforms.loads(schema_json).get('description')

@@ -11,8 +11,6 @@ module.exports = function(config) {
       YUI_BASE + '/dom-screen/dom-screen.js',
       YUI_BASE + '/node-screen/node-screen.js',
       YUI_BASE + '/node-style/node-style.js',
-      YUI_BASE + '/querystring-stringify-simple/' +
-          'querystring-stringify-simple.js',
       YUI_BASE + '/io-base/io-base.js',
       YUI_BASE + '/json-parse/json-parse.js',
       YUI_BASE + '/json-stringify/json-stringify.js',

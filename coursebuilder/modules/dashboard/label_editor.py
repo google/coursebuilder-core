@@ -51,9 +51,6 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
 
     URI = '/rest/label'
 
-    REQUIRED_MODULES = [
-        'gcb-rte', 'inputex-radio', 'inputex-string', 'inputex-number',
-        'inputex-hidden', 'gcb-uneditable']
     EXTRA_JS_FILES = []
 
     XSRF_TOKEN = 'label-edit'

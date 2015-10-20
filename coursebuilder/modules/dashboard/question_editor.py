@@ -130,10 +130,7 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
 
     URI = '/rest/question/mc'
 
-    REQUIRED_MODULES = [
-        'array-extras', 'gcb-rte', 'inputex-radio', 'inputex-select',
-        'inputex-string', 'inputex-list', 'inputex-number', 'inputex-hidden',
-        'inputex-checkbox']
+    EXTRA_REQUIRED_MODULES = ['array-extras']
     EXTRA_JS_FILES = [
         'question_editor_lib.js', 'mc_question_editor_lib.js',
         'mc_question_editor.js']
@@ -201,10 +198,6 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
     """REST handler for editing short answer questions."""
 
     URI = '/rest/question/sa'
-
-    REQUIRED_MODULES = [
-        'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list',
-        'inputex-hidden', 'inputex-integer', 'inputex-number']
 
     EXTRA_JS_FILES = [
         'question_editor_lib.js', 'sa_question_editor.js',
@@ -293,8 +286,6 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     URI = '/rest/question/gift'
 
-    REQUIRED_MODULES = [
-        'inputex-string', 'inputex-hidden', 'inputex-textarea']
     EXTRA_JS_FILES = []
 
     XSRF_TOKEN = 'import-gift-questions'

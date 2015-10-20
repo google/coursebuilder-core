@@ -95,10 +95,10 @@ class CourseSettingsHandler(object):
         form_html = oeditor.ObjectEditor.get_html_for(
             handler, schema.get_json_schema(), schema.get_schema_dict(),
             key, rest_url, exit_url,
+            additional_dirs=CourseSettingsHandler.ADDITIONAL_DIRS,
             extra_css_files=CourseSettingsHandler.EXTRA_CSS_FILES,
             extra_js_files=CourseSettingsHandler.EXTRA_JS_FILES,
-            additional_dirs=CourseSettingsHandler.ADDITIONAL_DIRS,
-            required_modules=CourseSettingsRESTHandler.REQUIRED_MODULES)
+            display_types=schema.get_display_types())
         template_values.update({
             'main_content': form_html,
         })
@@ -300,12 +300,6 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
 class CourseSettingsRESTHandler(CourseYamlRESTHandler):
     """Provides REST API for a file."""
 
-    REQUIRED_MODULES = [
-        'inputex-date', 'inputex-string', 'inputex-textarea', 'inputex-url',
-        'inputex-checkbox', 'inputex-select', 'gcb-uneditable', 'gcb-rte',
-        'inputex-hidden', 'inputex-integer', 'inputex-url',
-    ]
-
     URI = '/rest/course/settings'
 
     XSRF_ACTION = 'basic-course-settings-put'
@@ -395,7 +389,8 @@ class HtmlHookHandler(controllers_utils.ApplicationHandler):
             handler, registry.get_json_schema(), registry.get_schema_dict(),
             key, rest_url, exit_url,
             delete_url=delete_url, delete_method='delete',
-            required_modules=HtmlHookRESTHandler.REQUIRED_MODULES)
+            display_types=schema.get_display_types())
+
 
         template_values = {}
         template_values['page_title'] = handler.format_title('Edit Hook HTML')
@@ -415,8 +410,6 @@ class HtmlHookRESTHandler(CourseYamlRESTHandler):
     """REST API for individual HTML hook entries in course.yaml."""
 
     REGISTRY = _create_hook_registry()
-    REQUIRED_MODULES = [
-        'inputex-textarea', 'gcb-uneditable', 'gcb-rte', 'inputex-hidden']
     URI = '/rest/course/html_hook'
     XSRF_ACTION = 'html-hook-put'
 

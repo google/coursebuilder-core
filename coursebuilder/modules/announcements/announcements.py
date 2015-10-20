@@ -219,7 +219,7 @@ class AnnouncementsDashboardHandler(
             delete_message='Are you sure you want to delete this announcement?',
             delete_url=self._get_delete_url(
                 AnnouncementsItemRESTHandler.URL, key, 'announcement-delete'),
-            required_modules=AnnouncementsItemRESTHandler.REQUIRED_MODULES)
+            display_types=schema.get_display_types())
 
         self.render_page({
             'main_content': form_html,
@@ -264,11 +264,6 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
     """Provides REST API for an announcement."""
 
     URL = '/rest/announcements/item'
-
-    REQUIRED_MODULES = [
-        'inputex-date', 'gcb-rte', 'inputex-select', 'inputex-string',
-        'gcb-uneditable', 'inputex-checkbox', 'inputex-list',
-        'inputex-hidden', 'inputex-datetime', 'gcb-datetime']
 
     STATUS_ACTION = 'set_draft_status_announcement'
 

@@ -108,10 +108,6 @@ class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     URI = '/rest/question_group'
 
-    REQUIRED_MODULES = [
-        'gcb-rte', 'inputex-hidden', 'inputex-select', 'inputex-string',
-        'inputex-list', 'inputex-number']
-
     EXTRA_CSS_FILES = ['question_group_editor.css']
     EXTRA_JS_FILES = ['question_group_editor.js']
 

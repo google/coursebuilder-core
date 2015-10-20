@@ -50,9 +50,6 @@ class RoleRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     URI = '/rest/role'
 
-    REQUIRED_MODULES = [
-        'inputex-hidden', 'inputex-string', 'inputex-checkbox',
-        'inputex-textarea', 'inputex-list', 'gcb-uneditable']
     EXTRA_JS_FILES = ['role_editor.js']
 
     XSRF_TOKEN = 'role-edit'

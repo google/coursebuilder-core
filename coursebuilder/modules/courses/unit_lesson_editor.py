@@ -325,14 +325,15 @@ class UnitLessonEditor(object):
             schema_json,
             annotations_dict,
             key, rest_url, exit_url,
-            extra_args=extra_args,
-            delete_url=delete_url, delete_method=delete_method,
-            delete_message=delete_message,
-            read_only=not handler.app_context.is_editable_fs(),
-            required_modules=rest_handler_cls.REQUIRED_MODULES,
             additional_dirs=extend_list(additional_dirs, 'ADDITIONAL_DIRS'),
+            delete_url=delete_url,
+            delete_method=delete_method,
+            delete_message=delete_message,
+            display_types=schema.get_display_types(),
+            extra_args=extra_args,
             extra_css_files=extend_list(extra_css_files, 'EXTRA_CSS_FILES'),
-            extra_js_files=extend_list(extra_js_files, 'EXTRA_JS_FILES'))
+            extra_js_files=extend_list(extra_js_files, 'EXTRA_JS_FILES'),
+            read_only=not handler.app_context.is_editable_fs())
 
         template_values = {}
         template_values['page_title'] = handler.format_title('Edit %s' % title)
@@ -422,8 +423,8 @@ class UnitLessonEditor(object):
             schema.get_json_schema(),
             annotations_dict,
             key, handler.canonicalize_url(LessonRESTHandler.URI), None,
-            required_modules=LessonRESTHandler.REQUIRED_MODULES,
             additional_dirs=LessonRESTHandler.ADDITIONAL_DIRS,
+            display_types=schema.get_display_types(),
             extra_css_files=LessonRESTHandler.EXTRA_CSS_FILES,
             extra_js_files=extra_js_files)
         template = handler.get_template('in_place_lesson_editor.html', [])
@@ -562,10 +563,6 @@ class UnitRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to unit."""
 
     URI = '/rest/course/unit'
-    REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'gcb-uneditable',
-        'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-integer',
-        'inputex-checkbox', 'gcb-rte']
 
     @classmethod
     def can_view(cls, app_context):
@@ -620,10 +617,6 @@ class LinkRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to link."""
 
     URI = '/rest/course/link'
-    REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'gcb-uneditable',
-        'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-checkbox',
-        'inputex-url']
 
     @classmethod
     def can_view(cls, app_context):
@@ -795,10 +788,6 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to assessment."""
 
     URI = '/rest/course/assessment'
-    REQUIRED_MODULES = [
-        'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-textarea',
-        'gcb-uneditable', 'inputex-integer', 'inputex-number', 'inputex-hidden',
-        'inputex-checkbox', 'inputex-list', 'inputex-datetime', 'gcb-datetime']
 
     @classmethod
     def get_schema(cls, course, key):
@@ -883,11 +872,6 @@ class LessonRESTHandler(utils.BaseRESTHandler):
     """Provides REST API to handle lessons and activities."""
 
     URI = '/rest/course/lesson'
-
-    REQUIRED_MODULES = [
-        'inputex-string', 'gcb-rte', 'inputex-select', 'inputex-textarea',
-        'gcb-uneditable', 'inputex-checkbox', 'inputex-hidden',
-        'inputex-url']
 
     # Enable modules to specify locations to load JS and CSS files
     ADDITIONAL_DIRS = []

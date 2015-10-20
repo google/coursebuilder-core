@@ -60,12 +60,14 @@ class BaseDatastoreAssetEditor(utils.ApplicationHandler):
             schema.get_json_schema(),
             schema.get_schema_dict(),
             key, rest_url, exit_url,
+            additional_dirs=getattr(rest_handler, 'ADDITIONAL_DIRS', None),
             auto_return=auto_return,
             delete_url=delete_url, delete_method='delete',
-            required_modules=rest_handler.REQUIRED_MODULES,
-            extra_js_files=rest_handler.EXTRA_JS_FILES,
+            display_types=schema.get_display_types(),
             extra_css_files=getattr(rest_handler, 'EXTRA_CSS_FILES', None),
-            additional_dirs=getattr(rest_handler, 'ADDITIONAL_DIRS', None),)
+            extra_js_files=rest_handler.EXTRA_JS_FILES,
+            extra_required_modules=
+                getattr(rest_handler, 'EXTRA_REQUIRED_MODULES', None))
 
 
 class BaseDatastoreRestHandler(utils.BaseRESTHandler):

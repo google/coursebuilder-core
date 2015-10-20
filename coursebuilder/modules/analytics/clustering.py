@@ -315,8 +315,6 @@ class ClusterRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     SCHEMA_VERSIONS = ['1.0']
 
-    REQUIRED_MODULES = []
-
     EXTRA_JS_FILES = ['cluster_rest.js']
     EXTRA_CSS_FILES = []
     ADDITIONAL_DIRS = [os.path.join(

@@ -467,8 +467,6 @@ def register_module():
 
     def on_module_enabled():
         register_analytic()
-        settings.CourseSettingsRESTHandler.REQUIRED_MODULES.append(
-            'inputex-list')
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[MODULE_NAME].append(
             get_criteria_editor_schema)
         courses.Course.OPTIONS_SCHEMA_PROVIDER_TITLES[

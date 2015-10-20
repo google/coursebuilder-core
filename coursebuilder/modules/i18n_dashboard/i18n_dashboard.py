@@ -530,17 +530,19 @@ class I18nDeletionHandler(BaseDashboardExtension):
     ACTION = 'i18n_delete'
 
     def render(self):
+        schema = TranslationDeletionRestHandler.schema()
         main_content = oeditor.ObjectEditor.get_html_for(
             self.handler,
-            TranslationDeletionRestHandler.schema().get_json_schema(),
-            TranslationDeletionRestHandler.schema().get_schema_dict(),
+            schema.get_json_schema(),
+            schema.get_schema_dict(),
             '',
             self.handler.canonicalize_url(TranslationDeletionRestHandler.URL),
             self.handler.get_action_url(I18nDashboardHandler.ACTION),
-            save_button_caption='Delete', auto_return=True,
-            required_modules=TranslationDeletionRestHandler.REQUIRED_MODULES,
+            additional_dirs=[TEMPLATES_DIR],
+            auto_return=True,
+            display_types=schema.get_display_types(),
             extra_js_files=['delete_translations.js'],
-            additional_dirs=[TEMPLATES_DIR])
+            save_button_caption='Delete')
         self.handler.render_page({
             'page_title': self.handler.format_title(
                 'Translation Deletion'),
@@ -552,10 +554,6 @@ class TranslationDeletionRestHandler(utils.BaseRESTHandler):
 
     URL = '/rest/modules/i18n_dashboard/i18n_deletion'
     XSRF_TOKEN_NAME = 'translation_deletion'
-    REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'inputex-hidden',
-        'inputex-checkbox', 'inputex-list', 'gcb-uneditable',
-        ]
 
     @classmethod
     def schema(cls):
@@ -678,17 +676,18 @@ class I18nDownloadHandler(BaseDashboardExtension):
     ACTION = 'i18n_download'
 
     def render(self):
+        schema = TranslationDownloadRestHandler.schema()
         main_content = oeditor.ObjectEditor.get_html_for(
             self.handler,
-            TranslationDownloadRestHandler.schema().get_json_schema(),
-            TranslationDownloadRestHandler.schema().get_schema_dict(),
+            schema.get_json_schema(),
+            schema.get_schema_dict(),
             '',
             self.handler.canonicalize_url(TranslationDownloadRestHandler.URL),
             self.handler.get_action_url(I18nDashboardHandler.ACTION),
-            required_modules=TranslationDownloadRestHandler.REQUIRED_MODULES,
-            save_button_caption='Download',
+            additional_dirs=[TEMPLATES_DIR],
+            display_types=schema.get_display_types(),
             extra_js_files=['download_translations.js'],
-            additional_dirs=[TEMPLATES_DIR])
+            save_button_caption='Download')
         self.handler.render_page({
             'page_title': self.handler.format_title(
                 'Translation Download'),
@@ -700,10 +699,6 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
 
     URL = '/rest/modules/i18n_dashboard/i18n_download'
     XSRF_TOKEN_NAME = 'translation_download'
-    REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'inputex-hidden',
-        'inputex-checkbox', 'inputex-list', 'gcb-uneditable',
-        ]
 
     @classmethod
     def schema(cls):
@@ -1051,10 +1046,11 @@ class I18nUploadHandler(BaseDashboardExtension):
             '',
             self.handler.canonicalize_url(TranslationUploadRestHandler.URL),
             self.handler.get_action_url(I18nDashboardHandler.ACTION),
-            required_modules=TranslationUploadRestHandler.REQUIRED_MODULES,
-            save_method='upload', save_button_caption='Upload',
+            additional_dirs=[TEMPLATES_DIR],
+            display_types=
+                TranslationUploadRestHandler.SCHEMA.get_display_types(),
             extra_js_files=['upload_translations.js'],
-            additional_dirs=[TEMPLATES_DIR])
+            save_method='upload', save_button_caption='Upload')
         self.handler.render_page({
             'page_title': self.handler.format_title('Translation Upload'),
             'main_content': main_content,
@@ -1081,9 +1077,6 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
     URL = '/rest/modules/i18n_dashboard/upload'
     XSRF_TOKEN_NAME = 'translation-upload'
     SCHEMA = translation_upload_generate_schema()
-    REQUIRED_MODULES = ['inputex-hidden', 'inputex-select', 'inputex-string',
-                        'gcb-uneditable', 'inputex-file',
-                        'io-upload-iframe']
 
     class ProtocolError(Exception):
         pass
@@ -1961,11 +1954,12 @@ class TranslationConsole(BaseDashboardExtension):
                 self.handler.canonicalize_url(
                     TranslationConsoleRestHandler.URL),
                 self.handler.get_action_url(I18nDashboardHandler.ACTION),
+                additional_dirs=[TEMPLATES_DIR],
                 auto_return=False,
-                required_modules=TranslationConsoleRestHandler.REQUIRED_MODULES,
+                display_types=
+                    TranslationConsoleRestHandler.SCHEMA.get_display_types(),
                 extra_css_files=['translation_console.css'],
-                extra_js_files=['translation_console.js'],
-                additional_dirs=[TEMPLATES_DIR])
+                extra_js_files=['translation_console.js'])
 
         self.handler.render_page({
             'page_title': self.handler.format_title('Translation workflow'),
@@ -2030,10 +2024,6 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
     XSRF_TOKEN_NAME = 'translation-console'
 
     SCHEMA = tc_generate_schema()
-
-    REQUIRED_MODULES = [
-        'inputex-hidden', 'inputex-list', 'inputex-string', 'inputex-textarea',
-        'gcb-uneditable']
 
     def get(self):
 
