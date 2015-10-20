@@ -25,11 +25,13 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import argparse
 import datetime
+import difflib
 import logging
 import multiprocessing
 import os
 import re
 import signal
+import shutil
 import socket
 import stat
 import subprocess
@@ -37,6 +39,7 @@ import sys
 import threading
 import time
 import yaml
+import zipfile
 
 
 # WARNING !!!
@@ -367,10 +370,31 @@ ALL_TEST_CLASSES = {
     'tests.unit.gift_parser_tests.TestCreateManyGiftQuestion': 1
 }
 
+INTERNAL_TEST_CLASSES = {}
+
 INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
+
+# List of dot-qualified modules that may not be imported by CB code.
+DISALLOWED_IMPORTS = [
+    'google.appengine.api.users',
+]
+# Map of relative cb path -> dot qualified import target of exceptions to
+# DISALLOWED_IMPORTS.
+DISALLOWED_IMPORTS_EXCEPTIONS = {
+    'common/users.py': ['google.appengine.api.users'],
+    'tests/functional/common_users.py': ['google.appengine.api.users'],
+}
+PY_FILE_SUFFIX = '.py'
 
 LOG_LINES = []
 LOG_LOCK = threading.Lock()
+
+# exact count of compiled .mo catalog files included in release; change this
+# when new files are added. NOTE: common.locales.LOCALES_DISPLAY_NAMES must
+# be kept in sync with the locales supported.
+EXPECTED_MO_FILE_COUNT = 58
+
+PRODUCT_NAME = 'coursebuilder'
 
 
 def make_default_parser():
@@ -690,6 +714,251 @@ class FunctionalTestTask(object):
             raise Exception()
 
 
+class DeveloperWorkflowTester(object):
+
+    def _run(self, cmd):
+        result, out = run(cmd, verbose=False)
+        if result != 0:
+            raise Exception('Test failed:\n%s', out)
+        return out
+
+    def assert_contains(self, needle, haystack):
+        if haystack.find(needle) == -1:
+            raise Exception(
+                'Expected to find %s, found:\n%s', (needle, haystack))
+
+    def test_all(self):
+        log('Testing developer test workflow')
+
+        self.test_class_name_expansion()
+        self.test_developer_test_workflow_with_test_sh()
+        # self.test_developer_test_workflow_with_run_all_tests_py()
+
+    def test_class_name_expansion(self):
+        """Developer can test all methods of one class."""
+        # package name expands into class names
+        tests = select_tests_to_run('tests.unit.')
+        assert 'tests.unit.test_classes.InvokeExistingUnitTest' in tests
+        assert 'tests.unit.test_classes.EtlRetryTest' in tests
+
+        # class name is preserved
+        tests = select_tests_to_run(
+            'tests.unit.test_classes.InvokeExistingUnitTest')
+        assert 'tests.unit.test_classes.InvokeExistingUnitTest' in tests
+
+        # method name is preserved
+        tests = select_tests_to_run(
+            'tests.unit.test_classes.InvokeExistingUnitTest.'
+            'test_string_encoding')
+        assert(
+            'tests.unit.test_classes.InvokeExistingUnitTest.'
+            'test_string_encoding' in tests)
+
+    def test_developer_test_workflow_with_test_sh(self):
+        """Developer can test one method of one class with test.sh."""
+        cmd = os.path.join(
+            os.getcwd(), 'experimental', 'coursebuilder', 'scripts', 'test.sh')
+        out = self._run([
+            'sh', cmd,
+            'tests.unit.test_classes.'
+            'InvokeExistingUnitTest.test_string_encoding'])
+        self.assert_contains(
+            'tests.unit.test_classes.InvokeExistingUnitTest', out)
+
+    def test_developer_test_workflow_with_run_all_tests_py(self):
+        """Developer can test one method of one class with run_all_test.py."""
+        cmd = os.path.join(
+            os.getcwd(), 'experimental', 'coursebuilder', 'scripts',
+            'run_all_tests.py')
+        out = self._run([
+            'python', cmd,
+            '--skip_pylint',
+            '--test_class_name', 'tests.unit.test_classes'])
+        self.assert_contains(
+            'tests.unit.test_classes.InvokeExistingUnitTest', out)
+
+def walk_folder_tree(home_dir):
+    fileset = set()
+    for dir_, _, files in os.walk(home_dir):
+        for filename in files:
+            reldir = os.path.relpath(dir_, home_dir)
+            relfile = os.path.join(reldir, filename)
+            fileset.add(relfile)
+    return sorted(list(fileset))
+
+
+def write_text_file(file_name, text):
+    afile = open(file_name, 'w')
+    afile.write(text)
+    afile.close()
+
+
+def create_manifests(manifest_file, third_party_file, release_label):
+    log('Creating manifest: %s' % manifest_file)
+    write_text_file(manifest_file, 'Release: %s' % release_label)
+    write_text_file(
+        third_party_file,
+        """
+        This folder contains various third party packages that Course Builder
+        depends upon. These packages are not developed by Google Inc., but
+        provided by the open-source developer community. Please review the
+        licensing terms for each individual package before use.""")
+
+
+def purge(dir_name, pattern):
+    """Deletes files matching pattern from a directory tree."""
+    for f in os.listdir(dir_name):
+        current = os.path.join(dir_name, f)
+        if not os.path.isfile(current):
+            purge(current, pattern)
+        else:
+            if re.search(pattern, f):
+                os.remove(current)
+
+
+def remove_dir(dir_name):
+    """Deletes a directory."""
+    if os.path.exists(dir_name):
+        shutil.rmtree(dir_name)
+        if os.path.exists(dir_name):
+            raise Exception('Failed to delete directory: %s' % dir_name)
+
+
+def clean_dir(dir_name):
+    """Cleans a directory."""
+    remove_dir(dir_name)
+    os.makedirs(dir_name)
+    if not os.path.exists(dir_name):
+        raise Exception('Failed to create directory: %s' % dir_name)
+
+
+def chmod_dir_recursive(folder_name, mode):
+    """Removes read-only attribute from all files and folders recursively."""
+    for root, unused_dirs, files in os.walk(folder_name):
+        for fname in files:
+            full_path = os.path.join(root, fname)
+            os.chmod(full_path, mode)
+
+
+def zip_all_files(build_dir, zip_file_name, verbose=False):
+    """Build and test a release zip file."""
+
+    log('Zipping: %s' % zip_file_name)
+
+    chmod_dir_recursive(build_dir, 0o777)
+
+    # build it
+    _out = zipfile.ZipFile(zip_file_name, 'w')
+    for root, unused_dirs, files in os.walk(build_dir):
+        base = '/'.join(root.split('/')[3:])
+        base = os.path.join(PRODUCT_NAME, base)
+        for afile in files:
+            _out.write(os.path.join(root, afile),
+                           os.path.join(base, afile))
+    _out.close()
+
+    # verify it
+    _in = zipfile.ZipFile(zip_file_name, 'r')
+    _in.testzip()
+    for afile in _in.filelist:
+        date = '%d-%02d-%02d %02d:%02d:%02d' % afile.date_time[:6]
+        if verbose:
+            log('Zip file entry: %-46s %s %12d' %
+                (afile.filename, date, afile.file_size))
+    _in.close()
+
+
+def get_import_target(line):
+    """Canonicalize import statements into a reliable form.
+
+    All of
+
+        import foo.bar.baz
+        from foo.bar import baz
+        from foo.bar import baz as quux
+
+    are canonicalized to
+
+        foo.bar.baz
+
+    Returns None if line does not contain an import statement. Note that we will
+    not catch imports done with advanced techniques (__import__, etc.).
+    """
+    target = None
+
+    match = re.search(r'^import\ (.+)$', line)
+    if match:
+        target = match.groups()[0]
+    else:
+        match = re.search(r'^from\ (\S+)\ import\ (\S+)(\ as\ .+)?$', line)
+        if match:
+            target = '%s.%s' % tuple(match.groups()[0:2])
+
+    return target
+
+
+def is_disallowed_import_exception(path, target):
+    return target in DISALLOWED_IMPORTS_EXCEPTIONS.get(path, [])
+
+
+def assert_no_disallowed_imports(root):
+    for cb_path in walk_folder_tree(root):
+        if not os.path.splitext(cb_path)[1] == PY_FILE_SUFFIX:
+            continue
+
+        if cb_path.startswith('./'):
+            cb_path = cb_path[2:]
+
+        with open(os.path.join(root, cb_path)) as f:
+            for line in f.readlines():
+                target = get_import_target(line.strip())
+
+                if (target in DISALLOWED_IMPORTS and not
+                    is_disallowed_import_exception(cb_path, target)):
+                    raise Exception(
+                        'Found disallowed import of "%s" in file: %s' % (
+                            target, cb_path))
+
+
+def count_files_in_dir(dir_name, suffix=None):
+    """Counts files with a given suffix, or all files if suffix is None."""
+
+    count = 0
+    for f in os.listdir(dir_name):
+        current = os.path.join(dir_name, f)
+        if os.path.isfile(current):
+            if not suffix or current.endswith(suffix):
+                count += 1
+        else:
+            count += count_files_in_dir(current, suffix=suffix)
+    return count
+
+
+def enforce_file_count_and_remove_extra_files(
+    build_dir, known_files=None, delete_extra_files_folders=False):
+    """Check that we have exactly the files we expect; delete extras."""
+    count_mo_files = count_files_in_dir(build_dir, suffix='.mo')
+    if count_mo_files != EXPECTED_MO_FILE_COUNT:
+        raise Exception('Expected %s .mo catalogue files, found %s' %
+                        (EXPECTED_MO_FILE_COUNT, count_mo_files))
+
+    if known_files:
+        all_files = walk_folder_tree(build_dir)
+        if delete_extra_files_folders:
+            for afile in all_files:
+                if afile not in known_files:
+                    result, output = run(['rm', '-f', '-v',
+                                      os.path.join(build_dir, afile)])
+                    if result != 0:
+                        raise Exception('error %s\n%s' % (result, output))
+        all_files = walk_folder_tree(build_dir)
+        if all_files != known_files:
+            diff = difflib.unified_diff(all_files, known_files, lineterm='')
+            raise Exception(
+                'Folder contents differs from expected:\n%s' % (
+                      '\n'.join(list(diff))))
+
+
 def setup_all_dependencies():
     """Setup all third party Python packages."""
 
@@ -886,10 +1155,13 @@ def run_lint():
     return status == 0
 
 
-def main():
-    parser = make_default_parser()
-    parsed_args = parser.parse_args()
+def _dry_run(parsed_args):
+    run_tests(
+        INTERNAL_TEST_CLASSES,
+        parsed_args.verbose, setup_deps=False, hint="dry run")
 
+
+def _lint(parsed_args):
     if parsed_args.skip_pylint:
         log('Skipping pylint at user request')
     else:
@@ -899,6 +1171,92 @@ def main():
             else:
                 raise RuntimeError('Pylint tests failed.')
 
+
+def do_a_release(
+    source_dir, target_dir, build_dir, release_label):
+    """Creates/validates an official release of CourseBuilder.
+
+    Args:
+        source_dir: a string specifying source folder for the project
+        target_dir: a string specifying target folder for output
+        build_dir: a string specifying temp folder to do a build in
+        release_label: a string with text label for the release
+
+    Here is what this function does:
+        - creates a target_dir, build_dir
+        - copies all files from source_dir to the build_dir
+        - deletes all files from build_dir that should not be released
+        - checks banned imports
+        - brings up and teras down integration server
+        - runs all tests in the build_dir and checks they pass
+        - tests developer workflow
+        - adds VERSION and manifest file
+        - creates a zip file
+        - copies a resulting zip file and log file to target_dir
+    """
+
+    log_file = os.path.join(target_dir, 'log_%s.txt' % release_label)
+    zip_file = os.path.join(
+        target_dir, '%s_%s.zip' % (PRODUCT_NAME, release_label))
+    manifest_file = os.path.join(build_dir, 'VERSION')
+    third_party_file = os.path.join(build_dir, 'lib/README')
+
+    file_list_fn = '%s/scripts/all_files.txt' % source_dir
+    known_files = open(file_list_fn).read().splitlines()
+
+    start = time.time()
+
+    del LOG_LINES[:]
+
+    log('Starting Course Builder release')
+    log('Working directory: %s' % os.getcwd())
+    log('Source directory: %s' % source_dir)
+    log('Target directory: %s' % target_dir)
+    log('Build temp directory: %s' % build_dir)
+
+    setup_all_dependencies()
+
+    clean_dir(target_dir)
+    remove_dir(build_dir)
+    shutil.copytree(source_dir, build_dir)
+
+    create_manifests(manifest_file, third_party_file, release_label)
+
+    parsed_args = make_default_parser().parse_args()
+    _dry_run(parsed_args)
+
+    enforce_file_count_and_remove_extra_files(
+        build_dir, known_files, delete_extra_files_folders=True)
+
+    assert_no_disallowed_imports(build_dir)
+    _lint(parsed_args)
+    DeveloperWorkflowTester().test_all()
+
+    run_all_tests(parsed_args, setup_deps=False)
+    enforce_file_count_and_remove_extra_files(build_dir, known_files)
+
+    zip_all_files(build_dir, zip_file)
+    remove_dir(build_dir)
+
+    log('Saving log to: %s' % log_file)
+    write_text_file(log_file, '%s' % '\n'.join(LOG_LINES))
+
+    log('Done release in %ss: find results in %s' % (
+        int(time.time() - start), target_dir))
+
+    return 0
+
+
+def main():
+    parsed_args = make_default_parser().parse_args()
+    if parsed_args.skip_pylint:
+        log('Skipping pylint at user request')
+    else:
+        if not run_lint():
+            if parsed_args.ignore_pylint_failures:
+                log('Ignoring pylint test errors.')
+            else:
+                raise RuntimeError('Pylint tests failed.')
     run_all_tests(parsed_args)
 
 
