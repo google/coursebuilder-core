@@ -389,8 +389,7 @@ class HtmlHookHandler(controllers_utils.ApplicationHandler):
             handler, registry.get_json_schema(), registry.get_schema_dict(),
             key, rest_url, exit_url,
             delete_url=delete_url, delete_method='delete',
-            display_types=schema.get_display_types())
-
+            display_types=registry.get_display_types())
 
         template_values = {}
         template_values['page_title'] = handler.format_title('Edit Hook HTML')
