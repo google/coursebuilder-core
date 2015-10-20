@@ -48,3 +48,16 @@ Each question is imported as a separate question (named Q1, Q2, etc.).
 Additionally, a question group is added with all the questions. Course Builder
 supports multiple choice, true-false, short answer, and numerical questions.
 """, "https://code.google.com/p/course-builder/wiki/Dashboard")
+
+ROLE_NAME_DESCRIPTION = """
+This is the name of this role.
+"""
+
+ROLE_DESCRIPTION_DESCRIPTION = """
+This describes this role for your reference.
+"""
+
+ROLE_USER_EMAILS_DESCRIPTION = """
+This list of email addresses represents the members of this role.
+Separate addresses with a comma or space.
+"""

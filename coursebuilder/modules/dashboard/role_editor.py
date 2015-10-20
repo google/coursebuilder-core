@@ -21,6 +21,7 @@ from common import utils
 from models.models import RoleDAO
 from models.roles import Roles
 from modules.dashboard import dto_editor
+import messages
 
 
 class RoleManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
@@ -94,13 +95,15 @@ class RoleRESTHandler(dto_editor.BaseDatastoreRestHandler):
         schema.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         schema.add_property(schema_fields.SchemaField(
-            'name', 'Name', 'string', optional=False))
+            'name', 'Name', 'string', optional=False,
+            description=messages.ROLE_NAME_DESCRIPTION))
         schema.add_property(schema_fields.SchemaField(
-            'description', 'Description', 'text', optional=True))
+            'description', 'Description', 'text', optional=True,
+            description=messages.ROLE_DESCRIPTION_DESCRIPTION))
         # TODO(gdejonghe) Use user.id instead of user.email
         schema.add_property(schema_fields.SchemaField(
             'users', 'User Emails', 'text',
-            description='Separate emails by commas or spaces.',
+            description=messages.ROLE_USER_EMAILS_DESCRIPTION,
             optional=True))
 
         subschema = schema.add_sub_registry('modules', 'Permission Modules')
