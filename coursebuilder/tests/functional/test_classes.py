@@ -241,6 +241,7 @@ class WSGIRoutingTest(actions.TestBase):
 
         app = webapp2.WSGIApplication()
         app.router = sites.WSGIRouter(global_routes + app_routes)
+
         return app
 
     def test_global_routes(self):
@@ -3010,27 +3011,35 @@ class StaticHandlerTest(actions.TestBase):
 
     def _assert_handler(self, response, name=None):
         assert_equals(response.status_int, 200)
-        assert_equals(name, response.headers.get('GCB-HANDLER-CLASS'))
+        assert_equals(
+            name, response.headers.get(sites.GCB_HANDLER_CLASS_HEADER_NAME))
 
-    def test_non_admin_does_not_see_handler_in_headers(self):
-        actions.login('test@example.com')
-        self._assert_handler(self.testapp.get(
-            '/static/inputex-3.1.0/src/'
-            'inputex/assets/skins/sam/inputex.css'))
-        self._assert_handler(self.testapp.get(
-            '/modules/oeditor/resources/butterbar.js'))
-        self._assert_handler(self.get('/assets/css/main.css'))
-        self._assert_handler(self.get('/course'))
+    def test_non_admin_on_prod_does_not_see_handler_in_headers(self):
+        old = appengine_config.PRODUCTION_MODE
+        appengine_config.PRODUCTION_MODE = True
+        try:
+            actions.login('test@example.com')
+            self._assert_handler(self.testapp.get(
+                '/static/inputex-3.1.0/src/'
+                'inputex/assets/skins/sam/inputex.css'))
+            self._assert_handler(self.testapp.get(
+                '/modules/oeditor/resources/butterbar.js'))
+            self._assert_handler(self.get('/assets/css/main.css'))
+            self._assert_handler(self.get('/course'))
+        finally:
+            appengine_config.PRODUCTION_MODE = old
 
-    def test_admin_sees_handler_in_headers(self):
-        actions.login('test@example.com', is_admin=True)
-        self._assert_handler(self.testapp.get(
-            '/modules/oeditor/resources/butterbar.js'), None)
-        self._assert_handler(self.testapp.get(
-            '/static/inputex-3.1.0/src/'
-            'inputex/assets/skins/sam/inputex.css'), 'CustomZipHandler')
-        self._assert_handler(self.get('/assets/css/main.css'), 'AssetHandler')
-        self._assert_handler(self.get('/course'), 'CourseHandler')
+    def test_admins_and_dev_server_users_see_handler_in_headers(self):
+        for is_admin in [True, False]:
+            actions.login('test@example.com', is_admin=is_admin)
+            self._assert_handler(self.testapp.get(
+                '/modules/oeditor/resources/butterbar.js'), None)
+            self._assert_handler(self.testapp.get(
+                '/static/inputex-3.1.0/src/'
+                'inputex/assets/skins/sam/inputex.css'), 'CustomZipHandler')
+            self._assert_handler(self.get(
+                '/assets/css/main.css'), 'AssetHandler')
+            self._assert_handler(self.get('/course'), 'CourseHandler')
 
 
 class ActivityTest(actions.TestBase):

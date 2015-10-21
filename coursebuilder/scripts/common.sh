@@ -295,6 +295,9 @@ if [ ! -d "$DISTRIBUTED_LIBS_DIR" ]; then
   mkdir -p "$DISTRIBUTED_LIBS_DIR"
 fi
 for lib in "$DISTRIBUTED_LIBS_DIR"/*; do
+  if [ ! "$lib" = "_static" ]; then
+      continue
+  fi
   fname=$( basename "$lib" )
   if [[ "$DISTRIBUTED_LIBS" != *" $fname "* ]]; then
     echo "Warning: extraneous CB distribution runtime library file $lib"
@@ -312,5 +315,8 @@ if need_install yui build/yui/yui.js YUI 3.6.0 ; then
   unzip "$DISTRIBUTED_LIBS_DIR/yui_3.6.0.zip" -d $RUNTIME_HOME
 fi
 
-# "Deleting existing files: *.pyc"
+# Prepare files for static serving
+. "$(dirname "$0")/static.sh"
+
+# Delete existing files: *.pyc
 find "$SOURCE_DIR" -iname "*.pyc" -exec rm -f {} \;

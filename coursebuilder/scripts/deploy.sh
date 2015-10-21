@@ -23,6 +23,11 @@
 
 set -e
 
+# local environment may contain non-default value for GCB_ALLOW_STATIC_SERV;
+# remove it here, so the proper default is picked up from script/config.sh
+echo "Removing GCB_ALLOW_STATIC_SERV set to '"$GCB_ALLOW_STATIC_SERV"'"
+unset GCB_ALLOW_STATIC_SERV
+
 . "$(dirname "$0")/common.sh"
 
 if [[ $# == 1 && $1 != -* ]]; then

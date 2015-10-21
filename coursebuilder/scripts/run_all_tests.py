@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Runs all of the tests in parallel.
+"""Runs all of the tests in parallel with or without integration server.
 
 Execute this script from the Course Builder folder as:
     python scripts/run_all_tests.py
@@ -26,6 +26,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import argparse
 import datetime
 import difflib
+import httplib
 import logging
 import multiprocessing
 import os
@@ -367,7 +368,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.gift_parser_tests.TestMultiChoiceMultipleSelectionQuestion': 3,
     'tests.unit.gift_parser_tests.TestHead': 2,
     'tests.unit.gift_parser_tests.TestMultiChoiceQuestion': 5,
-    'tests.unit.gift_parser_tests.TestCreateManyGiftQuestion': 1
+    'tests.unit.gift_parser_tests.TestCreateManyGiftQuestion': 1,
 }
 
 INTERNAL_TEST_CLASSES = {}
@@ -395,6 +396,26 @@ LOG_LOCK = threading.Lock()
 EXPECTED_MO_FILE_COUNT = 58
 
 PRODUCT_NAME = 'coursebuilder'
+
+# name of the response header used to transmit handler class name;
+# keep in sync with the same value in controllers/sites.py
+GCB_HANDLER_CLASS_HEADER_NAME = 'gcb-handler-class'
+
+
+# a lists of tests URL's that can be served statically or dynamically
+STATIC_SERV_URLS = [
+    ('/modules/oeditor/_static/js/butterbar.js', None),  # always static
+    ('/static/codemirror/lib/codemirror.js', 'CustomZipHandler'),
+    ('/static/yui_3.6.0/yui/build/yui/yui.js', 'CustomZipHandler'),
+    ('/static/inputex-3.1.0/src/loader.js', 'CustomZipHandler'),
+    (
+        '/static/2in3/2in3-master/dist/2.9.0/build/yui2-editor/yui2-editor.js',
+        'CustomZipHandler'),
+    ]
+
+# well-known location of statically served files
+STATIC_SERV_LN_SOURCE = os.path.join(
+    os.path.dirname(__file__), '..', 'lib', '_static')
 
 
 def make_default_parser():
@@ -455,28 +476,29 @@ def _parse_test_name(name):
         return name
 
 
-def ensure_port_available(port_number):
+def ensure_port_available(port_number, quiet=False):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         s.bind(('localhost', port_number))
     except socket.error, ex:
-        logging.error('''
-            ==========================================================
-            Failed to bind to port %d.
-            This probably means another CourseBuilder server is
-            already running.  Be sure to shut down any manually
-            started servers before running tests.
+        if not quiet:
+            logging.error('''
+                ==========================================================
+                Failed to bind to port %d.
+                This probably means another CourseBuilder server is
+                already running.  Be sure to shut down any manually
+                started servers before running tests.
 
-            Kill running server from command line via:
-            lsof -i tcp:8081 -Fp | tr -d p | xargs kill -9
-            ==========================================================''',
-            port_number)
+                Kill running server from command line via:
+                lsof -i tcp:8081 -Fp | tr -d p | xargs kill -9
+                ==========================================================''',
+                port_number)
         raise ex
     s.close()
 
 
-def start_integration_server(server_log_file):
+def start_integration_server(server_log_file, env):
     ensure_port_available(8081)
     ensure_port_available(8000)
     server_cmd = os.path.join(
@@ -484,11 +506,11 @@ def start_integration_server(server_log_file):
     return start_integration_server_process(
         server_cmd,
         set(['tests.integration.fake_visualizations']),
-        server_log_file)
+        server_log_file, env=env)
 
 
-def start_integration_server_process(integration_server_start_cmd, modules,
-                                     server_log_file):
+def start_integration_server_process(
+    integration_server_start_cmd, modules, server_log_file, env):
     if modules:
         _fn = os.path.join(os.path.dirname(__file__), '..', 'custom.yaml')
         _st = os.stat(_fn)
@@ -517,7 +539,7 @@ def start_integration_server_process(integration_server_start_cmd, modules,
 
     server = subprocess.Popen(
         integration_server_start_cmd, preexec_fn=os.setsid, stdout=logfile,
-        stderr=logfile)
+        stderr=logfile, env=env)
     time.sleep(3)  # Wait for server to start up
 
     return server, logfile
@@ -532,6 +554,16 @@ def stop_integration_server(server, logfile, modules):
     # done, our tests will never complete so we kill it manually.
     os.killpg(server.pid, signal.SIGTERM)
 
+    # wait process to terminate
+    while True:
+        try:
+            ensure_port_available(8081, quiet=True)
+            ensure_port_available(8000, quiet=True)
+            break
+        except:  # pylint: disable=bare-except
+            time.sleep(0.25)
+
+    # clean up
     if modules:
         fp = open(
             os.path.join(os.path.dirname(__file__), '..', 'custom.yaml'), 'w')
@@ -551,6 +583,36 @@ def stop_integration_server(server, logfile, modules):
             '#    my_extension.modules.blivets\n'
             ])
         fp.close()
+
+
+class WithTestConfiguration(object):
+    """Class to manage integration server using 'with' statement."""
+
+    def __init__(
+        self,
+        enable_integration_server, enable_static_serving, server_log_file):
+        self.enable_integration_server = enable_integration_server
+        self.enable_static_serving = enable_static_serving
+        self.server_log_file = server_log_file
+
+    def __enter__(self):
+        if self.enable_integration_server:
+            log(
+                'Starting integration server '
+                '(static serving %s)' % (
+                    'enabled' if self.enable_static_serving else 'disabled'))
+            env = os.environ.copy()
+            env['GCB_ALLOW_STATIC_SERV'] = (
+                'true' if self.enable_static_serving else 'false')
+            self.server, self.logfile = start_integration_server(
+                self.server_log_file, env=env)
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+        if self.enable_integration_server:
+            log('Stopping integration server')
+            stop_integration_server(
+                self.server, self.logfile,
+                set(['tests.integration.fake_visualizations']))
 
 
 def log(message):
@@ -777,11 +839,19 @@ class DeveloperWorkflowTester(object):
         self.assert_contains(
             'tests.unit.test_classes.InvokeExistingUnitTest', out)
 
-def walk_folder_tree(home_dir):
+def walk_folder_tree(home_dir, skip_rel_dirs=None):
     fileset = set()
     for dir_, _, files in os.walk(home_dir):
+        reldir = os.path.relpath(dir_, home_dir)
+        if skip_rel_dirs:
+            skip = False
+            for skip_rel_dir in skip_rel_dirs:
+                if reldir.startswith('%s%s' % (skip_rel_dir, os.sep)):
+                    skip = True
+                    break
+            if skip:
+                continue
         for filename in files:
-            reldir = os.path.relpath(dir_, home_dir)
             relfile = os.path.join(reldir, filename)
             fileset.add(relfile)
     return sorted(list(fileset))
@@ -937,13 +1007,17 @@ def count_files_in_dir(dir_name, suffix=None):
 def enforce_file_count_and_remove_extra_files(
     build_dir, known_files=None, delete_extra_files_folders=False):
     """Check that we have exactly the files we expect; delete extras."""
+    skip_rel_dirs = ['_static']
+
+    # verify mo files
     count_mo_files = count_files_in_dir(build_dir, suffix='.mo')
     if count_mo_files != EXPECTED_MO_FILE_COUNT:
         raise Exception('Expected %s .mo catalogue files, found %s' %
                         (EXPECTED_MO_FILE_COUNT, count_mo_files))
 
     if known_files:
-        all_files = walk_folder_tree(build_dir)
+        # list files; delete extras
+        all_files = walk_folder_tree(build_dir, skip_rel_dirs=skip_rel_dirs)
         if delete_extra_files_folders:
             for afile in all_files:
                 if afile not in known_files:
@@ -951,7 +1025,9 @@ def enforce_file_count_and_remove_extra_files(
                                       os.path.join(build_dir, afile)])
                     if result != 0:
                         raise Exception('error %s\n%s' % (result, output))
-        all_files = walk_folder_tree(build_dir)
+
+        # list files again; check no extras
+        all_files = walk_folder_tree(build_dir, skip_rel_dirs=skip_rel_dirs)
         if all_files != known_files:
             diff = difflib.unified_diff(all_files, known_files, lineterm='')
             raise Exception(
@@ -1029,7 +1105,49 @@ def select_tests_to_run(test_class_name):
     return test_classes
 
 
-def run_all_tests(parsed_args, setup_deps=True):
+def assert_handler(url, handler):
+    """Verifies (via response headers) that URL is not served by CB handler."""
+    conn = httplib.HTTPConnection("localhost:8081")
+    conn.request("GET", url)
+    res = conn.getresponse()
+
+    assert res.status == 200
+    headers = dict(res.getheaders())
+    specified_handler = headers.get(GCB_HANDLER_CLASS_HEADER_NAME, None)
+
+    if not specified_handler == handler:
+        raise Exception(
+            'Failed to find header %s with value %s in url %s '
+            'having response headers %s' % (
+            GCB_HANDLER_CLASS_HEADER_NAME, handler, url, res.getheaders()))
+
+
+def assert_gcb_allow_static_serv_is_disabled():
+    log('Making sure static serving disabled')
+
+    assert not os.path.exists(STATIC_SERV_LN_SOURCE)
+
+    for url, handler in STATIC_SERV_URLS:
+        assert_handler(url, handler)
+
+    # check combo zip handler also works
+    assert_handler(
+        '/static/combo/inputex?'
+        'src/inputex/assets/skins/sam/inputex.css&'
+        'src/inputex-list/assets/skins/sam/inputex-list.css',
+        'CustomCssComboZipHandler')
+
+
+def assert_gcb_allow_static_serv_is_enabled():
+    log('Making sure static serving enabled')
+
+    assert os.path.exists(STATIC_SERV_LN_SOURCE)
+
+    for url, _ in STATIC_SERV_URLS:
+        assert_handler(url, None)
+
+
+def group_tests(parsed_args, setup_deps=True):
     # get all applicable tests
     test_classes = select_tests_to_run(
         _parse_test_name(parsed_args.test_class_name))
@@ -1046,6 +1164,7 @@ def run_all_tests(parsed_args, setup_deps=True):
         target.update(
                 {test_class_name: test_classes[test_class_name]})
 
+    # filter out according to command line args
     if parsed_args.skip_non_integration:
         log('Skipping non-integration tests at user request')
         non_integration_tests = {}
@@ -1053,18 +1172,30 @@ def run_all_tests(parsed_args, setup_deps=True):
         log('Skipping integration test at user request')
         integration_tests = {}
 
+    return integration_tests, non_integration_tests
+
+
+def run_all_tests(parsed_args, setup_deps=True):
+    integration_tests, non_integration_tests = group_tests(
+        parsed_args, setup_deps)
+
     all_tests = {}
     all_tests.update(non_integration_tests)
     all_tests.update(integration_tests)
 
-    server = None
-    if integration_tests:
-        server, logfile = start_integration_server(parsed_args.server_log_file)
-        run_tests({
-            'tests.integration.test_classes.'
-            'IntegrationServerInitializationTask': 1},
-            False, setup_deps=False, chunk_size=1, hint='setup')
-    try:
+    with_server = bool(integration_tests)
+
+    with WithTestConfiguration(with_server, False, parsed_args.server_log_file):
+        if with_server:
+            assert_gcb_allow_static_serv_is_disabled()
+
+    with WithTestConfiguration(with_server, True, parsed_args.server_log_file):
+        if with_server:
+            assert_gcb_allow_static_serv_is_enabled()
+            run_tests({
+                'tests.integration.test_classes.'
+                'IntegrationServerInitializationTask': 1},
+                False, setup_deps=False, chunk_size=1, hint='setup')
         if all_tests:
             try:
                 chunk_size = 2 * multiprocessing.cpu_count()
@@ -1073,11 +1204,6 @@ def run_all_tests(parsed_args, setup_deps=True):
             run_tests(
                 all_tests, parsed_args.verbose,
                 setup_deps=setup_deps, chunk_size=chunk_size)
-    finally:
-        if server:
-            stop_integration_server(
-                server, logfile,
-                set(['tests.integration.fake_visualizations']))
 
 
 def run_tests(
@@ -1117,7 +1243,8 @@ def run_tests(
             round(duration, 2), task_to_test[tasks[index]].test_class_name))
 
     # report all longest first
-    log('Reporting execution times for 10 longest tests')
+    if name_durations:
+        log('Reporting execution times for 10 longest tests')
     for duration, name in sorted(
         name_durations, key=lambda name_duration: name_duration[0],
         reverse=True)[:10]:

@@ -216,6 +216,9 @@ COUNTER_BY_HTTP_CODE = {
 
 _NAMESPACE_MAX_LENGTH = 100
 
+# name of the response header used to transmit handler class name
+GCB_HANDLER_CLASS_HEADER_NAME = 'gcb-handler-class'
+
 
 class BaseZipHandler(zipserve.ZipHandler, utils.StarRouteHandlerMixin):
     """Base class for zip handlers."""
@@ -316,9 +319,9 @@ def unprefix(path, prefix):
 
 
 def _add_handler_to_headers(handler):
-    if users.is_current_user_admin():
+    if users.is_current_user_admin() or not appengine_config.PRODUCTION_MODE:
         handler.response.headers[
-            'GCB-HANDLER-CLASS'] = handler.__class__.__name__
+            GCB_HANDLER_CLASS_HEADER_NAME] = handler.__class__.__name__
 
 
 def set_static_resource_cache_control(handler):

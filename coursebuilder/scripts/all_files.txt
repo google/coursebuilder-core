@@ -641,6 +641,7 @@ scripts/run_all_tests.sh
 scripts/run_javascript_test_server.sh
 scripts/start.sh
 scripts/start_in_shell.sh
+scripts/static.sh
 scripts/suite.sh
 scripts/test.sh
 scripts/test_completions.py

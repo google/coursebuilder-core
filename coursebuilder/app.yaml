@@ -55,6 +55,7 @@ env_variables:
 
 includes:
 - custom.yaml
+- static.yaml
 
 inbound_services:
 - warmup
