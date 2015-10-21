@@ -374,7 +374,8 @@ function getYuiConfig(bundle_lib_files) {
         inputex: {
           combine: 'true',
           comboBase: '/static/combo/inputex?',
-          root: 'src/'
+          root: 'src/',
+          base: '/static/inputex-3.1.0/src/'
         },
         yui2: {
           combine: true,

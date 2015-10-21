@@ -147,9 +147,19 @@ div.inputEx-invalid > div.inputEx-label {
   border: solid 1px red !important;
   box-shadow: 0 0 5px #f00;
 }
-.inputEx-invalid > .inputEx-message {
-  margin-top: 1.2em;
+div.inputEx-message {
+  display: none;
+  margin-left: 136px;
+  margin-top: 4px;
 }
+.new-form-layout .inputEx-message {
+  margin-top: 1.2em;
+  margin-left: 4px;
+}
+.inputEx-invalid > .inputEx-message {
+  display: block;
+}
+
 button.oeditor-control,
 a.inputEx-Button,
 div.inputEx-Button,

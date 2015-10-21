@@ -2321,6 +2321,7 @@ class Course(object):
         opts.add_property(schema_fields.SchemaField(
             'base:privacy_terms_url', 'Privacy & Terms URL', 'string',
             description=messages.HOMEPAGE_PRIVACY_URL_DESCRIPTION,
+            extra_schema_dict_values={'_type': 'url', 'showMsg': True},
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(

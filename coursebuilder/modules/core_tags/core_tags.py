@@ -645,7 +645,8 @@ class IFrame(CoreTag):
         reg.add_property(schema_fields.SchemaField(
             'src', 'Source URL', 'string',
             optional=True,
-            description='Provide source URL for iframe (including http/https)'))
+            description='Provide source URL for iframe (including http/https)',
+            extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
         reg.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string',
             optional=True,
