@@ -43,6 +43,6 @@
 .name.indent-course {
   padding-left: 8px;
 }
-.name.indent-lesson {
+.name.indent-lesson, .name.indent-pre-assessment, .name.indent-post-assessment {
   padding-left: 50px;
 }
