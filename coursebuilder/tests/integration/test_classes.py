@@ -101,16 +101,28 @@ class BaseIntegrationTest(suite.TestBase):
             self, suite.TestBase.ADMIN_SERVER_BASE_URL, course_name)
 
     def load_sample_course(self):
-        # Be careful using this method. Multiple clicks against the 'explore
-        # sample course' button create multiple courses with different slugs, in
-        # different namespaces. Because integration tests are not well isolated,
-        # this can lead to a number of subtle collisions between tests that do
-        # not manifest when the tests are run individually, but *do* manifest
-        # when run en bloc. Prefer create_new_course() whenever possible.
-        return self.load_root_page(
-        ).load_welcome_page(
-            self.INTEGRATION_SERVER_BASE_URL
-        ).click_explore_sample_course()
+        # Be careful using this method. The sample class is a singleton and
+        # tests which use it will not be isolated. This can lead to a number of
+        # subtle collisions between tests that do not manifest when the tests
+        # are run individually, but *do* manifest when run en bloc. Prefer
+        # create_new_course() whenever possible.
+        name = 'sample'
+        title = 'Power Searching with Google'
+
+        page = self.load_root_page(
+        ).click_login(
+        ).login(
+            self.LOGIN, admin=True
+        ).click_dashboard(
+        ).click_admin()
+
+        if not page.has_course(name):
+            page.click_add_sample_course(
+            ).set_fields(
+                name=name, title=title, email=self.LOGIN
+            ).click_ok()
+
+        return self.load_dashboard(name)
 
     def get_slug_for_current_course(self):
         """Returns the slug for the current course based on the current URL."""
@@ -148,9 +160,7 @@ class BaseIntegrationTest(suite.TestBase):
         ).click_add_course(
         ).set_fields(
             name=name, title=title, email='a@bb.com'
-        ).click_save(
-            link_text='Add New Course', status_message='Added.', post_wait=True
-        )
+        ).click_ok()
 
         return (name, title)
 

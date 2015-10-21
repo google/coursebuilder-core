@@ -35,7 +35,6 @@ from common import utils as common_utils
 from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import ReflectiveRequestHandler
-import models
 from models import config
 from models import counters
 from models import courses
@@ -99,11 +98,6 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
     get_actions = [default_action]
     post_actions = ['explore_sample', 'add_first_course', 'configure_settings']
 
-    # Enable other modules to make changes to sample course import.
-    # Each member must be a function of the form:
-    #     callback(course, errors)
-    COPY_SAMPLE_COURSE_HOOKS = []
-
     # Enable other modules to put global warnings on the welcome page.  This
     # is useful when you want to ask for permission from the installation
     # administrator, and you want to be absolutely certain the administrator
@@ -113,8 +107,7 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
     WELCOME_FORM_HOOKS = []
 
     # Items on this list are called back when the welcome page has been
-    # submitted.  These should take two parameters: the course just created
-    # and the page handler object.
+    # submitted.  These should receive the page handler object as an argument.
     POST_HOOKS = []
 
     def get_template(self, template_name):
@@ -144,8 +137,8 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
     def post(self):
         if not self.can_edit():
             return
-        app_context = super(WelcomeHandler, self).post()
-        common_utils.run_hooks(self.POST_HOOKS, app_context, self)
+        common_utils.run_hooks(self.POST_HOOKS, self)
+        self.redirect('/modules/admin')
 
     def _redirect(self, app_context, url):
         self.app_context = app_context
@@ -169,63 +162,6 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
             template_values['page_uuid'] = str(uuid.uuid1())
         self.response.write(
             self.get_template('welcome.html').render(template_values))
-
-    def _make_new_course(self, uid, title):
-        """Make a new course entry."""
-        errors = []
-        admin_email = users.get_current_user().email()
-        entry = sites.add_new_course_entry(
-            uid, title, admin_email, errors)
-        if errors:
-            raise Exception(errors)
-        app_context = sites.get_all_courses(entry)[0]
-        new_course = models.courses.Course(None, app_context=app_context)
-        new_course.init_new_course_settings(title, admin_email)
-        return app_context
-
-    def _copy_sample_course(self, uid):
-        """Make a fresh copy of sample course."""
-        src_app_context = sites.get_all_courses('course:/:/:')[0]
-        dst_app_context = self._make_new_course(uid, '%s (%s)' % (
-            src_app_context.get_title(), os.environ['GCB_PRODUCT_VERSION']))
-        errors = []
-        dst_course = courses.Course(None, dst_app_context)
-        dst_course.import_from(src_app_context, errors)
-        dst_course.save()
-        if not errors:
-            common_utils.run_hooks(
-                self.COPY_SAMPLE_COURSE_HOOKS, dst_app_context, errors)
-        if errors:
-            raise Exception(errors)
-        return dst_app_context
-
-    def post_explore_sample(self):
-        """Navigate to or import sample course."""
-        course = None
-        for uid in ['sample', 'sample_%s' % os.environ[
-            'GCB_PRODUCT_VERSION'].replace('.', '_')]:
-            course = sites.get_course_index(
-                ).get_app_context_for_namespace('ns_%s' % uid)
-            if not course:
-                course = self._copy_sample_course(uid)
-                break
-        assert course is not None
-        self._redirect(course, '/dashboard')
-        return course
-
-    def post_add_first_course(self):
-        """Adds first course to the deployment."""
-        uid = 'first'
-        course = sites.get_course_index().get_course_for_path('/%s' % uid)
-        if course:
-            self._redirect(course, '/dashboard')
-            return course
-        course = self._make_new_course(uid, 'My First Course')
-        self._redirect(course, '/dashboard')
-        return course
-
-    def post_configure_settings(self):
-        self.redirect('/modules/admin')
 
 
 def can_view_admin_action(action):
@@ -254,8 +190,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
     LINK_URL = 'admin'
 
     default_action = 'courses'
-    get_actions = ['courses', 'add_course', 'config_edit', 'settings',
-        'deployment', 'console']
+    get_actions = ['courses', 'config_edit', 'settings', 'deployment',
+        'console']
     post_actions = ['config_override', 'config_reset', 'console_run']
 
     class AbstractDbTypeDescriber(object):
@@ -854,13 +790,14 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 'link': link,
                 'name': name,
                 'slug': slug,
-                'location': location,
-                'namespace': course.get_namespace_name(),
                 'is_selected_course': is_selected_course,
+                'now_available': course.now_available
                 })
 
         delete_course_xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
             CourseDeleteHandler.XSRF_ACTION)
+        add_course_xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+                modules.admin.config.CoursesItemRESTHandler.XSRF_ACTION)
         template_values = {
             'page_title': self.format_title('Courses'),
             'main_content': self.render_template_to_html(
@@ -868,7 +805,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
                     'add_course_link': '%s?action=add_course' % self.LINK_URL,
                     'delete_course_link': CourseDeleteHandler.URI,
                     'delete_course_xsrf_token': delete_course_xsrf_token,
+                    'add_course_xsrf_token':add_course_xsrf_token,
                     'courses': all_courses,
+                    'email': users.get_current_user().email(),
                 },
                 'courses.html', [TEMPLATE_DIR]
             )

@@ -1703,17 +1703,13 @@ class AdminAspectTest(actions.TestBase):
         assert_contains('Course Builder &gt; Admin &gt; Courses', response.body)
         assert_contains('Total: 2 item(s)', response.body)
 
-        # Check ocurse URL's.
+        # Check course dashboard URL's.
         assert_contains('<a href="/foo/dashboard">', response.body)
         assert_contains('<a href="/bar/dashboard">', response.body)
 
-        # Check content locations.
-        assert_contains('/foo-data', response.body)
-        assert_contains('/bar-data', response.body)
-
-        # Check namespaces.
-        assert_contains('gcb-course-foo-data', response.body)
-        assert_contains('nsbar', response.body)
+        # Check course URL's.
+        assert_contains('<a href="/foo">', response.body)
+        assert_contains('<a href="/bar">', response.body)
 
         # Clean up.
         sites.reset_courses()
@@ -1757,6 +1753,46 @@ class AdminAspectTest(actions.TestBase):
         assert_equals(u'new course (тест данные)', new_app_context.get_title())
         new_course = courses.Course(None, app_context=new_app_context)
         assert not new_course.get_units()
+
+    def test_add_sample_course(self):
+
+        if not self.supports_editing:
+            return
+
+        email = 'test_add_course@google.com'
+        actions.login(email, is_admin=True)
+
+        # Prepare request data.
+        payload = {
+            'name': 'add_new',
+            'title': u'new course (тест данные)',
+            'admin_email': 'foo@bar.com',
+            'template_course': 'sample'}
+        request = {
+            'payload': transforms.dumps(payload),
+            'xsrf_token': XsrfTokenManager.create_xsrf_token('add-course-put')}
+
+        # Execute action.
+        response = self.put('/rest/courses/item', {
+            'request': transforms.dumps(request)})
+        assert_equals(response.status_int, 200)
+
+        # Check response.
+        json_dict = transforms.loads(transforms.loads(response.body)['payload'])
+        assert 'course:/add_new::ns_add_new' == json_dict.get('entry')
+
+        # Re-execute action; should fail as this would create a duplicate.
+        response = self.put('/rest/courses/item', {
+            'request': transforms.dumps(request)})
+        assert_equals(response.status_int, 200)
+        assert_equals(412, transforms.loads(response.body)['status'])
+
+        # Load the course and check its title.
+        new_app_context = sites.get_all_courses(
+            'course:/add_new::ns_add_new')[0]
+        assert_equals(u'new course (тест данные)', new_app_context.get_title())
+        new_course = courses.Course(None, app_context=new_app_context)
+        assert len(new_course.get_units()) == 12 # The number of units in PSWG
 
 
 class CourseAuthorAspectTest(actions.TestBase):

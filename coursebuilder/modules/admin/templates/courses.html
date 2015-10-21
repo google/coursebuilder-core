@@ -1,22 +1,29 @@
+<link rel="stylesheet" href="/modules/admin/_static/css/courses.css">
+
 <div class="gcb-button-toolbar">
   <a id="add_course"
-     href="{{ add_course_link }}"
+     class="gcb-button"
+     role="button"
+     data-email="{{ email }}"
+     data-xsrf-token="{{ add_course_xsrf_token }}">
+    Add Course...
+  </a>
+  <a id="add_sample_course"
      class="gcb-button"
      role="button">
-    Add Course
+    Add Sample Course...
   </a>
 </div>
 <div style="clear: both; padding-top: 2px;">
 </div>
 
 <div class="gcb-list gcb-list--autostripe">
-  <table style="table-layout: auto">
+  <table>
     <thead>
       <tr>
         <th>Course Title</th>
-        <th>Context Path</th>
-        <th>Content Location</th>
-        <th>Student Data Location</th>
+        <th>Course Path</th>
+        <th>Content Availability</th>
         <th class="gcb-list__cell--icon"></th>
       </tr>
     </thead>
@@ -28,9 +35,16 @@
             {{ course.name }}
           </a>
         </td>
-        <td>{{ course.slug }}</td>
-        <td>{{ course.location }}</td>
-        <td>{{ course.namespace }}</td>
+        <td>
+          <a href="{{ course.slug }}">{{ course.slug }}</a>
+        </td>
+        <td>
+          {% if course.now_available %}
+            Public
+          {% else %}
+            Private
+          {% endif %}
+        </td>
         <td>
           {% if course.namespace != '' %}
             <form
@@ -54,7 +68,7 @@
 
       {% if courses|length %}
       <tr>
-        <td colspan="5"style="text-align: right">
+        <td colspan="4" style="text-align: right">
           Total: {{ courses|length }} item(s)
         </td>
       </tr>
@@ -65,22 +79,27 @@
 
   {% if not courses|length %}
     <div class="gcb-list__empty-message-wrapper">
-      <div class="gcb-list__empty-message">No items</div>
+      <div class="gcb-list__empty-message">
+        <div class="empty-instance-instructions">
+          <div class="header">
+            Create a course by clicking one of the buttons above and then...
+          </div>
+          <dl>
+            <dt>Create</dt>
+            <dd>create course content</dd>
+            <dt>Style</dt>
+            <dd>style the course</dd>
+            <dt>Publish</dt>
+            <dd>publish the course</dd>
+            <dt>Manage</dt>
+            <dd>manage the course</dd>
+            <dt>Settings</dt>
+            <dd>change course settings</dd>
+          </dl>
+        </div>
+      </div>
     </div>
   {% endif %}
 </div>
 
-<script>
-$(document).ready(function(){
-  // Forms have no submit control unless this JS runs successfully to
-  // add the are-you-sure safety check.
-  $("[delete_course]").append(
-    '<button class="gcb-list__icon gcb-list__icon--rowhover material-icons">' +
-    'delete</button')
-  // Now that we have some submit controls, add the are-you-sure modal dialog.
-  $("[delete_course]").submit(function(event){
-    return confirm('You are about to permanently and unrecoverably ' +
-                   'delete this course.  Really proceed?');
-  })
-});
-</script>
+<script src="/modules/admin/_static/js/courses.js"></script>

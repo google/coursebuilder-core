@@ -1,5 +1,10 @@
 $(function() {
-  window.gcb = {};
+  window.gcb = {
+    _XSSI_PREFIX: ")]}'",
+    parseJsonResponse: function(responseString) {
+      return JSON.parse(responseString.replace(this._XSSI_PREFIX, ''));
+    }
+  };
 
   var modules = {
     // TODO(jorr): Bring Butterbar in here.

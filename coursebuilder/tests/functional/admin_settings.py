@@ -17,7 +17,6 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import cgi
-import os
 import re
 import urllib
 
@@ -33,7 +32,6 @@ from modules.dashboard import filer
 from modules.i18n_dashboard import i18n_dashboard
 from tests.functional import actions
 from tests.functional.actions import assert_contains
-from tests.functional.actions import assert_does_not_contain
 
 COURSE_NAME = 'admin_settings'
 COURSE_TITLE = 'Admin Settings'
@@ -81,68 +79,15 @@ class WelcomePageTests(actions.TestBase):
         response = self.get('/admin/welcome?action=welcome')
         assert_contains('Welcome to Course Builder', response.body)
         assert_contains('action="/admin/welcome"', response.body)
-        assert_contains('Create Empty Course', response.body)
-        assert_contains('Explore Sample Course', response.body)
+        assert_contains('Start Using Course Builder', response.body)
 
-    def test_explore_sample_course(self):
+    def test_welcome_page_button(self):
         actions.login(ADMIN_EMAIL, is_admin=True)
-        response = self.post(
-            '/admin/welcome?action=explore_sample',
-            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
-                'explore_sample')})
-        self.assertEqual(response.status_int, 302)
-        assert_contains('/dashboard', response.headers['location'])
-        response = self.get(response.headers['location'])
-        assert_contains('Power Searching with Google', response.body)
-        assert_does_not_contain('explore_sample', response.body)
-
-    def test_create_new_course(self):
-        actions.login(ADMIN_EMAIL, is_admin=True)
-        response = self.post(
-            '/admin/welcome?action=add_first_course',
-            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
-                'add_first_course')})
+        response = self.post('/admin/welcome', {})
         self.assertEqual(response.status_int, 302)
         self.assertEqual(
             response.headers['location'],
-            'http://localhost/first/dashboard')
-        response = self.get('/first/dashboard')
-        assert_contains('My First Course', response.body)
-        response = self.get('/admin/welcome?action=welcome')
-        assert_does_not_contain('Create Empty Course', response.body)
-
-    def test_configure_settings(self):
-        actions.login(ADMIN_EMAIL, is_admin=True)
-        response = self.post(
-            '/admin/welcome?action=configure_settings',
-            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
-                'configure_settings')})
-        self.assertEqual(302, response.status_int)
-        self.assertEqual(
-            response.headers['location'], 'http://localhost/modules/admin')
-
-    def test_explore_sample_course_not_idempotent(self):
-        for uid in ['sample', 'sample_%s' % os.environ[
-            'GCB_PRODUCT_VERSION'].replace('.', '_')]:
-            self.test_explore_sample_course()
-            response = self.get('/')
-            self.assertEqual(response.status_int, 302)
-            self.assertEqual(
-                response.headers['location'],
-                'http://localhost/%s/course?use_last_location=true' % uid)
-
-        self.test_create_new_course()
-
-    def test_create_new_course_idempotent(self):
-        self.test_create_new_course()
-        self.test_create_new_course()
-
-        self.test_explore_sample_course()
-        response = self.get('/')
-        self.assertEqual(response.status_int, 302)
-        self.assertEqual(
-            response.headers['location'],
-            'http://localhost/first/course?use_last_location=true')
+            'http://localhost/modules/admin')
 
 
 class HtmlHookTest(actions.TestBase):

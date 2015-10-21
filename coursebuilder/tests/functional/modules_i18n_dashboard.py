@@ -2932,41 +2932,21 @@ class CourseLocalizationTestBase(actions.TestBase):
     def _import_course(self):
         email = 'test_course_localization@google.com'
         actions.login(email, is_admin=True)
-
-        response = self.get('/admin/welcome')
-        self.assertEquals(response.status_int, 200)
-        response = self.post(
-            '/admin/welcome?action=add_first_course',
-            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
-                'add_first_course')})
-        self.assertEquals(response.status_int, 302)
-
-        sites.setup_courses('course:/first::ns_first')
-
-        response = self.get('first/dashboard')
-        self.assertIn('My First Course', response.body)
-        self.assertEquals(response.status_int, 200)
+        actions.simple_add_course('first', email, 'My First Course')
 
 
 class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
     def _import_sample_course(self):
-        email = 'test_course_localization@google.com'
-        actions.login(email, is_admin=True)
-
-        response = self.get('/admin/welcome')
-        self.assertEquals(response.status_int, 200)
-        response = self.post(
-            '/admin/welcome?action=explore_sample',
-            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
-                'explore_sample')})
-        self.assertEquals(response.status_int, 302)
-
-        sites.setup_courses('course:/sample::ns_sample')
-
-        response = self.get('sample/dashboard')
-        self.assertIn('Power Searching with Google', response.body)
-        self.assertEquals(response.status_int, 200)
+        dst_app_context = actions.simple_add_course(
+            'sample', 'test_course_localization@google.com',
+            'Power Searching with Google')
+        dst_course = courses.Course(None, dst_app_context)
+        src_app_context = sites.get_all_courses('course:/:/:')[0]
+        errors = []
+        dst_course.import_from(src_app_context, errors)
+        dst_course.save()
+        self.assertEquals(0, len(errors))
 
     def _setup_locales(self, availability='available', course='first'):
         request = {

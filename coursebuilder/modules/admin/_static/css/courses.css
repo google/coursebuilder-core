@@ -1,0 +1,76 @@
+/*
+ * Style for the add course panel. Based on EditSkillPopup.
+ */
+.add-course-panel {
+  position: relative;
+}
+.add-course-panel .form-row {
+  margin: 12px 0;
+}
+.add-course-panel .form-row > label {
+  display: block;
+  font-weight: normal;
+  margin: 0 0 6px 0;
+}
+.add-course-panel .form-row > label.strong {
+  font-weight: bold;
+}
+.add-course-panel .form-row > label.invalid {
+  color: #f00;
+}
+.add-course-panel .form-row > input {
+  width: 300px;
+  padding: 10px;
+  border: solid 1px #ccc;
+  border-radius: 3px;
+  font-family: arial, sans-serif;
+  font-size: 13px;
+}
+/* keep the error style in sync with oeditor.css error style */
+.add-course-panel .form-row > input.invalid, {
+  border: solid 1px red;
+  box-shadow: 0 0 5px #f00;
+}
+.add-course-panel .spinner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.add-course-panel .spinner.hidden {
+  display: block !important;
+  visibility: visible;
+  left: -10000px;
+}
+.add-course-panel .spinner .background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #fff;
+  opacity: 0.5;
+}
+.add-course-panel .spinner .icon {
+  width: initial;
+  height: initial;
+  font-size: 80px;
+  position: absolute;
+  top: 60px;
+  left: 100px;
+}
+
+/*
+ * Style for the instructions shown when there are no courses.
+ */
+.empty-instance-instructions .header {
+  font-style: italic;
+  margin: 20px 0;
+}
+.empty-instance-instructions dt {
+  margin: 20px 0 0 0;
+}
+.empty-instance-instructions dd {
+  margin: 3px 0 0 0;
+}

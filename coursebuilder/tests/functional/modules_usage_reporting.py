@@ -210,8 +210,7 @@ class CourseCreationTests(UsageReportingTestBase):
         with actions.OverriddenConfig(sites.GCB_COURSES_CONFIG.name, ''):
             response = self.get('/admin/welcome')
             self.assertEquals(200, response.status_int)
-            self.assertIn('Explore Sample Course', response.body)
-            self.assertIn('Create Empty Course', response.body)
+            self.assertIn('Start Using Course Builder', response.body)
             self.assertIn(
                 'I agree that Google may collect information about this',
                 response.body)

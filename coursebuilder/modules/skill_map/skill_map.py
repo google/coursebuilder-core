@@ -46,7 +46,7 @@ from models import progress
 from models import resources_display
 from models import roles
 from models import transforms
-from modules.admin.admin import WelcomeHandler
+from modules.admin.config import CoursesItemRESTHandler
 from modules.courses import outline
 from modules.courses import settings
 from modules.courses.unit_lesson_editor import LessonRESTHandler
@@ -2070,7 +2070,7 @@ def notify_module_enabled():
     transforms.CUSTOM_JSON_ENCODERS.append(LocationInfo.json_encoder)
     transforms.CUSTOM_JSON_ENCODERS.append(SkillInfo.json_encoder)
 
-    WelcomeHandler.COPY_SAMPLE_COURSE_HOOKS.append(
+    CoursesItemRESTHandler.COPY_SAMPLE_COURSE_HOOKS.append(
         welcome_handler_import_skills_callback)
     courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.add(_SkillEntity)
 

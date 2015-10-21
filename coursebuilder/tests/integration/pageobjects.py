@@ -529,9 +529,19 @@ class DashboardPage(PageObject):
 
     def click_add_course(self):
         # assuming you're already looking at the Courses page
-        button = self.find_element_by_id('add_course')
-        self.wait_for_page_load_after(button.click)
-        return AddCourseEditorPage(self._tester)
+        self.find_element_by_id('add_course').click()
+        return AddCourseEditorPopup(self._tester)
+
+    def click_add_sample_course(self):
+        # assuming you're already looking at the Courses page
+        self.find_element_by_id('add_sample_course').click()
+        return AddCourseEditorPopup(self._tester)
+
+    def has_course(self, slug):
+        # assuming you're already looking at the Courses page, determines
+        # whether a given course exists
+        main_content = self.find_element_by_id('gcb-main-content')
+        return bool(main_content.find_elements_by_link_text('/' + slug))
 
     def click_site_settings(self):
         self.ensure_menu_group_is_open('settings')
@@ -1397,7 +1407,7 @@ class ConfigPropertyOverridePage(EditorPageObject):
         return self._close_and_return_to(AdminSettingsPage)
 
 
-class AddCourseEditorPage(EditorPageObject):
+class AddCourseEditorPopup(EditorPageObject):
     """Page object for the dashboards' add course page."""
 
     def set_fields(self, name=None, title=None, email=None):
@@ -1417,6 +1427,12 @@ class AddCourseEditorPage(EditorPageObject):
         if email:
             email_el.send_keys(email)
 
+        return self
+
+    def click_ok(self):
+        save_button = self.find_element_by_css_selector(
+            '.add-course-panel .save-button')
+        self.wait_for_page_load_after(save_button.click)
         return self
 
     def click_close(self):

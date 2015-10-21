@@ -30,7 +30,7 @@ USAGE_REPORTING_CONSENT_CHECKBOX_NAME = 'usage_reporting_consent'
 USAGE_REPORTING_CONSENT_CHECKBOX_VALUE = 'accepted'
 
 
-def _welcome_form_submitted(app_context, handler):
+def _welcome_form_submitted(handler):
     """Note value of reporting consent checkbox submitted with Welcome form."""
 
     consent_val = handler.request.get(USAGE_REPORTING_CONSENT_CHECKBOX_NAME)

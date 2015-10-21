@@ -13,6 +13,8 @@ window.gcb.Lightbox = function() {
 
   this._container.append(this._background);
   this._container.append(this._content);
+
+  this._background.click(this.close.bind(this));
   this._container.hide();
 }
 window.gcb.Lightbox.prototype = {

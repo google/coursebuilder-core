@@ -168,6 +168,8 @@ modules/activity_tag/activity_tag.py
 modules/activity_tag/resources/activity.png
 modules/admin/__init__.py
 modules/admin/_static/css/admin.css
+modules/admin/_static/css/courses.css
+modules/admin/_static/js/courses.js
 modules/admin/admin.py
 modules/admin/config.py
 modules/admin/templates/courses.html
@@ -829,6 +831,7 @@ tests/unit/javascript_tests/assets_lib_activity_generic/tests.js
 tests/unit/javascript_tests/assets_lib_butterbar/fixture.html
 tests/unit/javascript_tests/assets_lib_butterbar/karma.conf.js
 tests/unit/javascript_tests/assets_lib_butterbar/tests.js
+tests/unit/javascript_tests/lib/common.js
 tests/unit/javascript_tests/modules_assessment_tags/fixture.html
 tests/unit/javascript_tests/modules_assessment_tags/grading_button_fixture.html
 tests/unit/javascript_tests/modules_assessment_tags/karma.conf.js

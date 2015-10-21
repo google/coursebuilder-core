@@ -40,6 +40,13 @@ describe('Core UI', function() {
       this.lightbox.bindTo(this.root).show().close();
       expect(this.root.find('div.lightbox').length).toEqual(0);
     });
+
+    it('closes when background is clicked', function() {
+      this.lightbox.bindTo(this.root).show();
+      expect(this.root.find('div.lightbox').length).toEqual(1);
+      this.root.find('.lightbox .background').click();
+      expect(this.root.find('div.lightbox').length).toEqual(0);
+    });
   });
 
 });
