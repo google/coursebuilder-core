@@ -2501,16 +2501,16 @@ class Course(object):
                 'className': 'inputEx-Group hidden-header'
             })
         i18n_opts.add_property(schema_fields.SchemaField(
-            'course:can_student_change_locale', 'Let students switch languages',
+            'course:can_student_change_locale', 'Show Language Picker',
             'boolean',
-            description=messages.ALLOW_LANGUAGE_SWITCHING_DESCRIPTION,
+            description=str(messages.TRANSLATIONS_SHOW_LANGUAGE_PICKER),
             optional=True))
         locale_data_for_select = [
             (loc, locales.get_locale_display_name(loc))
             for loc in locales.get_system_supported_locales()]
         i18n_opts.add_property(schema_fields.SchemaField(
             'course:locale', 'Base language', 'string',
-            description=messages.BASE_LANGUAGE_DESCRIPTION, i18n=False,
+            description=messages.TRANSLATIONS_BASE_LANGUAGE, i18n=False,
             select_data=locale_data_for_select,
             optional=True))
         locale_type = schema_fields.FieldRegistry(
@@ -2528,21 +2528,16 @@ class Course(object):
             cls.SCHEMA_LOCALE_AVAILABILITY, 'Availability',
             'boolean', optional=True, select_data=select_data))
         i18n_opts.add_property(schema_fields.FieldArray(
-            'extra_locales', 'Extra languages',
-            item_type=locale_type,
-            description=(
-                'Languages which are listed here and marked as available can '
-                'be selected by students as their preferred language.'),
+            'extra_locales', 'Other Languages', item_type=locale_type,
+            description=messages.TRANSLATIONS_OTHER_LANGUAGES,
             extra_schema_dict_values={
                 'className': 'settings-list',
                 'listAddLabel': 'Add a language',
                 'listRemoveLabel': 'Delete language'},
             optional=True))
         i18n_opts.add_property(schema_fields.SchemaField(
-            'course:prevent_translation_edits',
-            'Prevent translation edits',
-            'boolean', optional=True,
-            description=messages.PREVENT_TRANSLATION_EDITS_DESCRIPTION))
+            'course:prevent_translation_edits', 'Prevent Edits', 'boolean',
+            optional=True, description=messages.TRANSLATIONS_PREVENT_EDITS))
         return reg
 
     @classmethod

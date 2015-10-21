@@ -317,18 +317,27 @@ Points a student receives for answering this question correctly. 1.0 indicates
 full credit.
 """
 
-ALLOW_LANGUAGE_SWITCHING_DESCRIPTION = """
-Allow students to switch languages at any time using a menu on the bottom of
-the page.
+TRANSLATIONS_BASE_LANGUAGE = """
+This is the base language of the course; other languages represent translations
+of the default content in this language.
 """
 
-BASE_LANGUAGE_DESCRIPTION = """
-The language your original course content is written in.
+TRANSLATIONS_OTHER_LANGUAGES = """
+The course is available in the languages listed here which are marked as
+available.
 """
 
-PREVENT_TRANSLATION_EDITS_DESCRIPTION = """
-Enable this to boost performance if you are finished translating your course.
+TRANSLATIONS_PREVENT_EDITS = """
+If checked, translations cannot be edited. This can be set to prevent accidental
+or undesired edits to translated content.
 """
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+TRANSLATIONS_SHOW_LANGUAGE_PICKER = safe_dom.assemble_text_message("""
+If checked, students can select among the available languages at any time via a
+language picker. Otherwise, the desire language must be assigned during
+registration.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
 
 REGISTRATION_EMAIL_BODY = """
 This is the body for welcome emails. Use the string {{student_name}} to include
@@ -366,3 +375,4 @@ Can pick all languages, including unavailable ones.
 ROLES_PERMISSION_SEE_DRAFTS_DESCRIPTION = """
 Can see lessons and assessments with draft status.
 """
+

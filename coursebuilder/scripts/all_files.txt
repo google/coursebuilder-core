@@ -345,9 +345,11 @@ modules/dashboard/utils.py
 modules/data_pump/__init__.py
 modules/data_pump/data_pump.html
 modules/data_pump/data_pump.py
+modules/data_pump/messages.py
 modules/data_removal/__init__.py
 modules/data_removal/data_removal.py
 modules/data_removal/delete_confirmation.html
+modules/data_removal/messages.py
 modules/data_removal/removal_models.py
 modules/embed/__init__.py
 modules/embed/embed.py

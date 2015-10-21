@@ -49,6 +49,7 @@ from models import jobs
 from models import transforms
 from modules.courses import settings
 from modules.dashboard import dashboard
+from modules.data_pump import messages
 
 from google.appengine.ext import db
 from google.appengine.ext import deferred
@@ -1164,15 +1165,11 @@ def register_module():
     project_id = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PROJECT_ID,
         'Project ID', 'string',
-        description='(Required) The ID (not the name!) of the Project to which '
-        'to send data.  See the list of projects and their IDs at '
-        'https://console.developers.google.com/project',
-        i18n=False, optional=True, validator=validate_project_id)
+        description=str(messages.PROJECT_ID), i18n=False, optional=True,
+        validator=validate_project_id)
     dataset_name = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + DATASET_NAME,
-        'Dataset Name', 'string',
-        description='Name of the BigQuery dataset to which to pump tables.  '
-        'If not set, this will default to the name of the course.',
+        'Dataset Name', 'string', description=messages.DATASET_NAME,
         optional=True, i18n=False)
 
     def validate_json_key(json_key, errors):
@@ -1199,14 +1196,8 @@ def register_module():
 
     json_key = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + JSON_KEY,
-        'JSON Key', 'text',
-        description='(Required) Contents of a JSON key created in the '
-        'Developers Console for the instance where BigQuery is to be run.  See '
-        'these videos for '
-        '<a href="https://www.youtube.com/watch?v=cz80K9DPtxg">'
-        'configuration</a> instructions as well as a brief demonstration of '
-        '<a href="https://www.youtube.com/watch?v=2ticBJcZGZ8">basic use.</a>"',
-        i18n=False, optional=True, validator=validate_json_key)
+        'JSON Key', 'text', description=str(messages.JSON_KEY), i18n=False,
+        optional=True, validator=validate_json_key)
 
     def validate_table_lifetime(value, errors):
         if not value:
@@ -1220,34 +1211,14 @@ def register_module():
 
     table_lifetime = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + TABLE_LIFETIME,
-        'Table Lifetime', 'string',
-        optional=True, i18n=False,
+        'Table Lifetime', 'string', optional=True, i18n=False,
         validator=validate_table_lifetime,
-        description='Amount of time a table pushed to BigQuery will last.  '
-        'After this amount of time, the table will be automatically deleted.  '
-        '(This is useful if your data retention or privacy policy mandates  '
-        'a limited time for analysis after which personal data must be '
-        'removed.)  Leaving this field blank will use the default value '
-        'of "' + PII_SECRET_DEFAULT_LIFETIME + '".  Supported units are: '
-        '"weeks", "days", "hours", "minutes", "seconds".  Units may be '
-        'specified as their first letter, singular, or plural.  Spaces '
-        'and commas may be used or omitted.  E.g., both of the following '
-        'are equivalent: "3w1d7h", "3 weeks, 1 day, 7 hours"')
+        description=str(messages.TABLE_LIFETIME))
 
     pii_encryption_token = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PII_ENCRYPTION_TOKEN,
-        'PII Encryption Token', 'string',
-        optional=True, i18n=False, editable=False,
-        description='Automatically generated encryption secret used to '
-        'obscure PII fields when these are pushed to BigQuery.  This '
-        'key lasts only as long as the Table Lifetime setting above, or '
-        '30 days if the limit is not set.  After this secret has expired, '
-        'a new secret will be generated.  PII items with the same un-obscured '
-        'value which are obscured with different values for this secret will '
-        'have different values.  Most importantly, this means that joins on '
-        'fields that should be the same (e.g., user ID) will not work. This '
-        'value will automatically be generated after all required fields are '
-        'satisfied and you click Save.')
+        'PII Encryption Token', 'string', optional=True, i18n=False,
+        editable=False, description=str(messages.PII_ENCRYPTION_TOKEN))
 
     course_settings_fields = (
         lambda c: project_id,

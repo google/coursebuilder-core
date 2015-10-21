@@ -37,6 +37,7 @@ from models import jobs
 from models import models
 from models import transforms
 from modules.admin import admin
+from modules.data_removal import messages
 from modules.data_removal import removal_models
 
 from google.appengine.api import namespace_manager
@@ -715,8 +716,7 @@ def _build_removal_policy_schema():
         i18n=False,
         select_data=select_data,
         default_value=ImmediateRemovalPolicy.get_name(),
-        description='The policy used for removal of data attributable '
-        'to a student when the student unregisters from the course.')
+        description=str(messages.REMOVAL_POLICY))
     return data_removal_policy
 
 
