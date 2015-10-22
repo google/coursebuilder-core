@@ -46,6 +46,7 @@ from models import data_removal
 from models import data_sources
 from models import models
 from models import transforms
+from modules.questionnaire import messages
 
 RESOURCES_PATH = '/modules/questionnaire/resources'
 
@@ -104,28 +105,20 @@ class QuestionnaireTag(tags.ContextAwareTag):
         reg.add_property(
             schema_fields.SchemaField(
                 'form-id', 'Form ID', 'string', optional=True, i18n=False,
-                description=(
-                    'Enter a unique ID for this form. Note this must be '
-                    'unique across your whole course. Then use this ID '
-                    'as the ID attribute of your form element.')))
+                description=str(messages.RTE_QUESTIONNAIRE_FORM_ID)))
         reg.add_property(
             schema_fields.SchemaField(
-                'button-label', 'Button Label', 'string', optional=True,
-                i18n=True, description=(
-                    'Text to be shown on submit button.')))
+                'button-label', 'Submit Label', 'string', optional=True,
+                i18n=True, description=messages.RTE_QUESTIONNAIRE_SUBMIT_LABEL))
         reg.add_property(
             schema_fields.SchemaField(
-                'disabled', 'Disabled', 'boolean', optional=True,
-                description=(
-                    'Use this option to render the form with data but leave '
-                    'all the fields disabled. This is used to display the '
-                    'results of a questionnaire on a different page.')))
+                'disabled', 'Disable Fields', 'boolean', optional=True,
+                description=str(messages.RTE_QUESTIONNAIRE_DISABLE_FIELDS)))
         reg.add_property(
             schema_fields.SchemaField(
-                'post-message', 'Post Message', 'text', optional=True,
-                i18n=True, description=(
-                    'Text shown to the student after they submit their '
-                    'responses.')))
+                'post-message', 'Submission Text', 'text', optional=True,
+                i18n=True,
+                description=messages.RTE_QUESTIONNAIRE_SUBMISSION_TEXT))
         return reg
 
     def rollup_header_footer(self, context):

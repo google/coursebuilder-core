@@ -30,6 +30,7 @@ from controllers import utils
 from models import custom_modules
 from models import models
 from models import student_work
+from modules.upload import messages
 
 from google.appengine.ext import db
 
@@ -111,9 +112,7 @@ class TextFileUploadTag(tags.BaseTag):
         registry = schema_fields.FieldRegistry(TextFileUploadTag.name())
         registry.add_property(schema_fields.SchemaField(
             'display_length', 'Display Length', 'integer',
-            description=(
-                'Number of characters in the filename display (supported '
-                'browsers only).'),
+            description=messages.RTE_UPLOAD_DISPLAY_LENGTH,
             extra_schema_dict_values={'value': 100},
         ))
 

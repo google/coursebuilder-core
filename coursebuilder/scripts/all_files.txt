@@ -237,6 +237,7 @@ modules/certificate/resources/images/cert.png
 modules/certificate/templates/certificate.html
 modules/code_tags/__init__.py
 modules/code_tags/code_tags.py
+modules/code_tags/messages.py
 modules/code_tags/resources/code_tags.css
 modules/code_tags/resources/code_tags.js
 modules/code_tags/resources/code_tags.png
@@ -259,6 +260,7 @@ modules/core_tags/_static/js/drive_tag_script_manager.js
 modules/core_tags/_static/js/html5_video.js
 modules/core_tags/_static/js/youtube_video.js
 modules/core_tags/core_tags.py
+modules/core_tags/messages.py
 modules/core_tags/templates/drive_error.html
 modules/core_tags/templates/drive_item.html
 modules/core_tags/templates/drive_tag_child_frame.js
@@ -531,6 +533,7 @@ modules/mapreduce/mapreduce_module.py
 modules/mapreduce/messages.py
 modules/math/__init__.py
 modules/math/math.py
+modules/math/messages.py
 modules/math/resources/math.png
 modules/notifications/__init__.py
 modules/notifications/cron.py
@@ -557,6 +560,7 @@ modules/oeditor/templates/preview_editor.html
 modules/oeditor/templates/rte.js
 modules/oeditor/templates/uneditable.js
 modules/questionnaire/__init__.py
+modules/questionnaire/messages.py
 modules/questionnaire/questionnaire.py
 modules/questionnaire/resources/css/button.css
 modules/questionnaire/resources/img/icon.png
@@ -617,6 +621,7 @@ modules/unsubscribe/templates/resubscribe.html
 modules/unsubscribe/templates/unsubscribe.html
 modules/unsubscribe/unsubscribe.py
 modules/upload/__init__.py
+modules/upload/messages.py
 modules/upload/resources/script_add.png
 modules/upload/templates/form.html
 modules/upload/templates/result.html

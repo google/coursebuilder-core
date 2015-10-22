@@ -35,6 +35,7 @@ from models import custom_modules
 from models import models
 from models import roles
 from models import transforms
+from modules.core_tags import messages
 from modules.oeditor import oeditor
 
 
@@ -612,10 +613,10 @@ class GoogleGroup(CoreTag):
         reg = schema_fields.FieldRegistry(GoogleGroup.name())
         reg.add_property(schema_fields.SchemaField(
             'group', 'Group Name', 'string', optional=True, i18n=False,
-            description='Name of the Google Group (e.g. mapping-with-google)'))
+            description=str(messages.RTE_GOOGLE_GROUP_GROUP_NAME)))
         reg.add_property(schema_fields.SchemaField(
             'category', 'Category Name', 'string', optional=True, i18n=False,
-            description='Name of the Category (e.g. unit5-2-annotation)'))
+            description=messages.RTE_GOOGLE_GROUP_CATEGORY_NAME))
         return reg
 
 
@@ -643,24 +644,20 @@ class IFrame(CoreTag):
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(IFrame.name())
         reg.add_property(schema_fields.SchemaField(
-            'src', 'Source URL', 'string',
-            optional=True,
-            description='Provide source URL for iframe (including http/https)',
+            'src', 'Embed URL', 'string', optional=True,
+            description=messages.RTE_IFRAME_EMBED_URL,
             extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
         reg.add_property(schema_fields.SchemaField(
-            'title', 'Title', 'string',
-            optional=True,
-            description='Provide title of iframe'))
+            'title', 'Title', 'string', optional=True,
+            description=messages.RTE_IFRAME_TITLE))
         reg.add_property(schema_fields.SchemaField(
-            'height', 'Height', 'string', i18n=False,
-            optional=True,
+            'height', 'Height', 'string', i18n=False, optional=True,
             extra_schema_dict_values={'value': '400'},
-            description=('Height of the iframe')))
+            description=messages.RTE_IFRAME_HEIGHT))
         reg.add_property(schema_fields.SchemaField(
-            'width', 'Width', 'string', i18n=False,
-            optional=True,
+            'width', 'Width', 'string', i18n=False, optional=True,
             extra_schema_dict_values={'value': '650'},
-            description=('Width of the iframe')))
+            description=messages.RTE_IFRAME_WIDTH))
         return reg
 
 
@@ -748,10 +745,7 @@ class Markdown(tags.ContextAwareTag, CoreTag):
         reg = schema_fields.FieldRegistry(Markdown.name())
         reg.add_property(schema_fields.SchemaField(
             'markdown', 'Markdown', 'text',
-            description='Provide '
-            '<a target="_blank" '
-            'href="http://daringfireball.net/projects/markdown/syntax">'
-            'markdown</a> text',
+            description=str(messages.RTE_MARKDOWN_MARKDOWN),
             extra_schema_dict_values={
                 'mode': 'markdown', '_type': 'code',
             }, optional=False))

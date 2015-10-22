@@ -22,6 +22,7 @@ from common import schema_fields
 from common import tags
 from controllers import sites
 from models import custom_modules
+from modules.code_tags import messages
 
 CODETAGS_MODULE_URI = '/modules/code_tags'
 CODETAGS_RESOURCES_URI = CODETAGS_MODULE_URI + '/resources'
@@ -173,13 +174,12 @@ class CodeTag(tags.ContextAwareTag):
         reg.add_property(
             schema_fields.SchemaField(
                 'mode', 'Language', 'string',
-                optional=True,
+                optional=True, description=messages.RTE_LANGUAGE,
                 select_data=SELECT_DATA))
         reg.add_property(
             schema_fields.SchemaField(
                 'code', 'Code', 'text',
-                description=('The code which will be displayed.'),
-                extra_schema_dict_values={
+                description=messages.RTE_CODE, extra_schema_dict_values={
                     '_type': 'code',
                 }, optional=True))
         return reg

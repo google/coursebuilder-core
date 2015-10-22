@@ -25,6 +25,7 @@ from common import schema_fields
 from common import tags
 from controllers import sites
 from models import custom_modules
+from modules.math import messages
 
 MATH_MODULE_URI = '/modules/math'
 RESOURCES_URI = MATH_MODULE_URI + '/resources'
@@ -79,14 +80,12 @@ class MathTag(tags.ContextAwareTag):
                 optional=True,
                 select_data=[('TeX', 'TeX'), ('MML', 'MML')],
                 extra_schema_dict_values={'value': 'TeX'},
-                description=('Select either "TeX" or "MML" to write math'
-                             ' script in TeX or MathML respectively.')))
+                description=str(messages.RTE_MATH_TYPE)))
         reg.add_property(
             schema_fields.SchemaField(
-                'formula', 'Mathematical formula', 'text',
+                'formula', 'Mathematical Formula', 'text',
                 optional=True,
-                description=('Provide mathematical script'
-                             ' which will be displayed')))
+                description=messages.RTE_MATH_MATHEMATICAL_FORMULA))
         return reg
 
 
@@ -118,5 +117,3 @@ def register_module():
         notify_module_disabled=on_module_disable,
         notify_module_enabled=on_module_enable)
     return custom_module
-
-
