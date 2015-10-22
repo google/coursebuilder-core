@@ -1044,6 +1044,8 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_rich_text(
         ).click_rte_add_custom_tag(
             'Question'
+        ).click_rte_element(
+            '#select_tab'
         ).set_rte_lightbox_field(
             '.question-weight input[name=weight]', 1
         ).click_rte_element(
@@ -1062,6 +1064,8 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_rich_text(
         ).click_rte_add_custom_tag(
             'Question'
+        ).click_rte_element(
+            '#select_tab'
         ).set_rte_lightbox_field(
             '.question-weight input[name=weight]', 1
         ).click_rte_element(
@@ -1082,6 +1086,8 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_rte_add_custom_tag(
             'Question',
             pageobjects.AddAssessment.INDEX_CONTENT
+        ).click_rte_element(
+            '#select_tab'
         ).set_rte_lightbox_field(
             '.question-weight input[name=weight]', 1
         ).click_rte_element(
@@ -1100,6 +1106,8 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_rte_add_custom_tag(
             'Question',
             pageobjects.AddAssessment.INDEX_CONTENT
+        ).click_rte_element(
+            '#select_tab'
         ).set_rte_lightbox_field(
             '.question-weight input[name=weight]', 1
         ).click_rte_element(

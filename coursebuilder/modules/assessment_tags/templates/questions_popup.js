@@ -73,11 +73,14 @@ $(function() {
       $('#cb-oeditor-form .sa-container').addClass('is-active');
       saUpdateToggleFeedbackButtons(_env.form.getFieldByName('sa_tab'));
     } else {
-      $('#mc_tab').text(CREATE_MC_TAB_LABEL);
+      $('#mc_tab').text(CREATE_MC_TAB_LABEL).addClass('is-active');
       $('#sa_tab').text(CREATE_SA_TAB_LABEL);
-      $('#select_tab').text(SELECT_EXISTING_TAB_LABEL).addClass('is-active');
-      $('#cb-oeditor-form .select-container').addClass('is-active');
+      $('#select_tab').text(SELECT_EXISTING_TAB_LABEL);
+      $('#cb-oeditor-form .mc-container').addClass('is-active');
     }
+
+    // Run MDL registration again
+    window.componentHandler.upgradeAllRegistered()
   }
 
   function validateFormData() {
@@ -152,11 +155,6 @@ $(function() {
       container.addClass('mdl-tabs__panel');
       tabBar.find('a').eq(index).attr('href', '#' + container.get(0).id);
     });
-
-    // Run MDL registration again
-    setTimeout(function() {
-      window.componentHandler.upgradeAllRegistered()
-    }, 0);
   }
 
   function bindSelect() {
