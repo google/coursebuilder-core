@@ -16,8 +16,17 @@
 
 """Runs all of the tests in parallel with or without integration server.
 
-Execute this script from the Course Builder folder as:
-    python scripts/run_all_tests.py
+This package does not need any setup and can do one of three things:
+
+  - execute all unit, functional and integration tests:
+      python scripts/run_all_tests.py
+
+  - execute specific tests packages, classes or methods:
+      python scripts/run_all_tests.py --test_class_name tests.unit.test_classes
+
+  - execute a complete official Course Builder release verification process:
+      python scripts/run_all_tests.py --do_a_release
+
 """
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
@@ -42,336 +51,8 @@ import urllib2
 import yaml
 import zipfile
 
+import all_tests
 
-# WARNING !!!
-#
-# by convention, all entries in the ALL_*_TEST_CLASSES dicts, including
-# integration test entries, are executed in separate threads concurrently;
-# be very careful with it; use it when you are confident that the tests do
-# not interfere with each other at runtime; they do interfere in a couple of
-# ways, for example: due to edits to a shared course content, due to changes
-# to the shared configuration properties or course settings and so on;
-#
-# when needed, force groups of tests to execute serially; simply don't list
-# them here individually, but do create a new empty test class that inherits
-# the individual tests from all desired test classes via multiple inheritance;
-# list each bundle class below individually and all tests within it will run
-# serially, while all the entries themselves continue to run concurrently
-#
-# WARNING !!!
-
-# here we list all integration tests that require an integration server
-ALL_INTEGRATION_TEST_CLASSES = {
-    'tests.integration.test_classes.IntegrationTestBundle1': 16,
-    'tests.integration.test_classes.VisualizationsTest': 5,
-    'tests.integration.test_classes.EmbedModuleTest': 4,
-}
-
-# here we list all functional and unit tests that run in-process
-ALL_TEST_CLASSES = {
-    'tests.functional.admin_settings.AdminSettingsTests': 1,
-    'tests.functional.admin_settings.ExitUrlTest': 1,
-    'tests.functional.admin_settings.HtmlHookTest': 17,
-    'tests.functional.admin_settings.JinjaContextTest': 2,
-    'tests.functional.admin_settings.WelcomePageTests': 2,
-    'tests.functional.assets_rest.AssetsRestTest': 13,
-    'tests.functional.common_crypto.EncryptionManagerTests': 5,
-    'tests.functional.common_crypto.XsrfTokenManagerTests': 3,
-    'tests.functional.common_crypto.PiiObfuscationHmac': 2,
-    'tests.functional.common_crypto.GenCryptoKeyFromHmac': 2,
-    'tests.functional.common_crypto.GetExternalUserIdTests': 4,
-    'tests.functional.common_users.AppEnginePassthroughUsersServiceTest': 10,
-    'tests.functional.common_users.AuthInterceptorAndRequestHooksTest': 2,
-    'tests.functional.common_users.PublicExceptionsAndClassesIdentityTests': 2,
-    'tests.functional.explorer_module.CourseExplorerTest': 5,
-    'tests.functional.explorer_module.CourseExplorerDisabledTest': 3,
-    'tests.functional.explorer_module.GlobalProfileTest': 1,
-    'tests.functional.controllers_review.PeerReviewControllerTest': 7,
-    'tests.functional.controllers_review.PeerReviewDashboardAdminTest': 1,
-    'tests.functional.controllers_review.PeerReviewDashboardStudentTest': 2,
-    'tests.functional.controllers_utils.LocalizedGlobalHandlersTest': 4,
-    'tests.functional.i18n.I18NCourseSettingsTests': 7,
-    'tests.functional.i18n.I18NMultipleChoiceQuestionTests': 6,
-    'tests.functional.model_analytics.AnalyticsTabsWithNoJobs': 8,
-    'tests.functional.model_analytics.CronCleanupTest': 14,
-    'tests.functional.model_analytics.MapReduceSimpleTest': 1,
-    'tests.functional.model_analytics.ProgressAnalyticsTest': 9,
-    'tests.functional.model_analytics.QuestionAnalyticsTest': 3,
-    'tests.functional.model_config.ValueLoadingTests': 2,
-    'tests.functional.model_courses.CourseCachingTest': 5,
-    'tests.functional.model_courses.PermissionsTest': 4,
-    'tests.functional.model_data_sources.PaginatedTableTest': 17,
-    'tests.functional.model_data_sources.PiiExportTest': 4,
-    'tests.functional.model_entities.BaseEntityTestCase': 3,
-    'tests.functional.model_entities.ExportEntityTestCase': 2,
-    'tests.functional.model_entities.EntityTransformsTest': 4,
-    'tests.functional.model_jobs.JobOperationsTest': 15,
-    'tests.functional.model_models.BaseJsonDaoTestCase': 1,
-    'tests.functional.model_models.ContentChunkTestCase': 16,
-    'tests.functional.model_models.EventEntityTestCase': 1,
-    'tests.functional.model_models.MemcacheManagerTestCase': 4,
-    'tests.functional.model_models.PersonalProfileTestCase': 1,
-    'tests.functional.model_models.QuestionDAOTestCase': 3,
-    'tests.functional.model_models.StudentAnswersEntityTestCase': 1,
-    'tests.functional.model_models.StudentLifecycleObserverTestCase': 13,
-    'tests.functional.model_models.StudentProfileDAOTestCase': 6,
-    'tests.functional.model_models.StudentPropertyEntityTestCase': 1,
-    'tests.functional.model_models.StudentTestCase': 11,
-    'tests.functional.model_permissions.PermissionsTests': 4,
-    'tests.functional.model_permissions.SimpleSchemaPermissionTests': 16,
-    'tests.functional.model_student_work.KeyPropertyTest': 4,
-    'tests.functional.model_student_work.ReviewTest': 3,
-    'tests.functional.model_student_work.SubmissionTest': 3,
-    'tests.functional.model_utils.QueryMapperTest': 4,
-    'tests.functional.model_vfs.VfsLargeFileSupportTest': 6,
-    'tests.functional.module_config_test.ManipulateAppYamlFileTest': 8,
-    'tests.functional.module_config_test.ModuleIncorporationTest': 12,
-    'tests.functional.module_config_test.ModuleManifestTest': 7,
-    'tests.functional.modules_admin.AdminDashboardTabTests': 6,
-    'tests.functional.modules_analytics.ClusterRESTHandlerTest': 29,
-    'tests.functional.modules_analytics.ClusteringGeneratorTests': 6,
-    'tests.functional.modules_analytics.ClusteringTabTests': 7,
-    'tests.functional.modules_analytics.StudentAggregateTest': 6,
-    'tests.functional.modules_analytics.StudentVectorGeneratorProgressTests': 2,
-    'tests.functional.modules_analytics.StudentVectorGeneratorTests': 12,
-    'tests.functional.modules_analytics.TestClusterStatisticsDataSource': 2,
-    'tests.functional.modules_analytics.GradebookCsvTests': 6,
-    'tests.functional.modules_assessment_tags.MultipleChoiceTagTests': 1,
-    'tests.functional.modules_assessments.EmbeddedAssessmentTests': 4,
-    'tests.functional.modules_balancer.ExternalTaskTest': 3,
-    'tests.functional.modules_balancer.ManagerTest': 10,
-    'tests.functional.modules_balancer.ProjectRestHandlerTest': 5,
-    'tests.functional.modules_balancer.TaskRestHandlerTest': 20,
-    'tests.functional.modules_balancer.WorkerPoolTest': 2,
-    'tests.functional.modules_certificate.CertificateHandlerTestCase': 5,
-    'tests.functional.modules_certificate.CertificateCriteriaTestCase': 6,
-    'tests.functional.modules_code_tags.CodeTagTests': 3,
-    'tests.functional.modules_core_tags.GoogleDriveRESTHandlerTest': 8,
-    'tests.functional.modules_core_tags.GoogleDriveTagRendererTest': 8,
-    'tests.functional.modules_core_tags.RuntimeTest': 13,
-    'tests.functional.modules_core_tags.TagsInclude': 8,
-    'tests.functional.modules_core_tags.TagsMarkdown': 1,
-    'tests.functional.modules_courses.AccessDraftsTestCase': 2,
-    'tests.functional.modules_courses.BackgroundImportTests': 7,
-    'tests.functional.modules_courses.CourseAccessPermissionsTests': 7,
-    'tests.functional.modules_courses.ReorderAccess': 2,
-    'tests.functional.modules_courses.UnitLessonEditorAccess': 3,
-    'tests.functional.modules_dashboard.CourseOutlineTestCase': 3,
-    'tests.functional.modules_dashboard.DashboardAccessTestCase': 3,
-    'tests.functional.modules_dashboard.TestLessonSchema': 2,
-    'tests.functional.modules_dashboard.QuestionDashboardTestCase': 8,
-    'tests.functional.modules_dashboard.QuestionGroupDashboardTestCase': 6,
-    'tests.functional.modules_dashboard.RoleEditorTestCase': 3,
-    'tests.functional.modules_data_pump.SchemaConversionTests': 1,
-    'tests.functional.modules_data_pump.StudentSchemaValidationTests': 2,
-    'tests.functional.modules_data_pump.PiiTests': 7,
-    'tests.functional.modules_data_pump.BigQueryInteractionTests': 36,
-    'tests.functional.modules_data_pump.UserInteractionTests': 4,
-    'tests.functional.modules_data_removal.DataRemovalTests': 8,
-    'tests.functional.modules_data_removal.UserInteractionTests': 16,
-    'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
-    'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
-    'tests.functional.modules_data_source_providers.StudentsTest': 5,
-    'tests.functional.modules_embed.DemoHandlerTest': 2,
-    'tests.functional.modules_embed'
-        '.ExampleEmbedAndHandlerV1ChildCoursesTest': 5,
-    'tests.functional.modules_embed'
-        '.ExampleEmbedAndHandlerV1SingleCourseTest': 3,
-    'tests.functional.modules_embed.FinishAuthHandlerTest': 1,
-    'tests.functional.modules_embed.GlobalErrorsDemoHandlerTest': 2,
-    'tests.functional.modules_embed.JsHandlersTest': 3,
-    'tests.functional.modules_embed.LocalErrorsDemoHandlerTest': 2,
-    'tests.functional.modules_embed.RegistryTest': 3,
-    'tests.functional.modules_embed.StaticResourcesTest': 1,
-    'tests.functional.modules_embed.UrlParserTest': 12,
-    'tests.functional.modules_extra_tabs.ExtraTabsTests': 7,
-    'tests.functional.modules_gitkit'
-        '.AccountChooserCustomizationHandlersTest': 2,
-    'tests.functional.modules_gitkit.BaseHandlerTest': 3,
-    'tests.functional.modules_gitkit.EmailMappingTest': 6,
-    'tests.functional.modules_gitkit.EmailRestHandlerTest': 5,
-    'tests.functional.modules_gitkit.RuntimeAndRuntimeConfigTest': 12,
-    'tests.functional.modules_gitkit.GitkitServiceTest': 9,
-    'tests.functional.modules_gitkit.OobChangeEmailResponseTest': 7,
-    'tests.functional.modules_gitkit.OobFailureResponseTest': 6,
-    'tests.functional.modules_gitkit.OobResetPasswordResponseTest': 7,
-    'tests.functional.modules_gitkit.SignInContinueHandlerTest': 4,
-    'tests.functional.modules_gitkit.SignInHandlerTest': 11,
-    'tests.functional.modules_gitkit.SignOutContinueHandlerTest': 5,
-    'tests.functional.modules_gitkit.SignOutHandlerTest': 2,
-    'tests.functional.modules_gitkit.StudentFederatedEmailTest': 2,
-    'tests.functional.modules_gitkit.WidgetHandlerTest': 2,
-    'tests.functional.modules_gitkit.UsersServiceTest': 16,
-    'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 15,
-    'tests.functional.modules_i18n_dashboard.IsTranslatableRestHandlerTests': 3,
-    'tests.functional.modules_i18n_dashboard.I18nDashboardHandlerTests': 4,
-    'tests.functional.modules_i18n_dashboard'
-        '.I18nProgressDeferredUpdaterTests': 5,
-    'tests.functional.modules_i18n_dashboard.LazyTranslatorTests': 5,
-    'tests.functional.modules_i18n_dashboard.ResourceBundleKeyTests': 2,
-    'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
-    'tests.functional.modules_i18n_dashboard'
-        '.TranslationConsoleRestHandlerTests': 8,
-    'tests.functional.modules_i18n_dashboard'
-        '.TranslationConsoleValidationTests': 5,
-    'tests.functional.modules_i18n_dashboard.TranslationImportExportTests': 53,
-    'tests.functional.modules_i18n_dashboard.TranslatorRoleTests': 2,
-    'tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest': 17,
-    'tests.functional.modules_i18n_dashboard_jobs.BaseJobTest': 9,
-    'tests.functional.modules_i18n_dashboard_jobs.DeleteTranslationsTest': 3,
-    'tests.functional.modules_i18n_dashboard_jobs.DownloadTranslationsTest': 5,
-    'tests.functional.modules_i18n_dashboard_jobs.RoundTripTest': 1,
-    'tests.functional.modules_i18n_dashboard_jobs'
-        '.TranslateToReversedCaseTest': 1,
-    'tests.functional.modules_i18n_dashboard_jobs.UploadTranslationsTest': 5,
-    'tests.functional.modules_invitation.InvitationHandlerTests': 16,
-    'tests.functional.modules_invitation.ProfileViewInvitationTests': 5,
-    'tests.functional.modules_invitation.SantitationTests': 1,
-    'tests.functional.modules_manual_progress.ManualProgressTest': 24,
-    'tests.functional.modules_math.MathTagTests': 3,
-    'tests.functional.modules_notifications.CronTest': 9,
-    'tests.functional.modules_notifications.DatetimeConversionTest': 1,
-    'tests.functional.modules_notifications.ManagerTest': 31,
-    'tests.functional.modules_notifications.NotificationTest': 8,
-    'tests.functional.modules_notifications.PayloadTest': 6,
-    'tests.functional.modules_notifications.SerializedPropertyTest': 2,
-    'tests.functional.modules_notifications.StatsTest': 2,
-    'tests.functional.modules_oeditor.ButtonbarCssHandlerTests': 2,
-    'tests.functional.modules_oeditor.ObjectEditorTest': 4,
-    'tests.functional.modules_oeditor.EditorPrefsTests': 6,
-    'tests.functional.modules_questionnaire.QuestionnaireDataSourceTests': 2,
-    'tests.functional.modules_questionnaire.QuestionnaireTagTests': 3,
-    'tests.functional.modules_questionnaire.QuestionnaireRESTHandlerTests': 5,
-    'tests.functional.modules_rating.ExtraContentProvideTests': 4,
-    'tests.functional.modules_rating.RatingHandlerTests': 15,
-    'tests.functional.modules_search.SearchTest': 12,
-    'tests.functional.modules_skill_map.CompetencyMeasureTests': 4,
-    'tests.functional.modules_skill_map.CountSkillCompletionsTests': 3,
-    'tests.functional.modules_skill_map.GenerateCompetencyHistogramsTests': 1,
-    'tests.functional.modules_skill_map.EventListenerTests': 4,
-    'tests.functional.modules_skill_map.LocationListRestHandlerTests': 2,
-    'tests.functional.modules_skill_map.SkillAggregateRestHandlerTests': 6,
-    'tests.functional.modules_skill_map.SkillCompletionTrackerTests': 6,
-    'tests.functional.modules_skill_map.SkillGraphTests': 11,
-    'tests.functional.modules_skill_map.SkillI18nTests': 5,
-    'tests.functional.modules_skill_map.SkillMapAnalyticsTabTests': 2,
-    'tests.functional.modules_skill_map.SkillMapHandlerTests': 3,
-    'tests.functional.modules_skill_map.SkillMapMetricTests': 10,
-    'tests.functional.modules_skill_map.SkillMapRdfHandlerTests': 3,
-    'tests.functional.modules_skill_map.SkillMapTests': 7,
-    'tests.functional.modules_skill_map.SkillRestHandlerTests': 18,
-    'tests.functional.modules_skill_map.StudentSkillViewWidgetTests': 6,
-    'tests.functional.modules_unsubscribe.GetUnsubscribeUrlTests': 1,
-    'tests.functional.modules_unsubscribe.SubscribeAndUnsubscribeTests': 4,
-    'tests.functional.modules_unsubscribe.UnsubscribeHandlerTests': 4,
-    'tests.functional.modules_usage_reporting.ConsentBannerTests': 4,
-    'tests.functional.modules_usage_reporting.ConsentBannerRestHandlerTests': 3,
-    'tests.functional.modules_usage_reporting.ConfigTests': 3,
-    'tests.functional.modules_usage_reporting.CourseCreationTests': 4,
-    'tests.functional.modules_usage_reporting.DevServerTests': 2,
-    'tests.functional.modules_usage_reporting.EnrollmentTests': 3,
-    'tests.functional.modules_usage_reporting.MessagingTests': 8,
-    'tests.functional.modules_usage_reporting.UsageReportingTests': 5,
-    'tests.functional.progress_percent.ProgressPercent': 4,
-    'tests.functional.review_module.ManagerTest': 55,
-    'tests.functional.review_peer.ReviewStepTest': 3,
-    'tests.functional.review_peer.ReviewSummaryTest': 5,
-    'tests.functional.student_answers.StudentAnswersAnalyticsTest': 1,
-    'tests.functional.student_labels.StudentLabelsTest': 32,
-    'tests.functional.student_last_location.NonRootCourse': 9,
-    'tests.functional.student_last_location.RootCourse': 3,
-    'tests.functional.student_tracks.StudentTracksTest': 10,
-    'tests.functional.review_stats.PeerReviewAnalyticsTest': 1,
-    'tests.functional.roles.RolesTest': 24,
-    'tests.functional.upload_module.TextFileUploadHandlerTestCase': 8,
-    'tests.functional.upload_module.TextFileUploadTagTestCase': 2,
-    'tests.functional.test_classes.ActivityTest': 2,
-    'tests.functional.test_classes.AdminAspectTest': 10,
-    'tests.functional.test_classes.AssessmentPolicyTests': 6,
-    'tests.functional.test_classes.AssessmentTest': 2,
-    'tests.functional.test_classes.CourseAuthorAspectTest': 4,
-    'tests.functional.test_classes.CourseAuthorCourseCreationTest': 1,
-    'tests.functional.test_classes.CourseAuthorCourseDeletionTest': 7,
-    'tests.functional.test_classes.CourseUrlRewritingTest': 48,
-    'tests.functional.test_classes.DatastoreBackedCustomCourseTest': 6,
-    'tests.functional.test_classes.DatastoreBackedSampleCourseTest': 48,
-    'tests.functional.test_classes.EtlMainTestCase': 46,
-    'tests.functional.test_classes.EtlRemoteEnvironmentTestCase': 0,
-    'tests.functional.test_classes.ExtensionSwitcherTests': 2,
-    'tests.functional.test_classes.InfrastructureTest': 21,
-    'tests.functional.test_classes.I18NTest': 2,
-    'tests.functional.test_classes.LegacyEMailAsKeyNameTest': 48,
-    'tests.functional.test_classes.LessonComponentsTest': 3,
-    'tests.functional.test_classes.MemcacheTest': 69,
-    'tests.functional.test_classes.MultipleCoursesTest': 1,
-    'tests.functional.test_classes.NamespaceTest': 2,
-    'tests.functional.test_classes.StaticHandlerTest': 3,
-    'tests.functional.test_classes.StudentAspectTest': 20,
-    'tests.functional.test_classes.StudentKeyNameTest': 8,
-    'tests.functional.test_classes.StudentUnifiedProfileTest': 20,
-    'tests.functional.test_classes.TransformsEntitySchema': 1,
-    'tests.functional.test_classes.TransformsJsonFileTestCase': 3,
-    'tests.functional.test_classes.VirtualFileSystemTest': 48,
-    'tests.functional.test_classes.ImportActivityTests': 7,
-    'tests.functional.test_classes.ImportAssessmentTests': 3,
-    'tests.functional.test_classes.ImportGiftQuestionsTests': 1,
-    'tests.functional.test_classes.WSGIRoutingTest': 3,
-    'tests.functional.unit_assessment.UnitPartialUpdateTests': 6,
-    'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 18,
-    'tests.functional.unit_description.UnitDescriptionsTest': 1,
-    'tests.functional.unit_header_footer.UnitHeaderFooterTest': 11,
-    'tests.functional.unit_on_one_page.UnitOnOnePageTest': 4,
-    'tests.functional.whitelist.WhitelistTest': 13,
-    'tests.unit.etl_mapreduce.HistogramTests': 5,
-    'tests.unit.etl_mapreduce.FlattenJsonTests': 4,
-    'tests.unit.common_catch_and_log.CatchAndLogTests': 6,
-    'tests.unit.common_locales.LocalesTests': 2,
-    'tests.unit.common_locales.ParseAcceptLanguageTests': 6,
-    'tests.unit.common_menus.MenuTests': 6,
-    'tests.unit.common_resource.ResourceKeyTests': 3,
-    'tests.unit.common_schema_fields.CloneItemsNamedTests': 10,
-    'tests.unit.common_schema_fields.ComplexDisplayTypeTests': 1,
-    'tests.unit.common_schema_fields.DisplayTypeTests': 6,
-    'tests.unit.common_schema_fields.FieldArrayTests': 3,
-    'tests.unit.common_schema_fields.FieldRegistryTests': 7,
-    'tests.unit.common_schema_fields.RedactEntityTests': 11,
-    'tests.unit.common_schema_fields.SchemaFieldTests': 4,
-    'tests.unit.common_safe_dom.NodeListTests': 4,
-    'tests.unit.common_safe_dom.TextTests': 2,
-    'tests.unit.common_safe_dom.ElementTests': 17,
-    'tests.unit.common_safe_dom.ScriptElementTests': 3,
-    'tests.unit.common_safe_dom.EntityTests': 11,
-    'tests.unit.common_tags.CustomTagTests': 13,
-    'tests.unit.common_utils.CommonUnitTests': 11,
-    'tests.unit.common_utils.ParseTimedeltaTests': 8,
-    'tests.unit.common_utils.ValidateTimedeltaTests': 6,
-    'tests.unit.common_utils.ZipAwareOpenTests': 2,
-    'tests.unit.javascript_tests.AllJavaScriptTests': 10,
-    'tests.unit.models_analytics.AnalyticsTests': 6,
-    'tests.unit.models_config.ValidateIntegerRangeTests': 3,
-    'tests.unit.models_courses.WorkflowValidationTests': 13,
-    'tests.unit.models_transforms.JsonToDictTests': 13,
-    'tests.unit.models_transforms.JsonParsingTests': 3,
-    'tests.unit.models_transforms.StringValueConversionTests': 2,
-    'tests.unit.modules_search.ParserTests': 10,
-    'tests.unit.test_classes.DeepDictionaryMergeTest': 5,
-    'tests.unit.test_classes.EtlRetryTest': 3,
-    'tests.unit.test_classes.InvokeExistingUnitTest': 5,
-    'tests.unit.test_classes.ReviewModuleDomainTests': 1,
-    'tests.unit.test_classes.SuiteTestCaseTest': 3,
-    'tests.unit.gift_parser_tests.SampleQuestionsTest': 1,
-    'tests.unit.gift_parser_tests.TestEssayAndNumericQuestion': 4,
-    'tests.unit.gift_parser_tests.TestMatchQuestion': 3,
-    'tests.unit.gift_parser_tests.TestMissingWordQuestion': 2,
-    'tests.unit.gift_parser_tests.TestShortAnswerQuestion': 3,
-    'tests.unit.gift_parser_tests.TestTrueFalseQuestion': 2,
-    'tests.unit.gift_parser_tests.TestMultiChoiceMultipleSelectionQuestion': 3,
-    'tests.unit.gift_parser_tests.TestHead': 2,
-    'tests.unit.gift_parser_tests.TestMultiChoiceQuestion': 5,
-    'tests.unit.gift_parser_tests.TestCreateManyGiftQuestion': 1,
-}
-
-INTERNAL_TEST_CLASSES = {}
 
 INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
 
@@ -379,6 +60,7 @@ INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
 DISALLOWED_IMPORTS = [
     'google.appengine.api.users',
 ]
+
 # Map of relative cb path -> dot qualified import target of exceptions to
 # DISALLOWED_IMPORTS.
 DISALLOWED_IMPORTS_EXCEPTIONS = {
@@ -422,9 +104,12 @@ COMBO_SERV_URLS = [
         'CustomCssComboZipHandler'),
     ]
 
-# well-known location of statically served files
-STATIC_SERV_LN_SOURCE = os.path.join(
-    os.path.dirname(__file__), '..', 'lib', '_static')
+# A directory, which all components of this file should treat as project root
+BUILD_DIR = None
+
+def build_dir():
+    """Convenience function to access BUILD_DIR."""
+    return BUILD_DIR
 
 
 def make_default_parser():
@@ -433,6 +118,10 @@ def make_default_parser():
         '--test_class_name',
         help='required dotted module name of the test(s) to run',
         type=str, default=None)
+    parser.add_argument(
+        '--do_a_release',
+        help='Whether to run an entire release validation process',
+        action='store_true')
     parser.add_argument(
         '--skip_integration', help='Whether to run integration tests',
         action='store_true')
@@ -510,8 +199,7 @@ def ensure_port_available(port_number, quiet=False):
 def start_integration_server(server_log_file, env):
     ensure_port_available(8081)
     ensure_port_available(8000)
-    server_cmd = os.path.join(
-        os.path.dirname(__file__), 'start_in_shell.sh')
+    server_cmd = os.path.join(build_dir(), 'scripts', 'start_in_shell.sh')
     return start_integration_server_process(
         server_cmd,
         set(['tests.integration.fake_visualizations']),
@@ -521,7 +209,7 @@ def start_integration_server(server_log_file, env):
 def start_integration_server_process(
     integration_server_start_cmd, modules, server_log_file, env):
     if modules:
-        _fn = os.path.join(os.path.dirname(__file__), '..', 'custom.yaml')
+        _fn = os.path.join(build_dir(), 'custom.yaml')
         _st = os.stat(_fn)
         os.chmod(_fn, _st.st_mode | stat.S_IWUSR)
         fp = open(_fn, 'w')
@@ -575,7 +263,7 @@ def stop_integration_server(server, logfile, modules):
     # clean up
     if modules:
         fp = open(
-            os.path.join(os.path.dirname(__file__), '..', 'custom.yaml'), 'w')
+            os.path.join(build_dir(), 'custom.yaml'), 'w')
         fp.writelines([
             '# Add configuration for your application here to avoid\n'
             '# potential merge conflicts with new releases of the main\n'
@@ -633,8 +321,7 @@ def log(message):
 
 
 def all_third_party_tests():
-    yaml_path = os.path.join(os.path.dirname(__file__),
-                             'third_party_tests.yaml')
+    yaml_path = os.path.join(build_dir(), 'scripts', 'third_party_tests.yaml')
     if os.path.exists(yaml_path):
         with open(yaml_path) as fp:
             data = yaml.load(fp)
@@ -776,8 +463,7 @@ class FunctionalTestTask(object):
     def run(self):
         if self.verbose:
             log('Running all tests in: %s.' % (self.test_class_name))
-
-        suite_sh = os.path.join(os.path.dirname(__file__), 'suite.sh')
+        suite_sh = os.path.join(build_dir(), 'scripts', 'suite.sh')
         result, self.output = run(
             ['sh', suite_sh, self.test_class_name], stdout=None,
             verbose=self.verbose)
@@ -803,7 +489,7 @@ class DeveloperWorkflowTester(object):
 
         self.test_class_name_expansion()
         self.test_developer_test_workflow_with_test_sh()
-        # self.test_developer_test_workflow_with_run_all_tests_py()
+        self.test_developer_test_workflow_with_run_all_tests_py()
 
     def test_class_name_expansion(self):
         """Developer can test all methods of one class."""
@@ -827,8 +513,7 @@ class DeveloperWorkflowTester(object):
 
     def test_developer_test_workflow_with_test_sh(self):
         """Developer can test one method of one class with test.sh."""
-        cmd = os.path.join(
-            os.getcwd(), 'experimental', 'coursebuilder', 'scripts', 'test.sh')
+        cmd = os.path.join(build_dir(), 'scripts', 'test.sh')
         out = self._run([
             'sh', cmd,
             'tests.unit.test_classes.'
@@ -838,8 +523,7 @@ class DeveloperWorkflowTester(object):
 
     def test_developer_test_workflow_with_run_all_tests_py(self):
         """Developer can test one method of one class with run_all_test.py."""
-        cmd = os.path.join(
-            os.getcwd(), 'experimental', 'coursebuilder', 'scripts',
+        cmd = os.path.join(build_dir(), 'scripts',
             'run_all_tests.py')
         out = self._run([
             'python', cmd,
@@ -903,14 +587,6 @@ def remove_dir(dir_name):
             raise Exception('Failed to delete directory: %s' % dir_name)
 
 
-def clean_dir(dir_name):
-    """Cleans a directory."""
-    remove_dir(dir_name)
-    os.makedirs(dir_name)
-    if not os.path.exists(dir_name):
-        raise Exception('Failed to create directory: %s' % dir_name)
-
-
 def chmod_dir_recursive(folder_name, mode):
     """Removes read-only attribute from all files and folders recursively."""
     for root, unused_dirs, files in os.walk(folder_name):
@@ -919,16 +595,16 @@ def chmod_dir_recursive(folder_name, mode):
             os.chmod(full_path, mode)
 
 
-def zip_all_files(build_dir, zip_file_name, verbose=False):
+def zip_all_files(zip_file_name, verbose=False):
     """Build and test a release zip file."""
 
     log('Zipping: %s' % zip_file_name)
 
-    chmod_dir_recursive(build_dir, 0o777)
+    chmod_dir_recursive(build_dir(), 0o777)
 
     # build it
     _out = zipfile.ZipFile(zip_file_name, 'w')
-    for root, unused_dirs, files in os.walk(build_dir):
+    for root, unused_dirs, files in os.walk(build_dir()):
         base = '/'.join(root.split('/')[3:])
         base = os.path.join(PRODUCT_NAME, base)
         for afile in files:
@@ -997,6 +673,7 @@ def assert_no_disallowed_imports(root):
                     raise Exception(
                         'Found disallowed import of "%s" in file: %s' % (
                             target, cb_path))
+    log('No banned imports found')
 
 
 def count_files_in_dir(dir_name, suffix=None):
@@ -1014,34 +691,36 @@ def count_files_in_dir(dir_name, suffix=None):
 
 
 def enforce_file_count_and_remove_extra_files(
-    build_dir, known_files=None, delete_extra_files_folders=False):
+    known_files=None, delete_extra_files_folders=False):
     """Check that we have exactly the files we expect; delete extras."""
     skip_rel_dirs = ['_static']
 
     # verify mo files
-    count_mo_files = count_files_in_dir(build_dir, suffix='.mo')
+    count_mo_files = count_files_in_dir(build_dir(), suffix='.mo')
     if count_mo_files != EXPECTED_MO_FILE_COUNT:
         raise Exception('Expected %s .mo catalogue files, found %s' %
                         (EXPECTED_MO_FILE_COUNT, count_mo_files))
 
     if known_files:
         # list files; delete extras
-        all_files = walk_folder_tree(build_dir, skip_rel_dirs=skip_rel_dirs)
+        all_files = walk_folder_tree(build_dir(), skip_rel_dirs=skip_rel_dirs)
         if delete_extra_files_folders:
             for afile in all_files:
                 if afile not in known_files:
-                    result, output = run(['rm', '-f', '-v',
-                                      os.path.join(build_dir, afile)])
-                    if result != 0:
-                        raise Exception('error %s\n%s' % (result, output))
+                    os.remove(os.path.join(build_dir(), afile))
 
         # list files again; check no extras
-        all_files = walk_folder_tree(build_dir, skip_rel_dirs=skip_rel_dirs)
+        all_files = walk_folder_tree(build_dir(), skip_rel_dirs=skip_rel_dirs)
         if all_files != known_files:
             diff = difflib.unified_diff(all_files, known_files, lineterm='')
             raise Exception(
                 'Folder contents differs from expected:\n%s' % (
                       '\n'.join(list(diff))))
+
+    if delete_extra_files_folders:
+        log('File count verified and extra files removed')
+    else:
+        log('File count of verified')
 
 
 def setup_all_dependencies():
@@ -1084,8 +763,8 @@ def is_a_member_of(test_class_name, set_of_tests):
 
 def select_tests_to_run(test_class_name):
     test_classes = {}
-    test_classes.update(ALL_TEST_CLASSES)
-    test_classes.update(ALL_INTEGRATION_TEST_CLASSES)
+    test_classes.update(all_tests.ALL_TEST_CLASSES)
+    test_classes.update(all_tests.ALL_INTEGRATION_TEST_CLASSES)
     test_classes.update(all_third_party_tests())
 
     if test_class_name:
@@ -1146,7 +825,7 @@ def assert_handler(url, handler):
 
 def assert_gcb_allow_static_serv_is_disabled():
     log('Making sure static serving disabled')
-    assert not os.path.exists(STATIC_SERV_LN_SOURCE)
+    assert not os.path.exists(os.path.join(build_dir(), 'lib', '_static'))
     for url, handler in STATIC_SERV_URLS:
         assert_handler(url, handler)
     for  url, handler in COMBO_SERV_URLS:
@@ -1155,7 +834,7 @@ def assert_gcb_allow_static_serv_is_disabled():
 
 def assert_gcb_allow_static_serv_is_enabled():
     log('Making sure static serving enabled')
-    assert os.path.exists(STATIC_SERV_LN_SOURCE)
+    assert os.path.exists(os.path.join(build_dir(), 'lib', '_static'))
     for url, _ in STATIC_SERV_URLS:
         assert_handler(url, None)
 
@@ -1170,7 +849,7 @@ def group_tests(parsed_args, setup_deps=True):
     non_integration_tests = {}
     for test_class_name in test_classes.keys():
         if is_a_member_of(
-            test_class_name, ALL_INTEGRATION_TEST_CLASSES):
+            test_class_name, all_tests.ALL_INTEGRATION_TEST_CLASSES):
             target = integration_tests
         else:
             target = non_integration_tests
@@ -1188,13 +867,13 @@ def group_tests(parsed_args, setup_deps=True):
     return integration_tests, non_integration_tests
 
 
-def run_all_tests(parsed_args, setup_deps=True):
+def _run_all_tests(parsed_args, setup_deps=True):
     integration_tests, non_integration_tests = group_tests(
         parsed_args, setup_deps)
 
-    all_tests = {}
-    all_tests.update(non_integration_tests)
-    all_tests.update(integration_tests)
+    _all_tests = {}
+    _all_tests.update(non_integration_tests)
+    _all_tests.update(integration_tests)
 
     with_server = bool(integration_tests)
 
@@ -1205,21 +884,22 @@ def run_all_tests(parsed_args, setup_deps=True):
     with WithTestConfiguration(with_server, True, parsed_args.server_log_file):
         if with_server:
             assert_gcb_allow_static_serv_is_enabled()
-            run_tests({
-                'tests.integration.test_classes.'
-                'IntegrationServerInitializationTask': 1},
+            _run_tests(
+                {
+                  'tests.integration.test_classes.'
+                  'IntegrationServerInitializationTask': 1},
                 False, setup_deps=False, chunk_size=1, hint='setup')
-        if all_tests:
+        if _all_tests:
             try:
                 chunk_size = 2 * multiprocessing.cpu_count()
             except:  # pylint: disable=bare-except
                 chunk_size = 8
-            run_tests(
-                all_tests, parsed_args.verbose,
+            _run_tests(
+                _all_tests, parsed_args.verbose,
                 setup_deps=setup_deps, chunk_size=chunk_size)
 
 
-def run_tests(
+def _run_tests(
     test_classes, verbose, setup_deps=True, chunk_size=16, hint='generic'):
     start = time.time()
     task_to_test = {}
@@ -1257,7 +937,7 @@ def run_tests(
 
     # report all longest first
     if name_durations:
-        log('Reporting execution times for 10 longest tests')
+        log('Reporting execution times for upto 10 longest tests')
     for duration, name in sorted(
         name_durations, key=lambda name_duration: name_duration[0],
         reverse=True)[:10]:
@@ -1286,18 +966,18 @@ def run_tests(
         total_count, len(tasks), int(time.time() - start)))
 
 
-def run_lint():
+def _run_lint():
     # Wire outputs to our own stdout/stderr so messages appear immediately,
     # rather than batching up and waiting for the end (linting takes a while)
-    path = os.path.join(os.path.dirname(__file__), 'pylint.sh')
+    path = os.path.join(build_dir(), 'scripts', 'pylint.sh')
     status = subprocess.call(path, stdin=None, stdout=sys.stdout,
                              stderr=sys.stderr)
     return status == 0
 
 
 def _dry_run(parsed_args):
-    run_tests(
-        INTERNAL_TEST_CLASSES,
+    _run_tests(
+        all_tests.INTERNAL_TEST_CLASSES,
         parsed_args.verbose, setup_deps=False, hint="dry run")
 
 
@@ -1305,7 +985,7 @@ def _lint(parsed_args):
     if parsed_args.skip_pylint:
         log('Skipping pylint at user request')
     else:
-        if not run_lint():
+        if not _run_lint():
             if parsed_args.ignore_pylint_failures:
                 log('Ignoring pylint test errors.')
             else:
@@ -1313,7 +993,7 @@ def _lint(parsed_args):
 
 
 def do_a_release(
-    source_dir, target_dir, build_dir, release_label):
+    source_dir, target_dir, _build_dir, release_label):
     """Creates/validates an official release of CourseBuilder.
 
     Args:
@@ -1335,11 +1015,14 @@ def do_a_release(
         - copies a resulting zip file and log file to target_dir
     """
 
+    global BUILD_DIR  # pylint: disable=global-statement
+    BUILD_DIR = _build_dir
+
     log_file = os.path.join(target_dir, 'log_%s.txt' % release_label)
     zip_file = os.path.join(
         target_dir, '%s_%s.zip' % (PRODUCT_NAME, release_label))
-    manifest_file = os.path.join(build_dir, 'VERSION')
-    third_party_file = os.path.join(build_dir, 'lib/README')
+    manifest_file = os.path.join(build_dir(), 'VERSION')
+    third_party_file = os.path.join(build_dir(), 'lib/README')
 
     file_list_fn = '%s/scripts/all_files.txt' % source_dir
     known_files = open(file_list_fn).read().splitlines()
@@ -1348,17 +1031,16 @@ def do_a_release(
 
     del LOG_LINES[:]
 
-    log('Starting Course Builder release')
+    log('Starting Course Builder release: %s' % release_label)
     log('Working directory: %s' % os.getcwd())
     log('Source directory: %s' % source_dir)
     log('Target directory: %s' % target_dir)
-    log('Build temp directory: %s' % build_dir)
+    log('Build temp directory: %s' % build_dir())
 
     setup_all_dependencies()
 
-    clean_dir(target_dir)
-    remove_dir(build_dir)
-    shutil.copytree(source_dir, build_dir)
+    remove_dir(build_dir())
+    shutil.copytree(source_dir, build_dir(), symlinks=True)
 
     create_manifests(manifest_file, third_party_file, release_label)
 
@@ -1366,17 +1048,18 @@ def do_a_release(
     _dry_run(parsed_args)
 
     enforce_file_count_and_remove_extra_files(
-        build_dir, known_files, delete_extra_files_folders=True)
+        known_files, delete_extra_files_folders=True)
 
-    assert_no_disallowed_imports(build_dir)
     _lint(parsed_args)
+    assert_no_disallowed_imports(build_dir())
     DeveloperWorkflowTester().test_all()
 
-    run_all_tests(parsed_args, setup_deps=False)
-    enforce_file_count_and_remove_extra_files(build_dir, known_files)
+    _run_all_tests(parsed_args, setup_deps=False)
+    enforce_file_count_and_remove_extra_files(
+        known_files, delete_extra_files_folders=True)
 
-    zip_all_files(build_dir, zip_file)
-    remove_dir(build_dir)
+    zip_all_files(zip_file)
+    remove_dir(build_dir())
 
     log('Saving log to: %s' % log_file)
     write_text_file(log_file, '%s' % '\n'.join(LOG_LINES))
@@ -1387,17 +1070,35 @@ def do_a_release(
     return 0
 
 
-def main():
-    parsed_args = make_default_parser().parse_args()
+def _test_only(parsed_args):
+    """Runs a set of tests as specific by command line arguments."""
+    global BUILD_DIR  # pylint: disable=global-statement
+    BUILD_DIR = os.path.join(os.path.dirname(__file__), '..')
     if parsed_args.skip_pylint:
         log('Skipping pylint at user request')
     else:
-        if not run_lint():
+        if not _run_lint():
             if parsed_args.ignore_pylint_failures:
                 log('Ignoring pylint test errors.')
             else:
                 raise RuntimeError('Pylint tests failed.')
-    run_all_tests(parsed_args)
+    return _run_all_tests(parsed_args)
+
+
+def _test_and_release(parsed_args):
+    """Runs an entire release process with all tests and configurations."""
+    release_label = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    return do_a_release(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), '..')),
+        os.getcwd(),
+        '/tmp/%s-build-%s' % (PRODUCT_NAME, release_label),
+        release_label)
+
+
+def main():
+    parsed_args = make_default_parser().parse_args()
+    action = _test_and_release if parsed_args.do_a_release else _test_only
+    return action(parsed_args)
 
 
 if __name__ == '__main__':

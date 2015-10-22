@@ -634,6 +634,8 @@ modules/usage_reporting/templates/course_creation.html
 modules/usage_reporting/templates/message.html
 modules/usage_reporting/usage_reporting.py
 scripts/__init__.py
+scripts/all_files.txt
+scripts/all_tests.py
 scripts/common.sh
 scripts/config.sh
 scripts/deploy.sh
