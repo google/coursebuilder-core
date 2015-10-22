@@ -53,16 +53,15 @@ fi
 # characters and their expansion
 STATIC_YAML_TEXT=""
 STATIC_YAML_TEXT="# GENERATED; DO NOT MODIFY"$'\n'
+STATIC_YAML_TEXT+=$"env_variables:"$'\n'
+STATIC_YAML_TEXT+=$"  GCB_STATIC_SERV_ENABLED: $ALLOW_STATIC_SERV"$'\n'
 if [ "$ALLOW_STATIC_SERV" = true ] ; then
-  STATIC_YAML_TEXT+=$"# STATIC SERVING IS ALLOWED"$'\n'
   STATIC_YAML_TEXT+=$"handlers:"$'\n'
   for K in "${!STATIC_SERV[@]}"; do
     STATIC_YAML_TEXT+=$"- url: /static/${STATIC_SERV[$K]}"$'\n'
     STATIC_YAML_TEXT+=$"  static_dir: lib/_static/$K"$'\n'
     STATIC_YAML_TEXT+=$"  expiration: 10m"$'\n'
   done
-else
-  STATIC_YAML_TEXT+=$"# STATIC SERVING IS NOT ALLOWED"$'\n'
 fi
 
 # '\n' at EOF is truncated, unless followed by another character, like ' '

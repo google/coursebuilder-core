@@ -30,7 +30,8 @@ PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
 
 # Set this flag to true to enable bulk downloads of Javascript/CSS files in lib
-BUNDLE_LIB_FILES = not os.environ.get('ALLOW_STATIC_SERV') == 'true'
+BUNDLE_LIB_FILES = not os.environ.get(
+    'GCB_STATIC_SERV_ENABLED', 'false').upper() == 'TRUE'
 
 # this is the official location of this app for computing of all relative paths
 BUNDLE_ROOT = os.path.dirname(__file__)

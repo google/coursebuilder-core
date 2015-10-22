@@ -454,17 +454,20 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 '%s: %s: %s' % (name, tag.__class__.__name__, vendor)))
         return tag_content
 
-    def _render_yaml(self):
+    def _render_yamls(self):
         yaml_content = safe_dom.NodeList()
-        yaml_content.append(
-            safe_dom.Element('h3').add_text('Contents of ').add_child(
-                safe_dom.Element('code').add_text('app.yaml')))
-        ol = safe_dom.Element('ol')
-        yaml_content.append(ol)
-        yaml_lines = open(os.path.join(os.path.dirname(
-            __file__), '../../app.yaml'), 'r').readlines()
-        for line in yaml_lines:
-            ol.add_child(safe_dom.Element('li').add_text(line))
+        for _yaml in ['app.yaml', 'custom.yaml', 'static.yaml']:
+            yaml_content.append(
+                safe_dom.Element('h3').add_text('Contents of ').add_child(
+                    safe_dom.Element('code').add_text(_yaml)))
+            ol = safe_dom.Element('ol')
+            yaml_content.append(ol)
+            pre = safe_dom.Element('pre')
+            ol.append(pre)
+            yaml_lines = open(os.path.join(os.path.dirname(
+                __file__), '../../%s' % _yaml), 'r').readlines()
+            for line in yaml_lines:
+                pre.add_text(line)
         return yaml_content
 
     def _render_db_entity_types(self):
@@ -519,7 +522,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
             ).append(
                 self._render_custom_tags()
             ).append(
-                self._render_yaml()
+                self._render_yamls()
             ).append(
                 self.render_dict(os.environ, 'Server Environment Variables')
             ).append(

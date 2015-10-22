@@ -413,6 +413,15 @@ STATIC_SERV_URLS = [
         'CustomZipHandler'),
     ]
 
+# a lists of tests URL's served by combo zip handler
+COMBO_SERV_URLS = [
+    (
+        '/static/combo/inputex?'
+        'src/inputex/assets/skins/sam/inputex.css&'
+        'src/inputex-list/assets/skins/sam/inputex-list.css',
+        'CustomCssComboZipHandler'),
+    ]
+
 # well-known location of statically served files
 STATIC_SERV_LN_SOURCE = os.path.join(
     os.path.dirname(__file__), '..', 'lib', '_static')
@@ -1137,25 +1146,16 @@ def assert_handler(url, handler):
 
 def assert_gcb_allow_static_serv_is_disabled():
     log('Making sure static serving disabled')
-
     assert not os.path.exists(STATIC_SERV_LN_SOURCE)
-
     for url, handler in STATIC_SERV_URLS:
         assert_handler(url, handler)
-
-    # check combo zip handler also works
-    assert_handler(
-        '/static/combo/inputex?'
-        'src/inputex/assets/skins/sam/inputex.css&'
-        'src/inputex-list/assets/skins/sam/inputex-list.css',
-        'CustomCssComboZipHandler')
+    for  url, handler in COMBO_SERV_URLS:
+        assert_handler(url, handler)
 
 
 def assert_gcb_allow_static_serv_is_enabled():
     log('Making sure static serving enabled')
-
     assert os.path.exists(STATIC_SERV_LN_SOURCE)
-
     for url, _ in STATIC_SERV_URLS:
         assert_handler(url, None)
 
