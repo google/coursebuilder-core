@@ -16,17 +16,30 @@
 
 """Runs all of the tests in parallel with or without integration server.
 
-This package does not need any setup and can do one of three things:
+This package doesn't need any setup and can do one of three things:
 
-  - execute all unit, functional and integration tests:
-      python scripts/run_all_tests.py
+    execute all unit, functional and integration tests:
+        python scripts/run_all_tests.py
 
-  - execute specific tests packages, classes or methods:
-      python scripts/run_all_tests.py --test_class_name tests.unit.test_classes
+    execute specific tests packages, classes or methods:
+        python scripts/run_all_tests.py --test_class_name \
+            tests.unit.test_classes
 
-  - execute a complete official Course Builder release verification process:
-      python scripts/run_all_tests.py --do_a_release
+    execute a complete official Course Builder release verification process:
+        python scripts/run_all_tests.py --do_a_release
 
+It's possible to run this package headless, while still fully executing all
+of the Selenium integration tests. Several tools are available to get this
+done. The one we know works is xvfb -- virtual framebuffer is a display server.
+Here is an example:
+
+    ssh $my_developer_box
+    sudo apt-get install xvfb
+    Xvfb :99 -ac & export DISPLAY=:99
+    cd /coursebuilder
+    python scripts/run_all_tests.py
+
+Good luck!
 """
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
@@ -876,14 +889,16 @@ def _run_all_tests(parsed_args, setup_deps=True):
     _all_tests.update(integration_tests)
 
     with_server = bool(integration_tests)
+    test_static_serv = not bool(parsed_args.test_class_name)
 
-    with WithTestConfiguration(with_server, False, parsed_args.server_log_file):
-        if with_server:
+    if test_static_serv and with_server:
+        with WithTestConfiguration(True, False, parsed_args.server_log_file):
             assert_gcb_allow_static_serv_is_disabled()
 
     with WithTestConfiguration(with_server, True, parsed_args.server_log_file):
         if with_server:
-            assert_gcb_allow_static_serv_is_enabled()
+            if test_static_serv:
+                assert_gcb_allow_static_serv_is_enabled()
             _run_tests(
                 {
                   'tests.integration.test_classes.'
@@ -1074,14 +1089,8 @@ def _test_only(parsed_args):
     """Runs a set of tests as specific by command line arguments."""
     global BUILD_DIR  # pylint: disable=global-statement
     BUILD_DIR = os.path.join(os.path.dirname(__file__), '..')
-    if parsed_args.skip_pylint:
-        log('Skipping pylint at user request')
-    else:
-        if not _run_lint():
-            if parsed_args.ignore_pylint_failures:
-                log('Ignoring pylint test errors.')
-            else:
-                raise RuntimeError('Pylint tests failed.')
+    if not parsed_args.test_class_name:
+        _lint(parsed_args)
     return _run_all_tests(parsed_args)
 
 

@@ -59,8 +59,6 @@ fi
 . "$(dirname "$0")/test_config.sh"
 
 echo Running functional tests
-python "$SOURCE_DIR/scripts/run_all_tests.py" \
-  --skip_pylint \
-  --test_class_name "$@"
+python "$SOURCE_DIR/scripts/run_all_tests.py" --test_class_name "$@"
 
 echo Done!
