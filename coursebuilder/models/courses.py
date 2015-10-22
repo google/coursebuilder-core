@@ -2424,8 +2424,8 @@ class Course(object):
             'reg_form:header_text', 'Introduction', 'string', optional=True,
             description=messages.REGISTRATION_INTRODUCTION))
         registration_opts.add_property(schema_fields.SchemaField(
-            'reg_form:additional_registration_fields', 'Additional Fields',
-            'html', description='Additional registration text or questions.',
+            'reg_form:additional_registration_fields', 'Registration Form',
+            'html', description=str(messages.REGISTRATION_REGISTRATION_FORM),
             optional=True))
         registration_opts.add_property(schema_fields.SchemaField(
             'course:whitelist', 'Whitelisted Students', 'text',

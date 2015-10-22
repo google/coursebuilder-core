@@ -152,7 +152,7 @@ correct answer is given when pressed.
 """
 
 ASSESSMENT_SINGLE_SUBMISSION_DESCRIPTION = """
-Allow students only one opportunity to submit the answers.
+If checked, students may only submit their answers once.
 """
 
 ASSESSMENT_DUE_DATE_FORMAT_DESCRIPTION = safe_dom.assemble_text_message("""
@@ -361,6 +361,11 @@ title.
 REGISTRATION_INTRODUCTION = """
 This introduction text is shown to students at the top of the registration page.
 """
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+REGISTRATION_REGISTRATION_FORM = safe_dom.assemble_text_message("""
+This text or question is shown below the default registration question.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
 
 REGISTRATION_SEND_WELCOME_EMAIL = """
 If checked, welcome emails will be sent when new students register for the
