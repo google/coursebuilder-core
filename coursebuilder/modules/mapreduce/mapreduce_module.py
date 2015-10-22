@@ -26,7 +26,8 @@ from mapreduce import parameters as mapreduce_parameters
 from pipeline import models as pipeline_models
 from pipeline import pipeline
 
-from common import safe_dom
+import messages
+
 from common import users
 from common.utils import Namespace
 from controllers import sites
@@ -46,18 +47,8 @@ MAX_MAPREDUCE_METADATA_RETENTION_DAYS = 3
 
 GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS = ConfigProperty(
     'gcb_enable_mapreduce_detail_access', bool,
-    safe_dom.NodeList().append(
-        safe_dom.Element('p').add_text("""
-Enables access to status pages showing details of progress for individual
-map/reduce jobs as they run.  These pages can be used to cancel jobs or
-sub-jobs.  This is a benefit if you have launched a huge job that is
-consuming too many resources, but a hazard for naive users.""")
-    ).append(
-        safe_dom.Element('p').add_child(
-        safe_dom.A('/mapreduce/ui/pipeline/list', target='_blank').add_text("""
-See an example page (with this control enabled)"""))
-    ), default_value=False, label='MapReduce details', multiline=False,
-    validator=None)
+    messages.SITE_SETTINGS_MAPREDUCE, default_value=False, label='MapReduce',
+    multiline=False, validator=None)
 
 
 def authorization_wrapper(self, *args, **kwargs):

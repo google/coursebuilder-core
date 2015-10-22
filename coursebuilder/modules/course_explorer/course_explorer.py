@@ -16,22 +16,19 @@
 
 __author__ = 'Rahul Singal (rahulsingal@google.com)'
 
-from common import safe_dom
 from common import users
 from controllers import utils
 from models import custom_modules
 from models.config import ConfigProperty
 from models.models import StudentProfileDAO
+from modules.course_explorer import messages
 from modules.course_explorer import student
+
 
 GCB_ENABLE_COURSE_EXPLORER_PAGE = ConfigProperty(
     'gcb_enable_course_explorer_page', bool,
-    safe_dom.NodeList().append(
-        safe_dom.Element('p').add_text("""
-If this option is selected, "/" redirects to the course explorer page.
-Otherwise, it redirects to the preview page for the default course.""")
-    ), default_value=False, label='Course explorer', multiline=False,
-    validator=None)
+    messages.SITE_SETTINGS_COURSE_EXPLORER, default_value=False,
+    label='Course Explorer', multiline=False, validator=None)
 
 
 custom_module = None

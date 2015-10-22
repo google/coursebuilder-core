@@ -24,6 +24,7 @@ import random
 import time
 
 import appengine_config
+from common import messages
 from common import users
 from common import utils
 from models import config
@@ -65,24 +66,15 @@ except ImportError:
 XSRF_SECRET_LENGTH = 20
 
 XSRF_SECRET = config.ConfigProperty(
-    'gcb_xsrf_secret', str, (
-        'Text used to encrypt tokens, which help prevent Cross-site request '
-        'forgery (CSRF, XSRF). You can set the value to any alphanumeric text, '
-        'preferably using 16-64 characters. Once you change this value, the '
-        'server rejects all subsequent requests issued using an old value for '
-        'this variable.'),
-    default_value='course builder XSRF secret', label='CSRF secret')
+    'gcb_xsrf_secret', str, messages.SITE_SETTINGS_XSRF_SECRET,
+    default_value='Course Builder XSRF Secret', label='XSRF secret')
 
 ENCRYPTION_SECRET_LENGTH = 48
 
 ENCRYPTION_SECRET = config.ConfigProperty(
-    'gcb_encryption_secret', str, (
-        'Text used to encrypt messages.  You can set this to any text at all, '
-        'but the value must be exactly ' + str(ENCRYPTION_SECRET_LENGTH) +
-        ' characters long.  If you change this value, the server will be '
-        'unable to understand items encrypted under the old key.'),
+    'gcb_encryption_secret', str, messages.SITE_SETTINGS_ENCRYPTION_SECRET,
     default_value='default value of CourseBuilder encryption secret',
-    label='Encryption secret',
+    label='Encryption Secret',
     validator=config.ValidateLength(ENCRYPTION_SECRET_LENGTH).validator)
 
 

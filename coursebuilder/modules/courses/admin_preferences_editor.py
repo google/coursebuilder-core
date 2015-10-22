@@ -20,6 +20,7 @@ from common import schema_fields
 from common import users
 from models import models
 from models import roles
+from modules.courses import messages
 from modules.dashboard import dashboard
 from modules.dashboard import dto_editor
 
@@ -75,18 +76,13 @@ class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):
         ret.add_property(schema_fields.SchemaField(
             'id', '', 'string', optional=True, hidden=True))
         ret.add_property(schema_fields.SchemaField(
-            'show_hooks', 'Show Hook Edit Buttons', 'boolean',
-            description='Whether to show controls on course pages to permit '
-            'editing of HTML inclusions (hook points) at that location on '
-            'the page.  Turn this setting off to see the course as the '
-            'student would see it, and on to enable the edit controls.',
-            optional=True, hidden=False))
+            'show_hooks', 'Enable Hook Edits', 'boolean',
+            description=str(messages.ENABLE_HOOK_EDITS), optional=True,
+            hidden=False))
         ret.add_property(schema_fields.SchemaField(
             'show_jinja_context', 'Show Jinja Context', 'boolean',
-            description='Whether to show a dump of Jinja context contents '
-            'at the bottom of course pages (Only for admins, and only '
-            'available on development server.)',
-            optional=True, hidden=False))
+            description=str(messages.SHOW_JINJA_CONTEXT), optional=True,
+            hidden=False))
         return ret
 
     def get_default_content(self):

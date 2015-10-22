@@ -23,14 +23,6 @@ ABOUT_THE_COURSE_DESCRIPTION = safe_dom.assemble_text_message("""
 This information is configured by an administrator from the Admin pages.
 """, None)
 
-DATA_FILES_DESCRIPTION = safe_dom.assemble_text_message("""
-The lesson.csv file contains the contents of your lesson. The unit.csv file
-contains the course related content shown on the homepage. These files are
-located in your Course Builder installation. Edit them directly with an editor
-like Notepad++. Be careful, some editors will add extra characters, which may
-prevent the uploading of these files.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
-
 CONTENTS_OF_THE_COURSE_DESCRIPTION = safe_dom.assemble_text_message("""
 The course.yaml file contains all course-level settings.  It can be
 modified from other settings sub-tabs, or directly edited in its
@@ -49,5 +41,26 @@ AppEngine.  Changing the defaults in the file will not erase or
 override any course-specific settings you may have made.
 """, None)
 
+DATA_FILES_DESCRIPTION = safe_dom.assemble_text_message("""
+The lesson.csv file contains the contents of your lesson. The unit.csv file
+contains the course related content shown on the homepage. These files are
+located in your Course Builder installation. Edit them directly with an editor
+like Notepad++. Be careful, some editors will add extra characters, which may
+prevent the uploading of these files.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+ENABLE_HOOK_EDITS = safe_dom.assemble_text_message("""
+If checked, controls on course pages will be displayed to permit editing of HTML
+inclusions (hook points). Otherwise, the course pages will appear as students
+would see it.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+
 SETTINGS_DESCRIPTION = safe_dom.assemble_text_message(
     None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Settings')
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+SHOW_JINJA_CONTEXT = safe_dom.assemble_text_message("""
+If checked, a dump of Jinja context contents will be displayed at the bottom of
+course pages (only for admins and only on the development server).
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')

@@ -42,6 +42,7 @@ from common import tags
 from common import users
 from common import utils as common_utils
 from common.crypto import XsrfTokenManager
+from controllers import messages
 from models import courses
 from models import custom_modules
 from models import jobs
@@ -72,11 +73,8 @@ TRANSIENT_STUDENT = TransientStudent()
 
 # Whether to output debug info into the page.
 CAN_PUT_DEBUG_INFO_INTO_PAGES = ConfigProperty(
-    'gcb_can_put_debug_info_into_pages', bool, (
-        'Whether or not to put debugging information into the web pages. '
-        'This may be useful for debugging purposes if you develop custom '
-        'Course Builder features or extensions.'), False,
-    label='Debug information')
+    'gcb_can_put_debug_info_into_pages', bool,
+    messages.SITE_SETTINGS_DEBUG_INFORMATION, False, label='Debug Information')
 
 # Whether to record page load/unload events in a database.
 CAN_PERSIST_PAGE_EVENTS = ConfigProperty(

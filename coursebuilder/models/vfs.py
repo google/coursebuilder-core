@@ -31,6 +31,7 @@ import jinja2
 
 from common import caching
 from common import jinja_utils
+from models import messages
 
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
@@ -50,11 +51,9 @@ _MAX_VFS_NUM_SHARDS = 4
 
 # Global memcache controls.
 CAN_USE_VFS_IN_PROCESS_CACHE = ConfigProperty(
-    'gcb_can_use_vfs_in_process_cache', bool, (
-        'Whether or not to cache content objects. For production this value '
-        'should be on to enable maximum performance. For development this '
-        'value should be off so you can see your changes to course content '
-        'instantaneously.'), default_value=True, label='Content caching')
+    'gcb_can_use_vfs_in_process_cache', bool,
+    messages.SITE_SETTINGS_CACHE_CONTENT, default_value=True,
+    label='Cache Content')
 
 
 class AbstractFileSystem(object):

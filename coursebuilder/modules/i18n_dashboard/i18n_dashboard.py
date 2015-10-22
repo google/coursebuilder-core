@@ -59,8 +59,9 @@ from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from modules.courses import settings
-from modules.dashboard import dashboard
 from modules.courses import unit_lesson_editor
+from modules.dashboard import dashboard
+from modules.i18n_dashboard import messages
 from modules.oeditor import oeditor
 from tools import verify
 
@@ -1118,7 +1119,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                 translations[locale][key][message.id] = message.string
 
     @staticmethod
-    def update_translations(course, translations, messages):
+    def update_translations(course, translations, translation_messages):
         app_context = course.app_context
         transformer = xcontent.ContentTransformer(
             config=I18nTranslationContext.get(app_context))
@@ -1177,7 +1178,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                         if not isinstance(source_value, basestring):
                             source_value = unicode(source_value)  # convert num
                         if source_value not in translations:
-                            messages.append(
+                            translation_messages.append(
                                 'Did not find translation for "%s"' %
                                 source_value)
                         elif translations[source_value]:
@@ -1190,7 +1191,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                             num_blank_translations += 1
 
                 for unused_translation in set(translations) - used_translations:
-                    messages.append(
+                    translation_messages.append(
                         'Translation for "%s" present but not used.' %
                         unused_translation)
 
@@ -1200,11 +1201,11 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
             for unused in (
                 set(resource_translations) - used_resource_translations):
 
-                messages.append(
+                translation_messages.append(
                     ('Translation file had %d items for resource "%s", but '
                      'course had no such resource.') % (
                          len(resource_translations[unused]), unused))
-            messages.append(
+            translation_messages.append(
                 ('For %s, made %d total replacements in %d resources.  '
                  '%d items in the uploaded file did not have translations.') % (
                     common_locales.get_locale_display_name(locale),
@@ -1289,10 +1290,12 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                     self, 401, 'Access denied.')
                 return
 
-        messages = []
-        self.update_translations(self.get_course(), translations, messages)
+        translation_messages = []
+        self.update_translations(
+            self.get_course(), translations, translation_messages)
         transforms.send_file_upload_response(
-            self, 200, 'Success.', payload_dict={'messages': messages})
+            self, 200, 'Success.',
+            payload_dict={'messages': translation_messages})
 
 
 class I18nProgressManager(caching.RequestScopedSingleton):
@@ -1329,12 +1332,9 @@ CACHE_ENTRY_TTL_SEC = 5 * 60
 
 # Global memcache controls.
 CAN_USE_RESOURCE_BUNDLE_IN_PROCESS_CACHE = ConfigProperty(
-    'gcb_can_use_resource_bundle_in_process_cache', bool, (
-        'Whether or not to cache I18N translations. For production this value '
-        'should be on to enable maximum performance. For development this '
-        'value should be off so you can see your changes to course content '
-        'instantaneously.'), default_value=True,
-    label='Cache internationalization')
+    'gcb_can_use_resource_bundle_in_process_cache', bool,
+    messages.SITE_SETTINGS_CACHE_TRANSLATIONS, default_value=True,
+    label='Cache Translations')
 
 
 class ProcessScopedResourceBundleCache(caching.ProcessScopedSingleton):
@@ -1635,10 +1635,10 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
             TranslationUploadRestHandler.build_translations_defaultdict())
         TranslationUploadRestHandler.parse_po_file(
             translations, po_file_content)
-        messages = []
+        translation_messages = []
         TranslationUploadRestHandler.update_translations(course, translations,
-                                                         messages)
-        for message in messages:
+                                                         translation_messages)
+        for message in translation_messages:
             logging.warning(message)
 
     def render(self):

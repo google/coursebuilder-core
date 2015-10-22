@@ -18,40 +18,23 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import collections
 import config
+import messages
+
 from common import utils
 from common import users
 from models import MemcacheManager
 from models import RoleDAO
 
 GCB_ADMIN_LIST = config.ConfigProperty(
-    'gcb_admin_user_emails', str, (
-        'A list of email addresses for super-admin users. '
-        'WARNING! Super-admin users have the highest level of access to your '
-        'Google App Engine instance and to all data about all courses and '
-        'students within that instance. Be very careful when modifying this '
-        'property.  '
-        'Syntax: Entries may be separated with any combination of '
-        'tabs, spaces, commas, or newlines.  Existing values using "[" and '
-        '"]" around email addresses continues to be supported.  '
-        'Regular expressions are not supported.'),
-    '', label='Admin email addresses', multiline=True)
+    'gcb_admin_user_emails', str, messages.SITE_SETTINGS_SITE_ADMIN_EMAILS, '',
+    label='Site Admin Emails', multiline=True)
 
 KEY_COURSE = 'course'
 KEY_ADMIN_USER_EMAILS = 'admin_user_emails'
 
 GCB_WHITELISTED_USERS = config.ConfigProperty(
-    'gcb_user_whitelist', str, (
-        'A list of email addresses of users allowed access to courses.  '
-        'If this is blank, site-wide user whitelisting is disabled.  '
-        'Access to courses is also implicitly granted to super admins and '
-        'course admins, so you need not repeat those names here.  '
-        'Course-specific whitelists trump this list - if a course has a '
-        'non-blank whitelist, this one is ignored.  '
-        'Syntax: Entries may be separated with any combination of '
-        'tabs, spaces, commas, or newlines.  Existing values using "[" and '
-        '"]" around email addresses continues to be supported.  '
-        'Regular expressions are not supported.'),
-    '', label='User whitelist', multiline=True)
+    'gcb_user_whitelist', str, messages.SITE_SETTINGS_WHITELIST, '',
+    label='Whitelist', multiline=True)
 
 Permission = collections.namedtuple('Permission', ['name', 'description'])
 

@@ -737,8 +737,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
             safe_dom.Element('p').add_child(
                 safe_dom.Element('strong').add_text('Legend')
             ).add_text(':').add_text("""
-                For each property, the value shown corresponds to, in
-                descending order of priority:
+                For each setting, the value shown corresponds to, in descending
+                order of priority:
             """).add_child(
                 safe_dom.Element('span', className='gcb-db-diff').add_child(
                     safe_dom.Entity('&nbsp;')
@@ -759,6 +759,10 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 ).add_child(safe_dom.Entity('&nbsp;'))
             ).add_text(', ').add_text("""
                 and the [ default value ] in the Course Builder codebase.
+                Default values that are blank are indicated by angle brackets
+                and the word "none" (<none>). Other default values that are
+                descriptive in nature are represented with the angle brackets
+                and the description within them.
             """))
 
         template_values['main_content'] = content

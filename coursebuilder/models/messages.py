@@ -376,3 +376,120 @@ ROLES_PERMISSION_SEE_DRAFTS_DESCRIPTION = """
 Can see lessons and assessments with draft status.
 """
 
+SITE_SETTINGS_AGGREGATE_COUNTERS = """
+If "True", counter values are aggregated across all frontend application
+instances and recorded in memcache. This slightly increases latency of all
+requests, but improves the quality of performance metrics. Otherwise, you will
+only see counter values for the one frontend instance you are connected to right
+now.
+"""
+
+SITE_SETTINGS_CACHE_CONTENT = """
+If "True", course content is cached. During course development you should turn
+this setting to "False" so you can see your changes instantaneously. Otherwise,
+keep this setting at "True" to maximize performance.
+"""
+
+SITE_SETTINGS_COURSE_URLS = safe_dom.NodeList().append(
+    safe_dom.Element('div').add_text("""
+Specify the URLs for your course(s). Specify only one course per line.""")
+    ).append(safe_dom.Element('br')).append(
+        safe_dom.Element('span').add_text("""
+The syntax has four parts, separated by colons (':'). The four parts are:""")
+    ).append(
+        safe_dom.Element('ol').add_child(
+            safe_dom.Element('li').add_text(
+                'The word \'course\', which is a required element.')
+        ).add_child(
+            safe_dom.Element('li').add_text("""
+A unique course URL prefix. Examples could be '/cs101' or '/art'.
+Default: '/'""")
+        ).add_child(
+            safe_dom.Element('li').add_text("""
+A file system location of course asset files. If location is left empty,
+the course assets are stored in a datastore instead of the file system. A course
+with assets in a datastore can be edited online. A course with assets on file
+system must be re-deployed to Google App Engine manually.""")
+        ).add_child(
+            safe_dom.Element('li').add_text("""
+A course datastore namespace where course data is stored in App Engine.
+Note: this value cannot be changed after the course is created."""))
+    ).append(
+        safe_dom.Text(
+            'For example, consider the following two course entries:')
+    ).append(safe_dom.Element('br')).append(
+        safe_dom.Element('div', className='gcb-message').add_text(
+            'course:/cs101::ns_cs101'
+        ).add_child(
+            safe_dom.Element('br')
+        ).add_text('course:/:/')
+    ).append(
+        safe_dom.Element('div').add_text("""
+Assuming you are hosting Course Builder on http://www.example.com, the first
+entry defines a course on a http://www.example.com/cs101 and both its assets
+and student data are stored in the datastore namespace 'ns_cs101'. The second
+entry defines a course hosted on http://www.example.com/, with its assets
+stored in the '/' folder of the installation and its data stored in the default
+empty datastore namespace.""")
+    ).append(safe_dom.Element('br')).append(
+        safe_dom.Element('div').add_text("""
+A line that starts with '#' is ignored. Course entries are applied in the
+order they are defined.""")
+)
+
+SITE_SETTINGS_GOOGLE_APIS = """
+If "True", courses can use Google APIs. You must still configure the relevant
+APIs in the Cloud Console to successfully make API calls.
+"""
+
+SITE_SETTINGS_MEMCACHE = """
+If "True", various objects are cached in memcache. During course development you
+should turn this setting to "False" so you can see your changes instantaneously.
+Otherwise, keep this setting at "True" to maximize performance.
+"""
+
+SITE_SETTINGS_QUEUE_NOTIFICATION = safe_dom.NodeList().append(
+    safe_dom.Element('div').add_text("""
+Specify the number of queue failures before Course Builder sends a notification
+email to the course administrator(s)."""
+).append(
+    safe_dom.Element('br')
+).append(
+    safe_dom.Element('br')
+).append(
+    safe_dom.Element('div').add_text("""
+Course Builder uses a work queue to notify modules of changes in the status of
+students (enrollment, unenrollment, etc.). Since some of the work done from this
+queue is potentially sensitive (e.g., privacy concerns), the queue will re-try
+failed work indefinitely. If the failures persist for the specified number of
+attempts, an email is sent to all the course administrators to alert them of the
+problem. Retries are done with increasingly large delays 0:15, 0:30, 1:00, 2:00,
+4:00, 8:00, 32:00, 1:04:00 and every two hours thereafter.""")))
+
+SITE_SETTINGS_REFRESH_INTERVAL_TEMPLATE = """
+An update interval (in seconds) for reloading runtime properties from the
+datastore. Specify an integer value between 1 and %s, inclusive. To completely
+disable reloading properties set the value to 0 in the app.yaml file.
+"""
+
+SITE_SETTINGS_SHARE_STUDENT_PROFILE = """
+If "True", the student's profile information is shared among all the different
+courses for which she registered. This setting is only relevant if you have
+multiple courses on this instance.
+"""
+
+SITE_SETTINGS_SITE_ADMIN_EMAILS = """
+This list of email addresses represents the super-administrators for the whole
+site. Super-admin users have the highest level of access to your Google App
+Engine istance and to all data about all courses and students within that
+instance. Separate addresses with a comma, space, or newline.
+"""
+
+SITE_SETTINGS_WHITELIST = """
+Specify a list of email addresses of users who are allowed to access courses.
+Separate the email addresses with commas. If this field is blank, site-wide user
+whitelisting is disabled. Access to courses is implicitly granted to Google App
+Engine admins and course admins, so don't repeat them here. Course-specific
+whitelists supercede this list: if a course has a non-blank whitelist, this list
+is ignored.
+"""

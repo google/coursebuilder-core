@@ -25,7 +25,9 @@ import tags
 from webapp2_extras import i18n
 
 import appengine_config
+
 from common import caching
+from common import messages
 from models import config
 from models import models
 from models.counters import PerfCounter
@@ -36,9 +38,9 @@ MAX_GLOBAL_CACHE_SIZE_BYTES = 8 * 1024 * 1024
 
 # this cache used to be memcache based; now it's in-process
 CAN_USE_JINJA2_TEMPLATE_CACHE = config.ConfigProperty(
-    'gcb_can_use_jinja2_template_cache', bool, safe_dom.Text(
-        'Whether jinja2 can cache bytecode of compiled templates in-process.'),
-    default_value=True, label='Cache compiled templates')
+    'gcb_can_use_jinja2_template_cache', bool,
+    messages.SITE_SETTINGS_CACHE_TEMPLATES, default_value=True,
+    label='Cache Templates')
 
 
 def finalize(x):

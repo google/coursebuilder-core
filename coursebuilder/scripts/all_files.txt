@@ -76,6 +76,7 @@ common/crypto.py
 common/jinja_utils.py
 common/locales.py
 common/menus.py
+common/messages.py
 common/resource.py
 common/safe_dom.py
 common/schema_fields.py
@@ -86,6 +87,7 @@ common/xcontent.py
 common/yaml_files.py
 controllers/__init__.py
 controllers/lessons.py
+controllers/messages.py
 controllers/sites.py
 controllers/utils.py
 data/lesson.csv
@@ -221,6 +223,7 @@ modules/assessments/templates/reviewed_assessment_confirmation.html
 modules/assessments/templates/test_confirmation.html
 modules/balancer/__init__.py
 modules/balancer/balancer.py
+modules/balancer/messages.py
 modules/certificate/__init__.py
 modules/certificate/certificate.py
 modules/certificate/certificates_earned.html
@@ -271,6 +274,7 @@ modules/core_ui/core_ui.py
 modules/core_ui/templates/style_guide/style_guide.html
 modules/course_explorer/__init__.py
 modules/course_explorer/course_explorer.py
+modules/course_explorer/messages.py
 modules/course_explorer/student.py
 modules/course_explorer/views/base_explorer.html
 modules/course_explorer/views/base_student.html
@@ -501,6 +505,7 @@ modules/i18n/resources/locale/zu/LC_MESSAGES/messages.po
 modules/i18n_dashboard/__init__.py
 modules/i18n_dashboard/i18n_dashboard.py
 modules/i18n_dashboard/jobs.py
+modules/i18n_dashboard/messages.py
 modules/i18n_dashboard/resources/css/global_i18n.css
 modules/i18n_dashboard/resources/css/i18n_dashboard.css
 modules/i18n_dashboard/resources/js/i18n_dashboard.js
@@ -522,6 +527,7 @@ modules/manual_progress/__init__.py
 modules/manual_progress/manual_progress.py
 modules/mapreduce/__init__.py
 modules/mapreduce/mapreduce_module.py
+modules/mapreduce/messages.py
 modules/math/__init__.py
 modules/math/math.py
 modules/math/resources/math.png

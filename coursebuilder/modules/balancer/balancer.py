@@ -72,6 +72,7 @@ from models import config
 from models import custom_modules
 from models import entities
 from models import transforms
+from modules.balancer import messages
 
 from google.appengine.api import urlfetch
 from google.appengine.ext import db
@@ -100,14 +101,12 @@ logging.basicConfig()
 
 EXTERNAL_TASK_BALANCER_REST_ENABLED = config.ConfigProperty(
     'gcb_external_task_balancer_rest_enabled', bool,
-    ('Whether or not to enable the REST endpoints for the external task '
-     'balancer module. You must also set the external task balancer URL '
-     'to use this feature.'), default_value=False,
-    label='Enable task balancer REST endpoints')
+    messages.SITE_SETTINGS_TASK_BALANCER_REST, default_value=False,
+    label='Task Balancer REST')
 EXTERNAL_TASK_BALANCER_WORKER_URL = config.ConfigProperty(
     'gcb_external_task_balancer_worker_url', str,
-    'URL for the worker pool used by the external task balancer module.',
-    default_value='', label='External task balancer worker URL')
+    messages.SITE_SETTINGS_TASK_BALANCER_URL, default_value='',
+    label='Task Balancer URL')
 
 
 class Error(Exception):

@@ -35,6 +35,7 @@ from entities import delete
 from entities import get
 from entities import put
 import data_removal
+import messages
 import services
 import transforms
 
@@ -67,11 +68,7 @@ STUDENT_LAST_SEEN_ON_UPDATE_SEC = 24 * 60 * 60  # 1 day.
 
 # Global memcache controls.
 CAN_USE_MEMCACHE = config.ConfigProperty(
-    'gcb_can_use_memcache', bool, (
-        'Whether or not to cache various objects in memcache. For production '
-        'this value should be on to enable maximum performance. For '
-        'development this value should be off so you can see your changes to '
-        'course content instantaneously.'),
+    'gcb_can_use_memcache', bool, messages.SITE_SETTINGS_MEMCACHE,
     default_value=appengine_config.PRODUCTION_MODE, label='Memcache')
 
 # performance counters
@@ -360,13 +357,8 @@ class MemcacheManager(object):
 
 CAN_AGGREGATE_COUNTERS = config.ConfigProperty(
     'gcb_can_aggregate_counters', bool,
-    'Whether or not to aggregate and record counter values in memcache. '
-    'This allows you to see counter values aggregated across all frontend '
-    'application instances. Without recording, you only see counter values '
-    'for one frontend instance you are connected to right now. Enabling '
-    'aggregation improves quality of performance metrics, but adds a small '
-    'amount of latency to all your requests.',
-    default_value=False, label='Counters')
+    messages.SITE_SETTINGS_AGGREGATE_COUNTERS, default_value=False,
+    label='Aggregate Counters')
 
 
 def incr_counter_global_value(name, delta):
@@ -390,9 +382,9 @@ counters.incr_counter_global_value = incr_counter_global_value
 
 # Whether to record tag events in a database.
 CAN_SHARE_STUDENT_PROFILE = config.ConfigProperty(
-    'gcb_can_share_student_profile', bool, (
-        'Whether or not to share student profile between different courses.'),
-    default_value=False, label='Shared student profile')
+    'gcb_can_share_student_profile', bool,
+    messages.SITE_SETTINGS_SHARE_STUDENT_PROFILE, default_value=False,
+    label='Share Student Profile')
 
 
 class CollisionError(Exception):
@@ -642,17 +634,8 @@ class PersonalProfileDTO(object):
 
 QUEUE_RETRIES_BEFORE_SENDING_MAIL = config.ConfigProperty(
     'gcb_lifecycle_queue_retries_before_sending_mail', int,
-    'Course Builder uses a work queue to notify modules of changes in the '
-    'status of students.  (enrollment, unenrollment, and so on.)  Since '
-    'some of the work done from this queue is potentially sensitive (e.g., '
-    'privacy concerns), the queue will re-try failed work indefinitely.  '
-    'If the failures persist for this number of attempts, mail is sent to '
-    'course administrators to alert them of the problem.  Retries are done '
-    'with increasingly large delays 0:15, 0:30, 1:00, 2:00, 4:00, 8:00, '
-    '32:00, 1:04:00 and every two hours thereafter.  Mail is sent to all '
-    'course administrators.',
-    default_value=10,
-    label='Number of queue failures before alert',
+    messages.SITE_SETTINGS_QUEUE_NOTIFICATION, default_value=10,
+    label='Queue Notification',
     validator=config.ValidateIntegerRange(1, 50).validate)
 
 

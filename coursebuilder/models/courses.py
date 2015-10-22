@@ -82,10 +82,8 @@ ISO_8601_DATE_FORMAT = '%Y-%m-%d %H:%M'
 
 # Whether or not individual courses are allowed to use Google APIs.
 COURSES_CAN_USE_GOOGLE_APIS = config.ConfigProperty(
-    'gcb_courses_can_use_google_apis', bool, (
-        'Whether or not courses can use Google APIs. If True, individual '
-        'courses must also be configured with API keys, etc., in order to '
-        'actually make API calls'), default_value=False, label='Google APIs')
+    'gcb_courses_can_use_google_apis', bool, messages.SITE_SETTINGS_GOOGLE_APIS,
+    default_value=False, label='Google APIs')
 
 # The config key part under which course info lives.
 _CONFIG_KEY_PART_COURSE = 'course'

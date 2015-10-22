@@ -28,6 +28,8 @@ import safe_dom
 import webapp2
 
 import appengine_config
+
+from common import messages
 from common import schema_fields
 from models import config
 
@@ -41,11 +43,8 @@ except ImportError:
 
 
 CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(
-    'gcb_can_use_dynamic_tags', bool, safe_dom.Text(
-        'Whether lesson content can make use of custom HTML tags such as '
-        '<gcb-youtube videoid="...">. If this is enabled some legacy content '
-        'may be rendered differently. '),
-    default_value=True, label='Dynamic tags')
+    'gcb_can_use_dynamic_tags', bool, messages.SITE_SETTINGS_DYNAMIC_TAGS,
+    default_value=True, label='Dynamic Tags')
 
 
 DUPLICATE_INSTANCE_ID_MESSAGE = (

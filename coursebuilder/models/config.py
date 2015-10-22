@@ -29,6 +29,7 @@ import threading
 import time
 
 import entities
+import messages
 import transforms
 
 import appengine_config
@@ -458,15 +459,9 @@ def run_all_unit_tests():
 
 
 UPDATE_INTERVAL_SEC = ConfigProperty(
-    'gcb_config_update_interval_sec', int, (
-        'An update interval (in seconds) for reloading runtime properties '
-        'from a datastore. Using this editor, you can set this value to an '
-        'integer between 1 and %s, inclusive. To completely disable reloading '
-        'properties from a datastore, you must set the value to 0. However, '
-        'you can only set the value to 0 by directly modifying the app.yaml '
-        'file.' % MAX_UPDATE_INTERVAL_SEC),
-    default_value=DEFAULT_UPDATE_INTERVAL_SEC,
-    label='Settings refresh interval',
+    'gcb_config_update_interval_sec', int,
+    messages.SITE_SETTINGS_REFRESH_INTERVAL_TEMPLATE % MAX_UPDATE_INTERVAL_SEC,
+    default_value=DEFAULT_UPDATE_INTERVAL_SEC, label='Refresh Interval',
     validator=ValidateIntegerRange(
         lower_bound_inclusive=0,
         upper_bound_inclusive=MAX_UPDATE_INTERVAL_SEC).validate)
