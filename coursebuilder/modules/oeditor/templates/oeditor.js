@@ -465,7 +465,7 @@ function mainYuiFunction(Y) {
 
   var editorControls = isFramed() ?
       new FramedEditorControls(Y, window.parent.frameProxy, cb_global,
-          maybePerformAction) :
+          maybePerformAction, alertIfNotSavedChanges) :
       new TopLevelEditorControls(Y, cb_global);
 
   // choose buttons to show

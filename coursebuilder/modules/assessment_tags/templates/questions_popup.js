@@ -172,6 +172,7 @@ $(function() {
     getFormData(formData.quid).then(function() {
         initMcQuestionEditor(_env.form.getFieldByName('mc_tab'));
         initSaQuestionEditor(_env.form.getFieldByName('sa_tab'));
+        _env.lastSavedFormValue = _env.form.getValue();
     });
     _env.validate = validateFormData;
     _env.onSaveClick = saveFormData;

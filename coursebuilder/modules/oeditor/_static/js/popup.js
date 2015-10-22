@@ -5,13 +5,36 @@
  *     the parent window.
  * @param env The shared GCB envronment variables.
  */
-function FramedEditorControls(Y, frameProxy, env, maybePerformAction) {
+function FramedEditorControls(Y, frameProxy, env, maybePerformAction,
+    alertIfNotSavedChanges) {
+  var that = this;
   this._Y = Y;
   this._frameProxy = frameProxy;
   this._env = env;
   this._maybePerformAction = maybePerformAction;
+  this._alertIfNotSavedChanges = alertIfNotSavedChanges;
+
+  var close = this._close.bind(this);
+  this._Y.one('.close-button').on('click', close);
+  this._frameProxy.onBackgroundClick(close);
 }
 FramedEditorControls.prototype = {
+  _close: function() {
+    var that = this;
+    var reallyClose = true;
+    var changesMessage = this._alertIfNotSavedChanges(this._env);
+    if (changesMessage) {
+      reallyClose = confirm(changesMessage + '\n\n' +
+          'Are you sure you want to close?');
+    }
+    if (reallyClose) {
+      this._maybePerformAction(this._env.onCloseClick, function() {
+        that._frameProxy.close();
+      });
+    }
+    return false;
+  },
+
   getSaveButton: function() {
     var that = this;
     return {
@@ -41,12 +64,7 @@ FramedEditorControls.prototype = {
       type: 'link',
       value: 'Close',
       className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
-      onClick: function() {
-        that._maybePerformAction(that._env.onCloseClick, function() {
-          that._frameProxy.close();
-        });
-        return false;
-      }
+      onClick: this._close.bind(this)
     };
   },
 
@@ -57,6 +75,7 @@ FramedEditorControls.prototype = {
   populateForm: function() {
     this._frameProxy.init(this._env.schema);
     this._env.form.setValue(this._frameProxy.getValue());
+    this._env.lastSavedFormValue = this._env.form.getValue();
 
     // InputEx sets invalid field class on load but we want this only on submit
     this._Y.all('.inputEx-invalid').removeClass('inputEx-invalid');
@@ -119,6 +138,11 @@ FrameProxy.prototype = {
 
   onLoad: function() {
     this.refresh();
+  },
+
+  onBackgroundClick: function(callback) {
+    // Use plain JS because we don't have a $ or Y for the parent window.
+    this._root.querySelector('.background').addEventListener('click', callback);
   },
 
   refresh: function() {

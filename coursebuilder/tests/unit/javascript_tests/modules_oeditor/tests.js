@@ -133,10 +133,16 @@ describe('FramedEditorControls', function() {
   };
 
   beforeEach(function() {
+    var that = this;
     Y = {
       all: function(selector) {
         return {
           removeClass: function(className) {}
+        };
+      },
+      one: function(selector) {
+        return {
+          on: function(event, action) {}
         };
       }
     };
@@ -147,7 +153,10 @@ describe('FramedEditorControls', function() {
       setValue: function() {},
       submit: function() {},
       close: function() {},
-      onLoad: function() {}
+      onLoad: function() {},
+      onBackgroundClick: function(callback) {
+        that.backgroundClick = callback;
+      }
     };
     env = {
       form: {
@@ -169,8 +178,11 @@ describe('FramedEditorControls', function() {
     spyOn(env.form, 'setValue');
     spyOn(env, 'onFormLoad');
 
+    this.alertIfNotSavedChanges = jasmine.createSpy('alertIfNotSavedChanges');
+    this.confirm = spyOn(window, 'confirm');
+
     framedEditorControls = new FramedEditorControls(Y, frameProxy, env,
-        maybePerformAction);
+        maybePerformAction, this.alertIfNotSavedChanges);
   });
 
   describe('the save button', function() {
@@ -206,6 +218,40 @@ describe('FramedEditorControls', function() {
 
     it('closes the iframe on click', function() {
       closeButton.onClick();
+      expect(frameProxy.close).toHaveBeenCalled();
+    });
+
+    it('does not ask for confirmation if the form has not changed', function() {
+      this.alertIfNotSavedChanges.and.returnValue(null);
+      closeButton.onClick();
+      expect(this.confirm).not.toHaveBeenCalled();
+      expect(frameProxy.close).toHaveBeenCalled();
+    });
+
+    it('asks for confirmation if the form has changed', function() {
+      var message = 'Values have changed'
+      this.alertIfNotSavedChanges.and.returnValue(message);
+      this.confirm.and.returnValue(false);
+      closeButton.onClick();
+      expect(this.confirm.calls.argsFor(0)[0]).toContain(message);
+      expect(frameProxy.close).not.toHaveBeenCalled();
+    });
+
+    it('closes if confirmation given when the form has changed', function() {
+      var message = 'Values have changed'
+      this.alertIfNotSavedChanges.and.returnValue(message);
+      this.confirm.and.returnValue(true);
+      closeButton.onClick();
+      var confirmMessage = this.confirm.calls.argsFor(0)[0];
+      expect(confirmMessage).toContain(message);
+      expect(confirmMessage).toContain('Are you sure you want to close?');
+      expect(frameProxy.close).toHaveBeenCalled();
+    });
+
+    it('closes on a background click', function() {
+      this.alertIfNotSavedChanges.and.returnValue(null);
+      this.backgroundClick();
+      expect(this.confirm).not.toHaveBeenCalled();
       expect(frameProxy.close).toHaveBeenCalled();
     });
   });

@@ -8,6 +8,8 @@
 
     <style type="text/css">
       body {
+        position: absolute;
+        min-height: inherit;
         font-family: arial,sans-serif;
         font-size: 13px;
       }
@@ -24,9 +26,17 @@
         font-weight: normal;
         cursor: default;
       }
+      .close-button {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: inherit;
+        border: none;
+      }
     </style>
   </head>
   <body>
+    <button class="close-button material-icons">close</button>
     {{ form_html }}
   </body>
 </html>
