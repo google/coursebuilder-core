@@ -26,7 +26,6 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import argparse
 import datetime
 import difflib
-import httplib
 import logging
 import multiprocessing
 import os
@@ -39,6 +38,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib2
 import yaml
 import zipfile
 
@@ -1107,19 +1107,32 @@ def select_tests_to_run(test_class_name):
 
 def assert_handler(url, handler):
     """Verifies (via response headers) that URL is not served by CB handler."""
-    conn = httplib.HTTPConnection("localhost:8081")
-    conn.request("GET", url)
-    res = conn.getresponse()
+    last_attempt = 4
+    url = INTEGRATION_SERVER_BASE_URL + url
 
-    assert res.status == 200
-    headers = dict(res.getheaders())
+    for attempt in xrange(1, last_attempt):
+        try:
+            result = urllib2.urlopen(url, timeout=10)
+            break
+        except urllib2.URLError as e:
+            # Sometimes the server has not yet restarted and connections are
+            # refused, so the timeout mechanism won't retry. Do it manually.
+            log('Unable to open %s on attempt %s' % (url, attempt))
+            if attempt != last_attempt:
+                time.sleep(5)
+    else:
+        raise e
+
+    assert result.getcode() == 200
+
+    headers = dict(result.headers)
     specified_handler = headers.get(GCB_HANDLER_CLASS_HEADER_NAME, None)
 
     if not specified_handler == handler:
         raise Exception(
             'Failed to find header %s with value %s in url %s '
             'having response headers %s' % (
-            GCB_HANDLER_CLASS_HEADER_NAME, handler, url, res.getheaders()))
+            GCB_HANDLER_CLASS_HEADER_NAME, handler, url, headers))
 
 
 def assert_gcb_allow_static_serv_is_disabled():
