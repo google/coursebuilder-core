@@ -45,6 +45,23 @@
         {{ submission_due_date }}.
       {% endif %}
     {% endif %}
+    {% if embedded and email %}
+      {% if readonly_student_assessment %}
+        {% if assessment_attempted %}
+          {# I18N: Text telling students what their recorded email address is. #}
+          {{ gettext('Your answers have been recorded under the email') }}
+          <span class="email-address">{{ email }}</span>.
+        {% else %}
+          {# I18N: Text telling students there are not answers recorded for them. #}
+          {{ gettext('You have not submitted any answers to this assignment under the email') }}
+          <span class="email-address">{{ email }}</span>.
+        {% endif %}
+      {% else %}
+        {# I18N: Text telling students what their recorded email address is. #}
+        {{ gettext('Your answers will be recorded under the email') }}
+        <span class="email-address">{{ email }}</span>.
+      {% endif %}
+    {% endif %}
     </div>
 
     {% if show_score %}

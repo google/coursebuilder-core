@@ -215,6 +215,7 @@ modules/assessment_tags/templates/questions_popup.css
 modules/assessment_tags/templates/questions_popup.js
 modules/assessment_tags/templates/sa_question.html
 modules/assessments/__init__.py
+modules/assessments/_static/css/assessments.css
 modules/assessments/assessments.py
 modules/assessments/templates/assessment.html
 modules/assessments/templates/assessment_html_content.html

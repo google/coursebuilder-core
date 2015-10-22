@@ -17,16 +17,20 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 import urlparse
+from xml import etree
 import yaml
 
 from controllers import sites
 from models import courses
+from models import transforms
 from tests.functional import actions
 
 ADMIN_EMAIL = 'admin@foo.com'
 STUDENT_EMAIL = 'student@foo.com'
 STUDENT_NAME = 'A S Tudent'
 COURSE_NAME = 'assessment_tests'
+DUE_DATE_IN_PAST = '1995-06-15 12:00'
+DUE_DATE_IN_FUTURE = '2035-06-15 12:00'
 
 
 class EmbeddedAssessmentTests(actions.TestBase):
@@ -50,6 +54,14 @@ class EmbeddedAssessmentTests(actions.TestBase):
     def tearDown(self):
         del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         super(EmbeddedAssessmentTests, self).tearDown()
+
+    def set_workflow_field(self, name, value):
+        workflow_dict = {}
+        if self.assessment.workflow_yaml:
+            workflow_dict = yaml.safe_load(self.assessment.workflow_yaml)
+        workflow_dict[name] = value
+        self.assessment.workflow_yaml = yaml.safe_dump(workflow_dict)
+        self.course.save()
 
     def test_assessment_is_embedded(self):
         response = self.get(self.embed_url)
@@ -103,3 +115,52 @@ class EmbeddedAssessmentTests(actions.TestBase):
         self.assertEquals(
             'Peer-review assignments cannot be embedded in external pages.',
             dom.find('.//*[@class="gcb-article"]').text.strip())
+
+    def test_email_of_record_is_shown_to_student(self):
+        def assert_message_and_email(message):
+            # The message and email are seen in embedded assessments
+            redirect_url = self.get(self.embed_url).headers['Location']
+            response = self.get(redirect_url)
+            dom = self.parse_html_string(response.body)
+            top_info = etree.ElementTree.tostring(
+                dom.find('.//*[@class="assessment-top-info"]'))
+            self.assertIn(message, top_info)
+            self.assertIn(STUDENT_EMAIL, top_info)
+
+            # The message and email are not shown in non-embedded assessments
+            response = self.get('assessment?name=%s' % self.assessment.unit_id)
+            dom = self.parse_html_string(response.body)
+            top_info = etree.ElementTree.tostring(
+                dom.find('.//*[@class="assessment-top-info"]'))
+            self.assertNotIn(message, top_info)
+            self.assertNotIn(STUDENT_EMAIL, top_info)
+
+        # Assessment is open, and no answers recorded
+        assert_message_and_email(
+            'Your answers will be recorded under the email')
+
+        # Assessment is closed, and no answers recorded
+        self.set_workflow_field('submission_due_date', DUE_DATE_IN_PAST)
+        assert_message_and_email(
+            'You have not submitted any answers to this assignment under the '
+            'email')
+
+        # Submit assignment
+        self.set_workflow_field('submission_due_date', DUE_DATE_IN_FUTURE)
+        actions.submit_assessment(self, self.assessment.unit_id, {
+            'assessment_type': self.assessment.unit_id,
+            'score': '75.0',
+            'answers': transforms.dumps({
+                'rawScore': 3,
+                'totalWeight': 4,
+                'percentScore': 75})
+        })
+
+        # Assessment is open, and some answers recorded
+        assert_message_and_email(
+            'Your answers will be recorded under the email')
+
+        # Assessment is closed, and some answers recorded
+        self.set_workflow_field('submission_due_date', DUE_DATE_IN_PAST)
+        assert_message_and_email(
+            'Your answers have been recorded under the email')
