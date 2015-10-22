@@ -1,4 +1,4 @@
-$(function() {
+(function() {
   window.gcb = {
     _XSSI_PREFIX: ")]}'",
     parseJsonResponse: function(responseString) {
@@ -23,12 +23,25 @@ $(function() {
   };
   var base = '/modules/core_ui/';
 
-  $.each(modules, function(name, module) {
-    $.each(module.css, function(_, uri) {
-      $('head').append($('<link rel="stylesheet">').attr('href', base + uri));
-    });
-    $.each(module.js, function(_, uri) {
-      $('body').append($('<script>').attr('src', base + uri));
+  for (var name in modules) {
+    if (! modules.hasOwnProperty(name)) {
+      continue;
+    }
+    var module = modules[name];
+    for (var i = 0; i < module.css.length; i++) {
+      var uri = module.css[i];
+      var link = document.createElement('link');
+      link.setAttribute('rel', 'stylesheet');
+      link.setAttribute('href', base + uri);
+      document.head.appendChild(link);
+    }
+  }
+
+  $(function() {
+    $.each(modules, function(_, module) {
+      $.each(module.js, function(_, uri) {
+        $('body').append($('<script>').attr('src', base + uri));
+      });
     });
   });
-});
+})();
