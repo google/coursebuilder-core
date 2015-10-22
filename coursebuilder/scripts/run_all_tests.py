@@ -1127,7 +1127,7 @@ def assert_handler(url, handler):
             # Sometimes the server has not yet restarted and connections are
             # refused, so the timeout mechanism won't retry. Do it manually.
             log('Unable to open %s on attempt %s' % (url, attempt))
-            if attempt != last_attempt:
+            if attempt != last_attempt - 1:
                 time.sleep(5)
     else:
         raise e
