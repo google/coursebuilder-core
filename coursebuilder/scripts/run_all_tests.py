@@ -610,7 +610,6 @@ def chmod_dir_recursive(folder_name, mode):
 
 def zip_all_files(zip_file_name, verbose=False):
     """Build and test a release zip file."""
-
     log('Zipping: %s' % zip_file_name)
 
     chmod_dir_recursive(build_dir(), 0o777)
@@ -1054,9 +1053,7 @@ def do_a_release(
 
     setup_all_dependencies()
 
-    remove_dir(build_dir())
-    shutil.copytree(source_dir, build_dir(), symlinks=True)
-
+    _create_release_directories(source_dir, build_dir(), zip_file)
     create_manifests(manifest_file, third_party_file, release_label)
 
     parsed_args = make_default_parser().parse_args()
@@ -1083,6 +1080,16 @@ def do_a_release(
         int(time.time() - start), target_dir))
 
     return 0
+
+
+def _create_release_directories(source_dir_name, build_dir_name, zip_file_name):
+    remove_dir(build_dir_name)
+    shutil.copytree(source_dir_name, build_dir_name, symlinks=True)
+
+    target_dir_name = os.path.dirname(zip_file_name)
+    if not os.path.exists(target_dir_name):
+        log('Creating directory for release: %s' % target_dir_name)
+        os.makedirs(target_dir_name)
 
 
 def _test_only(parsed_args):
