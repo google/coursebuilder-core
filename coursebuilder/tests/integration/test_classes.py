@@ -1033,7 +1033,9 @@ class QuestionsTest(BaseIntegrationTest):
         ).verify_course_outline_contains_unit(
             'Unit 1 - Test Unit 1'
         #---------------------------------------------- Lesson 1 (graded)
-        ).click_add_lesson(
+        )
+
+        page = page.click_add_lesson(
         ).set_title(
             'Question lesson - Graded'
         ).select_settings(
@@ -1096,7 +1098,9 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_save(
         ).click_close(
         #---------------------------------------------- Assessment post (ID 5)
-        ).click_add_assessment(
+        )
+
+        page = page.click_add_assessment(
         ).set_title(
             'Post-Assessment'
         ).set_status(
