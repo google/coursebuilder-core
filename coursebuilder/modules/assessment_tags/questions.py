@@ -203,7 +203,9 @@ class QuestionTag(tags.BaseTag):
             select_schema.add_property(
                 schema_fields.SchemaField(
                     'quid', 'Question', 'string', optional=True, i18n=False,
-                    select_data=[('', '-- New Question --')] + question_list))
+                    select_data=[
+                        ('', '-- Select Existing Question --')] + question_list
+            ))
         else:
             select_schema.add_property(
                 schema_fields.SchemaField(

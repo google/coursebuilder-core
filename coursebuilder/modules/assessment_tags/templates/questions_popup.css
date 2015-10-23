@@ -11,12 +11,14 @@ form#cb-oeditor-form > fieldset {
 #cb-oeditor-form > fieldset,
 #cb-oeditor-form .mc-container > fieldset,
 #cb-oeditor-form .sa-container > fieldset,
+#cb-oeditor-form .select-container > fieldset,
 #cb-oeditor-form > fieldset > .inputEx-Group:last-child > fieldset {
   border-top: none;
 }
 #cb-oeditor-form > fieldset > .inputEx-Group-legend,
 #cb-oeditor-form .mc-container > fieldset > .inputEx-Group-legend,
 #cb-oeditor-form .sa-container > fieldset > .inputEx-Group-legend,
+#cb-oeditor-form .select-container > fieldset > .inputEx-Group-legend,
 #cb-oeditor-form > fieldset > .inputEx-Group:last-child > fieldset > .inputEx-Group-legend {
   display: none;
 }
@@ -27,11 +29,15 @@ form#cb-oeditor-form > fieldset {
   margin-top: 50px;
 }
 
+#cb-oeditor-form .sa-container .inputEx-label,
+#cb-oeditor-form .select-container .inputEx-label,
 #cb-oeditor-form > fieldset > .inputEx-Group:last-child > fieldset .inputEx-label {
   width: inherit;
 }
+.select-container .inputEx-Field,
 .question-weight {
   margin-left: 87px;
+  float: none;
 }
 .question-weight input {
   width: 546px;
