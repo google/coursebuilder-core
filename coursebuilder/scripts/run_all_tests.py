@@ -796,7 +796,7 @@ def select_tests_to_run(test_class_name):
         if not _test_classes:
             raise Exception(
                 'No tests found for "%s".  (Did you remember to add the test '
-                'class to the list in tests/run_all_tests.py?)' %
+                'class to the list in scripts/all_tests.py?)' %
                 test_class_name)
         test_classes = _test_classes
 

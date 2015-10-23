@@ -16,4 +16,7 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
-SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
+from common import schema_transforms
+
+# Leave tombstones pointing to moved functions from 'common'
+SIMPLE_TYPES = schema_transforms.SIMPLE_TYPES

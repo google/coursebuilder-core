@@ -80,6 +80,7 @@ common/messages.py
 common/resource.py
 common/safe_dom.py
 common/schema_fields.py
+common/schema_transforms.py
 common/tags.py
 common/users.py
 common/utils.py
