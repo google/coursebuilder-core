@@ -2419,7 +2419,7 @@ class Course(object):
         registration_opts.add_property(schema_fields.SchemaField(
             'reg_form:can_register', 'Enable Registrations', 'boolean',
             description='Checking this box allows new students to register for '
-            'the course.'))
+            'the course.', optional=True))
         registration_opts.add_property(schema_fields.SchemaField(
             'reg_form:header_text', 'Introduction', 'string', optional=True,
             description=messages.REGISTRATION_INTRODUCTION))

@@ -572,17 +572,12 @@ def add_asset_handler_base_fields(schema):
 
     schema.add_property(schema_fields.SchemaField(
         'file', 'Upload New File', 'file',
-        optional=True,
         description='You may upload a file to set or replace the content '
         'of the asset.'))
     schema.add_property(schema_fields.SchemaField(
-        'key', 'Key', 'string',
-        editable=False,
-        hidden=True))
+        'key', 'Key', 'string', editable=False, hidden=True))
     schema.add_property(schema_fields.SchemaField(
-        'base', 'Base', 'string',
-        editable=False,
-        hidden=True))
+        'base', 'Base', 'string', editable=False, hidden=True))
 
 
 def add_asset_handler_display_field(schema):

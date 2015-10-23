@@ -954,7 +954,7 @@ class ResourceAssessment(ResourceUnitBase):
             optional=True))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.GRADER_KEY), 'Grading Method', 'string',
-            select_data=ALLOWED_GRADERS_NAMES.items(),
+            select_data=ALLOWED_GRADERS_NAMES.items(), optional=True,
             description=str(messages.ASSESSMENT_GRADING_METHOD_DESCRIPTION)))
         reg.add_sub_registry('assessment', 'Assessment Config',
                              registry=course_opts)

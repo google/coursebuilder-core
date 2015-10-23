@@ -149,7 +149,6 @@ class GoogleDoc(CoreTag):
             # contents do not appear instantly.
             schema_fields.SchemaField(
                 'link', 'Document Link', 'string',
-                optional=True,
                 description=('Provide the "Document Link" from the Google Docs '
                              '"Publish to the web" dialog')))
         reg.add_property(
@@ -233,7 +232,6 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
         reg.add_property(
             schema_fields.SchemaField(
                 'document-id', 'Document ID', 'string',
-                optional=True,  # Validation enforced by JS code.
                 description='The ID of the Google Drive item you want to '
                 'use', i18n=False, extra_schema_dict_values={
                     'api-key': api_key,
@@ -446,7 +444,6 @@ class GoogleSpreadsheet(CoreTag):
             # document or to its contents do not appear instantly.
             schema_fields.SchemaField(
                 'link', 'Link', 'string',
-                optional=True,
                 description=('Provide the link from the Google Spreadsheets '
                              '"Publish to the web" dialog')))
         reg.add_property(
@@ -508,7 +505,6 @@ class YouTube(CoreTag):
         reg = schema_fields.FieldRegistry(YouTube.name())
         reg.add_property(schema_fields.SchemaField(
             'videoid', 'Video Id', 'string',
-            optional=True,
             description='Provide YouTube video ID (e.g. Kdg2drcUjYI)'))
         return reg
 
@@ -612,7 +608,7 @@ class GoogleGroup(CoreTag):
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(GoogleGroup.name())
         reg.add_property(schema_fields.SchemaField(
-            'group', 'Group Name', 'string', optional=True, i18n=False,
+            'group', 'Group Name', 'string', i18n=False,
             description=str(messages.RTE_GOOGLE_GROUP_GROUP_NAME)))
         reg.add_property(schema_fields.SchemaField(
             'category', 'Category Name', 'string', optional=True, i18n=False,

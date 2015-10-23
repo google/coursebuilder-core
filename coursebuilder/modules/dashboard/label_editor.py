@@ -73,7 +73,7 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
             'description', 'Description', 'string', optional=True,
             description=messages.LABELS_DESCRIPTION_DESCRIPTION))
         schema.add_property(schema_fields.SchemaField(
-            'type', 'Type', 'integer',
+            'type', 'Type', 'integer', optional=True,
             description=messages.LABELS_TYPE_DESCRIPTION,
             select_data=[
                 (lt.type, lt.title) for lt in (

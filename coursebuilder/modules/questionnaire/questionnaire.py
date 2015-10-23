@@ -104,7 +104,7 @@ class QuestionnaireTag(tags.ContextAwareTag):
         reg = schema_fields.FieldRegistry('Questionnaire')
         reg.add_property(
             schema_fields.SchemaField(
-                'form-id', 'Form ID', 'string', optional=True, i18n=False,
+                'form-id', 'Form ID', 'string', i18n=False,
                 description=str(messages.RTE_QUESTIONNAIRE_FORM_ID)))
         reg.add_property(
             schema_fields.SchemaField(

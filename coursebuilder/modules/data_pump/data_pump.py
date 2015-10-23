@@ -1165,7 +1165,7 @@ def register_module():
     project_id = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PROJECT_ID,
         'Project ID', 'string',
-        description=str(messages.PROJECT_ID), i18n=False, optional=True,
+        description=str(messages.PROJECT_ID), i18n=False,
         validator=validate_project_id)
     dataset_name = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + DATASET_NAME,
