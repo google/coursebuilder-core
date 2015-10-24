@@ -7,7 +7,7 @@ div.item-selector-root {
 div.inputEx-Field div.new-skill button.add,
 div.item-selector-root button.add {
   background-color: inherit;
-  color: #06998b;
+  color: #00776a;
   font-size: 120%;
   border: none;
   outline: none;
@@ -21,7 +21,7 @@ div.item-selector-root div.selector {
   left: 0;
   width: 20em;
   background-color: #fff;
-  border: solid 1px #ccc;
+  border: solid 1px #e0e0e0;
   border-radius: 0.2em;
   z-index: 20;
 }
@@ -30,8 +30,8 @@ div.item-selector-root ol.item-list {
   overflow-y: scroll;
   list-style-type: none;
   padding: 5px;
-  border-top: solid 1px #ccc;
-  border-bottom: solid 1px #ccc;
+  border-top: solid 1px #e0e0e0;
+  border-bottom: solid 1px #e0e0e0;
   margin: 0;
 }
 div.item-selector-root input {
@@ -41,7 +41,7 @@ div.item-selector-root input.search {
   width: 18em !important;
   margin: 1em;
   padding: 7px 8px;
-  border: solid 1px #ccc;
+  border: solid 1px #e0e0e0;
   border-radius: 3px;
   font-size: 12px;
 }
@@ -93,7 +93,7 @@ div.edit-skill-popup div.form-row > input,
 div.edit-skill-popup div.form-row > textarea {
   width: 300px;
   padding: 10px;
-  border: solid 1px #ccc;
+  border: solid 1px #e0e0e0;
   border-radius: 3px;
   font-family: arial, sans-serif;
   font-size: 13px;

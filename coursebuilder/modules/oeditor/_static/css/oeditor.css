@@ -10,8 +10,8 @@ div.form > div {
 }
 #formContainer fieldset {
   border: none;
-  border-top: solid 1px #999999;
-  border-bottom: solid 1px #999999;
+  border-top: solid 1px #e0e0e0;
+  border-bottom: solid 1px #e0e0e0;
   margin-bottom: 16px;
 }
 div#formContainer fieldset legend span {
@@ -20,11 +20,11 @@ div#formContainer fieldset legend span {
   padding: 4px;
 }
 div#formContainer fieldset fieldset {
-  border-top: solid #eee 6px;
+  border-top: solid #e0e0e0 1px;
   border-bottom: none;
 }
 div#formContainer fieldset fieldset legend span {
-  color: #777
+  color: #505050;
 }
 div.split-from-main-group-parent {
   margin: 0 0 20px 70px !important;
@@ -41,9 +41,8 @@ div.inputEx-fieldWrapper {
 div.inputEx-Field textarea {
   width: 496px;
   height: 200px;
-  border: solid 1px #999999;
+  border: solid 1px #e0e0e0;
   padding: 4px;
-  border-left: 6px solid #999999;
   white-space: pre;
   word-wrap: normal;
   overflow: scroll;
@@ -56,14 +55,13 @@ div.inputEx-StringField-wrapper input {
   margin-bottom: 2px;
   padding: 2px;
   text-align: left;
-  border: solid 1px #999999;
+  border: solid 1px #e0e0e0;
 }
 div.inputEx-Field div.inputEx-StringField-wrapper > input {
   /* Ensure the selector is narrow enough that it does not hit the inputs in the
    * popup panels with class yui-editor-container.
    */
   width: 100%;
-  border-left: 6px solid #999999;
 }
 div.inputEx-CheckBox input {
   width: auto;
@@ -84,9 +82,9 @@ div.inputEx-CheckBox input {
 .inputEx-DateField .inputEx-StringField-wrapper > input[type="text"],
 .new-form-layout .inputEx-DateField .inputEx-StringField-wrapper > input[type="text"] {
   width: 85px;
-  background-color: #f8f8f8;
+  background-color: #f9f9f9;
   padding: 5px 5px 5px 25px;
-  border-left: solid 1px #999;
+  border-left: solid 1px #e0e0e0;
 }
 .inputEx-DateField .inputEx-DatePicker-button {
   position: absolute;
@@ -173,7 +171,7 @@ div.sa-grader-container > a,
 div.question-group-items a {
   display: inline-block;
   width: auto;
-  background-color: #666;
+  background-color: #00776a;
   color: #FFFFFF;
   padding: 4px 12px;
   margin-left: 4px;
@@ -231,7 +229,7 @@ div.organizer div.inputEx-ListField-subFieldEl > fieldset > div.inputEx-fieldWra
 }
 div.organizer div.inputEx-ListField-childContainer > div {
   white-space: nowrap;
-  border-top: solid 1px #eee;
+  border-top: solid 1px #e0e0e0;
 }
 div.organizer div.inputEx-ListField-Arrow {
   float: none;
@@ -244,7 +242,7 @@ div.organizer a.inputEx-List-link {
 
 
 img.framed {
-  border: 1px solid #ccc;
+  border: 1px solid #e0e0e0;
   padding: 3px;
   max-width: 400px;
 }
@@ -532,11 +530,8 @@ div.mc-choice {
 .toggle-feedback > button,
 div.mc-choice + a {
   /* The show-feedback and the delete-choice button */
-  color: #000;
-  background-color: #f2f2f2;
-  border: solid #808080 1px;
-  padding: 3px;
-  font-weight: bold;
+  color: #fff;
+  background-color: #bf5100;
   font-size: 10px;
   margin-top: 5px;
 }
@@ -698,8 +693,7 @@ div.assessment-editor-check-answers > input[type=checkbox] {
  */
 
 div#formContainer div.label-group-list {
-  border: solid 1px #999999;
-  border-left: solid 6px #999999;
+  border: solid 1px #e0e0e0;
   padding: 3px;
 }
 
@@ -756,7 +750,7 @@ div.CodeMirror {
 
 #cb-oeditor-form .editors-div {
   /* Add a border to the CB Editor Field */
-  border: solid 1px #ccc;
+  border: solid 1px #e0e0e0;
   border-radius: 2px;
 }
 #cb-oeditor-form .yui-editor-container,
@@ -867,7 +861,6 @@ div.new-form-layout div.inputEx-label {
 div.new-form-layout div.inputEx-label > label {
   font-weight: bold !important;
   font-size: 12px;
-  color: rgb(47, 105, 107);
 }
 div.new-form-layout div.inputEx-fieldWrapper.gcb-text-input > div.inputEx-label {
   margin-top: 13px;
@@ -883,11 +876,12 @@ div.new-form-layout > form > fieldset > div > fieldset > div.inputEx-fieldWrappe
 div.split-from-main-group-parent {
   margin: 20px 0 0 0;
   padding: 20px 20px 20px 20px;
-  background-color: #f8f8f8;
+  background-color: #f9f9f9;
   border-radius: 5px;
-  border: solid #D7D7D7 1px;
+  border: solid #e0e0e0 1px;
 }
 div.new-form-layout div.inputEx-description {
+  color: #b0b0b0;
   margin-top: 6px;
   max-width: 500px;
 }
@@ -905,14 +899,14 @@ div.new-form-layout div.inputEx-Field textarea {
    */
   width: 500px;
   padding: 7px 8px;
-  border: solid 1px #999;
+  border: solid 1px #e0e0e0;
   border-radius: 3px;
   font-size: 12px;
 }
 div#formContainer  > div.inputEx-Group.new-form-layout div.label-group-list {
   background-color: #fff;
   border-radius: 3px;
-  border: solid 1px #999;
+  border: solid 1px #e0e0e0;
   padding: 5px 15px;;
 }
 div.new-form-layout div.inputEx-Form-buttonBar {

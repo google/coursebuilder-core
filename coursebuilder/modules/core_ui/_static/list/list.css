@@ -17,7 +17,8 @@
 
 /*** List ***/
 .gcb-list {
-  border: 1px solid #ccc;
+  border: 1px solid #e0e0e0;
+  border-bottom: 0;
   font-color: #333333;
 }
 
@@ -31,6 +32,11 @@
   table-layout: fixed;
   border-spacing: 2px;
   border-collapse: collapse;
+}
+
+.gcb-list th,
+.gcb-list td {
+    border: 0;
 }
 
 .gcb-list a {
@@ -54,7 +60,7 @@ ul.gcb-list, ol.gcb-list {
 .gcb-list__row--dark-stripe,
 .gcb-list--autostripe .gcb-list__row:nth-child(even),
 .gcb-list--autostripe > table > tbody > tr:nth-child(even) {
-  background-color:#f0f0f0;
+  background-color:#f9f9f9;
 }
 
 .gcb-list__row,
@@ -66,7 +72,7 @@ ul.gcb-list, ol.gcb-list {
 /* Hover needs to beat stripes */
 .gcb-list__row:hover,
 .gcb-list > table > tbody > tr:hover {
-  background-color:#e0e0e0 !important;
+  background-color:#e9e9e9 !important;
 }
 
 /*** Cell ***/
@@ -76,7 +82,6 @@ ul.gcb-list, ol.gcb-list {
   padding: 0;
   padding-left: 8px;
   vertical-align: middle;
-  border: none;
   white-space: nowrap;
   overflow-x: hidden;
   text-overflow: ellipsis;
@@ -100,12 +105,18 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
 
 .gcb-list__header-row,
 .gcb-list > table > thead > tr {
-  border: none;
-  border-bottom: 1px #ccc solid;
-  background-color: #aaa;
+  background-color: #f9f9f9;
+  border-bottom: solid 1px #e0e0e0;
   font-weight: bold;
   text-align: left;
   height: 40px;
+}
+
+/*** Row ***/
+
+.gcb-list__row,
+.gcb-list > table > tbody > tr {
+  border-bottom: solid 1px #e0e0e0;
 }
 
 /* If you aren't a table, use flexbox */
@@ -146,7 +157,6 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
   padding: 0;
   padding-left: 8px;
   vertical-align: middle;
-  border: 0;
 }
 
 /*** Icon stuff ***/
@@ -180,6 +190,7 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
 
 .gcb-list__empty-message-wrapper {
   min-height: 100px;
+  border-bottom: solid 1px #e0e0e0;
   box-sizing: border-box;
   display: flex;
   vertical-align: middle;
@@ -205,4 +216,3 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
 .sort-desc .gcb-list__sort-indicator:before {
   content: 'arrow_drop_up';
 }
-

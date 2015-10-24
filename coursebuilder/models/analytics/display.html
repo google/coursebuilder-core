@@ -80,19 +80,19 @@
     {% if rest_source.chunk_size > 0%}
       {{ rest_source.title }}
       <button
-         class="gcb_button"
+         class="gcb-button"
          id="gcb_rest_source_page_request_zero_{{ rest_source.name }}"
          onclick="gcbRestSourcePageRequest('{{ rest_source.name }}', 0);">
         |&lt;&lt;
       </button>
       <button
-         class="gcb_button"
+         class="gcb-button"
          id="gcb_rest_source_page_request_minusten_{{ rest_source.name }}"
          onclick="gcbRestSourcePageChange('{{ rest_source.name }}', -10);">
         &lt;&lt;
       </button>
       <button
-         class="gcb_button"
+         class="gcb-button"
          id="gcb_rest_source_page_request_minusone_{{ rest_source.name }}"
          onclick="gcbRestSourcePageChange('{{ rest_source.name }}', -1);">
         &lt;
@@ -102,13 +102,13 @@
         0
       </span>
       <button
-         class="gcb_button"
+         class="gcb-button"
          id="gcb_rest_source_page_request_plusone_{{ rest_source.name }}"
          onclick="gcbRestSourcePageChange('{{ rest_source.name }}', 1);">
         &gt;
       </button>
       <button
-         class="gcb_button"
+         class="gcb-button"
          id="gcb_rest_source_page_request_plusten_{{ rest_source.name }}"
          onclick="gcbRestSourcePageChange('{{ rest_source.name }}', 10);">
         &gt;&gt;

@@ -8,7 +8,7 @@ ol.skill-display-root {
 }
 ol.skill-display-root > li.skill {
   display: inline-block;
-  background-color: #697792;
+  background-color: #5076bb;
   color: white;
   font-weight: normal;
   border-radius: 0.2em;
@@ -16,7 +16,7 @@ ol.skill-display-root > li.skill {
   margin: 0 0.2em !important;
 }
 ol.skill-display-root > li.unknown {
-  background-color: #697792;
+  background-color: #5076bb;
 }
 ol.skill-display-root > li.not-started {
   background-color: #bdc9e1;
@@ -38,9 +38,9 @@ ol.skill-display-root > li.skill > button.close {
 .skill-card {
   display: inline-block;
   width: 160px;
-  border: solid 1px #ccc;
+  border: solid 1px #e0e0e0;
   border-radius: 3px;
-  background-color: #fafafa;
+  background-color: #f9f9f9;
   padding: 5px 8px;
   box-shadow: 1px 2px 2px 2px #f0f0f0;
 }
@@ -48,7 +48,7 @@ li.skill-card {
   margin: 5px 2px;
 }
 .skill-card > div.name {
-  background-color: #697792;
+  background-color: #5076bb;
   color: white;
   font-weight: normal;
   text-align: center;
@@ -60,7 +60,7 @@ li.skill-card {
   text-overflow: ellipsis;
 }
 .skill-card > div.unknown {
-  background-color: #697792;
+  background-color: #5076bb;
 }
 .skill-card > div.not-started {
   background-color: #bdc9e1;

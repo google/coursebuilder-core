@@ -4,6 +4,9 @@
 .add-course-panel {
   position: relative;
 }
+.add-course-panel .title {
+  margin-top: 0;
+}
 .add-course-panel .form-row {
   margin: 12px 0;
 }
@@ -21,13 +24,13 @@
 .add-course-panel .form-row > input {
   width: 300px;
   padding: 10px;
-  border: solid 1px #ccc;
+  border: solid 1px #e0e0e0;
   border-radius: 3px;
   font-family: arial, sans-serif;
   font-size: 13px;
 }
 /* keep the error style in sync with oeditor.css error style */
-.add-course-panel .form-row > input.invalid, {
+.add-course-panel .form-row > input.invalid {
   border: solid 1px red;
   box-shadow: 0 0 5px #f00;
 }
@@ -64,13 +67,22 @@
 /*
  * Style for the instructions shown when there are no courses.
  */
+.empty-instance-instructions {
+  font-family: 'Roboto','Helvetica','Arial',sans-serif;
+}
 .empty-instance-instructions .header {
-  font-style: italic;
-  margin: 20px 0;
+  font-weight: 300;
+  margin: 30px 0;
+}
+.empty-instance-instructions dl {
+  margin: 30px 0;
 }
 .empty-instance-instructions dt {
+  font-size: 1.1em;
+  font-weight: 600;
   margin: 20px 0 0 0;
 }
 .empty-instance-instructions dd {
-  margin: 3px 0 0 0;
+  font-weight: 300;
+  margin: 5px 0 0 0;
 }

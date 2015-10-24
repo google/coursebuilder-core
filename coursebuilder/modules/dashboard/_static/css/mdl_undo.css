@@ -2,7 +2,9 @@
  * When we decide to use their typography rules, we may be able to remove some
  * of these rules.
  */
-
+html {
+  color: #555;
+}
 html, body, table, td, th, p {
   font-family: arial,sans-serif;
   font-size: 13px;
@@ -33,7 +35,8 @@ h2 {
   font-size: 1.5em;
 }
 a {
-  color: rgb(0, 0, 238);
+  color: #00776a;
+  text-decoration: none;
 }
 iframe {
   border: 2px inset;

@@ -29,9 +29,7 @@ Minimal Example:
 */
 
 .gcb-collapse--opened {
-  border-top: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
-  margin-top: -1px;
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .gcb-collapse--opened + .gcb-collapse--opened {
@@ -55,7 +53,6 @@ Minimal Example:
 .gcb-collapse__icon {
   transition-property: transform;
   transition-duration: 0.2s;
-  color: rgba(0,0,0,0.3);
 }
 
 .gcb-collapse--opened .gcb-collapse__icon {
@@ -63,6 +60,11 @@ Minimal Example:
 }
 
 .gcb-collapse--opened .gcb-collapse__content {
+  border-top: solid 1px rgba(0, 0, 0, 0.15);
   /* Overrides the inline style calculated by the JavaScript on startup */
   margin-top: 0 !important;
+}
+
+.gcb-collapse--opened .gcb-collapse__content .gcb-menu__sub-group:first-child {
+  border-top: 0;
 }

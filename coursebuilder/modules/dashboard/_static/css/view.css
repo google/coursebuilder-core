@@ -1,3 +1,42 @@
+/*
+
+This is the color palette used throughput the product. For example,
+the top and left nav are "mid teal", the product name in the top
+left is "darker teal", most buttons are "darker teal", etc.
+
+Generally speaking we've tried to be consistent in coloring "clickable
+things" with one monochromatic palette, and "information things" with
+a different monochromatic palette. (We've used a different color for
+clickable things in one particular spot because we happen to have lots
+of buttons very close to each other. That's the exceptopn rather than
+the rule though.)
+
+Primary (Teal) - used generally for clickable info
+
+ * #42b2a6 [rgb( 66, 178, 166)]: lightest teal
+ * #20a294 [rgb( 32, 162, 148)]: lighter teal
+ * #009686 [rgb(  0, 150, 134)]: mid teal
+ * #00776a [rgb(  0, 119, 106)]: darker teal
+ * #005d53 [rgb(  0,  93, 83)]: darkest teal
+
+Complementary (Orange) - used generally as an alt color for clickable info
+
+ * #ffa25e [rgb(255, 162,  94)]: lightest orange
+ * #ff8933 [rgb(255, 137,  51)]: lighter orange
+ * #f16700 [rgb(241, 103,   0)]: orange
+ * #bf5100 [rgb(191,  81,   0)]: darker orange
+ * #953f00 [rgb(149,  63,   0)]: darkest orange
+
+Split-complementary (Blue) - generally used for non-clickable info
+
+ * #5076bb [rgb( 80, 118, 187)]: lightest blue
+ * #305cac [rgb( 48,  92, 172)]: lighter blue
+ * #1043a1 [rgb( 16,  67, 161)]: blue
+ * #0b347f [rgb( 11,  52, 127)]: darker blue
+ * #072763 [rgb(  7,  39,  99)]: darkest blue
+
+*/
+
 body {
   background-color: #f5f5f5;
 }
@@ -9,20 +48,20 @@ table {
   border-width: 1px;
   border-spacing: 2px;
   border-style: outset;
-  border-color: gray;
+  border-color: #e0e0e0;
   border-collapse: collapse;
 }
 table th {
   border-width: 1px;
   padding: 4px;
-  border-style: inset;
-  border-color: gray;
+  border-style: solid;
+  border-color: #e0e0e0;
 }
 table td {
   border-width: 1px;
   padding: 8px;
-  border-style: inset;
-  border-color: gray;
+  border-style: solid;
+  border-color: #e0e0e0;
 }
 a {
   cursor: pointer;
@@ -30,7 +69,6 @@ a {
 
 div#gcb-main-area {
   text-align: center;
-  padding-top: 12px;
   position: relative;
 }
 div#gcb-section {
@@ -43,9 +81,11 @@ div#gcb-main-content {
 div#gcb-footer {
   text-align: center;
   font-size: smaller;
-  padding: 4px;
-  border-top: solid 1px #607D8B;
-  background-color: #f5f5f5;
+  padding: 8px 4px;
+  border-top: solid 1px #e0e0e0;
+  border-bottom: solid 1px #e0e0e0;
+  background-color: #f9f9f9;
+  color: #b0b0b0;
 }
 .section + .section {
   margin-top: 40px;
@@ -70,7 +110,7 @@ div#formContainer {
   display: inline-block;
   margin: 0;
   padding: 4px 12px;
-  background-color: #37474F;
+  background-color: #00776A;
   color: #fff;
   text-decoration: none;
   border: none;
@@ -80,8 +120,8 @@ div#formContainer {
   cursor: default;
 }
 .gcb-button-toolbar {
-  margin-top: 8px;
-  margin-bottom: 16px;
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 .gcb-icon-button {
   padding-top:0;
@@ -135,7 +175,7 @@ div.settings-list > div.inputEx-ListField-childContainer > div {
 div.settings-list a.inputEx-List-link {
   color: #000;
   background-color: #f2f2f2;
-  border: solid #808080 1px;
+  border: solid #e0e0e0 1px;
   padding: 3px;
   font-weight: bold;
   font-size: 10px;
@@ -143,7 +183,7 @@ div.settings-list a.inputEx-List-link {
 }
 div.new-form-layout div.settings-list a.inputEx-List-link {
   color: #fff;
-  background-color: #666;
+  background-color: #00776A;
   font-weight: normal;
   border-radius: 3px;
   padding: 3px 10px;
@@ -172,7 +212,7 @@ div.settings-list-item select {
 }
 div.settings-list-item input[type="text"] {
   width: 300px;
-  border-left: solid 1px #999;
+  border-left: solid 1px #e0e0e0;
 }
 div.settings-list-item div.inputEx-description {
   width: 250px;
@@ -181,11 +221,11 @@ div.settings-list > div.inputEx-description {
   margin-top: 10px;
 }
 div#formContainer div.settings-list-item fieldset {
-  border: solid #999 1px;
+  border: solid #e0e0e0 1px;
   margin-left: 0px;
 }
 div#formContainer div.new-form-layout div.settings-list-item fieldset {
-  border: solid #ddd 1px;
+  border: solid #e0e0e0 1px;
   border-radius: 3px;
 }
 div#formContainer div.settings-list-item fieldset legend span {
@@ -307,7 +347,7 @@ div#formContainer div.settings-list-item fieldset legend span {
   top: 26px;
   width: 470px;
   background-color: #fff;
-  border: 1px solid #ccc;
+  border: 1px solid #e0e0e0;
   border: 1px solid rgba(0,0,0,0.2);
   padding: 10px;
   -mozkit-box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
@@ -341,7 +381,7 @@ div#formContainer div.settings-list-item fieldset legend span {
 }
 .form-popup > fieldset {
   border:none;
-  border-top: solid 1px #999999;
+  border-top: solid 1px #e0e0e0;
 }
 .form-popup legend {
   color: #505050;
@@ -432,7 +472,7 @@ div#formContainer fieldset .permission-item fieldset {
   width: 500px;
 }
 .settings-property-value {
-  border-left: 1px solid #999;
+  border-left: 1px solid #e0e0e0;
   color: #555;
   background: #EEE;
   padding: 3px;
@@ -473,6 +513,15 @@ label.settings.togglebutton {
 }
 
 /* Drawer menu adjustments */
+.mdl-layout__drawer {
+  background-color: #009686;
+  border: none;
+  -mozkit-box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.33);
+  -webkit-box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.33);
+  box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.33);
+  font-family: 'Roboto','Helvetica','Arial',sans-serif;
+}
+
 .mdl-layout__drawer .mdl-navigation .gcb-menu .mdl-navigation__link {
   padding-top: 8px;
   padding-bottom: 8px;
@@ -481,15 +530,16 @@ label.settings.togglebutton {
   cursor: pointer;
   position: relative;
   font-size: 15px;
-  color: inherit;
+  font-weight: 300;
+  color: #fff;
 }
 
 .mdl-layout__drawer .mdl-navigation .mdl-navigation__link:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
 .mdl-layout__drawer .mdl-navigation .gcb-menu .gcb-collapse--disabled .mdl-navigation__link {
-  opacity: .53;
+  opacity: .3;
   cursor: auto;
 }
 
@@ -501,11 +551,12 @@ label.settings.togglebutton {
 /* current page indication */
 .mdl-layout__drawer .mdl-navigation .gcb-menu .mdl-navigation__link.gcb-active,
 .mdl-layout__drawer .mdl-navigation .gcb-menu .mdl-navigation__link.gcb-active:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
 }
 
 .mdl-navigation .gcb-menu .gcb-active-group .gcb-collapse__button {
-  color: rgb(0, 150, 136);
+
 }
 
 .mdl-navigation__link .gcb-collapse__icon {
@@ -516,16 +567,16 @@ label.settings.togglebutton {
 
 /* Make the Courses menu item look like the others despite not being a group */
 #menu-item__courses {
-  font-weight: bold;
+
 }
 
 #menu-item__courses.gcb-active {
-  background: inherit;
-  color: rgb(0, 150, 136);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
 }
 
 #menu-item__courses:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
 /* adjustments for the header */
@@ -548,15 +599,26 @@ label.settings.togglebutton {
 }
 
 .mdl-layout__header {
+  background-color: #009686;
+  font-weight: 300;
   position: relative;
+}
+
+.mdl-layout-title {
+  font-weight: 300;
 }
 
 .mdl-layout__drawer .mdl-layout-title {
   padding-left: 30px;
-  border-bottom: 1px solid #e0e0e0;
+  -mozkit-box-shadow: -2px 0 2px 2px rgba(0, 0, 0, 0.33);
+  -webkit-box-shadow: -2px 0 2px 2px rgba(0, 0, 0, 0.33);
+  box-shadow: -2px 0 2px 2px rgba(0, 0, 0, 0.33);
+  color: #fff;
+  letter-spacing: 1.5px;
   margin: 0;
   padding-top: 22px;
   padding-bottom: 22px;
+  text-transform: uppercase;
 }
 
 @media screen and (max-width: 850px) {
@@ -567,8 +629,7 @@ label.settings.togglebutton {
 }
 
 .gcb-drawer-header {
-  background:  white;
-  border-bottom: 1px solid #e0e0e0;
+  background:  #00776A;
 }
 
 /* indent sub-menus */
@@ -578,11 +639,10 @@ label.settings.togglebutton {
 
 /* sub-groups */
 .gcb-menu__sub-group {
-  padding-top: 8px;
-  padding-bottom: 8px;
+  border-top: solid 1px rgba(0, 0, 0, 0.15);
 }
 .gcb-menu__sub-group + .gcb-menu__sub-group {
-  border-top: 1px dotted #e0e0e0;
+
 }
 
 /* etc */

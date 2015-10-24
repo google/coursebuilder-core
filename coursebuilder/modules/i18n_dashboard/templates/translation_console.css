@@ -10,14 +10,13 @@
 
 .translation-header {
   margin: 20px 0 10px 0;
-  background-color: #f0f0f0;
-  border-top: solid #ccc 1px;
-  border-bottom: solid #ccc 1px;
+  background-color: #f9f9f9;
+  border: solid #e0e0e0 1px;
   font-weight: bold;
-  color: #333;
+  color: #505050;
 }
 .translation-header > div {
-  width: 330px;
+  width: 329px;
   padding: 5px 0;
   padding-left: 20px;
   display: inline-block;
@@ -39,7 +38,7 @@
 }
 
 .translation-console .inputEx-Field textarea {
-  border: solid 1px #999999;
+  border: solid 1px #e0e0e0;
   width: 325px;
   height: 75px;
   overflow-x: auto;
@@ -48,8 +47,8 @@
   resize: vertical;
 }
 .translation-console .inputEx-Field textarea:disabled {
-  background-color: #f8f8f8;
-  color: #008;
+  background-color: #f9f9f9;
+  color: #b0b0b0;
   resize: none;
 }
 
@@ -81,7 +80,7 @@
   vertical-align: middle;
   text-align: center;
   border-radius: 15px;
-  border: solid #ccc 1px;
+  border: solid #e0e0e0 1px;
   -webkit-transition: all 0.30s ease-in-out;
   -moz-transition: all 0.30s ease-in-out;
   -ms-transition: all 0.30s ease-in-out;
@@ -162,7 +161,7 @@ div.validation-feedback.stale > div.errm {
 }
 
 div#formContainer .translation-item > fieldset {
-  border-top: solid #ccc 1px;
+  border-top: solid #e0e0e0 1px;
   padding: 10px 0;
   margin: 0;
   width: 700px;
