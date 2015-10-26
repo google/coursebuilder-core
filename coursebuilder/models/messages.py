@@ -160,14 +160,9 @@ Should be formatted as YYYY-MM-DD hh:mm (e.g. 2013-07-16 19:20) and be specified
 in the UTC timezone.""", None)
 
 
-ASSESSMENT_SHOW_FEEDBACK_DESCRIPTION = """
-Show students the feedback on their answers after the due date is passed.
-If no due date is set, this flag has no effect.
-"""
-
-ASSESSMENT_SHOW_SCORE_DESCRIPTION = """
-Show students the total score on the assignment after the due date is passed.
-If no due date is set, this flag has no effect.
+ASSESSMENT_SHOW_FEEDBACK_DESCRIPTION = """Show students their total score and
+the feedback for their answers after the due date is passed.  If no due date is
+set, this has no effect.
 """
 
 ASSESSMENT_FAILING_TEXT = """

@@ -115,8 +115,6 @@ def on_module_enabled(courses_custom_module, course_permissions):
                 'assessment/%s' % resources_display.workflow_key(
                     courses.SHOW_FEEDBACK_KEY),
                 'assessment/%s' % resources_display.workflow_key(
-                    courses.SHOW_SCORE_KEY),
-                'assessment/%s' % resources_display.workflow_key(
                     courses.GRADER_KEY),
                 'review_opts/%s' % resources_display.workflow_key(
                     courses.MATCHER_KEY),

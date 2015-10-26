@@ -186,7 +186,6 @@ MATCHER_KEY = 'matcher'
 SINGLE_SUBMISSION_KEY = 'single_submission'
 SUBMISSION_DUE_DATE_KEY = 'submission_due_date'
 SHOW_FEEDBACK_KEY = 'show_feedback'
-SHOW_SCORE_KEY = 'show_score'
 REVIEW_DUE_DATE_KEY = 'review_due_date'
 REVIEW_MIN_COUNT_KEY = 'review_min_count'
 REVIEW_WINDOW_MINS_KEY = 'review_window_mins'
@@ -2037,9 +2036,6 @@ class Workflow(object):
 
     def show_feedback(self):
         return self.to_dict().get(SHOW_FEEDBACK_KEY, False)
-
-    def show_score(self):
-        return self.to_dict().get(SHOW_SCORE_KEY, False)
 
     def get_review_due_date(self):
         date_str = self.to_dict().get(REVIEW_DUE_DATE_KEY)

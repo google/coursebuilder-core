@@ -3504,7 +3504,11 @@ class AssessmentPolicyTests(actions.TestBase):
         # Submit assignment
         actions.submit_assessment(self, self.assessment.unit_id, {
             'assessment_type': self.assessment.unit_id,
-            'score': '0.0'
+            'score': '0.0',
+            'answers': transforms.dumps({
+                'rawScore': 0,
+                'totalWeight': 1,
+                'percentScore': 0})
         })
 
         # If flag is set, feedback is shown after the due date is passed
@@ -3570,8 +3574,8 @@ class AssessmentPolicyTests(actions.TestBase):
         self.assertIsNotNone(dom.find('.//*[@class="submission-date"]'))
 
     def test_student_score_may_be_shown_after_due_date(self):
-        # Set up policy with show_score set to True and due date not yet reached
-        self.set_workflow_field('show_score', True)
+        # Set up policy with show_feedback set to True and due date not reached
+        self.set_workflow_field('show_feedback', True)
         self.set_workflow_field('submission_due_date', self._DUE_DATE_IN_FUTURE)
 
         # Expect no score shown when no submission made
@@ -3603,8 +3607,8 @@ class AssessmentPolicyTests(actions.TestBase):
         self.assertEquals(
             '3/4 (75%)', total_score.find('.//*[@class="score"]').text)
 
-        # Turn off show_score flag and expect no score shown
-        self.set_workflow_field('show_score', False)
+        # Turn off show_feedback flag and expect no score shown
+        self.set_workflow_field('show_feedback', False)
         response = self.get('assessment?name=%s' % self.assessment.unit_id)
         dom = self.parse_html_string(response.body)
         self.assertIsNone(dom.find('.//*[@class="total-score"]'))

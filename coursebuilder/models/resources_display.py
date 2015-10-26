@@ -729,8 +729,6 @@ class UnitTools(object):
                 submission_due_date),
             workflow_key(courses.SHOW_FEEDBACK_KEY): (
                 workflow.show_feedback()),
-            workflow_key(courses.SHOW_SCORE_KEY): (
-                workflow.show_score()),
             workflow_key(courses.GRADER_KEY): workflow.get_grader(),
             })
         return {
@@ -948,10 +946,6 @@ class ResourceAssessment(ResourceUnitBase):
             workflow_key(courses.SHOW_FEEDBACK_KEY), 'Show Feedback',
             'boolean', optional=True,
             description=messages.ASSESSMENT_SHOW_FEEDBACK_DESCRIPTION))
-        course_opts.add_property(schema_fields.SchemaField(
-            workflow_key(courses.SHOW_SCORE_KEY), 'Show Score',
-            'boolean', description=messages.ASSESSMENT_SHOW_SCORE_DESCRIPTION,
-            optional=True))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.GRADER_KEY), 'Grading Method', 'string',
             select_data=ALLOWED_GRADERS_NAMES.items(), optional=True,

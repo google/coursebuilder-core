@@ -221,15 +221,13 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
                         self.template_value['submission_date'] = (
                             submission.updated_on.strftime(
                                 utils.HUMAN_READABLE_DATETIME_FORMAT))
-                    if due_date_exceeded and unit.workflow.show_score():
+                    if due_date_exceeded and unit.workflow.show_feedback():
                         score = submission_contents.get('rawScore', 0)
                         weight = submission_contents.get('totalWeight', 0)
                         percent = submission_contents.get('percentScore', 0)
-                        self.template_value['show_score'] = True
+                        self.template_value['show_feedback'] = True
                         self.template_value['score'] = '%d/%d (%d%%)' % (
                             score, weight, percent)
-                    if due_date_exceeded and unit.workflow.show_feedback():
-                        self.template_value['show_feedback'] = True
 
             if unit.workflow.is_single_submission() and submission is not None:
                 readonly_view = True
