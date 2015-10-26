@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-19 07:52-0700\n"
+"POT-Creation-Date: 2015-10-26 07:49-0700\n"
 "PO-Revision-Date: 2015-10-19 07:52-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: hi <LL@li.org>\n"
@@ -168,13 +168,28 @@ msgstr ""
 msgid "Due date for this assignment: "
 msgstr "इस असाइनमेंट का नियत दिनांक: "
 
+#. Text telling students what their recorded email address is.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:52
+msgid "Your answers have been recorded under the email"
+msgstr ""
+
+#. Text telling students there are not answers recorded for them.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:56
+msgid "You have not submitted any answers to this assignment under the email"
+msgstr ""
+
+#. Text telling students what their recorded email address is.
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:61
+msgid "Your answers will be recorded under the email"
+msgstr ""
+
 #. Text telling students what their total score is.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:54
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:71
 msgid "Score:"
 msgstr "स्कोर:"
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:65
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:82
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -186,22 +201,22 @@ msgstr ""
 "आपके मित्रों द्वारा समीक्षा की जाएगी."
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:80
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:97
 msgid "Submitted assignment"
 msgstr "सबमिट किया गया असाइनमेंट"
 
 #. Text telling students the date their answers were submitted
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:85
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:102
 msgid "Submitted on"
 msgstr "सबमिट करने का दिनांक:"
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:110
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:127
 msgid "Reviews received"
 msgstr "समीक्षाएं प्राप्त हुईं"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:117
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:134
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -211,17 +226,17 @@ msgstr ""
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:124
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:141
 msgid "Go to the review dashboard"
 msgstr "समीक्षा डैशबोर्ड पर जाएं"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:129
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:146
 msgid "You have not received any peer reviews yet."
 msgstr "आपने अभी तक कोई मित्र समीक्षा प्राप्त नहीं की है."
 
 #. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:162
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:179
 msgid "This assessment is not available."
 msgstr "यह आंकलन उपलब्ध नहीं है."
 
@@ -458,7 +473,7 @@ msgstr "नाम बदलें"
 #. course soon after un-enrolling.  It takes up to several
 #. hours to remove their data, and they are prevented from
 #. re-enrolling during that time to prevent problems.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:271
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:272
 msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
@@ -471,14 +486,14 @@ msgstr ""
 #. to delete their personal data.  This link only appears for users
 #. who are currently enrolled in the course or who were enrolled
 #. but still have personal data present in the course.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:425
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:426
 msgid "Delete My Data"
 msgstr "मेरा डेटा हटाएं"
 
 #. Shown when a student is unenrolling from a
 #. course.  Gives the student the option to have all
 #. their data permanently removed.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:444
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:445
 msgid "Delete all associated data"
 msgstr "सभी संबद्ध डेटा हटाएं"
 
@@ -615,7 +630,7 @@ msgid "A password change has been requested for"
 msgstr "इसके लिए पासवर्ड बदलने का अनुरोध किया गया है:"
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:275
+#: experimental/coursebuilder/modules/invitation/invitation.py:276
 msgid "Error: Empty email list"
 msgstr "त्रुटि: रिक्त ईमेल सूची"
 
@@ -625,7 +640,7 @@ msgstr "त्रुटि: रिक्त ईमेल सूची"
 #. than any single user is allowed to send.  No email addresses
 #. were added to the list to send, and no further email messages
 #. were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:289
+#: experimental/coursebuilder/modules/invitation/invitation.py:290
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -635,68 +650,68 @@ msgstr ""
 "%s. कोई संदेश नहीं भेजा गया."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:298
+#: experimental/coursebuilder/modules/invitation/invitation.py:299
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "त्रुटि: अमान्य ईमेल \"%s\""
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:302
+#: experimental/coursebuilder/modules/invitation/invitation.py:303
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "त्रुटि: आपने पहले ही \"%s\" को एक आमंत्रण ईमेल भेज दिया है"
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:319
+#: experimental/coursebuilder/modules/invitation/invitation.py:320
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "सभी संदेश भेजे नहीं गए थे (%s / %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:327
+#: experimental/coursebuilder/modules/invitation/invitation.py:328
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "ठीक है, %s संदेश भेजे गए"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:380
+#: experimental/coursebuilder/modules/invitation/invitation.py:374
 msgid "Invite Friends"
 msgstr "मित्रों को आमंत्रित करें"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:385
+#: experimental/coursebuilder/modules/invitation/invitation.py:379
 msgid "Click to send invitations to family and friends"
 msgstr "परिवार और मित्रों को आमंत्रण भेजने के लिए क्लिक करें"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:389
+#: experimental/coursebuilder/modules/invitation/invitation.py:383
 msgid "Invitations not currently available"
 msgstr "आमंत्रण वर्तमान में उपलब्ध नहीं हैं"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:401
+#: experimental/coursebuilder/modules/invitation/invitation.py:395
 msgid "Subscribe/Unsubscribe"
 msgstr "सदस्य बनें/सदस्यता छोड़ें"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:408
+#: experimental/coursebuilder/modules/invitation/invitation.py:402
 msgid "You are currently unsubscribed from course-related emails."
 msgstr ""
 "वर्तमान में पाठ्यक्रम-संबंधित ईमेल के लिए आपकी सदस्यता को रद्द कर दिया "
 "गया है."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:412
+#: experimental/coursebuilder/modules/invitation/invitation.py:406
 msgid "Click here to re-subscribe."
 msgstr "फिर से सदस्य बनने के लिए यहां क्लिक करें."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:417
+#: experimental/coursebuilder/modules/invitation/invitation.py:411
 msgid "You are currently receiving course-related emails. "
 msgstr "आप वर्तमान में पाठ्यक्रम-संबंधित ईमेल प्राप्त कर रहे हैं. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:421
+#: experimental/coursebuilder/modules/invitation/invitation.py:415
 msgid "Click here to unsubscribe."
 msgstr "सदस्यता छोड़ने के लिए यहां क्लिक करें."
 
@@ -748,14 +763,14 @@ msgstr "विषय:"
 
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
-#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:193
-#: experimental/coursebuilder/modules/rating/rating.py:95
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:186
+#: experimental/coursebuilder/modules/rating/rating.py:96
 msgid "Access denied."
 msgstr "एक्सेस अस्वीकार किया गया."
 
 #. Message to acknowledge successful submission of the
 #. questionnaire
-#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:197
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:190
 msgid "Response submitted."
 msgstr "उत्तर सबमिट किया गया."
 
@@ -765,7 +780,7 @@ msgid "Submit answers"
 msgstr "उत्तर सबमिट करें"
 
 #. Message displayed when user submits written comments
-#: experimental/coursebuilder/modules/rating/rating.py:155
+#: experimental/coursebuilder/modules/rating/rating.py:156
 msgid "Thank you for your feedback."
 msgstr "आपके फ़ीडबैक के लिए धन्यवाद."
 
@@ -1582,5 +1597,4 @@ msgstr "अगला पृष्ठ"
 #: experimental/coursebuilder/views/unit.html:143
 msgid "End"
 msgstr "समाप्त"
-
 
