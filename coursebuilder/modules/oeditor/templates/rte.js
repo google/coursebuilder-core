@@ -153,41 +153,8 @@ function bindEditorField(Y) {
 
     // Reveal the toolbar on focus and hide it on blur
     this.toolbarSlideInProgress = false;
-    function slideToolbarInOut(slideIn) {
-      var toolbar = $(that.editor.toolbar.get('element'));
-      var editorContainer =$(that.root).find('.yui-editor-editable-container');
-      var editorHeight = editorContainer.height();
-      var toolbarHeight = toolbar.find('fieldset').height();
-
-      if (slideIn) {
-        toolbar.css('height', toolbarHeight);
-        that.editor.set('height', (editorHeight - toolbarHeight) + 'px');
-      } else {
-        toolbar.css('height', 0);
-        that.editor.set('height', (editorHeight + toolbarHeight) + 'px');
-        toolbar.removeClass('slid-in');
-      }
-      that.toolbarSlideInProgress = true;
-      editorContainer.addClass('slow-transition');
-      that.toolbarSlideFinished = $.Deferred(function(def) {
-        setTimeout(function() {
-          that.toolbarSlideInProgress = false;
-          editorContainer.removeClass('slow-transition');
-          if (slideIn) {
-            toolbar.addClass('slid-in');
-          }
-        }, 500);
-      });
-    }
-    this.editor.on('editorWindowFocus', function() { slideToolbarInOut(true) });
-    this.editor.on('editorWindowBlur', function() {
-      if (! $('.yui-toolbar-fontname').hasClass('yui-button-hover')) {
-        // Unlike the other toolbar controls, the font choose grabs focus. This
-        // tests whether the current loss of focus is due to action on the
-        // font-chooser. A more direct signal would be better, but this works.
-        slideToolbarInOut(false);
-      }
-    });
+    this.editor.on('editorWindowFocus', this._onEditorWindowFocus.bind(this));
+    this.editor.on('editorWindowBlur', this._onEditorWindowBlur.bind(this));
 
     this._customTagManager = new DummyCustomTagManager();
     if (options.supportCustomTags) {
@@ -365,6 +332,51 @@ function bindEditorField(Y) {
       return html;
     };
     this.editor._fixNodes = function() {};
+  };
+  RichTextEditor.prototype._slideToolbarInOut = function (slideIn) {
+    var that = this;
+    var toolbar = $(this.editor.toolbar.get('element'));
+    var editorContainer =$(this.root).find('.yui-editor-editable-container');
+    var editorHeight = editorContainer.height();
+    var toolbarHeight = toolbar.find('fieldset').height();
+
+    if (slideIn) {
+      toolbar.css('height', toolbarHeight);
+      this.editor.set('height', (editorHeight - toolbarHeight) + 'px');
+    } else {
+      toolbar.css('height', 0);
+      this.editor.set('height', (editorHeight + toolbarHeight) + 'px');
+      toolbar.removeClass('slid-in');
+    }
+    this.toolbarSlideInProgress = true;
+    editorContainer.addClass('slow-transition');
+    this.toolbarSlideFinished = $.Deferred(function(def) {
+      setTimeout(function() {
+        that.toolbarSlideInProgress = false;
+        editorContainer.removeClass('slow-transition');
+        if (slideIn) {
+          toolbar.addClass('slid-in');
+        }
+      }, 500);
+    });
+  };
+  RichTextEditor.prototype._onEditorWindowFocus = function() {
+    if (! this.toolbarSlideInProgress) {
+      this._slideToolbarInOut(true);
+    }
+  };
+  RichTextEditor.prototype._slideOutIsAllowed = function() {
+    // A loss of focus can occur when (i) the font name chooser grabs the
+    // focus, or (ii) when the image or link editor opens. Don't hide the
+    // toolbar in those cases.
+    return ! this.toolbarSlideInProgress &&
+        ! $('.yui-toolbar-fontname').hasClass('yui-button-hover') &&
+        $('.yui-editor-panel').hasClass('yui-overlay-hidden')
+  };
+  RichTextEditor.prototype._onEditorWindowBlur = function() {
+    if (this._slideOutIsAllowed()) {
+      this._slideToolbarInOut(false);
+    }
   };
 
   /**

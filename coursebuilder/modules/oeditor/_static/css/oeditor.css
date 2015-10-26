@@ -759,22 +759,22 @@ div.CodeMirror {
   /* Remove borders from the CB Editor Field subcomponents */
   border: none;
 }
-#cb-oeditor-form .yui-toolbar-container {
+#cb-oeditor-form .first-child > .yui-toolbar-container {
   height: 0;
   position: relative;
   overflow-y: hidden;
   background-color: #f9f9f9;
 }
-#cb-oeditor-form .yui-toolbar-container.slid-in {
+#cb-oeditor-form .first-child > .yui-toolbar-container.slid-in {
   overflow-y: inherit;
 }
-#cb-oeditor-form .yui-toolbar-container,
+#cb-oeditor-form .first-child > .yui-toolbar-container,
 #cb-oeditor-form .yui-editor-editable-container.slow-transition {
   -webkit-transition: height 300ms cubic-bezier(.4,0,.2,1);
   -moz-transition: height 300ms cubic-bezier(.4,0,.2,1);
   transition: height 300ms cubic-bezier(.4,0,.2,1);
 }
-#cb-oeditor-form .yui-toolbar-container > fieldset {
+#cb-oeditor-form .first-child > .yui-toolbar-container > fieldset {
   padding: 0;
   margin: 0;
   border: 0;
@@ -782,20 +782,20 @@ div.CodeMirror {
   bottom: 0;
   width: 100%;
 }
-#cb-oeditor-form .yui-toolbar-container .yui-toolbar-subcont {
+#cb-oeditor-form .first-child > .yui-toolbar-container .yui-toolbar-subcont {
   border-bottom-color: #ccc;
 }
-#cb-oeditor-form .yui-toolbar-titlebar {
+#cb-oeditor-form .first-child .yui-toolbar-titlebar {
   /* Hide the top titlebar on the RTE. */
   display: none;
 }
-#cb-oeditor-form .yui-toolbar-group {
+#cb-oeditor-form .first-child .yui-toolbar-group {
   margin: 2px 0;
 }
-#cb-oeditor-form .yui-toolbar-group > h3 {
+#cb-oeditor-form .first-child .yui-toolbar-group > h3 {
   display: none;
 }
-#cb-oeditor-form .yui-toolbar-group .yui-button {
+#cb-oeditor-form .first-child .yui-toolbar-group .yui-button {
   background: none;
   border-radius: 4px;
   border: solid #000 1px;
@@ -805,15 +805,15 @@ div.CodeMirror {
   color: #888;
   outline: 0;
 }
-#cb-oeditor-form .yui-toolbar-group .yui-button-selected {
+#cb-oeditor-form .first-child .yui-toolbar-group .yui-button-selected {
   background-color: #ddd;
   border-color: #ccc;
 }
-#cb-oeditor-form .yui-toolbar-group .yui-button:hover {
+#cb-oeditor-form .first-child .yui-toolbar-group .yui-button:hover {
   border-color: #ccc;
   color: #444;
 }
-#cb-oeditor-form .yui-toolbar-group .yui-button .first-child{
+#cb-oeditor-form .first-child .yui-toolbar-group .yui-button .first-child{
   border: none;
 }
 
