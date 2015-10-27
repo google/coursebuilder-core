@@ -1,0 +1,25 @@
+tests:
+  functional:
+    - modules.usage_reporting.usage_reporting_tests.ConsentBannerTests = 4
+    - modules.usage_reporting.usage_reporting_tests.ConsentBannerRestHandlerTests = 3
+    - modules.usage_reporting.usage_reporting_tests.ConfigTests = 3
+    - modules.usage_reporting.usage_reporting_tests.CourseCreationTests = 4
+    - modules.usage_reporting.usage_reporting_tests.DevServerTests = 2
+    - modules.usage_reporting.usage_reporting_tests.EnrollmentTests = 3
+    - modules.usage_reporting.usage_reporting_tests.MessagingTests = 8
+    - modules.usage_reporting.usage_reporting_tests.UsageReportingTests = 5
+
+files:
+  - modules/usage_reporting/__init__.py
+  - modules/usage_reporting/config.py
+  - modules/usage_reporting/consent_banner.py
+  - modules/usage_reporting/constants.py
+  - modules/usage_reporting/course_creation.py
+  - modules/usage_reporting/enrollment.py
+  - modules/usage_reporting/messaging.py
+  - modules/usage_reporting/students.py
+  - modules/usage_reporting/templates/consent_banner.html
+  - modules/usage_reporting/templates/course_creation.html
+  - modules/usage_reporting/templates/message.html
+  - modules/usage_reporting/usage_reporting.py
+  - modules/usage_reporting/usage_reporting_tests.py

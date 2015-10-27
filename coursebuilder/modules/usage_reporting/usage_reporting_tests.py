@@ -38,6 +38,8 @@ from tests.functional import actions
 from google.appengine.api import namespace_manager
 from google.appengine.api import urlfetch
 
+# pylint: disable=protected-access
+
 ADMIN_EMAIL = 'admin@foo.com'
 FAKE_COURSE_ID = 'CCCCCCCCCCCCCCCCCCCCC'
 FAKE_INSTALLATION_ID = 'IIIIIIIIIIIIIIIIIIII'

@@ -1,0 +1,10 @@
+tests:
+  functional:
+    - modules.math.math_tests.MathTagTests = 3
+
+files:
+  - modules/math/__init__.py
+  - modules/math/math.py
+  - modules/math/math_tests.py
+  - modules/math/messages.py
+  - modules/math/resources/math.png

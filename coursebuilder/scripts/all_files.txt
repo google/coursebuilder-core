@@ -532,10 +532,6 @@ modules/manual_progress/manual_progress.py
 modules/mapreduce/__init__.py
 modules/mapreduce/mapreduce_module.py
 modules/mapreduce/messages.py
-modules/math/__init__.py
-modules/math/math.py
-modules/math/messages.py
-modules/math/resources/math.png
 modules/notifications/__init__.py
 modules/notifications/cron.py
 modules/notifications/notifications.py
@@ -627,18 +623,6 @@ modules/upload/resources/script_add.png
 modules/upload/templates/form.html
 modules/upload/templates/result.html
 modules/upload/upload.py
-modules/usage_reporting/__init__.py
-modules/usage_reporting/config.py
-modules/usage_reporting/consent_banner.py
-modules/usage_reporting/constants.py
-modules/usage_reporting/course_creation.py
-modules/usage_reporting/enrollment.py
-modules/usage_reporting/messaging.py
-modules/usage_reporting/students.py
-modules/usage_reporting/templates/consent_banner.html
-modules/usage_reporting/templates/course_creation.html
-modules/usage_reporting/templates/message.html
-modules/usage_reporting/usage_reporting.py
 scripts/__init__.py
 scripts/all_files.txt
 scripts/all_tests.py
@@ -793,7 +777,6 @@ tests/functional/modules_i18n_dashboard.py
 tests/functional/modules_i18n_dashboard_jobs.py
 tests/functional/modules_invitation.py
 tests/functional/modules_manual_progress.py
-tests/functional/modules_math.py
 tests/functional/modules_notifications.py
 tests/functional/modules_oeditor.py
 tests/functional/modules_questionnaire.py
@@ -801,7 +784,6 @@ tests/functional/modules_rating.py
 tests/functional/modules_search.py
 tests/functional/modules_skill_map.py
 tests/functional/modules_unsubscribe.py
-tests/functional/modules_usage_reporting.py
 tests/functional/progress_percent.py
 tests/functional/review_module.py
 tests/functional/review_peer.py

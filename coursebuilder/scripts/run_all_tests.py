@@ -45,26 +45,30 @@ Good luck!
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
+import os
+import sys
+
 import argparse
 import datetime
 import difflib
 import logging
 import multiprocessing
-import os
 import re
 import signal
 import shutil
 import socket
 import stat
 import subprocess
-import sys
 import threading
 import time
 import urllib2
 import yaml
 import zipfile
 
-import all_tests
+# defer some imports
+schema_fields = None
+schema_transforms = None
+all_tests = None
 
 
 INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
@@ -150,6 +154,11 @@ def make_default_parser():
         help='Whether to ignore pylint test failures',
         action='store_true')
     parser.add_argument(
+        '--deep_clean',
+        help='Whether to delete all temporary files, resources and caches '
+        'before starting the release process',
+        action='store_true')
+    parser.add_argument(
         '--verbose',
         help='Print more verbose output to help diagnose problems',
         action='store_true')
@@ -160,31 +169,6 @@ def make_default_parser():
         'the server that does not manifest when the server is started outside '
         'tests.')
     return parser
-
-
-
-def _parse_test_name(name):
-    """Attempts to convert the argument to a dotted test name.
-
-    If the test name is provided in the format output by unittest error
-    messages (e.g., "my_test (tests.functional.modules_my.MyModuleTest)")
-    then it is converted to a dotted test name
-    (e.g., "tests.functional.modules_my.MyModuleTest.my_test"). Otherwise
-    it is returned unmodified.
-    """
-
-    if not name:
-        return name
-
-    match = re.match(r"\s*(?P<method_name>\S+)\s+\((?P<class_name>\S+)\)\s*",
-        name)
-    if match:
-        return "{class_name}.{method_name}".format(
-            class_name=match.group('class_name'),
-            method_name=match.group('method_name'),
-        )
-    else:
-        return name
 
 
 def ensure_port_available(port_number, quiet=False):
@@ -295,15 +279,15 @@ def stop_integration_server(server, logfile, modules):
         fp.close()
 
 
-class WithTestConfiguration(object):
+class WithReleaseConfiguration(object):
     """Class to manage integration server using 'with' statement."""
 
     def __init__(
         self,
-        enable_integration_server, enable_static_serving, server_log_file):
+        enable_integration_server, enable_static_serving, config):
         self.enable_integration_server = enable_integration_server
         self.enable_static_serving = enable_static_serving
-        self.server_log_file = server_log_file
+        self.server_log_file = config.parsed_args.server_log_file
 
     def __enter__(self):
         if self.enable_integration_server:
@@ -331,16 +315,6 @@ def log(message):
             datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'), message)
         LOG_LINES.append(line)
         print line
-
-
-def all_third_party_tests():
-    yaml_path = os.path.join(build_dir(), 'scripts', 'third_party_tests.yaml')
-    if os.path.exists(yaml_path):
-        with open(yaml_path) as fp:
-            data = yaml.load(fp)
-        return data['tests']
-    else:
-        return {}
 
 
 def run(exe, strict=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -486,6 +460,9 @@ class FunctionalTestTask(object):
 
 class DeveloperWorkflowTester(object):
 
+    def __init__(self, config):
+        self.build_dir = config.build_dir
+
     def _run(self, cmd):
         result, out = run(cmd, verbose=False)
         if result != 0:
@@ -500,24 +477,97 @@ class DeveloperWorkflowTester(object):
     def test_all(self):
         log('Testing developer test workflow')
 
+        self.tests = TestsRepo(None)
+
+        self.test_module_manifest_is_parsed()
+        self.test_module_can_not_declare_tests_for_another_module()
+        self.test_module_manifest_is_validated_1()
+        self.test_module_manifest_is_validated_2()
         self.test_class_name_expansion()
         self.test_developer_test_workflow_with_test_sh()
         self.test_developer_test_workflow_with_run_all_tests_py()
+        self.test_developer_test_workflow_with_module_manifest()
+
+    def test_module_manifest_is_parsed(self):
+        manifest_data = '''
+            tests:
+                unit:
+                    - modules.sample.foo = 5
+                functional:
+                    - modules.sample.baz = 6
+                integration:
+                    - modules.sample.bar = 7
+            files:
+                - foo
+                - bar
+                - baz
+            '''
+        manifest = ModuleManifest('sample', manifest_data=manifest_data)
+
+        assert manifest.data['tests']['unit'][0] == 'modules.sample.foo = 5'
+        assert manifest.data[
+            'tests']['functional'][0] == 'modules.sample.baz = 6'
+        assert manifest.data[
+            'tests']['integration'][0] == 'modules.sample.bar = 7'
+        assert manifest.data['files'] == ['foo', 'bar', 'baz']
+
+        integration, non_integration = manifest.get_tests()
+        assert 1 == len(integration)
+        assert 2 == len(non_integration)
+
+    def test_module_manifest_is_validated_1(self):
+        manifest_data = '''
+            tests:
+                unknown:
+                    - foo = 7
+            '''
+        try:
+            ModuleManifest('sample', manifest_data=manifest_data)
+        except:  # pylint: disable=bare-except
+            return
+        raise Exception('Expected to fail')
+
+    def test_module_manifest_is_validated_2(self):
+        manifest_data = '''
+            tests:
+                unit:
+                    - foo : bar
+            '''
+        try:
+            ModuleManifest('sample', manifest_data=manifest_data)
+        except:  # pylint: disable=bare-except
+            return
+        raise Exception('Expected to fail')
+
+    def test_module_can_not_declare_tests_for_another_module(self):
+        manifest_data = '''
+            tests:
+                unit:
+                    - modules.module_name_a.tests.tests.Main = 25
+            '''
+        ModuleManifest(
+            'module_name_a', manifest_data=manifest_data).get_tests()
+        try:
+            ModuleManifest(
+                'module_name_b', manifest_data=manifest_data).get_tests()
+        except:  # pylint: disable=bare-except
+            return
+        raise Exception('Expected to fail')
 
     def test_class_name_expansion(self):
         """Developer can test all methods of one class."""
         # package name expands into class names
-        tests = select_tests_to_run('tests.unit.')
+        tests = self.tests.select_tests_to_run('tests.unit.')
         assert 'tests.unit.test_classes.InvokeExistingUnitTest' in tests
         assert 'tests.unit.test_classes.EtlRetryTest' in tests
 
         # class name is preserved
-        tests = select_tests_to_run(
+        tests = self.tests.select_tests_to_run(
             'tests.unit.test_classes.InvokeExistingUnitTest')
         assert 'tests.unit.test_classes.InvokeExistingUnitTest' in tests
 
         # method name is preserved
-        tests = select_tests_to_run(
+        tests = self.tests.select_tests_to_run(
             'tests.unit.test_classes.InvokeExistingUnitTest.'
             'test_string_encoding')
         assert(
@@ -526,7 +576,7 @@ class DeveloperWorkflowTester(object):
 
     def test_developer_test_workflow_with_test_sh(self):
         """Developer can test one method of one class with test.sh."""
-        cmd = os.path.join(build_dir(), 'scripts', 'test.sh')
+        cmd = os.path.join(self.build_dir, 'scripts', 'test.sh')
         out = self._run([
             'sh', cmd,
             'tests.unit.test_classes.'
@@ -536,7 +586,7 @@ class DeveloperWorkflowTester(object):
 
     def test_developer_test_workflow_with_run_all_tests_py(self):
         """Developer can test one method of one class with run_all_test.py."""
-        cmd = os.path.join(build_dir(), 'scripts',
+        cmd = os.path.join(self.build_dir, 'scripts',
             'run_all_tests.py')
         out = self._run([
             'python', cmd,
@@ -544,6 +594,313 @@ class DeveloperWorkflowTester(object):
             '--test_class_name', 'tests.unit.test_classes'])
         self.assert_contains(
             'tests.unit.test_classes.InvokeExistingUnitTest', out)
+
+    def test_developer_test_workflow_with_module_manifest(self):
+        """Developer can seamlessly run a test declared in module manifest."""
+        cmd = os.path.join(self.build_dir, 'scripts', 'test.sh')
+        out = self._run([
+            'sh', cmd, 'modules.math.math_tests'])
+        self.assert_contains(
+            'modules.math.math_tests.MathTagTests', out)
+
+
+class ModuleManifest(object):
+    """Provides parsing and access to modules/*/manifest.yaml."""
+
+    def __init__(self, module_name, manifest_fn=None, manifest_data=None):
+        self.name = module_name
+        self.files = None
+        self.tests = None
+        self.unit = None
+        self.functional = None
+        self.integration = None
+        self.data = self._parse(manifest_fn, manifest_data)
+
+    def get_schema(self):
+        self.files = schema_fields.FieldArray(
+            'files', 'Module files',
+            item_type=schema_fields.SchemaField(
+                'filename', 'Filename', 'string'))
+
+        self.unit = schema_fields.FieldArray(
+            'unit', 'Unit test classes',
+            item_type=schema_fields.SchemaField(
+                'entry', 'module.module.ClassName = test_count', 'string'))
+
+        self.functional = schema_fields.FieldArray(
+          'functional', 'Functional test classes',
+          item_type=schema_fields.SchemaField(
+              'entry', 'module.module.ClassName = test_count', 'string'))
+
+        self.integration = schema_fields.FieldArray(
+            'integration', 'Integration test classes',
+            item_type=schema_fields.SchemaField(
+                'entry', 'module.module.ClassName = test_count', 'string'))
+
+        tests = schema_fields.FieldRegistry('tests_registry')
+        tests.add_property(self.unit)
+        tests.add_property(self.functional)
+        tests.add_property(self.integration)
+
+        manifest = schema_fields.FieldRegistry('manifest')
+        manifest.add_property(self.files)
+        self.tests = manifest.add_sub_registry(
+            'tests',
+            title='Unit, functional and integration tests', registry=tests)
+
+        return manifest
+
+    def _parse(self, manifest_fn=None, manifest_data=None):
+        if not (manifest_fn or manifest_data):
+            raise Exception('Either manifest_fn or manifest_data is required.')
+        if manifest_data:
+            data = yaml.load(manifest_data)
+        else:
+            data = yaml.load(open(manifest_fn))
+
+        complaints = schema_transforms.validate_object_matches_json_schema(
+            data, self.get_schema().get_json_schema_dict())
+        if complaints:
+            raise Exception('Failed to parse manifest file %s: %s' % (
+                manifest_fn, complaints))
+        return data
+
+    def _test_line_to_dict(self, line):
+        parts = line.split('=')
+        if not len(parts) == 2:
+            raise Exception(
+                'Expected module.package.ClassName = test_count, '
+                'found "%s"' % line)
+        if not parts[0].strip().startswith('modules.%s' % self.name):
+            raise Exception(
+                'Test name "%s" must start with the '
+                'module name "%s"' % (parts[0].strip(), self.name))
+        return {parts[0].strip(): int(parts[1].strip())}
+
+    def get_tests(self):
+        integration_tests = {}
+        non_integration_tests = {}
+        tests = self.data.get(self.tests.name)
+        if tests:
+            for test_type in [
+                    self.unit.name,
+                    self.functional.name]:
+                tests_for_type = tests.get(test_type)
+                if tests_for_type:
+                    for test in tests_for_type:
+                        non_integration_tests.update(
+                            self._test_line_to_dict(test))
+            integration = tests.get(self.integration.name)
+            if integration:
+                for test in integration:
+                    integration_tests.update(
+                        self._test_line_to_dict(test))
+        return integration_tests, non_integration_tests
+
+
+class ModulesRepo(object):
+    """Provides access to all extension modules and their metadata."""
+
+    def __init__(self, config):
+        self.config = config
+        self.modules_dir = os.path.join(self.config.build_dir, 'modules')
+        self.modules = self._get_modules()
+        self.module_to_manifest = self._get_manifests()
+        log(
+            'Found %s modules with %s manifests' % (
+                len(self.modules), len(self.module_to_manifest.keys())))
+
+    def _get_modules(self):
+        modules = []
+        for (dirpath, dirnames, _) in os.walk(self.modules_dir):
+            for dirname in dirnames:
+                modules.append(dirname)
+            del dirnames[:]
+        modules.sort()
+        return modules
+
+    def _get_manifests(self):
+        modules_to_manifest = {}
+        for module in self.modules:
+            manifest_fn = os.path.join(
+                self.modules_dir, module, 'manifest.yaml')
+            if os.path.isfile(manifest_fn):
+                modules_to_manifest[module] = ModuleManifest(
+                    module, manifest_fn=manifest_fn)
+        return modules_to_manifest
+
+
+class FilesRepo(object):
+    """Provides access to all files."""
+
+    def __init__(self, config):
+        self.config = config
+
+        self.known_files = self._get_known_files()
+        self.module_known_files = self._get_module_known_files()
+        self.all_known_files = self.known_files + self.module_known_files
+        self.all_known_files.sort()
+        log('Modules bring %s new files' % (
+            len(self.module_known_files)))
+
+    def _get_known_files(self):
+        file_list_fn = '%s/scripts/all_files.txt' % self.config.build_dir
+        return open(file_list_fn).read().splitlines()
+
+    def _get_module_known_files(self):
+        known_files = []
+        for manifest in self.config.modules.module_to_manifest.values():
+            files = manifest.data.get('files')
+            if files:
+                known_files += files
+        return known_files
+
+
+class TestsRepo(object):
+    """Provides acces to all known tests."""
+
+    def __init__(self, config):
+        self.config = config
+        self.integration_tests = all_tests.ALL_INTEGRATION_TEST_CLASSES
+        self.non_integration_tests = all_tests.ALL_TEST_CLASSES
+        if config:
+            integration_tests, non_integration_tests = self._get_modules_tests()
+            self.integration_tests.update(integration_tests)
+            self.non_integration_tests.update(non_integration_tests)
+            self.non_integration_tests.update(self._get_all_third_party_tests())
+
+    def _get_all_third_party_tests(self):
+        yaml_path = os.path.join(
+            self.config.build_dir, 'scripts', 'third_party_tests.yaml')
+        if os.path.exists(yaml_path):
+            with open(yaml_path) as fp:
+                data = yaml.load(fp)
+            return data['tests']
+        else:
+            return {}
+
+    def _get_modules_tests(self):
+        integration_tests = {}
+        non_integration_tests = {}
+        for manifest in self.config.modules.module_to_manifest.values():
+            module_integration_tests, module_non_integration_tests = (
+                manifest.get_tests())
+            integration_tests.update(module_integration_tests)
+            non_integration_tests.update(module_non_integration_tests)
+        log(
+            'Modules bring %s integration and %s non-integration tests' % (
+                len(integration_tests), len(non_integration_tests)))
+        return integration_tests, non_integration_tests
+
+    def select_tests_to_run(self, test_class_name):
+        test_classes = {}
+        test_classes.update(self.integration_tests)
+        test_classes.update(self.non_integration_tests)
+
+        if test_class_name:
+            _test_classes = {}
+
+            for name in test_classes.keys():
+                # try matching on the class name
+                if name.find(test_class_name) == 0:
+                    _test_classes.update({name: test_classes[name]})
+                    continue
+
+                # try matching on the method name
+                if test_class_name.find(name) == 0:
+                    _test_classes.update({test_class_name: 1})
+                    continue
+
+            if not _test_classes:
+                raise Exception(
+                    'No tests found for "%s".  (Did you remember to add the '
+                    'test class to scripts/all_tests.py or your module''s '
+                    'manifest.yaml file)?' % test_class_name)
+
+            test_classes = _test_classes
+            sorted_names = sorted(
+                test_classes, key=lambda key: test_classes[key])
+
+        return test_classes
+
+    def is_a_member_of(self, test_class_name, set_of_tests):
+        for name in set_of_tests.keys():
+
+            # try matching on the class name
+            if name.find(test_class_name) == 0:
+                return True
+
+            # try matching on the method name
+            if test_class_name.find(name) == 0:
+                return True
+
+        return False
+
+    def _parse_test_name(self, name):
+        """Attempts to convert the argument to a dotted test name.
+
+        If the test name is provided in the format output by unittest error
+        messages (e.g., "my_test (tests.functional.modules_my.MyModuleTest)")
+        then it is converted to a dotted test name
+        (e.g., "tests.functional.modules_my.MyModuleTest.my_test"). Otherwise
+        it is returned unmodified.
+        """
+
+        if not name:
+            return name
+
+        match = re.match(
+            r"\s*(?P<method_name>\S+)\s+\((?P<class_name>\S+)\)\s*", name)
+        if match:
+            return "{class_name}.{method_name}".format(
+                class_name=match.group('class_name'),
+                method_name=match.group('method_name'),
+            )
+        else:
+            return name
+
+    def group_tests(self):
+        # get all applicable tests
+        test_classes = self.select_tests_to_run(
+            self._parse_test_name(self.config.parsed_args.test_class_name))
+
+        # separate out integration and non-integration tests
+        integration_tests = {}
+        non_integration_tests = {}
+        for test_class_name in test_classes.keys():
+            if self.is_a_member_of(
+                test_class_name, self.integration_tests):
+                target = integration_tests
+            else:
+                target = non_integration_tests
+            target.update(
+                    {test_class_name: test_classes[test_class_name]})
+
+        # filter out according to command line args
+        if self.config.parsed_args.skip_non_integration:
+            log('Skipping non-integration tests at user request')
+            non_integration_tests = {}
+        if self.config.parsed_args.skip_integration:
+            log('Skipping integration test at user request')
+            integration_tests = {}
+
+        _all_tests = {}
+        _all_tests.update(non_integration_tests)
+        _all_tests.update(integration_tests)
+
+        return _all_tests, integration_tests, non_integration_tests
+
+
+class ReleaseConfiguration(object):
+    """Contains data and methods for a particular release configuration."""
+
+    def __init__(self, parsed_args, _build_dir):
+        self.parsed_args = parsed_args
+        self.build_dir = os.path.abspath(_build_dir)
+        self.modules = ModulesRepo(self)
+        self.files = FilesRepo(self)
+        self.tests = TestsRepo(self)
+
 
 def walk_folder_tree(home_dir, skip_rel_dirs=None):
     fileset = set()
@@ -569,8 +926,10 @@ def write_text_file(file_name, text):
     afile.close()
 
 
-def create_manifests(manifest_file, third_party_file, release_label):
-    log('Creating manifest: %s' % manifest_file)
+def _create_manifests(_build_dir, release_label):
+    manifest_file = os.path.join(_build_dir, 'VERSION')
+    third_party_file = os.path.join(_build_dir, 'lib/README')
+
     write_text_file(manifest_file, 'Release: %s' % release_label)
     write_text_file(
         third_party_file,
@@ -608,8 +967,11 @@ def chmod_dir_recursive(folder_name, mode):
             os.chmod(full_path, mode)
 
 
-def zip_all_files(zip_file_name, verbose=False):
+def _zip_all_files(target_dir, release_label):
     """Build and test a release zip file."""
+    zip_file_name = os.path.join(
+        target_dir, '%s_%s.zip' % (PRODUCT_NAME, release_label))
+
     log('Zipping: %s' % zip_file_name)
 
     chmod_dir_recursive(build_dir(), 0o777)
@@ -629,9 +991,6 @@ def zip_all_files(zip_file_name, verbose=False):
     _in.testzip()
     for afile in _in.filelist:
         date = '%d-%02d-%02d %02d:%02d:%02d' % afile.date_time[:6]
-        if verbose:
-            log('Zip file entry: %-46s %s %12d' %
-                (afile.filename, date, afile.file_size))
     _in.close()
 
 
@@ -668,7 +1027,7 @@ def is_disallowed_import_exception(path, target):
     return target in DISALLOWED_IMPORTS_EXCEPTIONS.get(path, [])
 
 
-def assert_no_disallowed_imports(root):
+def _assert_no_disallowed_imports(root):
     for cb_path in walk_folder_tree(root):
         if not os.path.splitext(cb_path)[1] == PY_FILE_SUFFIX:
             continue
@@ -702,43 +1061,48 @@ def count_files_in_dir(dir_name, suffix=None):
     return count
 
 
-def enforce_file_count_and_remove_extra_files(
-    known_files=None, delete_extra_files_folders=False):
+def _enforce_file_count(config):
     """Check that we have exactly the files we expect; delete extras."""
     skip_rel_dirs = ['_static']
+    known_files = config.files.all_known_files
 
     # verify mo files
-    count_mo_files = count_files_in_dir(build_dir(), suffix='.mo')
+    count_mo_files = count_files_in_dir(
+        config.build_dir, suffix='.mo')
     if count_mo_files != EXPECTED_MO_FILE_COUNT:
         raise Exception('Expected %s .mo catalogue files, found %s' %
                         (EXPECTED_MO_FILE_COUNT, count_mo_files))
 
     if known_files:
-        # list files; delete extras
-        all_files = walk_folder_tree(build_dir(), skip_rel_dirs=skip_rel_dirs)
-        if delete_extra_files_folders:
-            for afile in all_files:
-                if afile not in known_files:
-                    os.remove(os.path.join(build_dir(), afile))
+        # list files
+        all_files = walk_folder_tree(
+            config.build_dir, skip_rel_dirs=skip_rel_dirs)
+
+        # delete extras
+        for afile in all_files:
+            if afile not in known_files:
+                os.remove(os.path.join(config.build_dir, afile))
 
         # list files again; check no extras
-        all_files = walk_folder_tree(build_dir(), skip_rel_dirs=skip_rel_dirs)
+        all_files = walk_folder_tree(
+            config.build_dir, skip_rel_dirs=skip_rel_dirs)
         if all_files != known_files:
-            diff = difflib.unified_diff(all_files, known_files, lineterm='')
+            diff = difflib.unified_diff(
+                all_files, known_files, lineterm='')
             raise Exception(
                 'Folder contents differs from expected:\n%s' % (
                       '\n'.join(list(diff))))
-
-    if delete_extra_files_folders:
-        log('File count verified and extra files removed')
+    if known_files:
+        log('File count enforced: %s *.mo amongst %s other known files' % (
+            EXPECTED_MO_FILE_COUNT, len(known_files)))
     else:
-        log('File count of verified')
+        log('File count enforced: %s *.mo files' % EXPECTED_MO_FILE_COUNT)
 
 
-def setup_all_dependencies():
+def _setup_all_dependencies():
     """Setup all third party Python packages."""
-
-    common_sh = os.path.join(os.path.dirname(__file__), 'common.sh')
+    common_sh = os.path.join(build_dir(), 'scripts', 'common.sh')
+    log('Installing dependencies by running %s' % common_sh)
     result, output = run(['sh', common_sh], strict=True)
     if result != 0:
         raise Exception()
@@ -751,58 +1115,6 @@ def setup_all_dependencies():
         if 'grep: write error' in line or 'grep: writing output' in line:
             continue
         log(line)
-
-
-def chunk_list(l, n):
-    """Yield successive n-sized chunks from l."""
-    for i in xrange(0, len(l), n):
-        yield l[i:i + n]
-
-
-def is_a_member_of(test_class_name, set_of_tests):
-    for name in set_of_tests.keys():
-
-        # try matching on the class name
-        if name.find(test_class_name) == 0:
-            return True
-
-        # try matching on the method name
-        if test_class_name.find(name) == 0:
-            return True
-
-    return False
-
-
-def select_tests_to_run(test_class_name):
-    test_classes = {}
-    test_classes.update(all_tests.ALL_TEST_CLASSES)
-    test_classes.update(all_tests.ALL_INTEGRATION_TEST_CLASSES)
-    test_classes.update(all_third_party_tests())
-
-    if test_class_name:
-        _test_classes = {}
-
-        for name in test_classes.keys():
-            # try matching on the class name
-            if name.find(test_class_name) == 0:
-                _test_classes.update({name: test_classes[name]})
-                continue
-
-            # try matching on the method name
-            if test_class_name.find(name) == 0:
-                _test_classes.update({test_class_name: 1})
-                continue
-
-        if not _test_classes:
-            raise Exception(
-                'No tests found for "%s".  (Did you remember to add the test '
-                'class to the list in scripts/all_tests.py?)' %
-                test_class_name)
-        test_classes = _test_classes
-
-        sorted_names = sorted(test_classes, key=lambda key: test_classes[key])
-
-    return test_classes
 
 
 def assert_handler(url, handler):
@@ -851,50 +1163,18 @@ def assert_gcb_allow_static_serv_is_enabled():
         assert_handler(url, None)
 
 
-def group_tests(parsed_args, setup_deps=True):
-    # get all applicable tests
-    test_classes = select_tests_to_run(
-        _parse_test_name(parsed_args.test_class_name))
-
-    # separate out integration and non-integration tests
-    integration_tests = {}
-    non_integration_tests = {}
-    for test_class_name in test_classes.keys():
-        if is_a_member_of(
-            test_class_name, all_tests.ALL_INTEGRATION_TEST_CLASSES):
-            target = integration_tests
-        else:
-            target = non_integration_tests
-        target.update(
-                {test_class_name: test_classes[test_class_name]})
-
-    # filter out according to command line args
-    if parsed_args.skip_non_integration:
-        log('Skipping non-integration tests at user request')
-        non_integration_tests = {}
-    if parsed_args.skip_integration:
-        log('Skipping integration test at user request')
-        integration_tests = {}
-
-    return integration_tests, non_integration_tests
-
-
-def _run_all_tests(parsed_args, setup_deps=True):
-    integration_tests, non_integration_tests = group_tests(
-        parsed_args, setup_deps)
-
-    _all_tests = {}
-    _all_tests.update(non_integration_tests)
-    _all_tests.update(integration_tests)
+def _run_all_tests(config, setup_deps=True):
+    _all_tests, integration_tests, non_integration_tests = (
+        config.tests.group_tests())
 
     with_server = bool(integration_tests)
-    test_static_serv = not bool(parsed_args.test_class_name)
+    test_static_serv = not bool(config.parsed_args.test_class_name)
 
     if test_static_serv and with_server:
-        with WithTestConfiguration(True, False, parsed_args.server_log_file):
+        with WithReleaseConfiguration(True, False, config):
             assert_gcb_allow_static_serv_is_disabled()
 
-    with WithTestConfiguration(with_server, True, parsed_args.server_log_file):
+    with WithReleaseConfiguration(with_server, True, config):
         if with_server:
             if test_static_serv:
                 assert_gcb_allow_static_serv_is_enabled()
@@ -909,7 +1189,7 @@ def _run_all_tests(parsed_args, setup_deps=True):
             except:  # pylint: disable=bare-except
                 chunk_size = 8
             _run_tests(
-                _all_tests, parsed_args.verbose,
+                _all_tests, config.parsed_args.verbose,
                 setup_deps=setup_deps, chunk_size=chunk_size)
 
 
@@ -935,7 +1215,7 @@ def _run_tests(
 
     # setup dependencies
     if setup_deps:
-        setup_all_dependencies()
+        _setup_all_dependencies()
 
     # execute all tasks
     log('Executing %s "%s" test suites' % (len(tasks), hint))
@@ -1006,6 +1286,60 @@ def _lint(parsed_args):
                 raise RuntimeError('Pylint tests failed.')
 
 
+def _prepare_filesystem(
+    source_dir_name, target_dir_name, build_dir_name, deep_clean=False):
+    """Prepare various directories used in the release process."""
+
+    log('Working directory: %s' % os.getcwd())
+    log('Source directory: %s' % source_dir_name)
+    log('Target directory: %s' % target_dir_name)
+    log('Build temp directory: %s' % build_dir_name)
+
+    remove_dir(build_dir_name)
+    shutil.copytree(source_dir_name, build_dir_name, symlinks=True)
+
+    if deep_clean:
+        dirs_to_remove = [
+            os.path.join(os.path.expanduser("~"), 'coursebuilder_resources'),
+            os.path.join(build_dir_name, 'lib')
+            ]
+        log('Deep cleaning %s' % ', '.join(dirs_to_remove))
+        for _dir in dirs_to_remove:
+            remove_dir(_dir)
+
+    if not os.path.exists(target_dir_name):
+        log('Creating target directory: %s' % target_dir_name)
+        os.makedirs(target_dir_name)
+
+
+def _save_log(target_dir, release_label):
+    log_file = os.path.join(target_dir, 'log_%s.txt' % release_label)
+    log('Saving log to: %s' % log_file)
+    write_text_file(log_file, '%s' % '\n'.join(LOG_LINES))
+
+
+def _test_developer_workflow(config):
+    DeveloperWorkflowTester(config).test_all()
+
+
+def _set_up_imports():
+    global schema_fields
+    global schema_transforms
+    global all_tests
+
+    # when this runs, the environment is not yet setup; as a minimum,
+    # we need access to our own code; provide it here
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+    # no third party packages are available or will ever be available in this
+    # module including Google App Engine SDK, but we can safely access our own
+    # code, IF AND ONLY IF, it does not have any dependencies
+    # pylint: disable=redefined-outer-name
+    from common import schema_fields
+    from common import schema_transforms
+    from scripts import all_tests
+
+
 def do_a_release(
     source_dir, target_dir, _build_dir, release_label):
     """Creates/validates an official release of CourseBuilder.
@@ -1017,64 +1351,46 @@ def do_a_release(
         release_label: a string with text label for the release
 
     Here is what this function does:
-        - creates a target_dir, build_dir
+        - creates a target_dir, build_dir; cleans temp directories
         - copies all files from source_dir to the build_dir
         - deletes all files from build_dir that should not be released
-        - checks banned imports
-        - brings up and teras down integration server
-        - runs all tests in the build_dir and checks they pass
-        - tests developer workflow
         - adds VERSION and manifest file
+        - scans all modules and adds tests/files listed in manifests
+        - sets up all third party dependencies
+        - brings up and tears down integration server
+        - checks banned imports
+        - tests developer workflow
+        - runs all tests in the build_dir and checks they pass
         - creates a zip file
         - copies a resulting zip file and log file to target_dir
     """
 
+    _set_up_imports()  # TODO (psimakov): move this call into main()
+
     global BUILD_DIR  # pylint: disable=global-statement
     BUILD_DIR = _build_dir
-
-    log_file = os.path.join(target_dir, 'log_%s.txt' % release_label)
-    zip_file = os.path.join(
-        target_dir, '%s_%s.zip' % (PRODUCT_NAME, release_label))
-    manifest_file = os.path.join(build_dir(), 'VERSION')
-    third_party_file = os.path.join(build_dir(), 'lib/README')
-
-    file_list_fn = '%s/scripts/all_files.txt' % source_dir
-    known_files = open(file_list_fn).read().splitlines()
-
-    start = time.time()
-
     del LOG_LINES[:]
 
-    log('Starting Course Builder release: %s' % release_label)
-    log('Working directory: %s' % os.getcwd())
-    log('Source directory: %s' % source_dir)
-    log('Target directory: %s' % target_dir)
-    log('Build temp directory: %s' % build_dir())
-
-    setup_all_dependencies()
-
-    _create_release_directories(source_dir, build_dir(), zip_file)
-    create_manifests(manifest_file, third_party_file, release_label)
-
     parsed_args = make_default_parser().parse_args()
+
+    start = time.time()
+    log('Starting Course Builder release: %s' % release_label)
+
+    _prepare_filesystem(
+        source_dir, target_dir, build_dir(), deep_clean=parsed_args.deep_clean)
+    _setup_all_dependencies()
+    _create_manifests(build_dir(), release_label)
+    config = ReleaseConfiguration(parsed_args, build_dir())
     _dry_run(parsed_args)
-
-    enforce_file_count_and_remove_extra_files(
-        known_files, delete_extra_files_folders=True)
-
     _lint(parsed_args)
-    assert_no_disallowed_imports(build_dir())
-    DeveloperWorkflowTester().test_all()
-
-    _run_all_tests(parsed_args, setup_deps=False)
-    enforce_file_count_and_remove_extra_files(
-        known_files, delete_extra_files_folders=True)
-
-    zip_all_files(zip_file)
+    _assert_no_disallowed_imports(build_dir())
+    _test_developer_workflow(config)
+    _enforce_file_count(config)
+    _run_all_tests(config, setup_deps=False)
+    _enforce_file_count(config)
+    _zip_all_files(target_dir, release_label)
     remove_dir(build_dir())
-
-    log('Saving log to: %s' % log_file)
-    write_text_file(log_file, '%s' % '\n'.join(LOG_LINES))
+    _save_log(target_dir, release_label)
 
     log('Done release in %ss: find results in %s' % (
         int(time.time() - start), target_dir))
@@ -1082,28 +1398,26 @@ def do_a_release(
     return 0
 
 
-def _create_release_directories(source_dir_name, build_dir_name, zip_file_name):
-    remove_dir(build_dir_name)
-    shutil.copytree(source_dir_name, build_dir_name, symlinks=True)
-
-    target_dir_name = os.path.dirname(zip_file_name)
-    if not os.path.exists(target_dir_name):
-        log('Creating directory for release: %s' % target_dir_name)
-        os.makedirs(target_dir_name)
-
-
 def _test_only(parsed_args):
     """Runs a set of tests as specific by command line arguments."""
     global BUILD_DIR  # pylint: disable=global-statement
     BUILD_DIR = os.path.join(os.path.dirname(__file__), '..')
+    log('Running test_only: %s' % parsed_args)
+    log('Working directory: %s' % os.getcwd())
+    log('Source directory: %s' % build_dir())
+    if parsed_args.deep_clean:
+        raise Exception(
+            'Unable to use --deep_clean flag without --do_a_release flag.')
     if not parsed_args.test_class_name:
         _lint(parsed_args)
-    return _run_all_tests(parsed_args)
+    _set_up_imports()  # TODO (psimakov): move this call into main()
+    return _run_all_tests(ReleaseConfiguration(parsed_args, BUILD_DIR))
 
 
 def _test_and_release(parsed_args):
     """Runs an entire release process with all tests and configurations."""
     release_label = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    log('Running test_and_release: %s' % parsed_args)
     return do_a_release(
         os.path.abspath(os.path.join(os.path.dirname(__file__), '..')),
         os.getcwd(),

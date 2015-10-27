@@ -81,6 +81,7 @@ class Registry(object):
     SCHEMA_PATH_SEPARATOR = '/'
 
     def __init__(self, title, description=None, extra_schema_dict_values=None):
+        self._name = None
         self._title = title
         self._registry = {'id': title, 'type': 'object'}
         self._description = description
@@ -89,6 +90,10 @@ class Registry(object):
         self._extra_schema_dict_values = extra_schema_dict_values or {}
         self._properties = []
         self._sub_registries = collections.OrderedDict()
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def title(self):
@@ -119,9 +124,12 @@ class Registry(object):
     def add_sub_registry(self, name, title=None, description=None,
         registry=None, extra_schema_dict_values=None):
         """Add a sub registry to this Registry."""
+        if name in self._sub_registries:
+            raise Exception('Already have registry undr name %s' % name)
         if not registry:
             registry = self.__class__(title=title, description=description,
                 extra_schema_dict_values=extra_schema_dict_values)
+        registry._name = name  # pylint: disable=protected-access
         self._sub_registries[name] = registry
         return registry
 
