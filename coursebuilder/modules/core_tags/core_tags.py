@@ -659,6 +659,10 @@ class IFrame(CoreTag):
 
 class Include(CoreTag):
 
+    @classmethod
+    def name(cls):
+        return 'HTML Asset'
+
     def render(self, node, handler):
         template_path = re.sub('^/+', '', node.attrib.get('path'))
         base_path = os.path.dirname(template_path)

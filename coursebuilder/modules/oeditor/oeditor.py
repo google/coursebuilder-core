@@ -173,9 +173,6 @@ class ObjectEditor(object):
                 'vendor': tag_class.vendor(),
                 'label': tag_class.name(),
                 'iconUrl': tag_class().get_icon_url()})
-        rte_tag_data = sorted(
-            rte_tag_data,
-            key=lambda item: (item['vendor'], item['label']))
 
         editor_prefs = {
             'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(

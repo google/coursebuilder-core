@@ -136,9 +136,12 @@ function bindEditorField(Y) {
     var attrs = {
       extracss: this.EXTRA_CSS,
     };
+    var buttonSet = this.FULL_BUTTON_SET;
     if (options['rteButtonSet'] == 'reduced') {
-      attrs.toolbar = {buttons: $.extend({}, this.REDUCED_BUTTON_SET)};
+      buttonSet = this.REDUCED_BUTTON_SET;
     }
+    attrs.toolbar = {buttons: $.extend({}, buttonSet)};
+
     this.editor = new Y.YUI2.widget.Editor(textarea, attrs);
     this._disableHtmlCleaning();
 
@@ -181,9 +184,93 @@ function bindEditorField(Y) {
     '  background-color: #c0c0c0;' +
     '  border: solid 1px #b4b4b4;' +
     '}';
+  /* See http://yui.github.io/yui2/docs/yui_2.9.0_full/examples/editor/toolbar_editor.html */
+  RichTextEditor.prototype.FULL_BUTTON_SET = [
+    {
+      group: 'fontstyle', label: 'Font Name and Size',
+      buttons: [
+        {
+          type: 'select', label: 'Arial', value: 'fontname', disabled: true,
+          menu: [
+            { text: 'Arial', checked: true },
+            { text: 'Arial Black' },
+            { text: 'Comic Sans MS' },
+            { text: 'Courier New' },
+            { text: 'Lucida Console' },
+            { text: 'Tahoma' },
+            { text: 'Times New Roman' },
+            { text: 'Trebuchet MS' },
+            { text: 'Verdana' }
+          ]
+        },
+        { type: 'spin', label: '13', value: 'fontsize', range: [ 9, 75 ], disabled: true }
+      ]
+    },
+    { type: 'separator' },
+    {
+      group: 'textstyle', label: 'Font Style',
+      buttons: [
+        { type: 'push', label: 'Bold CTRL + SHIFT + B', value: 'bold' },
+        { type: 'push', label: 'Italic CTRL + SHIFT + I', value: 'italic' },
+        { type: 'push', label: 'Underline CTRL + SHIFT + U', value: 'underline' },
+        { type: 'separator' },
+        { type: 'push', label: 'Subscript', value: 'subscript', disabled: true },
+        { type: 'push', label: 'Superscript', value: 'superscript', disabled: true },
+        { type: 'separator' },
+        { type: 'color', label: 'Font Color', value: 'forecolor', disabled: true },
+        { type: 'color', label: 'Background Color', value: 'backcolor', disabled: true },
+        { type: 'separator' },
+        { type: 'push', label: 'Remove Formatting', value: 'removeformat', disabled: true },
+        { type: 'push', label: 'Show/Hide Hidden Elements', value: 'hiddenelements' }
+      ]
+    },
+    { type: 'separator' },
+    {
+      group: 'alignment', label: 'Alignment',
+      buttons: [
+        { type: 'push', label: 'Align Left CTRL + SHIFT + [', value: 'justifyleft' },
+        { type: 'push', label: 'Align Center CTRL + SHIFT + |', value: 'justifycenter' },
+        { type: 'push', label: 'Align Right CTRL + SHIFT + ]', value: 'justifyright' },
+        { type: 'push', label: 'Justify', value: 'justifyfull' }
+      ]
+    },
+    { type: 'separator' },
+    {
+      group: 'parastyle', label: 'Paragraph Style',
+      buttons: [
+        {
+          type: 'select', label: 'Normal', value: 'heading', disabled: true,
+          menu: [
+            { text: 'Normal', value: 'none', checked: true },
+            { text: 'Header 1', value: 'h1' },
+            { text: 'Header 2', value: 'h2' },
+            { text: 'Header 3', value: 'h3' },
+            { text: 'Header 4', value: 'h4' },
+            { text: 'Header 5', value: 'h5' },
+            { text: 'Header 6', value: 'h6' }
+          ]
+        }
+      ]
+    },
+    { type: 'separator' },
+    {
+      group: 'indentlist', label: 'Indenting and Lists',
+      buttons: [
+        { type: 'push', label: 'Indent', value: 'indent', disabled: true },
+        { type: 'push', label: 'Outdent', value: 'outdent', disabled: true },
+        { type: 'push', label: 'Create an Unordered List', value: 'insertunorderedlist' },
+        { type: 'push', label: 'Create an Ordered List', value: 'insertorderedlist' }
+      ]
+    },
+    { type: 'separator' },
+    {
+      group: 'insertitem', label: 'Insert Item',
+      buttons: []
+    }
+  ];
+  /* See http://yui.github.io/yui2/docs/yui_2.9.0_full/examples/editor/toolbar_editor.html */
   RichTextEditor.prototype.REDUCED_BUTTON_SET = [
     {
-      /* See http://yui.github.io/yui2/docs/yui_2.9.0_full/examples/editor/toolbar_editor.html */
       group: 'fontstyle', label: 'Font Name and Size',
       buttons: [
         {
@@ -223,11 +310,35 @@ function bindEditorField(Y) {
     },
     {
       group: 'insertitem', label: 'Insert Item',
-      buttons: [
-        { type: 'push', label: 'HTML Link CTRL + SHIFT + L', value: 'createlink', disabled: true },
-        { type: 'push', label: 'Insert Image', value: 'insertimage' }
-      ]
+      buttons: []
     }
+  ];
+  /**
+   * This list holds the tag names of tags in the order in which their buttons
+   * should be displayed. Because of the loose-coupling between OEditor and the
+   * other modules which provide the tags, this ordering is only best-effort.
+   * Tag authors may change the binding name of their tag or introduce new tags
+   * which are not listed here. This should not be assumed to be a comprehensive
+   * list.
+   */
+  RichTextEditor.prototype.TAG_BUTTON_ORDER = [
+    'question',
+    'question-group',
+    'gcb-youtube',
+    'insertimage',
+    'gcb-googlegroup',
+    'gcb-questionnaire',
+    'gcb-googledrive',
+    'gcb-googledoc',
+    'gcb-googlespreadsheet',
+    'gcb-include',
+    'gcb-code',
+    'gcb-math',
+    'gcb-markdown',
+    'gcb-html5video',
+    'gcb-iframe',
+    'createlink',
+    'text-file-upload-tag',
   ];
 
   RichTextEditor.prototype.isReady = function() {
@@ -273,22 +384,67 @@ function bindEditorField(Y) {
       that._customTagManager.insertMarkerTags();
     });
   };
+  RichTextEditor.prototype._tagButtonCompare = function(button1, button2) {
+    function strCmp(a, b) {
+      if (a < b) {
+        return -1;
+      } else if (a === b) {
+        return 0;
+      } else {
+        return 1;
+      }
+    }
+    var index1 = this.TAG_BUTTON_ORDER.indexOf(button1.value);
+    var index2 = this.TAG_BUTTON_ORDER.indexOf(button2.value);
+
+    if (index1 > -1 && index2 > -1) {
+      return index1 - index2;
+    } else if (index1 > -1 && index2 == -1) {
+      // If button1 is in the list and button2 is not, then button1 comes first
+      return -1;
+    } else if (index1 == -1 && index2 > -1) {
+      // If button1 is not in the list and button2 is, then button1 comes after
+      return 1;
+    } else {
+      return strCmp(button1.label, button2.label);
+    }
+  };
+
   RichTextEditor.prototype._addCustomComponentButtons = function() {
     // Add buttons to the tool bar for each of the CB custom components.
     var that = this;
+    var buttonDefs = [
+      {
+        type: 'push',
+        label: 'HTML Link',
+        value: 'createlink',
+        disabled: false
+      },
+      {
+        type: 'push',
+        label: 'Image',
+        value: 'insertimage',
+        disabled: false
+      }
+    ];
     for (var i = 0; i < RTE_TAG_DATA.length; i++) {
       var componentData = RTE_TAG_DATA[i];
       if (this.excludedCustomTags.indexOf(componentData.name) >= 0) {
         continue;
       }
-      var buttonDef = {
+      buttonDefs.push({
         type: 'push',
         label: componentData.label,
         value: componentData.name,
         disabled: false
-      };
-      this.editor.toolbar.addButtonToGroup(buttonDef, 'insertitem');
+      });
     }
+    buttonDefs.sort(this._tagButtonCompare.bind(this));
+
+    for (var i = 0; i < buttonDefs.length; i++) {
+      this.editor.toolbar.addButtonToGroup(buttonDefs[i], 'insertitem');
+    }
+
     this.editor.toolbar.on('buttonClick', function(evt) {
       that._onAddCustomComponentButtonClicked(evt);
     });

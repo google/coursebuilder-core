@@ -123,7 +123,7 @@ class CodeTag(tags.ContextAwareTag):
 
     @classmethod
     def name(cls):
-        return 'Embedded Code'
+        return 'Code'
 
     @classmethod
     def vendor(cls):
