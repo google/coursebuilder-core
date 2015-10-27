@@ -57,21 +57,42 @@ PATH=$RUNTIME_HOME/node/node_modules/karma/bin\
 export YUI_BASE=$RUNTIME_HOME/yui/build
 export KARMA_LIB=$RUNTIME_HOME/karma_lib
 
-CB_ARCHIVE_URL=https://github.com/google/coursebuilder-resources/raw/master/lib
+CB_ARCHIVE_URL=https://github.com/google/coursebuilder-resources/raw/master
+CB_ARCHIVE_CONFIG_URL=$CB_ARCHIVE_URL/config
+CB_ARCHIVE_LIB_URL=$CB_ARCHIVE_URL/lib
+CB_ARCHIVE_GAE_SDK_URL=$CB_ARCHIVE_CONFIG_URL/gae_sdk_download_url_cb_1_10
 
 echo Ensuring runtime folder $RUNTIME_HOME
 if [ ! -d "$RUNTIME_HOME" ]; then
   mkdir -p $RUNTIME_HOME
 fi
 
-echo Using GAE from $GOOGLE_APP_ENGINE_HOME
-if [ ! -d "$GOOGLE_APP_ENGINE_HOME" ]; then
-  echo Installing GAE
+if [ -s "$GOOGLE_APP_ENGINE_HOME/VERSION" ]; then
+  GAE_SDK_VERSION=$(cat $GOOGLE_APP_ENGINE_HOME/VERSION | \
+    grep release | \
+    sed 's/release: //g' | \
+    tr -d '"')
+  echo Using GAE SDK $GAE_SDK_VERSION from $GOOGLE_APP_ENGINE_HOME
+else
+  echo Installing GAE SDK
+
+  if [ -d "$GOOGLE_APP_ENGINE_HOME" ]; then
+    rm -r $GOOGLE_APP_ENGINE_HOME
+  fi
+
   mkdir -p $RUNTIME_HOME
-  curl --location --silent https://storage.googleapis.com/appengine-sdks/deprecated/1921/google_appengine_1.9.21.zip -o google_appengine_1.9.21.zip
-  unzip google_appengine_1.9.21.zip -d $RUNTIME_HOME/
-  mv $RUNTIME_HOME/google_appengine $GOOGLE_APP_ENGINE_HOME
-  rm google_appengine_1.9.21.zip
+  echo Fetching GAE SDK URL from $CB_ARCHIVE_GAE_SDK_URL
+  curl --location --silent $CB_ARCHIVE_GAE_SDK_URL -o gae_sdk_download_url
+  GAE_SDK_URL=$(cat gae_sdk_download_url)
+  curl --location --silent $GAE_SDK_URL -o google_appengine.zip
+  unzip google_appengine.zip -d $RUNTIME_HOME
+  rm google_appengine.zip
+  rm gae_sdk_download_url
+  GAE_SDK_VERSION=$(cat $GOOGLE_APP_ENGINE_HOME/VERSION | \
+    grep release | \
+    sed 's/release: //g' | \
+    tr -d '"')
+  echo Installed GAE SDK $GAE_SDK_VERSION
 fi
 
 function handle_build_error() {
@@ -306,7 +327,7 @@ done
 for lib in $DISTRIBUTED_LIBS ; do
   if [ ! -f "$DISTRIBUTED_LIBS_DIR/$lib" ]; then
     echo "Adding CB distribution runtime library $lib to $DISTRIBUTED_LIBS_DIR"
-    curl --location --silent $CB_ARCHIVE_URL/$lib -o "$DISTRIBUTED_LIBS_DIR/$lib"
+    curl --location --silent $CB_ARCHIVE_LIB_URL/$lib -o "$DISTRIBUTED_LIBS_DIR/$lib"
   fi
 done
 
