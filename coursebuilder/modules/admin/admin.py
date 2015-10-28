@@ -323,9 +323,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
         cls.install_courses_menu_item()
 
-        bind('settings', 'site', 'Site settings', action='settings',
-            contents=cls.get_settings, placement=2000,
-            sub_group_name='advanced')
+        bind('settings', 'site', 'Advanced site settings', action='settings',
+            contents=cls.get_settings, sub_group_name='advanced')
 
         bind('help', 'welcome', 'Welcome', action='welcome',
             href='/admin/welcome', is_external=True, placement=1000)

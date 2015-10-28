@@ -2458,11 +2458,6 @@ class Course(object):
             'Hide Lesson Nav', 'boolean',
             description=messages.UNIT_HIDE_LESSON_NAV, optional=True))
         unit_opts.add_property(schema_fields.SchemaField(
-            'unit:hide_assessment_navigation_buttons',
-            'Hide Assessment Nav', 'boolean',
-            description=messages.UNIT_HIDE_ASSESSMENT_NAV,
-            optional=True))
-        unit_opts.add_property(schema_fields.SchemaField(
             'unit:show_unit_links_in_leftnav', 'Show Unit Link',
             'boolean', description=messages.UNIT_SHOW_UNIT_LINK,
             optional=True))
@@ -2489,6 +2484,11 @@ class Course(object):
             'string', optional=True,
             description=messages.ASSESSMENT_FAILING_TEXT,
             validator=must_contain_one_string_substitution))
+        assessment_opts.add_property(schema_fields.SchemaField(
+            'unit:hide_assessment_navigation_buttons',
+            'Hide Assessment Nav', 'boolean',
+            description=messages.UNIT_HIDE_ASSESSMENT_NAV,
+            optional=True))
 
         i18n_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_I18N, 'Translations',

@@ -624,5 +624,6 @@ def on_module_enabled(courses_custom_module, perms):
     CourseSettingsHandler.register_settings_section('forums')
 
     dashboard.DashboardHandler.add_sub_nav_mapping(
-        SETTINGS_TAB_NAME, 'advanced', 'Advanced', action='settings_advanced',
-        contents=_get_settings_advanced, sub_group_name='advanced')
+        SETTINGS_TAB_NAME, 'advanced', 'Advanced course settings',
+        action='settings_advanced', contents=_get_settings_advanced,
+        sub_group_name='advanced')

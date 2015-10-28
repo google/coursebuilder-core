@@ -476,7 +476,7 @@ class DashboardPage(PageObject):
 
     def click_advanced_settings(self):
         self.ensure_menu_group_is_open('settings')
-        self.find_element_by_link_text('Advanced').click()
+        self.find_element_by_id('menu-item__settings__advanced').click()
         return AdvancedSettingsPage(self._tester)
 
     def click_settings(self):
@@ -545,7 +545,7 @@ class DashboardPage(PageObject):
 
     def click_site_settings(self):
         self.ensure_menu_group_is_open('settings')
-        self.find_element_by_link_text('Site settings').click()
+        self.find_element_by_id('menu-item__settings__site').click()
         return AdminSettingsPage(self._tester)
 
     def click_lock(self):
