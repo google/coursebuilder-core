@@ -33,7 +33,7 @@ class CodeTagTests(actions.TestBase):
         'main();')
     CODE_TAG_TEMPLATE = (
         '<gcb-code mode="%s" instanceid="my-instance">%s</gcb-code>')
-    CODE_MIRROR_URL = '/modules/code_tags/codemirror/lib/codemirror.js'
+    CODE_MIRROR_URL = '/static/codemirror/lib/codemirror.js'
 
     def setUp(self):
         super(CodeTagTests, self).setUp()

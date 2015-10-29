@@ -26,7 +26,7 @@ from modules.code_tags import messages
 
 CODETAGS_MODULE_URI = '/modules/code_tags'
 CODETAGS_RESOURCES_URI = CODETAGS_MODULE_URI + '/resources'
-CODEMIRROR_URI = CODETAGS_MODULE_URI + '/codemirror'
+CODEMIRROR_URI = '/static/codemirror'
 
 SELECT_DATA = [
     # codemirror does not have plain text mode

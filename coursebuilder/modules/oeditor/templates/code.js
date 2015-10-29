@@ -26,7 +26,7 @@ function bindCodeField(Y) {
     renderComponent: function() {
       // This function is probably only called once per instance
       var that = this;
-      CodeMirror.modeURL = "/modules/code_tags/codemirror/mode/%N/%N.js";
+      CodeMirror.modeURL = "/static/codemirror/mode/%N/%N.js";
 
       Y.one(this.fieldContainer).addClass('cb-code-field');
       this.wrapEl = Y.inputEx.cn(

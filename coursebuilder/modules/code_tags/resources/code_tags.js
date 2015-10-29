@@ -1,4 +1,4 @@
-CodeMirror.modeURL = "/modules/code_tags/codemirror/mode/%N/%N.js";
+CodeMirror.modeURL = "/static/codemirror/mode/%N/%N.js";
 $('code.codemirror-container-readonly').each(function() {
   var code = $(this).text();
   $(this).empty();
