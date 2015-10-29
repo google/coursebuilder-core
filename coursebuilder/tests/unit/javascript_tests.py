@@ -7,7 +7,7 @@ import os
 import unittest
 
 import appengine_config
-from scripts import run_all_tests
+from scripts import project  # TODO(jorr): factor out run() into common/
 
 
 class AllJavaScriptTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class AllJavaScriptTests(unittest.TestCase):
         karma_conf = os.path.join(
             appengine_config.BUNDLE_ROOT, 'tests', 'unit',
             'javascript_tests', test_folder, 'karma.conf.js')
-        result, out = run_all_tests.run([
+        result, out = project.run([
             'karma', 'start', karma_conf], verbose=False)
         if result != 0:
             raise Exception('Test failed: %s', out)

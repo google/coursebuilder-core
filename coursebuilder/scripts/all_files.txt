@@ -633,16 +633,14 @@ scripts/etl.sh
 scripts/modules.py
 scripts/modules.sh
 scripts/parse_start_args.sh
+scripts/project.py
 scripts/pylint.rc
 scripts/pylint.sh
-scripts/run_all_tests.py
-scripts/run_all_tests.sh
 scripts/run_javascript_test_server.sh
 scripts/start.sh
 scripts/start_in_shell.sh
 scripts/static.sh
 scripts/suite.sh
-scripts/test.sh
 scripts/test_completions.py
 scripts/test_config.sh
 tests/__init__.py
