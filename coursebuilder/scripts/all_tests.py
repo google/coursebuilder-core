@@ -40,7 +40,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 # here we list all integration tests that require an integration server
 ALL_INTEGRATION_TEST_CLASSES = {
-    'tests.integration.test_classes.IntegrationTestBundle1': 16,
+    'tests.integration.test_classes.IntegrationTestBundle1': 15,
     'tests.integration.test_classes.VisualizationsTest': 5,
     'tests.integration.test_classes.EmbedModuleTest': 4,
 }
@@ -265,7 +265,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.DatastoreBackedCustomCourseTest': 6,
     'tests.functional.test_classes.DatastoreBackedSampleCourseTest': 48,
     'tests.functional.test_classes.EtlMainTestCase': 46,
-    'tests.functional.test_classes.EtlRemoteEnvironmentTestCase': 0,
+    'tests.functional.test_classes.EtlTranslationRoundTripTest': 1,
     'tests.functional.test_classes.ExtensionSwitcherTests': 2,
     'tests.functional.test_classes.InfrastructureTest': 21,
     'tests.functional.test_classes.I18NTest': 2,
@@ -321,8 +321,8 @@ ALL_TEST_CLASSES = {
     'tests.unit.models_courses.WorkflowValidationTests': 13,
     'tests.unit.models_transforms.JsonToDictTests': 13,
     'tests.unit.models_transforms.JsonParsingTests': 3,
-    'tests.unit.models_transforms.StringValueConversionTests': 2,
     'tests.unit.models_transforms.SchemaValidationTests': 20,
+    'tests.unit.models_transforms.StringValueConversionTests': 2,
     'tests.unit.modules_search.ParserTests': 10,
     'tests.unit.test_classes.DeepDictionaryMergeTest': 5,
     'tests.unit.test_classes.EtlRetryTest': 3,

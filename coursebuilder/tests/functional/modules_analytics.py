@@ -51,12 +51,12 @@ from google.appengine.api import namespace_manager
 # - Download test data via:
 #
 #   echo "a@b.c" | \
-#   ./scripts/etl.sh download course /test_course mycourse localhost:8081 \
+#   ./scripts/etl.sh download course /test_course localhost \
 #   --archive_path=tests/functional/modules_analytics/TEST_NAME_HERE/course \
 #   --internal --archive_type=directory --force_overwrite --no_static_files
 #
 #   echo "a@b.c" | \
-#   ./scripts/etl.sh download datastore /test_course mycourse localhost:8081 \
+#   ./scripts/etl.sh download datastore /test_course localhost \
 #   --archive_path=tests/functional/modules_analytics/TEST_NAME_HERE/datastore \
 #   --internal --archive_type=directory --force_overwrite --no_static_files
 #
@@ -99,13 +99,11 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
         # Load the course to the VFS, and populate the DB w/ entities
         parser = etl.create_args_parser()
         etl.add_internal_args_support(parser)
-        with actions.PreserveOsEnvironDebugMode():
-            etl.main(parser.parse_args([
-                'upload', 'course', '/' + self.COURSE_NAME, 'mycourse',
-                'localhost:8081', '--archive_path', course_data,
-                '--internal', '--archive_type', 'directory',
-                '--disable_remote', '--force_overwrite', '--log_level',
-                'WARNING']))
+        etl.main(parser.parse_args([
+            'upload', 'course', '/' + self.COURSE_NAME, 'localhost',
+            '--archive_path', course_data, '--internal', '--archive_type',
+            'directory', '--disable_remote', '--force_overwrite', '--log_level',
+            'WARNING']))
 
     def load_datastore(self, path):
         data_path = self._get_data_path(path)
@@ -114,16 +112,13 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
 
         parser = etl.create_args_parser()
         etl.add_internal_args_support(parser)
-        with actions.PreserveOsEnvironDebugMode():
-            etl.main(parser.parse_args([
-                'upload', 'datastore', '/' + self.COURSE_NAME, 'mycourse',
-                'localhost:8081', '--archive_path', datastore_data,
-                '--internal', '--archive_type', 'directory',
-                '--disable_remote', '--force_overwrite', '--log_level',
-                'WARNING',
-                '--exclude_types',
-                ','.join([
-                    'Submission', 'FileDataEntity', 'FileMetadataEntity'])]))
+        etl.main(parser.parse_args([
+            'upload', 'datastore', '/' + self.COURSE_NAME, 'localhost',
+            '--archive_path', datastore_data, '--internal', '--archive_type',
+            'directory', '--disable_remote', '--force_overwrite', '--log_level',
+            'WARNING', '--exclude_types',
+            ','.join([
+                'Submission', 'FileDataEntity', 'FileMetadataEntity'])]))
 
     def get_aggregated_data_by_email(self, email):
         # email and user_id must match the values listed in Student.json file
@@ -1819,7 +1814,6 @@ class GradebookCsvTests(actions.TestBase):
             ['run',
              'modules.analytics.gradebook.DownloadAsCsv',
              '/%s' % (course_name or self.COURSE_NAME),
-             'unused_appid',
              'unused_servername',
              '--job_args', '--mode=%s --save_as=%s' % (
                  mode, self.temp_file_name),

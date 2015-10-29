@@ -21,17 +21,14 @@ __author__ = [
 import collections
 import os
 import random
-import subprocess
 import time
 import urllib
 import urllib2
-import zipfile
 
 import pageobjects
 from selenium import webdriver
 from selenium.common import exceptions
 from selenium.webdriver.chrome import options
-from selenium.webdriver.support import expected_conditions as ec
 
 from models import models
 from models import transforms
@@ -389,140 +386,6 @@ class IntegrationServerInitializationTask(BaseIntegrationTest):
     def test_setup_default_course(self):
         self.load_root_page()._add_default_course_if_needed(
             suite.TestBase.INTEGRATION_SERVER_BASE_URL)
-
-
-class EtlTranslationRoundTripTest(BaseIntegrationTest):
-
-    def setUp(self):
-        super(EtlTranslationRoundTripTest, self).setUp()
-        self.archive_path = self._get_archive_path('translations.zip')
-
-    def _delete_archive_file(self):
-        os.remove(self.archive_path)
-
-    def _get_archive_path(self, name):
-        return os.path.join(self.test_tempdir, name)
-
-    def _get_etl_sh_abspath(self):
-        cb_home = os.environ.get('COURSEBUILDER_HOME')
-        if not cb_home:
-            raise Exception('Could not find COURSEBUILDER_HOME')
-
-        return os.path.join(cb_home, 'scripts/etl.sh')
-
-    def _get_ln_locale_element(self, page, pre_wait=True):
-        try:
-            return page.find_element_by_css_selector(
-                '.language-header', pre_wait=pre_wait)
-        except exceptions.NoSuchElementException:
-            return None
-
-    # For these _run* methods: Integration tests are not well isolated. When
-    # multiple tests click the button to create a sample course, they may end up
-    # with different slugs. The slug is used to create the ETL command lines, so
-    # we must always parse the slug out of the driver's URL so the ETL commands
-    # target the correct namespace.
-    def _run_download_course(self):
-        etl_command = [
-            'download', 'course', self.get_slug_for_current_course(),
-            'mycourse', 'localhost:8081', '--archive_path', self.archive_path]
-        self._run_etl_command(etl_command)
-
-    def _run_download_datastore(self):
-        etl_command = [
-            'download', 'datastore', self.get_slug_for_current_course(),
-            'mycourse', 'localhost:8081', '--archive_path', self.archive_path]
-        self._run_etl_command(etl_command)
-
-    def _run_delete_job(self):
-        etl_command = [
-            'run', 'modules.i18n_dashboard.jobs.DeleteTranslations',
-            self.get_slug_for_current_course(), 'mycourse', 'localhost:8081']
-        self._run_etl_command(etl_command)
-
-    def _run_download_job(self):
-        etl_command = [
-            'run', 'modules.i18n_dashboard.jobs.DownloadTranslations',
-            self.get_slug_for_current_course(), 'mycourse', 'localhost:8081',
-            '--job_args=' + self.archive_path]
-        self._run_etl_command(etl_command)
-
-    def _run_translate_job(self):
-        etl_command = [
-            'run', 'modules.i18n_dashboard.jobs.TranslateToReversedCase',
-            self.get_slug_for_current_course(), 'mycourse', 'localhost:8081']
-        self._run_etl_command(etl_command)
-
-    def _run_upload_job(self):
-        etl_command = [
-            'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
-            self.get_slug_for_current_course(), 'mycourse', 'localhost:8081',
-            '--job_args=' + self.archive_path]
-        self._run_etl_command(etl_command)
-
-    def _run_etl_command(self, etl_command):
-        etl_command = (['sh', self._get_etl_sh_abspath()] + etl_command)
-        process = subprocess.Popen(
-            etl_command, stdin=subprocess.PIPE, stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE)
-        process.stdin.write('anything@example.com\nany_password\n')
-        process.stdin.flush()
-        _, stderr = process.communicate()
-
-        if process.returncode:
-            raise Exception(
-                'Unable to run etl command "%s", stderr was %s' % (
-                    ' '.join(etl_command), stderr))
-
-    def assert_archive_file_exists(self):
-        self.assertTrue(os.path.exists(self.archive_path))
-
-    def assert_ln_locale_in_course(self, page):
-        self.assertTrue(self._get_ln_locale_element(page))
-
-    def assert_ln_locale_not_in_course(self, page):
-        self.assertFalse(self._get_ln_locale_element(page, pre_wait=False))
-
-    def assert_zipfile_contains_only_ln_locale(self):
-        self.assert_archive_file_exists()
-
-        with zipfile.ZipFile(self.archive_path) as zf:
-            files = zf.infolist()
-            self.assertEqual(
-                ['locale/ln/LC_MESSAGES/messages.po'],
-                [f.filename for f in files])
-
-    def test_full_round_trip_of_data_via_i18n_dashboard_module_jobs(self):
-        page = self.load_sample_course().click_i18n()
-        self.assert_ln_locale_not_in_course(page)
-
-        self._run_translate_job()
-        page.click_i18n()
-        self.assert_ln_locale_in_course(page)
-
-        self._run_download_job()
-        self.assert_zipfile_contains_only_ln_locale()
-
-        ln_locale = self._get_ln_locale_element(page)
-        self._run_delete_job()
-        page.click_i18n()
-        page.wait().until(ec.staleness_of((ln_locale)))
-        self.assert_ln_locale_not_in_course(page)
-
-        self._run_upload_job()
-        page.click_i18n()
-        self.assert_ln_locale_in_course(page)
-
-        # As an additional sanity check, make sure we can download the course
-        # definitions and datastore data for a course with translations.
-
-        self._delete_archive_file()
-        self._run_download_course()
-        self.assert_archive_file_exists()
-
-        self._delete_archive_file()
-        self._run_download_datastore()
-        self.assert_archive_file_exists()
 
 
 class SampleCourseTests(BaseIntegrationTest):
@@ -1481,7 +1344,6 @@ class EventsTest(BaseIntegrationTest):
 
 
 class IntegrationTestBundle1(
-        AdminTests, EventsTest, EtlTranslationRoundTripTest, QuestionsTest,
-        SampleCourseTests):
+        AdminTests, EventsTest, QuestionsTest, SampleCourseTests):
     """Test bundle that forces serial execution of all containing tests."""
     pass

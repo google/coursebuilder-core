@@ -119,13 +119,13 @@ class VfsLargeFileSupportTest(actions.TestBase):
         try:
             parser = etl.create_args_parser()
             etl.main(parser.parse_args([
-                'download', 'course', '/' + self.COURSE_NAME, 'mycourse',
-                'localhost:8081', '--archive_path', archive_file,
-                '--force_overwrite', '--internal', '--disable_remote']))
+                'download', 'course', '/' + self.COURSE_NAME, 'localhost',
+                '--archive_path', archive_file, '--force_overwrite',
+                '--internal', '--disable_remote']))
             etl.main(parser.parse_args([
-                'upload', 'course', '/' + other_course_name, 'mycourse',
-                'localhost:8081', '--archive_path', archive_file,
-                '--force_overwrite', '--internal', '--disable_remote']))
+                'upload', 'course', '/' + other_course_name, 'localhost',
+                '--archive_path', archive_file, '--force_overwrite',
+                '--internal', '--disable_remote']))
         finally:
             os.unlink(archive_file)
 

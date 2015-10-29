@@ -41,15 +41,13 @@ class _JobTestBase(
         bad_course_url_prefix = '/bad' + self.url_prefix
         args = [
             'run', 'modules.i18n_dashboard.jobs.' + job_name,
-            bad_course_url_prefix, 'myapp', 'localhost:8080']
+            bad_course_url_prefix, 'localhost']
 
         if job_args:
             args.append(job_args)
 
         with self.assertRaises(SystemExit):
-            etl.main(
-                etl.create_args_parser().parse_args(args),
-                environment_class=testing.FakeEnvironment)
+            etl.main(etl.create_args_parser().parse_args(args), testing=True)
 
         self.assertIn(
             'Unable to find course with url prefix ' + bad_course_url_prefix,
@@ -76,14 +74,12 @@ class _JobTestBase(
 
     def run_job(self, name, job_args=None):
         # Requires course at /first; use self._import_course().
-        args = ['run', name, '/first', 'myapp', 'localhost:8080']
+        args = ['run', name, '/first', 'localhost']
 
         if job_args:
             args.append(job_args)
 
-        etl.main(
-            etl.create_args_parser().parse_args(args),
-            environment_class=testing.FakeEnvironment)
+        etl.main(etl.create_args_parser().parse_args(args), testing=True)
 
     def run_delete_job(self, job_args=None):
         self.run_job(
@@ -212,26 +208,20 @@ class DownloadTranslationsTest(_JobTestBase):
         self.create_file('contents')
         args = [
             'run', 'modules.i18n_dashboard.jobs.DownloadTranslations',
-            self.url_prefix, 'myapp', 'localhost:8080',
-            '--job_args=%s' % self.filename]
+            self.url_prefix, 'localhost', '--job_args=%s' % self.filename]
 
         with self.assertRaises(SystemExit):
-            etl.main(
-                etl.create_args_parser().parse_args(args),
-                environment_class=testing.FakeEnvironment)
+            etl.main(etl.create_args_parser().parse_args(args), testing=True)
 
         self.assertIn('File already exists', self.get_log())
 
     def test_download_of_course_with_no_translations_dies(self):
         args = [
             'run', 'modules.i18n_dashboard.jobs.DownloadTranslations',
-            self.url_prefix, 'myapp', 'localhost:8080',
-            '--job_args=%s' % self.zipfile_name]
+            self.url_prefix, 'localhost', '--job_args=%s' % self.zipfile_name]
 
         with self.assertRaises(SystemExit):
-            etl.main(
-                etl.create_args_parser().parse_args(args),
-                environment_class=testing.FakeEnvironment)
+            etl.main(etl.create_args_parser().parse_args(args), testing=True)
 
         self.assertIn(
             'No translations found for course at %s; exiting' % self.url_prefix,
@@ -287,26 +277,21 @@ class UploadTranslationsTest(_JobTestBase):
     def test_dies_if_path_does_not_exist(self):
         args = [
             'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
-            self.url_prefix, 'myapp', 'localhost:8080',
-            '--job_args=%s' % self.zipfile_name]
+            self.url_prefix, 'localhost', '--job_args=%s' % self.zipfile_name]
 
         with self.assertRaises(SystemExit):
-            etl.main(
-                etl.create_args_parser().parse_args(args),
-                environment_class=testing.FakeEnvironment)
+            etl.main(etl.create_args_parser().parse_args(args), testing=True)
 
         self.assertIn('File does not exist', self.get_log())
 
     def test_dies_if_path_has_bad_file_extension(self):
         args = [
             'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
-            self.url_prefix, 'myapp', 'localhost:8080',
+            self.url_prefix, 'localhost',
             '--job_args=%s' % self.zipfile_name + '.bad']
 
         with self.assertRaises(SystemExit):
-            etl.main(
-                etl.create_args_parser().parse_args(args),
-                environment_class=testing.FakeEnvironment)
+            etl.main(etl.create_args_parser().parse_args(args), testing=True)
 
         self.assertIn('Invalid file extension: ".bad"', self.get_log())
 
@@ -314,13 +299,11 @@ class UploadTranslationsTest(_JobTestBase):
         self.create_zip_file('contents')
         args = [
             'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
-            '/bad' + self.url_prefix, 'myapp', 'localhost:8080',
+            '/bad' + self.url_prefix, 'localhost',
             '--job_args=%s' % self.zipfile_name]
 
         with self.assertRaises(SystemExit):
-            etl.main(
-                etl.create_args_parser().parse_args(args),
-                environment_class=testing.FakeEnvironment)
+            etl.main(etl.create_args_parser().parse_args(args), testing=True)
 
         self.assertIn(
             'Unable to find course with url prefix', self.get_log())

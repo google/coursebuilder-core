@@ -18,48 +18,19 @@ __author__ = [
     'johncox@google.com',
 ]
 
-import os
+import logging
 import sys
-import appengine_config
-
-# Override SERVER_SOFTWARE before doing any App Engine imports so import-time
-# detection of dev mode, done against SERVER_SOFTWARE of 'Development*', fails.
-# Once imports are done, this environment variable can be reset as needed (for
-# tests, etc.).
-SERVER_SOFTWARE = 'Production Emulation'
-if appengine_config.PRODUCTION_MODE:
-    sys.exit('Running etl/tools/remote.py in production is not supported.')
-os.environ['SERVER_SOFTWARE'] = SERVER_SOFTWARE
+import traceback
 
 from google.appengine.ext.remote_api import remote_api_stub
-from google.appengine.tools import appengine_rpc
-from google.appengine.tools import remote_api_shell
 
-# String. Used to detect appspot.com servers.
-_APPSPOT_SERVER_SUFFIX = 'appspot.com'
-# String. Password used when a password is not necessary.
-_BOGUS_PASSWORD = 'bogus_password'
-# String. Infix for google.com application ids.
-_GOOGLE_APPLICATION_INFIX = 'google.com'
-# String. Prefix App Engine uses application ids in the dev appserver.
-_LOCAL_APPLICATION_ID_PREFIX = 'dev~'
+# Url of help documentation we send the user to if there is an authentication
+# error.
+_AUTH_HELP_URL = 'https://code.google.com/p/course-builder/wiki/EtlAuth'
 # String. Prefix used to detect if a server is running locally.
 _LOCAL_SERVER_PREFIX = 'localhost'
-# String. Prefix App Engine uses for application ids in production.
-_REMOTE_APPLICATION_ID_PREFIX = 's~'
-# String. Email address used unless os.environ['USER_EMAIL'] is set in tests.
-_TEST_EMAIL = 'test@example.com'
-# String. os.ENVIRON['SERVER_SOFTWARE'] value that indicates we're running under
-# the test environment.
-TEST_SERVER_SOFTWARE = 'Test'
-
-
-class Error(Exception):
-    """Base error type."""
-
-
-class EnvironmentAuthenticationError(Error):
-    """Raised when establishing an environment fails due to bad credentials."""
+_LOG = logging.getLogger('coursebuilder.tools.etl')
+logging.basicConfig()
 
 
 class Environment(object):
@@ -77,56 +48,35 @@ class Environment(object):
     """
 
     def __init__(
-        self, application_id, server, path='/_ah/remote_api'):
+            self, server, path='/_ah/remote_api', port=None, testing=False):
         """Constructs a new Environment.
 
         Args:
-            application_id: string. The application id of the environment
-                (myapp).
             server: string. The full name of the server to connect to
                 (myurl.appspot.com).
             path: string. The URL of your app's remote api entry point.
+            port: int. When server is 'localhost', must be set to the API port
+                of the dev appserver. Ignored otherwise.
+            testing: boolean. For tests only, indicates testing mode.
         """
-        self._application_id = application_id
         self._path = path
+        self._port = port
         self._server = server
+        self._testing = testing
 
-    @staticmethod
-    def _dev_appserver_auth_func():
-        """Auth function to run for dev_appserver (bogus password)."""
-        return raw_input('Email: '), _BOGUS_PASSWORD
-
-    @staticmethod
-    def _test_auth_func():
-        """Auth function to run in tests (bogus username and password)."""
-        return os.environ.get('USER_EMAIL', _TEST_EMAIL), _BOGUS_PASSWORD
-
-    def _get_auth_func(self):
-        """Returns authentication function for the remote API."""
-        if os.environ.get('SERVER_SOFTWARE', '').startswith(
-                TEST_SERVER_SOFTWARE):
-            return self._test_auth_func
-        elif self._is_localhost():
-            return self._dev_appserver_auth_func
-        else:
-            return remote_api_shell.auth_func
-
-    def _get_internal_application_id(self):
-        """Returns string containing App Engine's internal id representation."""
-        prefix = _REMOTE_APPLICATION_ID_PREFIX
-        if self._is_localhost():
-            prefix = _LOCAL_APPLICATION_ID_PREFIX
-        elif not self._is_appspot():
-            prefix = '%s%s:' % (prefix, _GOOGLE_APPLICATION_INFIX)
-        return prefix + self._application_id
+    def _get_formatted_last_traceback(self):
+        return ''.join(traceback.format_tb(sys.exc_info()[2]))
 
     def _get_secure(self):
         """Returns boolean indicating whether or not to use https."""
         return not self._is_localhost()
 
-    def _is_appspot(self):
-        """Returns True iff server is appspot.com."""
-        return self._server.endswith(_APPSPOT_SERVER_SUFFIX)
+    def _get_server(self):
+        if not self._is_localhost():
+            return self._server
+        else:
+            assert self._port
+            return '%s:%s' % (_LOCAL_SERVER_PREFIX, self._port)
 
     def _is_localhost(self):
         """Returns True if environment is dev_appserver and False otherwise."""
@@ -134,12 +84,28 @@ class Environment(object):
 
     def establish(self):
         """Establishes the environment for RPC execution."""
+        if self._testing:
+            return
+
         try:
-            remote_api_stub.ConfigureRemoteApi(
-                self._get_internal_application_id(), self._path,
-                self._get_auth_func(), servername=self._server,
-                save_cookies=True, secure=self._get_secure(),
-                rpc_server_factory=appengine_rpc.HttpRpcServer)
+            remote_api_stub.ConfigureRemoteApiForOAuth(
+                self._get_server(), self._path, secure=self._get_secure())
             remote_api_stub.MaybeInvokeAuthentication()
-        except AttributeError:
-            raise EnvironmentAuthenticationError
+        # Must be broad -- we cannot know what types of exceptions App Engine
+        # raises due to auth errors. pylint: disable=bare-except
+        except:
+            _LOG.error(
+                'Unable to authenticate. The most likely cause is that you '
+                'are missing OAuth2 credentials. For help getting those '
+                'credentials, see %s. Original error was:\n%s',
+                    _AUTH_HELP_URL, self._get_formatted_last_traceback())
+            sys.exit(1)
+
+    def get_info(self):
+        """Returns string representation of the environment for logging."""
+        return 'server: %(server)s, path: %(path)s, port: %(port)s' % {
+            'path': self._path,
+            'port': self._port if self._is_localhost() else '<ignored>',
+            'server': self._server,
+        }
+

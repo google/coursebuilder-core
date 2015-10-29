@@ -75,15 +75,14 @@ class Job(object):
 
     Custom jobs can be executed by etl.py. The advantage of this is that they
     can run arbitrary local computations, but calls to App Engine services
-    (db.get() or db.put(), for example) are executed against a remove server.
+    (db.get() or db.put(), for example) are executed against a remote server.
     This allows you to perform arbitrary computations against your app's data,
     and to construct data pipelines that are not possible within the App Engine
     execution environment.
 
     When you run your custom job under etl.py in this way, it authenticates
-    against the remove server, prompting the user for credentials if necessary.
-    It then configures the local environment so RPCs execute against the
-    requested remote endpoint.
+    against the remote server. It then configures the local environment so RPCs
+    execute against the requested remote endpoint.
 
     It then imports your custom job. Your job must be a Python class that is
     a child of this class. Before invoking etl.py, you must configure sys.path
@@ -93,7 +92,7 @@ class Job(object):
 
     You invoke your custom job via etl.py:
 
-    $ python etl.py run path.to.my.Job /cs101 myapp server.appspot.com \
+    $ python etl.py run path.to.my.Job /cs101 server.appspot.com \
         --job_args='more_args --delegated_to my.Job'
 
     Before main() is executed, arguments are parsed. The full set of parsed

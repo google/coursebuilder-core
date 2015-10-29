@@ -15,10 +15,12 @@ Usage: $0 [-f] [-d <data_path>] [-s] [-p <port>] [-a <admin_port>] [-h]
 EOF
 }
 
-CLEAR_DATASTORE=true
 ADMIN_PORT=8000
+API_PORT=8082
 CB_PORT=8081
+CLEAR_DATASTORE=true
 DATA_PATH=''
+
 while getopts fd:sp:a:h option
 do
     case $option
@@ -51,10 +53,14 @@ done
 # scripts make use of start_in_shell.sh.
 
 start_cb_server=( python $GOOGLE_APP_ENGINE_HOME/dev_appserver.py \
-    --host=0.0.0.0 --port=$CB_PORT --admin_port=$ADMIN_PORT \
+    --admin_port=$ADMIN_PORT \
+    --api_host=0.0.0.0 \
+    --api_port=$API_PORT \
     --clear_datastore=$CLEAR_DATASTORE \
     --datastore_consistency_policy=consistent \
+    --host=0.0.0.0 \
     --max_module_instances=1 \
+    --port=$CB_PORT \
     --skip_sdk_update_check=true )
 
 if [ "$DATA_PATH" ] ; then
@@ -63,6 +69,3 @@ if [ "$DATA_PATH" ] ; then
 fi
 
 start_cb_server+=("$SOURCE_DIR")
-
-
-

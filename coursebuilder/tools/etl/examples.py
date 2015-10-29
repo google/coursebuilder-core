@@ -39,7 +39,7 @@ class PrintMemcacheStats(etl_lib.Job):
 
     Usage:
 
-    etl.py run tools.etl.examples.PrintMemcacheStats /course myapp \
+    etl.py run tools.etl.examples.PrintMemcacheStats /course \
         server.appspot.com
 
     Arguments to etl.py are documented in tools/etl/etl.py. You must do some
@@ -68,7 +68,7 @@ class UploadFileToCourse(etl_lib.Job):
 
     Usage:
 
-    etl.py run tools.etl.examples.UploadFileToCourse /course myapp \
+    etl.py run tools.etl.examples.UploadFileToCourse /course \
         server.appspot.com --job_args='/path/to/local/file path/to/remote/file'
 
     Arguments to etl.py are documented in tools/etl/etl.py. You must do some
@@ -112,7 +112,7 @@ class WriteStudentEmailsToFile(etl_lib.Job):
 
     Usage:
 
-    etl.py run tools.etl.examples.WriteStudentEmailsToFile /course myapp \
+    etl.py run tools.etl.examples.WriteStudentEmailsToFile /course \
         server.appspot.com --job_args=/path/to/output_file
 
     Arguments to etl.py are documented in tools/etl/etl.py. You must do some

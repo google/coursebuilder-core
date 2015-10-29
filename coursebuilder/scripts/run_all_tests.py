@@ -195,6 +195,7 @@ def ensure_port_available(port_number, quiet=False):
 
 def start_integration_server(server_log_file, env):
     ensure_port_available(8081)
+    ensure_port_available(8082)
     ensure_port_available(8000)
     server_cmd = os.path.join(build_dir(), 'scripts', 'start_in_shell.sh')
     return start_integration_server_process(

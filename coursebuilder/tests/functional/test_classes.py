@@ -17,7 +17,6 @@
 
 __author__ = 'Sean Lip'
 
-import __builtin__
 import copy
 import cStringIO
 import csv
@@ -71,8 +70,6 @@ from tools import verify
 from tools.etl import etl
 from tools.etl import etl_lib
 from tools.etl import examples
-with actions.PreserveOsEnvironDebugMode():
-    from tools.etl import remote
 from tools.etl import testing
 
 from google.appengine.api import memcache
@@ -4780,8 +4777,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         super(EtlMainTestCase, self).setUp()
         self.archive_path = os.path.join(self.test_tempdir, 'archive.zip')
         self.new_course_title = 'New Course Title'
-        self.common_args = [
-            self.url_prefix, 'myapp', 'localhost:8080']
+        self.common_args = [self.url_prefix, 'localhost']
         self.common_command_args = self.common_args + [
             '--archive_path', self.archive_path]
         self.common_course_args = [etl._TYPE_COURSE] + self.common_command_args
@@ -4810,7 +4806,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.import_sample_course()
         args = etl.create_args_parser().parse_args(['download'] +
                                                  self.common_course_args)
-        etl.main(args, environment_class=testing.FakeEnvironment)
+        etl.main(args, testing=True)
         sites.reset_courses()
 
     def create_archive_with_question(self, data):
@@ -4820,7 +4816,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             sites.get_all_courses()[1], models.QuestionEntity, data)
         args = etl.create_args_parser().parse_args(['download'] +
                                                  self.common_course_args)
-        etl.main(args, environment_class=testing.FakeEnvironment)
+        etl.main(args, testing=True)
         sites.reset_courses()
         return question
 
@@ -4868,17 +4864,14 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
     def test_delete_course_fails(self):
         args = etl.create_args_parser().parse_args(
             [etl._MODE_DELETE, etl._TYPE_COURSE] + self.common_args)
-        self.assertRaises(
-            NotImplementedError,
-            etl.main, args, environment_class=testing.FakeEnvironment)
+        self.assertRaises(NotImplementedError, etl.main, args, testing=True)
 
     def test_delete_datastore_fails_if_user_does_not_confirm(self):
         self.swap(
             etl, '_raw_input',
             lambda x: 'not' + etl._DELETE_DATASTORE_CONFIRMATION_INPUT)
         self.assertRaises(
-            SystemExit, etl.main, self.delete_datastore_args,
-            environment_class=testing.FakeEnvironment)
+            SystemExit, etl.main, self.delete_datastore_args, testing=True)
 
     def test_delete_datastore_succeeds(self):
         """Tests delete datastore success for populated and empty datastores."""
@@ -4899,9 +4892,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             namespace_manager.set_namespace(old_namespace)
 
         # Delete against a datastore with contents runs successfully.
-        etl.main(
-            self.delete_datastore_args,
-            environment_class=testing.FakeEnvironment)
+        etl.main(self.delete_datastore_args, testing=True)
 
         # Spot check that those kinds are now empty.
         try:
@@ -4912,17 +4903,13 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             namespace_manager.set_namespace(old_namespace)
 
         # Delete against a datastore without contents runs successfully.
-        etl.main(
-            self.delete_datastore_args,
-            environment_class=testing.FakeEnvironment)
+        etl.main(self.delete_datastore_args, testing=True)
 
     def test_disable_remote_cannot_be_passed_for_mode_other_than_run(self):
         bad_args = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_course_args +
             ['--disable_remote'])
-        self.assertRaises(
-            SystemExit, etl.main, bad_args,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, bad_args, testing=True)
 
     def test_download_course_creates_valid_archive(self):
         """Tests download of course data and archive creation."""
@@ -4930,9 +4917,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.import_sample_course()
         question = _add_data_entity(
             sites.get_all_courses()[0], models.QuestionEntity, 'test question')
-        etl.main(
-            self.download_course_args,
-            environment_class=testing.FakeEnvironment)
+        etl.main(self.download_course_args, testing=True)
 
         # Don't use Archive and Manifest here because we want to test the raw
         # structure of the emitted zipfile.
@@ -4964,35 +4949,28 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
     def test_download_course_errors_if_archive_path_exists_on_disk(self):
         self.upload_all_sample_course_files([])
         self.import_sample_course()
-        etl.main(
-            self.download_course_args,
-            environment_class=testing.FakeEnvironment)
+        etl.main(self.download_course_args, testing=True)
         self.assertRaises(
-            SystemExit, etl.main, self.download_course_args,
-            environment_class=testing.FakeEnvironment)
+            SystemExit, etl.main, self.download_course_args, testing=True)
 
     def test_download_errors_if_course_url_prefix_does_not_exist(self):
         sites.reset_courses()
         self.assertRaises(
-            SystemExit, etl.main, self.download_course_args,
-            environment_class=testing.FakeEnvironment)
+            SystemExit, etl.main, self.download_course_args, testing=True)
 
     def test_download_course_errors_if_course_version_is_pre_1_3(self):
         args = etl.create_args_parser().parse_args(
             ['download', 'course', '/'] + self.common_course_args[2:])
         self.upload_all_sample_course_files([])
         self.import_sample_course()
-        self.assertRaises(
-            SystemExit, etl.main, args,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, args, testing=True)
 
     def test_download_datastore_fails_if_datastore_types_not_in_datastore(self):
         download_datastore_args = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
             ['--datastore_types', 'Missing'])
         with self.assertRaises(SystemExit):
-            etl.main(download_datastore_args,
-                     environment_class=testing.FakeEnvironment)
+            etl.main(download_datastore_args, testing=True)
         self.assertLogContains('Requested types not found: Missing')
 
     def test_download_datastore_fails_if_datastore_types_not_findable(self):
@@ -5003,8 +4981,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
             ['--datastore_types', 'LiesAboutItsKind'])
         with self.assertRaises(SystemExit):
-            etl.main(download_datastore_args,
-                     environment_class=testing.FakeEnvironment)
+            etl.main(download_datastore_args, testing=True)
         self.assertLogContains(
             'Requested types not found: LiesAboutItsKind\n'
             'Available types are: SomeOtherNameThanLiesAboutItsKind')
@@ -5017,8 +4994,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
             ['--datastore_types', 'HasNoSafeKeyMethod'])
         with self.assertRaises(SystemExit):
-            etl.main(download_datastore_args,
-                     environment_class=testing.FakeEnvironment)
+            etl.main(download_datastore_args, testing=True)
         self.assertLogContains('CRITICAL: Class %s has no safe_key method.')
 
     def test_download_datastore_succeeds(self):
@@ -5041,8 +5017,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         finally:
             namespace_manager.set_namespace(old_namespace)
 
-        etl.main(
-            download_datastore_args, environment_class=testing.FakeEnvironment)
+        etl.main(download_datastore_args, testing=True)
         archive = etl._init_archive(self.archive_path, etl.ARCHIVE_TYPE_ZIP)
         archive.open('r')
         self.assertEqual(
@@ -5092,8 +5067,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
             with self.assertRaisesRegexp(RuntimeError,
                                          'Fake error for testing'):
-                etl.main(download_args,
-                         environment_class=testing.FakeEnvironment)
+                etl.main(download_args, testing=True)
         finally:
             etl._write_model_to_json_file = save_write_model_fn
 
@@ -5109,7 +5083,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.assertEqual(set(['QuestionEntity.json']), expected_models)
 
         # Exact same set of arguments, but this time w/o fake failure.
-        etl.main(download_args, environment_class=testing.FakeEnvironment)
+        etl.main(download_args, testing=True)
         archive = etl._init_archive(self.archive_path, archive_type)
         archive.open('r')
 
@@ -5129,7 +5103,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         args = [etl._MODE_UPLOAD, what] + self.common_command_args + [
             '--internal', '--archive_type', archive_type]
         upload_args = etl.create_configured_args_parser(args).parse_args(args)
-        etl.main(upload_args, environment_class=testing.FakeEnvironment)
+        etl.main(upload_args, testing=True)
         with Namespace(self.namespace):
             self.assertIsNotNone(models.QuestionEntity.all().get())
             self.assertIsNotNone(models.QuestionGroupEntity.all().get())
@@ -5159,8 +5133,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         finally:
             namespace_manager.set_namespace(old_namespace)
 
-        etl.main(
-            download_datastore_args, environment_class=testing.FakeEnvironment)
+        etl.main(download_datastore_args, testing=True)
         archive = etl._init_archive(self.archive_path, etl.ARCHIVE_TYPE_ZIP)
         archive.open('r')
         self.assertEqual(
@@ -5186,58 +5159,40 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
     def test_privacy_fails_if_not_downloading_datastore(self):
         wrong_mode = etl.create_args_parser().parse_args(
             [etl._MODE_UPLOAD] + self.common_datastore_args + ['--privacy'])
-        self.assertRaises(
-            SystemExit, etl.main, wrong_mode,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, wrong_mode, testing=True)
         wrong_type = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_course_args + ['--privacy'])
-        self.assertRaises(
-            SystemExit, etl.main, wrong_type,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, wrong_type, testing=True)
 
     def test_privacy_secret_fails_if_not_download_datastore_with_privacy(self):
         """Tests invalid flag combinations related to --privacy."""
         missing_privacy = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
             ['--privacy_secret', 'foo'])
-        self.assertRaises(
-            SystemExit, etl.main, missing_privacy,
-            environment_class=testing.FakeEnvironment)
-        self.assertRaises(
-            SystemExit, etl.main, missing_privacy,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, missing_privacy, testing=True)
+        self.assertRaises(SystemExit, etl.main, missing_privacy, testing=True)
         wrong_mode = etl.create_args_parser().parse_args(
             [etl._MODE_UPLOAD] + self.common_datastore_args +
             ['--privacy_secret', 'foo', '--privacy'])
-        self.assertRaises(
-            SystemExit, etl.main, wrong_mode,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, wrong_mode, testing=True)
         wrong_type = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_course_args +
             ['--privacy_secret', 'foo', '--privacy'])
-        self.assertRaises(
-            SystemExit, etl.main, wrong_type,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, wrong_type, testing=True)
 
     def test_run_fails_when_delegated_argument_parsing_fails(self):
         bad_args = etl.create_args_parser().parse_args(
             ['run', 'tools.etl_lib.Job'] + self.common_args +
             ['--job_args', "'unexpected_argument'"])
-        self.assertRaises(
-            SystemExit, etl.main, bad_args,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, bad_args, testing=True)
 
     def test_run_fails_when_if_requested_class_missing_or_invalid(self):
         bad_args = etl.create_args_parser().parse_args(
             ['run', 'a.missing.class.or.Module'] + self.common_args)
-        self.assertRaises(
-            SystemExit, etl.main, bad_args,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, bad_args, testing=True)
         bad_args = etl.create_args_parser().parse_args(
             ['run', 'tools.etl.etl._ZipArchive'] + self.common_args)
-        self.assertRaises(
-            SystemExit, etl.main, bad_args,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, bad_args, testing=True)
 
     def test_run_print_memcache_stats_succeeds(self):
         """Tests examples.WriteStudentEmailsToFile prints stats to stdout."""
@@ -5251,7 +5206,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         stdout = cStringIO.StringIO()
         try:
             sys.stdout = stdout
-            etl.main(args, environment_class=testing.FakeEnvironment)
+            etl.main(args, testing=True)
         finally:
             sys.stdout = old_stdout
 
@@ -5278,7 +5233,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         args = etl.create_args_parser().parse_args(
             ['run', 'tools.etl.etl_lib.Job'] + self.common_args +
             ['--disable_remote'])
-        etl.main(args)
+        etl.main(args, testing=True)
 
     def test_run_upload_file_to_course_succeeds(self):
         """Tests upload of a single local file to a course."""
@@ -5297,7 +5252,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         context = etl_lib.get_context(args.course_url_prefix)
 
         self.assertFalse(context.fs.impl.get(remote_path))
-        etl.main(args, environment_class=testing.FakeEnvironment)
+        etl.main(args, testing=True)
         self.assertEqual(contents, context.fs.impl.get(remote_path).read())
 
     def test_run_write_student_emails_to_file_succeeds(self):
@@ -5319,14 +5274,13 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         finally:
             namespace_manager.set_namespace(old_namespace)
 
-        etl.main(args, environment_class=testing.FakeEnvironment)
+        etl.main(args, testing=True)
         self.assertEqual('%s\n%s\n' % (email1, email2), open(path).read())
 
     def test_upload_course_fails_if_archive_cannot_be_opened(self):
         sites.setup_courses(self.raw)
         self.assertRaises(
-            SystemExit, etl.main, self.upload_course_args,
-            environment_class=testing.FakeEnvironment)
+            SystemExit, etl.main, self.upload_course_args, testing=True)
 
     def test_upload_course_fails_if_archive_course_json_malformed(self):
         self.create_archive()
@@ -5338,8 +5292,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             'garbage')
         zip_archive.close()
         self.assertRaises(
-            SystemExit, etl.main, self.upload_course_args,
-            environment_class=testing.FakeEnvironment)
+            SystemExit, etl.main, self.upload_course_args, testing=True)
 
     def test_upload_course_fails_if_archive_course_yaml_malformed(self):
         self.create_archive()
@@ -5351,30 +5304,25 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             '{')
         zip_archive.close()
         self.assertRaises(
-            SystemExit, etl.main, self.upload_course_args,
-            environment_class=testing.FakeEnvironment)
+            SystemExit, etl.main, self.upload_course_args, testing=True)
 
     def test_upload_course_fails_if_course_has_non_course_yaml_contents(self):
         self.upload_all_sample_course_files([])
         self.import_sample_course()
         self.assertRaises(
-            SystemExit, etl.main, self.upload_course_args,
-            environment_class=testing.FakeEnvironment)
+            SystemExit, etl.main, self.upload_course_args, testing=True)
 
     def test_upload_course_fails_if_force_overwrite_passed_with_bad_args(self):
         self.create_archive()
         bad_args = etl.create_args_parser().parse_args(
             [etl._MODE_UPLOAD] + self.common_datastore_args + [
                 '--force_overwrite'])
-        self.assertRaises(
-            SystemExit, etl.main, bad_args,
-            environment_class=testing.FakeEnvironment)
+        self.assertRaises(SystemExit, etl.main, bad_args, testing=True)
 
     def test_upload_course_fails_if_no_course_with_url_prefix_found(self):
         self.create_archive()
         self.assertRaises(
-            SystemExit, etl.main, self.upload_course_args,
-            environment_class=testing.FakeEnvironment)
+            SystemExit, etl.main, self.upload_course_args, testing=True)
 
     def _get_all_entity_files(self):
         files = []
@@ -5394,8 +5342,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         all_files_before_upload = set(
             etl._filter_filesystem_files(etl._list_all(
                 context, include_inherited=True)))
-        etl.main(
-            self.upload_course_args, environment_class=testing.FakeEnvironment)
+        etl.main(self.upload_course_args, testing=True)
 
         # check archive content
         archive = etl._init_archive(self.archive_path, etl.ARCHIVE_TYPE_ZIP)
@@ -5439,15 +5386,11 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
         self.upload_all_sample_course_files([])
         self.import_sample_course()
-        etl.main(
-            self.download_course_args,
-            environment_class=testing.FakeEnvironment)
+        etl.main(self.download_course_args, testing=True)
         force_overwrite_args = etl.create_args_parser().parse_args(
             [etl._MODE_UPLOAD] + self.common_course_args + [
                 '--force_overwrite'])
-        etl.main(
-            force_overwrite_args,
-            environment_class=testing.FakeEnvironment)
+        etl.main(force_overwrite_args, testing=True)
         archive = etl._init_archive(self.archive_path, etl.ARCHIVE_TYPE_ZIP)
         archive.open('r')
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
@@ -5498,7 +5441,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         etl.main(etl.create_args_parser().parse_args([etl._MODE_DOWNLOAD] +
                                        self.common_datastore_args +
                                        extra_args),
-                 environment_class=testing.FakeEnvironment)
+                 testing=True)
 
     def _clear_datastore(self):
         self.swap(
@@ -5506,14 +5449,14 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             lambda x: etl._DELETE_DATASTORE_CONFIRMATION_INPUT)
         etl.main(etl.create_args_parser().parse_args([etl._MODE_DELETE] +
                                        self.common_datastore_args),
-                 environment_class=testing.FakeEnvironment)
+                 testing=True)
 
     def _upload_archive(self, extra_args=None):
         extra_args = extra_args or []
         etl.main(etl.create_args_parser().parse_args([etl._MODE_UPLOAD] +
                                        self.common_datastore_args +
                                        extra_args),
-                 environment_class=testing.FakeEnvironment)
+                 testing=True)
 
     def _test_upload_valid_reference(self, pii_key, download_args):
         # Make ETL archive of item with PII in key using encoding.
@@ -5572,12 +5515,12 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             EtlTestEntityIllegal(score=123).put()
         etl.main(etl.create_args_parser().parse_args([etl._MODE_DOWNLOAD] +
                                        self.common_datastore_args),
-                 environment_class=testing.FakeEnvironment)
+                 testing=True)
 
         with self.assertRaises(SystemExit):
             etl.main(etl.create_args_parser().parse_args([etl._MODE_UPLOAD] +
                                            self.common_datastore_args),
-                     environment_class=testing.FakeEnvironment)
+                     testing=True)
 
     def test_upload_with_pre_existing_data(self):
         # make archive file with one element.
@@ -5710,33 +5653,119 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         # Must run etl.main() to get crypto module loaded.
         args = etl.create_args_parser().parse_args(['download'] +
                                                    self.common_course_args)
-        etl.main(args, environment_class=testing.FakeEnvironment)
+        etl.main(args, testing=True)
         self.assertEqual(
             crypto.hmac_sha_2_256_transform('secret', 'value'),
             etl._get_privacy_transform_fn(True, 'secret')('value'))
 
 
-# TODO(johncox): re-enable these tests once we figure out how to make webtest
-# play nice with remote_api.
-class EtlRemoteEnvironmentTestCase(actions.TestBase):
-    """Tests tools/etl/remote.py."""
+class EtlTranslationRoundTripTest(
+        testing.EtlTestBase, DatastoreBackedCourseTest):
 
     def setUp(self):
-        super(EtlRemoteEnvironmentTestCase, self).setUp()
-        self.test_environ = copy.deepcopy(os.environ)
+        super(EtlTranslationRoundTripTest, self).setUp()
+        self.archive_path = self._get_archive_path('translations.zip')
+        actions.login('admin@foo.com', is_admin=True)
+        sites.setup_courses('course:/test::ns_test')
 
-    def disabled_test_can_establish_environment_in_dev_mode(self):
-        # Stub the call that requires user input so the test runs unattended.
-        self.swap(__builtin__, 'raw_input', lambda _: 'username')
-        self.assertEqual(os.environ['SERVER_SOFTWARE'], remote.SERVER_SOFTWARE)
-        # establish() performs RPC. If it doesn't throw, we're good.
-        remote.Environment('mycourse', 'localhost:8080').establish()
+    def _delete_archive_file(self):
+        os.remove(self.archive_path)
 
-    def disabled_test_can_establish_environment_in_test_mode(self):
-        self.test_environ['SERVER_SOFTWARE'] = remote.TEST_SERVER_SOFTWARE
-        self.swap(os, 'environ', self.test_environ)
-        # establish() performs RPC. If it doesn't throw, we're good.
-        remote.Environment('mycourse', 'localhost:8080').establish()
+    def _get_archive_path(self, name):
+        return os.path.join(self.test_tempdir, name)
+
+    def _get_ln_locale_element(self):
+        dom = self.parse_html_string(self.testapp.get(
+            '/test/dashboard?action=i18n_dashboard').body)
+        return dom.find('.//*[@class="language-header"]')
+
+    def _run_download_course(self):
+        etl_command = [
+            'download', 'course', '/test', 'localhost', '--archive_path',
+            self.archive_path]
+        self._run_etl_command(etl_command)
+
+    def _run_download_datastore(self):
+        etl_command = [
+            'download', 'datastore', '/test', 'localhost', '--archive_path',
+            self.archive_path]
+        self._run_etl_command(etl_command)
+
+    def _run_delete_job(self):
+        etl_command = [
+            'run', 'modules.i18n_dashboard.jobs.DeleteTranslations', '/test',
+            'localhost']
+        self._run_etl_command(etl_command)
+
+    def _run_download_job(self):
+        etl_command = [
+            'run', 'modules.i18n_dashboard.jobs.DownloadTranslations', '/test',
+            'localhost', '--job_args=' + self.archive_path]
+        self._run_etl_command(etl_command)
+
+    def _run_translate_job(self):
+        etl_command = [
+            'run', 'modules.i18n_dashboard.jobs.TranslateToReversedCase',
+            '/test', 'localhost']
+        self._run_etl_command(etl_command)
+
+    def _run_upload_job(self):
+        etl_command = [
+            'run', 'modules.i18n_dashboard.jobs.UploadTranslations', '/test',
+            'localhost', '--job_args=' + self.archive_path]
+        self._run_etl_command(etl_command)
+
+    def _run_etl_command(self, etl_command):
+        parsed_args = etl.create_args_parser().parse_args(etl_command)
+        etl.main(parsed_args, testing=True)
+
+    def assert_archive_file_exists(self):
+        self.assertTrue(os.path.exists(self.archive_path))
+
+    def assert_ln_locale_in_course(self):
+        self.assertIsNotNone(self._get_ln_locale_element())
+
+    def assert_ln_locale_not_in_course(self):
+        self.assertIsNone(self._get_ln_locale_element())
+
+    def assert_zipfile_contains_only_ln_locale(self):
+        self.assert_archive_file_exists()
+
+        with zipfile.ZipFile(self.archive_path) as zf:
+            files = zf.infolist()
+            self.assertEqual(
+                ['locale/ln/LC_MESSAGES/messages.po'],
+                [f.filename for f in files])
+
+    def test_full_round_trip_of_data_via_i18n_dashboard_module_jobs(self):
+        self.assert_ln_locale_not_in_course()
+
+        self._run_translate_job()
+
+        self.assert_ln_locale_in_course()
+
+        self._run_download_job()
+        self.assert_zipfile_contains_only_ln_locale()
+        self.assert_ln_locale_in_course()
+
+        self._run_delete_job()
+
+        self.assert_ln_locale_not_in_course()
+
+        self._run_upload_job()
+
+        self.assert_ln_locale_in_course()
+
+        # As an additional sanity check, make sure we can download the course
+        # definitions and datastore data for a course with translations.
+
+        self._delete_archive_file()
+        self._run_download_course()
+        self.assert_archive_file_exists()
+
+        self._delete_archive_file()
+        self._run_download_datastore()
+        self.assert_archive_file_exists()
 
 
 class CourseUrlRewritingTest(CourseUrlRewritingTestBase):

@@ -18,23 +18,22 @@ There are four features:
 
 1. Download and upload of Course Builder 1.3+ data:
 
-$ python etl.py download course /cs101 myapp server.appspot.com archive.zip
+$ python etl.py download course /cs101 server.appspot.com archive.zip
 
 This will result in a file called archive.zip that contains the files that make
-up the Course Builder 1.3+ course found at the URL /cs101 on the application
-with id myapp running on the server named server.appspot.com. archive.zip will
-contain assets and data files from the course along with a manifest.json
-enumerating them. The format of archive.zip will change and should not be relied
-upon.
+up the Course Builder 1.3+ course found at the URL /cs101 on the deployment
+running on the server named server.appspot.com. archive.zip will contain assets
+and data files from the course along with a manifest.json enumerating them. The
+format of archive.zip will change and should not be relied upon.
 
 For upload of course and related data
 
-$ python etl.py upload course /cs101 myapp server.appspot.com \
+$ python etl.py upload course /cs101 server.appspot.com \
     --archive_path archive.zip
 
 2. Download of datastore entities. This feature is experimental.
 
-$ python etl.py download datastore /cs101 myapp server.appspot.com \
+$ python etl.py download datastore /cs101 server.appspot.com \
     --archive_path archive.zip --datastore_types model1,model2
 
 This will result in a file called archive.zip that contains a dump of all model1
@@ -48,7 +47,7 @@ respectively.
 
 3. Upload of datastore entities.  This feature is experimental.
 
-$ python etl.py upload datastore /cs101 myapp server.apppot.com \
+$ python etl.py upload datastore /cs101 server.apppot.com \
     --archive_path archive.zip
 
 Uploads should ideally be (but are not required to be) done to courses that
@@ -92,12 +91,12 @@ before uploading to a production installation:
 ./scripts/etl.sh --force_overwrite --batch_size=100 --resume \
   --exclude_types=RootUsageEntity,KeyValueEntity,DefinitionEntity,UsageEntity \
   --archive_path my_archive_file.zip \
-  upload datastore /new_course mycourse localhost:8081
+  upload datastore /new_course localhost
 
 4. Deletion of all datastore entities in a single course. Delete of the course
    itself not supported. To run:
 
-$ python etl.py delete datastore /cs101 myapp server.appspot.com
+$ python etl.py delete datastore /cs101 server.appspot.com
 
 Before delete commences, you will be told what entity kinds will be deleted and
 you will be prompted for confirmation. Note that this process is irreversible,
@@ -115,7 +114,7 @@ flush all operations, all caches for all courses will be flushed.
 
 5. Execution of custom jobs.
 
-$ python etl.py run path.to.my.Job /cs101 myapp server.appspot.com \
+$ python etl.py run path.to.my.Job /cs101 server.appspot.com \
     --job_args='more_args --delegated_to my.Job'
 
 This requires that you have written a custom class named Job found in the
@@ -147,12 +146,9 @@ In order to run this script, you must add the following to the head of sys.path:
   4. If you are running a custom job, the absolute paths of all code required
      by your custom job, unless covered above.
 
-When running etl.py against a remote endpoint you will be prompted for a
-username and password. If the remote endpoint is a development server, you may
-enter any username and password. If the remote endpoint is in production, enter
-your username and an application-specific password. See
-http://support.google.com/accounts/bin/answer.py?hl=en&answer=185833 for help on
-application-specific passwords.
+When running etl.py against a remote endpoint, you must authenticate via OAuth2.
+If you have not authenticated, you will get an error with instructions on how to
+authenticate.
 
 Pass --help for additional usage information.
 """
@@ -204,6 +200,9 @@ _COURSE_JSON_PATH_SUFFIX = 'data/course.json'
 _COURSE_YAML_PATH_SUFFIX = 'course.yaml'
 # String. Message the user must type to confirm datastore deletion.
 _DELETE_DATASTORE_CONFIRMATION_INPUT = 'YES, DELETE'
+# Default value of --api_port passed to the dev appserver. Keep this in sync
+# with the value in scripts/parse_start_args.sh's API_PORT.
+_DEV_APPSERVER_API_HOST_DEFAULT_PORT = 8082
 # List of types which are not to be downloaded.  These are types which
 # are either known to be transient, disposable state classes (e.g.,
 # map/reduce's "_AE_... classes), or legacy types no longer required.
@@ -292,9 +291,6 @@ def create_args_parser():
             "URL prefix of the course you want to download (e.g. '/foo' in "
             "'course:/foo:/directory:namespace'"), type=str)
     parser.add_argument(
-        'application_id',
-        help="The id of the application to read from (e.g. 'myapp')", type=str)
-    parser.add_argument(
         'server',
         help=(
             'The full name of the source application to read from (e.g. '
@@ -334,6 +330,14 @@ def create_args_parser():
             'If mode is upload,  forces overwrite of entities '
             'on the target system that are also present in the archive. Note '
             'that this operation is dangerous and may result in data loss.'))
+    parser.add_argument(
+        '--port', default=_DEV_APPSERVER_API_HOST_DEFAULT_PORT,
+        help=(
+            'If running against localhost, this is the port remote API '
+            'requests are sent to. Default is %s. Ignored if running against '
+            'non-localhost deployments. Must be the value passed to '
+            'dev_appserver.py via --api_port.' % (
+                _DEV_APPSERVER_API_HOST_DEFAULT_PORT)))
     parser.add_argument(
         '--resume', action='store_true',
         help=(
@@ -1659,14 +1663,11 @@ def _write_model_to_json_file(json_file, privacy_transform_fn, model):
     json_file.write(transforms.dict_to_json(entity_dict))
 
 
-def main(parsed_args, environment_class=None):
+def main(parsed_args, testing=False):
     """Performs the requested ETL operation.
 
     Args:
         parsed_args: argparse.Namespace. Parsed command-line arguments.
-        environment_class: None or remote.Environment. Environment setup class
-            used to configure the service stub map. Injectable for tests only;
-            defaults to remote.Environment if not specified.
     """
     _validate_arguments(parsed_args)
     _LOG.setLevel(parsed_args.log_level.upper())
@@ -1674,16 +1675,14 @@ def main(parsed_args, environment_class=None):
     _set_env_vars_from_app_yaml()
     _import_entity_modules()
 
-    if not environment_class:
-        environment_class = remote.Environment
+    environment = remote.Environment(
+        parsed_args.server, port=parsed_args.port, testing=testing)
     _LOG.info('Mode is %s', parsed_args.mode)
-    _LOG.info(
-        'Target is url %s from application_id %s on server %s',
-        parsed_args.course_url_prefix, parsed_args.application_id,
-        parsed_args.server)
+    _LOG.info('Target is: %s', environment.get_info())
+
     if not parsed_args.disable_remote:
-        environment_class(
-            parsed_args.application_id, parsed_args.server).establish()
+        environment.establish()
+
     _force_config_reload()
 
     if parsed_args.mode == _MODE_DELETE:
