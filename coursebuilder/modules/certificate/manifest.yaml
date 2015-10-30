@@ -1,0 +1,23 @@
+tests:
+  functional:
+    - modules.certificate.certificate_tests.CertificateCriteriaTestCase = 6
+    - modules.certificate.certificate_tests.CertificateHandlerTestCase = 5
+  unit:
+    - modules.certificate.certificate_unit_tests.JavaScriptTests = 1
+
+files:
+  - modules/certificate/__init__.py
+  - modules/certificate/certificate.py
+  - modules/certificate/certificate_tests.py
+  - modules/certificate/certificate_unit_tests.py
+  - modules/certificate/certificates_earned.html
+  - modules/certificate/course_settings.css
+  - modules/certificate/course_settings.js
+  - modules/certificate/custom_criteria.py
+  - modules/certificate/javascript_tests/fixture.html
+  - modules/certificate/javascript_tests/karma.conf.js
+  - modules/certificate/javascript_tests/tests.js
+  - modules/certificate/messages.py
+  - modules/certificate/resources/css/certificate.css
+  - modules/certificate/resources/images/cert.png
+  - modules/certificate/templates/certificate.html

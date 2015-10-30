@@ -1,0 +1,38 @@
+tests:
+  functional:
+    - modules.core_tags.core_tags_tests.GoogleDriveRESTHandlerTest = 8
+    - modules.core_tags.core_tags_tests.GoogleDriveTagRendererTest = 8
+    - modules.core_tags.core_tags_tests.RuntimeTest = 13
+    - modules.core_tags.core_tags_tests.TagsInclude = 8
+    - modules.core_tags.core_tags_tests.TagsMarkdown = 1
+  unit:
+    - modules.core_tags.core_tags_unit_tests.JavaScriptTests = 1
+
+files:
+  - modules/core_tags/__init__.py
+  - modules/core_tags/_static/css/markdown.css
+  - modules/core_tags/_static/images/docs.png
+  - modules/core_tags/_static/images/drive.png
+  - modules/core_tags/_static/images/forumembed.png
+  - modules/core_tags/_static/images/html5-badge-h-solo.png
+  - modules/core_tags/_static/images/iframe.png
+  - modules/core_tags/_static/images/include.png
+  - modules/core_tags/_static/images/markdown.png
+  - modules/core_tags/_static/images/spreadsheets.png
+  - modules/core_tags/_static/images/youtube.png
+  - modules/core_tags/_static/js/drive_tag_parent_frame.js
+  - modules/core_tags/_static/js/drive_tag_refresh.js
+  - modules/core_tags/_static/js/drive_tag_script_manager.js
+  - modules/core_tags/_static/js/html5_video.js
+  - modules/core_tags/_static/js/youtube_video.js
+  - modules/core_tags/core_tags.py
+  - modules/core_tags/core_tags_tests.py
+  - modules/core_tags/core_tags_unit_tests.py
+  - modules/core_tags/javascript_tests/karma.conf.js
+  - modules/core_tags/javascript_tests/tests.js
+  - modules/core_tags/messages.py
+  - modules/core_tags/templates/drive_error.html
+  - modules/core_tags/templates/drive_item.html
+  - modules/core_tags/templates/drive_tag_child_frame.js
+  - modules/core_tags/templates/google_drive_tag.css
+  - modules/core_tags/templates/google_drive_tag_lightbox.js

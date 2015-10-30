@@ -33,7 +33,7 @@ describe('certificate criteria user interface', function() {
       };
       jasmine.getFixtures().fixturesPath = 'base/';
       loadFixtures(
-          'tests/unit/javascript_tests/modules_certificate/fixture.html');
+          'modules/certificate/javascript_tests/fixture.html');
       this.assessmentDropdown = $(".assessment-dropdown select");
       // Execute the jQuery onReady function
       onReady();

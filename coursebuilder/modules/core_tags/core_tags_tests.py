@@ -58,6 +58,7 @@ class GoogleDriveTestBase(actions.TestBase):
             courses.COURSES_CAN_USE_GOOGLE_APIS.name] = True
 
     def get_env(self, api_key=None, client_id=None):
+        # Treat as module-protected. pylint: disable=protected-access
         result = {
             courses._CONFIG_KEY_PART_COURSE: {
                 courses._CONFIG_KEY_PART_GOOGLE: {}
@@ -91,15 +92,18 @@ class RuntimeTest(GoogleDriveTestBase):
         super(RuntimeTest, self).tearDown()
 
     def test_can_edit_false_if_user_is_not_logged_in(self):
+        # Treat as module-protected. pylint: disable=protected-access
         self.assertFalse(core_tags._Runtime(self.app_context).can_edit())
 
     def test_can_edit_false_if_user_is_not_admin(self):
         actions.login(self.email, is_admin=False)
 
+        # Treat as module-protected. pylint: disable=protected-access
         self.assertFalse(core_tags._Runtime(self.app_context).can_edit())
 
     def test_can_edit_true_if_user_is_admin(self):
         actions.login(self.email, is_admin=True)
+        # Treat as module-protected. pylint: disable=protected-access
         runtime = core_tags._Runtime(self.app_context)
 
         self.assertTrue(runtime.can_edit())
@@ -107,6 +111,7 @@ class RuntimeTest(GoogleDriveTestBase):
     def test_configured_false_when_courses_cannot_use_google_apis(self):
         with actions.OverriddenEnvironment(self.get_env(
                 api_key=self.api_key, client_id=self.client_id)):
+            # Treat as module-protected. pylint: disable=protected-access
             self.assertFalse(core_tags._Runtime(self.app_context).configured())
 
     def test_configured_false_when_api_key_empty(self):
@@ -114,6 +119,7 @@ class RuntimeTest(GoogleDriveTestBase):
 
         with actions.OverriddenEnvironment(self.get_env(
                 client_id=self.client_id)):
+            # Treat as module-protected. pylint: disable=protected-access
             self.assertFalse(core_tags._Runtime(self.app_context).configured())
 
     def test_configured_false_when_client_id_empty(self):
@@ -121,6 +127,7 @@ class RuntimeTest(GoogleDriveTestBase):
 
         with actions.OverriddenEnvironment(self.get_env(
                 api_key=self.api_key)):
+            # Treat as module-protected. pylint: disable=protected-access
             self.assertFalse(core_tags._Runtime(self.app_context).configured())
 
     def test_configured_true_when_enabled_and_api_key_and_client_id_set(self):
@@ -128,34 +135,41 @@ class RuntimeTest(GoogleDriveTestBase):
 
         with actions.OverriddenEnvironment(self.get_env(
                 api_key=self.api_key, client_id=self.client_id)):
+            # Treat as module-protected. pylint: disable=protected-access
             self.assertTrue(core_tags._Runtime(self.app_context).configured())
 
     def test_courses_cannot_use_google_apis_by_default(self):
+        # Treat as module-protected. pylint: disable=protected-access
         self.assertFalse(
             core_tags._Runtime(self.app_context).courses_can_use_google_apis())
 
     def test_courses_can_use_google_apis_with_override(self):
         self.enable_courses_can_use_google_apis()
 
+        # Treat as module-protected. pylint: disable=protected-access
         self.assertTrue(
             core_tags._Runtime(self.app_context).courses_can_use_google_apis())
 
     def test_get_api_key_returns_empty_string_when_not_set(self):
+        # Treat as module-protected. pylint: disable=protected-access
         self.assertEqual('', core_tags._Runtime(self.app_context).get_api_key())
 
     def test_get_api_key_returns_expected_value_when_set(self):
         with actions.OverriddenEnvironment(self.get_env(api_key=self.api_key)):
+            # Treat as module-protected. pylint: disable=protected-access
             self.assertEqual(
                 self.api_key,
                 core_tags._Runtime(self.app_context).get_api_key())
 
     def test_get_client_id_returns_empty_string_when_not_set(self):
+        # Treat as module-protected. pylint: disable=protected-access
         self.assertEqual(
             '', core_tags._Runtime(self.app_context).get_client_id())
 
     def test_get_client_id_returns_expected_value_when_set(self):
         with actions.OverriddenEnvironment(self.get_env(
                 client_id=self.client_id)):
+            # Treat as module-protected. pylint: disable=protected-access
             self.assertEqual(
                 self.client_id,
                 core_tags._Runtime(self.app_context).get_client_id())
@@ -210,6 +224,7 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
             'type_id': self.type_id,
             'xsrf_token': self.xsrf_token,
         })
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.put(
             core_tags._GOOGLE_DRIVE_TAG_PATH, params=params)
         matches = models.ContentChunkDAO.get_by_uid(self.uid)
@@ -239,6 +254,7 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
         self.assertEqual('old_' + self.contents, old_dto.contents)
         self.assertEqual('old_' + self.content_type, old_dto.content_type)
 
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.put(
             core_tags._GOOGLE_DRIVE_TAG_PATH, params=params)
         matches = models.ContentChunkDAO.get_by_uid(self.uid)
@@ -256,6 +272,7 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
             'type_id': self.type_id,
             'xsrf_token': self.xsrf_token,
         })
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.put(
             core_tags._GOOGLE_DRIVE_TAG_PATH, expect_errors=True, params=params)
 
@@ -267,6 +284,7 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
             'type_id': self.type_id,
             'xsrf_token': self.xsrf_token,
         })
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.put(
             core_tags._GOOGLE_DRIVE_TAG_PATH, expect_errors=True, params=params)
 
@@ -278,6 +296,7 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
             'document_id': self.document_id,
             'xsrf_token': self.xsrf_token,
         })
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.put(
             core_tags._GOOGLE_DRIVE_TAG_PATH, expect_errors=True, params=params)
 
@@ -287,6 +306,7 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
         params = self._make_params({
             'xsrf_token': 'bad_' + self.xsrf_token,
         })
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.put(
             core_tags._GOOGLE_DRIVE_TAG_PATH, expect_errors=True, params=params)
 
@@ -300,6 +320,7 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
             'type_id': self.type_id,
             'xsrf_token': self.xsrf_token,
         })
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.put(
             core_tags._GOOGLE_DRIVE_TAG_PATH, expect_errors=True, params=params)
 
@@ -320,6 +341,7 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
             'type_id': self.type_id,
             'xsrf_token': self.xsrf_token,
         })
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.put(
             core_tags._GOOGLE_DRIVE_TAG_PATH, expect_errors=True, params=params)
 
@@ -360,6 +382,7 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
         self.assert_response(404, 'Content chunk not found', response)
 
     def test_get_returns_200_if_content_chunk_found(self):
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.get(
             core_tags._GOOGLE_DRIVE_TAG_RENDERER_PATH,
             params={
@@ -376,6 +399,7 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
             'resource_id': self.resource_id,
             'type_id': self.type_id,
         }))
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.get(
             core_tags._GOOGLE_DRIVE_TAG_RENDERER_PATH,
             params={
@@ -387,6 +411,7 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
         self.assert_200_response(self.contents, response)
 
     def test_get_returns_400_if_resource_id_missing(self):
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.get(
             core_tags._GOOGLE_DRIVE_TAG_RENDERER_PATH, expect_errors=True,
             params={'type_id': self.type_id})
@@ -394,6 +419,7 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
         self.assert_400_response(response)
 
     def test_get_returns_400_if_type_id_missing(self):
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.get(
             core_tags._GOOGLE_DRIVE_TAG_RENDERER_PATH, expect_errors=True,
             params={'resource_id': self.resource_id})
@@ -401,6 +427,7 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
         self.assert_400_response(response)
 
     def test_get_returns_404_if_content_chunk_not_found(self):
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.get(
             core_tags._GOOGLE_DRIVE_TAG_RENDERER_PATH, expect_errors=True,
             params={
@@ -412,6 +439,7 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
 
     def test_get_returns_404_if_courses_cannot_use_google_apis(self):
         self.disable_courses_can_use_google_apis()
+        # Treat as module-protected. pylint: disable=protected-access
         response = self.testapp.get(
             core_tags._GOOGLE_DRIVE_TAG_RENDERER_PATH, expect_errors=True,
             params={
@@ -422,6 +450,7 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
         self.assertEqual(404, response.status_code)
 
     def test_get_tag_renderer_url_for_course_at_root(self):
+        # Treat as module-protected. pylint: disable=protected-access
         self.assertEqual(
             '/modules/core_tags/googledrivetagrenderer?'
             'resource_id=resource_id&type_id=type_id',
@@ -429,6 +458,7 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
                 '/', 'type_id', 'resource_id'))
 
     def test_get_tag_renderer_url_for_course_with_slug(self):
+        # Treat as module-protected. pylint: disable=protected-access
         self.assertEqual(
             '/slug/modules/core_tags/googledrivetagrenderer?'
             'resource_id=resource_id&type_id=type_id',

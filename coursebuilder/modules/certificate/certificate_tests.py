@@ -17,7 +17,6 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 
-import actions
 from controllers import sites
 from models import courses
 from models import models
@@ -27,6 +26,7 @@ from modules.certificate import custom_criteria
 from modules.review import domain
 from modules.review import peer
 from modules.review import review as review_module
+from tests.functional import actions
 
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db

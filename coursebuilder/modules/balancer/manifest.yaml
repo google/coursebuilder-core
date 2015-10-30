@@ -1,0 +1,13 @@
+tests:
+  functional:
+    - modules.balancer.balancer_tests.ExternalTaskTest = 3
+    - modules.balancer.balancer_tests.ManagerTest = 10
+    - modules.balancer.balancer_tests.ProjectRestHandlerTest = 5
+    - modules.balancer.balancer_tests.TaskRestHandlerTest = 20
+    - modules.balancer.balancer_tests.WorkerPoolTest = 2
+
+files:
+  - modules/balancer/__init__.py
+  - modules/balancer/balancer.py
+  - modules/balancer/balancer_tests.py
+  - modules/balancer/messages.py
