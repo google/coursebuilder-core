@@ -4,7 +4,7 @@
        data-question-batch-id="L{{ lesson.lesson_id }}">
     {{ lesson.objectives | gcb_tags}}
     {% if lesson.scored and not transient_student %}
-      <div class="qt-grade-scored-lesson qt-hidden">
+      <div class="qt-grade-scored-lesson" style="display:none">
         <button class="gcb-button qt-check-answer-button">
           {# I18N: Button at the bottom of a lesson page offering the student the opportunity to grade his/her answers. #}
           {{ gettext('Grade Questions') }}

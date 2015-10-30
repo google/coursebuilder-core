@@ -44,7 +44,7 @@
   {% else %}
     {% if not readonly %}
       {% if check_answers %}
-        <div class="qt-grade-scored-lesson qt-hidden">
+        <div class="qt-grade-scored-lesson" style="display:none">
           <button class="gcb-button qt-check-answer-button">
             {{ gettext(' Check Answers ') }}
           </button>
@@ -53,7 +53,7 @@
       <div class="qt-grade-report qt-hidden"
            data-question-batch-id="A{{ unit_id }}"></div>
       {% if not transient_student %}
-      <div class="qt-grade-assessment qt-hidden">
+      <div class="qt-grade-assessment" style="display:none">
         <button class="gcb-button qt-check-answer-button">
           {{ gettext(' Submit Answers ') }}
         </button>

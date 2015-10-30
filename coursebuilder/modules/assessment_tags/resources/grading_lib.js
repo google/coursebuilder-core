@@ -702,7 +702,7 @@ function findGcbQuestions() {
   // Bind the page-level grading buttons
   if (! $.isEmptyObject(gcbQuestions)) {
     $('div.qt-grade-scored-lesson')
-        .removeClass('qt-hidden')
+        .css('display', '')
         .children('button').click(function(event) {
           var dataDiv = $(
               $(event.target).parents('[data-question-batch-id]')[0]);
@@ -711,7 +711,7 @@ function findGcbQuestions() {
               messages, questionBatchId);
         });
     $('div.qt-grade-assessment')
-        .removeClass('qt-hidden')
+        .css('display', '')
         .children('button').click(function(event) {
           var dataDiv = $(
               $(event.target).parents('[data-question-batch-id]')[0]);
