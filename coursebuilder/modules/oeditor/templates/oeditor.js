@@ -499,6 +499,17 @@ function mainYuiFunction(Y) {
     };
   }
 
+  // Patch InputEx.Field to keep a copy of all the config options it was passed.
+  // This enables extra schema data to be attached to the form elements.
+  if (Y.inputEx.Field) {
+    Y.inputEx.Field.prototype._origSetOptions =
+        Y.inputEx.Field.prototype.setOptions;
+    Y.inputEx.Field.prototype.setOptions = function(options) {
+      this.allOptions = options;
+      this._origSetOptions(options);
+    };
+  }
+
   // create form and bind it to DOM
   inputExDefinition.parentEl = 'formContainer';
   cb_global.form = new Y.inputEx.Form(inputExDefinition);
@@ -713,6 +724,43 @@ TopLevelEditorControls.prototype = {
     }
   },
 
+  _lockDisabledFields: function() {
+    // InputEx does not provide full support for disabling parts of a form, so
+    // we run through the tree and explicitly disable all fields maked with
+    // "disabled" flag, together with their children
+    function doRecursion(inputs, parentDisabled) {
+      for (var name in inputs) {
+        if (inputs.hasOwnProperty(name)) {
+          var field = inputs[name];
+          var disabled = parentDisabled || field.allOptions.disabled;
+
+          if (field.inputsNames) {
+            // An InputEx.Group
+            doRecursion(field.inputsNames, disabled);
+          } else if (field.subFields) {
+            // And InputEx.ListField
+            if (disabled) {
+              disableListFieldControls(field);
+            }
+            doRecursion(field.subFields, disabled);
+          } else {
+            if (disabled) {
+              field.disable();
+            }
+          }
+        }
+      }
+    }
+
+    function disableListFieldControls(field) {
+      $(field.addButton).hide();
+      $(field.fieldContainer).find('> .inputEx-ListField-childContainer ' +
+          '> div > .inputEx-List-link').hide();
+    }
+
+    doRecursion(this._env.form.inputsNames, false);
+  },
+
   _onSaveComplete: function(status, message, payload) {
     enableAllControlButtons(this._env.form);
     if (! status) {
@@ -876,6 +924,7 @@ TopLevelEditorControls.prototype = {
     // push payload into form
     var payload = parseJson(json.payload);
     this._env.form.setValue(payload);
+    this._lockDisabledFields();
     this._restoreEditorFieldState();
 
     // InputEx sets classes on invalid fields on load but we want this only

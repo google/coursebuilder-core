@@ -269,7 +269,7 @@ class SchemaPermissionRegistry(object):
                 if not user_can_view(name):
                     schema._properties.remove(prop)
                 elif not in_editable_container or not user_can_edit(name):
-                    prop._editable = False
+                    prop._extra_schema_dict_values['disabled'] = True
             for sub_name, sub_schema in schema._sub_registries.iteritems():
                 name = build_prop_path(prefix, sub_name)
                 if not user_can_view(name):

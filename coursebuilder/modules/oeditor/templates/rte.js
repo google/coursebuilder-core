@@ -49,6 +49,9 @@ function bindEditorField(Y) {
       that.codeMirrorInstance.refresh();
     }, 0);
   };
+  HtmlEditor.prototype.disable = function() {
+    this.codeMirrorInstance.setOption('readOnly', 'nocursor');
+  };
 
   /**
    * An editor component which provides plain text editing in a textarea.
@@ -382,6 +385,13 @@ function bindEditorField(Y) {
     $.when(this.editorIsRendered).then(function() {
       that.editor.setEditorHTML(value || '');
       that._customTagManager.insertMarkerTags();
+    });
+  };
+  RichTextEditor.prototype.disable = function() {
+    var that = this;
+    $.when(this.editorIsRendered).then(function() {
+      that.editor.set('disabled', true);
+      that.editor.get('iframe').setStyle('display', 'block');
     });
   };
   RichTextEditor.prototype._tagButtonCompare = function(button1, button2) {
@@ -772,6 +782,10 @@ function bindEditorField(Y) {
       that._select(targetEditor);
       that.tabbar.selectTabByLabel(targetLabel);
     });
+  };
+  EditorField.prototype.disable = function() {
+    this.richTextEditor.disable();
+    this.htmlEditor.disable();
   };
   EditorField.prototype._select = function (editor) {
     var value;

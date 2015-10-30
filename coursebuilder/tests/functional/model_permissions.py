@@ -192,13 +192,13 @@ class PermissionsTests(actions.TestBase):
             ret = reg.redact_schema_to_permitted_fields(
                 self.app_context, self.PERMISSION_SCOPE, self.schema)
             a = ret.get_property('a')
-            self.assertTrue(a.editable)
+            self.assertNotIn('disabled', a._extra_schema_dict_values)
             self.assertFalse(a.hidden)
             b = ret.get_property('b')
-            self.assertTrue(b.editable)
+            self.assertNotIn('disabled', b._extra_schema_dict_values)
             self.assertFalse(b.hidden)
             c = ret.get_property('c')
-            self.assertTrue(c.editable)
+            self.assertNotIn('disabled', c._extra_schema_dict_values)
             self.assertFalse(c.hidden)
 
             # 'a', 'b' readable, 'a' writable, and 'c' removed for assistant.
@@ -206,10 +206,10 @@ class PermissionsTests(actions.TestBase):
             ret = reg.redact_schema_to_permitted_fields(
                 self.app_context, self.PERMISSION_SCOPE, self.schema)
             a = ret.get_property('a')
-            self.assertTrue(a.editable)
+            self.assertNotIn('disabled', a._extra_schema_dict_values)
             self.assertFalse(a.hidden)
             b = ret.get_property('b')
-            self.assertFalse(b.editable)
+            self.assertTrue(b._extra_schema_dict_values.get('disabled'))
             self.assertFalse(b.hidden)
             self.assertIsNone(ret.get_property('c'))
 
