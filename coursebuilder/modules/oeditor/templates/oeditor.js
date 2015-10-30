@@ -429,6 +429,9 @@ function getYuiConfig(bundle_lib_files) {
  * otherwise.
  */
 function alertIfNotSavedChanges(cb_global) {
+  if (cb_global.is_deleted) {
+    return null;
+  }
   if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue())) {
     return null;
   } else {
@@ -867,6 +870,7 @@ TopLevelEditorControls.prototype = {
         document.body.appendChild(form);
         form.submit();
       }
+      this._env.is_deleted = true;
     } else {
       enableAllControlButtons(this._env.form);
     }
