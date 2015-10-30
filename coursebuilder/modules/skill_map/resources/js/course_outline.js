@@ -36,8 +36,8 @@ function getTooltip(skillDisplayRootElt) {
  * have overflowed.
  */
 function bindSkillListOverflowTooltip() {
-  $('div.course-outline').tooltip({
-    items: 'div.row',
+  $('.course-outline').tooltip({
+    items: '.gcb-list__row',
     content: function() {
       return getTooltip(this);
     },
@@ -50,7 +50,7 @@ function bindSkillListOverflowTooltip() {
 }
 
 function init() {
-  if ($('div.course-outline').length > 0) {
+  if ($('.course-outline').length > 0) {
     // Only initialize if the page contains the  course outline
     bindSkillListOverflowTooltip();
   }
