@@ -2,7 +2,7 @@ var YUI_BASE = process.env.YUI_BASE;
 
 module.exports = function(config) {
   config.set({
-    basePath: '../../../..',
+    basePath: '../../..',
     files: [
       YUI_BASE + '/yui/yui.js',
       YUI_BASE + '/yui-base/yui-base.js',
@@ -41,9 +41,9 @@ module.exports = function(config) {
       YUI_BASE + '/node-event-delegate/node-event-delegate.js',
       YUI_BASE + '/dom-style/dom-style.js',
       'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
-      'tests/unit/javascript_tests/modules_dashboard/*.js',
+      'modules/dashboard/javascript_tests/*.js',
       {
-        pattern: 'tests/unit/javascript_tests/modules_dashboard/*.html',
+        pattern: 'modules/dashboard/javascript_tests/*.html',
         watched: true,
         included: false,
         served: true

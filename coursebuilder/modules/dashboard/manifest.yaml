@@ -1,0 +1,70 @@
+tests:
+  functional:
+    - modules.dashboard.dashboard_tests.CourseOutlineTestCase = 3
+    - modules.dashboard.dashboard_tests.DashboardAccessTestCase = 3
+    - modules.dashboard.dashboard_tests.QuestionDashboardTestCase = 8
+    - modules.dashboard.dashboard_tests.QuestionGroupDashboardTestCase = 6
+    - modules.dashboard.dashboard_tests.RoleEditorTestCase = 3
+    - modules.dashboard.dashboard_tests.TestLessonSchema = 2
+  unit:
+    - modules.dashboard.dashboard_unit_tests.JavaScriptTests = 1
+
+files:
+  - modules/dashboard/__init__.py
+  - modules/dashboard/_static/css/course_outline.css
+  - modules/dashboard/_static/css/in_place_lesson_editor.css
+  - modules/dashboard/_static/css/mdl_undo.css
+  - modules/dashboard/_static/css/view.css
+  - modules/dashboard/dashboard.py
+  - modules/dashboard/dashboard_tests.py
+  - modules/dashboard/dashboard_unit_tests.py
+  - modules/dashboard/dto_editor.py
+  - modules/dashboard/filer.py
+  - modules/dashboard/javascript_tests/add_to_group_fixture.html
+  - modules/dashboard/javascript_tests/assets_table_fixture.html
+  - modules/dashboard/javascript_tests/filtering_fixture.html
+  - modules/dashboard/javascript_tests/karma.conf.js
+  - modules/dashboard/javascript_tests/navbar_fixture.html
+  - modules/dashboard/javascript_tests/role_editor_fixture.html
+  - modules/dashboard/javascript_tests/tests.js
+  - modules/dashboard/label_editor.py
+  - modules/dashboard/messages.py
+  - modules/dashboard/question_editor.py
+  - modules/dashboard/question_group_editor.py
+  - modules/dashboard/resources/js/course_outline.js
+  - modules/dashboard/resources/js/in_place_lesson_editor.js
+  - modules/dashboard/resources/js/view.js
+  - modules/dashboard/role_editor.py
+  - modules/dashboard/templates/add_to_group.html
+  - modules/dashboard/templates/assessment_difficulty.html
+  - modules/dashboard/templates/assessment_editor.js
+  - modules/dashboard/templates/assessment_editor_lib.js
+  - modules/dashboard/templates/assignment_individual.html
+  - modules/dashboard/templates/assignments_menu.html
+  - modules/dashboard/templates/course_infos.html
+  - modules/dashboard/templates/enrollment_assessment.html
+  - modules/dashboard/templates/gradebook.html
+  - modules/dashboard/templates/in_place_lesson_editor.html
+  - modules/dashboard/templates/in_place_lesson_editor_iframe.js
+  - modules/dashboard/templates/labels_on_students.html
+  - modules/dashboard/templates/lesson_editor.js
+  - modules/dashboard/templates/map_reduce.html
+  - modules/dashboard/templates/mc_question_editor.js
+  - modules/dashboard/templates/mc_question_editor_lib.js
+  - modules/dashboard/templates/menu_macros.html
+  - modules/dashboard/templates/multiple_choice_question.html
+  - modules/dashboard/templates/question_answers.html
+  - modules/dashboard/templates/question_editor_lib.js
+  - modules/dashboard/templates/question_filter.html
+  - modules/dashboard/templates/question_group_editor.css
+  - modules/dashboard/templates/question_group_editor.js
+  - modules/dashboard/templates/question_preview.html
+  - modules/dashboard/templates/readonly_assessment.html
+  - modules/dashboard/templates/readonly_html_assessment.html
+  - modules/dashboard/templates/role_editor.js
+  - modules/dashboard/templates/role_list.html
+  - modules/dashboard/templates/sa_question_editor.js
+  - modules/dashboard/templates/sa_question_editor_lib.js
+  - modules/dashboard/templates/student_progress.html
+  - modules/dashboard/templates/view.html
+  - modules/dashboard/utils.py

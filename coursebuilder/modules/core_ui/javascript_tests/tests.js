@@ -6,7 +6,7 @@ describe('Core UI', function() {
     cbHideMsg = jasmine.createSpy('hideMsg');
 
     jasmine.getFixtures().fixturesPath = 'base/';
-    loadFixtures('tests/unit/javascript_tests/modules_core_ui/fixture.html');
+    loadFixtures('modules/core_ui/javascript_tests/fixture.html');
   });
 
   afterEach(function() {

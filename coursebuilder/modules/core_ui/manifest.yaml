@@ -1,0 +1,18 @@
+tests:
+  unit:
+    - modules.core_ui.core_ui_unit_tests.JavaScriptTests = 1
+
+files:
+  - modules/core_ui/__init__.py
+  - modules/core_ui/_static/collapse/collapse.css
+  - modules/core_ui/_static/collapse/collapse.js
+  - modules/core_ui/_static/core-ui.js
+  - modules/core_ui/_static/lightbox/lightbox.css
+  - modules/core_ui/_static/lightbox/lightbox.js
+  - modules/core_ui/_static/list/list.css
+  - modules/core_ui/core_ui.py
+  - modules/core_ui/core_ui_unit_tests.py
+  - modules/core_ui/javascript_tests/fixture.html
+  - modules/core_ui/javascript_tests/karma.conf.js
+  - modules/core_ui/javascript_tests/tests.js
+  - modules/core_ui/templates/style_guide/style_guide.html

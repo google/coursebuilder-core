@@ -47,12 +47,6 @@ class AllJavaScriptTests(TestBase):
     def test_butterbar(self):
         self.karma_test('tests/unit/javascript_tests/assets_lib_butterbar')
 
-    def test_core_ui(self):
-        self.karma_test('tests/unit/javascript_tests/modules_core_ui')
-
-    def test_dashboard(self):
-        self.karma_test('tests/unit/javascript_tests/modules_dashboard')
-
     def test_oeditor(self):
         self.karma_test('tests/unit/javascript_tests/modules_oeditor')
 

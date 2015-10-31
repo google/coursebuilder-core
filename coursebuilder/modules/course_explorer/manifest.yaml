@@ -1,0 +1,16 @@
+tests:
+  unit:
+    - modules.course_explorer.course_explorer_tests.CourseExplorerDisabledTest = 3
+    - modules.course_explorer.course_explorer_tests.CourseExplorerTest = 5
+    - modules.course_explorer.course_explorer_tests.GlobalProfileTest = 1
+
+files:
+  - modules/course_explorer/__init__.py
+  - modules/course_explorer/course_explorer.py
+  - modules/course_explorer/course_explorer_tests.py
+  - modules/course_explorer/messages.py
+  - modules/course_explorer/student.py
+  - modules/course_explorer/views/base_explorer.html
+  - modules/course_explorer/views/base_student.html
+  - modules/course_explorer/views/course_explorer.html
+  - modules/course_explorer/views/profile.html

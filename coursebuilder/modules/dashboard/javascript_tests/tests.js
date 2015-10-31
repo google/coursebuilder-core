@@ -119,8 +119,8 @@ describe('normalize scores', function() {
 describe('asset table sorting', function() {
   beforeEach(function() {
     jasmine.getFixtures().fixturesPath = 'base/';
-    loadFixtures('tests/unit/javascript_tests/modules_dashboard/' +
-      'assets_table_fixture.html');
+    loadFixtures(
+        'modules/dashboard/javascript_tests/assets_table_fixture.html');
   });
   it('sorts the first column in ascending order', function() {
     var column_header = $('#x');
@@ -231,8 +231,7 @@ describe('question table filtering', function() {
   }
   beforeEach(function() {
     jasmine.getFixtures().fixturesPath = 'base/';
-    loadFixtures('tests/unit/javascript_tests/modules_dashboard/'
-        + 'filtering_fixture.html');
+    loadFixtures('modules/dashboard/javascript_tests/filtering_fixture.html');
     setUpFiltering();
     this.form = $("#question-filter-popup form");
     this.descriptionField = this.form.find(".description");
@@ -362,8 +361,8 @@ describe('adding a question to a question group', function() {
     cbShowMsgAutoHide = jasmine.createSpy("cbShowMsgAutoHide");
     closeModal = jasmine.createSpy("closeModal");
     jasmine.getFixtures().fixturesPath = 'base/';
-    loadFixtures('tests/unit/javascript_tests/modules_dashboard/'
-        + 'add_to_group_fixture.html');
+    loadFixtures(
+        'modules/dashboard/javascript_tests/add_to_group_fixture.html');
   });
   it('receives a successful response to add_to_question_group', function() {
     addToGroupCallback(
@@ -390,8 +389,7 @@ describe('editing a role in the role editor', function() {
   beforeEach(function() {
     showNoPermissionsMessage = jasmine.createSpy("showNoPermissionsMessage");
     jasmine.getFixtures().fixturesPath = 'base/';
-    loadFixtures('tests/unit/javascript_tests/modules_dashboard/'
-        + 'role_editor_fixture.html');
+    loadFixtures('modules/dashboard/javascript_tests/role_editor_fixture.html');
   });
   it('it shows a message when there are no permissions available', function() {
     $(".inputEx-ListField-childContainer").text("");

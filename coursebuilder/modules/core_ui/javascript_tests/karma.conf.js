@@ -1,12 +1,12 @@
 module.exports = function(config) {
   config.set({
-    basePath: '../../../..',
+    basePath: '../../..',
     files: [
       'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
       'tests/unit/javascript_tests/lib/common.js',
-      'tests/unit/javascript_tests/modules_core_ui/*.js',
+      'modules/core_ui/javascript_tests/*.js',
       {
-        pattern: 'tests/unit/javascript_tests/modules_core_ui/*.html',
+        pattern: 'modules/core_ui/javascript_tests/*.html',
         watched: true,
         included: false,
         served: true

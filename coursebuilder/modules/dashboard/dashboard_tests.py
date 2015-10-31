@@ -21,23 +21,22 @@ import itertools
 import time
 import json
 
-import actions
 from common import crypto
-from common.utils import Namespace
+from common import menus
+from common import utils
 from models import courses
+from models import custom_modules
 from models import models
 from models import resources_display
+from models import roles
 from models import transforms
-from models.custom_modules import Module
-from models.roles import Permission
-from models.roles import Roles
 from modules.dashboard import dashboard
-from common import menus
-from modules.dashboard.dashboard import DashboardHandler
-from modules.dashboard.question_group_editor import QuestionGroupRESTHandler
-from modules.dashboard.role_editor import RoleRESTHandler
+from modules.dashboard import question_group_editor
+from modules.dashboard import role_editor
+from tests.functional import actions
 
 from google.appengine.api import namespace_manager
+
 
 class QuestionTablesTests(actions.TestBase):
     def _soup_table(self):
@@ -45,6 +44,7 @@ class QuestionTablesTests(actions.TestBase):
             self.get(self.URL).body).select('.assets-table')
         self.assertEquals(len(asset_tables), 1)
         return asset_tables[0]
+
 
 class QuestionDashboardTestCase(QuestionTablesTests):
     """Tests Assets > Questions."""
@@ -384,13 +384,17 @@ class QuestionGroupDashboardTestCase(QuestionTablesTests):
         self.assertIn('Add Question Group', body)
 
     def test_adding_empty_question_group(self):
-        QG_URL = '/%s%s' % (self.COURSE_NAME, QuestionGroupRESTHandler.URI)
+        QG_URL = '/%s%s' % (
+            self.COURSE_NAME,
+            question_group_editor.QuestionGroupRESTHandler.URI)
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
-            QuestionGroupRESTHandler.XSRF_TOKEN)
+            question_group_editor.QuestionGroupRESTHandler.XSRF_TOKEN)
         description = 'Question Group'
+        version = (
+            question_group_editor.QuestionGroupRESTHandler.SCHEMA_VERSIONS[0])
         payload = {
             'description': description,
-            'version': QuestionGroupRESTHandler.SCHEMA_VERSIONS[0],
+            'version': version,
             'introduction': '',
             'items': []
         }
@@ -578,11 +582,13 @@ class RoleEditorTestCase(actions.TestBase):
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
 
-        self.old_registered_permission = Roles._REGISTERED_PERMISSIONS
-        Roles._REGISTERED_PERMISSIONS = {}
+        # Treat as module-protected. pylint: disable=protected-access
+        self.old_registered_permission = roles.Roles._REGISTERED_PERMISSIONS
+        roles.Roles._REGISTERED_PERMISSIONS = {}
 
     def tearDown(self):
-        Roles._REGISTERED_PERMISSIONS = self.old_registered_permission
+        # Treat as module-protected. pylint: disable=protected-access
+        roles.Roles._REGISTERED_PERMISSIONS = self.old_registered_permission
         namespace_manager.set_namespace(self.old_namespace)
         super(RoleEditorTestCase, self).tearDown()
 
@@ -602,18 +608,21 @@ class RoleEditorTestCase(actions.TestBase):
             'dashboard?action=edit_role&key=%s' % role_id))
 
     def test_editor_hooks(self):
-        module1 = Module('module1', '', [], [])
-        module2 = Module('module2', '', [], [])
-        module3 = Module('module3', '', [], [])
-        module4 = Module('module4', '', [], [])
-        Roles.register_permissions(module1, lambda unused: [
-            Permission('permissiona', 'a'), Permission('permissionb', 'b')])
+        module1 = custom_modules.Module('module1', '', [], [])
+        module2 = custom_modules.Module('module2', '', [], [])
+        module3 = custom_modules.Module('module3', '', [], [])
+        module4 = custom_modules.Module('module4', '', [], [])
+        roles.Roles.register_permissions(module1, lambda unused: [
+            roles.Permission('permissiona', 'a'),
+            roles.Permission('permissionb', 'b')])
 
-        Roles.register_permissions(module2, lambda unused: [
-            Permission('permissionc', 'c'), Permission('permissiond', 'd')])
-        Roles.register_permissions(module4, lambda unused: [
-            Permission('permissiong', 'g'), Permission('permissiond', 'h')])
-        handler = RoleRESTHandler()
+        roles.Roles.register_permissions(module2, lambda unused: [
+            roles.Permission('permissionc', 'c'),
+            roles.Permission('permissiond', 'd')])
+        roles.Roles.register_permissions(module4, lambda unused: [
+            roles.Permission('permissiong', 'g'),
+            roles.Permission('permissiond', 'h')])
+        handler = role_editor.RoleRESTHandler()
         handler.course = self.course
 
         datastore_permissions = {
@@ -636,7 +645,7 @@ class RoleEditorTestCase(actions.TestBase):
         self.assertEquals(permissionc['name'], 'permissionc')
         self.assertEquals(permissionc['description'], 'c')
         # Test unregistered module with assigned permission
-        permissionsf = modules[RoleRESTHandler.INACTIVE_MODULES][1]
+        permissionsf = modules[role_editor.RoleRESTHandler.INACTIVE_MODULES][1]
         self.assertEquals(permissionsf['assigned'], True)
         self.assertEquals(permissionsf['name'], 'permissionf')
         self.assertEquals(
@@ -665,7 +674,7 @@ class RoleEditorTestCase(actions.TestBase):
     def test_not_unique_role_name(self):
         role_name = 'Test Role'
         role_id = self._create_role(role_name)
-        handler = RoleRESTHandler()
+        handler = role_editor.RoleRESTHandler()
         handler.course = self.course
         editor_dict = {
             'name': role_name
@@ -695,7 +704,7 @@ class DashboardAccessTestCase(actions.TestBase):
 
         self.course_with_access = courses.Course(None, context)
 
-        with Namespace(self.course_with_access.app_context.namespace):
+        with utils.Namespace(self.course_with_access.app_context.namespace):
             role_dto = models.RoleDTO(None, {
                 'name': self.ROLE,
                 'users': [self.USER_EMAIL],
@@ -715,44 +724,44 @@ class DashboardAccessTestCase(actions.TestBase):
                 {'main_content': 'test', 'page_title': 'test'})
 
         # save properties
-        self.old_menu_group = DashboardHandler.root_menu_group
+        self.old_menu_group = dashboard.DashboardHandler.root_menu_group
         # pylint: disable=W0212
-        self.old_get_acitons = DashboardHandler._custom_get_actions
+        self.old_get_acitons = dashboard.DashboardHandler._custom_get_actions
         # pylint: enable=W0212
 
         # put a dummy method in
         menu_group = menus.MenuGroup('test', 'Test Dashboard')
-        DashboardHandler.root_menu_group = menu_group
-        DashboardHandler.default_action = self.ACTION
-        DashboardHandler.add_nav_mapping(self.ACTION, self.ACTION)
-        DashboardHandler.add_sub_nav_mapping(self.ACTION, self.ACTION,
+        dashboard.DashboardHandler.root_menu_group = menu_group
+        dashboard.DashboardHandler.default_action = self.ACTION
+        dashboard.DashboardHandler.add_nav_mapping(self.ACTION, self.ACTION)
+        dashboard.DashboardHandler.add_sub_nav_mapping(self.ACTION, self.ACTION,
             self.ACTION, action=self.ACTION, contents=test_content)
-        DashboardHandler.map_get_action_to_permission(
+        dashboard.DashboardHandler.map_get_action_to_permission(
             self.ACTION, dashboard.custom_module, self.PERMISSION)
         actions.logout()
 
     def tearDown(self):
         # restore properties
         # pylint: disable=W0212
-        DashboardHandler.root_menu_group = self.old_menu_group
-        DashboardHandler._custom_get_actions = self.old_get_acitons
+        dashboard.DashboardHandler.root_menu_group = self.old_menu_group
+        dashboard.DashboardHandler._custom_get_actions = self.old_get_acitons
         # pylint: enable=W0212
 
         super(DashboardAccessTestCase, self).tearDown()
 
     def test_dashboard_access_method(self):
-        with Namespace(self.course_with_access.app_context.namespace):
-            self.assertFalse(DashboardHandler.current_user_has_access(
+        with utils.Namespace(self.course_with_access.app_context.namespace):
+            self.assertFalse(dashboard.DashboardHandler.current_user_has_access(
                 self.course_with_access.app_context))
-        with Namespace(self.course_without_access.app_context.namespace):
-            self.assertFalse(DashboardHandler.current_user_has_access(
+        with utils.Namespace(self.course_without_access.app_context.namespace):
+            self.assertFalse(dashboard.DashboardHandler.current_user_has_access(
                 self.course_without_access.app_context))
         actions.login(self.USER_EMAIL, is_admin=False)
-        with Namespace(self.course_with_access.app_context.namespace):
-            self.assertTrue(DashboardHandler.current_user_has_access(
+        with utils.Namespace(self.course_with_access.app_context.namespace):
+            self.assertTrue(dashboard.DashboardHandler.current_user_has_access(
                 self.course_with_access.app_context))
-        with Namespace(self.course_without_access.app_context.namespace):
-            self.assertFalse(DashboardHandler.current_user_has_access(
+        with utils.Namespace(self.course_without_access.app_context.namespace):
+            self.assertFalse(dashboard.DashboardHandler.current_user_has_access(
                 self.course_without_access.app_context))
         actions.logout()
 
@@ -822,7 +831,7 @@ class DashboardCustomNavTestCase(actions.TestBase):
 
     def test_custom_top_nav(self):
         # Add a new top level navigation action
-        DashboardHandler.add_nav_mapping(self.ACTION, 'CUSTOM_MOD')
+        dashboard.DashboardHandler.add_nav_mapping(self.ACTION, 'CUSTOM_MOD')
 
         class CustomNavHandler(object):
 
@@ -831,7 +840,7 @@ class DashboardCustomNavTestCase(actions.TestBase):
                 dashboard_handler.render_page({
                     'page_title': dashboard_handler.format_title('CustomNav'),
                     'main_content': 'MainContent'})
-        DashboardHandler.add_custom_get_action(
+        dashboard.DashboardHandler.add_custom_get_action(
             self.ACTION, CustomNavHandler.show_page)
 
         dom = self.parse_html_string(self.get('dashboard').body)
@@ -844,7 +853,7 @@ class DashboardCustomNavTestCase(actions.TestBase):
         self.assertEquals(
             'MainContent', dom.find(self.CONTENT_PATH).text.strip())
 
-        DashboardHandler.remove_custom_get_action(self.ACTION)
+        dashboard.DashboardHandler.remove_custom_get_action(self.ACTION)
 
         # Add a new tab under the new navigation action
         class CustomTabHandler(object):
@@ -853,7 +862,7 @@ class DashboardCustomNavTestCase(actions.TestBase):
             def display_html(cls, unused_dashboard_handler):
                 return 'MainTabContent'
 
-        dashboard.DashboardHandler.add_sub_nav_mapping(
+        dashboard.dashboard.DashboardHandler.add_sub_nav_mapping(
             self.ACTION, 'cu_tab', 'CustomTab', action=self.ACTION,
             contents=CustomTabHandler)
         dom = self.parse_html_string(self.get(self.URL).body)
