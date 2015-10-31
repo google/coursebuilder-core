@@ -20,7 +20,6 @@ from xml.etree import cElementTree
 import appengine_config
 from common import schema_fields
 from common import tags
-from controllers import sites
 from models import custom_modules
 from modules.code_tags import messages
 
@@ -199,8 +198,7 @@ def register_module():
 
     global_routes = [
         (CODETAGS_RESOURCES_URI + '/.*', tags.ResourcesHandler),
-        (CODEMIRROR_URI + '/(.*)', sites.make_zip_handler(os.path.join(
-            appengine_config.BUNDLE_ROOT, 'lib/codemirror-4.5.0.zip')))]
+    ]
     namespaced_routes = []
 
     global custom_module  # pylint: disable=global-statement

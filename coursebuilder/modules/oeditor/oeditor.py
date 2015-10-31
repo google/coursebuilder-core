@@ -441,11 +441,6 @@ def register_module():
             os.path.join(
                 appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip')))]
 
-    codemirror_handler = [
-        ('/static/codemirror/(.*)', sites.make_zip_handler(
-            os.path.join(
-                appengine_config.BUNDLE_ROOT, 'lib/codemirror-4.5.0.zip')))]
-
     if appengine_config.BUNDLE_LIB_FILES:
         yui_handlers += [
             ('/static/combo/inputex', sites.make_css_combo_zip_handler(
@@ -465,7 +460,7 @@ def register_module():
         ('/oeditor/preview', PreviewHandler),
         ('/oeditor/rest/editor_prefs', EditorPrefsRestHandler)]
 
-    global_routes = yui_handlers + codemirror_handler + [
+    global_routes = yui_handlers + [
         ('/modules/oeditor/buttonbar.css', ButtonbarCssHandler),
         (_DEPRECATED_STATIC_URI + r'/.*\.css',
             tags.make_deprecated_resources_handler('css/')),

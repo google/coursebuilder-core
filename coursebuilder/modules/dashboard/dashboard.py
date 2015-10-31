@@ -632,11 +632,6 @@ def register_module():
             DashboardHandler.generate_dashboard_link)
 
     global_routes = [
-        (
-            dashboard_utils.RESOURCES_PATH +'/material-design-icons/(.*)',
-            sites.make_zip_handler(os.path.join(
-                appengine_config.BUNDLE_ROOT, 'lib',
-                'material-design-iconic-font-1.1.1.zip'))),
         (dashboard_utils.RESOURCES_PATH +'/js/.*', tags.JQueryHandler),
         (dashboard_utils.RESOURCES_PATH + '/.*',
             tags.DeprecatedResourcesHandler)]

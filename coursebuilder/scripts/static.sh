@@ -14,6 +14,12 @@ STATIC_SERV["codemirror-4.5.0"]="codemirror"
 STATIC_SERV["inputex-3.1.0"]="inputex-3.1.0"
 STATIC_SERV["yui_2in3-2.9.0"]="2in3"
 STATIC_SERV["yui_3.6.0"]="yui_3.6.0"
+STATIC_SERV["d3-3.4.3"]="d3-3.4.3"
+STATIC_SERV["dc.js-1.6.0"]="dc.js-1.6.0"
+STATIC_SERV["crossfilter-1.3.7"]="crossfilter-1.3.7"
+STATIC_SERV["underscore-1.4.3"]="underscore-1.4.3"
+STATIC_SERV["material-design-iconic-font-1.1.1"]="material-design-icons"
+STATIC_SERV["dependo-0.1.4"]="dependo-0.1.4"
 
 # Prepare files for static serving
 if [ "$ALLOW_STATIC_SERV" = true ] ; then
