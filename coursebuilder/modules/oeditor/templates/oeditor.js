@@ -3,6 +3,9 @@ var ajaxRpcTimeoutMillis = 45 * 1000;
 // XSSI prefix. Must be kept in sync with models/transforms.py.
 var xssiPrefix = ")]}'";
 
+var URL_VALIDATION_REGEX =
+  '(^(http:\/\/|https:\/\/|\/\/|\/).*$)|(^[^.\/]*(\/.*)?$)';
+
 /**
  * Utility class for an on/off toggle button.
  *
@@ -441,6 +444,11 @@ function alertIfNotSavedChanges(cb_global) {
 
 // here is the main method
 function mainYuiFunction(Y) {
+
+  // Override inputEx behavior for URL fields
+  Y.inputEx.regexps.url = URL_VALIDATION_REGEX;
+  Y.inputEx.messages.invalidUrl =
+    'Links to other sites must start with "http" or "https".';
 
   // Add a new visu handler to inputEx, to look for a named function. It must
   // be a member of cb_global.inputEx.visus and should accept Y and the value of

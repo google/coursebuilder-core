@@ -2310,7 +2310,9 @@ class Course(object):
         opts.add_property(schema_fields.SchemaField(
             'institution:name', 'Organization Name', 'string', optional=True))
         opts.add_property(schema_fields.SchemaField(
-            'institution:url', 'Organization URL', 'string', optional=True))
+            'institution:url', 'Organization URL', 'string',
+            extra_schema_dict_values={'_type': 'url', 'showMsg': True},
+            optional=True))
 
         opts.add_property(schema_fields.SchemaField(
             'base:privacy_terms_url', 'Privacy & Terms URL', 'string',
@@ -2323,7 +2325,9 @@ class Course(object):
             description='Header phrase for the main navigation bar',
             optional=True))
         opts.add_property(schema_fields.SchemaField(
-            'institution:logo:url', 'Site Logo', 'string', optional=True))
+            'institution:logo:url', 'Site Logo', 'string',
+            extra_schema_dict_values={'_type': 'url', 'showMsg': True},
+            optional=True))
         opts.add_property(schema_fields.SchemaField(
             'institution:logo:alt_text', 'Site Logo Alt Text', 'string',
             optional=True))

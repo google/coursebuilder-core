@@ -514,3 +514,44 @@ describe('CustomTagManager', function() {
         .toEqual('edit_url?tagname');
   });
 });
+
+describe('URL Validation', function() {
+  it('doesn\'t match ambiguous URLs', function() {
+    expect('foo.bar'.match(URL_VALIDATION_REGEX)).toBeNull();
+    expect('foo.bar/baz'.match(URL_VALIDATION_REGEX)).toBeNull();
+    expect('foo.bar.baz'.match(URL_VALIDATION_REGEX)).toBeNull();
+    expect('foo.bar.baz/qux'.match(URL_VALIDATION_REGEX)).toBeNull();
+  });
+
+  it('matches relative URLs', function() {
+    expect("foo".match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect("foo/bar".match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect("foo/bar.baz".match(URL_VALIDATION_REGEX)).not.toBeNull();
+  });
+
+  it('matches absolute URLs', function() {
+    expect('/foo'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('/foo/bar'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('/foo.bar'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('/foo.bar/baz'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('/foo.bar/baz.qux'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+
+    expect('//foo'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('//foo/bar'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('//foo.bar'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('//foo.bar/baz'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('//foo.bar/baz.qux'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+
+    expect('http://foo'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('http://foo/bar'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('http://foo.bar'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('http://foo.bar/baz'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('http://foo.bar/baz.qux'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+
+    expect('https//foo'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('https//foo/bar'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('https//foo.bar'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('https//foo.bar/baz'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+    expect('https//foo.bar/baz.qux'.match(URL_VALIDATION_REGEX)).not.toBeNull();
+  });
+});
