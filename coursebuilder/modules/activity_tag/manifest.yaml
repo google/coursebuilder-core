@@ -1,0 +1,4 @@
+files:
+  - modules/activity_tag/__init__.py
+  - modules/activity_tag/activity_tag.py
+  - modules/activity_tag/resources/activity.png

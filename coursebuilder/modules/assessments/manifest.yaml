@@ -1,0 +1,14 @@
+tests:
+  functional:
+    - modules.assessments.assessments_tests.EmbeddedAssessmentTests = 4
+
+files:
+  - modules/assessments/__init__.py
+  - modules/assessments/_static/css/assessments.css
+  - modules/assessments/assessments.py
+  - modules/assessments/assessments_tests.py
+  - modules/assessments/templates/assessment.html
+  - modules/assessments/templates/assessment_html_content.html
+  - modules/assessments/templates/assessment_page.html
+  - modules/assessments/templates/reviewed_assessment_confirmation.html
+  - modules/assessments/templates/test_confirmation.html

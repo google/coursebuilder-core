@@ -41,9 +41,6 @@ class AllJavaScriptTests(TestBase):
         self.karma_test(
             'tests/unit/javascript_tests/assets_lib_activity_generic')
 
-    def test_assessment_tags(self):
-        self.karma_test('tests/unit/javascript_tests/modules_assessment_tags')
-
     def test_butterbar(self):
         self.karma_test('tests/unit/javascript_tests/assets_lib_butterbar')
 

@@ -1,0 +1,27 @@
+tests:
+  functional:
+    - modules.assessment_tags.assessment_tags_tests.MultipleChoiceTagTests = 1
+  unit:
+    - modules.assessment_tags.assessment_tags_unit_tests.JavaScriptTests = 1
+
+files:
+  - modules/assessment_tags/__init__.py
+  - modules/assessment_tags/assessment_tags_tests.py
+  - modules/assessment_tags/assessment_tags_unit_tests.py
+  - modules/assessment_tags/gift.py
+  - modules/assessment_tags/javascript_tests/fixture.html
+  - modules/assessment_tags/javascript_tests/grading_button_fixture.html
+  - modules/assessment_tags/javascript_tests/karma.conf.js
+  - modules/assessment_tags/javascript_tests/tests.js
+  - modules/assessment_tags/questions.py
+  - modules/assessment_tags/resources/grading.js
+  - modules/assessment_tags/resources/grading_lib.js
+  - modules/assessment_tags/resources/question.png
+  - modules/assessment_tags/resources/question_group.png
+  - modules/assessment_tags/resources/questions.css
+  - modules/assessment_tags/templates/base_assessment_tag.html
+  - modules/assessment_tags/templates/mc_question.html
+  - modules/assessment_tags/templates/question_group.html
+  - modules/assessment_tags/templates/questions_popup.css
+  - modules/assessment_tags/templates/questions_popup.js
+  - modules/assessment_tags/templates/sa_question.html

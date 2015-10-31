@@ -25,7 +25,6 @@ import tempfile
 import urllib
 import zlib
 
-import actions
 from common import users
 from common import utils as common_utils
 from models import courses
@@ -88,8 +87,8 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
         self.maxDiff = None
 
     def _get_data_path(self, path):
-        return os.path.join(appengine_config.BUNDLE_ROOT, 'tests', 'functional',
-                            'modules_analytics', 'test_courses', path)
+        return os.path.join(appengine_config.BUNDLE_ROOT, 'modules',
+                            'analytics', 'test_courses', path)
 
     def load_course(self, path):
         data_path = self._get_data_path(path)
@@ -1089,9 +1088,8 @@ class StudentVectorGeneratorTests(actions.TestBase):
         super(StudentVectorGeneratorTests, self).tearDown()
 
     def _get_data_path(self, path):
-        return os.path.join(appengine_config.BUNDLE_ROOT, 'tests',
-                            'functional', 'modules_analytics',
-                            'test_courses', path)
+        return os.path.join(appengine_config.BUNDLE_ROOT, 'modules',
+                            'analytics', 'test_courses', path)
 
     def _load_initial_data(self):
         """Creates several StudentAggregateEntity based on the file item."""
@@ -1143,6 +1141,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
                             result.append(question)
                 return result
 
+        # Treat as module-protected. pylint: disable=protected-access
         result = clustering.StudentVectorGenerator._inverse_submission_data(
             self.dimensions, self.raw_activities)
         for dim in self.dimensions:
@@ -1170,6 +1169,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
     def test_inverse_page_view_data(self):
         """inverse_page_view_data returns a dictionary keys by dimension id.
         """
+        # Treat as module-protected. pylint: disable=protected-access
         result = clustering.StudentVectorGenerator._inverse_page_view_data(
             self.raw_views_data)
         for dim in self.dimensions:
@@ -1219,10 +1219,12 @@ class StudentVectorGeneratorTests(actions.TestBase):
         This is testing the following extra cases:
             - Submissions with no lesson_id
         """
+        # Treat as module-protected. pylint: disable=protected-access
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             self.dimensions, self.raw_activities)
         for dim in self.dimensions:
             if dim[clustering.DIM_TYPE] == clustering.DIM_TYPE_UNIT:
+                # Treat as module-protected. pylint: disable=protected-access
                 value = clustering.StudentVectorGenerator._get_unit_score(
                     data[dim[clustering.DIM_TYPE], dim[clustering.DIM_ID]], dim)
                 self.assertEqual(value, dim['expected_value'])
@@ -1233,6 +1235,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
         This is testing the following extra cases:
             - Submissions with no lesson_id
         """
+        # Treat as module-protected. pylint: disable=protected-access
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             self.dimensions, self.raw_activities)
         for dim in self.dimensions:
@@ -1249,6 +1252,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
             - Save question multiple times in the same submission.
             - Submissions to assesments (no lesson id).
         """
+        # Treat as module-protected. pylint: disable=protected-access
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             self.dimensions, self.raw_activities)
         for dim in self.dimensions:
@@ -1260,6 +1264,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
     def test_get_unit_visits(self):
         """Count the number of visits for a unit or an assessment.
         """
+        # Treat as module-protected. pylint: disable=protected-access
         data = clustering.StudentVectorGenerator._inverse_page_view_data(
             self.raw_views_data)
         for dim in self.dimensions:
@@ -1274,6 +1279,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
         extra_dimension = {
             clustering.DIM_TYPE: clustering.DIM_TYPE_UNIT,
             clustering.DIM_ID: '10'}
+        # Treat as module-protected. pylint: disable=protected-access
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             [extra_dimension], self.raw_activities)
         value = clustering.StudentVectorGenerator._get_unit_score(
@@ -1286,6 +1292,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
             clustering.DIM_TYPE: clustering.DIM_TYPE_LESSON,
             clustering.DIM_ID: '10'
             }
+        # Treat as module-protected. pylint: disable=protected-access
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             [extra_dimension], self.raw_activities)
         value = clustering.StudentVectorGenerator._get_lesson_score(
@@ -1298,6 +1305,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
             clustering.DIM_TYPE: clustering.DIM_TYPE_QUESTION,
             clustering.DIM_ID: clustering.pack_question_dimid('1', '3', '00000')
             }
+        # Treat as module-protected. pylint: disable=protected-access
         data = clustering.StudentVectorGenerator._inverse_submission_data(
             [extra_dimension], self.raw_activities)
         value = clustering.StudentVectorGenerator._get_question_score(
@@ -1319,6 +1327,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
             })
         }
         expected = (10.5 + 8.5) / 2
+        # Treat as module-protected. pylint: disable=protected-access
         value = clustering.StudentVectorGenerator._get_unit_score(
             raw_assessment_data, dimension)
         self.assertEqual(value, expected,
@@ -1649,6 +1658,7 @@ class TestClusterStatisticsDataSource(actions.TestBase):
             [self.clusters_map[keys[2]], 1, 1, 2, 2],  # three dimensions
             [self.clusters_map[keys[3]], 0, 0, 0, 6],
         ]
+        # Treat as module-protected. pylint: disable=protected-access
         result = clustering.ClusterStatisticsDataSource._process_job_result(
             job_result)
         self.assertEqual(expected_result, result[0])
@@ -1702,6 +1712,7 @@ class TestClusterStatisticsDataSource(actions.TestBase):
                             2: {1: 0.67, 3: 0.0},
                             3: {2: 0.0}}
         }
+        # Treat as module-protected. pylint: disable=protected-access
         result = clustering.ClusterStatisticsDataSource._process_job_result(
             job_result)
         self.assertEqual(result[1], [expected0, expected1, expected2])
@@ -1829,6 +1840,7 @@ class GradebookCsvTests(actions.TestBase):
     def _verify(self, expected_scores, expected_questions, course_name=None):
         course_name = course_name or self.COURSE_NAME
 
+        # Treat as module-protected. pylint: disable=protected-access
         self._build_job(gradebook._MODE_SCORES, course_name).run()
         self._verify_output(expected_scores)
 
@@ -1855,6 +1867,7 @@ class GradebookCsvTests(actions.TestBase):
         actions.logout()
         actions.login(self.STUDENT_EMAIL)
 
+        # Treat as module-protected. pylint: disable=protected-access
         scores_url = ('/%s%s?%s=%s' % (
             self.COURSE_NAME, gradebook.CsvDownloadHandler.URI,
             gradebook._MODE_ARG_NAME, gradebook._MODE_SCORES))
@@ -2008,6 +2021,7 @@ class GradebookCsvTests(actions.TestBase):
     def test_interactive_downloads_only_for_courses_with_few_students(self):
         gradebook_url = ('/%s/dashboard?action=analytics_gradebook' %
                          self.COURSE_NAME)
+        # Treat as module-protected. pylint: disable=protected-access
         job_name = student_answers.RawAnswersGenerator(
             self.app_context)._job_name
 

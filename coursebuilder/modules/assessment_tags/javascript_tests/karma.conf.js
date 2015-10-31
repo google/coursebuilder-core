@@ -1,9 +1,9 @@
 module.exports = function(config) {
   config.set({
-    basePath: '../../../..',
+    basePath: '../../..',
     files: [
       'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
-      'tests/unit/javascript_tests/modules_assessment_tags/*.js',
+      'modules/assessment_tags/javascript_tests/*.js',
       {
         pattern: 'tests/unit/common/event_payloads.json',
         watched: true,
@@ -11,7 +11,7 @@ module.exports = function(config) {
         served: true
       },
       {
-        pattern: 'tests/unit/javascript_tests/modules_assessment_tags/*.html',
+        pattern: 'modules/assessment_tags/javascript_tests/*.html',
         watched: true,
         included: false,
         served: true

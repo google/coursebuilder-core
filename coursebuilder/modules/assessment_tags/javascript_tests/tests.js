@@ -22,7 +22,7 @@ describe('assessment tags', function() {
   beforeEach(function() {
     jasmine.getFixtures().fixturesPath = 'base/';
     loadFixtures(
-        'tests/unit/javascript_tests/modules_assessment_tags/fixture.html');
+        'modules/assessment_tags/javascript_tests/fixture.html');
   });
   describe('standard rounding function', function() {
     it('rounds to closest number with 2 decimal place precision', function() {
@@ -963,8 +963,7 @@ describe('maybeMoveGradingButton', function() {
   beforeEach(function() {
     jasmine.getFixtures().fixturesPath = 'base/';
     loadFixtures(
-        'tests/unit/javascript_tests/modules_assessment_tags/' +
-        'grading_button_fixture.html');
+        'modules/assessment_tags/javascript_tests/grading_button_fixture.html');
   });
 
   it('moves the button', function() {

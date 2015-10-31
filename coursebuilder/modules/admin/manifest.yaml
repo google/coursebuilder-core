@@ -1,0 +1,14 @@
+tests:
+  functional:
+    - modules.admin.admin_tests.AdminDashboardTabTests = 6
+
+files:
+  - modules/admin/__init__.py
+  - modules/admin/_static/css/admin.css
+  - modules/admin/_static/css/courses.css
+  - modules/admin/_static/js/courses.js
+  - modules/admin/admin.py
+  - modules/admin/admin_tests.py
+  - modules/admin/config.py
+  - modules/admin/templates/courses.html
+  - modules/admin/templates/welcome.html
