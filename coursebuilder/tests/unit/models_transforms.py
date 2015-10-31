@@ -479,3 +479,18 @@ class SchemaValidationTests(unittest.TestCase):
             ['Found None at Test.struct_array[1]',
              'Missing mandatory value at Test.struct_array[2].city',
              'Missing mandatory value at Test.struct_array[3].name'])
+
+    def test_array_of_string(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.FieldArray(
+            'string_array', 'String Array',
+            item_type=schema_fields.SchemaField(None, None, 'string'),
+            select_data=(('one', 'One'), ('two', 'Two'), ('three', 'Three'))))
+        json_schema = reg.get_json_schema_dict()
+
+        source = {'string_array': ['one', 'two']}
+
+        self.assertEqual(transforms.validate_object_matches_json_schema(
+            source, json_schema), [])
+
+        self.assertEqual(transforms.json_to_dict(source, json_schema), source)

@@ -108,28 +108,55 @@ def _json_to_datetime(value, date_only=False):
     raise exception
 
 
+def _convert_bool(value, key):
+    if isinstance(value, types.NoneType):
+        return False
+    elif isinstance(value, bool):
+        return value
+    elif isinstance(value, basestring):
+        value = value.lower()
+        if value == 'true':
+            return True
+        elif value == 'false':
+            return False
+    raise ValueError('Bad boolean value for %s: %s' % (key, value))
+
+
+def coerce_json_value(source, schema, debug_key):
+    data_type = schema['type']
+
+    if data_type not in JSON_TYPES:
+        raise ValueError('Unsupported JSON type: %s' % data_type)
+    if data_type == 'object':
+        return json_to_dict(source, schema)
+    elif data_type == 'datetime' or data_type == 'date':
+        return _json_to_datetime(source, data_type == 'date')
+    elif data_type == 'number':
+        return float(source)
+    elif data_type in ('integer', 'timestamp'):
+        return int(source) if source else 0
+    elif data_type == 'boolean':
+        return _convert_bool(source, debug_key)
+    elif data_type == 'array':
+        subschema = schema['items']
+        array = []
+        for item in source:
+            array.append(coerce_json_value(item, subschema, debug_key))
+        return array
+    else:
+        return source
+
+
 def json_to_dict(source_dict, schema, permit_none_values=False):
     """Converts JSON dictionary into Python dictionary using schema."""
 
-    def convert_bool(value, key):
-        if isinstance(value, types.NoneType):
-            return False
-        elif isinstance(value, bool):
-            return value
-        elif isinstance(value, basestring):
-            value = value.lower()
-            if value == 'true':
-                return True
-            elif value == 'false':
-                return False
-        raise ValueError('Bad boolean value for %s: %s' % (key, value))
-
     output = {}
+
     for key, attr in schema['properties'].items():
         # Skip schema elements that don't exist in source.
 
         if key not in source_dict:
-            is_optional = convert_bool(attr.get('optional'), 'optional')
+            is_optional = _convert_bool(attr.get('optional'), 'optional')
             if not is_optional:
                 raise ValueError('Missing required attribute: %s' % key)
             continue
@@ -141,28 +168,7 @@ def json_to_dict(source_dict, schema, permit_none_values=False):
             output[key] = None
             continue
 
-        attr_type = attr['type']
-        if attr_type not in JSON_TYPES:
-            raise ValueError('Unsupported JSON type: %s' % attr_type)
-        if attr_type == 'object':
-            output[key] = json_to_dict(source_dict[key], attr)
-        elif attr_type == 'datetime' or attr_type == 'date':
-            output[key] = _json_to_datetime(source_dict[key],
-                                            attr_type == 'date')
-        elif attr_type == 'number':
-            output[key] = float(source_dict[key])
-        elif attr_type in ('integer', 'timestamp'):
-            output[key] = int(source_dict[key]) if source_dict[key] else 0
-        elif attr_type == 'boolean':
-            output[key] = convert_bool(source_dict[key], key)
-        elif attr_type == 'array':
-            subschema = attr['items']
-            array = []
-            for item in source_dict[key]:
-                array.append(json_to_dict(item, subschema))
-            output[key] = array
-        else:
-            output[key] = source_dict[key]
+        output[key] = coerce_json_value(source_dict[key], attr, key)
     return output
 
 

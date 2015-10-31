@@ -268,10 +268,9 @@ class SchemaField(Property):
 
     def _get_schema_dict(self, prefix_key):
         """Get Schema annotation dictionary for this field."""
-        if self._extra_schema_dict_values:
-            schema = self._extra_schema_dict_values
-        else:
-            schema = {}
+
+        schema = self._extra_schema_dict_values
+
         schema['label'] = self._label
 
         override_type = self._override_type
@@ -308,11 +307,12 @@ class FieldArray(SchemaField):
 
     def __init__(
         self, name, label, description=None, item_type=None,
-        optional=False, extra_schema_dict_values=None):
+        optional=False, extra_schema_dict_values=None, select_data=None):
 
         super(FieldArray, self).__init__(
             name, label, 'array', description=description, optional=optional,
-            extra_schema_dict_values=extra_schema_dict_values)
+            extra_schema_dict_values=extra_schema_dict_values,
+            select_data=select_data)
         self._item_type = item_type
 
     @property
@@ -585,7 +585,10 @@ class FieldRegistryIndex(object):
                 complex_name = field.name
                 if complex_name in self._complex_name_to_field:
                     raise KeyError('Field already defined: %s.' % complex_name)
-                if isinstance(field, FieldArray):
+                # TODO(nretallack): arrays of primitive types are not indexed.
+                # We will need to fix this if we want to translate them.
+                if isinstance(field, FieldArray) and isinstance(
+                        field.item_type, FieldRegistry):
                     self._inspect_registry(
                         [complex_name, '[]'], field.item_type)
                 self._complex_name_to_field[complex_name] = field
@@ -594,7 +597,10 @@ class FieldRegistryIndex(object):
                 computed_name = ':'.join(parent_names + [field.name])
                 if computed_name in self._computed_name_to_field:
                     raise KeyError('Field already defined: %s.' % computed_name)
-                if isinstance(field, FieldArray):
+                # TODO(nretallack): arrays of primitive types are not indexed.
+                # We will need to fix this if we want to translate them.
+                if isinstance(field, FieldArray) and isinstance(
+                        field.item_type, FieldRegistry):
                     self._inspect_registry(
                         parent_names + [field.name, '[]'], field.item_type)
                 self._computed_name_to_field[computed_name] = field

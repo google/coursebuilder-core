@@ -308,7 +308,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.models_courses.WorkflowValidationTests': 13,
     'tests.unit.models_transforms.JsonToDictTests': 13,
     'tests.unit.models_transforms.JsonParsingTests': 3,
-    'tests.unit.models_transforms.SchemaValidationTests': 20,
+    'tests.unit.models_transforms.SchemaValidationTests': 21,
     'tests.unit.models_transforms.StringValueConversionTests': 2,
     'tests.unit.modules_search.ParserTests': 10,
     'tests.unit.test_classes.DeepDictionaryMergeTest': 5,
