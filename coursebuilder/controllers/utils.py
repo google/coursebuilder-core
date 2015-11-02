@@ -67,8 +67,6 @@ COURSE_INFO_KEY = 'course_info'
 GUEST_LOCALE_COOKIE = 'cb-user-locale'
 GUEST_LOCALE_COOKIE_MAX_AGE_SEC = 48 * 60 * 60  # 48 hours
 
-_YOUTUBE_URL_REGEX = r'//(www\.youtube\.com|youtu\.be)/'
-
 TRANSIENT_STUDENT = TransientStudent()
 
 # Whether to output debug info into the page.
@@ -852,6 +850,8 @@ class CourseHandler(ApplicationHandler):
             custom_modules.can_see_drafts(self.app_context))
         self.template_value[
             'is_read_write_course'] = self.app_context.fs.is_read_write()
+        self.template_value['course_availability'] = (
+            self.get_course().get_course_availability())
         self.template_value['is_super_admin'] = Roles.is_super_admin()
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
         self.template_value['left_links'] = []
@@ -913,6 +913,7 @@ class CourseHandler(ApplicationHandler):
             self.app_context.get_current_locale(), additional_dirs)
         template_environ.filters[
             'gcb_tags'] = jinja_utils.get_gcb_tags_filter(self)
+        course = self.get_course()
         template_environ.globals.update({
             'display_unit_title': (
                 lambda unit: resources_display.display_unit_title(
@@ -920,9 +921,9 @@ class CourseHandler(ApplicationHandler):
             'display_short_unit_title': (
                 lambda unit: resources_display.display_short_unit_title(
                     unit, self.app_context)),
-            'display_lesson_title': (
-                lambda unit, lesson: resources_display.display_lesson_title(
-                    unit, lesson, self.app_context))})
+            'is_lesson_available': (
+                lambda lesson: course.is_lesson_available(None, lesson)),
+            })
 
         return template_environ.get_template(template_file)
 
@@ -1005,7 +1006,7 @@ class BaseHandler(CourseHandler):
                 )
                 return None
             else:
-                self.redirect('/preview')
+                self.redirect('/course')
                 return None
 
         return student
@@ -1097,99 +1098,6 @@ class BaseRESTHandler(CourseHandler, RESTHandlerMixin):
             payload_dict['messages'] = error_messages
         transforms.send_json_response(
             self, 412, message, payload_dict=payload_dict or None)
-
-
-def set_image_or_video_exists(template_value, course):
-    """Insert template settings for course main image or main video."""
-    show_image_or_video = bool(
-        'main_image' in course and
-        'url' in course['main_image'] and
-        course['main_image']['url'])
-    if show_image_or_video:
-        if re.search(_YOUTUBE_URL_REGEX, unicode(course['main_image']['url'])):
-            template_value['show_video'] = True
-        else:
-            template_value['show_image'] = True
-
-
-class UnitLeftNavElements(object):
-
-    def __init__(self, course, unit):
-        self._urls = []
-        self._index_by_label = {}
-
-        if unit.pre_assessment:
-            self._index_by_label['assessment.%d' % unit.pre_assessment] = (
-                len(self._urls))
-            self._urls.append('unit?unit=%s&assessment=%d' % (
-                unit.unit_id, unit.pre_assessment))
-
-        for lesson in course.get_lessons(unit.unit_id):
-            self._index_by_label['lesson.%s' % lesson.lesson_id] = (
-                len(self._urls))
-            self._urls.append('unit?unit=%s&lesson=%s' % (
-                unit.unit_id, lesson.lesson_id))
-
-            if lesson.activity and lesson.activity_listed:
-                self._index_by_label['activity.%s' % lesson.lesson_id] = (
-                    len(self._urls))
-                self._urls.append('unit?unit=%s&lesson=%s&activity=true' % (
-                    unit.unit_id, lesson.lesson_id))
-
-        if unit.post_assessment:
-            self._index_by_label['assessment.%d' % unit.post_assessment] = (
-                len(self._urls))
-            self._urls.append('unit?unit=%s&assessment=%d' % (
-                unit.unit_id, unit.post_assessment))
-
-    def get_url_by(self, item_type, item_id, offset):
-        index = self._index_by_label['%s.%s' % (item_type, item_id)]
-        index += offset
-        if index >= 0 and index < len(self._urls):
-            return self._urls[index]
-        else:
-            return None
-
-
-class PreviewHandler(BaseHandler):
-    """Handler for viewing course preview."""
-
-    def get(self):
-        """Handles GET requests."""
-        user = self.personalize_page_and_get_user()
-        if user is None:
-            student = TRANSIENT_STUDENT
-        else:
-            student = Student.get_enrolled_student_by_user(user)
-            if not student:
-                student = TRANSIENT_STUDENT
-
-        # If the course is browsable, or the student is logged in and
-        # registered, redirect to the main course page.
-        if ((student and not student.is_transient) or
-            self.app_context.get_environ()['course']['browsable']):
-            self.redirect('/course')
-            return
-
-        self.template_value['transient_student'] = True
-        self.template_value['can_register'] = self.app_context.get_environ(
-            )['reg_form']['can_register']
-        self.template_value['navbar'] = {'course': True}
-        self.template_value['units'] = self.get_units()
-        self.template_value['show_registration_page'] = True
-
-        course = self.app_context.get_environ()['course']
-        set_image_or_video_exists(self.template_value, course)
-
-        if user:
-            profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
-            additional_registration_fields = self.app_context.get_environ(
-                )['reg_form']['additional_registration_fields']
-            if profile is not None and not additional_registration_fields:
-                self.template_value['show_registration_page'] = False
-                self.template_value['register_xsrf_token'] = (
-                    XsrfTokenManager.create_xsrf_token('register-post'))
-        self.render('preview.html')
 
 
 class RegisterHandler(BaseHandler):

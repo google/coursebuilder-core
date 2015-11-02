@@ -16,21 +16,17 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+
 import copy
 import datetime
+import re
 import urllib
 import urlparse
 
-from utils import BaseHandler
-from utils import BaseRESTHandler
-from utils import HUMAN_READABLE_DATETIME_FORMAT
-from utils import set_image_or_video_exists
-from utils import TRANSIENT_STUDENT
-from utils import UnitLeftNavElements
-from utils import XsrfTokenManager
-
+from common import crypto
 from common import jinja_utils
 from common import safe_dom
+from controllers import utils
 from models import courses
 from models import custom_modules
 from models import models
@@ -44,10 +40,12 @@ from models.review import ReviewUtils
 from models.student_work import StudentWorkUtils
 from modules.assessments.assessments import AssessmentHandler
 from modules.assessments.assessments import create_readonly_assessment_params
+from modules.courses import unit_outline
 from modules.review import domain
 from tools import verify
 
 from google.appengine.ext import db
+
 
 COURSE_EVENTS_RECEIVED = PerfCounter(
     'gcb-course-events-received',
@@ -67,7 +65,7 @@ TAGS_THAT_TRIGGER_COMPONENT_COMPLETION = ['tag-assessment']
 TAGS_THAT_TRIGGER_HTML_COMPLETION = ['attempt-lesson']
 
 
-def get_first_lesson(handler, unit_id):
+def _get_first_lesson(handler, unit_id):
     """Returns the first lesson in the unit."""
     lessons = handler.get_course().get_lessons(unit_id)
     return lessons[0] if lessons else None
@@ -91,7 +89,7 @@ def _get_selected_or_first_lesson(handler, unit):
     l = handler.request.get('lesson')
     lesson = None
     if not l:
-        lesson = get_first_lesson(handler, unit.unit_id)
+        lesson = _get_first_lesson(handler, unit.unit_id)
     else:
         lesson = handler.get_course().find_lesson_by_id(unit, l)
     return lesson
@@ -128,7 +126,7 @@ def extract_unit_and_lesson_or_assessment(handler):
         return unit, None, handler.get_course().find_unit_by_id(
             unit.pre_assessment)
 
-    first_lesson = get_first_lesson(handler, unit.unit_id)
+    first_lesson = _get_first_lesson(handler, unit.unit_id)
     if first_lesson:
         return unit, first_lesson, None
 
@@ -153,100 +151,12 @@ def get_unit_and_lesson_id_from_url(handler, url):
     if 'lesson' in query_dict:
         lesson_id = query_dict['lesson'][0]
     else:
-        lesson_id = get_first_lesson(handler, unit_id).lesson_id
+        lesson_id = _get_first_lesson(handler, unit_id).lesson_id
 
     return unit_id, lesson_id
 
 
-def filter_assessments_used_within_units(units):
-    # Remove assessments that are to be treated as if they were in a unit.
-    referenced_assessments = set()
-    for unit in units:
-        if unit.type == verify.UNIT_TYPE_UNIT:
-            if unit.pre_assessment:
-                referenced_assessments.add(unit.pre_assessment)
-            if unit.post_assessment:
-                referenced_assessments.add(unit.post_assessment)
-    ret = []
-    for unit in list(units):
-        if unit.unit_id not in referenced_assessments:
-            ret.append(unit)
-    return ret
-
-
-def augment_assessment_units(course, student):
-    """Adds additional fields to assessment units."""
-    rp = course.get_reviews_processor()
-
-    for unit in course.get_units():
-        if unit.type == 'A':
-            if unit.needs_human_grader():
-                review_steps = rp.get_review_steps_by(
-                    unit.unit_id, student.get_key())
-                review_min_count = unit.workflow.get_review_min_count()
-
-                unit.matcher = unit.workflow.get_matcher()
-                unit.review_progress = ReviewUtils.get_review_progress(
-                    review_steps, review_min_count,
-                    course.get_progress_tracker()
-                )
-
-                unit.is_submitted = rp.does_submission_exist(
-                    unit.unit_id, student.get_key())
-
-
-def is_progress_recorded(handler, student):
-    if student.is_transient:
-        return False
-    if handler.can_record_student_events():
-        return True
-    course = handler.get_course()
-    units = handler.get_track_matching_student(student)
-    for unit in units:
-        if unit.manual_progress:
-            return True
-        for lesson in course.get_lessons(unit.unit_id):
-            if lesson.manual_progress:
-                return True
-    return False
-
-
-def add_course_outline_to_template(handler, student):
-    """Adds course outline with all units, lessons, progress to the template."""
-    _tracker = handler.get_progress_tracker()
-    if student and not student.is_transient:
-        augment_assessment_units(handler.get_course(), student)
-        handler.template_value['course_progress'] = (
-            _tracker.get_course_progress(student))
-
-    _tuples = []
-    units = handler.get_track_matching_student(student)
-    units = filter_assessments_used_within_units(units)
-    progress = _tracker.get_or_create_progress(
-          student) if is_progress_recorded(handler, student) else None
-    for _unit in units:
-        _lessons = handler.get_lessons(_unit.unit_id)
-        _lesson_progress = None
-        if progress:
-            _lesson_progress = _tracker.get_lesson_progress(
-                student, _unit.unit_id, progress=progress)
-        pre_assessment = None
-        if _unit.pre_assessment:
-            pre_assessment = handler.find_unit_by_id(_unit.pre_assessment)
-        post_assessment = None
-        if _unit.post_assessment:
-            post_assessment = handler.find_unit_by_id(_unit.post_assessment)
-
-        _tuple = (_unit, _lessons, _lesson_progress,
-                  pre_assessment, post_assessment)
-        _tuples.append(_tuple)
-
-    handler.template_value['course_outline'] = _tuples
-    handler.template_value['unit_progress'] = _tracker.get_unit_progress(
-        student, progress=progress)
-
-
-class CourseHandler(BaseHandler):
+class CourseHandler(utils.BaseHandler):
     """Handler for generating course page."""
 
     @classmethod
@@ -260,18 +170,14 @@ class CourseHandler(BaseHandler):
         try:
             user = self.personalize_page_and_get_user()
             if user is None:
-                student = TRANSIENT_STUDENT
+                student = utils.TRANSIENT_STUDENT
+                profile = None
             else:
                 student = Student.get_enrolled_student_by_user(user)
                 profile = StudentProfileDAO.get_profile_by_user(user)
                 self.template_value['has_global_profile'] = profile is not None
                 if not student:
-                    student = TRANSIENT_STUDENT
-
-            if (student.is_transient and
-                not self.app_context.get_environ()['course']['browsable']):
-                self.redirect('/preview')
-                return
+                    student = utils.TRANSIENT_STUDENT
 
             # If we are on this page due to visiting the course base URL
             # (and not base url plus "/course"), redirect registered students
@@ -281,40 +187,53 @@ class CourseHandler(BaseHandler):
                 self.redirect(last_location)
                 return
 
-            tracker = self.get_progress_tracker()
-            units = self.get_track_matching_student(student)
-            units = filter_assessments_used_within_units(units)
-            self.template_value['units'] = units
-            self.template_value['show_registration_page'] = True
-
-            if student and not student.is_transient:
-                augment_assessment_units(self.get_course(), student)
-                self.template_value['course_progress'] = (
-                    tracker.get_course_progress(student))
-            elif user:
-                profile = StudentProfileDAO.get_profile_by_user_id(
-                    user.user_id())
-                additional_registration_fields = self.app_context.get_environ(
-                    )['reg_form']['additional_registration_fields']
-                if profile is not None and not additional_registration_fields:
-                    self.template_value['show_registration_page'] = False
-                    self.template_value['register_xsrf_token'] = (
-                        XsrfTokenManager.create_xsrf_token('register-post'))
-
-            self.template_value['transient_student'] = student.is_transient
-            self.template_value['progress'] = tracker.get_unit_progress(student)
-            course = self.app_context.get_environ()['course']
-            set_image_or_video_exists(self.template_value, course)
-
-            self.template_value['is_progress_recorded'] = is_progress_recorded(
-                self, student)
-            self.template_value['navbar'] = {'course': True}
+            course_availability = self.get_course().get_course_availability()
+            settings = self.app_context.get_environ()
+            self._set_show_registration_settings(settings, student, profile,
+                                                 course_availability)
+            self._set_show_image_or_video(settings)
+            self._set_common_values(settings, student, course_availability)
         finally:
             models.MemcacheManager.end_readonly()
         self.render('course.html')
 
+    def _set_show_image_or_video(self, settings):
+        show_image_or_video = unicode(
+            settings['course'].get('main_image', {}).get('url'))
+        if show_image_or_video:
+            if re.search(r'//(www\.youtube\.com|youtu\.be)/',
+                         show_image_or_video):
+                self.template_value['show_video'] = True
+            else:
+                self.template_value['show_image'] = True
 
-class UnitHandler(BaseHandler):
+    def _set_show_registration_settings(self, settings, student, profile,
+                                        course_availability):
+        if (roles.Roles.is_course_admin(self.app_context) or
+            course_availability in (
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
+                courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL)):
+            self.template_value['show_registration_page'] = True
+
+        if not student or student.is_transient and profile:
+            additional_registration_fields = self.app_context.get_environ(
+                )['reg_form']['additional_registration_fields']
+            if profile is not None and not additional_registration_fields:
+                self.template_value['show_registration_page'] = False
+                self.template_value['register_xsrf_token'] = (
+                    crypto.XsrfTokenManager.create_xsrf_token('register-post'))
+
+    def _set_common_values(self, settings, student, course_availability):
+        self.template_value['transient_student'] = student.is_transient
+        self.template_value['navbar'] = {'course': True}
+        course_outline = unit_outline.CourseOutline(self, student)
+        self.template_value['course_outline'] = course_outline.contents
+        self.template_value['course_availability'] = course_availability
+        self.template_value['show_lessons_in_syllabus'] = (
+            settings['course'].get('show_lessons_in_syllabus', False))
+
+
+class UnitHandler(utils.BaseHandler):
     """Handler for generating unit page."""
 
     # A list of callback functions which modules can use to add extra content
@@ -358,8 +277,10 @@ class UnitHandler(BaseHandler):
 
             # If the unit is not currently available, and the user does not have
             # the permission to see drafts, redirect to the main page.
+            course = self.get_course()
             available_units = self.get_track_matching_student(student)
-            if ((not unit.now_available or unit not in available_units) and
+            if ((not course.is_unit_available(unit) or
+                 unit not in available_units) and
                 not custom_modules.can_see_drafts(self.app_context)):
                 self.redirect('/')
                 return
@@ -377,15 +298,18 @@ class UnitHandler(BaseHandler):
             self.student = student
             self.unit_id = unit_id
 
-            add_course_outline_to_template(self, student)
-            self.template_value['is_progress_recorded'] = is_progress_recorded(
-                self, student)
-
+            course_availability = course.get_course_availability()
+            settings = self.app_context.get_environ()
+            course_outline = unit_outline.CourseOutline(
+                self, student, unit, lesson or assessment)
+            self.template_value['course_outline'] = course_outline.contents
+            self.template_value['course_availability'] = course_availability
             if (unit.show_contents_on_one_page and
                 'confirmation' not in self.request.params):
-                self._show_all_contents(student, unit)
+                self._show_all_contents(student, unit, course_outline)
             else:
-                self._show_single_element(student, unit, lesson, assessment)
+                self._show_single_element(student, unit, lesson, assessment,
+                                          course_outline)
 
             for extra_content_hook in self.EXTRA_CONTENT:
                 extra_content = extra_content_hook(self.app_context)
@@ -417,13 +341,11 @@ class UnitHandler(BaseHandler):
     def _apply_gcb_tags(self, text):
         return jinja_utils.get_gcb_tags_filter(self)(text)
 
-    def _show_all_contents(self, student, unit):
+    def _show_all_contents(self, student, unit, course_outline):
         course = self.get_course()
         self.init_template_values(self.app_context.get_environ())
 
         display_content = []
-        left_nav_elements = UnitLeftNavElements(
-            self.get_course(), unit)
 
         if unit.unit_header:
             display_content.append(self._apply_gcb_tags(unit.unit_header))
@@ -431,13 +353,13 @@ class UnitHandler(BaseHandler):
         if unit.pre_assessment:
             display_content.append(self.get_assessment_display_content(
                 student, unit, course.find_unit_by_id(unit.pre_assessment),
-                left_nav_elements, {}))
+                course_outline, {}))
 
         for lesson in course.get_lessons(unit.unit_id):
             self.lesson_id = lesson.lesson_id
             self.lesson_is_scored = lesson.scored
             template_values = copy.copy(self.template_value)
-            self.set_lesson_content(student, unit, lesson, left_nav_elements,
+            self.set_lesson_content(student, unit, lesson, course_outline,
                                     template_values)
             display_content.append(self.render_template_to_html(
                 template_values, 'lesson_common.html'))
@@ -447,7 +369,7 @@ class UnitHandler(BaseHandler):
         if unit.post_assessment:
             display_content.append(self.get_assessment_display_content(
                 student, unit, course.find_unit_by_id(unit.post_assessment),
-                left_nav_elements, {}))
+                course_outline, {}))
 
         if unit.unit_footer:
             display_content.append(self._apply_gcb_tags(unit.unit_footer))
@@ -529,10 +451,9 @@ class UnitHandler(BaseHandler):
 
         return False
 
-    def _show_single_element(self, student, unit, lesson, assessment):
+    def _show_single_element(self, student, unit, lesson, assessment,
+                             course_outline):
         # Add markup to page which depends on the kind of content.
-        left_nav_elements = UnitLeftNavElements(
-            self.get_course(), unit)
 
         # need 'activity' to be True or False, and not the string 'true' or None
         is_activity = (self.request.get('activity') != '' or
@@ -545,24 +466,23 @@ class UnitHandler(BaseHandler):
         if assessment:
             if 'confirmation' in self.request.params:
                 self.set_confirmation_content(student, unit, assessment,
-                                              left_nav_elements)
+                                              course_outline)
                 self.template_value['assessment_name'] = (
                     self.template_value.get('assessment_name').lower())
                 display_content.append(self.render_template_to_html(
                     self.template_value, 'test_confirmation_content.html'))
             else:
                 display_content.append(self.get_assessment_display_content(
-                    student, unit, assessment, left_nav_elements,
+                    student, unit, assessment, course_outline,
                     self.template_value))
         elif lesson:
             self.lesson_id = lesson.lesson_id
             self.lesson_is_scored = lesson.scored
             if is_activity:
-                self.set_activity_content(student, unit, lesson,
-                                          left_nav_elements)
+                self.set_activity_content(student, unit, lesson, course_outline)
             else:
                 self.set_lesson_content(student, unit, lesson,
-                                        left_nav_elements, self.template_value)
+                                        course_outline, self.template_value)
             display_content.append(self.render_template_to_html(
                     self.template_value, 'lesson_common.html'))
         if (unit.unit_footer and
@@ -572,14 +492,14 @@ class UnitHandler(BaseHandler):
         self.template_value['display_content'] = display_content
 
     def get_assessment_display_content(self, student, unit, assessment,
-                                       left_nav_elements, template_values):
+                                       course_outline, template_values):
         template_values['page_type'] = ASSESSMENT_PAGE_TYPE
         template_values['assessment'] = assessment
-        template_values['back_button_url'] = left_nav_elements.get_url_by(
-            'assessment', assessment.unit_id, -1)
-        template_values['next_button_url'] = left_nav_elements.get_url_by(
-            'assessment', assessment.unit_id, 1)
-
+        outline_element = course_outline.find_element(
+            [unit.unit_id, assessment.unit_id])
+        if outline_element:
+            template_values['back_button_url'] = outline_element.prev_link
+            template_values['next_button_url'] = outline_element.next_link
         assessment_handler = AssessmentHandler()
         assessment_handler.app_context = self.app_context
         assessment_handler.request = self.request
@@ -587,7 +507,7 @@ class UnitHandler(BaseHandler):
             student, self.get_course(), assessment, as_lesson=True)
 
     def set_confirmation_content(self, student, unit, assessment,
-                                 left_nav_elements):
+                                 course_outline):
         course = self.get_course()
         self.template_value['page_type'] = ASSESSMENT_CONFIRMATION_PAGE_TYPE
         self.template_value['unit'] = unit
@@ -601,19 +521,23 @@ class UnitHandler(BaseHandler):
         self.template_value['overall_score'] = (
             course.get_overall_score(student))
         self.template_value['result'] = course.get_overall_result(student)
-        self.template_value['back_button_url'] = left_nav_elements.get_url_by(
-            'assessment', assessment.unit_id, 0)
-        self.template_value['next_button_url'] = left_nav_elements.get_url_by(
-            'assessment', assessment.unit_id, 1)
+        # Confirmation page's prev link goes back to assessment itself, not
+        # assessment's previous page.
+        outline_element = course_outline.find_element(
+            [unit.unit_id, assessment.unit_id])
+        if outline_element:
+            self.template_value['back_button_url'] = outline_element.link
+            self.template_value['next_button_url'] = outline_element.next_link
 
-    def set_activity_content(self, student, unit, lesson, left_nav_elements):
+    def set_activity_content(self, student, unit, lesson, course_outline):
         self.template_value['page_type'] = ACTIVITY_PAGE_TYPE
         self.template_value['lesson'] = lesson
         self.template_value['lesson_id'] = lesson.lesson_id
-        self.template_value['back_button_url'] = left_nav_elements.get_url_by(
-            'activity', lesson.lesson_id, -1)
-        self.template_value['next_button_url'] = left_nav_elements.get_url_by(
-            'activity', lesson.lesson_id, 1)
+        outline_element = course_outline.find_element(
+            [unit.unit_id, lesson.lesson_id])
+        if outline_element:
+            self.template_value['back_button_url'] = outline_element.prev_link
+            self.template_value['next_button_url'] = outline_element.next_link
         self.template_value['activity'] = {
             'title': lesson.activity_title,
             'activity_script_src': (
@@ -622,7 +546,7 @@ class UnitHandler(BaseHandler):
         self.template_value['page_type'] = 'activity'
         self.template_value['title'] = lesson.activity_title
 
-        if is_progress_recorded(self, student):
+        if unit_outline.is_progress_recorded(self, student):
             # Mark this page as accessed. This is done after setting the
             # student progress template value, so that the mark only shows up
             # after the student visits the page for the first time.
@@ -639,19 +563,21 @@ class UnitHandler(BaseHandler):
                 self.app_context, unit, lesson, student)
         return title
 
-    def set_lesson_content(self, student, unit, lesson, left_nav_elements,
+    def set_lesson_content(self, student, unit, lesson, course_outline,
                            template_values):
         template_values['page_type'] = UNIT_PAGE_TYPE
         template_values['lesson'] = lesson
         template_values['lesson_id'] = lesson.lesson_id
-        template_values['back_button_url'] = left_nav_elements.get_url_by(
-            'lesson', lesson.lesson_id, -1)
-        template_values['next_button_url'] = left_nav_elements.get_url_by(
-            'lesson', lesson.lesson_id, 1)
+        outline_element = course_outline.find_element(
+            [unit.unit_id, lesson.lesson_id])
+        if outline_element:
+            template_values['back_button_url'] = outline_element.prev_link
+            template_values['next_button_url'] = outline_element.next_link
         template_values['page_type'] = 'unit'
         template_values['title'] = self._get_lesson_title(unit, lesson, student)
 
-        if not lesson.manual_progress and is_progress_recorded(self, student):
+        if (not lesson.manual_progress and
+            unit_outline.is_progress_recorded(self, student)):
             # Mark this page as accessed. This is done after setting the
             # student progress template value, so that the mark only shows up
             # after the student visits the page for the first time.
@@ -659,7 +585,7 @@ class UnitHandler(BaseHandler):
                 student, unit.unit_id, lesson.lesson_id)
 
 
-class ReviewDashboardHandler(BaseHandler):
+class ReviewDashboardHandler(utils.BaseHandler):
     """Handler for generating the index of reviews that a student has to do."""
 
     def _populate_template(self, course, unit, review_steps):
@@ -677,9 +603,9 @@ class ReviewDashboardHandler(BaseHandler):
                 'assessment?name=%s' % unit.unit_id)
 
         self.template_value['event_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('event-post'))
+            crypto.XsrfTokenManager.create_xsrf_token('event-post'))
         self.template_value['review_dashboard_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('review-dashboard-post'))
+            crypto.XsrfTokenManager.create_xsrf_token('review-dashboard-post'))
 
         self.template_value['REVIEW_STATE_COMPLETED'] = (
             domain.REVIEW_STATE_COMPLETED)
@@ -691,7 +617,7 @@ class ReviewDashboardHandler(BaseHandler):
         review_due_date = unit.workflow.get_review_due_date()
         if review_due_date:
             self.template_value['review_due_date'] = review_due_date.strftime(
-                HUMAN_READABLE_DATETIME_FORMAT)
+                utils.HUMAN_READABLE_DATETIME_FORMAT)
 
         time_now = datetime.datetime.now()
         self.template_value['due_date_exceeded'] = (time_now > review_due_date)
@@ -804,7 +730,7 @@ class ReviewDashboardHandler(BaseHandler):
             self.render('review_dashboard.html')
 
 
-class ReviewHandler(BaseHandler):
+class ReviewHandler(utils.BaseHandler):
     """Handler for generating the submission page for individual reviews."""
 
     # pylint: disable=too-many-statements
@@ -872,7 +798,7 @@ class ReviewHandler(BaseHandler):
         review_due_date = unit.workflow.get_review_due_date()
         if review_due_date:
             self.template_value['review_due_date'] = review_due_date.strftime(
-                HUMAN_READABLE_DATETIME_FORMAT)
+                utils.HUMAN_READABLE_DATETIME_FORMAT)
 
         review_key = review_step.review_key
         rev = rp.get_reviews_by_keys(
@@ -892,9 +818,9 @@ class ReviewHandler(BaseHandler):
             configure_active_review(unit, rev)
 
         self.template_value['assessment_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('review-post'))
+            crypto.XsrfTokenManager.create_xsrf_token('review-post'))
         self.template_value['event_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('event-post'))
+            crypto.XsrfTokenManager.create_xsrf_token('event-post'))
 
         self.render('review.html')
 
@@ -979,9 +905,9 @@ class ReviewHandler(BaseHandler):
         review_due_date = unit.workflow.get_review_due_date()
         if time_now > review_due_date:
             self.template_value['time_now'] = time_now.strftime(
-                HUMAN_READABLE_DATETIME_FORMAT)
+                utils.HUMAN_READABLE_DATETIME_FORMAT)
             self.template_value['review_due_date'] = (
-                review_due_date.strftime(HUMAN_READABLE_DATETIME_FORMAT))
+                review_due_date.strftime(utils.HUMAN_READABLE_DATETIME_FORMAT))
             self.template_value['error_code'] = 'review_deadline_exceeded'
             self.render('error.html')
             return
@@ -1004,7 +930,7 @@ class ReviewHandler(BaseHandler):
         self.render('review_confirmation.html')
 
 
-class EventsRESTHandler(BaseRESTHandler):
+class EventsRESTHandler(utils.BaseRESTHandler):
     """Provides REST API for an Event."""
 
     def get(self):
@@ -1098,3 +1024,20 @@ class EventsRESTHandler(BaseRESTHandler):
                 not lesson.manual_progress):
                 self.get_course().get_progress_tracker().put_html_completed(
                     student, unit_id, lesson_id)
+
+
+def on_module_enabled(unused_custom_module):
+    # Conform with convention for sub-packages within modules/courses; this
+    # file doesn't have any module-registration-time work to do.
+    pass
+
+
+def get_namespaced_handlers():
+    return [
+        ('/', CourseHandler),
+        ('/activity', UnitHandler),
+        ('/course', CourseHandler),
+        ('/review', ReviewHandler),
+        ('/reviewdashboard', ReviewDashboardHandler),
+        ('/unit', UnitHandler),
+        ]

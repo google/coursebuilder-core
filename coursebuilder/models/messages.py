@@ -237,16 +237,6 @@ UNIT_DESCRIPTION_DESCRIPTION = """
 The unit description is displayed to students on the syllabus page.
 """
 
-UNIT_AVAILABILITY_DESCRIPTION = """
-If this unit is "%s", only admins can see it. If it is "%s", then
-anyone who has access to the course can see it.
-""" % (DRAFT_TEXT, PUBLISHED_TEXT)
-
-UNIT_SYLLABUS_VISIBILITY_DESCRIPTION = """
-If this unit is "%s", this controls whether or not its title is still
-shown to students on the syllabus page.
-""" % DRAFT_TEXT
-
 UNIT_PRE_ASSESSMENT_DESCRIPTION = """
 This assessment is given to students at the start of this unit.
 """

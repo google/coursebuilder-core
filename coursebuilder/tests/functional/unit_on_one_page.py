@@ -40,30 +40,30 @@ class UnitOnOnePageTest(actions.TestBase):
 
         self.unit = self.course.add_unit()
         self.unit.title = 'One Big Unit'
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
         self.unit.show_contents_on_one_page = True
 
         self.top_assessment = self.course.add_assessment()
         self.top_assessment.title = 'Top Assessment'
         self.top_assessment.html_content = 'content of top assessment'
-        self.top_assessment.now_available = True
+        self.top_assessment.availability = courses.AVAILABILITY_AVAILABLE
         self.unit.pre_assessment = self.top_assessment.unit_id
 
         self.bottom_assessment = self.course.add_assessment()
         self.bottom_assessment.title = 'Bottom Assessment'
         self.bottom_assessment.html_content = 'content of bottom assessment'
-        self.bottom_assessment.now_available = True
+        self.bottom_assessment.availability = courses.AVAILABILITY_AVAILABLE
         self.unit.post_assessment = self.bottom_assessment.unit_id
 
         self.lesson_one = self.course.add_lesson(self.unit)
         self.lesson_one.title = 'Lesson One'
         self.lesson_one.objectives = 'body of lesson one'
-        self.lesson_one.now_available = True
+        self.lesson_one.availability = courses.AVAILABILITY_AVAILABLE
 
         self.lesson_two = self.course.add_lesson(self.unit)
         self.lesson_two.title = 'Lesson Two'
         self.lesson_two.objectives = 'body of lesson two'
-        self.lesson_two.now_available = True
+        self.lesson_two.availability = courses.AVAILABILITY_AVAILABLE
 
         self.course.save()
 

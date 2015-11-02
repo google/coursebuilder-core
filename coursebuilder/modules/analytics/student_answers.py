@@ -844,13 +844,14 @@ class CourseUnitsDataSource(data_sources.AbstractSmallRestDataSource):
 
         # Look up questions from DB.
         units = []
-        for unit in courses.Course(None, app_context).get_units():
+        course = courses.Course(None, app_context=app_context)
+        for unit in course.get_units():
             units.append({
                 'unit_id': str(unit.unit_id),
                 'type': unit.type,
                 'title': unit.title,
                 'release_date': unit.release_date,
-                'now_available': unit.now_available,
+                'now_available': course.is_unit_available(unit),
                 'props': str(unit.properties),
                 'weight': float(unit.weight)
                 })

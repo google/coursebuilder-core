@@ -99,7 +99,7 @@ class MultipleChoiceTagTests(actions.TestBase):
 
         self.course = courses.Course(None, self.app_context)
         self.assessment = self.course.add_assessment()
-        self.assessment.now_available = True
+        self.assessment.availability = courses.AVAILABILITY_AVAILABLE
         self.assessment.html_content = (
             '<question quid="%s" weight="1" instanceid="q1"></question>'
             '<question-group qgid="%s" instanceid="qg1"></question-group' % (

@@ -548,26 +548,11 @@ class DashboardPage(PageObject):
         self.find_element_by_id('menu-item__settings__site').click()
         return AdminSettingsPage(self._tester)
 
-    def click_lock(self):
-        self.find_element_by_css_selector('button.icon-draft-status').click()
-        return self
-
-    def click_registration(self):
-        self.ensure_menu_group_is_open('settings')
-        self.find_element_by_link_text('Registration').click()
-        return RegistrationPage(self._tester)
-
-
-class RegistrationPage(EditorPageObject):
-    """Page object for the registration admin page."""
-
-    def set_whitelisted_students(self, emails):
-        textarea = self.find_element_by_css_selector(
-            'textarea[name="course:whitelist"]')
-        textarea.clear()
-        textarea.send_keys('\n'.join(emails))
-        self.click_save()
-        return self
+    def click_availability(self):
+        self.ensure_menu_group_is_open('publish')
+        clickable = self.find_element_by_link_text('Availability')
+        self.wait_for_page_load_after(clickable.click)
+        return CourseAvailabilityPage(self._tester)
 
 
 class CourseContentPage(RootPage):
@@ -1548,6 +1533,21 @@ class DatastorePage(PageObject):
             self._tester.driver.back()
 
         return data
+
+
+class CourseAvailabilityPage(EditorPageObject):
+
+    def set_course_availability(self, availability):
+        select.Select(self.find_element_by_name('course_availability')
+                      ).select_by_visible_text(availability)
+        return self
+
+    def set_whitelisted_students(self, emails):
+        textarea = self.find_element_by_css_selector(
+            'textarea[name="whitelist"]')
+        textarea.clear()
+        textarea.send_keys('\n'.join(emails))
+        return self
 
 
 class EmbedModuleStateError(object):

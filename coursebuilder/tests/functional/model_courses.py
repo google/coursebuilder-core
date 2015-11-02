@@ -159,7 +159,7 @@ class CourseCachingTest(actions.TestBase):
         num_lessons = courses.CachedCourse13._max_size() / len(LOREM_IPSUM)
         # Fudge factor to get size of course as saved to under the VFS limit
         # but over the memcache limit.
-        num_lessons -= 18
+        num_lessons -= 19
         unit = self._add_large_unit(num_lessons)
         memcache_keys = courses.CachedCourse13._make_keys()
 

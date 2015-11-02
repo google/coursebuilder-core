@@ -45,32 +45,32 @@ class ProgressPercent(actions.TestBase):
 
         self.unit = self.course.add_unit()
         self.unit.title = 'No Lessons'
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
 
         self.lesson_one = self.course.add_lesson(self.unit)
         self.lesson_one.title = 'Lesson One'
         self.lesson_one.objectives = 'body of lesson'
-        self.lesson_one.now_available = True
+        self.lesson_one.availability = courses.AVAILABILITY_AVAILABLE
 
         self.lesson_two = self.course.add_lesson(self.unit)
         self.lesson_two.title = 'Lesson Two'
         self.lesson_two.objectives = 'body of lesson'
-        self.lesson_two.now_available = True
+        self.lesson_two.availability = courses.AVAILABILITY_AVAILABLE
 
         self.lesson_three = self.course.add_lesson(self.unit)
         self.lesson_three.title = 'Lesson Three'
         self.lesson_three.objectives = 'body of lesson'
-        self.lesson_three.now_available = True
+        self.lesson_three.availability = courses.AVAILABILITY_AVAILABLE
 
         self.assessment_one = self.course.add_assessment()
         self.assessment_one.title = 'Assessment One'
         self.assessment_one.html_content = 'assessment one content'
-        self.assessment_one.now_available = True
+        self.assessment_one.availability = courses.AVAILABILITY_AVAILABLE
 
         self.assessment_two = self.course.add_assessment()
         self.assessment_two.title = 'Assessment Two'
         self.assessment_two.html_content = 'assessment two content'
-        self.assessment_two.now_available = True
+        self.assessment_two.availability = courses.AVAILABILITY_AVAILABLE
 
         self.course.save()
         actions.login(STUDENT_EMAIL)

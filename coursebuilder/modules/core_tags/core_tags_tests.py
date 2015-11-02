@@ -474,10 +474,10 @@ class TagsMarkdown(actions.TestBase):
         self.course = courses.Course(None, self.context)
         self.unit = self.course.add_unit()
         self.unit.title = 'The Unit'
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.title = 'The Lesson'
-        self.lesson.now_available = True
+        self.lesson.availability = courses.AVAILABILITY_AVAILABLE
         self.lesson.objectives = '''
  Welcome to Markdown!
 
@@ -535,10 +535,10 @@ class TagsInclude(actions.TestBase):
         self.course = courses.Course(None, self.context)
         self.unit = self.course.add_unit()
         self.unit.title = 'The Unit'
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.title = 'The Lesson'
-        self.lesson.now_available = True
+        self.lesson.availability = courses.AVAILABILITY_AVAILABLE
         self.lesson.objectives = GCB_INCLUDE % HTML_FILE
         self.course.save()
 

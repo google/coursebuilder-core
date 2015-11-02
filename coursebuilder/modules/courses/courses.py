@@ -17,7 +17,6 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 from common import resource
-from controllers import lessons
 from controllers import utils
 from models import content
 from models import resources_display
@@ -26,6 +25,8 @@ from models import roles
 from models import student_labels
 from modules.courses import admin_preferences_editor
 from modules.courses import assets
+from modules.courses import availability
+from modules.courses import lessons
 from modules.courses import outline
 from modules.courses import roles as course_roles
 from modules.courses import settings
@@ -56,10 +57,12 @@ def register_module():
         resource.Registry.register(resources_display.ResourceQuestionGroup)
         resource.Registry.register(utils.ResourceHtmlHook)
 
-        outline.on_module_enabled(custom_module, permissions)
+        outline.on_module_enabled(custom_module)
         assets.on_module_enabled()
         admin_preferences_editor.on_module_enabled()
+        availability.on_module_enabled(custom_module, permissions)
         course_roles.on_module_enabled(custom_module, permissions)
+        lessons.on_module_enabled(custom_module)
         settings.on_module_enabled(custom_module, permissions)
         unit_lesson_editor.on_module_enabled(custom_module, permissions)
 
@@ -70,25 +73,20 @@ def register_module():
 
     # setup routes
     courses_routes = [
-        ('/', lessons.CourseHandler),
-        ('/activity', lessons.UnitHandler),
-        ('/course', lessons.CourseHandler),
         ('/forum', utils.ForumHandler),
-        ('/preview', utils.PreviewHandler),
         ('/register', utils.RegisterHandler),
         ('/rest/locale', utils.StudentLocaleRESTHandler),
-        ('/review', lessons.ReviewHandler),
-        ('/reviewdashboard', lessons.ReviewDashboardHandler),
         ('/student/editstudent', utils.StudentEditStudentHandler),
         ('/student/settracks', utils.StudentSetTracksHandler),
         ('/student/home', utils.StudentProfileHandler),
         ('/student/unenroll', utils.StudentUnenrollHandler),
-        ('/unit', lessons.UnitHandler),
         ]
     courses_routes += admin_preferences_editor.get_namespaced_handlers()
+    courses_routes += availability.get_namespaced_handlers()
     courses_routes += settings.get_namespaced_handlers()
     courses_routes += unit_lesson_editor.get_namespaced_handlers()
     courses_routes += student_labels.get_namespaced_handlers()
+    courses_routes += lessons.get_namespaced_handlers()
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

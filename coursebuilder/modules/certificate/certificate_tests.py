@@ -64,7 +64,7 @@ class CertificateHandlerTestCase(actions.TestBase):
         response = self.get('/certificate')
         self.assertEquals(302, response.status_code)
         self.assertEquals(
-            'http://localhost/preview', response.headers['Location'])
+            'http://localhost/course', response.headers['Location'])
 
         # If the student is enrolled, expect certificate
         models.Student.add_new_student_for_current_user('Test User', None, self)
@@ -215,7 +215,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
         assessment = self.course.add_assessment()
         assessment.title = 'Assessment'
         assessment.html_content = 'assessment content'
-        assessment.now_available = True
+        assessment.availability = courses.AVAILABILITY_AVAILABLE
         self.course.save()
 
         self.certificate_criteria.append(
@@ -300,7 +300,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
             'review_min_count: 1,'
             'review_window_mins: 20,'
             'submission_due_date: \'2034-07-01 12:00\'}')
-        assessment.now_available = True
+        assessment.availability = courses.AVAILABILITY_AVAILABLE
         self.course.save()
 
         self.certificate_criteria.append(
@@ -345,7 +345,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
         machine_graded = self.course.add_assessment()
         machine_graded.title = 'Machine Graded'
         machine_graded.html_content = 'assessment content'
-        machine_graded.now_available = True
+        machine_graded.availability = courses.AVAILABILITY_AVAILABLE
         # Add peer graded assessment
         peer_graded = self.course.add_assessment()
         peer_graded.title = 'Peer Graded'
@@ -357,7 +357,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
             'review_min_count: 1,'
             'review_window_mins: 20,'
             'submission_due_date: \'2034-07-01 12:00\'}')
-        peer_graded.now_available = True
+        peer_graded.availability = courses.AVAILABILITY_AVAILABLE
         self.course.save()
 
         self.certificate_criteria.extend([

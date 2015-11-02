@@ -222,6 +222,42 @@ LEGACY_HUMAN_GRADER_WORKFLOW = yaml.safe_dump({
     REVIEW_WINDOW_MINS_KEY: DEFAULT_REVIEW_WINDOW_MINS,
 }, default_flow_style=False)
 
+# Availability policies that can be used for units and lessons.
+AVAILABILITY_AVAILABLE = 'public'
+AVAILABILITY_UNAVAILABLE = 'unavailable'
+AVAILABILITY_COURSE = 'course'
+AVAILABILITY_VALUES = [
+    AVAILABILITY_AVAILABLE,
+    AVAILABILITY_UNAVAILABLE,
+    AVAILABILITY_COURSE]
+
+COURSE_AVAILABILITY_PRIVATE = 'private'
+COURSE_AVAILABILITY_REGISTRATION_REQUIRED = 'registration_required'
+COURSE_AVAILABILITY_REGISTRATION_OPTIONAL = 'registration_optional'
+COURSE_AVAILABILITY_PUBLIC = 'public'
+COURSE_AVAILABILITY_POLICIES = collections.OrderedDict([
+    (COURSE_AVAILABILITY_PRIVATE, {
+        'now_available': False,
+        'browsable': False,
+        'can_register': False,
+        }),
+    (COURSE_AVAILABILITY_REGISTRATION_REQUIRED, {
+        'now_available': True,
+        'browsable': False,
+        'can_register': True,
+        }),
+    (COURSE_AVAILABILITY_REGISTRATION_OPTIONAL, {
+        'now_available': True,
+        'browsable': True,
+        'can_register': True,
+    }),
+    (COURSE_AVAILABILITY_PUBLIC, {
+        'now_available': True,
+        'browsable': True,
+        'can_register': False,
+    }),
+])
+
 
 def copy_attributes(source, target, converter):
     """Copies source object attributes into a target using a converter."""
@@ -512,11 +548,23 @@ class Unit12(object):
         return self.workflow.get_grader() == HUMAN_GRADER
 
     def is_custom_unit(self):
-        return None
+        return False
+
+    def is_unit(self):
+        return verify.UNIT_TYPE_UNIT == self.type
+
+    def is_link(self):
+        return verify.UNIT_TYPE_LINK == self.type
 
     @property
     def shown_when_unavailable(self):
         return False
+
+    @property
+    def availability(self):
+        if self.now_available:
+            return AVAILABILITY_COURSE
+        return AVAILABILITY_UNAVAILABLE
 
 
 class Lesson12(object):
@@ -543,6 +591,14 @@ class Lesson12(object):
     @property
     def now_available(self):
         return True
+
+    @property
+    def shown_when_unavailable(self):
+        return False
+
+    @property
+    def availability(self):
+        return AVAILABILITY_AVAILABLE
 
     @property
     def auto_index(self):
@@ -723,6 +779,14 @@ class CourseModel12(object):
             indent=4, sort_keys=True,
             default=lambda o: o.__dict__)
 
+    def is_unit_available(self, unit):
+        return unit.now_available
+
+    def is_lesson_available(self, unit, lesson):
+        if unit is None:
+            unit = self.find_unit_by_id(lesson.unit_id)
+        return self.is_unit_available(unit) and lesson.now_available
+
 
 class Unit13(object):
     """An object to represent a Unit, Assessment or Link (version 1.3)."""
@@ -742,7 +806,8 @@ class Unit13(object):
         'unit_header': None,
         'unit_footer': None,
         'custom_unit_type': None,
-        'shown_when_unavailable': False,
+        'availability': AVAILABILITY_COURSE,
+        'shown_when_unavailable': None,
         }
 
     def __init__(self):
@@ -750,8 +815,8 @@ class Unit13(object):
         self.type = ''
         self.title = ''
         self.release_date = ''
-        self.now_available = False
-        self.shown_when_unavailable = False
+        self.availability = AVAILABILITY_COURSE
+        self.shown_when_unavailable = None
 
         # custom properties
         self.properties = {}
@@ -837,6 +902,12 @@ class Unit13(object):
     def is_assessment(self):
         return verify.UNIT_TYPE_ASSESSMENT == self.type
 
+    def is_unit(self):
+        return verify.UNIT_TYPE_UNIT == self.type
+
+    def is_link(self):
+        return verify.UNIT_TYPE_LINK == self.type
+
     def is_custom_unit(self):
         return verify.UNIT_TYPE_CUSTOM == self.type
 
@@ -865,6 +936,25 @@ class Unit13(object):
             return cu and cu.is_graded
         return False
 
+    @property
+    def now_available(self):
+        raise NotImplementedError()
+
+    @now_available.setter
+    def now_available(self, value):
+        """Backward compatibility to existing settings.
+
+        This setter will be called when a course element is regenerated from
+        stored JSON, and will instead set the 'availability' enum member,
+        rather than the deprecated now_available boolean
+
+        """
+        if value:
+            self.availability = AVAILABILITY_UNAVAILABLE
+        else:
+            self.availability = AVAILABILITY_COURSE
+
+
 class Lesson13(object):
     """An object to represent a Lesson (version 1.3)."""
 
@@ -873,7 +963,10 @@ class Lesson13(object):
         'scored': False,
         'properties': {},
         'auto_index': True,
-        'manual_progress': False}
+        'manual_progress': False,
+        'availability': AVAILABILITY_COURSE,
+        'shown_when_unavailable': None,
+    }
 
     def __init__(self):
         self.lesson_id = 0  # primary key
@@ -884,7 +977,8 @@ class Lesson13(object):
         self.video = ''
         self.notes = ''
         self.duration = ''
-        self.now_available = False
+        self.availability = AVAILABILITY_COURSE
+        self.shown_when_unavailable = None
         self.has_activity = False
         self.activity_title = ''
         self.activity_listed = True
@@ -910,6 +1004,24 @@ class Lesson13(object):
     def activity(self):
         """A symbolic name to old attribute."""
         return self.has_activity
+
+    @property
+    def now_available(self):
+        raise NotImplementedError()
+
+    @now_available.setter
+    def now_available(self, value):
+        """Backward compatibility to existing settings.
+
+        This setter will be called when a course element is regenerated from
+        stored JSON, and will instead set the 'availability' enum member,
+        rather than the deprecated now_available boolean
+
+        """
+        if value:
+            self.availability = AVAILABILITY_UNAVAILABLE
+        else:
+            self.availability = AVAILABILITY_COURSE
 
 
 class PersistentCourse13(object):
@@ -1163,6 +1275,31 @@ class CourseModel13(object):
         """Checks if course object has been modified and needs to be saved."""
         return self._dirty_units or self._dirty_lessons
 
+    def _is_unit_or_lesson_available(self, unit_or_lesson):
+        if unit_or_lesson.availability == AVAILABILITY_AVAILABLE:
+            return True
+        elif unit_or_lesson.availability == AVAILABILITY_UNAVAILABLE:
+            return False
+        elif unit_or_lesson.availability == AVAILABILITY_COURSE:
+            return self.app_context.now_available
+        else:
+            raise ValueError('Unexpected value "%s" for unit availability; '
+                             'expected one of: %s' % (
+                                 unit_or_lesson.availabilty,
+                                 ' '.join(AVAILABILITY_VALUES)))
+    def is_unit_available(self, unit):
+        parent_unit = self.get_parent_unit(unit.unit_id)
+        if parent_unit and not self.is_unit_available(parent_unit):
+            return False
+        return self._is_unit_or_lesson_available(unit)
+
+    def is_lesson_available(self, unit, lesson):
+        if unit is None:
+            unit = self.find_unit_by_id(lesson.unit_id)
+        if not self.is_unit_available(unit):
+            return False
+        return self._is_unit_or_lesson_available(lesson)
+
     def _flush_deleted_objects(self):
         """Delete files owned by deleted objects."""
 
@@ -1246,7 +1383,7 @@ class CourseModel13(object):
             if fs.isfile(path):
                 self.set_file_content(
                     filename, None, metadata_only=True,
-                    is_draft=not unit.now_available)
+                    is_draft=not self.is_unit_available(unit))
 
         # Update state of owned activities.
         for lesson in self._dirty_lessons:
@@ -1258,7 +1395,7 @@ class CourseModel13(object):
             if fs.isfile(path):
                 fs.put(
                     path, None, metadata_only=True,
-                    is_draft=not lesson.now_available)
+                    is_draft=not self.is_lesson_available(None, lesson))
 
     def save(self):
         """Saves course to datastore and memcache."""
@@ -1345,7 +1482,7 @@ class CourseModel13(object):
         unit.type = unit_type
         unit.unit_id = self._get_next_id()
         unit.title = title
-        unit.now_available = False
+        unit.availability = AVAILABILITY_COURSE
         unit.shown_when_unavailable = False
         if verify.UNIT_TYPE_CUSTOM == unit_type:
             unit.custom_unit_type = custom_unit_type
@@ -1365,7 +1502,8 @@ class CourseModel13(object):
         lesson.lesson_id = self._get_next_id()
         lesson.unit_id = unit.unit_id
         lesson.title = title
-        lesson.now_available = False
+        lesson.availability = AVAILABILITY_COURSE
+        lesson.shown_when_unavailable = False
 
         self._lessons.append(lesson)
         self._index()
@@ -1459,7 +1597,7 @@ class CourseModel13(object):
             return False
         existing_unit.title = unit.title
         existing_unit.release_date = unit.release_date
-        existing_unit.now_available = unit.now_available
+        existing_unit.availability = unit.availability
         existing_unit.shown_when_unavailable = unit.shown_when_unavailable
         existing_unit.labels = unit.labels
         existing_unit.pre_assessment = unit.pre_assessment
@@ -1498,7 +1636,8 @@ class CourseModel13(object):
         existing_lesson.video = lesson.video
         existing_lesson.notes = lesson.notes
         existing_lesson.duration = lesson.duration
-        existing_lesson.now_available = lesson.now_available
+        existing_lesson.availability = lesson.availability
+        existing_lesson.shown_when_unavailable = lesson.shown_when_unavailable
         existing_lesson.has_actvity = lesson.has_activity
         existing_lesson.activity_title = lesson.activity_title
         existing_lesson.activity_listed = lesson.activity_listed
@@ -1612,7 +1751,7 @@ class CourseModel13(object):
 
         self.set_file_content(
             dest_filename, vfs.string_to_stream(assessment_content),
-            is_draft=not unit.now_available)
+            is_draft=not self.is_unit_available(unit))
 
     def set_assessment_content(self, unit, assessment_content, errors=None):
         """Updates the content of an assessment."""
@@ -1660,8 +1799,9 @@ class CourseModel13(object):
                 root_name, ex.message or ''))
             return
 
-        self.set_file_content(filename, vfs.string_to_stream(activity_content),
-                               is_draft=not lesson.now_available)
+        self.set_file_content(
+            filename, vfs.string_to_stream(activity_content),
+            is_draft=not self.is_lesson_available(None, lesson))
 
     def import_from(self, src_course, errors):
         """Imports a content of another course into this course."""
@@ -1745,7 +1885,7 @@ class CourseModel13(object):
             assert dst_unit.type == src_unit.type
 
             dst_unit.release_date = src_unit.release_date
-            dst_unit.now_available = src_unit.now_available
+            dst_unit.availability = src_unit.availability
             dst_unit.shown_when_unavailable = src_unit.shown_when_unavailable
 
             if verify.UNIT_TYPE_LINK == dst_unit.type:
@@ -1758,7 +1898,7 @@ class CourseModel13(object):
         def copy_unit13_into_unit13(src_unit, dst_unit, src_course, errors):
             """Copies unit13 attributes to a new unit."""
             dst_unit.release_date = src_unit.release_date
-            dst_unit.now_available = src_unit.now_available
+            dst_unit.availability = src_unit.availability
             dst_unit.shown_when_unavailable = src_unit.shown_when_unavailable
             dst_unit.workflow_yaml = src_unit.workflow_yaml
 
@@ -1840,14 +1980,15 @@ class CourseModel13(object):
             return True
 
         def copy_to_lesson_13(
-                src_unit, src_lesson, dst_unit, dst_lesson, now_available,
-                errors):
+                src_unit, src_lesson, dst_unit, dst_lesson, availability,
+                shown_when_unavailable, errors):
             dst_lesson.objectives = src_lesson.objectives
             dst_lesson.video = src_lesson.video
             dst_lesson.notes = src_lesson.notes
             dst_lesson.duration = src_lesson.duration
             dst_lesson.activity_listed = False
-            dst_lesson.now_available = now_available
+            dst_lesson.availability = availability
+            dst_lesson.shown_when_unavailable = shown_when_unavailable
 
             # Copy over the activity. Note that we copy files directly and
             # avoid all logical validations of their content. This is done for a
@@ -1861,7 +2002,9 @@ class CourseModel13(object):
                 lesson_w_activity = self.add_lesson(dst_unit, title)
                 lesson_w_activity.auto_index = False
                 lesson_w_activity.activity_listed = False
-                lesson_w_activity.now_available = now_available
+                lesson_w_activity.availability = availability
+                lesson_w_activity.shown_when_unavailable = (
+                    shown_when_unavailable)
                 src_filename = os.path.join(
                     src_course.app_context.get_home(),
                     src_course.get_activity_filename(
@@ -1875,15 +2018,15 @@ class CourseModel13(object):
         def copy_lesson12_into_lesson13(
                 src_unit, src_lesson, dst_unit, dst_lesson, errors):
             copy_to_lesson_13(
-                src_unit, src_lesson, dst_unit, dst_lesson, True, errors)
-            dst_lesson.now_available = True
+                src_unit, src_lesson, dst_unit, dst_lesson,
+                AVAILABILITY_COURSE, False, errors)
 
         def copy_lesson13_into_lesson13(
                 src_unit, src_lesson, dst_unit, dst_lesson, errors):
             copy_to_lesson_13(
                 src_unit, src_lesson, dst_unit, dst_lesson,
-                src_lesson.now_available, errors)
-            dst_lesson.now_available = src_lesson.now_available
+                src_lesson.availability, src_lesson.shown_when_unavailable,
+                errors)
             dst_lesson.scored = src_lesson.scored
             dst_lesson.properties = src_lesson.properties
 
@@ -2349,9 +2492,19 @@ class Course(object):
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
+            # Note: Not directly user-editable; now controlled as part of a
+            # cluster of settings from modules/courses/availability.py
             'course:browsable', 'Make Course Browsable', 'boolean',
             description='Allow non-registered users to view course content.',
-            optional=True))
+            optional=True, hidden=True, editable=False, i18n=False))
+
+        opts.add_property(schema_fields.SchemaField(
+            # Note: Not settable from traditional settings page; available
+            # from modules/courses/availability.py
+            'course:show_lessons_in_syllabus', 'Show Lessons in Syllabus',
+            'boolean',
+            description='When checked, show lesson titles in course syllabus.',
+            optional=True, hidden=True, editable=False, i18n=False))
 
         opts.add_property(schema_fields.SchemaField(
             'course:blurb', 'Abstract', 'html',
@@ -2417,21 +2570,26 @@ class Course(object):
                 'className': 'inputEx-Group hidden-header'
             })
         registration_opts.add_property(schema_fields.SchemaField(
-            'reg_form:can_register', 'Enable Registrations', 'boolean',
-            description='Checking this box allows new students to register for '
-            'the course.', optional=True))
-        registration_opts.add_property(schema_fields.SchemaField(
             'reg_form:header_text', 'Introduction', 'string', optional=True,
             description=messages.REGISTRATION_INTRODUCTION))
+        registration_opts.add_property(schema_fields.SchemaField(
+            # Note: Not directly user-editable; now controlled as part of a
+            # cluster of settings from modules/courses/availability.py
+            'reg_form:can_register', 'Enable Registrations', 'boolean',
+            description='Checking this box allows new students to register for '
+            'the course.',
+            optional=True, hidden=True, editable=False, i18n=False))
         registration_opts.add_property(schema_fields.SchemaField(
             'reg_form:additional_registration_fields', 'Registration Form',
             'html', description=str(messages.REGISTRATION_REGISTRATION_FORM),
             optional=True))
         registration_opts.add_property(schema_fields.SchemaField(
+            # Note: Not directly user-editable; now controlled as part of a
+            # cluster of settings from modules/courses/availability.py
             'course:whitelist', 'Whitelisted Students', 'text',
             description='A list of email addresses of students who may register'
             '.  Separate email addresses by commas or spaces.',
-            i18n=False, optional=True))
+            optional=True, hidden=True, editable=False, i18n=False))
         registration_opts.add_property(schema_fields.SchemaField(
             'course:send_welcome_notifications',
             'Send Welcome Email', 'boolean',
@@ -3227,3 +3385,54 @@ course:
         fs.put(course_yaml, vfs.string_to_stream(course_yaml_text))
         self.app_context.clear_per_request_cache()
         return True
+
+    def get_course_availability(self):
+        """Get derived course availability policy based on other settings.
+
+        Note that this method is class-static, so as to avoid having to
+        instantiate a Course object in contexts where we don't have one
+        as a formal parameter, but we do have an application context.
+
+        Returns:
+          A string indicating the availability policy; one of the keys from
+          COURSE_AVAILABILITY_POLICIES, or None if no policy matches the
+          current course state.
+        """
+        settings = self.app_context.get_environ()
+        now_available = settings['course']['now_available']
+        browsable = settings['course']['browsable']
+        can_register = settings['reg_form']['can_register']
+        for name, setting in COURSE_AVAILABILITY_POLICIES.iteritems():
+            if (setting['now_available'] == now_available and
+                setting['browsable'] == browsable and
+                setting['can_register'] == can_register):
+                return name
+        return None
+
+    def set_course_availability(self, name):
+        """Configure course availability policy into settings.
+
+        Note that this is class-static, so as to be symmetric with
+        get_course_availability(), above.
+
+        Args:
+          name: A string naming the availability policy.  Must be one of the
+              keys from COURSE_AVAILABILITY_POLICIES.
+        """
+        if name not in COURSE_AVAILABILITY_POLICIES:
+            raise ValueError(
+                'Expected course availability policy name to be one '
+                'of: %s, but was "%s"' %
+                (' '.join(COURSE_AVAILABILITY_POLICIES.keys()), name))
+        setting = COURSE_AVAILABILITY_POLICIES[name]
+        settings = self.app_context.get_environ()
+        settings['course']['now_available'] = setting['now_available']
+        settings['course']['browsable'] = setting['browsable']
+        settings['reg_form']['can_register'] = setting['can_register']
+        self.save_settings(settings)
+
+    def is_unit_available(self, unit):
+        return self._model.is_unit_available(unit)
+
+    def is_lesson_available(self, unit, lesson):
+        return self._model.is_lesson_available(unit, lesson)

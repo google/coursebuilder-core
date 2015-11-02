@@ -1,20 +1,3 @@
-{% macro render_availability_attributes(available, editable) %}
-  class="icon-draft-status gcb-list__icon gcb-list__icon--rowhover material-icons
-  {% if available %}
-    public
-  {% else %}
-    private
-  {% endif %}
-  {% if not editable %}
-    inactive
-  {% endif %}"
-  {% if available %}
-    alt="Published" title="Published"
-  {% else %}
-    alt="Private" title="Private"
-  {% endif %}
-{% endmacro %}
-
 <script src ="/modules/dashboard/resources/js/course_outline.js"></script>
 <link href="/modules/dashboard/_static/css/course_outline.css" rel="stylesheet">
 {% macro render_row(item) -%}
@@ -25,11 +8,6 @@
       {% else %}
         <div class="gcb-list__icon gcb-list__icon--rowhover inactive"></div>
       {% endif %}
-    </div>
-
-    <div class="gcb-list__cell gcb-list__cell--icon">
-      <a {{ render_availability_attributes(item.now_available, item.can_edit_status) }}
-          data-key="{{ item.id }}" data-component-type="{{ item.component_type }}"></a>
     </div>
 
     <div class="gcb-list__cell gcb-list__cell--icon">
@@ -63,7 +41,6 @@
   <div class="gcb-list__header-row gcb-list__row--flex">
     <div class="gcb-list__cell gcb-list__cell--header gcb-list__cell--icon"></div>
     <div class="gcb-list__cell gcb-list__cell--header gcb-list__cell--icon"></div>
-    <div class="gcb-list__cell gcb-list__cell--header gcb-list__cell--icon"></div>
     <div class="gcb-list__cell gcb-list__cell--header name indent-course">
       Course Outline
     </div>
@@ -73,20 +50,6 @@
   </div>
   <div class="gcb-list__row gcb-list__row--flex">
     <div class="gcb-list__cell gcb-list__cell--icon"></div>
-
-    <div class="gcb-list__cell gcb-list__cell--icon">
-      {% if course.availability.is_editable %}
-        <form action="{{ course.availability.url }}" method="POST">
-          <input type="hidden" name="xsrf_token"
-                 value="{{ course.availability.xsrf_token }}">
-          <input type="hidden" name="availability"
-                 value="{{ course.availability.param }}">
-          <button id="course-availability" {{ render_availability_attributes(course.availability.now_available, course.availability.is_editable) }}></button>
-        </form>
-      {% else %}
-        <div id="course-availability" {{ render_availability_attributes(course.availability.now_available, course.availability.is_editable) }}></div>
-      {% endif %}
-    </div>
 
     <div class="gcb-list__cell gcb-list__cell--icon">
       <a href="course" target="_blank" class="gcb-list__icon gcb-list__icon--rowhover material-icons">open_in_new</a>

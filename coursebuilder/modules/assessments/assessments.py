@@ -93,7 +93,7 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
 
         # If the assessment is not currently available, and the user does not
         # have the permission to see drafts redirect to the main page.
-        if (not unit.now_available and
+        if (not course.is_unit_available(unit) and
             not custom_modules.can_see_drafts(self.app_context)):
             self.redirect('/')
             return
@@ -140,7 +140,7 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
         if self.request.get('onsubmit'):
             self.template_value['show_onsubmit_message'] = True
         self.template_value['unit_id'] = unit.unit_id
-        self.template_value['now_available'] = unit.now_available
+        self.template_value['now_available'] = course.is_unit_available(unit)
         self.template_value['transient_student'] = student.is_transient
         self.template_value['as_lesson'] = as_lesson
         self.template_value['assessment_title'] = unit.title
@@ -473,11 +473,9 @@ class AnswerHandler(AssignmentsModuleMixin, utils.BaseHandler):
 
             parent_unit = course.get_parent_unit(unit.unit_id)
             if parent_unit:
-                unit_contents = utils.UnitLeftNavElements(
-                    course, parent_unit)
-                next_url = unit_contents.get_url_by(
-                    'assessment', unit.unit_id, 0) + '&confirmation'
-                self.redirect('/' + next_url)
+                next_url = '/unit?unit=%d&assessment=%d&confirmation' % (
+                    parent_unit.unit_id, unit.unit_id)
+                self.redirect(next_url)
             else:
                 if embedded:
                     self.redirect('/%s?%s' %(

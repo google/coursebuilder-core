@@ -273,7 +273,8 @@ def create_course_file_if_not_exists(handler):
     course_yaml = fs.physical_to_logical('/course.yaml')
     if not fs.isfile(course_yaml):
         fs.put(course_yaml, vfs.string_to_stream(
-            courses.EMPTY_COURSE_YAML % users.get_current_user().email()))
+            courses.Course.EMPTY_COURSE_YAML %
+            users.get_current_user().email()))
 
 
 def _match_allowed_bases(filename,

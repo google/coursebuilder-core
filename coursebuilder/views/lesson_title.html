@@ -1,6 +1,6 @@
 <h1 class="gcb-lesson-title">
   {{ lesson.title }}
-  {% if not lesson.now_available and can_see_drafts %}
+  {% if not is_lesson_available(lesson) and can_see_drafts %}
     <span id="lesson-title-private">
       (Private)
     </span>

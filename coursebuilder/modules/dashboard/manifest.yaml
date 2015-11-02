@@ -1,6 +1,6 @@
 tests:
   functional:
-    - modules.dashboard.dashboard_tests.CourseOutlineTestCase = 3
+    - modules.dashboard.dashboard_tests.CourseOutlineTestCase = 1
     - modules.dashboard.dashboard_tests.DashboardAccessTestCase = 3
     - modules.dashboard.dashboard_tests.QuestionDashboardTestCase = 8
     - modules.dashboard.dashboard_tests.QuestionGroupDashboardTestCase = 6

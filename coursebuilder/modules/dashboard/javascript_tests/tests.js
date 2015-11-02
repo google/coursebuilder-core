@@ -165,64 +165,6 @@ describe('asset table sorting', function() {
   });
 });
 
-describe('draft status toggling', function() {
-  beforeEach(function() {
-    cbShowAlert = jasmine.createSpy("cbShowAlert");
-    cbShowMsgAutoHide = jasmine.createSpy("cbShowMsgAutoHide");
-    this.oldPost = $.post;
-    $.post = jasmine.createSpy("$.post");
-    var content = $(
-        '<div class="gcb-list xsrf-token-holder"' +
-        '    data-status-xsrf-token-lesson="token">' +
-        '  <div class="private icon-draft-status"' +
-        '      data-key="9" data-component-type="lesson"></div>' +
-        '</div>');
-    this.padlock = content.find('.icon-draft-status');
-    onDraftStatusClick.call(this.padlock);
-  });
-  afterEach(function() {
-    $.post = this.oldPost;
-  });
-  it('optimistically changes the draft status icon', function() {
-    expect(this.padlock.hasClass("public")).toBe(true);
-    expect(this.padlock.hasClass("private")).toBe(false);
-  });
-  it('makes a POST request to the server', function() {
-    expect($.post).toHaveBeenCalledWith(
-      'dashboard',
-      {
-        action: 'set_draft_status_lesson',
-        set_draft: 0,
-        'key': 9,
-        'type': 'lesson',
-        'xsrf_token': 'token'
-      },
-      jasmine.any(Function),
-      'text'
-    );
-  });
-  it('verifies the server response and shows a message', function() {
-    setDraftStatusCallback(
-      '{"status": 200, "payload":"{\\"is_draft\\":false}"}', this.padlock);
-    expect(this.padlock.hasClass("public")).toBe(true);
-    expect(this.padlock.hasClass("private")).toBe(false);
-    expect(cbShowMsgAutoHide).toHaveBeenCalled();
-  });
-  it('resets the draft status icon when an error is received', function() {
-    setDraftStatusCallback('{"status": 401}', this.padlock);
-    expect(this.padlock.hasClass("public")).toBe(false);
-    expect(this.padlock.hasClass("private")).toBe(true);
-    expect(cbShowAlert).toHaveBeenCalled();
-  });
-  it('adjusts the draft status icon upon a server inconsistency', function() {
-    setDraftStatusCallback(
-      '{"status": 200, "payload":"{\\"is_draft\\":true}"}', this.padlock);
-    expect(this.padlock.hasClass("public")).toBe(false);
-    expect(this.padlock.hasClass("private")).toBe(true);
-    expect(cbShowAlert).toHaveBeenCalled();
-  });
-});
-
 describe('question table filtering', function() {
   function verifySingleRow(table, expectedId) {
     var visibleRows = table.find("tr:visible");

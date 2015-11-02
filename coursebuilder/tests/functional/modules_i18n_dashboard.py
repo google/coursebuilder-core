@@ -804,12 +804,12 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
         self.unit = self.course.add_unit()
         self.unit.title = 'Test Unit'
         self.unit.unit_header = '<p>a</p><p>b</p>'
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
 
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.title = 'Test Lesson'
         self.lesson.objectives = '<p>c</p><p>d</p>'
-        self.lesson.now_available = True
+        self.lesson.availability = courses.AVAILABILITY_AVAILABLE
 
         self.course.save()
 
@@ -853,7 +853,7 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
         lesson = self.course.add_lesson(unit)
         lesson.title = 'Test Lesson'
         lesson.objectives = '<p>a</p><p>b</p>'
-        lesson.now_available = True
+        lesson.availability = courses.AVAILABILITY_AVAILABLE
 
         self.course.save()
 
@@ -1283,12 +1283,12 @@ class CourseContentTranslationTests(actions.TestBase):
         self.unit = self.course.add_unit()
         self.unit.title = 'Test Unit'
         self.unit.unit_header = '<p>a</p><p>b</p>'
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
 
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.title = 'Test Lesson'
         self.lesson.objectives = '<p>c</p><p>d</p>'
-        self.lesson.now_available = True
+        self.lesson.availability = courses.AVAILABILITY_AVAILABLE
 
         self.course.save()
 
@@ -1946,14 +1946,14 @@ class TranslationImportExportTests(actions.TestBase):
         self.unit.description = 'unit description'
         self.unit.unit_header = 'unit header'
         self.unit.unit_footer = 'unit footer'
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
 
         self.assessment = self.course.add_assessment()
         self.assessment.title = 'Assessment Title'
         self.assessment.description = 'assessment description'
         self.assessment.html_content = 'assessment html content'
         self.assessment.html_review_form = 'assessment html review form'
-        self.assessment.now_available = True
+        self.assessment.availability = courses.AVAILABILITY_AVAILABLE
 
         self.link = self.course.add_link()
         self.link.title = 'Link Title'
@@ -1966,7 +1966,7 @@ class TranslationImportExportTests(actions.TestBase):
         self.lesson.objectives = 'lesson objectives'
         self.lesson.video_id = 'lesson video'
         self.lesson.notes = 'lesson notes'
-        self.lesson.now_available = True
+        self.lesson.availability = courses.AVAILABILITY_AVAILABLE
 
         self.course.save()
 
@@ -3003,27 +3003,27 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
             _en = course.add_unit()
             _en.type = 'U'
-            _en.now_available = True
+            _en.availability = courses.AVAILABILITY_AVAILABLE
             _en.title = 'Unit en_US'
 
             _ru = course.add_unit()
             _ru.type = 'U'
-            _ru.now_available = True
+            _ru.availability = courses.AVAILABILITY_AVAILABLE
             _ru.title = 'Unit ru_RU'
 
             _es = course.add_unit()
             _es.type = 'U'
-            _es.now_available = True
+            _es.availability = courses.AVAILABILITY_AVAILABLE
             _es.title = 'Unit es_ES'
 
             _all = course.add_unit()
             _all.type = 'U'
-            _all.now_available = True
+            _all.availability = courses.AVAILABILITY_AVAILABLE
             _all.title = 'Unit all_ALL'
 
             _none = course.add_unit()
             _none.type = 'U'
-            _none.now_available = True
+            _none.availability = courses.AVAILABILITY_AVAILABLE
             _none.title = 'Unit none_NONE'
 
             if locale_labels:
@@ -3368,13 +3368,13 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
             course = courses.Course(None, sites.get_all_courses()[0])
             unit_1 = course.add_unit()
             unit_1.type = 'U'
-            unit_1.now_available = True
+            unit_1.availability = courses.AVAILABILITY_AVAILABLE
             unit_1.title = 'Unit for Track A and Locale ru_RU'
             unit_1.labels = utils.list_to_text(
                 [track_a_id, locale_ru_id])
             unit_2 = course.add_unit()
             unit_2.type = 'U'
-            unit_2.now_available = True
+            unit_2.availability = courses.AVAILABILITY_AVAILABLE
             unit_2.title = 'Unit for Track B and Locale es_ES'
             unit_2.labels = utils.list_to_text(
                 [track_b_id, locale_es_id])

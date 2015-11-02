@@ -1,5 +1,5 @@
 {{ title }}
-{% if lesson.now_available or can_see_drafts %}
+{% if is_lesson_available(lesson) or can_see_drafts %}
   <div {% if lesson.notes %}class="gcb-cols"{% endif %}>
     {% if lesson.notes %}
     <div id="get-text-button">

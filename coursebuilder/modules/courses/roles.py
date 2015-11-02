@@ -41,10 +41,7 @@ def maybe_create_teaching_assistant_role():
         'permissions': {
             custom_module.name: constants.TEACHING_ASSISTANT_ROLE_PERMISSIONS
         },
-        'description': ('Limited permissions to modify short-running '
-                        'courses copied from master versions.  This '
-                        'includes re-setting assignment due dates to '
-                        'match the term of the run, and similar items.'),
+        'description': 'Ability to modify assessment due dates and scoring.',
         'users': []})
     roles.RoleDAO.save(role_dto)
 
@@ -55,47 +52,8 @@ def on_module_enabled(courses_custom_module, course_permissions):
 
     course_permissions.append(roles.Permission(
         constants.TEACHING_ASSISTANT_PERMISSION,
-        'Set unit availability and grading.  '
-        'Suitable for teaching assistants.'))
+        'Can modify assessment due dates and scoring.'))
 
-    # Roles with TA permission can edit course availability, start/end dates.
-    permissions.SchemaPermissionRegistry.add(
-        constants.SCOPE_COURSE_SETTINGS,
-        permissions.SimpleSchemaPermission(
-            custom_module, constants.TEACHING_ASSISTANT_PERMISSION,
-            editable_list=[
-                'course/course:start_date',
-                'course/course:now_available',
-                'course/course:browsable',
-                ]))
-
-    # Roles with TA permission can edit unit availability, start/end dates.
-    permissions.SchemaPermissionRegistry.add(
-        constants.SCOPE_UNIT,
-        permissions.SimpleSchemaPermission(
-            custom_module, constants.TEACHING_ASSISTANT_PERMISSION,
-            readable_list=[
-                'type',
-                'title',
-                'description',
-                ],
-            editable_list=[
-                'is_draft',
-                'shown_when_unavailable',
-                ]))
-    permissions.SchemaPermissionRegistry.add(
-        constants.SCOPE_LINK,
-        permissions.SimpleSchemaPermission(
-            custom_module, constants.TEACHING_ASSISTANT_PERMISSION,
-            readable_list=[
-                'type',
-                'title',
-                'description',
-                ],
-            editable_list=[
-                'is_draft',
-                'shown_when_unavailable',
-                ]))
     permissions.SchemaPermissionRegistry.add(
         constants.SCOPE_ASSESSMENT,
         permissions.SimpleSchemaPermission(
@@ -106,8 +64,6 @@ def on_module_enabled(courses_custom_module, course_permissions):
                 'assessment/description',
                 ],
             editable_list=[
-                'assessment/is_draft',
-                'assessment/shown_when_unavailable',
                 'assessment/%s' % resources_display.workflow_key(
                     courses.SINGLE_SUBMISSION_KEY),
                 'assessment/%s' % resources_display.workflow_key(

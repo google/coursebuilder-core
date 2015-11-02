@@ -32,7 +32,6 @@ from common import resource
 from common import safe_dom
 from common import schema_fields
 from common import tags
-from controllers import lessons as lessons_controller
 from controllers import sites
 from controllers import utils
 from mapreduce import context
@@ -47,6 +46,7 @@ from models import resources_display
 from models import roles
 from models import transforms
 from modules.admin.config import CoursesItemRESTHandler
+from modules.courses import lessons as lessons_controller
 from modules.courses import outline
 from modules.courses import settings
 from modules.courses.unit_lesson_editor import LessonRESTHandler
@@ -1858,12 +1858,14 @@ def welcome_handler_import_skills_callback(app_ctx, unused_errors):
 def filter_visible_lessons(handler, student, skill):
     """Filter out references to lessons which are not visible."""
     visible_lessons = []
+    course = handler.get_course()
     for lesson_location in skill.lessons:
-        u, l = resources_display.ResourceLesson.get_resource(
+        unit, lesson = resources_display.ResourceLesson.get_resource(
             handler.get_course(), lesson_location.id)
         if not (
-            u.now_available and l.now_available
-            and u in handler.get_track_matching_student(student)
+            course.is_unit_available(unit) and
+            course.is_lesson_available(unit, lesson) and
+            unit in handler.get_track_matching_student(student)
         ):
             continue
         visible_lessons.append(lesson_location)

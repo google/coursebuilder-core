@@ -62,10 +62,6 @@ UNIT_HOOK_POINTS = [
     '<!-- unit.after_content_begins -->',
     '<!-- unit.before_content_ends -->']
 
-PREVIEW_HOOK_POINTS = [
-    '<!-- preview.after_top_content_ends -->',
-    '<!-- preview.after_main_content_ends -->']
-
 
 class MockAppContext(object):
 
@@ -545,9 +541,12 @@ def get_current_user_email():
 
 
 def logout():
-    del os.environ['USER_EMAIL']
-    del os.environ['USER_ID']
-    del os.environ['USER_IS_ADMIN']
+    if 'USER_EMAIL' in os.environ:
+        del os.environ['USER_EMAIL']
+    if 'USER_ID' in os.environ:
+        del os.environ['USER_ID']
+    if 'USER_IS_ADMIN' in os.environ:
+        del os.environ['USER_IS_ADMIN']
 
 
 def in_course(course, url):
@@ -591,9 +590,6 @@ def view_registration(browser, course=None):
 def register_with_additional_fields(browser, name, data2, data3):
     """Registers a new student with customized registration form."""
 
-    response = browser.get('/')
-    assert_equals(response.status_int, 302)
-
     response = view_registration(browser)
 
     register_form = get_form_by_action(response, 'register')
@@ -634,34 +630,17 @@ def check_personalization(browser, response):
         check_logout_link(response.body)
 
 
-def view_preview(browser):
-    """Views /preview page."""
-    response = browser.get('preview')
-    assert_contains(' the stakes are high.', response.body)
-    assert_contains(
-        '<li class=\'\'><p class="gcb-top-content"> '
-        '<span class="gcb-progress-none"></span> '
-        'Pre-course assessment </p> </li>',
-        response.body, collapse_whitespace=True)
-
-    assert_contains_none_of(UNIT_HOOK_POINTS, response.body)
-    assert_contains_all_of(PREVIEW_HOOK_POINTS, response.body)
-
-    return response
-
-
 def view_course(browser):
     """Views /course page."""
     response = browser.get('course')
 
     assert_contains(' the stakes are high.', response.body)
-    assert_contains('<a href="assessment?name=Pre">Pre-course assessment</a>',
-                    response.body)
+    assert_contains('<a href="assessment?name=Pre"> Pre-course assessment </a>',
+                    response.body, collapse_whitespace=True)
     check_personalization(browser, response)
 
     assert_contains_all_of(BASE_HOOK_POINTS, response.body)
     assert_contains_none_of(UNIT_HOOK_POINTS, response.body)
-    assert_contains_none_of(PREVIEW_HOOK_POINTS, response.body)
 
     return response
 
@@ -678,7 +657,6 @@ def view_unit(browser):
 
     assert_contains_all_of(BASE_HOOK_POINTS, response.body)
     assert_contains_all_of(UNIT_HOOK_POINTS, response.body)
-    assert_contains_none_of(PREVIEW_HOOK_POINTS, response.body)
 
     return response
 
@@ -935,12 +913,12 @@ class Permissions(object):
     @classmethod
     def get_nonbrowsable_pages(cls):
         """Returns all non-browsable pages."""
-        return [view_preview, view_my_profile, view_registration]
+        return [view_my_profile, view_registration]
 
     @classmethod
     def get_logged_out_allowed_pages(cls):
         """Returns all pages that a logged-out user can see."""
-        return [view_announcements, view_preview]
+        return [view_announcements]
 
     @classmethod
     def get_logged_out_denied_pages(cls):
@@ -957,12 +935,12 @@ class Permissions(object):
     @classmethod
     def get_enrolled_student_denied_pages(cls):
         """Returns all pages that a logged-in, enrolled student can't see."""
-        return [view_registration, view_preview]
+        return [view_registration]
 
     @classmethod
     def get_unenrolled_student_allowed_pages(cls):
         """Returns all pages that a logged-in, unenrolled student can see."""
-        return [view_announcements, view_registration, view_preview]
+        return [view_announcements, view_registration]
 
     @classmethod
     def get_unenrolled_student_denied_pages(cls):
@@ -1053,6 +1031,7 @@ def simple_add_course(name, admin_email, title):
                 },
             })
 
+
 class CourseOutlineTest(TestBase):
     def assertAvailabilityState(self, element, available=None, active=None):
         """Check the state of a lock icon"""
@@ -1072,5 +1051,3 @@ class CourseOutlineTest(TestBase):
         self.assertIsNotNone(element)
         count = 1 if editable else 0
         self.assertEquals(len(element.select('a')), count)
-
-

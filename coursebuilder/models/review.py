@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 import entities
+import progress
 import student_work
 import transforms
 
@@ -204,7 +205,7 @@ class ReviewUtils(object):
 
     @classmethod
     def get_review_progress(
-        cls, review_steps, review_min_count, progress_tracker):
+        cls, review_steps, review_min_count):
         """Gets the progress value based on the number of reviews done.
 
         Args:
@@ -220,8 +221,8 @@ class ReviewUtils(object):
         completed_reviews = cls.count_completed_reviews(review_steps)
 
         if cls.has_completed_enough_reviews(review_steps, review_min_count):
-            return progress_tracker.COMPLETED_STATE
-        elif completed_reviews > 0:
-            return progress_tracker.IN_PROGRESS_STATE
+            return progress.UnitLessonCompletionTracker.COMPLETED_STATE
+        elif len(review_steps) > 0:
+            return progress.UnitLessonCompletionTracker.IN_PROGRESS_STATE
         else:
-            return progress_tracker.NOT_STARTED_STATE
+            return progress.UnitLessonCompletionTracker.NOT_STARTED_STATE

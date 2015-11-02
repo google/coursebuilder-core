@@ -1,8 +1,8 @@
 tests:
   functional:
-    - modules.courses.courses_tests.AccessDraftsTestCase = 2
+    - modules.courses.courses_tests.AvailabilityTests = 28
     - modules.courses.courses_tests.BackgroundImportTests = 7
-    - modules.courses.courses_tests.CourseAccessPermissionsTests = 7
+    - modules.courses.courses_tests.CourseAccessPermissionsTests = 4
     - modules.courses.courses_tests.ReorderAccess = 2
     - modules.courses.courses_tests.UnitLessonEditorAccess = 3
 
@@ -10,11 +10,13 @@ files:
   - modules/courses/__init__.py
   - modules/courses/admin_preferences_editor.py
   - modules/courses/assets.py
+  - modules/courses/availability.py
   - modules/courses/constants.py
   - modules/courses/course_outline.html
   - modules/courses/courses.py
   - modules/courses/courses_tests.py
   - modules/courses/import_running.html
+  - modules/courses/lessons.py
   - modules/courses/messages.py
   - modules/courses/outline.py
   - modules/courses/roles.py
@@ -25,3 +27,4 @@ files:
   - modules/courses/templates/question_list.html
   - modules/courses/templates/question_location_macros.html
   - modules/courses/unit_lesson_editor.py
+  - modules/courses/unit_outline.py

@@ -39,26 +39,28 @@
       </div>
       <div class="gcb-col-9">
 
-        <h1 class="gcb-syllabus-headers">
-          {# I18N: Title for the course syllabus on the main contents page. #}
-          {{ gettext('Syllabus') }}
-        </h1>
-        <div id="gcb-main" role="main">
-          <div class="gcb-nav gcb-nav-full" id="gcb-nav-y">
-            <ul>
-              {% for unit in units %}
-                {{ macros.render_unit_title(
-                    unit, progress, is_progress_recorded,
-                    transient_student, can_see_drafts, True,
-                    css_class=None,
-                    target_url='assessment?name=%s' % unit.unit_id,
-                    include_description=True,
-                    student_preferences=student_preferences) }}
-              {% endfor %}
-            </ul>
+        {% if course_outline %}
+          <h1 class="gcb-syllabus-headers">
+            {# I18N: Title for the course syllabus on the main contents page. #}
+            {{ gettext('Syllabus') }}
+          </h1>
+          <div id="gcb-main" role="main">
+            <div class="gcb-nav gcb-nav-full" id="gcb-nav-y">
+              <ul>
+                {% for outline_element in course_outline recursive %}
+                  {{ macros.render_outline_element(
+                         outline_element, can_see_drafts, course_availability,
+                         'li', '', 'p', 'gcb-top-content') }}
+                  {% if show_lessons_in_syllabus and outline_element.contents %}
+                    <ul>
+                      {{ loop(outline_element.contents) }}
+                    </ul>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            </div>
           </div>
-        </div>
-
+        {% endif %}
       </div>
     </div>
 {% endblock %}

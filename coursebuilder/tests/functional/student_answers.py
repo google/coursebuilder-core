@@ -293,7 +293,7 @@ class StudentAnswersAnalyticsTest(actions.TestBase):
         assessment = course.add_assessment()
         assessment.unit_id = assessment_def.unit_id
         assessment.title = assessment_def.title
-        assessment.now_available = True
+        assessment.availability = courses.AVAILABILITY_AVAILABLE
         assessment.html_content = assessment_def.html_content
 
     def _add_entity(self, context, entity):

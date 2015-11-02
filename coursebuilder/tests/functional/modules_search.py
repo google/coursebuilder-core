@@ -123,10 +123,10 @@ class SearchTest(search_unit_test.SearchTestBase):
         course = courses.Course(None,
                                 app_context=sites.get_all_courses()[0])
         unit = course.add_unit()
-        unit.now_available = True
+        unit.availability = courses.AVAILABILITY_AVAILABLE
         lesson_a = course.add_lesson(unit)
         lesson_a.notes = search_unit_test.UNICODE_PAGE_URL
-        lesson_a.now_available = True
+        lesson_a.availability = courses.AVAILABILITY_AVAILABLE
         course.update_unit(unit)
         course.save()
 
@@ -142,13 +142,13 @@ class SearchTest(search_unit_test.SearchTestBase):
         sites.setup_courses('course:/test::ns_test, course:/:/')
         course = courses.Course(None, app_context=sites.get_all_courses()[0])
         unit = course.add_unit()
-        unit.now_available = True
+        unit.availability = courses.AVAILABILITY_AVAILABLE
         lesson_a = course.add_lesson(unit)
         lesson_a.notes = search_unit_test.VALID_PAGE_URL
         objectives_link = 'http://objectiveslink.null/'
         lesson_a.objectives = '<a href="%s"></a><a href="%s"></a>' % (
             search_unit_test.LINKED_PAGE_URL, objectives_link)
-        lesson_a.now_available = True
+        lesson_a.availability = courses.AVAILABILITY_AVAILABLE
         course.update_unit(unit)
         course.save()
 
@@ -177,13 +177,13 @@ class SearchTest(search_unit_test.SearchTestBase):
             course = courses.Course(None,
                                     app_context=sites.get_all_courses()[0])
             unit = course.add_unit()
-            unit.now_available = True
+            unit.availability = courses.AVAILABILITY_AVAILABLE
             lesson_a = course.add_lesson(unit)
             lesson_a.video = 'portal'
-            lesson_a.now_available = True
+            lesson_a.availability = courses.AVAILABILITY_AVAILABLE
             lesson_b = course.add_lesson(unit)
             lesson_b.objectives = '<gcb-youtube videoid="glados">'
-            lesson_b.now_available = True
+            lesson_b.availability = courses.AVAILABILITY_AVAILABLE
             course.update_unit(unit)
             course.save()
 
@@ -278,12 +278,12 @@ class SearchTest(search_unit_test.SearchTestBase):
         lesson21.objectives = search_unit_test.VALID_PAGE
         lesson21.video = 'portal'
 
-        unit1.now_available = True
-        lesson11.now_available = False
+        unit1.availability = courses.AVAILABILITY_AVAILABLE
+        lesson11.availability = courses.AVAILABILITY_UNAVAILABLE
         course.update_unit(unit1)
 
-        unit2.now_available = False
-        lesson21.now_available = True
+        unit2.availability = courses.AVAILABILITY_UNAVAILABLE
+        lesson21.availability = courses.AVAILABILITY_AVAILABLE
         course.update_unit(unit2)
 
         course.save()
@@ -314,20 +314,20 @@ class SearchTest(search_unit_test.SearchTestBase):
                        'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
 
         unit1 = course.add_unit()
-        unit1.now_available = True
+        unit1.availability = courses.AVAILABILITY_AVAILABLE
         unit1.labels = str(foo_id)
         lesson11 = course.add_lesson(unit1)
         lesson11.objectives = 'common plugh <gcb-youtube videoid="glados">'
-        lesson11.now_available = True
+        lesson11.availability = courses.AVAILABILITY_AVAILABLE
         lesson11.notes = search_unit_test.VALID_PAGE_URL
         lesson11.video = 'portal'
         course.update_unit(unit1)
         unit2 = course.add_unit()
-        unit2.now_available = True
+        unit2.availability = courses.AVAILABILITY_AVAILABLE
         unit1.labels = str(bar_id)
         lesson21 = course.add_lesson(unit2)
         lesson21.objectives = 'common plover'
-        lesson21.now_available = True
+        lesson21.availability = courses.AVAILABILITY_AVAILABLE
         course.update_unit(unit2)
         course.save()
         self.index_test_course()
@@ -386,10 +386,10 @@ class SearchTest(search_unit_test.SearchTestBase):
         actions.register(self, 'Some Admin')
 
         unit = course.add_unit()
-        unit.now_available = True
+        unit.availability = courses.AVAILABILITY_AVAILABLE
         lesson = course.add_lesson(unit)
         lesson.objectives = 'A lesson about <a href="%s">dogs</a>' % dogs_link
-        lesson.now_available = True
+        lesson.availability = courses.AVAILABILITY_AVAILABLE
         course.save()
 
         lesson_bundle = {

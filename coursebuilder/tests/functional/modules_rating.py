@@ -51,10 +51,10 @@ class BaseRatingsTests(actions.TestBase):
             COURSE_NAME, ADMIN_EMAIL, 'Ratings Course')
         self.course = courses.Course(None, context)
         self.unit = self.course.add_unit()
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.objectives = 'Some lesson content'
-        self.lesson.now_available = True
+        self.lesson.availability = courses.AVAILABILITY_AVAILABLE
         self.course.save()
 
         self.key = '/%s/unit?unit=%s&lesson=%s' % (

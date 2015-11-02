@@ -233,7 +233,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.I18NTest': 2,
     'tests.functional.test_classes.LegacyEMailAsKeyNameTest': 48,
     'tests.functional.test_classes.LessonComponentsTest': 3,
-    'tests.functional.test_classes.MemcacheTest': 69,
+    'tests.functional.test_classes.MemcacheTest': 68,
     'tests.functional.test_classes.MultipleCoursesTest': 1,
     'tests.functional.test_classes.NamespaceTest': 2,
     'tests.functional.test_classes.StaticHandlerTest': 3,

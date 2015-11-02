@@ -17,7 +17,6 @@
 __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 
 import cgi
-import itertools
 import time
 import json
 
@@ -461,11 +460,6 @@ class CourseOutlineTestCase(actions.CourseOutlineTest):
         self.lesson.title = 'Test Lesson'
         self.course.save()
 
-    def _check_private_setting(self, soup, component_type, key, is_private):
-        lock = soup.select('[data-key="{}"]'.format(key))[0]
-        self.assertEqual(lock.get('data-component-type'), component_type)
-        self.assertAvailabilityState(lock, available=not is_private)
-
     def _get_item_for(self, component_type, item_id):
         return self._get_outline().select('[data-{}-id={}]'.format(
             component_type, item_id))[0]
@@ -474,67 +468,6 @@ class CourseOutlineTestCase(actions.CourseOutlineTest):
         response = self.get(self.URL)
         return self.parse_html_string_to_soup(response.body).select(
             '.course-outline')[0]
-
-    def _check_syllabus_for_admin(self, private, title):
-        response = self.get('/%s/course' % self.COURSE_NAME)
-        dom = self.parse_html_string(response.body)
-        units = dom.findall('.//div[@id="gcb-main"]//li')
-        for unit in units:
-            text = ' '.join(''.join(unit.itertext()).split())
-            if title in text:
-                if private:
-                    self.assertIn('(Private)', text)
-                else:
-                    self.assertNotIn('(Private)', text)
-
-    def _check_syllabus_for_student(self, private, shown, title):
-        actions.login(self.STUDENT_EMAIL, is_admin=False)
-        response = self.get('/%s/course' % self.COURSE_NAME)
-        dom = self.parse_html_string(response.body)
-        units = dom.findall('.//div[@id="gcb-main"]//li')
-
-        found = False
-        for unit in units:
-            text = ' '.join(''.join(unit.itertext()).split())
-            if title in text:
-                found = True
-                if private:
-                    if shown:
-                        self.assertIsNone(unit.find('.//a'))
-                    else:
-                        self.fail('private hidden items should not be found.')
-                else:
-                    self.assertIsNotNone(unit.find('.//a'))
-
-        if private and not shown:
-            self.assertFalse(found)
-        actions.login(self.ADMIN_EMAIL, is_admin=True)
-
-    def test_setting_combinations(self):
-        cases = ((self.unit, 'unit',),
-                 (self.link, 'link'),
-                 (self.assessment, 'assessment'))
-        for unit, kind in cases:
-            for private, shown in itertools.product([True, False], repeat=2):
-                unit.now_available = not private
-                unit.shown_when_unavailable = shown
-                self.course.save()
-                soup = self._get_outline()
-                self._check_private_setting(soup, kind, unit.unit_id, private)
-                self._check_syllabus_for_admin(private, unit.title)
-                self._check_syllabus_for_student(private, shown, unit.title)
-
-    def test_lesson_public_private(self):
-        self.lesson.now_available = True
-        self.course.save()
-
-        self._check_private_setting(
-            self._get_outline(), 'lesson', self.lesson.lesson_id, False)
-
-        self.lesson.now_available = False
-        self.course.save()
-        self._check_private_setting(
-            self._get_outline(), 'lesson', self.lesson.lesson_id, True)
 
     def _check_item_label(self, li, student_url, title):
         a = li.select('.name a')[0]

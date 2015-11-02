@@ -16,82 +16,25 @@
 
 __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 
+import collections
+import copy
+import urlparse
+
 from common import utils as common_utils
 from common import crypto
 from controllers import sites
 from controllers import utils
 from models import courses
-from models import custom_modules
 from models import models
+from models import review
 from models import transforms
+from modules.courses import availability
 from modules.courses import constants
 from modules.courses import courses as modules_courses
 from modules.courses import unit_lesson_editor
 from tests.functional import actions
 
-from google.appengine.api import namespace_manager
 from google.appengine.ext import deferred
-
-class AccessDraftsTestCase(actions.TestBase):
-    COURSE_NAME = 'draft_access'
-    ADMIN_EMAIL = 'admin@foo.com'
-    USER_EMAIL = 'user@foo.com'
-    ROLE = 'test_role'
-    ACTION = 'test_action'
-
-    def setUp(self):
-        super(AccessDraftsTestCase, self).setUp()
-        actions.login(self.ADMIN_EMAIL, is_admin=True)
-        self.base = '/' + self.COURSE_NAME
-        self.context = actions.simple_add_course(
-            self.COURSE_NAME, self.ADMIN_EMAIL, 'Access Draft Testing')
-
-        self.course = courses.Course(None, self.context)
-
-        self.old_namespace = namespace_manager.get_namespace()
-        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
-
-        role_dto = models.RoleDTO(None, {
-            'name': self.ROLE,
-            'users': [self.USER_EMAIL],
-            'permissions': {
-                custom_modules.core_module.name: [
-                    custom_modules.SEE_DRAFTS_PERMISSION]
-            }
-        })
-        models.RoleDAO.save(role_dto)
-        actions.logout()
-
-    def tearDown(self):
-        namespace_manager.set_namespace(self.old_namespace)
-        super(AccessDraftsTestCase, self).tearDown()
-
-    def test_access_assessment(self):
-        assessment = self.course.add_assessment()
-        assessment.is_draft = True
-        self.course.save()
-        self.assertEquals(
-            self.get('assessment?name=%s' % assessment.unit_id).status_int, 302)
-        actions.login(self.USER_EMAIL, is_admin=False)
-        self.assertEquals(
-            self.get('assessment?name=%s' % assessment.unit_id).status_int, 200)
-        actions.logout()
-
-    def test_access_lesson(self):
-        unit = self.course.add_unit()
-        unit.is_draft = True
-        lesson = self.course.add_lesson(unit)
-        lesson.is_draft = True
-        self.course.save()
-        self.assertEquals(
-            self.get('unit?unit=%s&lesson=%s' % (
-            unit.unit_id, lesson.lesson_id)).status_int, 302)
-        actions.login(self.USER_EMAIL, is_admin=False)
-        self.assertEquals(
-            self.get('unit?unit=%s&lesson=%s' % (
-            unit.unit_id, lesson.lesson_id)).status_int, 200)
-        actions.logout()
-
 
 class CourseAccessPermissionsTests(actions.CourseOutlineTest):
     COURSE_NAME = 'outline_permissions'
@@ -99,7 +42,6 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
     USER_EMAIL = 'user@foo.com'
     ROLE = 'test_role'
     NAMESPACE = 'ns_%s' % COURSE_NAME
-    COURSE_AVAILABILITY_XPATH = './/*[@id="course-availability"]'
     COURSE_EDIT_XPATH = './/*[@id="edit-course"]'
 
     def setUp(self):
@@ -129,26 +71,6 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
         self.assertEquals('http://localhost/%s' % self.COURSE_NAME,
                           response.location)
 
-    def test_course_structure_readonly_permission(self):
-        self._add_role_with_permissions(
-            [constants.COURSE_OUTLINE_VIEW_PERMISSION])
-        response = self.get('dashboard?action=outline')
-        self.assertEquals(200, response.status_int)
-        dom = self.parse_html_string(response.body)
-
-        # No buttons for add unit/assessment, import course.
-        toolbar = dom.find('.//div[@class="gcb-button-toolbar"]')
-        self.assertEquals(len(toolbar.getchildren()), 0)
-
-        # No reorder drag handles
-        handles = dom.findall(
-            './/div[@class="reorder icon row-hover md md-view-headline"]')
-        self.assertEquals(len(handles), 0)
-
-        # No add-lesson item.
-        add_lesson = dom.find('.//div[@class="row add-lesson"]')
-        self.assertIsNone(add_lesson)
-
     def test_course_structure_reorder_permission(self):
         self._add_role_with_permissions(
             [constants.COURSE_OUTLINE_REORDER_PERMISSION])
@@ -175,33 +97,10 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
         self.assertEquals(200, response.status_int)
         return self.parse_html_string_to_soup(response.body)
 
-    def test_course_availability_icon(self):
-        self._add_role_with_permissions(
-            [constants.COURSE_OUTLINE_VIEW_PERMISSION])
-
-        element = self._get_dom().find(self.COURSE_AVAILABILITY_XPATH)
-        self.assertEquals('div', element.tag)
-        self.assertAvailabilityState(element, available=True, active=False)
-
-        # Give this user permission to edit course availability.  Lock should
-        # now be a button, with CSS indicating icon clickability.
-        with actions.OverriddenSchemaPermission(
-            'fake_course_perm', constants.SCOPE_COURSE_SETTINGS,
-            self.USER_EMAIL, editable_perms=['course/course:now_available']):
-
-            element = self._get_dom().find(self.COURSE_AVAILABILITY_XPATH)
-            self.assertEquals('button', element.tag)
-            self.assertAvailabilityState(element, available=True, active=True)
-
     def test_course_edit_settings_link(self):
+        # Add role permission so we can see the course outline page at all.
         self._add_role_with_permissions(
-            [constants.COURSE_OUTLINE_VIEW_PERMISSION])
-
-        # Course-available lock should not be clickable and should not
-        # have CSS indicating clickability.
-        element = self._get_dom().find(self.COURSE_AVAILABILITY_XPATH)
-        self.assertEquals('div', element.tag)
-        self.assertAvailabilityState(element, active=False)
+            [constants.COURSE_OUTLINE_REORDER_PERMISSION])
 
         # Give this user permission to *edit* some random course property that's
         # not course-availability
@@ -221,76 +120,9 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
             element = self._get_dom().find(self.COURSE_EDIT_XPATH)
             self.assertEquals('a', element.tag)
 
-    def test_edit_unit_availability(self):
-        self._add_role_with_permissions(
-            [constants.COURSE_OUTLINE_VIEW_PERMISSION])
-
-        UNIT_AVAILABILITY_SELECTOR_TEMPLATE = \
-            '[data-unit-id="{}"] .icon-draft-status'
-        UNIT_SELECTOR = UNIT_AVAILABILITY_SELECTOR_TEMPLATE.format(
-            self.unit.unit_id)
-        ASSESSMENT_SELECTOR = UNIT_AVAILABILITY_SELECTOR_TEMPLATE.format(
-            self.assessment.unit_id)
-        LINK_SELECTOR = UNIT_AVAILABILITY_SELECTOR_TEMPLATE.format(
-            self.link.unit_id)
-
-        # Only unit lock editable.
-        with actions.OverriddenSchemaPermission(
-            'fake_unit_perm', constants.SCOPE_UNIT,
-            self.USER_EMAIL, editable_perms=['is_draft']):
-
-            dom = self._get_soup()
-
-            self.assertAvailabilityState(
-                dom.select(UNIT_SELECTOR)[0], available=False, active=True)
-
-            self.assertAvailabilityState(
-                dom.select(ASSESSMENT_SELECTOR)[0], available=False,
-                active=False)
-
-            self.assertAvailabilityState(
-                dom.select(LINK_SELECTOR)[0], available=False, active=False)
-
-        # Only assessment lock editable
-        with actions.OverriddenSchemaPermission(
-            'fake_unit_perm', constants.SCOPE_ASSESSMENT,
-            self.USER_EMAIL, editable_perms=['assessment/is_draft']):
-
-            dom = self._get_soup()
-
-            self.assertAvailabilityState(
-                dom.select(UNIT_SELECTOR)[0], available=False, active=False)
-
-            self.assertAvailabilityState(
-                dom.select(ASSESSMENT_SELECTOR)[0], available=False,
-                active=True)
-
-            self.assertAvailabilityState(
-                dom.select(LINK_SELECTOR)[0], available=False, active=False)
-
-        # Only link lock editable
-        with actions.OverriddenSchemaPermission(
-            'fake_unit_perm', constants.SCOPE_LINK,
-            self.USER_EMAIL, editable_perms=['is_draft']):
-
-            dom = self._get_soup()
-
-            self.assertAvailabilityState(
-                dom.select(UNIT_SELECTOR)[0], available=False, active=False)
-
-            self.assertAvailabilityState(
-                dom.select(ASSESSMENT_SELECTOR)[0], available=False,
-                active=False)
-
-            self.assertAvailabilityState(
-                dom.select(LINK_SELECTOR)[0], available=False, active=True)
-
     def test_edit_unit_property_editor_link(self):
         # Verify readability on some random property allows pencil icon
         # link to edit/view props page.
-
-        self._add_role_with_permissions(
-            [constants.COURSE_OUTLINE_VIEW_PERMISSION])
 
         UNIT_EDIT_LINK_SELECTOR = \
             '[data-unit-id={}] .name'
@@ -301,7 +133,6 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
         LINK_SELECTOR = UNIT_EDIT_LINK_SELECTOR.format(
             self.link.unit_id)
 
-        # Only unit lock editable.
         with actions.OverriddenSchemaPermission(
             'fake_unit_perm', constants.SCOPE_UNIT,
             self.USER_EMAIL, editable_perms=['description']):
@@ -312,7 +143,7 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
                 soup.select(ASSESSMENT_SELECTOR)[0], False)
             self.assertEditabilityState(soup.select(LINK_SELECTOR)[0], False)
 
-        # Only assessment lock editable
+        # Only assessment property editable
         with actions.OverriddenSchemaPermission(
             'fake_unit_perm', constants.SCOPE_ASSESSMENT,
             self.USER_EMAIL, editable_perms=['assessment/description']):
@@ -323,7 +154,7 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
                 soup.select(ASSESSMENT_SELECTOR)[0], True)
             self.assertEditabilityState(soup.select(LINK_SELECTOR)[0], False)
 
-        # Only link lock editable
+        # Only link property editable
         with actions.OverriddenSchemaPermission(
             'fake_unit_perm', constants.SCOPE_LINK,
             self.USER_EMAIL, editable_perms=['description']):
@@ -777,3 +608,1258 @@ class BackgroundImportTests(actions.TestBase):
                 unit_lesson_editor.UnitLessonEditor.ACTION_POST_CANCEL_IMPORT,
             }, expect_errors=True)
         self.assertEquals(403, response.status_int)
+
+
+Element = collections.namedtuple('Element',
+                                 ['text', 'link', 'progress', 'contents'])
+
+
+class AvailabilityTests(actions.TestBase):
+
+    COURSE_NAME = 'availability_tests'
+    ADMIN_EMAIL = 'admin@foo.com'
+    USER_EMAIL = 'user@foo.com'
+    ROLE = 'test_role'
+    NAMESPACE = 'ns_%s' % COURSE_NAME
+
+    TOP_LEVEL_NO_LINKS_NO_PROGRESS = [
+        Element('Unit 1 - Unit One', None, None, []),
+        Element('Link One', None, None, []),
+        Element('Assessment One', None, None, []),
+        Element('Unit 2 - Unit Two', None, None, []),
+        Element('Link Two', None, None, []),
+        Element('Assessment Two', None, None, []),
+        Element('Unit 3 - Unit Three', None, None, []),
+        Element('Link Three', None, None, []),
+        Element('Assessment Three', None, None, []),
+        ]
+    TOP_LEVEL_WITH_LINKS_NO_PROGRESS = [
+        Element('Unit 1 - Unit One', 'unit?unit=1', None, []),
+        Element('Link One', 'http://www.foo.com', None, []),
+        Element('Assessment One', 'assessment?name=3', None, []),
+        Element('Unit 2 - Unit Two', 'unit?unit=4', None, []),
+        Element('Link Two', 'http://www.bar.com', None, []),
+        Element('Assessment Two', 'assessment?name=6', None, []),
+        Element('Unit 3 - Unit Three', 'unit?unit=7', None, []),
+        Element('Link Three', None, None, []),
+        Element('Assessment Three', 'assessment?name=9', None, []),
+        ]
+    TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS = [
+        Element('Unit 1 - Unit One', 'unit?unit=1', None, []),
+        Element('Link One', 'http://www.foo.com', None, []),
+        Element('Assessment One', 'assessment?name=3',
+                'progress-notstarted-3', []),
+        Element('Unit 2 - Unit Two', 'unit?unit=4', None, []),
+        Element('Link Two', 'http://www.bar.com', None, []),
+        Element('Assessment Two', 'assessment?name=6',
+                'progress-notstarted-6', []),
+        Element('Unit 3 - Unit Three', 'unit?unit=7', None, []),
+        Element('Link Three', None, None, []),
+        Element('Assessment Three', 'assessment?name=9',
+                'progress-notstarted-9', []),
+        ]
+    TOP_LEVEL_WITH_LINKS_ALL_PROGRESS = [
+        Element('Unit 1 - Unit One', 'unit?unit=1', None, []),
+        Element('Link One', 'http://www.foo.com', None, []),
+        Element('Assessment One', 'assessment?name=3',
+                'progress-notstarted-3', []),
+        Element('Unit 2 - Unit Two', 'unit?unit=4', None, []),
+        Element('Link Two', 'http://www.bar.com', None, []),
+        Element('Assessment Two', 'assessment?name=6',
+                'progress-notstarted-6', []),
+        Element('Unit 3 - Unit Three', 'unit?unit=7', None, []),
+        Element('Link Three', None, None, []),
+        Element('Assessment Three', 'assessment?name=9',
+                'progress-notstarted-9', []),
+        ]
+    ALL_LEVELS_NO_LINKS_NO_PROGRESS = [
+        Element('Unit 1 - Unit One', None, None, []),
+        Element('Link One', None, None, []),
+        Element('Assessment One', None, None, []),
+        Element('Unit 2 - Unit Two', None, None, contents=[
+            Element('2.1 Lesson One', None, None, []),
+            Element('2.2 Lesson Two', None, None, []),
+            Element('2.3 Lesson Three', None, None, []),
+            ]),
+        Element('Link Two', None, None, []),
+        Element('Assessment Two', None, None, []),
+        Element('Unit 3 - Unit Three', None, None, contents=[
+            Element('Pre Assessment', None, None, []),
+            # Non-registered students don't see peer-review step.
+            Element('3.1 Mid Lesson', None, None, []),
+            Element('Post Assessment', None, None, []),
+            ]),
+        Element('Link Three', None, None, []),
+        Element('Assessment Three', None, None, []),
+        ]
+    ALL_LEVELS_WITH_LINKS_NO_PROGRESS = [
+        Element('Unit 1 - Unit One', 'unit?unit=1', None, []),
+        Element('Link One', 'http://www.foo.com', None, []),
+        Element('Assessment One', 'assessment?name=3', None, []),
+        Element('Unit 2 - Unit Two', 'unit?unit=4', None, contents=[
+            Element('2.1 Lesson One', 'unit?unit=4&lesson=10', None, []),
+            Element('2.2 Lesson Two', 'unit?unit=4&lesson=11', None, []),
+            Element('2.3 Lesson Three', 'unit?unit=4&lesson=12', None, [])]),
+        Element('Link Two', 'http://www.bar.com', None, []),
+        Element('Assessment Two', 'assessment?name=6', None, []),
+        Element('Unit 3 - Unit Three', 'unit?unit=7', None, contents=[
+            Element('Pre Assessment', 'unit?unit=7&assessment=13', None, []),
+            Element('Review peer assignments', None, None, []),
+            Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15', None, []),
+            Element('Post Assessment', 'unit?unit=7&assessment=14', None, [])]),
+        Element('Link Three', None, None, []),
+        Element('Assessment Three', 'assessment?name=9', None, []),
+        ]
+    ALL_LEVELS_WITH_LINKS_ASSESSMENT_PROGRESS = [
+        Element('Unit 1 - Unit One', 'unit?unit=1', None, []),
+        Element('Link One', 'http://www.foo.com', None, []),
+        Element('Assessment One', 'assessment?name=3',
+                'progress-notstarted-3', []),
+        Element('Unit 2 - Unit Two', 'unit?unit=4', None, contents=[
+            Element('2.1 Lesson One', 'unit?unit=4&lesson=10', None, []),
+            Element('2.2 Lesson Two', 'unit?unit=4&lesson=11', None, []),
+            Element('2.3 Lesson Three', 'unit?unit=4&lesson=12', None, [])]),
+        Element('Link Two', 'http://www.bar.com', None, []),
+        Element('Assessment Two', 'assessment?name=6',
+                'progress-notstarted-6', []),
+        Element('Unit 3 - Unit Three', 'unit?unit=7', None, contents=[
+            Element('Pre Assessment', 'unit?unit=7&assessment=13',
+                    'progress-notstarted-13', []),
+            Element('Review peer assignments', None,
+                    'progress-notstarted-13', []),
+            Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15', None, []),
+            Element('Post Assessment', 'unit?unit=7&assessment=14',
+                    'progress-notstarted-14', [])]),
+        Element('Link Three', None, None, []),
+        Element('Assessment Three', 'assessment?name=9',
+                'progress-notstarted-9', []),
+        ]
+
+    def setUp(self):
+        super(AvailabilityTests, self).setUp()
+        self.base = '/' + self.COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Availability Tests')
+
+        self.course = courses.Course(None, self.app_context)
+        self.unit_one = self.course.add_unit()
+        self.unit_one.title = 'Unit One'
+        self.link_one = self.course.add_link()
+        self.link_one.title = 'Link One'
+        self.link_one.href = 'http://www.foo.com'
+        self.assessment_one = self.course.add_assessment()
+        self.assessment_one.title = 'Assessment One'
+
+        self.unit_two = self.course.add_unit()
+        self.unit_two.title = 'Unit Two'
+        self.link_two = self.course.add_link()
+        self.link_two.title = 'Link Two'
+        self.link_two.href = 'http://www.bar.com'
+        self.assessment_two = self.course.add_assessment()
+        self.assessment_two.title = 'Assessment Two'
+
+        self.unit_three = self.course.add_unit()
+        self.unit_three.title = 'Unit Three'
+        self.link_three = self.course.add_link()
+        self.link_three.title = 'Link Three'
+        self.assessment_three = self.course.add_assessment()
+        self.assessment_three.title = 'Assessment Three'
+
+        self.lesson_one = self.course.add_lesson(self.unit_two)
+        self.lesson_one.title = 'Lesson One'
+        self.lesson_two = self.course.add_lesson(self.unit_two)
+        self.lesson_two.title = 'Lesson Two'
+        self.lesson_three = self.course.add_lesson(self.unit_two)
+        self.lesson_three.title = 'Lesson Three'
+
+        self.pre_assessment = self.course.add_assessment()
+        self.pre_assessment.title = 'Pre Assessment'
+        self.pre_assessment.workflow_yaml = (
+            '{'
+            '%s: %s, ' % (courses.GRADER_KEY, courses.HUMAN_GRADER) +
+            '%s: %s, ' % (courses.MATCHER_KEY, review.PEER_MATCHER) +
+            '%s: %s, ' % (courses.REVIEW_MIN_COUNT_KEY, 1) +
+            '%s: %s, ' % (courses.REVIEW_DUE_DATE_KEY, '"2099-01-01 00:00"') +
+            '%s: %s, ' % (courses.SUBMISSION_DUE_DATE_KEY,
+                          '"2099-01-01 00:00"') +
+            '}'
+            )
+
+        self.post_assessment = self.course.add_assessment()
+        self.post_assessment.title = 'Post Assessment'
+        self.mid_lesson = self.course.add_lesson(self.unit_three)
+        self.mid_lesson.title = 'Mid Lesson'
+        self.unit_three.pre_assessment = self.pre_assessment.unit_id
+        self.unit_three.post_assessment = self.post_assessment.unit_id
+
+        self.course.save()
+        self.action_url = '/%s/dashboard?action=%s' % (
+            self.COURSE_NAME, availability.AvailabilityRESTHandler.ACTION)
+        self.rest_url = '/%s/%s' % (
+            self.COURSE_NAME, availability.AvailabilityRESTHandler.URL)
+
+    def _add_availability_permission(self):
+        with common_utils.Namespace(self.NAMESPACE):
+            role_dto = models.RoleDTO(None, {
+                'name': self.ROLE,
+                'users': [self.USER_EMAIL],
+                'permissions': {
+                    modules_courses.MODULE_NAME: [
+                        constants.MODIFY_AVAILABILITY_PERMISSION]
+                    }
+                })
+            models.RoleDAO.save(role_dto)
+
+    def test_availability_page_unavailable_to_plain_users(self):
+        # Requesting dashboard just jumps straight to course title page.
+        actions.login(self.USER_EMAIL, is_admin=False)
+        response = self.get(self.action_url)
+        self.assertEquals(302, response.status_int)
+        self.assertEquals(response.location, 'http://localhost/%s' %
+                          self.COURSE_NAME)
+
+    def test_availability_page_available_to_course_admin(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        response = self.get(self.action_url)
+        self.assertEquals(200, response.status_int)
+
+    def test_availability_page_accessable_with_permission(self):
+        actions.login(self.USER_EMAIL)
+        self._add_availability_permission()
+        response = self.get(self.action_url)
+        self.assertEquals(200, response.status_int)
+
+    def test_availability_rest_handler_unavailable_to_plain_users(self):
+        actions.login(self.USER_EMAIL)
+        response = self.get(self.rest_url)
+        self.assertEquals(response.status_int, 200)
+        response = transforms.loads(response.body)
+        self.assertEquals(response['status'], 401)
+        self.assertEquals(response['message'], 'Access denied.')
+        self.assertNotIn('payload', response)
+
+    def test_availability_rest_handler_available_to_course_admin(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        response = self.get(self.rest_url)
+        self.assertEquals(response.status_int, 200)
+        response = transforms.loads(response.body)
+        self.assertEquals(response['status'], 200)
+        self.assertEquals(response['message'], 'OK.')
+        self.assertIn('payload', response)
+
+    def test_availability_rest_handler_available_with_permission(self):
+        actions.login(self.USER_EMAIL)
+        self._add_availability_permission()
+        response = self.get(self.rest_url)
+        self.assertEquals(response.status_int, 200)
+        response = transforms.loads(response.body)
+        self.assertEquals(response['status'], 200)
+        self.assertEquals(response['message'], 'OK.')
+        self.assertIn('payload', response)
+
+    def _post(self, data):
+        data = {
+            'request': transforms.dumps({
+                'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                    availability.AvailabilityRESTHandler.ACTION),
+                'payload': transforms.dumps(data)
+            })
+        }
+        return self.put(self.rest_url, data)
+
+    def test_availability_post_as_plain_user(self):
+        actions.login(self.USER_EMAIL)
+        response = self._post({})
+        self.assertEquals(response.status_int, 200)
+        response = transforms.loads(response.body)
+        self.assertEquals(401, response['status'])
+        self.assertEquals('Access denied.', response['message'])
+
+    def test_availability_post_as_admin(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        self.assertEquals(
+            app_context.get_environ()['reg_form']['whitelist'], '')
+        response = self._post({'whitelist': self.USER_EMAIL})
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        self.assertEquals(
+            app_context.get_environ()['reg_form']['whitelist'], self.USER_EMAIL)
+
+    def test_availability_post_with_permission(self):
+        actions.login(self.USER_EMAIL)
+        self._add_availability_permission()
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        self.assertEquals(
+            app_context.get_environ()['reg_form']['whitelist'], '')
+        response = self._post({'whitelist': self.USER_EMAIL})
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        self.assertEquals(
+            app_context.get_environ()['reg_form']['whitelist'], self.USER_EMAIL)
+
+    def test_course_availability_private(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self._post({'course_availability': 'private'})
+
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        self.assertEquals(
+            app_context.get_environ()['course']['now_available'], False)
+        self.assertEquals(
+            app_context.get_environ()['course']['browsable'], False)
+        self.assertEquals(
+            app_context.get_environ()['reg_form']['can_register'], False)
+
+        # User sees course page as 404.
+        actions.login(self.USER_EMAIL)
+        response = self.get('/%s/course' % self.COURSE_NAME, expect_errors=True)
+        self.assertEquals(response.status_int, 404)
+
+    def test_course_availability_registration_required(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self._post({'course_availability': 'registration_required'})
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        self.assertEquals(
+            app_context.get_environ()['course']['now_available'], True)
+        self.assertEquals(
+            app_context.get_environ()['course']['browsable'], False)
+        self.assertEquals(
+            app_context.get_environ()['reg_form']['can_register'], True)
+
+        actions.login(self.USER_EMAIL)
+        response = self.get('/%s/course' % self.COURSE_NAME)
+        self.assertEquals(response.status_int, 200)
+        dom = self.parse_html_string(response.body)
+        links = [l.text.strip() for l in dom.findall('.//a')]
+        self.assertIn('Register', links)
+
+    def test_course_availability_registration_optional(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self._post({'course_availability': 'registration_optional'})
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        self.assertEquals(
+            app_context.get_environ()['course']['now_available'], True)
+        self.assertEquals(
+            app_context.get_environ()['course']['browsable'], True)
+        self.assertEquals(
+            app_context.get_environ()['reg_form']['can_register'], True)
+
+        actions.login(self.USER_EMAIL)
+        response = self.get('/%s/course' % self.COURSE_NAME)
+        self.assertEquals(response.status_int, 200)
+        dom = self.parse_html_string(response.body)
+        links = [l.text.strip() for l in dom.findall('.//a')]
+        self.assertIn('Register', links)
+
+    def test_course_availability_public(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self._post({'course_availability': 'public'})
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        self.assertEquals(
+            app_context.get_environ()['course']['now_available'], True)
+        self.assertEquals(
+            app_context.get_environ()['course']['browsable'], True)
+        self.assertEquals(
+            app_context.get_environ()['reg_form']['can_register'], False)
+
+        actions.login(self.USER_EMAIL)
+        response = self.get('/%s/course' % self.COURSE_NAME)
+        self.assertEquals(response.status_int, 200)
+        dom = self.parse_html_string(response.body)
+        links = [l.text.strip() for l in dom.findall('.//a')]
+        self.assertNotIn('Register', links)
+
+    def _parse_nav_level(self, owning_item):
+        ret = []
+        prev_item = None
+        for item in owning_item.findall('./*') if owning_item else []:
+            if item.tag == 'li':
+                text = ' '.join((''.join(item.itertext())).strip().split())
+                a_tag = item.find('.//a')
+                link = a_tag.get('href') if a_tag is not None else None
+                progress = None
+                img_tag = item.find('.//img[@class="gcb-progress-icon"]')
+                if img_tag is not None:
+                    progress = img_tag.get('id')
+                prev_item = Element(text, link, progress, [])
+                ret.append(prev_item)
+            elif (item.tag == 'ul' or
+                  (item.tag == 'div' and
+                   'gcb-lesson-container' in item.get('class'))):
+                prev_item.contents.extend(self._parse_nav_level(item))
+        return ret
+
+    def _parse_leftnav(self, response):
+        dom = self.parse_html_string(response.body)
+        item = dom.find('.//div[@id="gcb-nav-y"]/ul')
+        return self._parse_nav_level(item)
+
+    def test_syllabus_reg_required_elements_private(self):
+        self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.course.save()
+
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        # Check as non-logged-in user; not even "Syllabus" should show.
+        response = self.get('course')
+        self.assertNotIn('Syllabus', response.body)
+        self.assertEquals([], self._parse_leftnav(response))
+
+        # Check as logged-in user;  not even "Syllabus" should show.
+        actions.login(self.USER_EMAIL, is_admin=False)
+        response = self.get('course')
+        self.assertNotIn('Syllabus', response.body)
+        self.assertEquals([], self._parse_leftnav(response))
+
+        # Registered students see no items.
+        actions.register(self, self.USER_EMAIL)
+        response = self.get('course')
+        self.assertNotIn('Syllabus', response.body)
+        self.assertEquals([], self._parse_leftnav(response))
+
+        # Check as admin; all should show and be linked, but marked as (Private)
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        response = self.get('course')
+        self.assertIn('Syllabus', response.body)
+        expected = [
+            Element('Unit 1 - Unit One (Private)', 'unit?unit=1', None, []),
+            Element('Link One (Private)', 'http://www.foo.com', None, []),
+            Element('Assessment One (Private)', 'assessment?name=3', None, []),
+            Element('Unit 2 - Unit Two (Private)', 'unit?unit=4', None, []),
+            Element('Link Two (Private)', 'http://www.bar.com', None, []),
+            Element('Assessment Two (Private)', 'assessment?name=6', None, []),
+            Element('Unit 3 - Unit Three (Private)', 'unit?unit=7', None, []),
+            Element('Link Three (Private)', None, None, []),
+            Element('Assessment Three (Private)', 'assessment?name=9', None, [])
+            ]
+        self.assertEquals(expected, self._parse_leftnav(response))
+
+    def test_syllabus_reg_required_elements_same_as_course(self):
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        # Not-even-logged-in users see syllabus items, but no links.
+        actions.logout()
+        self.assertEquals(self.TOP_LEVEL_NO_LINKS_NO_PROGRESS,
+                          self._parse_leftnav(self.get('course')))
+
+        # Non-students see syllabus, but nothing is linked.
+        actions.login(self.USER_EMAIL, is_admin=False)
+        self.assertEquals(self.TOP_LEVEL_NO_LINKS_NO_PROGRESS,
+                          self._parse_leftnav(self.get('course')))
+
+        # Registered tudents see syllabus with links and assessment progress.
+        actions.register(self, self.USER_EMAIL)
+        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                          self._parse_leftnav(self.get('course')))
+
+        # Admins see syllabus; no (Private) or (Public); all are linked.
+        # (Since admin is not also a registered student, no progress
+        # indicators) appear
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                          self._parse_leftnav(self.get('course')))
+
+    def test_syllabus_reg_required_elements_public(self):
+        self.unit_one.availability = courses.AVAILABILITY_AVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_AVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_AVAILABLE
+        self.unit_two.availability = courses.AVAILABILITY_AVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_AVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_AVAILABLE
+        self.unit_three.availability = courses.AVAILABILITY_AVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_AVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_AVAILABLE
+        self.course.save()
+
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        # Not-even-logged-in users see links to all content
+        actions.logout()
+        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                          self._parse_leftnav(self.get('course')))
+
+        # Non-students see links to all content.
+        actions.login(self.USER_EMAIL, is_admin=False)
+        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                          self._parse_leftnav(self.get('course')))
+
+        # Students see syllabus with links.
+        actions.register(self, self.USER_EMAIL)
+        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                          self._parse_leftnav(self.get('course')))
+
+        # Admins see syllabus; all marked (Public); all are linked.
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        expected = [
+            Element('Unit 1 - Unit One (Public)', 'unit?unit=1', None, []),
+            Element('Link One (Public)', 'http://www.foo.com', None, []),
+            Element('Assessment One (Public)', 'assessment?name=3', None, []),
+            Element('Unit 2 - Unit Two (Public)', 'unit?unit=4', None, []),
+            Element('Link Two (Public)', 'http://www.bar.com', None, []),
+            Element('Assessment Two (Public)', 'assessment?name=6', None, []),
+            Element('Unit 3 - Unit Three (Public)', 'unit?unit=7', None, []),
+            Element('Link Three (Public)', None, None, []),
+            Element('Assessment Three (Public)', 'assessment?name=9', None, [])
+            ]
+        self.assertEquals(expected, self._parse_leftnav(self.get('course')))
+
+    def test_syllabus_reg_optional_elements_private(self):
+        self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.course.save()
+
+        for _availability in (
+            courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL,
+            courses.COURSE_AVAILABILITY_PUBLIC):
+            self.course.set_course_availability(_availability)
+
+            # Check as non-logged-in user; not even "Syllabus" should show.
+            actions.logout()
+            response = self.get('course')
+            self.assertNotIn('Syllabus', response.body)
+            self.assertEquals([], self._parse_leftnav(response))
+
+            # Check as logged-in user;  not even "Syllabus" should show.
+            actions.login(self.USER_EMAIL, is_admin=False)
+            response = self.get('course')
+            self.assertNotIn('Syllabus', response.body)
+            self.assertEquals([], self._parse_leftnav(response))
+
+            if _availability != courses.COURSE_AVAILABILITY_PUBLIC:
+                # Registered students see no items.
+                actions.register(self, self.USER_EMAIL)
+                response = self.get('course')
+                self.assertNotIn('Syllabus', response.body)
+                self.assertEquals([], self._parse_leftnav(response))
+
+            # Check as admin; all should show and be linked, but
+            # marked as (Private)
+            actions.login(self.ADMIN_EMAIL, is_admin=True)
+            response = self.get('course')
+            self.assertIn('Syllabus', response.body)
+            expected = [
+                Element(
+                    'Unit 1 - Unit One (Private)', 'unit?unit=1', None, []),
+                Element(
+                    'Link One (Private)', 'http://www.foo.com', None, []),
+                Element(
+                    'Assessment One (Private)', 'assessment?name=3', None, []),
+                Element(
+                    'Unit 2 - Unit Two (Private)', 'unit?unit=4', None, []),
+                Element(
+                    'Link Two (Private)', 'http://www.bar.com', None, []),
+                Element(
+                    'Assessment Two (Private)', 'assessment?name=6', None, []),
+                Element(
+                    'Unit 3 - Unit Three (Private)', 'unit?unit=7', None, []),
+                Element(
+                    'Link Three (Private)', None, None, []),
+                Element(
+                    'Assessment Three (Private)', 'assessment?name=9', None, [])
+                ]
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+    def test_syllabus_reg_optional_elements_same_as_course(self):
+        for _availability in (
+            courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL,
+            courses.COURSE_AVAILABILITY_PUBLIC):
+            self.course.set_course_availability(_availability)
+
+            # Check as non-logged-in user
+            actions.logout()
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+            # Check as logged-in user
+            actions.login(self.USER_EMAIL, is_admin=False)
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+            # As registered student.  Registration only available with
+            # registration-optional; browse-only courses do not support this.
+            if _availability != courses.COURSE_AVAILABILITY_PUBLIC:
+                actions.register(self, self.USER_EMAIL)
+                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                                  self._parse_leftnav(self.get('course')))
+                actions.unregister(self)
+
+            # Check as admin
+            actions.login(self.ADMIN_EMAIL, is_admin=True)
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+    def test_syllabus_reg_optional_elements_public(self):
+        self.unit_one.availability = courses.AVAILABILITY_AVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_AVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_AVAILABLE
+        self.unit_two.availability = courses.AVAILABILITY_AVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_AVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_AVAILABLE
+        self.unit_three.availability = courses.AVAILABILITY_AVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_AVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_AVAILABLE
+        self.course.save()
+
+        for _availability in (
+            courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL,
+            courses.COURSE_AVAILABILITY_PUBLIC):
+            self.course.set_course_availability(_availability)
+
+            # Check as non-logged-in user.
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+            # Check as logged-in user.
+            actions.login(self.USER_EMAIL, is_admin=False)
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+            # As registered user (only meaningful when registration available)
+            if _availability != courses.COURSE_AVAILABILITY_PUBLIC:
+                actions.register(self, self.USER_EMAIL)
+                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                                  self._parse_leftnav(self.get('course')))
+                actions.unregister(self)
+
+            # Check as admin; all should show and be linked.  No
+            # public/private markers, since all items are available to all.
+            actions.login(self.ADMIN_EMAIL, is_admin=True)
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+            actions.logout()
+
+    def test_syllabus_with_lessons(self):
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+        with actions.OverriddenEnvironment({
+            'course': {'show_lessons_in_syllabus': True}}):
+
+            # Check as non-logged-in user; labels but no links or progress.
+            self.assertEquals(self.ALL_LEVELS_NO_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+            # Check as logged-in user; labels but no links or progress.
+            actions.login(self.USER_EMAIL, is_admin=False)
+            self.assertEquals(self.ALL_LEVELS_NO_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+            # Registered students see links and progress for assessments and
+            # peer-reviews.
+            actions.register(self, self.USER_EMAIL)
+            self.assertEquals(self.ALL_LEVELS_WITH_LINKS_ASSESSMENT_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+            # Admins see syllabus; no (Private) or (Public); all are linked.
+            actions.login(self.ADMIN_EMAIL, is_admin=True)
+            self.assertEquals(self.ALL_LEVELS_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+    def test_unit_view_shows_only_this_units_links(self):
+        with actions.OverriddenEnvironment({
+            'unit': {'show_unit_links_in_leftnav': False}}):
+
+            # Note that here, we expect to _not_ have a link for the
+            # first item, despite the fact that the user is entitled to
+            # see it.  This is suppressed, since that's the page the user
+            # is currently viewing.
+            expected = [
+                Element('Pre Assessment', None, progress=None, contents=[]),
+                Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15', None, []),
+                Element('Post Assessment', 'unit?unit=7&assessment=14',
+                        None, [])
+                ]
+            response = self.get('unit?unit=%s' % self.unit_three.unit_id)
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            # Same thing again; just make sure that when we look at the
+            # middle thing, the link for the first thing shows up and the
+            # link for the middle thing disappears.
+            expected = [
+                Element('Pre Assessment', 'unit?unit=7&assessment=13',
+                        None, contents=[]),
+                Element('3.1 Mid Lesson', None, None, []),
+                Element('Post Assessment', 'unit?unit=7&assessment=14',
+                        None, [])
+                ]
+            response = self.get('unit?unit=%s&lesson=%s' % (
+                self.unit_three.unit_id, self.mid_lesson.lesson_id))
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+    def test_unit_view_shows_all_unit_links(self):
+        with actions.OverriddenEnvironment({
+            'unit': {'show_unit_links_in_leftnav': True}}):
+
+            actions.login(self.ADMIN_EMAIL, is_admin=True)
+            response = self.get('unit?unit=%s' % self.unit_three.unit_id)
+            actual = self._parse_leftnav(response)
+
+            # We expect to not have links to unit 3, and to its first
+            # element (the pre-assessment and the peer-review of same)
+            # since that's what's open.
+            replacement = Element('Unit 3 - Unit Three', None, None, contents=[
+                Element('Pre Assessment', None, None, []),
+                Element('Review peer assignments', None, None, []),
+                Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15', None, []),
+                Element('Post Assessment', 'unit?unit=7&assessment=14',
+                        None, []),
+                ])
+            expected = copy.deepcopy(self.ALL_LEVELS_WITH_LINKS_NO_PROGRESS)
+            replace_at_index = expected.index(
+                common_utils.find(lambda x: x.text == 'Unit 3 - Unit Three',
+                                  expected))
+            expected[replace_at_index] = replacement
+            self.assertEquals(expected, actual)
+
+    def test_unavailable_owning_unit_overrides_lesson_publicness(self):
+        # Only experimenting on unit_two; make other items non-visible
+        # to shorten expected results constants.
+        self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.course.save()
+
+        self.unit_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.lesson_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.lesson_two.availability = courses.AVAILABILITY_COURSE
+        self.lesson_three.availability = courses.AVAILABILITY_AVAILABLE
+        self.course.save()
+
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        # Check this from syllabus; don't want link suppression for active
+        # lesson to confound the issue.
+        with actions.OverriddenEnvironment({
+            'course': {'show_lessons_in_syllabus': True}}):
+
+            # Check as non-logged-in user; not even "Syllabus" should show.
+            actions.logout()
+            response = self.get('course')
+            self.assertNotIn('Syllabus', response.body)
+            self.assertEquals([], self._parse_leftnav(response))
+
+            # Ditto for logged-in user.
+            actions.login(self.USER_EMAIL, is_admin=False)
+            response = self.get('course')
+            self.assertNotIn('Syllabus', response.body)
+            self.assertEquals([], self._parse_leftnav(response))
+
+            # Registered students see no items.
+            actions.register(self, self.USER_EMAIL)
+            response = self.get('course')
+            self.assertNotIn('Syllabus', response.body)
+            self.assertEquals([], self._parse_leftnav(response))
+            actions.unregister(self)
+
+        self.unit_two.availability = courses.AVAILABILITY_COURSE
+        self.course.save()
+
+        # Check this from syllabus; don't want link suppression for active
+        # lesson to confound the issue.
+        with actions.OverriddenEnvironment({
+            'course': {'show_lessons_in_syllabus': True}}):
+
+            # Check as non-logged-in user; unit visible, last two items
+            # should be visible but not linkable, even though lesson 3
+            # is marked as public.
+            actions.logout()
+            response = self.get('course')
+            self.assertEquals([
+                Element('Unit 2 - Unit Two', None, None, contents=[
+                    Element('2.2 Lesson Two', None, None, []),
+                    Element('2.3 Lesson Three', None, None, [])])],
+                self._parse_leftnav(response))
+
+            # Ditto for logged-in user
+            actions.login(self.USER_EMAIL, is_admin=False)
+            response = self.get('course')
+            self.assertEquals([
+                Element('Unit 2 - Unit Two', None, None, contents=[
+                    Element('2.2 Lesson Two', None, None, []),
+                    Element('2.3 Lesson Three', None, None, [])])],
+                self._parse_leftnav(response))
+
+            # Registered students see both available lessons.
+            actions.register(self, self.USER_EMAIL)
+            response = self.get('course')
+            self.assertEquals([
+                Element('Unit 2 - Unit Two', 'unit?unit=4', None, [
+                    Element('2.2 Lesson Two', 'unit?unit=4&lesson=11',
+                            None, []),
+                    Element('2.3 Lesson Three', 'unit?unit=4&lesson=12'
+                            , None, []),
+                    ])],
+                self._parse_leftnav(response))
+            actions.unregister(self)
+
+        self.unit_two.availability = courses.AVAILABILITY_AVAILABLE
+        self.course.save()
+
+        # Check this from syllabus; don't want link suppression for active
+        # lesson to confound the issue.
+        with actions.OverriddenEnvironment({
+            'course': {'show_lessons_in_syllabus': True}}):
+
+            # Check as non-logged-in user; unit visible and linkable;
+            # 1st unit still not visible; 2nd visible only, 3rd linkable.
+            actions.logout()
+            response = self.get('course')
+            self.assertEquals([
+                Element('Unit 2 - Unit Two', 'unit?unit=4', None, [
+                    Element('2.2 Lesson Two', None, None, []),
+                    Element('2.3 Lesson Three', 'unit?unit=4&lesson=12',
+                            None, [])])],
+                self._parse_leftnav(response))
+
+            # Ditto for logged-in user
+            actions.login(self.USER_EMAIL, is_admin=False)
+            response = self.get('course')
+            self.assertEquals([
+                Element('Unit 2 - Unit Two', 'unit?unit=4', None, [
+                    Element('2.2 Lesson Two', None, None, []),
+                    Element('2.3 Lesson Three', 'unit?unit=4&lesson=12',
+                            None, [])])],
+                self._parse_leftnav(response))
+
+            # Registered students see both available lessons.
+            actions.register(self, self.USER_EMAIL)
+            response = self.get('course')
+            self.assertEquals([
+                Element('Unit 2 - Unit Two', 'unit?unit=4', None, [
+                    Element('2.2 Lesson Two', 'unit?unit=4&lesson=11',
+                            None, []),
+                    Element('2.3 Lesson Three', 'unit?unit=4&lesson=12',
+                            None, [])])],
+                self._parse_leftnav(response))
+            actions.unregister(self)
+
+    def test_assessment_progress(self):
+        # Hide irrelevant items.
+        self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.course.save()
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        actions.login(self.USER_EMAIL)
+        actions.register(self, self.USER_EMAIL)
+
+        # Verify behavior on a top-level assessment
+        response = self.get('course')
+        expected = [
+            Element('Assessment One', 'assessment?name=3',
+                    'progress-notstarted-3', [])]
+        self.assertEquals(self._parse_leftnav(response), expected)
+        self.post('answer', {
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'assessment-post'),
+            'assessment_type': '%s' % self.assessment_one.unit_id,
+            'score': 1,
+            })
+        response = self.get('course')
+        expected = [
+            Element('Assessment One', 'assessment?name=3',
+                    'progress-completed-3', [])]
+        self.assertEquals(self._parse_leftnav(response), expected)
+
+    def test_peer_reviewed_assessment_progress(self):
+        # Hide irrelevant items.
+        self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.course.save()
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+        with actions.OverriddenEnvironment({
+            'course': {'show_lessons_in_syllabus': True}}):
+
+            # Logged in but non-student doesn't even see peer review
+            actions.login(self.USER_EMAIL)
+            expected = [
+                Element('Unit 3 - Unit Three', None, None, [
+                    Element('Pre Assessment', None, None, []),
+                    Element('3.1 Mid Lesson', None, None, []),
+                    Element('Post Assessment', None, None, [])])]
+            response = self.get('course')
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            # Peer-review step visible, but not linked until assessment
+            # submitted.
+            actions.register(self, self.USER_EMAIL)
+            expected = [
+                Element('Unit 3 - Unit Three', 'unit?unit=7', None, [
+                    Element('Pre Assessment', 'unit?unit=7&assessment=13',
+                            'progress-notstarted-13', []),
+                    Element('Review peer assignments', None,
+                            'progress-notstarted-13', []),
+                    Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15',
+                            None, []),
+                    Element('Post Assessment', 'unit?unit=7&assessment=14',
+                            'progress-notstarted-14', [])])]
+            response = self.get('course')
+            self.assertEquals(expected, self._parse_leftnav(response))
+            expected = [
+                Element('Pre Assessment', None, 'progress-notstarted-13', []),
+                Element('Review peer assignments', None,
+                        'progress-notstarted-13', []),
+                Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15',
+                        None, []),
+                Element('Post Assessment', 'unit?unit=7&assessment=14',
+                        'progress-notstarted-14', [])]
+            response = self.get('unit?unit=7')
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            # Submit a set of answers to the assessment.  Verify that
+            # assessment completion is now completed, and peer review
+            # progress is marked as not-started.
+            self.post('answer', {
+                'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                    'assessment-post'),
+                'assessment_type': '%s' % self.pre_assessment.unit_id,
+                'score': 1,
+                })
+
+            expected = [
+                Element('Unit 3 - Unit Three', 'unit?unit=7', None, [
+                    Element('Pre Assessment', 'unit?unit=7&assessment=13',
+                            'progress-completed-13', []),
+                    Element('Review peer assignments',
+                            'reviewdashboard?unit=13',
+                            'progress-notstarted-13', []),
+                    Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15',
+                            None, []),
+                    Element('Post Assessment', 'unit?unit=7&assessment=14',
+                            'progress-notstarted-14', [])])]
+            response = self.get('course')
+            self.assertEquals(expected, self._parse_leftnav(response))
+            expected = [
+                Element('Pre Assessment', None, 'progress-completed-13', []),
+                Element('Review peer assignments',
+                        'reviewdashboard?unit=13',
+                        'progress-notstarted-13', []),
+                Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15',
+                        None, []),
+                Element('Post Assessment', 'unit?unit=7&assessment=14',
+                        'progress-notstarted-14', [])]
+            response = self.get('unit?unit=7')
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            # Become another student and submit that assessment, so first
+            # student has something to review.
+            other_email = 'peer@bar.com'
+            actions.login(other_email)
+            actions.register(self, other_email)
+            self.post('answer', {
+                'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                    'assessment-post'),
+                'assessment_type': '%s' % self.pre_assessment.unit_id,
+                'score': 1,
+                })
+            actions.login(self.USER_EMAIL)
+
+            # Request a review to do.
+            response = self.post('reviewdashboard', {
+                'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                    'review-dashboard-post'),
+                'unit': '%s' % self.pre_assessment.unit_id})
+            self.assertEquals(response.status_int, 302)
+            parts = urlparse.urlparse(response.location)
+            params = urlparse.parse_qs(parts.query)
+            key = params['key']  # Get ID of the review we have been assigned.
+
+            # Progress should now show as in-progress.
+            expected = [
+                Element('Unit 3 - Unit Three', 'unit?unit=7', None, [
+                    Element('Pre Assessment', 'unit?unit=7&assessment=13',
+                            'progress-completed-13', []),
+                    Element('Review peer assignments',
+                            'reviewdashboard?unit=13',
+                            'progress-inprogress-13', []),
+                    Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15',
+                            None, []),
+                    Element('Post Assessment', 'unit?unit=7&assessment=14',
+                            'progress-notstarted-14', [])])]
+            response = self.get('course')
+            self.assertEquals(expected, self._parse_leftnav(response))
+            expected = [
+                Element('Pre Assessment', None, 'progress-completed-13', []),
+                Element('Review peer assignments',
+                        'reviewdashboard?unit=13',
+                        'progress-inprogress-13', []),
+                Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15',
+                        None, []),
+                Element('Post Assessment', 'unit?unit=7&assessment=14',
+                        'progress-notstarted-14', [])]
+            response = self.get('unit?unit=7')
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            # Submit the review.
+            self.post('review', {
+                'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                    'review-post'),
+                'unit_id': '%s' % self.pre_assessment.unit_id,
+                'key': key,
+                'is_draft': 'false',
+                })
+
+            expected = [
+                Element('Unit 3 - Unit Three', 'unit?unit=7', None, [
+                    Element('Pre Assessment', 'unit?unit=7&assessment=13',
+                            'progress-completed-13', []),
+                    Element('Review peer assignments',
+                            'reviewdashboard?unit=13',
+                            'progress-completed-13', []),
+                    Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15',
+                            None, []),
+                    Element('Post Assessment', 'unit?unit=7&assessment=14',
+                            'progress-notstarted-14', [])])]
+            response = self.get('course')
+            self.assertEquals(expected, self._parse_leftnav(response))
+            expected = [
+                Element('Pre Assessment', None, 'progress-completed-13', []),
+                Element('Review peer assignments',
+                        'reviewdashboard?unit=13',
+                        'progress-completed-13', []),
+                Element('3.1 Mid Lesson', 'unit?unit=7&lesson=15',
+                        None, []),
+                Element('Post Assessment', 'unit?unit=7&assessment=14',
+                        'progress-notstarted-14', [])]
+            response = self.get('unit?unit=7')
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+    def test_unit_progress_shown(self):
+        # Hide irrelevant items.
+        self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_UNAVAILABLE
+
+        self.link_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.course.save()
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        actions.login(self.USER_EMAIL)
+        actions.register(self, self.USER_EMAIL)
+
+        with actions.OverriddenEnvironment({
+            'course': {
+                'show_lessons_in_syllabus': True,
+                'can_record_student_events': True,
+                }
+            }):
+
+            expected = [
+                Element('Unit 2 - Unit Two', 'unit?unit=4',
+                        'progress-notstarted-4', [
+                    Element('2.1 Lesson One', 'unit?unit=4&lesson=10',
+                            'progress-notstarted-10', []),
+                    Element('2.2 Lesson Two', 'unit?unit=4&lesson=11',
+                            'progress-notstarted-11', []),
+                    Element('2.3 Lesson Three', 'unit?unit=4&lesson=12',
+                            'progress-notstarted-12', [])])]
+            response = self.get('course')
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            # Visit lesson two, then check progress.  Upon very first visit,
+            # progress is recorded, but not reported to the page.  Thus,
+            # the progress for "Lesson Two" is still not-started.
+            response = self.get('unit?unit=4&lesson=11')
+            expected = [
+                Element(text=u'2.1 Lesson One', link=u'unit?unit=4&lesson=10',
+                        progress=u'progress-notstarted-10', contents=[]),
+                Element(text=u'2.2 Lesson Two', link=None,
+                        progress=u'progress-notstarted-11', contents=[]),
+                Element(text=u'2.3 Lesson Three', link=u'unit?unit=4&lesson=12',
+                        progress=u'progress-notstarted-12', contents=[])]
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            # Check state of progress on syllabus; Lesson Two should show as
+            # complete.  (No in-progress for lessons).  Unit is now in-progress
+            # because it's partly done.
+            expected = [
+                Element('Unit 2 - Unit Two', 'unit?unit=4',
+                        'progress-inprogress-4', [
+                    Element('2.1 Lesson One', 'unit?unit=4&lesson=10',
+                            'progress-notstarted-10', []),
+                    Element('2.2 Lesson Two', 'unit?unit=4&lesson=11',
+                            'progress-completed-11', []),
+                    Element('2.3 Lesson Three', 'unit?unit=4&lesson=12',
+                            'progress-notstarted-12', [])])]
+            response = self.get('course')
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            # Re-visit lesson two, then check progress.  Progress should
+            # now show as completed.
+            response = self.get('unit?unit=4&lesson=11')
+            expected = [
+                Element(text=u'2.1 Lesson One', link=u'unit?unit=4&lesson=10',
+                        progress=u'progress-notstarted-10', contents=[]),
+                Element(text=u'2.2 Lesson Two', link=None,
+                        progress=u'progress-completed-11', contents=[]),
+                Element(text=u'2.3 Lesson Three', link=u'unit?unit=4&lesson=12',
+                        progress=u'progress-notstarted-12', contents=[])]
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            # Visit other lessons.  Unit should now show as completed.
+            response = self.get('unit?unit=4&lesson=10')
+            response = self.get('unit?unit=4&lesson=12')
+
+            expected = [
+                Element('Unit 2 - Unit Two', 'unit?unit=4',
+                        'progress-completed-4', [
+                    Element('2.1 Lesson One', 'unit?unit=4&lesson=10',
+                            'progress-completed-10', []),
+                    Element('2.2 Lesson Two', 'unit?unit=4&lesson=11',
+                            'progress-completed-11', []),
+                    Element('2.3 Lesson Three', 'unit?unit=4&lesson=12',
+                            'progress-completed-12', [])])]
+            response = self.get('course')
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+            expected = [
+                Element('2.1 Lesson One', None, 'progress-completed-10', []),
+                Element('2.2 Lesson Two', 'unit?unit=4&lesson=11',
+                        'progress-completed-11', []),
+                Element('2.3 Lesson Three', 'unit?unit=4&lesson=12',
+                        'progress-completed-12', [])]
+            response = self.get('unit?unit=4&lesson=10')
+            self.assertEquals(expected, self._parse_leftnav(response))
+
+    def test_next_prev_links_in_complex_unit(self):
+
+        def get_prev_next_links(response):
+            dom = self.parse_html_string(response.body)
+            prev_link = dom.find('.//div[@class="gcb-prev-button"]/a')
+            if prev_link is not None:
+                prev_link = prev_link.get('href')
+            next_link = dom.find('.//div[@class="gcb-next-button"]/a')
+            if next_link is not None:
+                next_link = next_link.get('href')
+            return prev_link, next_link
+
+        # Hide irrelevant items.
+        self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.course.save()
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        actions.login(self.USER_EMAIL)
+        actions.register(self, self.USER_EMAIL)
+
+        # Since we have not submitted the assessment, the review step
+        # is not available, so expect that the 'next' link will be lesson 15.
+        response = self.get('unit?unit=7')
+        prev_link, next_link = get_prev_next_links(response)
+        self.assertEquals(prev_link, None)
+        self.assertEquals(next_link, 'unit?unit=7&lesson=15')
+
+        response = self.get(next_link)
+        prev_link, next_link = get_prev_next_links(response)
+        self.assertEquals(prev_link, 'unit?unit=7&assessment=13')
+        self.assertEquals(next_link, 'unit?unit=7&assessment=14')
+
+        response = self.get(next_link)
+        prev_link, next_link = get_prev_next_links(response)
+        self.assertEquals(prev_link, 'unit?unit=7&lesson=15')
+        self.assertEquals(next_link, 'course')  # End link back to syllabus
+
+        # Pretend to submit the pre-assessment.  Prev/next links should
+        # change to reflect the new availability of the review step.
+        self.post('answer', {
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'assessment-post'),
+            'assessment_type': '%s' % self.pre_assessment.unit_id,
+            'score': 1,
+            })
+
+        # Get the lesson; verify prev now goes to review dashboard.
+        response = self.get('unit?unit=7&lesson=15')
+        prev_link, next_link = get_prev_next_links(response)
+        self.assertEquals(prev_link, 'reviewdashboard?unit=13')
+        self.assertEquals(next_link, 'unit?unit=7&assessment=14')
+
+        # TODO(mgainer): Review dashboard should be integrated to inline
+        # lesson flow.  When it its, test that it fits.
+
+    def test_previously_visited_link_marked(self):
+
+        def get_last_location_href(response):
+            dom = self.parse_html_string(response.body)
+            last_link = dom.find('.//li[@class="gcb-last-location"]//a')
+            if last_link is not None:
+                last_link = last_link.get('href')
+            return last_link
+
+        # Hide irrelevant items.
+        self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.course.save()
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        actions.login(self.USER_EMAIL)
+        actions.register(self, self.USER_EMAIL)
+
+        # Visit lesson; no item should be marked as previously visited.
+        response = self.get('unit?unit=7&lesson=15')
+        self.assertIsNone(get_last_location_href(response))
+
+        # Now visit pre-assessment.  Lesson should be marked as being the
+        # previous link visited.
+        response = self.get('unit?unit=7&assessment=13')
+        self.assertEquals('unit?unit=7&lesson=15',
+                          get_last_location_href(response))
+
+        # Now visit post-assessment.  Pre-assessment should be last visited.
+        response = self.get('unit?unit=7&assessment=14')
+        self.assertEquals('unit?unit=7&assessment=13',
+                          get_last_location_href(response))

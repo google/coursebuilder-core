@@ -1,82 +1,89 @@
 {% import 'macros.html' as macros %}
+
+{% macro render_sub_element(sub_element, can_see_drafts) %}
+  {% if sub_element.is_active %}
+    {% set outer_element_class = 'active' %}
+  {% else %}
+    {% set outer_element_class = '' %}
+  {% endif %}
+  {% if sub_element.is_progress_recorded %}
+    {% set inner_element_class = 'gcb-lesson-title-with-progress' %}
+  {% else %}
+    {% set inner_element_class = 'gcb-lesson-title-no-progress' %}
+  {% endif %}
+  {{ macros.render_outline_element(
+         sub_element, can_see_drafts, course_availability,
+         'li', outer_element_class, 'div', inner_element_class,
+         suppress_link=sub_element.is_active, suppress_description=True) }}
+{% endmacro %}
+
+{% macro render_elements_list(elements, can_see_drafts) %}
+
+{% endmacro %}
+
 <div class="gcb-nav left-menu" id="gcb-nav-y" role="navigation">
   <ul>
     {{html_hooks.insert('unit.after_leftnav_begins') | safe}}
 
     {% if not course_info.unit.show_unit_links_in_leftnav %}
-        {% for unit, lessons, lesson_progress, pre_assessment, post_assessment in course_outline %}
-            {% if unit_id == unit.unit_id %}
-                {% if pre_assessment %}
-                  {{ macros.render_a_unit_title(unit, pre_assessment, unit_progress,
-                         is_progress_recorded, transient_student, can_see_drafts,
-                         assessment and assessment.unit_id == pre_assessment.unit_id,
-                         student_preferences) }}
-                {% endif %}
-                {% for lesson in lessons %}
-                    {{ macros.render_lesson_title(
-                         page_type, unit, lesson, lesson_progress, is_progress_recorded,
-                         unit.unit_id == unit_id and lesson.lesson_id == lesson_id,
-                         can_see_drafts) }}
-                {% endfor %}
-                {% if post_assessment %}
-                  {{ macros.render_a_unit_title(unit, post_assessment, unit_progress,
-                         is_progress_recorded, transient_student, can_see_drafts,
-                         assessment and assessment.unit_id == post_assessment.unit_id,
-                         student_preferences) }}
-                {% endif %}
+      {% for outline_element in course_outline %}
+        {% if outline_element.is_active %}
+          {% for sub_element in outline_element.contents recursive %}
+            {{ render_sub_element(sub_element, can_see_drafts) }}
+            {% if sub_element.contents %}
+              <ul>
+                {{ loop(sub_element.contents) }}
+              </ul>
             {% endif %}
-        {% endfor %}
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
     {% else %}
-        {% for unit, lessons, lesson_progress, pre_assessment, post_assessment in course_outline %}
-            {{ macros.render_u_unit_title(
-                 unit, unit_progress, is_progress_recorded, transient_student,
-                 can_see_drafts, unit.type != 'U',
-                 'gcb-unit-title expanded'
-                     if unit_id == unit.unit_id else 'gcb-unit-title'
-                         if lessons else 'gcb-unit-title expanded leaf',
-                 student_preferences) }}
-            <div id="gcb-lesson-container"
-                {% if unit_id == unit.unit_id %}
-                    class="gcb-lesson-container expanded"
-                {% else %}
-                    class="gcb-lesson-container"
-                {% endif %}>
-            {% if pre_assessment %}
-              {{ macros.render_a_unit_title(unit, pre_assessment, unit_progress,
-                     is_progress_recorded, transient_student, can_see_drafts,
-                     assessment and assessment.unit_id == pre_assessment.unit_id,
-                     student_preferences) }}
-            {% endif %}
-            {% for lesson in lessons %}
-                {{ macros.render_lesson_title(
-                     page_type, unit, lesson, lesson_progress, is_progress_recorded,
-                     unit.unit_id == unit_id and lesson.lesson_id == lesson_id,
-                     can_see_drafts) }}
-            {% endfor %}
-            {% if post_assessment %}
-              {{ macros.render_a_unit_title(unit, post_assessment, unit_progress,
-                     is_progress_recorded, transient_student, can_see_drafts,
-                     assessment and assessment.unit_id == post_assessment.unit_id,
-                     student_preferences) }}
-            {% endif %}
-            </div>
-        {% endfor %}
-        <script>
-            $('li.gcb-unit-title').click(function() {
-                if ($(this).hasClass('leaf')) {
-                    return;
-                }
-                if ($(this).hasClass('expanded')) {
-                    $(this).removeClass('expanded');
-                    $(this).next().removeClass('expanded');
-                } else {
-                    $(this).addClass('expanded');
-                    $(this).next().addClass('expanded');
-                }
-            });
-        </script>
-    {% endif %}
+      {% for outline_element in course_outline %}
+        {% if outline_element.is_active %}
+          {% set outer_element_class = 'gcb-unit-title expanded' %}
+        {% elif outline_element.contents %}
+          {% set outer_element_class = 'gcb-unit-title' %}
+        {% else %}
+          {% set outer_element_class = 'gcb-unit-title expanded leaf' %}
+        {% endif %}
+        {{ macros.render_outline_element(
+               outline_element, can_see_drafts, course_availability,
+               'li', outer_element_class, 'p', '', suppress_description=True,
+               suppress_link=outline_element.is_active) }}
 
+        <div id="gcb-lesson-container"
+             {% if outline_element.is_active %}
+               class="gcb-lesson-container expanded"
+             {% else %}
+               class="gcb-lesson-container"
+             {% endif %}>
+          {% for sub_element in outline_element.contents recursive %}
+            {{ render_sub_element(sub_element, is_progress_recorded) }}
+            {% if sub_element.contents %}
+              <ul>
+                {{ loop(sub_element.contents) }}
+              </ul>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <script>
+        $('li.gcb-unit-title').click(function() {
+          if ($(this).hasClass('leaf')) {
+            return;
+          }
+          if ($(this).hasClass('expanded')) {
+            $(this).removeClass('expanded');
+            $(this).next().removeClass('expanded');
+          } else {
+            $(this).addClass('expanded');
+            $(this).next().addClass('expanded');
+          }
+        });
+      </script>
+    {% endif %}
     {{html_hooks.insert('unit.before_leftnav_ends') | safe}}
   </ul>
 </div>

@@ -21,11 +21,12 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 # add/delete units/assessments/links)
 COURSE_OUTLINE_REORDER_PERMISSION = 'course_outline_reorder'
 
-# Name of permission allowing admin to view course outline content.
-COURSE_OUTLINE_VIEW_PERMISSION = 'course_outline_view'
-
 # Name for the permission for read-only access to all course settings.
 VIEW_ALL_SETTINGS_PERMISSION = 'settings_viewer'
+
+# Name of permission allowing modification of course, unit, lesson
+# availability, visibility.  Also governs access to course whitelist.
+MODIFY_AVAILABILITY_PERMISSION = 'modify_availability'
 
 # Perm. to allow editing a few permissions in course, unit/lesson/assessment
 # scopes suitable to adjusting a small run or re-run of a course to fix up

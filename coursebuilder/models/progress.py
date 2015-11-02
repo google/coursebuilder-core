@@ -21,7 +21,6 @@ import logging
 import os
 from collections import defaultdict
 
-import courses
 import transforms
 
 from common import utils
@@ -1215,8 +1214,7 @@ class ProgressStats(object):
 
     def _get_course_label(self):
         # pylint: disable=protected-access
-        return courses.Course.get_environ(self._get_course().app_context)[
-            'course']['title']
+        return self._get_course().app_context.get_environ()['course']['title']
 
     def _get_unit_label(self, unit_id):
         unit = self._get_course().find_unit_by_id(unit_id)

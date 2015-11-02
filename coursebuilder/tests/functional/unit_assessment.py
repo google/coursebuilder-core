@@ -49,25 +49,25 @@ class UnitPrePostAssessmentTest(actions.TestBase):
 
         self.unit_no_lessons = self.course.add_unit()
         self.unit_no_lessons.title = 'No Lessons'
-        self.unit_no_lessons.now_available = True
+        self.unit_no_lessons.availability = courses.AVAILABILITY_AVAILABLE
 
         self.unit_one_lesson = self.course.add_unit()
         self.unit_one_lesson.title = 'One Lesson'
-        self.unit_one_lesson.now_available = True
+        self.unit_one_lesson.availability = courses.AVAILABILITY_AVAILABLE
         self.lesson = self.course.add_lesson(self.unit_one_lesson)
         self.lesson.title = 'Lesson One'
         self.lesson.objectives = 'body of lesson'
-        self.lesson.now_available = True
+        self.lesson.availability = courses.AVAILABILITY_AVAILABLE
 
         self.assessment_one = self.course.add_assessment()
         self.assessment_one.title = 'Assessment One'
         self.assessment_one.html_content = 'assessment one content'
-        self.assessment_one.now_available = True
+        self.assessment_one.availability = courses.AVAILABILITY_AVAILABLE
 
         self.assessment_two = self.course.add_assessment()
         self.assessment_two.title = 'Assessment Two'
         self.assessment_two.html_content = 'assessment two content'
-        self.assessment_two.now_available = True
+        self.assessment_two.availability = courses.AVAILABILITY_AVAILABLE
 
         self.course.save()
         actions.login(STUDENT_EMAIL)
@@ -222,7 +222,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
 
         response = self.get(COURSE_URL)
         self._assert_progress_state(
-            'Not yet started', 'Unit 2 - %s</a>' % self.unit_one_lesson.title,
+            'Not yet started', 'Unit 2 - %s' % self.unit_one_lesson.title,
             response)
 
         # On pre-assessment; no progress markers on any lesson.
@@ -255,7 +255,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         # Back on course page; expect partial progress.
         response = self._click_next_button(response)
         self._assert_progress_state(
-            'In progress', 'Unit 2 - %s</a>' % self.unit_one_lesson.title,
+            'In progress', 'Unit 2 - %s' % self.unit_one_lesson.title,
             response)
 
     def _post_assessment(self, assessment_id):
@@ -308,7 +308,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         # Verify that the overall course state is completed.
         response = self._click_next_button(response)
         self._assert_progress_state(
-            'Completed', 'Unit 2 - %s</a>' % self.unit_one_lesson.title,
+            'Completed', 'Unit 2 - %s' % self.unit_one_lesson.title,
             response)
 
     def _get_selection_choices(self, schema, match):
@@ -371,7 +371,6 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             unit,
             {
                 'title': unit.title,
-                'now_available': unit.now_available,
                 'label_groups': [],
                 'pre_assessment': assessment.unit_id,
                 'post_assessment': -1,
@@ -413,7 +412,6 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             self.unit_no_lessons,
             {
                 'title': self.unit_no_lessons.title,
-                'now_available': self.unit_no_lessons.now_available,
                 'label_groups': [],
                 'pre_assessment': self.assessment_one.unit_id,
                 'post_assessment': self.assessment_two.unit_id,
@@ -456,7 +454,6 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             self.unit_one_lesson,
             {
                 'title': self.unit_one_lesson.title,
-                'now_available': self.unit_one_lesson.now_available,
                 'label_groups': [],
                 'pre_assessment': self.assessment_one.unit_id,
                 'post_assessment': self.assessment_two.unit_id,
@@ -482,7 +479,6 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             self.unit_no_lessons,
             {
                 'title': self.unit_no_lessons.title,
-                'now_available': self.unit_no_lessons.now_available,
                 'label_groups': [],
                 'pre_assessment': self.assessment_two.unit_id,
                 'post_assessment': self.assessment_one.unit_id,
@@ -505,7 +501,6 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             self.unit_no_lessons,
             {
                 'title': self.unit_no_lessons.title,
-                'now_available': self.unit_no_lessons.now_available,
                 'label_groups': [],
                 'pre_assessment': self.assessment_one.unit_id,
                 'post_assessment': self.assessment_one.unit_id,
@@ -604,7 +599,6 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 self.unit_no_lessons,
                 {
                     'title': self.unit_no_lessons.title,
-                    'now_available': self.unit_no_lessons.now_available,
                     'label_groups': [],
                     'pre_assessment': self.assessment_one.unit_id,
                     'post_assessment': self.assessment_two.unit_id,
@@ -692,8 +686,8 @@ class UnitPrePostAssessmentTest(actions.TestBase):
 
         self.unit_one_lesson.pre_assessment = self.assessment_one.unit_id
         self.unit_one_lesson.post_assessment = self.assessment_two.unit_id
-        self.assessment_one.now_available = False
-        self.assessment_two.now_available = False
+        self.assessment_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
         self.course.save()
 
         actions.login(STUDENT_EMAIL)
@@ -759,19 +753,6 @@ class UnitPartialUpdateTests(actions.TestBase):
         self.assertEquals(self.unit.title, 'Title')
         self.assertEquals(self.assessment.title, 'Title')
         self.assertEquals(self.link.title, 'Title')
-        self.assertEquals(0, len(errors))
-
-    def test_set_only_is_draft(self):
-        errors = []
-        self.rest_handler.apply_updates(
-            self.unit, {'is_draft': False}, errors)
-        self.rest_handler.apply_updates(
-            self.assessment, {'is_draft': False}, errors)
-        self.rest_handler.apply_updates(
-            self.link, {'is_draft': False}, errors)
-        self.assertEquals(self.unit.now_available, True)
-        self.assertEquals(self.assessment.now_available, True)
-        self.assertEquals(self.link.now_available, True)
         self.assertEquals(0, len(errors))
 
     def test_set_only_unit_header(self):

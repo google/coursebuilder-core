@@ -51,8 +51,6 @@ ACTION_GET_OUTLINE = 'outline'
 
 def _render_assessment_outline(handler, unit):
     course_writable = handler.app_context.is_editable_fs()
-    can_edit_status = course_writable and permissions.can_edit_property(
-        handler.app_context, constants.SCOPE_ASSESSMENT, 'assessment/is_draft')
     can_view_props = course_writable and permissions.can_edit(
         handler.app_context, constants.SCOPE_ASSESSMENT)
 
@@ -65,15 +63,12 @@ def _render_assessment_outline(handler, unit):
             '/dashboard?%s') % urllib.urlencode({
                 'action': 'edit_assessment',
                 'key': unit.unit_id}),
-        'can_edit_status': can_edit_status,
         'can_view_props': can_view_props,
-        'now_available': unit.now_available,
     }
+
 
 def _render_link_outline(handler, unit):
     course_writable = handler.app_context.is_editable_fs()
-    can_edit_status = course_writable and permissions.can_edit_property(
-        handler.app_context, constants.SCOPE_LINK, 'is_draft')
     can_view_props = course_writable and permissions.can_edit(
         handler.app_context, constants.SCOPE_LINK)
 
@@ -82,9 +77,7 @@ def _render_link_outline(handler, unit):
         'view_url': unit.href or '',
         'id': unit.unit_id,
         'component_type': 'link',
-        'can_edit_status': can_edit_status,
         'can_view_props': can_view_props,
-        'now_available': unit.now_available,
         'href': handler.canonicalize_url(
             '/dashboard?%s') % urllib.urlencode({
                 'action': 'edit_link',
@@ -93,8 +86,6 @@ def _render_link_outline(handler, unit):
 
 def _render_custom_unit_outline(handler, course, unit):
     course_writable = handler.app_context.is_editable_fs()
-    can_edit_status = course_writable and permissions.can_edit_property(
-        handler.app_context, constants.SCOPE_UNIT, 'is_draft')
     can_view_props = course_writable and permissions.can_edit(
         handler.app_context, constants.SCOPE_UNIT)
 
@@ -103,9 +94,7 @@ def _render_custom_unit_outline(handler, course, unit):
         'component_type': 'custom-unit',
         'view_url': unit.custom_unit_url,
         'id': unit.unit_id,
-        'can_edit_status': can_edit_status,
         'can_view_props': can_view_props,
-        'now_available': unit.now_available,
         'href': handler.canonicalize_url(
             '/dashboard?%s') % urllib.urlencode({
                 'action': 'edit_custom_unit',
@@ -115,8 +104,6 @@ def _render_custom_unit_outline(handler, course, unit):
 
 def _render_unit_outline(handler, course, unit):
     course_writable = handler.app_context.is_editable_fs()
-    can_edit_status = course_writable and permissions.can_edit_property(
-        handler.app_context, constants.SCOPE_UNIT, 'is_draft')
     can_view_props = course_writable and permissions.can_edit(
         handler.app_context, constants.SCOPE_UNIT)
 
@@ -125,9 +112,7 @@ def _render_unit_outline(handler, course, unit):
         'component_type': 'unit',
         'view_url': 'unit?unit=%s' % unit.unit_id,
         'id': unit.unit_id,
-        'can_edit_status': can_edit_status,
         'can_view_props': can_view_props,
-        'now_available': unit.now_available,
         'href': handler.canonicalize_url(
             '/dashboard?%s') % urllib.urlencode({
                 'action': 'edit_unit',
@@ -162,10 +147,8 @@ def _render_unit_outline(handler, course, unit):
                 unit.unit_id, lesson.lesson_id),
             'id': lesson.lesson_id,
             'href': handler.get_action_url('edit_lesson', key=lesson.lesson_id),
-            'can_edit_status': lessons_editable,
             'can_view_props': lessons_editable,
             'auto_index': lesson.auto_index,
-            'now_available': lesson.now_available,
             'extras': extras})
 
     unit_data['lessons'] = lessons
@@ -212,13 +195,6 @@ def _render_course_outline_to_html(handler, course):
                 handler.app_context, custom_module,
                 constants.COURSE_OUTLINE_REORDER_PERMISSION),
             'settings_viewable': any_course_setting_viewable,
-            'availability': {
-                'url': handler.get_action_url('course_availability'),
-                'xsrf_token': handler.create_xsrf_token('course_availability'),
-                'param': not handler.app_context.now_available,
-                'now_available': handler.app_context.now_available,
-                'is_editable': is_course_availability_editable,
-            }
         },
         'units': units,
         'add_lesson_xsrf_token': handler.create_xsrf_token('add_lesson'),
@@ -228,12 +204,6 @@ def _render_course_outline_to_html(handler, course):
             course.app_context),
         'extra_info_title': ', '.join(COURSE_OUTLINE_EXTRA_INFO_TITLES)
     }
-    for item_type in unit_lesson_editor.UnitLessonEditor.CAN_EDIT_DRAFT:
-        action_name = '%s_%s' % (
-            unit_lesson_editor.UnitLessonEditor.ACTION_POST_SET_DRAFT_STATUS,
-            item_type)
-        token_name = 'status_xsrf_token_%s' % item_type
-        template_values[token_name] = handler.create_xsrf_token(action_name)
 
     return jinja2.Markup(
         handler.get_template(
@@ -313,9 +283,6 @@ def can_view_course_outline(app_context):
     return (
         roles.Roles.is_user_allowed(
             app_context, custom_module,
-            constants.COURSE_OUTLINE_VIEW_PERMISSION) or
-        roles.Roles.is_user_allowed(
-            app_context, custom_module,
             constants.COURSE_OUTLINE_REORDER_PERMISSION) or
         permissions.can_edit(app_context, constants.SCOPE_UNIT) or
         permissions.can_edit(app_context, constants.SCOPE_ASSESSMENT) or
@@ -323,15 +290,9 @@ def can_view_course_outline(app_context):
         )
 
 
-def on_module_enabled(courses_custom_module, module_permissions):
+def on_module_enabled(courses_custom_module):
     global custom_module  # pylint: disable=global-statement
     custom_module = courses_custom_module
-    module_permissions.extend([
-        roles.Permission(
-            constants.COURSE_OUTLINE_VIEW_PERMISSION,
-            'Can view course structure'),
-        ])
-
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'outline', 'Outline', action=ACTION_GET_OUTLINE,
         contents=_get_outline, placement=1000, sub_group_name='pinned')

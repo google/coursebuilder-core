@@ -439,7 +439,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         """Adds a unit to the course and records the u_index and unit_id."""
         unit = self.course.add_unit()
         unit.title = self.unit_name_str.format(u_index)
-        unit.now_available = True
+        unit.availability = courses.AVAILABILITY_AVAILABLE
         self.unit_keys.append((u_index, unit.unit_id))
         return unit
 
@@ -447,7 +447,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         """Adds a lesson to the course and records the u_index and lesson_id."""
         lesson = self.course.add_lesson(unit)
         lesson.title = self.lesson_name_str.format(u_index)
-        lesson.now_available = True
+        lesson.availability = courses.AVAILABILITY_AVAILABLE
         lesson.scored = True
         lesson.objectives = ''
         self.lesson_keys.append((u_index, lesson.lesson_id))
@@ -486,7 +486,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         """Adds an assessment to the course and records the u_index and id."""
         assessment = self.course.add_assessment()
         assessment.title = self.assessment_name_str.format(u_index)
-        assessment.now_available = True
+        assessment.availability = courses.AVAILABILITY_AVAILABLE
         self.assessment_keys.append((u_index, assessment.unit_id))
         return assessment
 
@@ -1361,10 +1361,10 @@ class StudentVectorGeneratorProgressTests(actions.TestBase):
         # Add course content
         unit = self.course.add_unit()
         unit.title = 'Unit number 1'
-        unit.now_available = True
+        unit.availability = courses.AVAILABILITY_AVAILABLE
         lesson = self.course.add_lesson(unit)
         lesson.title = 'Lesson'
-        lesson.now_available = True
+        lesson.availability = courses.AVAILABILITY_AVAILABLE
         self.course.save()
 
         self.student_id = '1'

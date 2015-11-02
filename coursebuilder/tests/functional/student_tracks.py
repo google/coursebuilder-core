@@ -90,22 +90,22 @@ class StudentTracksTest(actions.TestBase):
             None, app_context=sites.get_all_courses()[0])
         self._unit_no_labels = self._course.add_unit()
         self._unit_no_labels.title = 'Unit No Labels'
-        self._unit_no_labels.now_available = True
+        self._unit_no_labels.availability = courses.AVAILABILITY_AVAILABLE
         self._unit_labels_foo = self._course.add_unit()
         self._unit_labels_foo.title = 'Unit Labels: Foo'
-        self._unit_labels_foo.now_available = True
+        self._unit_labels_foo.availability = courses.AVAILABILITY_AVAILABLE
         self._unit_labels_foo.labels = str(self.foo_id)
         self._unit_labels_foo_bar = self._course.add_unit()
         self._unit_labels_foo_bar.title = 'Unit Labels: Bar, Foo'
-        self._unit_labels_foo_bar.now_available = True
+        self._unit_labels_foo_bar.availability = courses.AVAILABILITY_AVAILABLE
         self._unit_labels_foo_bar.labels = '%s %s' % (self.bar_id, self.foo_id)
         self._unit_labels_quux = self._course.add_unit()
         self._unit_labels_quux.title = 'Unit Labels: Quux'
-        self._unit_labels_quux.now_available = True
+        self._unit_labels_quux.availability = courses.AVAILABILITY_AVAILABLE
         self._unit_labels_quux.labels = str(self.quux_id)
         self._unit_labels_foo_quux = self._course.add_unit()
         self._unit_labels_foo_quux.title = 'Unit Labels: Foo Quux'
-        self._unit_labels_foo_quux.now_available = True
+        self._unit_labels_foo_quux.availability = courses.AVAILABILITY_AVAILABLE
         self._unit_labels_foo_quux.labels = '%s %s' % (str(self.foo_id),
                                                        str(self.quux_id))
         self._course.save()

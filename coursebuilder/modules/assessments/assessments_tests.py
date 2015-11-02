@@ -43,7 +43,7 @@ class EmbeddedAssessmentTests(actions.TestBase):
             COURSE_NAME, ADMIN_EMAIL, 'Learning Resources')
         self.course = courses.Course(None, self.app_context)
         self.assessment = self.course.add_assessment()
-        self.assessment.now_available = True
+        self.assessment.availability = courses.AVAILABILITY_AVAILABLE
         self.course.save()
 
         self.embed_url = 'modules/embed/v1/resource/assessment/%s' % (

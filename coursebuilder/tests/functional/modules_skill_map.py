@@ -1227,10 +1227,10 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
 
         self.unit = self.course.add_unit()
         self.unit.title = 'Test Unit'
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.title = 'Test Lesson'
-        self.lesson.now_available = True
+        self.lesson.availability = courses.AVAILABILITY_AVAILABLE
         self.course.save()
 
     def _getSkillPanelWidget(self):
@@ -1342,7 +1342,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         # in this lesson, don't list it.
         other_lesson = self.course.add_lesson(self.unit)
         other_lesson.title = 'Other Lesson'
-        other_lesson.now_available = True
+        other_lesson.availability = courses.AVAILABILITY_AVAILABLE
         other_lesson.properties[SKILLS_KEY] = [sa.id]
         self.course.save()
         widget = self._getSkillPanelWidget()
@@ -1389,7 +1389,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         self.lesson.properties[SKILLS_KEY] = [sa.id]
         lesson2 = self.course.add_lesson(self.unit)
         lesson2.title = 'Test Lesson 2'
-        lesson2.now_available = True
+        lesson2.availability = courses.AVAILABILITY_AVAILABLE
         lesson2.properties[SKILLS_KEY] = [sb.id]
         self.course.save()
 
@@ -1412,7 +1412,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
             locations[0].attrib['href'])
 
         # Next, make the lesson unavailable
-        lesson2.now_available = False
+        lesson2.availability = courses.AVAILABILITY_UNAVAILABLE
         self.course.save()
 
         # Except the subsequent skill does not show its lesson

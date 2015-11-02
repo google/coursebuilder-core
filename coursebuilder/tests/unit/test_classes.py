@@ -277,8 +277,9 @@ class InvokeExistingUnitTest(suite.TestBase):
         assert default_original == default_values
 
         # Check merge into an empty dict.
-        assert courses.DEFAULT_COURSE_YAML_DICT == courses.deep_dict_merge(
-            {}, courses.DEFAULT_COURSE_YAML_DICT)
+        assert (courses.DEFAULT_COURSE_YAML_DICT ==
+                courses.deep_dict_merge(
+                    {}, courses.DEFAULT_COURSE_YAML_DICT))
 
         # Check value does not merge into dictionary.
         real_values = {'foo': 'bar'}

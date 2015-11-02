@@ -25,7 +25,6 @@ import appengine_config
 from common import schema_fields
 from common import tags
 from common import users
-from controllers import lessons
 from controllers import utils
 from models import courses
 from models import custom_modules
@@ -33,6 +32,7 @@ from models import data_removal
 from models import data_sources
 from models import models
 from models import transforms
+from modules.courses import lessons
 from modules.rating import messages
 
 RESOURCES_PATH = '/modules/rating/resources'

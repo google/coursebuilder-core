@@ -80,12 +80,6 @@ class PeerReviewControllerTest(actions.TestBase):
              'correct': True},
         ])
 
-        # Check that the sample peer-review assignment shows up in the preview
-        # page.
-        response = actions.view_preview(self)
-        assert_contains('Sample peer review assignment', response.body)
-        assert_does_not_contain('Review peer assignments', response.body)
-
         actions.login(email)
         actions.register(self, name)
 
@@ -97,7 +91,7 @@ class PeerReviewControllerTest(actions.TestBase):
         assert_contains(
             '<a href="assessment?name=%s">' % LEGACY_REVIEW_UNIT_ID,
             response.body)
-        assert_contains('<span> Review peer assignments </span>', response.body,
+        assert_contains('Review peer assignments </p>', response.body,
                         collapse_whitespace=True)
         assert_does_not_contain('<a href="reviewdashboard', response.body,
                                 collapse_whitespace=True)
@@ -666,7 +660,7 @@ class PeerReviewDashboardStudentTest(actions.TestBase):
             'review_min_count: 1,'
             'review_window_mins: 20,'
             'submission_due_date: \'2034-07-01 12:00\'}')
-        self.assessment.now_available = True
+        self.assessment.availability = courses.AVAILABILITY_AVAILABLE
 
         self.course.save()
         actions.login(self.STUDENT_EMAIL)
@@ -693,7 +687,7 @@ class PeerReviewDashboardStudentTest(actions.TestBase):
     def test_back_button_child_assessment(self):
         parent_unit = self.course.add_unit()
         parent_unit.title = 'No Lessons'
-        parent_unit.now_available = True
+        parent_unit.availability = courses.AVAILABILITY_AVAILABLE
         parent_unit.pre_assessment = self.assessment.unit_id
         self.course.save()
 

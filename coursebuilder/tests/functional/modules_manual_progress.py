@@ -63,32 +63,32 @@ class ManualProgressTest(actions.TestBase):
 
         self._unit_one = self._course.add_unit()
         self._unit_one.title = 'Unit Labels: Foo'
-        self._unit_one.now_available = True
+        self._unit_one.availability = courses.AVAILABILITY_AVAILABLE
         self._lesson_1_1 = self._course.add_lesson(self._unit_one)
         self._lesson_1_1.title = 'Unit One, Lesson One'
-        self._lesson_1_1.now_available = True
+        self._lesson_1_1.availability = courses.AVAILABILITY_AVAILABLE
         self._lesson_1_1.manual_progress = True
         self._lesson_1_2 = self._course.add_lesson(self._unit_one)
         self._lesson_1_2.title = 'Unit One, Lesson Two'
-        self._lesson_1_2.now_available = True
+        self._lesson_1_2.availability = courses.AVAILABILITY_AVAILABLE
         self._lesson_1_2.manual_progress = True
 
         self._unit_two = self._course.add_unit()
         self._unit_two.title = 'Unit Labels: Foo'
-        self._unit_two.now_available = True
+        self._unit_two.availability = courses.AVAILABILITY_AVAILABLE
         self._unit_two.manual_progress = True
         self._lesson_2_1 = self._course.add_lesson(self._unit_two)
         self._lesson_2_1.title = 'Unit Two, Lesson One'
-        self._lesson_2_1.now_available = True
+        self._lesson_2_1.availability = courses.AVAILABILITY_AVAILABLE
         self._lesson_2_2 = self._course.add_lesson(self._unit_two)
         self._lesson_2_2.title = 'Unit Two, Lesson Two'
-        self._lesson_2_2.now_available = True
+        self._lesson_2_2.availability = courses.AVAILABILITY_AVAILABLE
 
         self._sub_assessment = self._course.add_assessment()
-        self._sub_assessment.now_available = True
+        self._sub_assessment.availability = courses.AVAILABILITY_AVAILABLE
 
         self._toplevel_assessment = self._course.add_assessment()
-        self._sub_assessment.now_available = True
+        self._sub_assessment.availability = courses.AVAILABILITY_AVAILABLE
 
         self._unit_three = self._course.add_unit()
         self._unit_three.pre_assessment = self._sub_assessment.unit_id

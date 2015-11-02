@@ -341,8 +341,6 @@ def register_base_course_matchers():
     PageEventAggregator.register_matcher(
         PathOnlyMatcher('forum', '/forum'))
     PageEventAggregator.register_matcher(
-        PathOnlyMatcher('preview', '/preview'))
-    PageEventAggregator.register_matcher(
         PathOnlyMatcher('answer', '/answer'))
     PageEventAggregator.register_matcher(
         PathOnlyMatcher('unenroll', '/student/unenroll'))
@@ -359,8 +357,6 @@ def unregister_base_course_matchers():
         PathOnlyMatcher('announcements', '/announcements'))
     PageEventAggregator.unregister_matcher(
         PathOnlyMatcher('forum', '/forum'))
-    PageEventAggregator.unregister_matcher(
-        PathOnlyMatcher('preview', '/preview'))
     PageEventAggregator.unregister_matcher(
         PathOnlyMatcher('answer', '/answer'))
     PageEventAggregator.unregister_matcher(

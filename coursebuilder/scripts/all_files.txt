@@ -87,7 +87,6 @@ common/utils.py
 common/xcontent.py
 common/yaml_files.py
 controllers/__init__.py
-controllers/lessons.py
 controllers/messages.py
 controllers/sites.py
 controllers/utils.py
@@ -596,7 +595,6 @@ views/lesson_navbar.html
 views/lesson_title.html
 views/macros.html
 views/notifications/welcome.txt
-views/preview.html
 views/readonly_assessment.html
 views/register.html
 views/registration_module.html

@@ -1,354 +1,79 @@
-{#
- # Renders a progress icon.
- # 0: not started
- # 1: in progress
- # 2: completed
- #}
-{% macro render_progress_icon(progress_int, id, submittable=False) %}
-  {% if progress_int == 0 %}
-    <img src="assets/img/not_started.png"
-      {% if submittable %}
-         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+{% macro render_progress(outline_element) %}
+  {% if outline_element.is_progress_recorded %}
+    {% if outline_element.progress == 0 or outline_element.progress is none %}
+      {% set progress_src = 'assets/img/not_started.png' %}
+      {% set progress_id_prefix = 'progress-notstarted-' %}
+      {% if outline_element.kind == 'assessment' %}
+        {# I18N: Alt text for image showing student progress. #}
+        {% set progress_alt = gettext('Not yet submitted') %}
       {% else %}
-         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
+        {# I18N: Alt text for image showing student progress. #}
+        {% set progress_alt = gettext('Not yet started') %}
       {% endif %}
+    {% elif outline_element.progress == 1 %}
+      {% set progress_src = 'assets/img/in_progress.png' %}
+      {% set progress_id_prefix = 'progress-inprogress-' %}
+      {#- I18N: Alt text for image showing student progress. #}
+      {% set progress_alt = gettext('In progress') %}
+    {% elif outline_element.progress == 2 %}
+      {% set progress_src = 'assets/img/completed.png' %}
+      {% set progress_id_prefix = 'progress-completed-' %}
+      {#- I18N: Alt text for image showing student progress. #}
+      {% set progress_alt = gettext('Completed') %}
+    {% endif %}
+    <img src="{{ progress_src }}"
+         alt="{{ progress_alt }}"
+         title="{{ progress_title }}"
          class="gcb-progress-icon"
-         id="progress-notstarted-{{id}}">
-  {% elif progress_int == 1 %}
-    <img src="assets/img/in_progress.png"
-         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-         class="gcb-progress-icon"
-         id="progress-inprogress-{{id}}">
-  {% elif progress_int == 2 %}
-    <img src="assets/img/completed.png"
-         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-         class="gcb-progress-icon"
-         id="progress-completed-{{id}}">
+         id="{{ progress_id_prefix }}{{ outline_element.id }}">
+  {% else %}
+    <span class="gcb-progress-empty"></span>
   {% endif %}
 {% endmacro %}
 
-
-{#
-# macro to render a title along with a progress indicator for any kind of unit
-#}
-{% macro render_unit_title(
-    unit, progress, is_progress_recorded, transient_student, can_see_drafts,
-    include_link, css_class, target_url, include_description,
-    student_preferences) -%}
-
-    {% if is_progress_recorded %}
-      {% set progress_class = 'gcb-progress-empty' %}
-    {% else %}
-      {% set progress_class = 'gcb-progress-none' %}
-    {% endif %}
-
-    {% if not css_class %}
-      {% set css_class = '' %}
-    {% endif %}
-
-    {% if not unit.now_available and unit.shown_when_unavailable %}
-      {% set include_link = False %}
-    {% endif %}
-
-    {% if unit.now_available or unit.shown_when_unavailable or can_see_drafts %}
-      {% if unit.type == 'A' %}
-        {% if (student_preferences and student_preferences.last_location and
-               student_preferences.last_location.endswith(target_url)) %}
-          {% set css_class = css_class + ' gcb-last-location' %}
-        {% endif %}
-        <li class='{{ css_class }}'><p class="gcb-top-content">
-          {% if not transient_student %}
-            {% if progress[unit.unit_id] > 0 %}
-              {{ render_progress_icon(2, unit.unit_id, True) }}
-            {% else %}
-              {{ render_progress_icon(0, unit.unit_id, True) }}
-            {% endif %}
-          {% else %}
-            <span class="{{ progress_class }}"></span>
-          {% endif %}
-          {% if include_link %}
-            <a href="{{ target_url }}">{{ unit.title }}</a>
-          {% else %}
-            {{ unit.title }}
-          {% endif %}
-          {% if include_description and unit.description %}
-            <span class="gcb-unit-description">
-              {{ unit.description }}
-            </span>
-          {% endif %}
-          {% if unit.needs_human_grader() and not transient_student %}
-            </p></li>
-            <li>
-              <p class="gcb-top-content">
-                <span class="{{ progress_class }}"></span>
-
-              {% if unit.review_progress in [1,2] %}
-                {{ render_progress_icon(unit.review_progress, 'review-{}'.format(unit.unit_id), True) }}
-              {% else %}
-                {{ render_progress_icon(0, 'review-{}'.format(unit.unit_id), True) }}
-              {% endif %}
-
-              {% if unit.is_submitted %}
-                <a href="reviewdashboard?unit={{ unit.unit_id }}">
-                  {% if unit.matcher == 'peer' %}
-                    {# I18N: Displayed in the course contents page. Indicates a page to which students can go to review other students' assignments. #}
-                    {{ gettext('Review peer assignments') }}
-                  {% endif %}
-                </a>
-              {% else %}
-                <span>
-                  {% if unit.matcher == 'peer' %}
-                    {# I18N: Displayed in the course contents page. Indicates a page to which students can go to review other students' assignments. #}
-                    {{ gettext('Review peer assignments') }}
-                  {% endif %}
-                </span>
-              {% endif %}
-
-          {% endif %}
-
-      {% elif unit.type == 'U' %}
-        {% if (student_preferences and student_preferences.last_location and
-               student_preferences.last_location.endswith(
-                '/unit?unit=%s' % unit.unit_id)) %}
-          {% set css_class = css_class + ' gcb-last-location' %}
-        {% endif %}
-        <li class='{{ css_class }}'><p class="gcb-top-content">
-          {% if is_progress_recorded and not transient_student %}
-            {% if progress[unit.unit_id] in [1,2] %}
-              {{ render_progress_icon(progress[unit.unit_id], unit.unit_id) }}
-            {% else %}
-              {{ render_progress_icon(0, unit.unit_id) }}
-            {% endif %}
-          {% else %}
-            <span class="{{ progress_class }}"></span>
-          {% endif %}
-
-          {% if include_link %}
-              <a href="unit?unit={{ unit.unit_id }}">{{ display_unit_title(unit) }}</a>
-          {% else %}
-              {{ display_unit_title(unit) }}
-          {% endif %}
-          {% if include_description and unit.description %}
-            <span class="gcb-unit-description">
-              {{ unit.description }}
-            </span>
-          {% endif %}
-
-      {% elif unit.type == 'O' %}
-        <li class='{{ css_class }}'>
-          <p class="gcb-top-content">
-            <span class="{{ progress_class }}"></span>
-            {% if include_link %}
-                <a href="{{ unit.href }}"> {{ unit.title }}</a>
-            {% else %}
-                {{ unit.title }}
-            {% endif %}
-            {% if include_description and unit.description %}
-              <span class="gcb-unit-description">
-                {{ unit.description }}
-              </span>
-            {% endif %}
-      {% else %}
-        {% if (student_preferences and student_preferences.last_location and
-               unit._custom_unit_url in student_preferences.last_location) %}
-          {% set css_class = css_class + ' gcb-last-location' %}
-        {% endif %}
-        <li class='{{ css_class }}'><p class="gcb-top-content">
-          {% if not transient_student %}
-            {% if progress[unit.unit_id] in [1,2] %}
-              {{ render_progress_icon(progress[unit.unit_id], 'review-{}'.format(unit.unit_id), True) }}
-            {% else %}
-              {{ render_progress_icon(0, 'review-{}'.format(unit.unit_id), True) }}
-            {% endif %}
-          {% else %}
-            <span class="{{ progress_class }}"></span>
-          {% endif %}
-          {% if include_link %}
-            <a href="{{ unit.custom_unit_url }}"> {{ unit.title }}</a>
-          {% else %}
-            {{ unit.title }}
-          {% endif %}
-          {% if include_description and unit.description %}
-            <span class="gcb-unit-description">
-              {{ unit.description }}
-            </span>
-          {% endif %}
-      {% endif %}
-          {% if not unit.now_available and can_see_drafts %}
-            (Private)
-          {% endif %}
-          </p>
-        </li>
-    {% endif %}
-{%- endmacro %}
-
-
-{#
-# macro to render a unit title
-#}
-{% macro render_u_unit_title(
-    unit, progress, is_progress_recorded, transient_student, can_see_drafts,
-    include_link, css_class, student_preferences) -%}
-    {{ render_unit_title(
-        unit, progress, is_progress_recorded, transient_student,
-        can_see_drafts, include_link, css_class,
-        'assessment?name=%s' % unit.unit_id,
-        student_preferences=student_preferences) }}
-{%- endmacro %}
-
-
-{#
-# macro to render an assessment title
-#}
-{% macro render_a_unit_title(
-    unit, assessment, progress, is_progress_recorded, transient_student,
-    can_see_drafts, is_active, student_preferences) -%}
-    {{ render_unit_title(assessment, progress,
-        is_progress_recorded, transient_student,
-        can_see_drafts,
-        not is_active,
-        'gcb-assessment-as-lesson active' if is_active else 'gcb-assessment-as-lesson',
-        'unit?unit=%s&assessment=%s' % (unit.unit_id, assessment.unit_id),
-        student_preferences=student_preferences) }}
-{%- endmacro %}
-
-
-{#
-# macro to render a lesson title along with a progress indicator
-#}
-{% macro render_lesson_title(
-    page_type, unit, lesson, lesson_progress, is_progress_recorded,
-    is_active, can_see_drafts) -%}
-  {% if lesson.now_available or can_see_drafts %}
-
-    {% if is_progress_recorded %}
-      {% set progress_class = 'gcb-progress-empty' %}
-    {% else %}
-      {% set progress_class = 'gcb-progress-none' %}
-    {% endif %}
-
-    <li{% if page_type == 'unit' and is_active %} class="active"{% endif %}>
-
-      {% if is_progress_recorded %}
-        <div class="gcb-progress-icon-holder">
-          {% if lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['html'] in [1,2] %}
-            {{ render_progress_icon(lesson_progress[lesson.lesson_id]['html'], lesson.lesson_id) }}
-          {% else %}
-            {{ render_progress_icon(0, lesson.lesson_id) }}
-          {% endif %}
-        </div>
-      {% endif %}
-
-      <div
-        {% if is_progress_recorded %}
-          class="gcb-lesson-title-with-progress"
-        {% else %}
-          class="gcb-lesson-title-no-progress"
-        {% endif %}
-      >
-        {% if page_type == 'unit' and is_active %}
-          {{ display_lesson_title(unit, lesson) }}
-        {% else %}
-          <a href="unit?unit={{ unit.unit_id }}&lesson={{ lesson.lesson_id }}">
-            {{ display_lesson_title(unit, lesson) }}
-          </a>
-        {% endif %}
-      </div>
-
-    {% if not lesson.now_available and can_see_drafts %}
-      <span class="gcb-grayed">
-        (Private)
-      </span>
-    {% endif %}
-
-    {% if lesson.activity and lesson.activity_listed %}
-      <ul>
-        <li{% if page_type == 'activity' and is_active %} class="active"{% endif %}>
-            {% if is_progress_recorded %}
-              <div class="gcb-progress-icon-holder">
-                {% if lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['activity'] in [1,2] %}
-                  {{ render_progress_icon(lesson_progress[lesson.lesson_id]['activity'], '{}-activity'.format(lesson.lesson_id)) }}
-                {% else %}
-                  {{ render_progress_icon(0, '{}-activity'.format(lesson.lesson_id)) }}
-                {% endif %}
-              </div>
-            {% endif %}
-
-            <div
-              {% if is_progress_recorded %}
-                class="gcb-activity-title-with-progress"
-              {% else %}
-                class="gcb-activity-title-no-progress"
-              {% endif %}
-            >
-              {% if page_type == 'activity' and is_active %}
-                {# I18N: Menu item. #}
-                {{ gettext('Activity') }}
-              {% else %}
-                <a href="activity?unit={{ unit.unit_id }}&lesson={{ lesson.lesson_id }}">
-                  {# I18N: Menu item. #}
-                  {{ gettext('Activity') }}
-                </a>
-              {% endif %}
-            </div>
-          </li>
-      </ul>
-    {% endif %}
-
-    </li>
-
-  {% else %}
-    <li>
-      {% if is_progress_recorded %}
-        <div class="gcb-progress-icon-holder">
-          {{ render_progress_icon(0, lesson.lesson_id) }}
-        </div>
-      {% endif %}
-
-      {% if page_type == 'unit' and is_active %}
-        <span class="gcb-grayed-active">
-      {% else %}
-        <span class="gcb-grayed">
-      {% endif %}
-          {{ display_lesson_title(unit, lesson) }}
-        </span>
-
-      {% if lesson.activity %}
-        <ul>
-          <li>
-            <span class="{{ progress_class }}"></span>
-            {% if page_type == 'activity' and is_active %}
-              <span class="gcb-grayed-active">
-            {% else %}
-              <span class="gcb-grayed">
-            {% endif %}
-
-            {% if is_progress_recorded %}
-              <div class="gcb-progress-icon-holder">
-                {{ render_progress_icon(0, '{}-activity'.format(lesson.lesson_id)) }}
-              </div>
-            {% endif %}
-
-              <div
-                {% if is_progress_recorded %}
-                  class="gcb-activity-title-with-progress"
-                {% else %}
-                  class="gcb-activity-title-no-progress"
-                {% endif %}
-              >
-                {# I18N: Menu item. #}
-                {{ gettext('Activity') }}
-              </div>
-
-            </span>
-          </li>
-        </ul>
-      {% endif %}
-
-    </li>
+{% macro render_outline_element(outline_element,
+                                can_see_drafts,
+                                course_availability,
+                                outer_element_tag,
+                                outer_element_class,
+                                inner_element_tag,
+                                inner_element_class,
+                                suppress_link=False,
+                                suppress_description=False) %}
+  {% if outline_element.link_is_last_page_visited %}
+    {% set outer_element_class = outer_element_class + ' gcb-last-location' %}
   {% endif %}
-{%- endmacro %}
+
+  <{{ outer_element_tag }} class="{{ outer_element_class|trim }}">
+    <{{ inner_element_tag }} class="{{ inner_element_class|trim }}">
+      {{ render_progress(outline_element) }}
+      {% if outline_element.link and not suppress_link %}
+        <a href="{{ outline_element.link|safe }}">
+      {% endif %}
+      {{ outline_element.title }}
+      {% if outline_element.link and not suppress_link %}
+        </a>
+      {% endif %}
+
+      {# When registration is required, then add annotations to items that
+         are strictly-private or strictly-public.  (For courses that are
+         private, all items are private, and for courses that are
+         registration-optional, all items are public, so don't bother
+         redundantly adding markup.) #}
+      {% if can_see_drafts %}
+        {% if not outline_element.is_available_to_students %}
+          <span class="gcb-grayed">(Private)</span>
+        {% endif %}
+        {% if course_availability == 'registration_required' and
+              outline_element.is_available_to_visitors %}
+          <span class="gcb-grayed">(Public)</span>
+        {% endif %}
+      {% endif %}
+      {% if outline_element.description and not suppress_description%}
+        <span class="gcb-unit-description">
+          {{ outline_element.description }}
+        </span>
+      {% endif %}
+    </{{ inner_element_tag }}>
+  </{{ outer_element_tag }}>
+{% endmacro %}

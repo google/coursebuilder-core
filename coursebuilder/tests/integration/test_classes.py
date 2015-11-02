@@ -224,17 +224,20 @@ class EmbedModuleTest(BaseIntegrationTest):
     def make_course_enrollable(self, name):
         self.load_dashboard(
             name
-        ).click_lock(
-        ).click_registration(
+        ).click_availability(
+        ).set_course_availability('Registration Required'
         ).set_whitelisted_students(
             [self.email]
-        )
+        ).click_save()
 
     def set_child_courses_and_make_course_available(
             self, parent_name, child_name):
-        self.load_dashboard(
-            parent_name
-        ).click_lock(
+        self.load_dashboard(parent_name
+        ).click_availability(
+        ).set_course_availability('Registration Required'
+        ).click_save()
+
+        self.load_dashboard(parent_name
         ).click_advanced_settings(
         ).click_advanced_edit(
         ).set_child_courses(
@@ -461,8 +464,6 @@ class AdminTests(BaseIntegrationTest):
         ).click_add_unit(
         ).set_title(
             'Test Unit 1'
-        ).set_status(
-            'Public'
         ).click_save(
         ).click_close(
         ).verify_course_outline_contains_unit('Unit 1 - Test Unit 1')
@@ -480,8 +481,6 @@ class AdminTests(BaseIntegrationTest):
         ).click_add_unit(
         ).set_title(
             unit_title
-        ).set_status(
-            'Public'
         ).click_plain_text(
         ).setvalue_codemirror(
             0, unit_header_html
@@ -503,8 +502,6 @@ class AdminTests(BaseIntegrationTest):
         ).click_add_unit(
         ).set_title(
             'Test Unit 1'
-        ).set_status(
-            'Public'
         ).click_save(
         ).click_close(
         ).verify_course_outline_contains_unit(
@@ -513,8 +510,6 @@ class AdminTests(BaseIntegrationTest):
         ).set_title(
             'Test Lesson'
         ).select_settings(
-        ).set_status(
-            'Public'
         ).select_content(
         ).click_plain_text(
         ).setvalue_codemirror(
@@ -883,8 +878,6 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_add_unit(
         ).set_title(
             'Test Unit 1'
-        ).set_status(
-            'Public'
         ).set_contents_on_one_page(
             True
         ).click_save(
@@ -898,8 +891,6 @@ class QuestionsTest(BaseIntegrationTest):
         ).set_title(
             'Question lesson - Graded'
         ).select_settings(
-        ).set_status(
-            'Public'
         ).set_questions_are_scored(
         ).select_content(
         ).click_rich_text(
@@ -919,8 +910,6 @@ class QuestionsTest(BaseIntegrationTest):
         ).set_title(
             'Question lesson - UnGraded'
         ).select_settings(
-        ).set_status(
-            'Public'
         ).select_content(
         ).click_rich_text(
         ).click_rte_add_custom_tag(
@@ -940,8 +929,6 @@ class QuestionsTest(BaseIntegrationTest):
         page = page.click_add_assessment(
         ).set_title(
             'Pre-Assessment'
-        ).set_status(
-            'Public'
         ).click_rich_text(
             pageobjects.AddAssessment.INDEX_CONTENT
         ).click_rte_add_custom_tag(
@@ -962,8 +949,6 @@ class QuestionsTest(BaseIntegrationTest):
         page = page.click_add_assessment(
         ).set_title(
             'Post-Assessment'
-        ).set_status(
-            'Public'
         ).click_rich_text(
             pageobjects.AddAssessment.INDEX_CONTENT
         ).click_rte_add_custom_tag(
@@ -1256,8 +1241,6 @@ class EventsTest(BaseIntegrationTest):
         ).click_add_unit(
         ).set_title(
             'First Unit'
-        ).set_status(
-            'Public'
         ).click_rich_text(
             pageobjects.AddUnit.INDEX_UNIT_HEADER
         ).click_rte_add_custom_tag(

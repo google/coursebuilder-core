@@ -33,9 +33,6 @@ from tools import verify
 DRAFT_TEXT = messages.DRAFT_TEXT
 PUBLISHED_TEXT = messages.PUBLISHED_TEXT
 
-SHOWN_WHEN_UNAVAILABLE_TEXT = 'Shown When Private'
-HIDDEN_WHEN_UNAVAILABLE_TEXT = 'Hidden When Private'
-
 # Allowed graders. Keys of this dict represent internal keys for the grader
 # type, and the value represents the corresponding string that will appear in
 # the dashboard UI.
@@ -495,12 +492,6 @@ class UnitTools(object):
             unit.title = updated_unit_dict['title']
         if 'description' in updated_unit_dict:
             unit.description = updated_unit_dict['description']
-        if 'is_draft' in updated_unit_dict:
-            unit.now_available = not updated_unit_dict['is_draft']
-        if 'shown_when_unavailable' in updated_unit_dict:
-            unit.shown_when_unavailable = updated_unit_dict[
-                'shown_when_unavailable']
-
         labels = LabelGroupsHelper.field_data_to_labels(updated_unit_dict)
 
         if labels and self._course.get_parent_unit(unit.unit_id):
@@ -654,8 +645,6 @@ class UnitTools(object):
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
             'description': unit.description or '',
-            'is_draft': not unit.now_available,
-            'shown_when_unavailable': unit.shown_when_unavailable,
         }
 
         exclude_types = []
@@ -774,9 +763,6 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
     # specific derived classes.
     TITLE_DESCRIPTION = messages.UNIT_TITLE_DESCRIPTION
     DESCRIPTION_DESCRIPTION = messages.UNIT_DESCRIPTION_DESCRIPTION
-    AVAILABILITY_DESCRIPTION = messages.UNIT_AVAILABILITY_DESCRIPTION
-    SYLLABUS_VISIBILITY_DESCRIPTION = (
-        messages.UNIT_SYLLABUS_VISIBILITY_DESCRIPTION)
 
     @classmethod
     def key_for_unit(cls, unit, course=None):
@@ -824,20 +810,6 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
         ret.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string',
             description=cls.DESCRIPTION_DESCRIPTION, optional=True))
-        ret.add_property(schema_fields.SchemaField(
-            'is_draft', 'Availability', 'boolean',
-            description=cls.AVAILABILITY_DESCRIPTION,
-            select_data=[(True, DRAFT_TEXT),
-                         (False, PUBLISHED_TEXT)],
-            extra_schema_dict_values={
-                'className': 'split-from-main-group inputEx-Field'}))
-        ret.add_property(schema_fields.SchemaField(
-            'shown_when_unavailable', 'Syllabus Visibility', 'boolean',
-            select_data=[(True, SHOWN_WHEN_UNAVAILABLE_TEXT),
-                         (False, HIDDEN_WHEN_UNAVAILABLE_TEXT)],
-            description=cls.SYLLABUS_VISIBILITY_DESCRIPTION, optional=True,
-            extra_schema_dict_values={
-                'className': 'split-from-main-group inputEx-Field'}))
         return ret
 
 
@@ -1124,12 +1096,6 @@ class ResourceLesson(resource.AbstractResourceHandler):
             description=str(
                 messages.LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION),
             optional=True))
-        lesson.add_property(schema_fields.SchemaField(
-            'is_draft', 'Availability', 'boolean',
-            select_data=[(True, DRAFT_TEXT), (False, PUBLISHED_TEXT)],
-            extra_schema_dict_values={
-                'className': 'split-from-main-group inputEx-Field'},
-            description=messages.LESSON_AVAILABILITY_DESCRIPTION))
         return lesson
 
     @classmethod
@@ -1156,7 +1122,6 @@ class ResourceLesson(resource.AbstractResourceHandler):
             'activity_listed': lesson.activity_listed,
             'activity': activity,
             'manual_progress': lesson.manual_progress or False,
-            'is_draft': not lesson.now_available
             }
         return lesson_dict
 

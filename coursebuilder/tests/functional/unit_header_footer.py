@@ -37,7 +37,7 @@ class UnitHeaderFooterTest(actions.TestBase):
             COURSE_NAME, ADMIN_EMAIL, COURSE_TITLE)
         self.course = courses.Course(None, context)
         self.unit = self.course.add_unit()
-        self.unit.now_available = True
+        self.unit.availability = courses.AVAILABILITY_AVAILABLE
         self.unit.unit_header = UNIT_HEADER_TEXT
         self.unit.unit_footer = UNIT_FOOTER_TEXT
         self.course.save()
@@ -48,14 +48,14 @@ class UnitHeaderFooterTest(actions.TestBase):
         assessment = self.course.add_assessment()
         assessment.title = title
         assessment.html_content = 'assessment content'
-        assessment.now_available = True
+        assessment.availability = courses.AVAILABILITY_AVAILABLE
         return assessment
 
     def _add_lesson(self, title):
         lesson = self.course.add_lesson(self.unit)
         lesson.lesson_title = title
         lesson.objectives = 'lesson content'
-        lesson.now_available = True
+        lesson.availability = courses.AVAILABILITY_AVAILABLE
         return lesson
 
     def test_no_lessons_or_assessments_or_header_or_footer(self):

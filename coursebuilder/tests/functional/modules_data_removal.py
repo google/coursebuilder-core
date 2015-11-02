@@ -559,10 +559,6 @@ class UserInteractionTests(DataRemovalTestBase):
         if unregistration_expected:
             self.assertEquals(response.status_int, 302)
             self.assertEquals(response.location,
-                              'http://localhost/%s/preview' % self.COURSE)
-            response = response.follow()
-            self.assertEquals(response.status_int, 302)
-            self.assertEquals(response.location,
                               'http://localhost/%s/course' % self.COURSE)
             response = response.follow()
             self.assertEquals(response.status_int, 200)
@@ -594,10 +590,6 @@ class UserInteractionTests(DataRemovalTestBase):
             self.assertEquals(response.status_int, 302)
             self.assertEquals(response.location,
                               'http://localhost/%s/student/home' % self.COURSE)
-            response = response.follow()
-            self.assertEquals(response.status_int, 302)
-            self.assertEquals(response.location,
-                              'http://localhost/%s/preview' % self.COURSE)
             response = response.follow()
             self.assertEquals(response.status_int, 302)
             self.assertEquals(response.location,

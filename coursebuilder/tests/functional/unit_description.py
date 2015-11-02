@@ -37,17 +37,17 @@ class UnitDescriptionsTest(actions.TestBase):
         course = courses.Course(None, context)
         unit = course.add_unit()
         unit.title = 'The Unit'
-        unit.now_available = True
+        unit.availability = courses.AVAILABILITY_AVAILABLE
         unit.description = UNIT_DESCRIPTION
 
         assessment = course.add_assessment()
         assessment.title = 'The Assessment'
-        assessment.now_available = True
+        assessment.availability = courses.AVAILABILITY_AVAILABLE
         assessment.description = ASSESSMENT_DESCRIPTION
 
         link = course.add_link()
         link.title = 'The Link'
-        link.now_available = True
+        link.availability = courses.AVAILABILITY_AVAILABLE
         link.description = LINK_DESCRIPTION
 
         course.save()

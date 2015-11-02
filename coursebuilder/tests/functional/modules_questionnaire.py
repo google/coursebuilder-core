@@ -65,9 +65,9 @@ class BaseQuestionnaireTests(actions.TestBase):
 
         self.course = courses.Course(None, test_course)
         test_unit = self.course.add_unit()
-        test_unit.now_available = True
+        test_unit.availability = courses.AVAILABILITY_AVAILABLE
         test_lesson = self.course.add_lesson(test_unit)
-        test_lesson.now_available = True
+        test_lesson.availability = courses.AVAILABILITY_AVAILABLE
         test_lesson.title = 'This is a lesson that contains a form.'
         test_lesson.objectives = '%s\n%s' % (TEST_FORM_HTML, QUESTIONNAIRE_TAG)
         self.unit_id = test_unit.unit_id

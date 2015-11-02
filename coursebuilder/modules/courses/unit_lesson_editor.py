@@ -63,19 +63,6 @@ class UnitLessonEditor(object):
     ACTION_GET_EDIT_ASSESSMENT = 'edit_assessment'
     ACTION_POST_ADD_CUSTOM_UNIT = 'add_custom_unit'
     ACTION_GET_EDIT_CUSTOM_UNIT = 'edit_custom_unit'
-    ACTION_POST_SET_DRAFT_STATUS = 'set_draft_status'
-
-    # Permissions checkers for whether admin is allowed to edit draft status
-    # on various types of course sub-entity.
-    CAN_EDIT_DRAFT = {
-        'unit': lambda app_context: permissions.can_edit_property(
-            app_context, constants.SCOPE_UNIT, 'is_draft'),
-        'assessment': lambda app_context: permissions.can_edit_property(
-            app_context, constants.SCOPE_ASSESSMENT, 'assessment/is_draft'),
-        'link': lambda app_context: permissions.can_edit_property(
-            app_context, constants.SCOPE_LINK, 'is_draft'),
-        'lesson': roles.Roles.is_course_admin,
-    }
 
     @classmethod
     def on_module_enabled(cls):
@@ -94,7 +81,6 @@ class UnitLessonEditor(object):
             (cls.ACTION_GET_EDIT_ASSESSMENT, cls.get_edit_assessment),
             (cls.ACTION_POST_ADD_CUSTOM_UNIT, cls.post_add_custom_unit),
             (cls.ACTION_GET_EDIT_CUSTOM_UNIT, cls.get_edit_custom_unit),
-            (cls.ACTION_POST_SET_DRAFT_STATUS, cls.post_set_draft_status),
             ):
 
             if callback.__name__.startswith('get_'):
@@ -105,20 +91,6 @@ class UnitLessonEditor(object):
                     action, callback)
             else:
                 raise ValueError('Callback names must start with get_ or post_')
-
-        # Set up different POST action names for different kinds of items'
-        # draft_status.  (This is necessary since we need a different action so
-        # we can distinguish between the POSTS without actually inspecting the
-        # content of the request at permission-checking time -- permissions
-        # checkers only get app_context parameters, not the WebApp handler
-        # as well)
-        for item_type, checker in cls.CAN_EDIT_DRAFT.iteritems():
-            action = '%s_%s' % (
-                cls.ACTION_POST_SET_DRAFT_STATUS, item_type)
-            dashboard.DashboardHandler.add_custom_post_action(
-                action, cls.post_set_draft_status)
-            dashboard.DashboardHandler.map_post_action_to_permission_checker(
-                action, checker)
 
         # Tell dashboard we want to handle authorization of viewing of
         # unit/assessment/link editors ourselves, rather than using a single
@@ -227,59 +199,6 @@ class UnitLessonEditor(object):
             'edit_custom_unit', key=custom_unit.unit_id,
             extra_args={'is_newly_created': 1,
                         'unit_type': custom_unit_type}))
-
-    @classmethod
-    def post_set_draft_status(cls, handler):
-        """Sets the draft status of a course component.
-
-        Only works with CourseModel13 courses, but the REST handler
-        is only called with this type of courses.
-        """
-        key = handler.request.get('key')
-        component_type = handler.request.get('type')
-
-        # Verify access to this item type.
-        if not cls.CAN_EDIT_DRAFT[component_type](handler.app_context):
-            transforms.send_json_response(
-                handler, 401, 'Access denied.', {'key': key})
-            return
-
-        course = courses.Course(handler)
-        if component_type in ('unit', 'assessment', 'link'):
-            course_component = course.find_unit_by_id(key)
-        elif component_type == 'lesson':
-            course_component = course.find_lesson_by_id(None, key)
-        else:
-            transforms.send_json_response(
-                handler, 401, 'Invalid key.', {'key': key})
-            return
-
-        set_draft = handler.request.get('set_draft')
-        if set_draft == '1':
-            set_draft = True
-        elif set_draft == '0':
-            set_draft = False
-        else:
-            transforms.send_json_response(
-                handler, 401, 'Invalid set_draft value, expected 0 or 1.',
-                {'set_draft': set_draft}
-            )
-            return
-
-        course_component.now_available = not set_draft
-        course.save()
-
-        transforms.send_json_response(
-            handler,
-            200,
-            'Draft status set to %s.' % (
-                resources_display.DRAFT_TEXT if set_draft else
-                resources_display.PUBLISHED_TEXT
-            ), {
-                'is_draft': set_draft
-            }
-        )
-        return
 
     @classmethod
     def _render_edit_form_for(
@@ -979,7 +898,6 @@ class LessonRESTHandler(utils.BaseRESTHandler):
         lesson.activity_title = updates_dict['activity_title']
         lesson.activity_listed = updates_dict['activity_listed']
         lesson.manual_progress = updates_dict['manual_progress']
-        lesson.now_available = not updates_dict['is_draft']
 
         activity = updates_dict.get('activity', '').strip()
         errors = []

@@ -701,7 +701,7 @@ class InfrastructureTest(actions.TestBase):
         self.assertEqual('A', src_assessment.type)
         src_assessment.title = 'Test Assessment'
         src_assessment.release_date = '2015-01-01 12:15'
-        src_assessment.now_available = True
+        src_assessment.availability = courses.AVAILABILITY_AVAILABLE
         src_assessment.properties = {'key': 'value'}
         src_assessment.weight = 3.14
         src_assessment.html_content = 'content'
@@ -738,7 +738,7 @@ class InfrastructureTest(actions.TestBase):
         src_lesson.video = 'video'
         src_lesson.notes = 'notes'
         src_lesson.duration = 'duration'
-        src_lesson.now_available = True
+        src_lesson.availability = courses.AVAILABILITY_AVAILABLE
         src_lesson.has_activity = True
         src_lesson.activity_title = 'activity title'
         src_lesson.activity_listed = False
@@ -838,11 +838,13 @@ class InfrastructureTest(actions.TestBase):
             # Test public/private assessment.
             assessment_url = (
                 '/test/' + course.get_assessment_filename(assessment.unit_id))
-            assert not assessment.now_available
+            assessment.availability = courses.AVAILABILITY_UNAVAILABLE
+            course.update_unit(assessment)
+            course.save()
             response = self.get(assessment_url, expect_errors=True)
             assert_equals(response.status_int, 403)
             assessment = course.find_unit_by_id(assessment.unit_id)
-            assessment.now_available = True
+            assessment.availability = courses.AVAILABILITY_AVAILABLE
             course.update_unit(assessment)
             course.save()
             response = self.get(assessment_url)
@@ -858,7 +860,7 @@ class InfrastructureTest(actions.TestBase):
 
             # Test public/private activity.
             lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
-            lesson_a.now_available = False
+            lesson_a.availability = courses.AVAILABILITY_UNAVAILABLE
             lesson_a.has_activity = True
             course.update_lesson(lesson_a)
             errors = []
@@ -870,7 +872,7 @@ class InfrastructureTest(actions.TestBase):
             response = self.get(activity_url, expect_errors=True)
             assert_equals(response.status_int, 403)
             lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
-            lesson_a.now_available = True
+            lesson_a.availability = courses.AVAILABILITY_AVAILABLE
             course.update_lesson(lesson_a)
             course.save()
             response = self.get(activity_url)
@@ -960,41 +962,41 @@ class InfrastructureTest(actions.TestBase):
 
         # Add a unit that is not available.
         unit_1 = course.add_unit()
-        unit_1.now_available = False
+        unit_1.availability = courses.AVAILABILITY_UNAVAILABLE
         lesson_1_1 = course.add_lesson(unit_1)
         lesson_1_1.title = 'Lesson 1.1'
         course.update_unit(unit_1)
 
         # Add a unit with some lessons available and some lessons not available.
         unit_2 = course.add_unit()
-        unit_2.now_available = True
+        unit_2.availability = courses.AVAILABILITY_AVAILABLE
         lesson_2_1 = course.add_lesson(unit_2)
         lesson_2_1.title = 'Lesson 2.1'
-        lesson_2_1.now_available = False
+        lesson_2_1.availability = courses.AVAILABILITY_UNAVAILABLE
         lesson_2_2 = course.add_lesson(unit_2)
         lesson_2_2.title = 'Lesson 2.2'
-        lesson_2_2.now_available = True
+        lesson_2_2.availability = courses.AVAILABILITY_AVAILABLE
         course.update_unit(unit_2)
 
         # Add a unit with all lessons not available.
         unit_3 = course.add_unit()
-        unit_3.now_available = True
+        unit_3.availability = courses.AVAILABILITY_AVAILABLE
         lesson_3_1 = course.add_lesson(unit_3)
         lesson_3_1.title = 'Lesson 3.1'
-        lesson_3_1.now_available = False
+        lesson_3_1.availability = courses.AVAILABILITY_UNAVAILABLE
         course.update_unit(unit_3)
 
         # Add a unit that is available.
         unit_4 = course.add_unit()
-        unit_4.now_available = True
+        unit_4.availability = courses.AVAILABILITY_AVAILABLE
         lesson_4_1 = course.add_lesson(unit_4)
         lesson_4_1.title = 'Lesson 4.1'
-        lesson_4_1.now_available = True
+        lesson_4_1.availability = courses.AVAILABILITY_AVAILABLE
         course.update_unit(unit_4)
 
         # Add an available unit with no lessons.
         unit_5 = course.add_unit()
-        unit_5.now_available = True
+        unit_5.availability = courses.AVAILABILITY_AVAILABLE
         course.update_unit(unit_5)
 
         course.save()
@@ -1007,11 +1009,14 @@ class InfrastructureTest(actions.TestBase):
         with actions.OverriddenEnvironment({
                 'course': {
                     'now_available': True,
-                    'browsable': False}}):
+                    'browsable': False},
+                'reg_form': {
+                    'can_register': True},
+                }):
             private_tag = 'id="lesson-title-private"'
 
             # Confirm private units are suppressed for user out of session
-            response = self.get('preview')
+            response = self.get('course')
             assert_equals(response.status_int, 200)
             assert_does_not_contain('Unit 1 - New Unit', response.body)
             assert_contains('Unit 2 - New Unit', response.body)
@@ -1131,11 +1136,11 @@ class InfrastructureTest(actions.TestBase):
 
         assessment_1 = course.add_assessment()
         assessment_1.title = 'first'
-        assessment_1.now_available = True
+        assessment_1.availability = courses.AVAILABILITY_AVAILABLE
         assessment_1.weight = 0
         assessment_2 = course.add_assessment()
         assessment_2.title = 'second'
-        assessment_2.now_available = True
+        assessment_2.availability = courses.AVAILABILITY_AVAILABLE
         assessment_2.weight = 0
         course.save()
         assert course.find_unit_by_id(assessment_1.unit_id)
@@ -2949,24 +2954,6 @@ class StudentAspectTest(actions.TestBase):
         assert_contains('no-cache', response.headers['Pragma'])
         assert_contains('Mon, 01 Jan 1990', response.headers['Expires'])
 
-    def test_browsability_permissions(self):
-        """Tests that the course browsability flag works correctly."""
-
-        # By default, courses are browsable.
-        response = self.get('course')
-        assert_equals(response.status_int, 200)
-        assert_contains('<a href="assessment?name=Pre"', response.body)
-        assert_does_not_contain('progress-notstarted-Pre', response.body)
-
-        actions.Permissions.assert_can_browse(self)
-
-        with actions.OverriddenEnvironment({'course': {'browsable': False}}):
-            actions.Permissions.assert_logged_out(self)
-
-            # Check course page redirects.
-            response = self.get('course', expect_errors=True)
-            assert_equals(response.status_int, 302)
-
 
 class StudentUnifiedProfileTest(StudentAspectTest):
     """Tests student actions having unified profile enabled."""
@@ -3062,74 +3049,6 @@ class ActivityTest(actions.TestBase):
         args['xsrf_token'] = xsrf_token
 
         return response, args
-
-    def test_activities(self):
-        """Test that activity submissions are handled and recorded correctly."""
-
-        email = 'test_activities@google.com'
-        name = 'Test Activities'
-        unit_id = 1
-        lesson_id = 2
-        activity_submissions = {
-            '1.2': {
-                'index': 3,
-                'type': 'activity-choice',
-                'value': 3,
-                'correct': True,
-            },
-        }
-
-        # Register.
-        actions.login(email)
-        actions.register(self, name)
-
-        # Enable event recording.
-        with actions.OverriddenEnvironment(
-            {'course': {analytics.CAN_RECORD_STUDENT_EVENTS: 'true'}}):
-
-            # Navigate to the course overview page, and check that the unit
-            # shows no progress yet.
-            response = self.get('course')
-            assert_equals(response.status_int, 200)
-            assert_contains(
-                u'id="progress-notstarted-%s"' % unit_id, response.body)
-
-            with Namespace(self.namespace):
-                response, args = self.get_activity(unit_id, lesson_id, {})
-
-                # Check that the current activity shows no progress yet.
-                assert_contains(
-                    u'id="progress-notstarted-%s-activity"' %
-                    lesson_id, response.body)
-
-                # Prepare activity submission event.
-                args['source'] = 'attempt-activity'
-                lesson_key = '%s.%s' % (unit_id, lesson_id)
-                assert lesson_key in activity_submissions
-                args['payload'] = activity_submissions[lesson_key]
-                args['payload']['location'] = (
-                    'http://localhost:8080/activity?unit=%s&lesson=%s' %
-                    (unit_id, lesson_id))
-                args['payload'] = transforms.dumps(args['payload'])
-
-                # Submit the request to the backend.
-                response = self.post('rest/events?%s' % urllib.urlencode(
-                    {'request': transforms.dumps(args)}), {})
-                assert_equals(response.status_int, 200)
-                assert not response.body
-
-                # Check that the current activity shows partial progress.
-                response, args = self.get_activity(unit_id, lesson_id, {})
-                assert_contains(
-                    u'id="progress-inprogress-%s-activity"' %
-                    lesson_id, response.body)
-
-                # Navigate to the course overview page and check that the unit
-                # shows partial progress.
-                response = self.get('course')
-                assert_equals(response.status_int, 200)
-                assert_contains(
-                    u'id="progress-inprogress-%s"' % unit_id, response.body)
 
     # pylint: disable=too-many-statements
     def test_progress(self):
@@ -3422,7 +3341,7 @@ class AssessmentPolicyTests(actions.TestBase):
         self.course = courses.Course(None, self.app_context)
         self.assessment = self.course.add_assessment()
         self.set_workflow_field('grader', 'auto')
-        self.assessment.now_available = True
+        self.assessment.availability = courses.AVAILABILITY_AVAILABLE
         self.course.save()
 
         self.old_namespace = namespace_manager.get_namespace()
@@ -3856,10 +3775,7 @@ class MultipleCoursesTestBase(actions.TestBase):
             actions.login(course.email, is_admin=is_admin)
 
             # Test schedule.
-            if first_time:
-                response = self.testapp.get('/courses/%s/preview' % course.path)
-            else:
-                response = self.testapp.get('/courses/%s/course' % course.path)
+            response = self.testapp.get('/courses/%s/course' % course.path)
             assert_contains(course.title, response.body)
             assert_contains(course.unit_title, response.body)
             assert_contains(course.head, response.body)
@@ -4486,9 +4402,9 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             email = 'test_units_lessons@google.com'
             name = 'Test Units Lessons'
 
-            assert_cached('preview', 'Putting it all together')
+            assert_cached('course', 'Putting it all together')
             actions.login(email, is_admin=True)
-            assert_cached('preview', 'Putting it all together')
+            assert_cached('course', 'Putting it all together')
             actions.register(self, name)
             assert_cached('course', 'Putting it all together')
             assert_cached(
@@ -6120,7 +6036,7 @@ var activity = [
         src_lesson.video = 'video'
         src_lesson.notes = 'notes'
         src_lesson.duration = 'duration'
-        src_lesson.now_available = True
+        src_lesson.availability = courses.AVAILABILITY_AVAILABLE
         src_lesson.has_activity = True
         src_lesson.activity_title = title
         src_lesson.activity_listed = True

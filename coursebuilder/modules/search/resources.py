@@ -296,7 +296,8 @@ class LessonResource(Resource):
         for lesson in course.get_lessons_for_all_units():
             unit = course.find_unit_by_id(lesson.unit_id)
             doc_id = cls._get_doc_id(lesson.unit_id, lesson.lesson_id)
-            if (lesson.now_available and unit.now_available and
+            if (course.is_unit_available(unit) and
+                course.is_lesson_available(unit, lesson) and
                 not cls._indexed_within_num_days(timestamps, doc_id,
                                                  cls.FRESHNESS_THRESHOLD_DAYS)):
                 try:
@@ -491,7 +492,8 @@ class YouTubeFragmentResource(Resource):
 
         for lesson in course.get_lessons_for_all_units():
             unit = course.find_unit_by_id(lesson.unit_id)
-            if not (lesson.now_available and unit.now_available):
+            if not (course.is_unit_available(unit) and
+                    course.is_lesson_available(unit, lesson)):
                 continue
             lesson_url = 'unit?unit=%s&lesson=%s' % (
                 lesson.unit_id, lesson.lesson_id)
