@@ -9,6 +9,11 @@ function bindDatetimeField(Y) {
       Y.one(this.divEl).addClass('gcb-datetime')
           .addClass('inputEx-fieldWrapper')
           .on('click', function(e) { e.preventDefault() });
+      var that = this;
+      $('<button>Clear</button>')
+          .addClass('inputEx-DatePicker-ClearButton')
+          .click(function(){ that.clear() })
+          .insertBefore(that.divEl.lastChild);
     },
     setValue: function(val, sendUpdatedEvt) {
       if (val) {

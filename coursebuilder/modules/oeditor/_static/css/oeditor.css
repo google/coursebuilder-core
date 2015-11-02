@@ -115,6 +115,11 @@ div.inputEx-CheckBox input {
 .new-form-layout .gcb-datetime > .inputEx-CombineField {
   margin-top: 5px;
 }
+.new-form-layout .gcb-datetime > .inputEx-DatePicker-ClearButton {
+  margin-top: 7px;
+  margin-left: 2em;
+}
+
 
 .gcb-datetime.date-only select,
 .gcb-datetime.date-only .inputEx-CombineField-separator {
