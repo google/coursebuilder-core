@@ -340,18 +340,21 @@ function onPageLoad(env) {
   /**
    * Define a rich text editor widget in the module "gcb-rte".
    */
-  YUI.add("gcb-rte", bindEditorField, '3.1.0', {
+  YUI.add('gcb-rte', bindEditorField, '3.1.0', {
     requires: ['inputex-field', 'yui2-editor', 'yui2-resize']
   });
-  YUI.add("gcb-code", bindCodeField, '3.1.0', {
+  YUI.add('gcb-code', bindCodeField, '3.1.0', {
     requires: ['inputex-field', 'yui2-resize']
   });
-  YUI.add("gcb-uneditable", bindUneditableField, '3.1.0', {
+  YUI.add('gcb-uneditable', bindUneditableField, '3.1.0', {
     requires: ['inputex-uneditable']
   });
-  YUI.add("gcb-datetime", bindDatetimeField, '3.1.0', {
+  YUI.add('gcb-datetime', bindDatetimeField, '3.1.0', {
     requires: ['inputex-datetime']
   });
+  YUI.add("gcb-checkbox-list", bindCheckboxListField, '3.1.0', {
+    requires: ['inputex-checkbox']
+  })
   YUI(getYuiConfig(env.bundle_lib_files)).use(
     env.required_modules,
     mainYuiFunction);

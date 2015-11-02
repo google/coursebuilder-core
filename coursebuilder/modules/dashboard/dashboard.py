@@ -28,8 +28,8 @@ from filer import AssetItemRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 from filer import TextAssetRESTHandler
-from label_editor import LabelManagerAndEditor
-from label_editor import LabelRestHandler
+from label_editor import LabelManagerAndEditor, TrackManagerAndEditor
+from label_editor import LabelRestHandler, TrackRestHandler
 import messages
 from question_editor import GeneralQuestionRESTHandler
 from question_editor import GiftQuestionRESTHandler
@@ -69,7 +69,7 @@ TEMPLATE_DIR = os.path.join(
 
 class DashboardHandler(
     CourseHandler, FileManagerAndEditor,
-    LabelManagerAndEditor, QuestionGroupManagerAndEditor,
+    LabelManagerAndEditor, TrackManagerAndEditor, QuestionGroupManagerAndEditor,
     QuestionManagerAndEditor, ReflectiveRequestHandler, RoleManagerAndEditor):
     """Handles all pages and actions required for managing a course."""
 
@@ -85,7 +85,8 @@ class DashboardHandler(
         'manage_asset', 'manage_text_asset',
         'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
-        'add_label', 'edit_label', 'question_preview', 'question_group_preview',
+        'question_preview', 'question_group_preview',
+        'add_label', 'edit_label', 'add_track', 'edit_track',
         'add_role', 'edit_role',
         'import_gift_questions']
     # Requests to these handlers automatically go through an XSRF token check
@@ -98,6 +99,7 @@ class DashboardHandler(
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
             (LabelRestHandler.URI, LabelRestHandler),
+            (TrackRestHandler.URI, TrackRestHandler),
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
             (GiftQuestionRESTHandler.URI, GiftQuestionRESTHandler),
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),

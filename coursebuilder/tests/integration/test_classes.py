@@ -30,7 +30,6 @@ from selenium import webdriver
 from selenium.common import exceptions
 from selenium.webdriver.chrome import options
 
-from models import models
 from models import transforms
 from modules.embed import embed
 from tests import suite
@@ -704,14 +703,13 @@ class AdminTests(BaseIntegrationTest):
             name
         ).click_edit(
         ).click_sub_tab(
-            'Labels'
+            'Tracks'
         ).click_add_label(
+            'Add Track'
         ).set_title(
             'Liver'
         ).set_description(
             'Exercise and diet to support healthy hepatic function'
-        ).set_type(
-            models.LabelDTO.LABEL_TYPE_COURSE_TRACK
         ).click_save(
         ).click_close(
         ).verify_label_present(
@@ -722,8 +720,6 @@ class AdminTests(BaseIntegrationTest):
             'Liver'
         ).verify_description(
             'Exercise and diet to support healthy hepatic function'
-        ).verify_type(
-            models.LabelDTO.LABEL_TYPE_COURSE_TRACK
         ).set_title(
             'Kidney'
         ).click_save(

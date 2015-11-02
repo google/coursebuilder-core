@@ -253,6 +253,16 @@ def _list_labels(handler, items, name, all_paths):
         models.LabelDAO.get_all_of_type(models.LabelDTO.LABEL_TYPE_GENERAL),
         key=lambda label: label.title)
 
+    items.append(safe_dom.Template(
+        jinja_utils.get_template('label_list.html', [TEMPLATE_DIR]),
+        add_text='Add Label', add_action='add_label', edit_action='edit_label',
+        items=labels))
+
+def _list_tracks(handler, items, name, all_paths):
+    """Prepare a list of labels for use on the Assets page."""
+    if not handler.app_context.is_editable_fs():
+        return safe_dom.NodeList()
+
     tracks = sorted(
         models.LabelDAO.get_all_of_type(
             models.LabelDTO.LABEL_TYPE_COURSE_TRACK),
@@ -260,7 +270,8 @@ def _list_labels(handler, items, name, all_paths):
 
     items.append(safe_dom.Template(
         jinja_utils.get_template('label_list.html', [TEMPLATE_DIR]),
-        labels=labels, tracks=tracks))
+        add_text='Add Track', add_action='add_track', edit_action='edit_track',
+        items=tracks))
 
 def _filer_url_template():
     return 'dashboard?action=manage_text_asset&type=%s&uri=%s&from_action=%s'
@@ -372,7 +383,9 @@ def on_module_enabled():
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'labels', 'Labels', action='edit_labels',
         contents=lambda h: _get_tab(h, _list_labels))
-
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'edit', 'tracks', 'Tracks', action='edit_tracks',
+        contents=lambda h: _get_tab(h, _list_tracks))
     # These tabs only show up if your schema is old
     dashboard.DashboardHandler.add_sub_nav_mapping(
         'edit', 'assessments', 'Assessments', action='edit_assessments',

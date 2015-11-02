@@ -897,6 +897,9 @@ div.new-form-layout div.inputEx-Field.inputEx-CheckBox > div.inputEx-description
 div.new-form-layout div.inputEx-Field input[type=checkbox] {
   vertical-align: top;
 }
+.inputEx-CheckboxListField-wrapper > .inputEx-CheckboxListField-subFieldEl > .inputEx-Field.inputEx-CheckBox > * {
+  vertical-align: middle;
+}
 div.new-form-layout div.inputEx-StringField-wrapper > input[type=text],
 div.new-form-layout div.inputEx-Field textarea {
   /* Ensure the selector is narrow enough that it does not hit the inputs in the

@@ -336,7 +336,7 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
             models.LabelDAO.save(models.LabelDTO(
                 None, {'title': locale,
                        'version': '1.0',
-                       'description': '[%s] locale' % locale,
+                       'description': '[%s] language' % locale,
                        'type': models.LabelDTO.LABEL_TYPE_LOCALE}))
 
     def process_put(self, request, payload):

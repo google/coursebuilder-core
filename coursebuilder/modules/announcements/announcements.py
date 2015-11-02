@@ -26,20 +26,14 @@ import jinja2
 
 import appengine_config
 from common import tags
-from common import utils
-from common.schema_fields import FieldArray
-from common.schema_fields import FieldRegistry
-from common.schema_fields import SchemaField
-from controllers.utils import BaseHandler
-from controllers.utils import BaseRESTHandler
-from controllers.utils import ReflectiveRequestHandler
-from controllers.utils import XsrfTokenManager
-from models.resources_display import LabelGroupsHelper
+from common import utils as common_utils
+from common import schema_fields
+from controllers import utils
+from models import resources_display
 from models import courses
 from models import custom_modules
 from models import entities
 from models import models
-from models import resources_display
 from models import roles
 from models import transforms
 from models.models import MemcacheManager
@@ -130,7 +124,8 @@ class AnnouncementsHandlerMixin(object):
 
 
 class AnnouncementsStudentHandler(
-        AnnouncementsHandlerMixin, BaseHandler, ReflectiveRequestHandler):
+        AnnouncementsHandlerMixin, utils.BaseHandler,
+        utils.ReflectiveRequestHandler):
     URL = '/announcements'
     default_action = 'list'
     get_actions = [default_action]
@@ -260,7 +255,7 @@ class AnnouncementsDashboardHandler(
             self.EDIT_ACTION, key=entity.key()))
 
 
-class AnnouncementsItemRESTHandler(BaseRESTHandler):
+class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
     """Provides REST API for an announcement."""
 
     URL = '/rest/announcements/item'
@@ -269,30 +264,26 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
 
     @classmethod
     def SCHEMA(cls):
-        schema = FieldRegistry('Announcement',
+        schema = schema_fields.FieldRegistry('Announcement',
             extra_schema_dict_values={
                 'className': 'inputEx-Group new-form-layout'})
-        schema.add_property(SchemaField(
+        schema.add_property(schema_fields.SchemaField(
             'key', 'ID', 'string', editable=False, hidden=True))
-        schema.add_property(SchemaField(
+        schema.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string', optional=True))
-        schema.add_property(SchemaField(
+        schema.add_property(schema_fields.SchemaField(
             'html', 'Body', 'html', optional=True,
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.COURSE_SCOPE}))
-        schema.add_property(SchemaField(
+        schema.add_property(schema_fields.SchemaField(
             'date', 'Date', 'string',
             optional=True, extra_schema_dict_values={
                 '_type': 'datetime',
                 'className': 'inputEx-CombineField gcb-datetime '
                 'inputEx-fieldWrapper date-only'}))
-        schema.add_property(FieldArray(
-            'label_groups', 'Labels',
-             item_type=LabelGroupsHelper.make_labels_group_schema_field(),
-             extra_schema_dict_values={
-                 'className': 'inputEx-Field label-group-list'}))
-        schema.add_property(SchemaField(
+        resources_display.LabelGroupsHelper.add_labels_schema_fields(schema)
+        schema.add_property(schema_fields.SchemaField(
             'is_draft', 'Status', 'boolean',
             select_data=[
                 (True, resources_display.DRAFT_TEXT),
@@ -331,14 +322,15 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
         date = datetime.datetime(date.year, date.month, date.day)
         entity_dict['date'] = date.strftime(courses.ISO_8601_DATE_FORMAT)
 
-        entity_dict['label_groups'] = (
-            LabelGroupsHelper.announcement_labels_to_dict(entity))
+        entity_dict.update(
+            resources_display.LabelGroupsHelper.labels_to_field_data(
+                common_utils.text_to_list(entity.labels)))
 
         json_payload = transforms.dict_to_json(entity_dict)
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,
-            xsrf_token=XsrfTokenManager.create_xsrf_token(
+            xsrf_token=utils.XsrfTokenManager.create_xsrf_token(
                 'announcement-put'))
 
     def put(self):
@@ -371,9 +363,10 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
         update_dict['date'] = datetime.datetime.strptime(
             update_dict['date'], courses.ISO_8601_DATE_FORMAT).date()
 
-        entity.labels = utils.list_to_text(
-            LabelGroupsHelper.decode_labels_group(
-                update_dict.get('label_groups')))
+        entity.labels = common_utils.list_to_text(
+            resources_display.LabelGroupsHelper.field_data_to_labels(
+                update_dict))
+        resources_display.LabelGroupsHelper.remove_label_field_data(update_dict)
 
         transforms.dict_to_entity(entity, update_dict)
 

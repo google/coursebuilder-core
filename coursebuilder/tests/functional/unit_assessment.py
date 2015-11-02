@@ -620,7 +620,8 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'Assessment "Assessment Two" has track labels, so it '
                 'cannot be used as a pre/post unit element'], errors)
 
-    def _test_assessments_as_pre_post_labels(self, label_id, expected_errors):
+    def _test_assessments_as_pre_post_labels(
+            self, label_id, label_type, expected_errors):
         self.unit_no_lessons.pre_assessment = self.assessment_one.unit_id
         self.unit_no_lessons.post_assessment = self.assessment_two.unit_id
         self.course.save()
@@ -632,23 +633,20 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             errors = []
             properties = assessment_rest_handler.unit_to_dict(
                 self.assessment_one)
-            properties['label_groups'] = [{
-                'labels': [{
-                    'checked': True,
-                    'id': label_id
-                }]
-            }]
+            properties[label_type] = [label_id]
             assessment_rest_handler.apply_updates(self.assessment_one,
                                                   properties, errors)
             self.assertEquals(expected_errors, errors)
 
     def test_assessments_as_pre_post_cannot_have_tracks_added(self):
         self._test_assessments_as_pre_post_labels(
-            self.track_one_id, ['Cannot set track labels on entities which are '
-                                'used within other units.'])
+            self.track_one_id, 'tracks',
+            ['Cannot set track labels on entities which are used within other '
+            'units.'])
 
     def test_assessments_as_pre_post_can_have_general_labels_added(self):
-        self._test_assessments_as_pre_post_labels(self.general_one_id, [])
+        self._test_assessments_as_pre_post_labels(
+            self.general_one_id, 'labels', [])
 
     def test_suppress_next_prev_buttons(self):
         # Set up one-lesson unit w/ pre, post assessment.  Set course

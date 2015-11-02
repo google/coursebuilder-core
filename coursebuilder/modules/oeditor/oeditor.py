@@ -61,6 +61,7 @@ TYPES_TO_MODULES = {
     'number':       'inputex-number',
     'code':         'gcb-code',
     'datetime':     'gcb-datetime',
+    'checkbox-list': 'gcb-checkbox-list',
     'group':        'inputex-group',
 }
 EXTRA_MODULES = ['array-extras', 'io-upload-iframe']

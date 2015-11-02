@@ -387,101 +387,91 @@ def workflow_key(key):
 class LabelGroupsHelper(object):
     """Various methods that make it easier to attach labels to objects."""
 
-    @classmethod
-    def make_labels_group_schema_field(cls):
-        label = schema_fields.FieldRegistry(None, description='label')
-        label.add_property(schema_fields.SchemaField(
-            'id', 'ID', 'integer',
-            hidden=True))
-        label.add_property(schema_fields.SchemaField(
-            'checked', None, 'boolean'))
-        label.add_property(schema_fields.SchemaField(
-            'title', None, 'string',
-            optional=True,
-            editable=False))
-        label.add_property(schema_fields.SchemaField(
-            'description', None, 'string',
-            optional=True,
-            editable=False,
-            extra_schema_dict_values={
-                'className': 'label-description'}))
-        label.add_property(schema_fields.SchemaField(
-            'no_labels', None, 'string',
-            optional=True,
-            editable=False,
-            extra_schema_dict_values={
-                'className': 'label-none-in-group'}))
+    LABELS_FIELD_NAME = 'labels'
+    TRACKS_FIELD_NAME = 'tracks'
+    LOCALES_FIELD_NAME = 'locales'
 
-        label_group = schema_fields.FieldRegistry(
-            '', description='label groups')
-        label_group.add_property(schema_fields.SchemaField(
-            'title', None, 'string',
-            editable=False))
-        label_group.add_property(schema_fields.FieldArray(
-            'labels', None,
-            item_type=label,
-            extra_schema_dict_values={
-                'className': 'label-group'}))
-        return label_group
+    FIELDS = [
+        {
+            'name': LABELS_FIELD_NAME,
+            'label': 'Labels',
+            'description': 'This labels the content for your reference.',
+            'type_id': models.LabelDTO.LABEL_TYPE_GENERAL,
+        },
+        {
+            'name': TRACKS_FIELD_NAME,
+            'label': 'Tracks',
+            'description':
+                'This content is only visible to students in these tracks.',
+            'type_id': models.LabelDTO.LABEL_TYPE_COURSE_TRACK,
+        },
+        {
+            'name': LOCALES_FIELD_NAME,
+            'label': 'Languages',
+            'description': 'This content is only available in these languages.',
+            'type_id': models.LabelDTO.LABEL_TYPE_LOCALE,
+        },
+    ]
 
     @classmethod
-    def decode_labels_group(cls, label_groups):
-        """Decodes label_group JSON."""
+    def add_labels_schema_fields(cls, schema, exclude_types=None):
+        """Creates multiple form fields for choosing labels"""
+        if exclude_types is None:
+            exclude_types = []
+
+        for field in cls.FIELDS:
+            if field['name'] not in exclude_types:
+                schema.add_property(schema_fields.FieldArray(
+                    field['name'], field['label'],
+                    description=field['description'],
+                    extra_schema_dict_values={
+                        '_type': 'checkbox-list',
+                    },
+                    item_type=schema_fields.SchemaField(None, None, 'string',
+                        extra_schema_dict_values={'_type': 'boolean'},
+                        i18n=False),
+                    optional=True,
+                    select_data=cls._labels_to_choices(field['type_id'])))
+
+    @classmethod
+    def _labels_to_choices(cls, label_type):
+        """Produces select_data for a label type"""
+        return [(label.id, label.title) for label in sorted(
+            models.LabelDAO.get_all_of_type(label_type),
+            key=lambda label: label.title)]
+
+    @classmethod
+    def remove_label_field_data(cls, data):
+        """Deletes label field data from a payload"""
+        for field in cls.FIELDS:
+            del data[field['name']]
+
+    @classmethod
+    def field_data_to_labels(cls, data):
+        """Collects chosen labels from all fields into a single set"""
         labels = set()
-        for label_group in label_groups:
-            for label in label_group['labels']:
-                if label['checked'] and label['id'] > 0:
-                    labels.add(label['id'])
+        for field in cls.FIELDS:
+            if field['name'] in data:
+                labels |= set(data[field['name']])
         return labels
 
     @classmethod
-    def announcement_labels_to_dict(cls, announcement):
-        return cls._all_labels_to_dict(
-            common_utils.text_to_list(announcement.labels))
+    def _filter_labels(cls, labels, label_type):
+        """Filters chosen labels by a given type"""
+        return [label.id for label in sorted(
+            models.LabelDAO.get_all_of_type(label_type),
+            key=lambda label: label.title)
+        if str(label.id) in labels]
 
     @classmethod
-    def unit_labels_to_dict(cls, course, unit):
-        parent_unit = course.get_parent_unit(unit.unit_id)
-        labels = common_utils.text_to_list(unit.labels)
-
-        def should_skip(label_type):
-            return (
-                parent_unit and
-                label_type.type == models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
-
-        return cls._all_labels_to_dict(labels, should_skip=should_skip)
-
-    @classmethod
-    def _all_labels_to_dict(cls, labels, should_skip=None):
-        all_labels = models.LabelDAO.get_all()
-        label_groups = []
-        for label_type in sorted(models.LabelDTO.LABEL_TYPES,
-                                 lambda a, b: cmp(a.menu_order, b.menu_order)):
-            if should_skip is not None and should_skip(label_type):
-                continue
-            label_group = []
-            for label in sorted(all_labels, lambda a, b: cmp(a.title, b.title)):
-                if label.type == label_type.type:
-                    label_group.append({
-                        'id': label.id,
-                        'title': label.title,
-                        'description': label.description,
-                        'checked': str(label.id) in labels,
-                        'no_labels': '',
-                        })
-            if not label_group:
-                label_group.append({
-                    'id': -1,
-                    'title': '',
-                    'description': '',
-                    'checked': False,
-                    'no_labels': '-- No labels of this type --',
-                    })
-            label_groups.append({
-                'title': label_type.title,
-                'labels': label_group,
-                })
-        return label_groups
+    def labels_to_field_data(cls, labels, exclude_types=None):
+        """Filters chosen labels by type into data for multiple fields"""
+        if exclude_types is None:
+            exclude_types = []
+        return {
+            field['name']: cls._filter_labels(labels, field['type_id'])
+            for field in cls.FIELDS
+            if not field['name'] in exclude_types}
 
 
 class UnitTools(object):
@@ -511,25 +501,24 @@ class UnitTools(object):
             unit.shown_when_unavailable = updated_unit_dict[
                 'shown_when_unavailable']
 
-        if 'label_groups' in updated_unit_dict:
-            labels = LabelGroupsHelper.decode_labels_group(
-                updated_unit_dict['label_groups'])
+        labels = LabelGroupsHelper.field_data_to_labels(updated_unit_dict)
 
-            if self._course.get_parent_unit(unit.unit_id):
-                track_label_ids = models.LabelDAO.get_set_of_ids_of_type(
-                    models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
-                if track_label_ids.intersection(labels):
-                    errors.append('Cannot set track labels on entities which '
-                                  'are used within other units.')
+        if labels and self._course.get_parent_unit(unit.unit_id):
+            track_label_ids = models.LabelDAO.get_set_of_ids_of_type(
+                models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
+            if track_label_ids.intersection(labels):
+                errors.append('Cannot set track labels on entities which '
+                              'are used within other units.')
 
-            unit.labels = common_utils.list_to_text(labels)
+        unit.labels = common_utils.list_to_text(labels)
 
     def _apply_updates_to_assessment(self, unit, updated_unit_dict, errors):
         """Store the updated assessment."""
 
         entity_dict = {}
-        ResourceAssessment.get_schema(None, None).convert_json_to_entity(
-            updated_unit_dict, entity_dict)
+        ResourceAssessment.get_schema(
+            self._course, unit.unit_id).convert_json_to_entity(
+                updated_unit_dict, entity_dict)
 
         self._apply_updates_common(unit, entity_dict, errors)
         if 'weight' in entity_dict:
@@ -660,15 +649,24 @@ class UnitTools(object):
             raise ValueError('Unknown unit type %s' % unit.type)
 
     def _unit_to_dict_common(self, unit):
-        return {
+        data = {
             'key': unit.unit_id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
             'description': unit.description or '',
             'is_draft': not unit.now_available,
             'shown_when_unavailable': unit.shown_when_unavailable,
-            'label_groups': LabelGroupsHelper.unit_labels_to_dict(
-                self._course, unit)}
+        }
+
+        exclude_types = []
+        if self._course.get_parent_unit(unit.unit_id):
+            exclude_types.append(LabelGroupsHelper.TRACKS_FIELD_NAME)
+
+        data.update(LabelGroupsHelper.labels_to_field_data(
+            common_utils.text_to_list(unit.labels),
+            exclude_types=exclude_types))
+
+        return data
 
     def _get_assessment_path(self, unit):
         return self._course.app_context.fs.impl.physical_to_logical(
@@ -806,10 +804,12 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
         return UnitTools(course).unit_to_dict(unit)
 
     @classmethod
-    def _generate_common_schema(cls, title, hidden_header=False):
+    def _generate_common_schema(
+            cls, title, hidden_header=False, exclude_fields=None):
         group_class_name = 'inputEx-Group new-form-layout'
         if hidden_header:
             group_class_name += ' hidden-header'
+
         ret = schema_fields.FieldRegistry(title, extra_schema_dict_values={
             'className': group_class_name})
         ret.add_property(schema_fields.SchemaField(
@@ -824,12 +824,6 @@ class ResourceUnitBase(resource.AbstractResourceHandler):
         ret.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string',
             description=cls.DESCRIPTION_DESCRIPTION, optional=True))
-        ret.add_property(schema_fields.FieldArray(
-            'label_groups', 'Labels',
-            item_type=LabelGroupsHelper.make_labels_group_schema_field(),
-            extra_schema_dict_values={
-                'className': 'inputEx-Field label-group-list'},
-            optional=True))
         ret.add_property(schema_fields.SchemaField(
             'is_draft', 'Availability', 'boolean',
             description=cls.AVAILABILITY_DESCRIPTION,
@@ -854,6 +848,7 @@ class ResourceUnit(ResourceUnitBase):
     @classmethod
     def get_schema(cls, course, key):
         schema = cls._generate_common_schema('Unit')
+        LabelGroupsHelper.add_labels_schema_fields(schema)
         schema.add_property(schema_fields.SchemaField(
             'pre_assessment', 'Pre-Assessment', 'integer', optional=True,
             description=messages.UNIT_PRE_ASSESSMENT_DESCRIPTION))
@@ -911,6 +906,15 @@ class ResourceAssessment(ResourceUnitBase):
         # Course level settings.
         course_opts = cls._generate_common_schema(
             'Assessment Config', hidden_header=True)
+
+        unit = cls.get_resource(course, key)
+        exclude_types = []
+        if course.get_parent_unit(unit.unit_id):
+            exclude_types.append(LabelGroupsHelper.TRACKS_FIELD_NAME)
+
+        LabelGroupsHelper.add_labels_schema_fields(
+            course_opts, exclude_types=exclude_types)
+
         course_opts.add_property(schema_fields.SchemaField(
             'weight', 'Points', 'number',
             description=messages.ASSESSMENT_POINTS_DESCRIPTION,
@@ -1019,6 +1023,7 @@ class ResourceLink(ResourceUnitBase):
     @classmethod
     def get_schema(cls, course, key):
         schema = cls._generate_common_schema('Link')
+        LabelGroupsHelper.add_labels_schema_fields(schema)
         schema.add_property(schema_fields.SchemaField(
             'url', 'URL', 'string', optional=True,
             description=messages.LINK_URL_DESCRIPTION,

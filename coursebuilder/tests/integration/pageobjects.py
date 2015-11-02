@@ -915,8 +915,8 @@ class AssetsPage(PageObject):
             '#modal-window .close-button').click()
         return self
 
-    def click_add_label(self):
-        self.find_element_by_link_text('Add Label').click()
+    def click_add_label(self, link_text):
+        self.find_element_by_link_text(link_text).click()
         return LabelEditorPage(self._tester)
 
     def verify_label_present(self, title):
@@ -1049,16 +1049,6 @@ class LabelEditorPage(EditorPageObject):
         description_el = self.find_element_by_name('description')
         self._tester.assertEqual(description,
                                  description_el.get_attribute('value'))
-        return self
-
-    def set_type(self, type_num):
-        type_el = self.find_element_by_id('_inputex_radioId%d' % type_num)
-        type_el.click()
-        return self
-
-    def verify_type(self, type_num):
-        type_el = self.find_element_by_id('_inputex_radioId%d' % type_num)
-        self._tester.assertEqual('true', type_el.get_attribute('checked'))
         return self
 
     def click_delete(self):

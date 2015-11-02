@@ -364,6 +364,7 @@ modules/oeditor/_static/js/butterbar.js
 modules/oeditor/_static/js/popup.js
 modules/oeditor/_static/js/resize_iframes.js
 modules/oeditor/oeditor.py
+modules/oeditor/templates/checkbox-list.js
 modules/oeditor/templates/code.js
 modules/oeditor/templates/datetime.js
 modules/oeditor/templates/oeditor.html
