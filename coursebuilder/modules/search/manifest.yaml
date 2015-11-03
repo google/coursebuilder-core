@@ -1,0 +1,19 @@
+tests:
+  functional:
+    - modules.search.search_tests.SearchTest = 12
+  unit:
+    - modules.search.search_unit_tests.ParserTests = 10
+
+files:
+  - modules/search/__init__.py
+  - modules/search/assets/search.css
+  - modules/search/assets/search.js
+  - modules/search/messages.py
+  - modules/search/resources.py
+  - modules/search/results_templates/basic.html
+  - modules/search/results_templates/youtube.html
+  - modules/search/search.html
+  - modules/search/search.py
+  - modules/search/search_dashboard.html
+  - modules/search/search_tests.py
+  - modules/search/search_unit_tests.py

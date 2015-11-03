@@ -1,0 +1,13 @@
+tests:
+  functional:
+    - modules.rating.rating_tests.ExtraContentProvideTests = 4
+    - modules.rating.rating_tests.RatingHandlerTests = 15
+
+files:
+  - modules/rating/__init__.py
+  - modules/rating/messages.py
+  - modules/rating/rating.py
+  - modules/rating/rating_tests.py
+  - modules/rating/resources/css/widget.css
+  - modules/rating/resources/js/widget.js
+  - modules/rating/templates/widget.html

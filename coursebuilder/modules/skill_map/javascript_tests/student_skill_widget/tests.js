@@ -7,8 +7,8 @@ describe('The student skill widget', function() {
     now = function() { return that.currentTimeMs; };
 
     jasmine.getFixtures().fixturesPath = 'base/';
-    loadFixtures('tests/unit/javascript_tests/modules_skill_map/' +
-        'student_skill_widget/fixture.html');
+    loadFixtures(
+        'modules/skill_map/javascript_tests/student_skill_widget/fixture.html');
 
     jasmine.clock().install();
     $.fx.off = true;

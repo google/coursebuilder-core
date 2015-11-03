@@ -1,0 +1,23 @@
+tests:
+  functional:
+    - modules.review.controllers_tests.PeerReviewControllerTest = 7
+    - modules.review.controllers_tests.PeerReviewDashboardAdminTest = 1
+    - modules.review.controllers_tests.PeerReviewDashboardStudentTest = 2
+    - modules.review.peer_tests.ReviewStepTest = 3
+    - modules.review.peer_tests.ReviewSummaryTest = 5
+    - modules.review.review_tests.ManagerTest = 55
+    - modules.review.stats_tests.PeerReviewAnalyticsTest = 1
+
+files:
+  - modules/review/__init__.py
+  - modules/review/controllers_tests.py
+  - modules/review/cron.py
+  - modules/review/dashboard.py
+  - modules/review/domain.py
+  - modules/review/peer.py
+  - modules/review/peer_tests.py
+  - modules/review/review.py
+  - modules/review/review_tests.py
+  - modules/review/stats.html
+  - modules/review/stats.py
+  - modules/review/stats_tests.py

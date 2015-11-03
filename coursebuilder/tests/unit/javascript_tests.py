@@ -43,10 +43,3 @@ class AllJavaScriptTests(TestBase):
 
     def test_butterbar(self):
         self.karma_test('tests/unit/javascript_tests/assets_lib_butterbar')
-
-    def test_skill_map(self):
-        self.karma_test(
-            'tests/unit/javascript_tests/modules_skill_map/lesson_editor')
-        self.karma_test(
-            'tests/unit/javascript_tests/modules_skill_map/'
-            'student_skill_widget')

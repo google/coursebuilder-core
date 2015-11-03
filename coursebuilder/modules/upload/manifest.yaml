@@ -1,0 +1,13 @@
+tests:
+  functional:
+    - modules.upload.upload_tests.TextFileUploadHandlerTestCase = 8
+    - modules.upload.upload_tests.TextFileUploadTagTestCase = 2
+
+files:
+  - modules/upload/__init__.py
+  - modules/upload/messages.py
+  - modules/upload/resources/script_add.png
+  - modules/upload/templates/form.html
+  - modules/upload/templates/result.html
+  - modules/upload/upload.py
+  - modules/upload/upload_tests.py

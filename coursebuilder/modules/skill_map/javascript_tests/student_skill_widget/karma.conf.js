@@ -1,13 +1,13 @@
 module.exports = function(config) {
   config.set({
-    basePath: '../../../../..',
+    basePath: '../../../..',
     files: [
       'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
       'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js',
-      'tests/unit/javascript_tests/modules_skill_map/student_skill_widget/*.js',
+      'modules/skill_map/javascript_tests/student_skill_widget/*.js',
       {
-        pattern: 'tests/unit/javascript_tests/modules_skill_map/' +
-            'student_skill_widget/*.html',
+        pattern: 'modules/skill_map/javascript_tests/student_skill_widget/' +
+            '*.html',
         watched: true,
         included: false,
         served: true

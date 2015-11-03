@@ -1,0 +1,12 @@
+tests:
+  functional:
+    - modules.unsubscribe.unsubscribe_tests.GetUnsubscribeUrlTests = 1
+    - modules.unsubscribe.unsubscribe_tests.SubscribeAndUnsubscribeTests = 4
+    - modules.unsubscribe.unsubscribe_tests.UnsubscribeHandlerTests = 4
+
+files:
+  - modules/unsubscribe/__init__.py
+  - modules/unsubscribe/templates/resubscribe.html
+  - modules/unsubscribe/templates/unsubscribe.html
+  - modules/unsubscribe/unsubscribe.py
+  - modules/unsubscribe/unsubscribe_tests.py

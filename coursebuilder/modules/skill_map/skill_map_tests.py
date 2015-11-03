@@ -373,7 +373,8 @@ class SkillMapTests(BaseSkillMapTests):
         self._build_sample_graph()
         skill_map = SkillMap.load(self.course)
         self.assertEqual(6, len(skill_map.skills()))
-        # verify topological co-sets
+        # verify topological co-sets. Allow access to code under test.
+        # pylint: disable=protected-access
         expected = {
             0: set([self.sa.id, self.sb.id, self.sc.id]),
             1: set([self.se.id, self.sd.id]),

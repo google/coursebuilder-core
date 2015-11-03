@@ -17,13 +17,11 @@
 
 __author__ = 'Sean Lip'
 
-import actions
-from actions import assert_contains
-from actions import assert_does_not_contain
-from actions import assert_equals
 from controllers import sites
 from models import courses
 from models import transforms
+from tests.functional import actions
+
 
 # The unit id for the peer review assignment in the default course.
 LEGACY_REVIEW_UNIT_ID = 'ReviewAssessmentExample'
@@ -86,40 +84,41 @@ class PeerReviewControllerTest(actions.TestBase):
         # Check that the sample peer-review assignment shows up in the course
         # page and that it can be visited.
         response = actions.view_course(self)
-        assert_contains('Sample peer review assignment', response.body)
-        assert_contains('Review peer assignments', response.body)
-        assert_contains(
+        actions.assert_contains('Sample peer review assignment', response.body)
+        actions.assert_contains('Review peer assignments', response.body)
+        actions.assert_contains(
             '<a href="assessment?name=%s">' % LEGACY_REVIEW_UNIT_ID,
             response.body)
-        assert_contains('Review peer assignments </p>', response.body,
+        actions.assert_contains('Review peer assignments </p>', response.body,
                         collapse_whitespace=True)
-        assert_does_not_contain('<a href="reviewdashboard', response.body,
-                                collapse_whitespace=True)
+        actions.assert_does_not_contain(
+            '<a href="reviewdashboard', response.body, collapse_whitespace=True)
 
         # Check that the progress circle for this assignment is unfilled.
-        assert_contains(
+        actions.assert_contains(
             'progress-notstarted-%s' % LEGACY_REVIEW_UNIT_ID, response.body)
-        assert_does_not_contain(
+        actions.assert_does_not_contain(
             'progress-completed-%s' % LEGACY_REVIEW_UNIT_ID, response.body)
 
         # Try to access an invalid assignment.
         response = self.get(
             'assessment?name=FakeAssessment', expect_errors=True)
-        assert_equals(response.status_int, 404)
+        actions.assert_equals(response.status_int, 404)
 
         # The student should not be able to see others' reviews because he/she
         # has not submitted an assignment yet.
         response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_does_not_contain('Submitted assignment', response.body)
-        assert_contains('Due date for this assignment', response.body)
-        assert_does_not_contain('Reviews received', response.body)
+        actions.assert_does_not_contain('Submitted assignment', response.body)
+        actions.assert_contains('Due date for this assignment', response.body)
+        actions.assert_does_not_contain('Reviews received', response.body)
 
         # The student should not be able to access the review dashboard because
         # he/she has not submitted the assignment yet.
         response = self.get(
             'reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID,
             expect_errors=True)
-        assert_contains('You must submit the assignment for', response.body)
+        actions.assert_contains(
+            'You must submit the assignment for', response.body)
 
         # The student submits the assignment.
         response = actions.submit_assessment(
@@ -127,14 +126,14 @@ class PeerReviewControllerTest(actions.TestBase):
             LEGACY_REVIEW_UNIT_ID,
             {'answers': submission, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
         )
-        assert_contains(
+        actions.assert_contains(
             'Thank you for completing this assignment', response.body)
-        assert_contains('Review peer assignments', response.body)
+        actions.assert_contains('Review peer assignments', response.body)
 
         # The student views the submitted assignment, which has become readonly.
         response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_contains('First answer to Q1', response.body)
-        assert_contains('Submitted assignment', response.body)
+        actions.assert_contains('First answer to Q1', response.body)
+        actions.assert_contains('Submitted assignment', response.body)
 
         # The student tries to re-submit the same assignment. This should fail.
         response = actions.submit_assessment(
@@ -144,33 +143,33 @@ class PeerReviewControllerTest(actions.TestBase):
              'assessment_type': LEGACY_REVIEW_UNIT_ID},
             presubmit_checks=False
         )
-        assert_contains(
+        actions.assert_contains(
             'You have already submitted this assignment.', response.body)
-        assert_contains('Review peer assignments', response.body)
+        actions.assert_contains('Review peer assignments', response.body)
 
         # The student views the submitted assignment. The new answers have not
         # been saved.
         response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_contains('First answer to Q1', response.body)
-        assert_does_not_contain('Second answer to Q1', response.body)
+        actions.assert_contains('First answer to Q1', response.body)
+        actions.assert_does_not_contain('Second answer to Q1', response.body)
 
         # The student checks the course page and sees that the progress
         # circle for this assignment has been filled, and that the 'Review
         # peer assignments' link is now available.
         response = actions.view_course(self)
-        assert_contains(
+        actions.assert_contains(
             'progress-completed-%s' % LEGACY_REVIEW_UNIT_ID, response.body)
-        assert_does_not_contain(
+        actions.assert_does_not_contain(
             '<span> Review peer assignments </span>', response.body,
             collapse_whitespace=True)
-        assert_contains(
+        actions.assert_contains(
             '<a href="reviewdashboard?unit=%s">' % LEGACY_REVIEW_UNIT_ID,
             response.body, collapse_whitespace=True)
 
         # The student should also be able to now view the review dashboard.
         response = self.get('reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_contains('Assignments for your review', response.body)
-        assert_contains('Review a new assignment', response.body)
+        actions.assert_contains('Assignments for your review', response.body)
+        actions.assert_contains('Review a new assignment', response.body)
 
         actions.logout()
 
@@ -222,9 +221,10 @@ class PeerReviewControllerTest(actions.TestBase):
         # to review -- but there is nothing to review.
         response = actions.request_new_review(
             self, LEGACY_REVIEW_UNIT_ID, expected_status_code=200)
-        assert_does_not_contain('Assignment to review', response.body)
-        assert_contains('Sorry, there are no new submissions ', response.body)
-        assert_contains('disabled="true"', response.body)
+        actions.assert_does_not_contain('Assignment to review', response.body)
+        actions.assert_contains(
+            'Sorry, there are no new submissions ', response.body)
+        actions.assert_contains('disabled="true"', response.body)
 
         actions.logout()
 
@@ -277,7 +277,7 @@ class PeerReviewControllerTest(actions.TestBase):
         # Student 2 requests a review, and is given Student 1's assignment.
         response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
         review_step_key_2_for_1 = get_review_step_key(response)
-        assert_contains('S1-1', response.body)
+        actions.assert_contains('S1-1', response.body)
         actions.logout()
 
         # Student 3 logs in, and submits the assignment.
@@ -316,9 +316,9 @@ class PeerReviewControllerTest(actions.TestBase):
         # Student 1 cannot see the reviews for his assignment yet, because he
         # has not submitted the two required reviews.
         response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_equals(response.status_int, 200)
-        assert_contains('Due date for this assignment', response.body)
-        assert_contains(
+        actions.assert_equals(response.status_int, 200)
+        actions.assert_contains('Due date for this assignment', response.body)
+        actions.assert_contains(
             'After you have completed the required number of peer reviews',
             response.body)
 
@@ -374,7 +374,7 @@ class PeerReviewControllerTest(actions.TestBase):
         # Student 2 requests a review, and is given Student 1's assignment.
         response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
         review_step_key_2_for_1 = get_review_step_key(response)
-        assert_contains('S1-1', response.body)
+        actions.assert_contains('S1-1', response.body)
 
         # Student 2 saves her review as a draft.
         review_2_for_1_payload = get_review_payload(
@@ -383,20 +383,20 @@ class PeerReviewControllerTest(actions.TestBase):
         response = actions.submit_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
             review_2_for_1_payload)
-        assert_contains('Your review has been saved.', response.body)
+        actions.assert_contains('Your review has been saved.', response.body)
 
         response = self.get('reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_equals(response.status_int, 200)
-        assert_contains('(Draft)', response.body)
+        actions.assert_equals(response.status_int, 200)
+        actions.assert_contains('(Draft)', response.body)
 
         # Student 2's draft is still changeable.
         response = actions.view_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1)
-        assert_contains('Submit Review', response.body)
+        actions.assert_contains('Submit Review', response.body)
         response = actions.submit_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
             review_2_for_1_payload)
-        assert_contains('Your review has been saved.', response.body)
+        actions.assert_contains('Your review has been saved.', response.body)
 
         # Student 2 logs out.
         actions.logout()
@@ -413,20 +413,20 @@ class PeerReviewControllerTest(actions.TestBase):
         response = self.get('/reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
 
         response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
-        assert_contains('Assignment to review', response.body)
-        assert_contains('not-S1', response.body)
+        actions.assert_contains('Assignment to review', response.body)
+        actions.assert_contains('not-S1', response.body)
 
         review_step_key_1_for_someone = get_review_step_key(response)
 
         response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
-        assert_contains('Assignment to review', response.body)
-        assert_contains('not-S1', response.body)
+        actions.assert_contains('Assignment to review', response.body)
+        actions.assert_contains('not-S1', response.body)
 
         review_step_key_1_for_someone_else = get_review_step_key(response)
 
         response = self.get('reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_equals(response.status_int, 200)
-        assert_contains('disabled="true"', response.body)
+        actions.assert_equals(response.status_int, 200)
+        actions.assert_contains('disabled="true"', response.body)
 
         # Student 1 submits both reviews, fulfilling his quota.
         review_1_for_other_payload = get_review_payload('R1for')
@@ -434,26 +434,26 @@ class PeerReviewControllerTest(actions.TestBase):
         response = actions.submit_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone,
             review_1_for_other_payload)
-        assert_contains(
+        actions.assert_contains(
             'Your review has been submitted successfully', response.body)
 
         response = actions.submit_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone_else,
             review_1_for_other_payload)
-        assert_contains(
+        actions.assert_contains(
             'Your review has been submitted successfully', response.body)
 
         response = self.get('/reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_contains('(Completed)', response.body)
-        assert_does_not_contain('(Draft)', response.body)
+        actions.assert_contains('(Completed)', response.body)
+        actions.assert_does_not_contain('(Draft)', response.body)
 
         # Although Student 1 has submitted 2 reviews, he cannot view Student
         # 2's review because it is still in Draft status.
         response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_equals(response.status_int, 200)
-        assert_contains(
+        actions.assert_equals(response.status_int, 200)
+        actions.assert_contains(
             'You have not received any peer reviews yet.', response.body)
-        assert_does_not_contain('R2for1', response.body)
+        actions.assert_does_not_contain('R2for1', response.body)
 
         # Student 1 logs out.
         actions.logout()
@@ -463,19 +463,19 @@ class PeerReviewControllerTest(actions.TestBase):
 
         response = self.get('review?unit=%s&key=%s' % (
             LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1))
-        assert_does_not_contain('Submitted review', response.body)
+        actions.assert_does_not_contain('Submitted review', response.body)
 
         response = actions.submit_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
             get_review_payload('R2for1'))
-        assert_contains(
+        actions.assert_contains(
             'Your review has been submitted successfully', response.body)
 
         # Her review is now read-only.
         response = self.get('review?unit=%s&key=%s' % (
             LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1))
-        assert_contains('Submitted review', response.body)
-        assert_contains('R2for1', response.body)
+        actions.assert_contains('Submitted review', response.body)
+        actions.assert_contains('R2for1', response.body)
 
         # Student 2 logs out.
         actions.logout()
@@ -483,8 +483,8 @@ class PeerReviewControllerTest(actions.TestBase):
         # Now Student 1 can see the review he has received from Student 2.
         actions.login(email1)
         response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
-        assert_equals(response.status_int, 200)
-        assert_contains('R2for1', response.body)
+        actions.assert_equals(response.status_int, 200)
+        actions.assert_contains('R2for1', response.body)
 
     def test_independence_of_draft_reviews(self):
         """Test that draft reviews do not interfere with each other."""
@@ -545,16 +545,16 @@ class PeerReviewControllerTest(actions.TestBase):
         response = self.get('/reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
 
         response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
-        assert_equals(response.status_int, 200)
-        assert_contains('Assignment to review', response.body)
-        assert_contains('not-S1', response.body)
+        actions.assert_equals(response.status_int, 200)
+        actions.assert_contains('Assignment to review', response.body)
+        actions.assert_contains('not-S1', response.body)
 
         review_step_key_1_for_someone = get_review_step_key(response)
 
         response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
-        assert_equals(response.status_int, 200)
-        assert_contains('Assignment to review', response.body)
-        assert_contains('not-S1', response.body)
+        actions.assert_equals(response.status_int, 200)
+        actions.assert_contains('Assignment to review', response.body)
+        actions.assert_contains('not-S1', response.body)
 
         review_step_key_1_for_someone_else = get_review_step_key(response)
 
@@ -565,22 +565,22 @@ class PeerReviewControllerTest(actions.TestBase):
         response = actions.submit_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone,
             get_review_payload('R1forFirst', is_draft=True))
-        assert_contains('Your review has been saved.', response.body)
+        actions.assert_contains('Your review has been saved.', response.body)
 
         response = actions.submit_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone_else,
             get_review_payload('R1forSecond', is_draft=True))
-        assert_contains('Your review has been saved.', response.body)
+        actions.assert_contains('Your review has been saved.', response.body)
 
         # The two draft reviews should still be different when subsequently
         # accessed.
         response = self.get('review?unit=%s&key=%s' % (
             LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone))
-        assert_contains('R1forFirst', response.body)
+        actions.assert_contains('R1forFirst', response.body)
 
         response = self.get('review?unit=%s&key=%s' % (
             LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone_else))
-        assert_contains('R1forSecond', response.body)
+        actions.assert_contains('R1forSecond', response.body)
 
         # Student 1 logs out.
         actions.logout()
@@ -612,28 +612,29 @@ class PeerReviewDashboardAdminTest(actions.TestBase):
         # There is nothing to review on the review dashboard.
         response = actions.request_new_review(
             self, LEGACY_REVIEW_UNIT_ID, expected_status_code=200)
-        assert_does_not_contain('Assignment to review', response.body)
-        assert_contains('Sorry, there are no new submissions ', response.body)
+        actions.assert_does_not_contain('Assignment to review', response.body)
+        actions.assert_contains(
+            'Sorry, there are no new submissions ', response.body)
         actions.logout()
 
         # The admin assigns the student to review his own work.
         actions.login(email, is_admin=True)
         response = actions.add_reviewer(
             self, LEGACY_REVIEW_UNIT_ID, email, email)
-        assert_equals(response.status_int, 302)
+        actions.assert_equals(response.status_int, 302)
         response = self.get(response.location)
-        assert_does_not_contain(
+        actions.assert_does_not_contain(
             'Error 412: The reviewer is already assigned', response.body)
-        assert_contains('First answer to Q1', response.body)
-        assert_contains(
+        actions.assert_contains('First answer to Q1', response.body)
+        actions.assert_contains(
             'Review 1 from test_add_reviewer@google.com', response.body)
 
         # The admin repeats the 'add reviewer' action. This should fail.
         response = actions.add_reviewer(
             self, LEGACY_REVIEW_UNIT_ID, email, email)
-        assert_equals(response.status_int, 302)
+        actions.assert_equals(response.status_int, 302)
         response = self.get(response.location)
-        assert_contains(
+        actions.assert_contains(
             'Error 412: The reviewer is already assigned', response.body)
 
 

@@ -100,7 +100,7 @@ while [[ ${#files[@]} -gt 0 ]] || [[ ${#jobs[@]} -gt 0 ]] ; do
   while [[ ${#jobs[@]} -lt $parallelism ]] && [[ ${#files[@]} -gt 0 ]] ; do
     filename=${files[0]}
     files=(${files[@]:1})  # shift array to drop item at index 0
-    if [[ $filename =~ (^|/)tests/ || $filename =~ modules/.*_tests.py ]] ; then
+    if [[ $filename =~ (^|/)tests/ ]] ; then
       IGNORE_FOR_TESTS[0]=--disable=protected-access
       IGNORE_FOR_TESTS[1]=--disable=unbalanced-tuple-unpacking
       IGNORE_FOR_TESTS[2]=--disable=unpacking-non-sequence

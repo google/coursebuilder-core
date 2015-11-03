@@ -37,9 +37,6 @@ from actions import assert_contains
 from actions import assert_contains_all_of
 from actions import assert_does_not_contain
 from actions import assert_equals
-from controllers_review import PeerReviewControllerTest
-from controllers_review import PeerReviewDashboardAdminTest
-from review_stats import PeerReviewAnalyticsTest
 
 import appengine_config
 from common import crypto
@@ -66,6 +63,8 @@ from modules.analytics import analytics
 from modules.announcements.announcements import AnnouncementEntity
 from modules import course_explorer
 from modules import search
+from modules.review import controllers_tests
+from modules.review import stats_tests
 from tools import verify
 from tools.etl import etl
 from tools.etl import etl_lib
@@ -6297,8 +6296,10 @@ class NamespaceTest(actions.TestBase):
 
 ALL_COURSE_TESTS = (
     StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
-    StaticHandlerTest, AdminAspectTest, PeerReviewControllerTest,
-    PeerReviewDashboardAdminTest, PeerReviewAnalyticsTest)
+    StaticHandlerTest, AdminAspectTest,
+    controllers_tests.PeerReviewControllerTest,
+    controllers_tests.PeerReviewDashboardAdminTest,
+    stats_tests.PeerReviewAnalyticsTest)
 
 MemcacheTest.__bases__ += (InfrastructureTest,) + ALL_COURSE_TESTS
 CourseUrlRewritingTest.__bases__ += ALL_COURSE_TESTS

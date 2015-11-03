@@ -20,7 +20,6 @@ import logging
 import re
 import urllib
 
-import actions
 from common import utils as common_utils
 from controllers import sites
 from models import courses
@@ -28,16 +27,15 @@ from models import resources_display
 from models import models
 from models import transforms
 from modules.announcements import announcements
-from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDAO
-from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDTO
-from modules.i18n_dashboard.i18n_dashboard import ResourceBundleKey
+from modules.i18n_dashboard import i18n_dashboard
 from modules.search import search
-from tests.unit import modules_search as search_unit_test
+from modules.search import search_unit_tests
+from tests.functional import actions
 
 from google.appengine.api import namespace_manager
 
 
-class SearchTest(search_unit_test.SearchTestBase):
+class SearchTest(search_unit_tests.SearchTestBase):
     """Tests the search module."""
 
     @classmethod
@@ -125,7 +123,7 @@ class SearchTest(search_unit_test.SearchTestBase):
         unit = course.add_unit()
         unit.availability = courses.AVAILABILITY_AVAILABLE
         lesson_a = course.add_lesson(unit)
-        lesson_a.notes = search_unit_test.UNICODE_PAGE_URL
+        lesson_a.notes = search_unit_tests.UNICODE_PAGE_URL
         lesson_a.availability = courses.AVAILABILITY_AVAILABLE
         course.update_unit(unit)
         course.save()
@@ -144,10 +142,10 @@ class SearchTest(search_unit_test.SearchTestBase):
         unit = course.add_unit()
         unit.availability = courses.AVAILABILITY_AVAILABLE
         lesson_a = course.add_lesson(unit)
-        lesson_a.notes = search_unit_test.VALID_PAGE_URL
+        lesson_a.notes = search_unit_tests.VALID_PAGE_URL
         objectives_link = 'http://objectiveslink.null/'
         lesson_a.objectives = '<a href="%s"></a><a href="%s"></a>' % (
-            search_unit_test.LINKED_PAGE_URL, objectives_link)
+            search_unit_tests.LINKED_PAGE_URL, objectives_link)
         lesson_a.availability = courses.AVAILABILITY_AVAILABLE
         course.update_unit(unit)
         course.save()
@@ -159,14 +157,14 @@ class SearchTest(search_unit_test.SearchTestBase):
 
         response = self.get('/test/search?query=Cogito')
         self.assertIn('gcb-search-result', response.body)
-        self.assertIn(search_unit_test.VALID_PAGE_URL, response.body)
+        self.assertIn(search_unit_tests.VALID_PAGE_URL, response.body)
         self.assertIn(objectives_link, response.body)
-        self.assertNotIn(search_unit_test.PDF_URL, response.body)
+        self.assertNotIn(search_unit_tests.PDF_URL, response.body)
 
         # If this test fails, indexing will crawl the entire web
         response = self.get('/test/search?query=ABORT')
         self.assertNotIn('gcb-search-result', response.body)
-        self.assertNotIn(search_unit_test.SECOND_LINK_PAGE_URL, response.body)
+        self.assertNotIn(search_unit_tests.SECOND_LINK_PAGE_URL, response.body)
 
     def test_youtube(self):
         sites.setup_courses('course:/test::ns_test, course:/:/')
@@ -269,13 +267,13 @@ class SearchTest(search_unit_test.SearchTestBase):
 
         unit1 = course.add_unit()
         lesson11 = course.add_lesson(unit1)
-        lesson11.notes = search_unit_test.VALID_PAGE_URL
-        lesson11.objectives = search_unit_test.VALID_PAGE
+        lesson11.notes = search_unit_tests.VALID_PAGE_URL
+        lesson11.objectives = search_unit_tests.VALID_PAGE
         lesson11.video = 'portal'
         unit2 = course.add_unit()
         lesson21 = course.add_lesson(unit2)
-        lesson21.notes = search_unit_test.VALID_PAGE_URL
-        lesson21.objectives = search_unit_test.VALID_PAGE
+        lesson21.notes = search_unit_tests.VALID_PAGE_URL
+        lesson21.objectives = search_unit_tests.VALID_PAGE
         lesson21.video = 'portal'
 
         unit1.availability = courses.AVAILABILITY_AVAILABLE
@@ -319,7 +317,7 @@ class SearchTest(search_unit_test.SearchTestBase):
         lesson11 = course.add_lesson(unit1)
         lesson11.objectives = 'common plugh <gcb-youtube videoid="glados">'
         lesson11.availability = courses.AVAILABILITY_AVAILABLE
-        lesson11.notes = search_unit_test.VALID_PAGE_URL
+        lesson11.notes = search_unit_tests.VALID_PAGE_URL
         lesson11.video = 'portal'
         course.update_unit(unit1)
         unit2 = course.add_unit()
@@ -405,11 +403,12 @@ class SearchTest(search_unit_test.SearchTestBase):
                         'dogs</a#1>' % dogs_link_fr)}]
             }
         }
-        lesson_key_fr = ResourceBundleKey(
+        lesson_key_fr = i18n_dashboard.ResourceBundleKey(
             resources_display.ResourceLesson.TYPE, lesson.lesson_id, 'fr')
         with common_utils.Namespace('ns_test'):
-            ResourceBundleDAO.save(
-                ResourceBundleDTO(str(lesson_key_fr), lesson_bundle))
+            i18n_dashboard.ResourceBundleDAO.save(
+                i18n_dashboard.ResourceBundleDTO(
+                    str(lesson_key_fr), lesson_bundle))
 
         extra_locales = [{'locale': 'fr', 'availability': 'available'}]
         with actions.OverriddenEnvironment({'extra_locales': extra_locales}):

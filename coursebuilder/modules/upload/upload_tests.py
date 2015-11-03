@@ -46,6 +46,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         self.student = models.Student(
             is_enrolled=True, key_name=self.email, user_id=self.user_id)
         self.student.put()
+        # Allow protected access for tests. pylint: disable=protected-access
         self.xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
 
@@ -56,6 +57,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         return db.get(student_work.Submission.get_key(unit_id, student_key))
 
     def test_bad_xsrf_token_returns_400(self):
+        # Allow protected access for tests. pylint: disable=protected-access
         response = self.testapp.post(
             upload._POST_ACTION_SUFFIX,
             {'form_xsrf_token': 'bad'}, self.headers, expect_errors=True)
@@ -63,6 +65,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
 
     def test_creates_new_submission(self):
         self.configure_environ_for_current_user()
+        # Allow protected access for tests. pylint: disable=protected-access
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
         params = {
@@ -81,6 +84,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
 
     def test_empty_contents_returns_400(self):
         self.configure_environ_for_current_user()
+        # Allow protected access for tests. pylint: disable=protected-access
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
         params = {
@@ -96,6 +100,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
 
     def test_missing_contents_returns_400(self):
         self.configure_environ_for_current_user()
+        # Allow protected access for tests. pylint: disable=protected-access
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
         params = {
@@ -109,6 +114,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         self.assertEqual(400, response.status_int)
 
     def test_missing_student_returns_403(self):
+        # Allow protected access for tests. pylint: disable=protected-access
         response = self.testapp.post(
             upload._POST_ACTION_SUFFIX,
             {'form_xsrf_token': self.xsrf_token}, self.headers,
@@ -116,12 +122,14 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         self.assertEqual(403, response.status_int)
 
     def test_missing_xsrf_token_returns_400(self):
+        # Allow protected access for tests. pylint: disable=protected-access
         response = self.testapp.post(
             upload._POST_ACTION_SUFFIX, {}, self.headers, expect_errors=True)
         self.assertEqual(400, response.status_int)
 
     def test_updates_existing_submission(self):
         self.configure_environ_for_current_user()
+        # Allow protected access for tests. pylint: disable=protected-access
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
         params = {
@@ -145,6 +153,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
 
     def test_unsavable_contents_returns_400(self):
         self.configure_environ_for_current_user()
+        # Allow protected access for tests. pylint: disable=protected-access
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
         params = {

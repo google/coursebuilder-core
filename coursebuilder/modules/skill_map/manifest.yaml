@@ -1,0 +1,56 @@
+tests:
+  functional:
+    - modules.skill_map.skill_map_tests.CompetencyMeasureTests = 4
+    - modules.skill_map.skill_map_tests.CountSkillCompletionsTests = 3
+    - modules.skill_map.skill_map_tests.EventListenerTests = 4
+    - modules.skill_map.skill_map_tests.GenerateCompetencyHistogramsTests = 1
+    - modules.skill_map.skill_map_tests.LocationListRestHandlerTests = 2
+    - modules.skill_map.skill_map_tests.SkillAggregateRestHandlerTests = 6
+    - modules.skill_map.skill_map_tests.SkillCompletionTrackerTests = 6
+    - modules.skill_map.skill_map_tests.SkillGraphTests = 11
+    - modules.skill_map.skill_map_tests.SkillI18nTests = 5
+    - modules.skill_map.skill_map_tests.SkillMapAnalyticsTabTests = 2
+    - modules.skill_map.skill_map_tests.SkillMapHandlerTests = 3
+    - modules.skill_map.skill_map_tests.SkillMapMetricTests = 10
+    - modules.skill_map.skill_map_tests.SkillMapRdfHandlerTests = 3
+    - modules.skill_map.skill_map_tests.SkillMapTests = 7
+    - modules.skill_map.skill_map_tests.SkillRestHandlerTests = 18
+    - modules.skill_map.skill_map_tests.StudentSkillViewWidgetTests = 6
+  unit:
+    - modules.skill_map.skill_map_unit_tests.JavaScriptTests = 2
+
+files:
+  - modules/skill_map/__init__.py
+  - modules/skill_map/_static/css/common.css
+  - modules/skill_map/_static/css/course_outline.css
+  - modules/skill_map/_static/css/lesson_header.css
+  - modules/skill_map/_static/css/skill_map.css
+  - modules/skill_map/_static/css/skill_tagging.css
+  - modules/skill_map/competency.py
+  - modules/skill_map/constants.py
+  - modules/skill_map/javascript_tests/lesson_editor/fixture.html
+  - modules/skill_map/javascript_tests/lesson_editor/karma.conf.js
+  - modules/skill_map/javascript_tests/lesson_editor/tests.js
+  - modules/skill_map/javascript_tests/student_skill_widget/fixture.html
+  - modules/skill_map/javascript_tests/student_skill_widget/karma.conf.js
+  - modules/skill_map/javascript_tests/student_skill_widget/tests.js
+  - modules/skill_map/messages.py
+  - modules/skill_map/rdf.py
+  - modules/skill_map/recommender.py
+  - modules/skill_map/resources/js/course_outline.js
+  - modules/skill_map/resources/js/lesson_header.js
+  - modules/skill_map/resources/js/skill_tagging_lib.js
+  - modules/skill_map/resources/js/skills_competencies_analytics.js
+  - modules/skill_map/resources/js/skills_progress.js
+  - modules/skill_map/skill_map.py
+  - modules/skill_map/skill_map_metrics.py
+  - modules/skill_map/skill_map_tests.py
+  - modules/skill_map/skill_map_unit_tests.py
+  - modules/skill_map/templates/dependency_graph.html
+  - modules/skill_map/templates/lesson_header.html
+  - modules/skill_map/templates/skill_card.html
+  - modules/skill_map/templates/skill_competencies_analytics.html
+  - modules/skill_map/templates/skill_map_analytics.html
+  - modules/skill_map/templates/skill_tagging.js
+  - modules/skill_map/templates/skills_progress.html
+  - modules/skill_map/templates/skills_table.html

@@ -22,9 +22,11 @@ import re
 import robotparser
 import urlparse
 
-from functional import actions
 from modules.search import resources
+from tests.functional import actions
+
 from google.appengine.api import urlfetch
+
 
 VALID_PAGE_URL = 'http://valid.null/'
 VALID_PAGE = """<html>
