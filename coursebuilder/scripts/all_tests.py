@@ -113,6 +113,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
     'tests.functional.modules_embed.DemoHandlerTest': 2,
+    'tests.functional.modules_embed.EmbedSnippetTest': 2,
     'tests.functional.modules_embed'
         '.ExampleEmbedAndHandlerV1ChildCoursesTest': 5,
     'tests.functional.modules_embed'
@@ -121,7 +122,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_embed.GlobalErrorsDemoHandlerTest': 2,
     'tests.functional.modules_embed.JsHandlersTest': 3,
     'tests.functional.modules_embed.LocalErrorsDemoHandlerTest': 2,
-    'tests.functional.modules_embed.RegistryTest': 3,
+    'tests.functional.modules_embed.RegistryTest': 5,
     'tests.functional.modules_embed.StaticResourcesTest': 1,
     'tests.functional.modules_embed.UrlParserTest': 12,
     'tests.functional.modules_extra_tabs.ExtraTabsTests': 7,

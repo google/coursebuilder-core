@@ -50,6 +50,11 @@ prevent the uploading of these files.
 """, 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
 
 # TODO(johncox): replace placeholder URL once target link is determined.
+EMBED_ASSESSMENT_DESCRIPTION = safe_dom.assemble_text_message("""
+This link allows the assessment to be embedded in any web page.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+
+# TODO(johncox): replace placeholder URL once target link is determined.
 ENABLE_HOOK_EDITS = safe_dom.assemble_text_message("""
 If checked, controls on course pages will be displayed to permit editing of HTML
 inclusions (hook points). Otherwise, the course pages will appear as students

@@ -40,6 +40,7 @@ from google.appengine.ext import db
 
 _BASE_DIR = os.path.join(appengine_config.BUNDLE_ROOT, 'modules', 'assessments')
 _TEMPLATES_DIR = os.path.join(_BASE_DIR, 'templates')
+_EMBEDDED_ASSESSMENT_KEY = 'assessment'
 
 custom_module = None
 
@@ -509,7 +510,7 @@ class AssessmentEmbed(embed.AbstractEmbed):
 
 
 def notify_module_enabled():
-    embed.Registry.bind('assessment', AssessmentEmbed)
+    embed.Registry.bind(_EMBEDDED_ASSESSMENT_KEY, AssessmentEmbed)
 
 
 def register_module():

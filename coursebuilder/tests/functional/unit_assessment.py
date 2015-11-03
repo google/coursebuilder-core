@@ -616,12 +616,17 @@ class UnitPrePostAssessmentTest(actions.TestBase):
 
     def _test_assessments_as_pre_post_labels(
             self, label_id, label_type, expected_errors):
+
+        class FakeRequest(object):
+            host_url = 'https://www.example.com'
+
         self.unit_no_lessons.pre_assessment = self.assessment_one.unit_id
         self.unit_no_lessons.post_assessment = self.assessment_two.unit_id
         self.course.save()
 
         assessment_rest_handler = unit_lesson_editor.AssessmentRESTHandler()
         assessment_rest_handler.app_context = self.course.app_context
+        assessment_rest_handler.request = FakeRequest()
 
         with common_utils.Namespace(NAMESPACE):
             errors = []

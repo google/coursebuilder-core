@@ -22,6 +22,7 @@ import urllib
 
 from common import utils as common_utils
 from common import crypto
+from common import schema_fields
 from controllers import sites
 from controllers import utils
 from models import courses
@@ -32,6 +33,8 @@ from models import permissions
 from models import roles
 from models import transforms
 from modules.courses import constants
+from modules.courses import messages
+from modules.assessments import assessments
 from modules.dashboard import dashboard
 from modules.oeditor import oeditor
 from tools import verify
@@ -711,9 +714,28 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
     @classmethod
     def get_schema(cls, course, key):
         schema = resources_display.ResourceAssessment.get_schema(course, key)
+
+        reg = schema_fields.FieldRegistry('')
+        reg.add_property(schema_fields.SchemaField(
+            'snippet', 'Embed Link', 'text', optional=True,
+            extra_schema_dict_values={
+                'disabled': True,
+                'className': 'inputEx-Field embed-code-snippet-display'},
+            description=str(messages.EMBED_ASSESSMENT_DESCRIPTION)))
+        schema.add_sub_registry('embed', '', registry=reg)
+
         permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(
             course.app_context, constants.SCOPE_ASSESSMENT, schema)
         return schema
+
+    def unit_to_dict(self, unit):
+        unit_dict = super(AssessmentRESTHandler, self).unit_to_dict(unit)
+        unit_dict['embed'] = {
+            'snippet': assessments.AssessmentEmbed.get_embed_snippet(
+                self, unit.unit_id)
+        }
+        return unit_dict
+
 
     @classmethod
     def can_view(cls, app_context):

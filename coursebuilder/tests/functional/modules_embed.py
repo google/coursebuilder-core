@@ -30,13 +30,15 @@ from tests.functional import actions
 
 class FakeHandler(object):
 
-    def __init__(self, request):
+    def __init__(self, app_context, request):
+        self.app_context = app_context
         self.request = request
 
 
 class FakeRequest(object):
-    def __init__(self, method):
+    def __init__(self, method, host_url):
         self.method = method
+        self.host_url = host_url
 
 
 class DemoHandlerTestBase(actions.TestBase):
@@ -373,6 +375,32 @@ class JsHandlersTest(actions.TestBase):
             self.testapp.get(embed._EMBED_LIB_JS_URL))
 
 
+class EmbedSnippetTest(actions.TestBase):
+
+    def _get_fake_handler(self):
+        app_context = sites.ApplicationContext(
+            'course', '/the_course', None, None, None)
+        request = FakeRequest('GET', 'https://www.example.com')
+        return FakeHandler(app_context, request)
+
+    def test_snippet_for_registered_embed(self):
+        embed.Registry.bind('fragment', embed.AbstractEmbed)
+        handler = self._get_fake_handler()
+        key = 'fake_key'
+        self.assertEquals(
+            '<script src="https://www.example.com/modules/embed/v1/embed.js">'
+            '</script>\n'
+            '<cb-embed src="https://www.example.com/the_course/modules/embed'
+            '/v1/resource/fragment/fake_key"></cb-embed>',
+            embed.AbstractEmbed.get_embed_snippet(handler, key))
+
+    def test_snippet_for_non_registered_embed(self):
+        handler = self._get_fake_handler()
+        key = 'fake_key'
+        with self.assertRaises(AssertionError):
+            embed.AbstractEmbed.get_embed_snippet(handler, key)
+
+
 class RegistryTest(actions.TestBase):
 
     def setUp(self):
@@ -398,6 +426,14 @@ class RegistryTest(actions.TestBase):
 
     def test_get_returns_none_if_no_match(self):
         self.assertIsNone(embed.Registry.get('no_match'))
+
+    def test_get_kind_returns_kind_of_registered_embed(self):
+        embed.Registry.bind('fragment', embed.AbstractEmbed)
+        self.assertEquals(
+            'fragment', embed.Registry.get_kind(embed.AbstractEmbed))
+
+    def test_get_kind_returns_none_if_no_match(self):
+        self.assertIsNone(embed.Registry.get_kind(embed.AbstractEmbed))
 
 
 class StaticResourcesTest(actions.TestBase):

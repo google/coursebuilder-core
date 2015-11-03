@@ -191,19 +191,25 @@ class AbstractEmbed(object):
     the ENROLLMENT_POLICY to it, then redirect to the desired resource.
     """
 
-    # TODO(johncox): add method for generating HTML embed snippet once we have
-    # a concrete implementation backed by an entity with an editor. Snippet
-    # format is:
-    #
-    # <script type='text/javascript' src='http://example.tld/_EMBED_JS_URL'>
-    # </script>
-    # <cb-embed
-    #   src='http://example.tld/namespace/_DISPATCH_URL/kind/id_or_name'>
-    # </cb-embed>
-
     # Enrollment policy we apply before 302ing to the requested resource. Can be
     # used by embed types that require an enrolled student during their render.
     ENROLLMENT_POLICY = AbstractEnrollmentPolicy
+
+    @classmethod
+    def get_embed_snippet(cls, handler, embed_key):
+        kind = Registry.get_kind(cls)
+        assert kind is not None
+
+        host_url = handler.request.host_url
+        slug = handler.app_context.get_slug()
+
+        script_src = '%s%s' % (host_url, _EMBED_JS_URL)
+        cb_embed_src = '%s%s%s/%s/%s' % (
+            host_url, slug, _DISPATCH_URL, kind, embed_key)
+        snippet = (
+            '<script src="%s"></script>\n'
+            '<cb-embed src="%s"></cb-embed>') % (script_src, cb_embed_src)
+        return snippet
 
     @classmethod
     def dispatch(cls, handler):
@@ -366,6 +372,13 @@ class Registry(object):
     def get(cls, kind):
         """Gets embed_class (or None) by kind string."""
         return cls._bindings.get(kind)
+
+    @classmethod
+    def get_kind(cls, embed_cls):
+        for key, value in cls._bindings.items():
+            if value == embed_cls:
+                return key
+        return None
 
 
 class UrlParser(object):

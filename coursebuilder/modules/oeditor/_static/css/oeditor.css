@@ -935,3 +935,15 @@ div.new-form-layout div.cb-editor-small div.CodeMirror {
 .hidden-header > fieldset > .inputEx-Group-legend {
   display:none;
 }
+div.new-form-layout .inputEx-Field.embed-code-snippet-display {
+  width: inherit;
+  margin-left: 140px;
+  margin-right: 10px;
+  float: none;
+}
+div.new-form-layout .inputEx-Field.embed-code-snippet-display textarea {
+  width: 100%;
+  height: 3em;
+  overflow-x: auto;
+  overflow-y: auto;
+}
