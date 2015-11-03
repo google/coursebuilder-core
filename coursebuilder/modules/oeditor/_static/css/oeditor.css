@@ -73,6 +73,9 @@ div.inputEx-CheckBox input {
 .gcb-datetime > .inputEx-label {
   margin-top: 7px;
 }
+.gcb-datetime .inputEx-description {
+  margin-left: 140px;
+}
 .gcb-datetime > .inputEx-CombineField {
   margin-top: 5px;
 }

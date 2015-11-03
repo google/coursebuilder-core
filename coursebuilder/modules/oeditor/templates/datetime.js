@@ -14,6 +14,12 @@ function bindDatetimeField(Y) {
           .addClass('inputEx-DatePicker-ClearButton')
           .click(function(){ that.clear() })
           .insertBefore(that.divEl.lastChild);
+
+      if (this.options.description) {
+        $('<div class="inputEx-description">')
+            .text(this.options.description)
+            .insertBefore(that.divEl.lastChild);
+      }
     },
     setValue: function(val, sendUpdatedEvt) {
       if (val) {
