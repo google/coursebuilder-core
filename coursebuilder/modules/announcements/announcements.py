@@ -38,6 +38,7 @@ from models import roles
 from models import transforms
 from models.models import MemcacheManager
 from models.models import Student
+from modules.announcements import messages
 from modules.dashboard import dashboard
 from modules.oeditor import oeditor
 
@@ -270,25 +271,32 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
         schema.add_property(schema_fields.SchemaField(
             'key', 'ID', 'string', editable=False, hidden=True))
         schema.add_property(schema_fields.SchemaField(
-            'title', 'Title', 'string', optional=True))
+            'title', 'Title', 'string',
+            description=messages.ANNOUNCEMENT_TITLE_DESCRIPTION))
         schema.add_property(schema_fields.SchemaField(
-            'html', 'Body', 'html', optional=True,
+            'html', 'Body', 'html',
+            description=messages.ANNOUNCEMENT_BODY_DESCRIPTION,
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags': tags.EditorBlacklists.COURSE_SCOPE}))
+                'excludedCustomTags': tags.EditorBlacklists.COURSE_SCOPE},
+            optional=True))
         schema.add_property(schema_fields.SchemaField(
             'date', 'Date', 'string',
-            optional=True, extra_schema_dict_values={
+            description=messages.ANNOUNCEMENT_DATE_DESCRIPTION,
+            extra_schema_dict_values={
                 '_type': 'datetime',
                 'className': 'inputEx-CombineField gcb-datetime '
                 'inputEx-fieldWrapper date-only'}))
-        resources_display.LabelGroupsHelper.add_labels_schema_fields(schema)
+        resources_display.LabelGroupsHelper.add_labels_schema_fields(
+            schema, 'announcement')
         schema.add_property(schema_fields.SchemaField(
             'is_draft', 'Status', 'boolean',
+            description=messages.ANNOUNCEMENT_STATUS_DESCRIPTION,
+            extra_schema_dict_values={'className': 'split-from-main-group'},
+            optional=True,
             select_data=[
                 (True, resources_display.DRAFT_TEXT),
-                (False, resources_display.PUBLISHED_TEXT)],
-            extra_schema_dict_values={'className': 'split-from-main-group'}))
+                (False, resources_display.PUBLISHED_TEXT)]))
         return schema
 
     def get(self):

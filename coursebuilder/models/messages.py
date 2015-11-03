@@ -77,7 +77,7 @@ If this lesson is "%s", only admins can see it. If it is "%s", then anyone
 who has access to the course can see it.
 """ % (DRAFT_TEXT, PUBLISHED_TEXT)
 
-QUESTION_DESCRIPTION = 'Shown when selecting questions for quizzes, etc.'
+QUESTION_DESCRIPTION = 'This is the description of this question.'
 
 INCORRECT_ANSWER_FEEDBACK = """
 Shown when the student response does not match any of the possible answers.
@@ -155,10 +155,9 @@ ASSESSMENT_SINGLE_SUBMISSION_DESCRIPTION = """
 If checked, students may only submit their answers once.
 """
 
-ASSESSMENT_DUE_DATE_FORMAT_DESCRIPTION = safe_dom.assemble_text_message("""
-Should be formatted as YYYY-MM-DD hh:mm (e.g. 2013-07-16 19:20) and be specified
-in the UTC timezone.""", None)
-
+ASSESSMENT_DUE_DATE_FORMAT_DESCRIPTION = """
+If specified, students will not be able to submit answers after this date.
+"""
 
 ASSESSMENT_SHOW_FEEDBACK_DESCRIPTION = """Show students their total score and
 the feedback for their answers after the due date is passed.  If no due date is
@@ -300,6 +299,35 @@ This content appears at the bottom of the unit page.
 SHORT_ANSWER_SCORE_DESCRIPTION = """
 Points a student receives for answering this question correctly. 1.0 indicates
 full credit.
+"""
+
+SHORT_ANSWER_TYPE_DESCRIPTION = """
+This indicates the type of answer.
+"""
+
+SHORT_ANSWER_ANSWER_DESCRIPTION = """
+The correct answer for this question.
+"""
+
+SHORT_ANSWER_FEEDBACK_DESCRIPTION = """
+Shown when the student response does not match any of the possible answers.
+"""
+
+SHORT_ANSWER_DESCRIPTION_DESCRIPTION = """
+This is the description of this question.
+"""
+
+SHORT_ANSWER_HINT_DESCRIPTION = """
+This provides a hint to the answer.
+"""
+
+MULTIPLE_CHOICE_FEEDBACK_DESCRIPTION = """
+This text provides feedback to the student for this particular answer choice.
+"""
+
+MULTIPLE_CHOICE_RANDOMIZE_CHOICES_DESCRIPTION = """
+If checked, the answer choices will be presented to each student in a random
+order.
 """
 
 TRANSLATIONS_BASE_LANGUAGE = """
@@ -483,3 +511,58 @@ Engine admins and course admins, so don't repeat them here. Course-specific
 whitelists supercede this list: if a course has a non-blank whitelist, this list
 is ignored.
 """
+
+ORGANIZATION_NAME_DESCRIPTION = """
+The organization name appears in the footer of every page, but only when the
+Organization URL is also provided.
+"""
+
+ORGANIZATION_URL_DESCRIPTION = """
+When the Organization Name is provided, it is displayed in the footer of every
+page linked to the Organization URL. Links to other sites must start with "http"
+or "https".
+"""
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+IMAGE_OR_VIDEO_DESCRIPTION = safe_dom.assemble_text_message("""
+URL for the preview image or YouTube video shown on the course homepage. Videos
+must use the YouTube embed URL.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+
+IMAGE_DESCRIPTION_DESCRIPTION = """
+This is the alt text for the preview image on the course syllabus page (useful
+for screen readers).
+"""
+
+SITE_NAME_DESCRIPTION = """
+This is the name of the site header of every page, next to the Site Logo. It
+links to the root (default) of this deployment.
+"""
+
+SITE_LOGO_DESCRIPTION = """
+This logo is displayed in the upper left corner of every student facing page,
+next to the Site Name. It links to the root (default) of this deployment. Links
+to other sites must start with "http" or "https".
+"""
+
+SITE_LOGO_DESCRIPTION_DESCRIPTION = """
+This is the alt text for the Site Logo (useful for screen readers).
+"""
+
+COURSE_URL_COMPONENT_DESCRIPTION = """
+This is the basename of your course in the URL.
+"""
+
+COURSE_NAMESPACE_DESCRIPTION = """
+This is the namespace for your course.
+"""
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+GOOGLE_API_KEY_DESCRIPTION = safe_dom.assemble_text_message("""
+The Google API Key is required to enable certain functionality.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+
+# TODO(johncox): replace placeholder URL once target link is determined.
+GOOGLE_CLIENT_ID_DESCRIPTION = safe_dom.assemble_text_message("""
+The Google Client ID is required to enable certain functionality.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')

@@ -68,7 +68,7 @@ def options_schema_provider(unused_course):
         'Extra Tab',
         extra_schema_dict_values={'className': 'settings-list-item'})
     extra_tab_type.add_property(schema_fields.SchemaField(
-        LABEL_KEY, 'Title', 'string', optional=True,
+        LABEL_KEY, 'Title', 'string',
         description=messages.EXTRA_TABS_TITLE_DESCRIPTION))
     extra_tab_type.add_property(schema_fields.SchemaField(
         POSITION_KEY, 'Tab Position', 'string',

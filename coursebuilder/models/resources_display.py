@@ -129,7 +129,8 @@ class ResourceSAQuestion(ResourceQuestionBase):
             sa_question, 'question', 'Question', 'sa-question',
             supportCustomTags, optional=False)
         cls._add_html_field_to(
-            sa_question, 'hint', 'Hint', 'sa-hint', supportCustomTags)
+            sa_question, 'hint', 'Hint', 'sa-hint', supportCustomTags,
+            description=messages.SHORT_ANSWER_HINT_DESCRIPTION)
         cls._add_html_field_to(
             sa_question, 'defaultFeedback', 'Feedback', 'sa-feedback',
             supportCustomTags,
@@ -159,18 +160,22 @@ class ResourceSAQuestion(ResourceQuestionBase):
             extra_schema_dict_values={
                 'className': 'sa-grader-score',
                 'value': '1.0',
-            }, i18n=False, optional=True))
+            }, i18n=False))
         grader_type.add_property(schema_fields.SchemaField(
-            'matcher', 'Grading', 'string', optional=True, i18n=False,
-            select_data=cls.GRADER_TYPES,
-            extra_schema_dict_values={'className': 'sa-grader-score'}))
+            'matcher', 'Type', 'string',
+            description=messages.SHORT_ANSWER_TYPE_DESCRIPTION,
+            extra_schema_dict_values={'className': 'sa-grader-score'},
+            i18n=False, optional=True, select_data=cls.GRADER_TYPES))
         grader_type.add_property(schema_fields.SchemaField(
-            'response', 'Response', 'string', optional=False,
+            'response', 'Answer', 'string',
+            description=messages.SHORT_ANSWER_ANSWER_DESCRIPTION,
             extra_schema_dict_values={
-                'className': 'inputEx-Field sa-grader-text'}))
+                'className': 'inputEx-Field sa-grader-text'},
+            optional=False))
         cls._add_html_field_to(
             grader_type, 'feedback', 'Feedback', 'sa-grader-feedback',
-            supportCustomTags)
+            supportCustomTags,
+            description=messages.SHORT_ANSWER_FEEDBACK_DESCRIPTION)
 
         graders_array = schema_fields.FieldArray(
             'graders', '', item_type=grader_type,
@@ -216,8 +221,10 @@ class ResourceMCQuestion(ResourceQuestionBase):
             supportCustomTags)
 
         mc_question.add_property(schema_fields.SchemaField(
-            'permute_choices', 'Permute Choices', 'boolean', optional=True,
-            extra_schema_dict_values={'className': 'mc-bool-option'}))
+            'permute_choices', 'Randomize Choices', 'boolean',
+            description=messages.MULTIPLE_CHOICE_RANDOMIZE_CHOICES_DESCRIPTION,
+            extra_schema_dict_values={'className': 'mc-bool-option'},
+            optional=True))
 
         mc_question.add_property(schema_fields.SchemaField(
             'all_or_nothing_grading', 'All or Nothing', 'boolean',
@@ -249,11 +256,11 @@ class ResourceMCQuestion(ResourceQuestionBase):
             extra_schema_dict_values={
                 'className': 'mc-choice-score', 'value': '0'}))
         cls._add_html_field_to(
-            choice_type, 'text', 'Text', 'mc-choice-text', supportCustomTags,
-            optional=False)
+            choice_type, 'text', 'Text', 'mc-choice-text', supportCustomTags)
         cls._add_html_field_to(
             choice_type, 'feedback', 'Feedback', 'mc-choice-feedback',
-            supportCustomTags)
+            supportCustomTags,
+            description=messages.MULTIPLE_CHOICE_FEEDBACK_DESCRIPTION)
 
         choices_array = schema_fields.FieldArray(
             'choices', '', item_type=choice_type, optional=True,
@@ -392,35 +399,48 @@ class LabelGroupsHelper(object):
         {
             'name': LABELS_FIELD_NAME,
             'label': 'Labels',
-            'description': 'This labels the content for your reference.',
+            'description':
+                'The {content} is tagged with these labels for your reference.',
             'type_id': models.LabelDTO.LABEL_TYPE_GENERAL,
         },
         {
             'name': TRACKS_FIELD_NAME,
             'label': 'Tracks',
             'description':
-                'This content is only visible to students in these tracks.',
+                'The {content} is part of these tracks. If none are selected, '
+                'it will be part of all tracks.',
             'type_id': models.LabelDTO.LABEL_TYPE_COURSE_TRACK,
+            'learn_more':
+                # TODO(johncox): replace placeholder URL once target link is
+                # determined.
+                'https://code.google.com/p/course-builder/wiki/Dashboard',
         },
         {
             'name': LOCALES_FIELD_NAME,
             'label': 'Languages',
-            'description': 'This content is only available in these languages.',
+            'description':
+                'The {content} is available in these languages, in addition to '
+                'the base language.',
             'type_id': models.LabelDTO.LABEL_TYPE_LOCALE,
         },
     ]
 
     @classmethod
-    def add_labels_schema_fields(cls, schema, exclude_types=None):
+    def add_labels_schema_fields(cls, schema, type_name, exclude_types=None):
         """Creates multiple form fields for choosing labels"""
         if exclude_types is None:
             exclude_types = []
 
         for field in cls.FIELDS:
             if field['name'] not in exclude_types:
+                description = field['description'].format(content=type_name)
+                learn_more = field.get('learn_more')
+                if learn_more:
+                    description = safe_dom.assemble_text_message(
+                        description, learn_more)
+
                 schema.add_property(schema_fields.FieldArray(
-                    field['name'], field['label'],
-                    description=field['description'],
+                    field['name'], field['label'], description=str(description),
                     extra_schema_dict_values={
                         '_type': 'checkbox-list',
                     },
@@ -820,7 +840,7 @@ class ResourceUnit(ResourceUnitBase):
     @classmethod
     def get_schema(cls, course, key):
         schema = cls._generate_common_schema('Unit')
-        LabelGroupsHelper.add_labels_schema_fields(schema)
+        LabelGroupsHelper.add_labels_schema_fields(schema, 'unit')
         schema.add_property(schema_fields.SchemaField(
             'pre_assessment', 'Pre-Assessment', 'integer', optional=True,
             description=messages.UNIT_PRE_ASSESSMENT_DESCRIPTION))
@@ -885,7 +905,7 @@ class ResourceAssessment(ResourceUnitBase):
             exclude_types.append(LabelGroupsHelper.TRACKS_FIELD_NAME)
 
         LabelGroupsHelper.add_labels_schema_fields(
-            course_opts, exclude_types=exclude_types)
+            course_opts, 'assessment', exclude_types=exclude_types)
 
         course_opts.add_property(schema_fields.SchemaField(
             'weight', 'Points', 'number',
@@ -995,10 +1015,9 @@ class ResourceLink(ResourceUnitBase):
     @classmethod
     def get_schema(cls, course, key):
         schema = cls._generate_common_schema('Link')
-        LabelGroupsHelper.add_labels_schema_fields(schema)
+        LabelGroupsHelper.add_labels_schema_fields(schema, 'link')
         schema.add_property(schema_fields.SchemaField(
-            'url', 'URL', 'string', optional=True,
-            description=messages.LINK_URL_DESCRIPTION,
+            'url', 'URL', 'string', description=messages.LINK_URL_DESCRIPTION,
             extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
         return schema
 
@@ -1079,7 +1098,7 @@ class ResourceLesson(resource.AbstractResourceHandler):
             extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
         lesson.add_property(schema_fields.SchemaField(
             'auto_index', 'Auto-Number', 'boolean',
-            description=messages.LESSON_AUTO_NUMBER_DESCRIPTION))
+            description=messages.LESSON_AUTO_NUMBER_DESCRIPTION, optional=True))
         lesson.add_property(schema_fields.SchemaField(
             'activity_title', 'Activity Title', 'string', optional=True,
             description=messages.LESSON_ACTIVITY_TITLE_DESCRIPTION))

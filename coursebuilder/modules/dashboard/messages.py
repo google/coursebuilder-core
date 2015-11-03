@@ -32,9 +32,12 @@ LABELS_DESCRIPTION_DESCRIPTION = """
 This is the description of this label.
 """
 
-LABELS_TYPE_DESCRIPTION = """
-You can put students in different <b>Course tracks</b> to show them different
-units.
+TRACKS_TITLE_DESCRIPTION = """
+This is the name of this track.
+"""
+
+TRACKS_DESCRIPTION_DESCRIPTION = """
+This is the description of this track.
 """
 
 GIFT_GROUP_DESCRIPTION_DESCRIPTION = """

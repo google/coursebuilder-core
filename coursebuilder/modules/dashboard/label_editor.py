@@ -82,18 +82,19 @@ class AbstractLabelRestHandler(dto_editor.BaseDatastoreRestHandler):
     DAO = models.LabelDAO
 
     @classmethod
-    def get_schema(cls):
-        schema = schema_fields.FieldRegistry('Label', 'label')
+    def get_templated_schema(
+            cls, title, title_description, description_description):
+        schema = schema_fields.FieldRegistry(title, 'label')
         schema.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         schema.add_property(schema_fields.SchemaField(
             'id', 'ID', 'string', editable=False, hidden=True, optional=True))
         schema.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string',
-            description=messages.LABELS_TITLE_DESCRIPTION))
+            description=title_description))
         schema.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string', optional=True,
-            description=messages.LABELS_DESCRIPTION_DESCRIPTION))
+            description=description_description))
         return schema
 
     def sanitize_input_dict(self, json_dict):
@@ -143,8 +144,20 @@ class LabelRestHandler(AbstractLabelRestHandler):
     DEFAULT_TITLE = 'New Label'
     LABEL_TYPE = models.LabelDTO.LABEL_TYPE_GENERAL
 
+    @classmethod
+    def get_schema(cls):
+        return cls.get_templated_schema(
+            'Label', messages.LABELS_TITLE_DESCRIPTION,
+            messages.LABELS_DESCRIPTION_DESCRIPTION)
+
 
 class TrackRestHandler(AbstractLabelRestHandler):
     URI = '/rest/track'
     DEFAULT_TITLE = 'New Track'
     LABEL_TYPE = models.LabelDTO.LABEL_TYPE_COURSE_TRACK
+
+    @classmethod
+    def get_schema(cls):
+        return cls.get_templated_schema(
+            'Track', messages.TRACKS_TITLE_DESCRIPTION,
+            messages.TRACKS_DESCRIPTION_DESCRIPTION)

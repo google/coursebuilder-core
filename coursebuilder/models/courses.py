@@ -2451,9 +2451,11 @@ class Course(object):
             })
 
         opts.add_property(schema_fields.SchemaField(
-            'institution:name', 'Organization Name', 'string', optional=True))
+            'institution:name', 'Organization Name', 'string',
+            description=messages.ORGANIZATION_NAME_DESCRIPTION, optional=True))
         opts.add_property(schema_fields.SchemaField(
             'institution:url', 'Organization URL', 'string',
+            description=messages.ORGANIZATION_URL_DESCRIPTION,
             extra_schema_dict_values={'_type': 'url', 'showMsg': True},
             optional=True))
 
@@ -2465,14 +2467,16 @@ class Course(object):
 
         opts.add_property(schema_fields.SchemaField(
             'base:nav_header', 'Site Name', 'string',
-            description='Header phrase for the main navigation bar',
+            description=messages.SITE_NAME_DESCRIPTION,
             optional=True))
         opts.add_property(schema_fields.SchemaField(
             'institution:logo:url', 'Site Logo', 'string',
+            description=messages.SITE_LOGO_DESCRIPTION,
             extra_schema_dict_values={'_type': 'url', 'showMsg': True},
             optional=True))
         opts.add_property(schema_fields.SchemaField(
-            'institution:logo:alt_text', 'Site Logo Alt Text', 'string',
+            'institution:logo:alt_text', 'Site Logo Description', 'string',
+            description=messages.SITE_LOGO_DESCRIPTION_DESCRIPTION,
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
@@ -2481,9 +2485,11 @@ class Course(object):
 
         opts.add_property(schema_fields.SchemaField(
             '_reserved:context_path', 'Course URL Component', 'uneditable',
+            description=messages.COURSE_URL_COMPONENT_DESCRIPTION,
             optional=True))
         opts.add_property(schema_fields.SchemaField(
             '_reserved:namespace', 'Course Namespace', 'uneditable',
+            description=messages.COURSE_NAMESPACE_DESCRIPTION,
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
@@ -2521,14 +2527,13 @@ class Course(object):
 
         opts.add_property(schema_fields.SchemaField(
             'course:main_image:url', 'Image or Video', 'string',
-            description='URL for the preview image or YouTube video shown on '
-            'the course homepage.', optional=True,
-            extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
+            description=str(messages.IMAGE_OR_VIDEO_DESCRIPTION),
+            extra_schema_dict_values={'_type': 'url', 'showMsg': True},
+            optional=True))
 
         opts.add_property(schema_fields.SchemaField(
             'course:main_image:alt_text', 'Image Description', 'string',
-            description='Alt text for the preview image on the course '
-            'homepage.', optional=True))
+            description=messages.IMAGE_DESCRIPTION_DESCRIPTION, optional=True))
 
         opts.add_property(schema_fields.SchemaField(
             'base:show_gplus_button', 'Show G+ Button', 'boolean',
@@ -2550,7 +2555,7 @@ class Course(object):
                 CONFIG_KEY_GOOGLE_API_KEY, 'Google API Key', 'string',
                 optional=True, i18n=False, description='Google API Key'))
             opts.add_property(schema_fields.SchemaField(
-                CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client Id', 'string',
+                CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client ID', 'string',
                 optional=True, i18n=False, description='Google Client Id'))
 
     @classmethod

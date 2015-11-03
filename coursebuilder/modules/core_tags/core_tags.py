@@ -149,15 +149,13 @@ class GoogleDoc(CoreTag):
             # contents do not appear instantly.
             schema_fields.SchemaField(
                 'link', 'Document Link', 'string',
-                description=('Provide the "Document Link" from the Google Docs '
-                             '"Publish to the web" dialog')))
+                description=messages.DOCUMENT_LINK_DESCRIPTION))
         reg.add_property(
             schema_fields.SchemaField(
                 'height', 'Height', 'string', i18n=False,
                 optional=True,
                 extra_schema_dict_values={'value': '300'},
-                description=('Height of the document, in pixels. Width will be '
-                             'set automatically')))
+                description=messages.DOCUMENT_HEIGHT_DESCRIPTION))
         return reg
 
 
@@ -220,10 +218,7 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
             runtime = _Runtime(handler.app_context)
             if not runtime.configured():
                 return self.unavailable_schema(
-                    'Google Drive is not available. Please make sure the '
-                    'global gcb_courses_can_use_google_apis setting is True '
-                    'and set the Google API Key and Google Client ID in course '
-                    'settings in order to use this tag.')
+                    messages.GOOGLE_DRIVE_UNAVAILABLE)
 
             api_key = runtime.get_api_key()
             client_id = runtime.get_client_id()
@@ -232,13 +227,13 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
         reg.add_property(
             schema_fields.SchemaField(
                 'document-id', 'Document ID', 'string',
-                description='The ID of the Google Drive item you want to '
-                'use', i18n=False, extra_schema_dict_values={
+                description=messages.DOCUMENT_ID_DESCRIPTION,
+                extra_schema_dict_values={
                     'api-key': api_key,
                     'client-id': client_id,
                     'type-id': self.CONTENT_CHUNK_TYPE,
                     'xsrf-token': GoogleDriveRESTHandler.get_xsrf_token(),
-                }))
+                }, i18n=False))
 
         return reg
 
@@ -444,15 +439,13 @@ class GoogleSpreadsheet(CoreTag):
             # document or to its contents do not appear instantly.
             schema_fields.SchemaField(
                 'link', 'Link', 'string',
-                description=('Provide the link from the Google Spreadsheets '
-                             '"Publish to the web" dialog')))
+                description=messages.GOOGLE_SPREADSHEET_LINK_DESCRIPTION))
         reg.add_property(
             schema_fields.SchemaField(
-                'height', 'Height', 'string', i18n=False,
-                optional=True,
+                'height', 'Height', 'string',
+                description=messages.GOOGLE_SPREADSHEET_HEIGHT_DESCRIPTION,
                 extra_schema_dict_values={'value': '300'},
-                description=('Height of the spreadsheet, in pixels. Width will '
-                             'be set automatically')))
+                i18n=False, optional=True))
         return reg
 
 
@@ -504,8 +497,8 @@ class YouTube(CoreTag):
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(YouTube.name())
         reg.add_property(schema_fields.SchemaField(
-            'videoid', 'Video Id', 'string',
-            description='Provide YouTube video ID (e.g. Kdg2drcUjYI)'))
+            'videoid', 'Video ID', 'string',
+            description=messages.VIDEO_ID_DESCRIPTION))
         return reg
 
 
@@ -550,19 +543,16 @@ class Html5Video(CoreTag):
         reg.add_property(
             schema_fields.SchemaField(
                 'url', 'Video URL', 'url',
-                optional=False,
-                description='URL of the video.  Note that playing a video'
-                'from Google Docs is supported; add "&export=download".  E.g.,'
-                'https://docs.google.com/a/google.com/uc?authuser=0'
-                '&id=0B82t9jeypLokMERMQ1g5Q3NFU1E&export=download'))
+                description=messages.HTML5_VIDEO_URL_DESCRIPTION,
+                optional=False))
         reg.add_property(schema_fields.SchemaField(
             'width', 'Width', 'integer',
-            optional=True,
-            description='Width, in pixels.'))
+            description=messages.HTML5_VIDEO_WIDTH_DESCRIPTION,
+            optional=True))
         reg.add_property(schema_fields.SchemaField(
             'height', 'Height', 'integer',
-            optional=True,
-            description='Height, in pixels.'))
+            description=messages.HTML5_VIDEO_HEIGHT_DESCRIPTION,
+            optional=True))
         return reg
 
 
@@ -640,12 +630,11 @@ class IFrame(CoreTag):
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(IFrame.name())
         reg.add_property(schema_fields.SchemaField(
-            'src', 'Embed URL', 'string', optional=True,
+            'src', 'Embed URL', 'string',
             description=messages.RTE_IFRAME_EMBED_URL,
             extra_schema_dict_values={'_type': 'url', 'showMsg': True}))
         reg.add_property(schema_fields.SchemaField(
-            'title', 'Title', 'string', optional=True,
-            description=messages.RTE_IFRAME_TITLE))
+            'title', 'Title', 'string', description=messages.RTE_IFRAME_TITLE))
         reg.add_property(schema_fields.SchemaField(
             'height', 'Height', 'string', i18n=False, optional=True,
             extra_schema_dict_values={'value': '400'},

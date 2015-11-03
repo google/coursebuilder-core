@@ -27,7 +27,7 @@ This is the name of the Google Group Category, if any was set up.
 
 # TODO(johncox): replace placeholder URL once target link is determined.
 RTE_GOOGLE_GROUP_GROUP_NAME = safe_dom.assemble_text_message("""
-This is the name of the Google Group.
+This is the name of the Google Group. The group must be @googlegroups.com.
 """, 'https://code.google.com/p/course-builder/wiki/Dashboard')
 
 RTE_IFRAME_EMBED_URL = """
@@ -50,3 +50,47 @@ This is the width of the iframe, in pixels.
 RTE_MARKDOWN_MARKDOWN = safe_dom.assemble_text_message("""
 This is the markdown text.
 """, 'https://code.google.com/p/course-builder/wiki/Dashboard')
+
+DOCUMENT_LINK_DESCRIPTION = """
+This is the link from the Google Docs "Publish to the web" dialog to embed the
+document.
+"""
+
+DOCUMENT_HEIGHT_DESCRIPTION = """
+The document displays with this height; the width is set automatically.
+"""
+
+GOOGLE_DRIVE_UNAVAILABLE = """
+Before embedding a Google Drive object, Google APIs must be configured for this
+course.
+"""
+
+DOCUMENT_ID_DESCRIPTION = """
+Paste the ID of the Google Drive item you want to use or pick one in the
+chooser.
+"""
+
+VIDEO_ID_DESCRIPTION = """
+This is the YouTube video ID (e.g., Kdg2drcUjYI) to embed.
+"""
+
+HTML5_VIDEO_URL_DESCRIPTION = """
+This is the video to embed. Google Drive videos can be played by adding "&export=download" to the URL.
+"""
+
+HTML5_VIDEO_WIDTH_DESCRIPTION = """
+The video displays with this width.
+"""
+
+HTML5_VIDEO_HEIGHT_DESCRIPTION = """
+The video displays with this height.
+"""
+
+GOOGLE_SPREADSHEET_LINK_DESCRIPTION = """
+This is the link from the Google Spreadsheet "Publish to the web" dialog to
+embed the document.
+"""
+
+GOOGLE_SPREADSHEET_HEIGHT_DESCRIPTION = """
+The document displays with this height; the width is set automatically.
+"""

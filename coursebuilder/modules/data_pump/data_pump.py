@@ -1197,7 +1197,7 @@ def register_module():
     json_key = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + JSON_KEY,
         'JSON Key', 'text', description=str(messages.JSON_KEY), i18n=False,
-        optional=True, validator=validate_json_key)
+        validator=validate_json_key)
 
     def validate_table_lifetime(value, errors):
         if not value:

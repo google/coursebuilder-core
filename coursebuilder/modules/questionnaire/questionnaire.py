@@ -108,7 +108,7 @@ class QuestionnaireTag(tags.ContextAwareTag):
                 description=str(messages.RTE_QUESTIONNAIRE_FORM_ID)))
         reg.add_property(
             schema_fields.SchemaField(
-                'button-label', 'Submit Label', 'string', optional=True,
+                'button-label', 'Submit Label', 'string',
                 i18n=True, description=messages.RTE_QUESTIONNAIRE_SUBMIT_LABEL))
         reg.add_property(
             schema_fields.SchemaField(
