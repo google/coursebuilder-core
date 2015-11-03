@@ -29,11 +29,11 @@
   left: -1000%;
 }
 .gcb-butterbar-dashboard .gcb-butterbar {
-  background: #1043A0;
+  background: #2196F3;
   border: none;
-  -mozkit-box-shadow: 0 0 6px 0px rgba(0,0,0,0.5);
-  -webkit-box-shadow: 0 0 6px 0px rgba(0,0,0,0.5);
-  box-shadow: 0 0 6px 0px rgba(0,0,0,0.5);
+  -mozkit-box-shadow: 0 0 4px 0px rgba(0,0,0,0.5);
+  -webkit-box-shadow: 0 0 4px 0px rgba(0,0,0,0.5);
+  box-shadow: 0 0 4px 0px rgba(0,0,0,0.5);
   color: #fff;
 }
 
@@ -74,7 +74,7 @@
   cursor: default;
 }
 .gcb-butterbar-dashboard #gcb-butterbar-close {
-  color: #ccf;
+  color: #026382;
   font-weight: normal;
 }
 
@@ -82,5 +82,5 @@
   color: #555555;
 }
 .gcb-butterbar-dashboard #gcb-butterbar-close:hover {
-  color: #5076bb;
+  color: #0284ae;
 }
