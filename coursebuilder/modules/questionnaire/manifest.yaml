@@ -1,0 +1,22 @@
+tests:
+  functional:
+    - modules.questionnaire.questionnaire_tests.QuestionnaireDataSourceTests = 2
+    - modules.questionnaire.questionnaire_tests.QuestionnaireRESTHandlerTests = 5
+    - modules.questionnaire.questionnaire_tests.QuestionnaireTagTests = 3
+  unit:
+    - modules.questionnaire.questionnaire_unit_tests.JavaScriptTests = 1
+
+files:
+  - modules/questionnaire/__init__.py
+  - modules/questionnaire/javascript_tests/fixture.html
+  - modules/questionnaire/javascript_tests/form_data.json
+  - modules/questionnaire/javascript_tests/karma.conf.js
+  - modules/questionnaire/javascript_tests/tests.js
+  - modules/questionnaire/messages.py
+  - modules/questionnaire/questionnaire.py
+  - modules/questionnaire/questionnaire_tests.py
+  - modules/questionnaire/questionnaire_unit_tests.py
+  - modules/questionnaire/resources/css/button.css
+  - modules/questionnaire/resources/img/icon.png
+  - modules/questionnaire/resources/js/questionnaire.js
+  - modules/questionnaire/templates/questionnaire.html

@@ -2,10 +2,9 @@ describe("questionnaire library", function () {
 
   beforeEach(function () {
     jasmine.getFixtures().fixturesPath = "base/";
-    loadFixtures("tests/unit/javascript_tests/modules_questionnaire/" +
-        "fixture.html");
+    loadFixtures("modules/questionnaire/javascript_tests/fixture.html");
     this.payload = JSON.parse(readFixtures(
-        "tests/unit/javascript_tests/modules_questionnaire/form_data.json"));
+        "modules/questionnaire/javascript_tests/form_data.json"));
     this.button = $("button.questionnaire-button");
     this.form = $("#standard-form form");
     this.key = "This-form-id"

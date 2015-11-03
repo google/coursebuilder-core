@@ -1,0 +1,17 @@
+tests:
+  functional:
+    - modules.notifications.notifications_tests.CronTest = 9
+    - modules.notifications.notifications_tests.DatetimeConversionTest = 1
+    - modules.notifications.notifications_tests.ManagerTest = 31
+    - modules.notifications.notifications_tests.NotificationTest = 8
+    - modules.notifications.notifications_tests.PayloadTest = 6
+    - modules.notifications.notifications_tests.SerializedPropertyTest = 2
+    - modules.notifications.notifications_tests.StatsTest = 2
+
+files:
+  - modules/notifications/__init__.py
+  - modules/notifications/cron.py
+  - modules/notifications/notifications.py
+  - modules/notifications/notifications_tests.py
+  - modules/notifications/stats.html
+  - modules/notifications/stats.py

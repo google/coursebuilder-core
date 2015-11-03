@@ -1,0 +1,4 @@
+files:
+  - modules/mapreduce/__init__.py
+  - modules/mapreduce/mapreduce_module.py
+  - modules/mapreduce/messages.py

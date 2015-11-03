@@ -1,0 +1,5 @@
+files:
+  - modules/oauth2/__init__.py
+  - modules/oauth2/client_secrets.json
+  - modules/oauth2/oauth2.py
+  - modules/oauth2/templates/result.html

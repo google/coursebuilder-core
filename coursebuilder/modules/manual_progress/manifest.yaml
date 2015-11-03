@@ -1,0 +1,8 @@
+tests:
+  functional:
+    - modules.manual_progress.manual_progress_tests.ManualProgressTest = 24
+
+files:
+  - modules/manual_progress/__init__.py
+  - modules/manual_progress/manual_progress.py
+  - modules/manual_progress/manual_progress_tests.py

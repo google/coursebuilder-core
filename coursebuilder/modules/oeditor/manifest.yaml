@@ -1,0 +1,29 @@
+tests:
+  functional:
+    - modules.oeditor.oeditor_tests.ButtonbarCssHandlerTests = 2
+    - modules.oeditor.oeditor_tests.EditorPrefsTests = 6
+    - modules.oeditor.oeditor_tests.ObjectEditorTest = 4
+  unit:
+    - modules.oeditor.oeditor_unit_tests.JavaScriptTests = 1
+
+files:
+  - modules/oeditor/__init__.py
+  - modules/oeditor/_static/css/butterbar.css
+  - modules/oeditor/_static/css/oeditor.css
+  - modules/oeditor/_static/js/butterbar.js
+  - modules/oeditor/_static/js/popup.js
+  - modules/oeditor/_static/js/resize_iframes.js
+  - modules/oeditor/javascript_tests/karma.conf.js
+  - modules/oeditor/javascript_tests/tests.js
+  - modules/oeditor/oeditor.py
+  - modules/oeditor/oeditor_tests.py
+  - modules/oeditor/oeditor_unit_tests.py
+  - modules/oeditor/templates/checkbox-list.js
+  - modules/oeditor/templates/code.js
+  - modules/oeditor/templates/datetime.js
+  - modules/oeditor/templates/oeditor.html
+  - modules/oeditor/templates/oeditor.js
+  - modules/oeditor/templates/popup.html
+  - modules/oeditor/templates/preview_editor.html
+  - modules/oeditor/templates/rte.js
+  - modules/oeditor/templates/uneditable.js

@@ -33,6 +33,8 @@ from google.appengine.api import mail_errors
 from google.appengine.ext import db
 from google.appengine.ext import deferred
 
+# Allow access to code under test. pylint: disable=protected-access
+
 
 class UnregisteredRetentionPolicy(notifications.RetentionPolicy):
     NAME = 'unregistered'
