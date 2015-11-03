@@ -1,0 +1,12 @@
+tests:
+  functional:
+    - modules.data_removal.data_removal_tests.DataRemovalTests = 8
+    - modules.data_removal.data_removal_tests.UserInteractionTests = 16
+
+files:
+  - modules/data_removal/__init__.py
+  - modules/data_removal/data_removal.py
+  - modules/data_removal/data_removal_tests.py
+  - modules/data_removal/delete_confirmation.html
+  - modules/data_removal/messages.py
+  - modules/data_removal/removal_models.py

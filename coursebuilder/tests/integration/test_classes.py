@@ -20,377 +20,25 @@ __author__ = [
 
 import collections
 import os
-import random
 import time
 import urllib
 import urllib2
 
 import pageobjects
-from selenium import webdriver
-from selenium.common import exceptions
-from selenium.webdriver.chrome import options
 
 from models import transforms
-from modules.embed import embed
-from tests import suite
 from tests.integration import fake_visualizations
+from tests.integration import integration
 
-BROWSER_WIDTH = 1600
-BROWSER_HEIGHT = 1000
 
-
-class BaseIntegrationTest(suite.TestBase):
-    """Base class for all integration tests."""
-
-    LOGIN = 'test@example.com'
-
-    def setUp(self):
-        super(BaseIntegrationTest, self).setUp()
-        chrome_options = options.Options()
-        chrome_options.add_argument('--disable-extensions')
-
-        # Sadly, the max wait for the driver to become ready is hard-coded at
-        # 30 seconds.  However, that seems like it'd be enough for our
-        # purposes, so retrying the whole shebang seems like a better bet for
-        # getting rid of the flakiness due to occasional failure to connect to
-        # the Chrome driver.
-        self.driver = None
-        tries = 10
-        while not self.driver:
-            tries -= 1
-            try:
-                self.driver = webdriver.Chrome(chrome_options=chrome_options)
-            except exceptions.WebDriverException, ex:
-                print ex
-                if tries:
-                    print 'Retrying Chrome connection up to %d more times' % (
-                        tries)
-                else:
-                    raise ex
-
-        # Set a large enough window size independent of screen size so that all
-        # click actions can be performed correctly.
-        self.driver.set_window_size(BROWSER_WIDTH, BROWSER_HEIGHT)
-
-    def tearDown(self):
-        time.sleep(1)  # avoid broken sockets on the server
-        self.driver.quit()
-        super(BaseIntegrationTest, self).tearDown()
-
-    def load_root_page(self):
-        ret = pageobjects.RootPage(self).load(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL)
-        tries = 10
-        while tries and 'This webpage is not avail' in self.driver.page_source:
-            tries -= 1
-            time.sleep(1)
-            ret = pageobjects.RootPage(self).load(
-                suite.TestBase.INTEGRATION_SERVER_BASE_URL)
-        return ret
-
-    def load_dashboard(self, name):
-        return pageobjects.DashboardPage(self).load(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL, name)
-
-    def load_appengine_admin(self, course_name):
-        return pageobjects.AppengineAdminPage(
-            self, suite.TestBase.ADMIN_SERVER_BASE_URL, course_name)
-
-    def load_sample_course(self):
-        # Be careful using this method. The sample class is a singleton and
-        # tests which use it will not be isolated. This can lead to a number of
-        # subtle collisions between tests that do not manifest when the tests
-        # are run individually, but *do* manifest when run en bloc. Prefer
-        # create_new_course() whenever possible.
-        name = 'sample'
-        title = 'Power Searching with Google'
-
-        page = self.load_root_page(
-        ).click_login(
-        ).login(
-            self.LOGIN, admin=True
-        ).click_dashboard(
-        ).click_admin()
-
-        if not page.has_course(name):
-            page.click_add_sample_course(
-            ).set_fields(
-                name=name, title=title, email=self.LOGIN
-            ).click_ok()
-
-        return self.load_dashboard(name)
-
-    def get_slug_for_current_course(self):
-        """Returns the slug for the current course based on the current URL."""
-        return '/' + self.driver.current_url.split('/')[3]
-
-    def get_uid(self):
-        """Generate a unique id string."""
-        uid = ''
-        for i in range(10):  # pylint: disable=unused-variable
-            j = random.randint(0, 61)
-            if j < 26:
-                uid += chr(65 + j)  # ascii capital letters
-            elif j < 52:
-                uid += chr(97 + j - 26)  # ascii lower case letters
-            else:
-                uid += chr(48 + j - 52)  # ascii digits
-        return uid
-
-    def create_new_course(self, login=True):
-        """Create a new course with a unique name, using the admin tools."""
-        uid = self.get_uid()
-        name = 'ns_%s' % uid
-        title = 'Test Course (%s)' % uid
-
-        page = self.load_root_page()
-
-        if login:
-            page.click_login(
-            ).login(
-                self.LOGIN, admin=True
-            )
-
-        page.click_dashboard(
-        ).click_admin(
-        ).click_add_course(
-        ).set_fields(
-            name=name, title=title, email='a@bb.com'
-        ).click_ok()
-
-        return (name, title)
-
-    def set_admin_setting(self, setting_name, state):
-        """Configure a property on Admin setting page."""
-
-        self.load_root_page(
-        ).click_dashboard(
-        ).click_admin(
-        ).click_site_settings(
-        ).click_override(
-            setting_name
-        ).set_value(
-            state
-        ).set_status(
-            'Active'
-        ).click_save(
-        ).click_close()
-
-
-class EmbedModuleTest(BaseIntegrationTest):
-
-    # Ideally we'd fetch this programmatically, but the integration tests can't
-    # see app contexts, and we don't want to refactor the DOM to make it
-    # accessible.
-    SAMPLE_COURSE_TITLE = 'Power Searching with Google'
-
-    def setUp(self):
-        super(EmbedModuleTest, self).setUp()
-        self.email = 'test@example.com'
-
-    def assert_embed_has_error(self, page, error):
-        self.assertIsNotNone(page)
-        self.assertTrue(page.has_error(error))
-
-    def assert_is_embed_page(self, page, embedded_course_title):
-        self.assertIsNotNone(page)
-        page_text = page.get_text()
-        self.assertIn('Greetings, %s.' % self.email, page_text)
-        self.assertIn(embedded_course_title, page_text)
-
-    def assert_is_sign_in_page(self, page):
-        self.assertIsNotNone(page)
-        self.assertIn('start', page.get_text().lower())
-
-    def get_demo_child_url(self, name):
-        return (
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL + embed._DEMO_CHILD_URL +
-            '?slug=' + name)
-
-    def get_demo_url(self):
-        return (
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL + embed._DEMO_URL)
-
-    def get_global_errors_url(self):
-        return (
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL +
-            embed._GLOBAL_ERRORS_DEMO_URL)
-
-    def get_local_errors_url(self):
-        return (
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL +
-            embed._LOCAL_ERRORS_DEMO_URL)
-
-    def make_course_enrollable(self, name):
-        self.load_dashboard(
-            name
-        ).click_availability(
-        ).set_course_availability('Registration Required'
-        ).set_whitelisted_students(
-            [self.email]
-        ).click_save()
-
-    def set_child_courses_and_make_course_available(
-            self, parent_name, child_name):
-        self.load_dashboard(parent_name
-        ).click_availability(
-        ).set_course_availability('Registration Required'
-        ).click_save()
-
-        self.load_dashboard(parent_name
-        ).click_advanced_settings(
-        ).click_advanced_edit(
-        ).set_child_courses(
-            [child_name]
-        )
-
-    def test_embed_global_errors(self):
-        self.load_sample_course()
-        pageobjects.RootPage(self).load(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL).click_logout()
-
-        global_error_page = pageobjects.EmbedModuleDemoPage(self).load(
-            self.get_global_errors_url())
-
-        # Because both widgets have configuration errors, the embeds are both in
-        # state error and no sign-in widget is shown.
-        cb_embeds = global_error_page.get_cb_embed_elements()
-
-        self.assertEquals(2, len(cb_embeds))
-
-        first_error_page = global_error_page.load_embed(
-            cb_embeds[0], wait_for=pageobjects.EmbedModuleStateError)
-        global_error_message = (
-            'Embed src '
-            '"http://other:8081/sample/modules/embed/v1/resource/example/1" '
-            'does not match origin "http://localhost:8081"')
-
-        self.assert_embed_has_error(first_error_page, global_error_message)
-
-        second_error_page = global_error_page.load_embed(
-            cb_embeds[1], wait_for=pageobjects.EmbedModuleStateError)
-        global_error_message = (
-            'Embed src '
-            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
-            '2" does not match origin "http://localhost:8081"')
-        local_error_message = (
-            'Embed src '
-            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
-            '2" does not match first cb-embed src found, which is from the '
-            'deployment at "http://other:8081/sample/modules/embed/v1". '
-            'All cb-embeds in a single page must be from the same Course '
-            'Builder deployment.')
-
-        self.assert_embed_has_error(second_error_page, global_error_message)
-        self.assert_embed_has_error(second_error_page, local_error_message)
-
-    def test_embed_local_errors(self):
-        self.load_sample_course()
-        pageobjects.RootPage(self).load(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL).click_logout()
-
-        local_error_page = pageobjects.EmbedModuleDemoPage(self).load(
-            self.get_local_errors_url())
-
-        # Before signing in, the first embed shows the sign-in widget, and the
-        # second shows both a global and a local error.
-        cb_embeds = local_error_page.get_cb_embed_elements()
-
-        self.assertEquals(2, len(cb_embeds))
-        self.assert_is_sign_in_page(
-            local_error_page.load_embed(
-                cb_embeds[0], wait_for=pageobjects.EmbedModuleStateSignIn))
-
-        second_embed_page = local_error_page.load_embed(
-            cb_embeds[1], wait_for=pageobjects.EmbedModuleStateError)
-        global_error_message = (
-            'Embed src '
-            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
-            '2" does not match origin "http://localhost:8081"')
-        local_error_message = (
-            'Embed src '
-            '"http://localhost:8082/sample/modules/embed/v1/resource/example/'
-            '2" does not match first cb-embed src found, which is from the '
-            'deployment at "http://localhost:8081/sample/modules/embed/v1". '
-            'All cb-embeds in a single page must be from the same Course '
-            'Builder deployment.')
-
-        self.assert_embed_has_error(second_embed_page, global_error_message)
-        self.assert_embed_has_error(second_embed_page, local_error_message)
-
-        # After signing in, the first embed shows content and the second embed
-        # shows both a global and a local error.
-        local_error_page.login(self.email)
-
-        cb_embeds = local_error_page.get_cb_embed_elements()
-
-        self.assertEquals(2, len(cb_embeds))
-
-        first_embed_page = local_error_page.load_embed(cb_embeds[0])
-        second_embed_page = local_error_page.load_embed(
-            cb_embeds[1], wait_for=pageobjects.EmbedModuleStateError)
-
-        self.assert_is_embed_page(first_embed_page, self.SAMPLE_COURSE_TITLE)
-        self.assert_embed_has_error(second_embed_page, global_error_message)
-        self.assert_embed_has_error(second_embed_page, local_error_message)
-
-    def test_embed_render_lifecycle_for_child_course(self):
-        child_name, child_title = self.create_new_course()
-        self.make_course_enrollable(child_name)
-        parent_name = self.create_new_course(login=False)[0]
-        self.set_child_courses_and_make_course_available(
-            parent_name, child_name)
-        pageobjects.RootPage(self).load(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL).click_logout()
-        demo_page = pageobjects.EmbedModuleDemoPage(self).load(
-            self.get_demo_child_url(parent_name))
-        embeds = demo_page.get_cb_embed_elements()
-
-        self.assertTrue(len(embeds) == 1)
-
-        for cb_embed in embeds:
-            page = demo_page.load_embed(
-                cb_embed, wait_for=pageobjects.EmbedModuleStateSignIn)
-            self.assert_is_sign_in_page(page)
-
-        demo_page.login(self.email)
-
-        # Force refetch of embeds because login state changed.
-        for cb_embed in demo_page.get_cb_embed_elements():
-            page = demo_page.load_embed(cb_embed)
-            self.assert_is_embed_page(page, child_title)
-
-    def test_embed_render_lifecycle_for_single_course(self):
-        dashboard_page = self.load_sample_course()
-        pageobjects.RootPage(self).load(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL).click_logout()
-        demo_page = pageobjects.EmbedModuleDemoPage(self).load(
-            self.get_demo_url())
-        embeds = demo_page.get_cb_embed_elements()
-
-        self.assertTrue(len(embeds) == 3)
-
-        for cb_embed in embeds:
-            page = demo_page.load_embed(
-                cb_embed, wait_for=pageobjects.EmbedModuleStateSignIn)
-            self.assert_is_sign_in_page(page)
-
-        demo_page.login(self.email)
-
-        # Force refetch of embeds because login state changed.
-        for cb_embed in demo_page.get_cb_embed_elements():
-            page = demo_page.load_embed(cb_embed)
-            self.assert_is_embed_page(page, self.SAMPLE_COURSE_TITLE)
-
-
-class IntegrationServerInitializationTask(BaseIntegrationTest):
+class IntegrationServerInitializationTask(integration.TestBase):
 
     def test_setup_default_course(self):
         self.load_root_page()._add_default_course_if_needed(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL)
+            integration.TestBase.INTEGRATION_SERVER_BASE_URL)
 
 
-class SampleCourseTests(BaseIntegrationTest):
+class SampleCourseTests(integration.TestBase):
     """Integration tests on the sample course installed with Course Builder."""
 
     def test_admin_can_add_announcement(self):
@@ -439,7 +87,7 @@ class SampleCourseTests(BaseIntegrationTest):
         ).verify_admin_user_emails_contains(email)
 
 
-class AdminTests(BaseIntegrationTest):
+class AdminTests(integration.TestBase):
     """Tests for the administrator interface."""
 
     LOGIN = 'test@example.com'
@@ -732,7 +380,7 @@ class AdminTests(BaseIntegrationTest):
         )
 
 
-class QuestionsTest(BaseIntegrationTest):
+class QuestionsTest(integration.TestBase):
 
     def test_inline_question_creation(self):
         name = self.create_new_course()[0]
@@ -1018,7 +666,7 @@ class QuestionsTest(BaseIntegrationTest):
         ).return_to_unit()
 
 
-class VisualizationsTest(BaseIntegrationTest):
+class VisualizationsTest(integration.TestBase):
 
     def setUp(self):
         super(VisualizationsTest, self).setUp()
@@ -1041,7 +689,7 @@ class VisualizationsTest(BaseIntegrationTest):
         self._assert_have_page_number(page, data_source, page_number)
 
     def _force_response_common(self, data_source, action, page_number=0):
-        url = (suite.TestBase.INTEGRATION_SERVER_BASE_URL +
+        url = (integration.TestBase.INTEGRATION_SERVER_BASE_URL +
                fake_visualizations.ForceResponseHandler.URL)
         fp = urllib2.urlopen(url, urllib.urlencode({
             fake_visualizations.ForceResponseHandler.PARAM_DATA_SOURCE:
@@ -1221,7 +869,7 @@ class VisualizationsTest(BaseIntegrationTest):
                           page.get_data_source_logs('fake_answers'))
 
 
-class EventsTest(BaseIntegrationTest):
+class EventsTest(integration.TestBase):
 
     def test_html5_video_events(self):
         name = self.create_new_course()[0]

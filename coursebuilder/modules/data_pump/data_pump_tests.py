@@ -19,7 +19,6 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 import datetime
 import time
 
-import actions
 import apiclient
 from common import catch_and_log
 from common import schema_fields
@@ -32,6 +31,7 @@ from models import models
 from models import transforms
 from modules.data_pump import data_pump
 from modules.analytics import rest_providers
+from tests.functional import actions
 
 from google.appengine.ext import deferred
 
@@ -39,6 +39,8 @@ COURSE_NAME = 'data_pump'
 ADMIN_EMAIL = 'admin@foo.com'
 USER_EMAIL = 'user@foo.com'
 USER_NAME = 'Some User'
+
+# pylint: disable=protected-access
 
 
 class TrivialDataSource(data_sources.AbstractRestDataSource):

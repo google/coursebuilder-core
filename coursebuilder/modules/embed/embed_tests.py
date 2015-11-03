@@ -61,6 +61,7 @@ class DemoHandlerTestBase(actions.TestBase):
 
 class DemoHandlerTest(DemoHandlerTestBase):
 
+    # Allow access to code under test. pylint: disable=protected-access
     _HANDLER = embed._DemoHandler
     _URL = embed._DEMO_URL
 
@@ -73,6 +74,7 @@ class DemoHandlerTest(DemoHandlerTestBase):
 
 class GlobalErrorsDemoHandlerTest(DemoHandlerTestBase):
 
+    # Allow access to code under test. pylint: disable=protected-access
     _HANDLER = embed._GlobalErrorsDemoHandler
     _URL = embed._GLOBAL_ERRORS_DEMO_URL
 
@@ -85,6 +87,7 @@ class GlobalErrorsDemoHandlerTest(DemoHandlerTestBase):
 
 class LocalErrorsDemoHandlerTest(DemoHandlerTestBase):
 
+    # Allow access to code under test. pylint: disable=protected-access
     _HANDLER = embed._LocalErrorsDemoHandler
     _URL = embed._LOCAL_ERRORS_DEMO_URL
 
@@ -114,7 +117,8 @@ class ExampleEmbedTestBase(actions.TestBase):
     def assert_embed_rendered(self, response, email, course_title):
         self.assert_expected_headers_present(response.headers)
         self.assertEquals(200, response.status_code)
-        # Frame resizing JS present.
+        # Frame resizing JS present. Allow access to code under test.
+        # pylint: disable=protected-access
         self.assertIn(embed._EMBED_CHILD_JS_URL, response.body)
         # The desired user is authenticated.
         self.assertIn(email, response.body)
@@ -331,9 +335,36 @@ class ExampleEmbedAndHandlerV1SingleCourseTest(ExampleEmbedTestBase):
             'Request malformed; kind: None, id_or_name: None')
 
 
+class EmbedSnippetTest(actions.TestBase):
+
+    def _get_fake_handler(self):
+        app_context = sites.ApplicationContext(
+            'course', '/the_course', None, None, None)
+        request = FakeRequest('GET', 'https://www.example.com')
+        return FakeHandler(app_context, request)
+
+    def test_snippet_for_registered_embed(self):
+        embed.Registry.bind('fragment', embed.AbstractEmbed)
+        handler = self._get_fake_handler()
+        key = 'fake_key'
+        self.assertEquals(
+            '<script src="https://www.example.com/modules/embed/v1/embed.js">'
+            '</script>\n'
+            '<cb-embed src="https://www.example.com/the_course/modules/embed'
+            '/v1/resource/fragment/fake_key"></cb-embed>',
+            embed.AbstractEmbed.get_embed_snippet(handler, key))
+
+    def test_snippet_for_non_registered_embed(self):
+        handler = self._get_fake_handler()
+        key = 'fake_key'
+        with self.assertRaises(AssertionError):
+            embed.AbstractEmbed.get_embed_snippet(handler, key)
+
+
 class FinishAuthHandlerTest(actions.TestBase):
 
     def test_get_returns_200_with_contents(self):
+        # Allow access to code under test. pylint: disable=protected-access
         response = self.testapp.get(embed._FINISH_AUTH_URL)
 
         self.assertEquals(200, response.status_code)
@@ -363,51 +394,30 @@ class JsHandlersTest(actions.TestBase):
         self.assert_javascript_content_type(response)
 
     def test_embed_child_js_returns_js_with_caching_disabled(self):
+        # Allow access to code under test. pylint: disable=protected-access
         self.assert_successful_js_response_with_caching_disabled(
             self.testapp.get(embed._EMBED_CHILD_JS_URL))
 
     def test_embed_js_returns_js_with_caching_disabled(self):
+        # Allow access to code under test. pylint: disable=protected-access
         self.assert_successful_js_response_with_caching_disabled(
             self.testapp.get(embed._EMBED_JS_URL))
 
     def test_embed_lib_js_returns_js_with_caching_disabled(self):
+        # Allow access to code under test. pylint: disable=protected-access
         self.assert_successful_js_response_with_caching_disabled(
             self.testapp.get(embed._EMBED_LIB_JS_URL))
-
-
-class EmbedSnippetTest(actions.TestBase):
-
-    def _get_fake_handler(self):
-        app_context = sites.ApplicationContext(
-            'course', '/the_course', None, None, None)
-        request = FakeRequest('GET', 'https://www.example.com')
-        return FakeHandler(app_context, request)
-
-    def test_snippet_for_registered_embed(self):
-        embed.Registry.bind('fragment', embed.AbstractEmbed)
-        handler = self._get_fake_handler()
-        key = 'fake_key'
-        self.assertEquals(
-            '<script src="https://www.example.com/modules/embed/v1/embed.js">'
-            '</script>\n'
-            '<cb-embed src="https://www.example.com/the_course/modules/embed'
-            '/v1/resource/fragment/fake_key"></cb-embed>',
-            embed.AbstractEmbed.get_embed_snippet(handler, key))
-
-    def test_snippet_for_non_registered_embed(self):
-        handler = self._get_fake_handler()
-        key = 'fake_key'
-        with self.assertRaises(AssertionError):
-            embed.AbstractEmbed.get_embed_snippet(handler, key)
 
 
 class RegistryTest(actions.TestBase):
 
     def setUp(self):
         super(RegistryTest, self).setUp()
+        # Allow access to code under test. pylint: disable=protected-access
         self.old_bindings = dict(embed.Registry._bindings)
 
     def tearDown(self):
+        # Allow access to code under test. pylint: disable=protected-access
         embed.Registry._bindings = self.old_bindings
         super(RegistryTest, self).tearDown()
 
@@ -439,6 +449,7 @@ class RegistryTest(actions.TestBase):
 class StaticResourcesTest(actions.TestBase):
 
     def test_get_returns_successful_response_with_correct_headers(self):
+        # Allow access to code under test. pylint: disable=protected-access
         response = self.testapp.get(embed._EMBED_CSS_URL)
 
         self.assertEquals(200, response.status_code)

@@ -42,7 +42,6 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 ALL_INTEGRATION_TEST_CLASSES = {
     'tests.integration.test_classes.IntegrationTestBundle1': 15,
     'tests.integration.test_classes.VisualizationsTest': 5,
-    'tests.integration.test_classes.EmbedModuleTest': 4,
 }
 
 # here we list all functional and unit tests that run in-process
@@ -102,29 +101,9 @@ ALL_TEST_CLASSES = {
     'tests.functional.module_config_test.ManipulateAppYamlFileTest': 8,
     'tests.functional.module_config_test.ModuleIncorporationTest': 12,
     'tests.functional.module_config_test.ModuleManifestTest': 7,
-    'tests.functional.modules_data_pump.SchemaConversionTests': 1,
-    'tests.functional.modules_data_pump.StudentSchemaValidationTests': 2,
-    'tests.functional.modules_data_pump.PiiTests': 7,
-    'tests.functional.modules_data_pump.BigQueryInteractionTests': 36,
-    'tests.functional.modules_data_pump.UserInteractionTests': 4,
-    'tests.functional.modules_data_removal.DataRemovalTests': 8,
-    'tests.functional.modules_data_removal.UserInteractionTests': 16,
     'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
-    'tests.functional.modules_embed.DemoHandlerTest': 2,
-    'tests.functional.modules_embed.EmbedSnippetTest': 2,
-    'tests.functional.modules_embed'
-        '.ExampleEmbedAndHandlerV1ChildCoursesTest': 5,
-    'tests.functional.modules_embed'
-        '.ExampleEmbedAndHandlerV1SingleCourseTest': 3,
-    'tests.functional.modules_embed.FinishAuthHandlerTest': 1,
-    'tests.functional.modules_embed.GlobalErrorsDemoHandlerTest': 2,
-    'tests.functional.modules_embed.JsHandlersTest': 3,
-    'tests.functional.modules_embed.LocalErrorsDemoHandlerTest': 2,
-    'tests.functional.modules_embed.RegistryTest': 5,
-    'tests.functional.modules_embed.StaticResourcesTest': 1,
-    'tests.functional.modules_embed.UrlParserTest': 12,
     'tests.functional.modules_invitation.InvitationHandlerTests': 16,
     'tests.functional.modules_invitation.ProfileViewInvitationTests': 5,
     'tests.functional.modules_invitation.SantitationTests': 1,
