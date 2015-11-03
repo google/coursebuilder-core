@@ -157,15 +157,15 @@ class AssetsRestTest(actions.TestBase):
         response = self.get(ITEM_ASSET_URL + '?key=assets/img')
         payload = transforms.loads(transforms.loads(response.body)['payload'])
         self.assertEquals('assets/img', payload['key'])
-        self.assertEquals('assets/img', payload['base'])
-        self.assertNotIn('asset_url', payload)
+        self.assertEquals('/assets/img/', payload['base'])
+        self.assertEquals('assets/img/', payload['asset_url'])
 
     def test_get_nonexistent_asset(self):
         response = self.get(ITEM_ASSET_URL + '?key=assets/img/foo.jpg')
         payload = transforms.loads(transforms.loads(response.body)['payload'])
         self.assertEquals('assets/img/foo.jpg', payload['key'])
-        self.assertEquals('assets/img', payload['base'])
-        self.assertNotIn('asset_url', payload)
+        self.assertEquals('/assets/img/', payload['base'])
+        self.assertEquals('assets/img/', payload['asset_url'])
 
     def test_cannot_overwrite_existing_file_without_key(self):
         def add_asset():

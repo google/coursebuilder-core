@@ -1,3 +1,17 @@
+# Copyright 2013 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Classes to build sanitized HTML."""
 
 __author__ = 'John Orr (jorr@google.com)'
@@ -299,14 +313,25 @@ class Entity(Node):
         return self._entity
 
 
+def _assemble_link_element(uri, text, **attr):
+    attr['href'] = uri
+    return Element('a', **attr).add_text(text)
+
+
 def assemble_text_message(text, link):
     node_list = NodeList()
     if text:
         node_list.append(Text(text))
         node_list.append(Entity('&nbsp;'))
     if link:
-        node_list.append(Element(
-            'a', href=link, target='_blank').add_text('Learn more...'))
+        node_list.append(
+            _assemble_link_element(link, 'Learn more...', target='_blank'))
+    return node_list
+
+
+def assemble_link(uri, text, **attr):
+    node_list = NodeList()
+    node_list.append(_assemble_link_element(uri, text, **attr))
     return node_list
 
 

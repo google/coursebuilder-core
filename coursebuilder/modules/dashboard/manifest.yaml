@@ -7,6 +7,8 @@ tests:
     - modules.dashboard.dashboard_tests.RoleEditorTestCase = 3
     - modules.dashboard.dashboard_tests.TestLessonSchema = 2
   unit:
+    - modules.dashboard.dashboard_unit_tests.AllowedBasesTests = 5
+    - modules.dashboard.dashboard_unit_tests.AssetPathsTests = 5
     - modules.dashboard.dashboard_unit_tests.JavaScriptTests = 1
 
 files:
@@ -15,6 +17,7 @@ files:
   - modules/dashboard/_static/css/in_place_lesson_editor.css
   - modules/dashboard/_static/css/mdl_undo.css
   - modules/dashboard/_static/css/view.css
+  - modules/dashboard/asset_paths.py
   - modules/dashboard/dashboard.py
   - modules/dashboard/dashboard_tests.py
   - modules/dashboard/dashboard_unit_tests.py

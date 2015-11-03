@@ -49,6 +49,58 @@ Additionally, a question group is added with all the questions. Course Builder
 supports multiple choice, true-false, short answer, and numerical questions.
 """, "https://code.google.com/p/course-builder/wiki/Dashboard")
 
+IMAGES_DOCS_UPLOAD_NEW_FILE_DESCRIPTION = """
+Upload a file to set or replace the content of this asset.
+"""
+
+IMAGES_DOCS_UPLOAD_NEW_CSS_DESCRIPTION = """
+Upload a new CSS file, which must not have the same name as any existing CSS
+file.<br>
+To edit an existing CSS file, select it from the previous
+""" + str(safe_dom.assemble_link(
+    "dashboard?action=style_css", "Style > CSS",
+    title="Opens the Style > CSS list in a new browser tab.",
+    target="_blank")) + """
+list.
+"""
+
+IMAGES_DOCS_UPLOAD_NEW_HTML_DESCRIPTION = """
+Upload a new HTML file, which must not have the same name as any existing
+HTML file.<br>
+To edit an existing HTML file, select it from the previous
+""" + str(safe_dom.assemble_link(
+    "dashboard?action=edit_html", "Create > HTML",
+    title="Opens the Create > HTML list in a new browser tab.",
+    target="_blank")) + """
+list.
+"""
+
+IMAGES_DOCS_UPLOAD_NEW_JS_DESCRIPTION = """
+Upload a new JavaScript file, which must not have the same name as any
+existing JavaScript file.<br>
+To edit an existing JavaScript file, select it from the previous
+""" + str(safe_dom.assemble_link(
+    "dashboard?action=style_js", "Style > JavaScript",
+    title="Opens the Style > JavaScript list in a new browser tab.",
+    target="_blank")) + """
+list.
+"""
+
+IMAGES_DOCS_UPLOAD_NEW_TEMPLATE_DESCRIPTION = """
+Upload a new HTML template, which must not have the same name as any existing
+HTML template.<br>
+To edit an existing HTML template, select it from the previous
+""" + str(safe_dom.assemble_link(
+    "dashboard?action=style_templates", "Style > Templates",
+    title="Opens the Style > Templates list in a new browser tab.",
+    target="_blank")) + """
+list.
+"""
+
+IMAGES_DOCS_UPLOAD_NEW_IMAGE_DESCRIPTION = """
+Upload an image to set or replace the content of this asset.
+"""
+
 ROLE_NAME_DESCRIPTION = """
 This is the name of this role.
 """

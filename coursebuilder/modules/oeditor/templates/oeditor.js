@@ -231,25 +231,74 @@ function formatServerErrorMessage(status, message) {
  * simply expose a link to the asset.
  */
 function renderAsset(Y, uri) {
-  imageExts = ['png', 'jpg', 'jpeg', 'gif'];
   var div = document.createElement('div');
+
+  // If loc is null after the execution of the loop checking for allowed
+  // image asset file extensions, it is assumed that a match was not found,
+  // and the new asset case needs to be handled.
+  var found = false;
+
+  // The first item in the render div is a "location", which is either a link
+  // to the existing image asset or, for the new image upload case, a link
+  // back to the "Create > Images" list page.
+  var loc = document.createElement('a');
+  loc.setAttribute('target', '_blank');
+  loc.appendChild(document.createTextNode(uri));
+  div.appendChild(loc);
+  div.appendChild(document.createElement('br'));
+
+  // One way or another, the enclosing render div will contain a description
+  // as the last element.
+  var desc = document.createElement('div');
+  desc.setAttribute('class', 'inputEx-description');
+
+  // Compare the tail end of the uri to allowed image asset file extensions.
+  imageExts = ['.png', '.jpg', '.jpeg', '.gif'];
   for (i in imageExts) {
     var ext = imageExts[i];
-    if (uri.length >= ext.length &&
-        uri.substring(uri.length - ext.length).toLowerCase() == ext) {
+    if ((uri.length > ext.length) && uri.toLowerCase().endsWith(ext)) {
+      // uri matches one of the valid image asset file extensions, so assume
+      // it points to an existing image asset.
+      found = true;
+      // Insert a "preview" of the existing image asset that will be replaced.
+      // ("Preview" because CSS is used to cap the maximum displayed size.)
       var img = document.createElement('img');
       img.setAttribute('src', uri);
-      img.setAttribute('class', 'framed');
+      img.setAttribute('class', 'framed'); // img.framed caps max-width.
       div.appendChild(img);
       div.appendChild(document.createElement('br'));
+      // Customize the "helper text" in the description div to the specific
+      // case of replacing an existing image asset.
+      desc.appendChild(document.createTextNode(
+          "A preview of the existing image that will be replaced."));
+      // Set the loc link target to that existing image asset.
+      loc.setAttribute('href', uri);
+      loc.setAttribute('title',
+                       "Opens this existing image in a new browser tab.");
       break;
     }
   }
-  var link = document.createElement('a');
-  link.setAttribute('href', uri);
-  link.setAttribute('target', '_blank');
-  link.appendChild(document.createTextNode(uri));
-  div.appendChild(link);
+  if (!found) {
+    // uri did not match one of the valid image asset file extensions, so
+    // this is not the "replacing an existing asset" case.
+    desc.appendChild(document.createTextNode(
+        "Destination for a new uploaded image, which must not have the same" +
+        " name as any existing image."));
+    desc.appendChild(document.createElement('br'));
+    desc.appendChild(document.createTextNode(
+        "To override an existing image, select that image from the previous "));
+    var images = document.createElement('a');
+    images.setAttribute('href', "dashboard?action=edit_images");
+    images.setAttribute('target', '_blank');
+    images.appendChild(document.createTextNode("Create > Images"));
+    desc.appendChild(images);
+    desc.appendChild(document.createTextNode(" list."));
+    loc.setAttribute('href', "dashboard?action=edit_images");
+    loc.setAttribute('title',
+                     "Opens the Create > Images list in a new browser tab.");
+  }
+  // Return a completed render div after appending an always-last description.
+  div.appendChild(desc);
   return div;
 }
 

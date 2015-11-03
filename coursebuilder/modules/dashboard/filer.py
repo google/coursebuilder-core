@@ -18,6 +18,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import base64
 import cgi
+import collections
 import os
 import urllib
 
@@ -33,37 +34,13 @@ from models import courses
 from models import roles
 from models import transforms
 from models import vfs
+from modules.dashboard import asset_paths
+from modules.dashboard import messages
 from modules.dashboard import utils as dashboard_utils
 from modules.oeditor import oeditor
 
-# Set of string. The relative, normalized path bases we allow uploading of
-# binary data into.
-ALLOWED_ASSET_BINARY_BASES = frozenset([
-    'assets/img',
-])
-# Set of string. The relative, normalized path bases we allow uploading of text
-# data into.
-ALLOWED_ASSET_TEXT_BASES = frozenset([
-    'assets/css',
-    'assets/html',
-    'assets/lib',
-    'views'
-])
-
-DISPLAYABLE_ASSET_BASES = frozenset([
-    'assets/img',
-])
 
 MAX_ASSET_UPLOAD_SIZE_K = 500
-
-
-def allowed_asset_upload_bases():
-    """The relative, normalized path bases we allow uploading into.
-
-    Returns:
-        Set of string.
-    """
-    return ALLOWED_ASSET_BINARY_BASES.union(ALLOWED_ASSET_TEXT_BASES)
 
 
 def is_text_payload(payload):
@@ -149,14 +126,12 @@ class FileManagerAndEditor(ApplicationHandler):
         template_values['main_content'] = form_html
         self.render_page(template_values, in_action=from_action)
 
-    def _is_displayable_asset(self, path):
-        return any([path.startswith(name) for name in DISPLAYABLE_ASSET_BASES])
-
     def get_manage_asset(self):
         """Show an upload/delete dialog for assets."""
 
-        key = self.request.get('key').lstrip('/').rstrip('/')
-        if not _is_asset_in_allowed_bases(key):
+        path = self.request.get('key')
+        key = asset_paths.as_key(path)
+        if not asset_paths.AllowedBases.is_path_allowed(path):
             raise ValueError('Cannot add/edit asset with key "%s" ' % key +
                              'which is not under a valid asset path')
         fs = self.app_context.fs.impl
@@ -176,13 +151,8 @@ class FileManagerAndEditor(ApplicationHandler):
             # show a blank form, bring the user back to the assets list.
             auto_return = True
 
-        if self._is_displayable_asset(key):
-            json = AssetItemRESTHandler.DISPLAYABLE_SCHEMA_JSON
-            ann = AssetItemRESTHandler.DISPLAYABLE_SCHEMA_ANNOTATIONS_DICT
-        else:
-            json = AssetItemRESTHandler.UNDISPLAYABLE_SCHEMA_JSON
-            ann = AssetItemRESTHandler.UNDISPLAYABLE_SCHEMA_ANNOTATIONS_DICT
-
+        details = AssetItemRESTHandler.get_schema_details(path)
+        json, ann = details.json, details.annotations
         from_action = self.request.get('from_action')
         exit_url = self.canonicalize_url(
             dashboard_utils.build_assets_url(from_action))
@@ -277,23 +247,6 @@ def create_course_file_if_not_exists(handler):
             users.get_current_user().email()))
 
 
-def _match_allowed_bases(filename,
-                         allowed_bases=allowed_asset_upload_bases()):
-    for allowed_base in allowed_bases:
-        if (filename == allowed_base or
-            (filename.startswith(allowed_base) and
-             len(filename) > len(allowed_base) and
-             filename[len(allowed_base)] == '/')):
-            return allowed_base
-    return None
-
-
-def _is_asset_in_allowed_bases(filename,
-                               allowed_bases=allowed_asset_upload_bases()):
-    matched_base = _match_allowed_bases(filename, allowed_bases)
-    return True if matched_base else False
-
-
 class TextAssetRESTHandler(BaseRESTHandler):
     """REST endpoints for text assets."""
 
@@ -344,7 +297,7 @@ class TextAssetRESTHandler(BaseRESTHandler):
                 self, 401, 'Access denied.', {'key': filename})
             return
 
-        if not _is_asset_in_allowed_bases(filename):
+        if not asset_paths.AllowedBases.is_path_allowed(filename):
             transforms.send_json_response(
                 self, 400, 'Malformed request.', {'key': filename})
             return
@@ -395,7 +348,7 @@ class TextAssetRESTHandler(BaseRESTHandler):
                 self, 401, 'Access denied.', {'key': filename})
             return
 
-        if not _is_asset_in_allowed_bases(filename):
+        if not asset_paths.AllowedBases.is_path_allowed(filename):
             transforms.send_json_response(
                 self, 400, 'Malformed request.', {'key': filename})
             return
@@ -440,12 +393,11 @@ class FilesItemRESTHandler(BaseRESTHandler):
     URI = '/rest/files/item'
     FILE_ENCODING_TEXT = 'text/utf-8'
     FILE_ENCODING_BINARY = 'binary/base64'
-    FILE_EXTENTION_TEXT = ['.js', '.css', '.yaml', '.html', '.csv']
+    FILE_EXTENSION_TEXT = frozenset(['.js', '.css', '.yaml', '.html', '.csv'])
 
     @classmethod
     def is_text_file(cls, filename):
-        # TODO(psimakov): this needs to be better and not use linear search
-        for extention in cls.FILE_EXTENTION_TEXT:
+        for extention in cls.FILE_EXTENSION_TEXT:
             if filename.endswith(extention):
                 return True
         return False
@@ -568,13 +520,11 @@ class FilesItemRESTHandler(BaseRESTHandler):
         transforms.send_json_response(self, 200, 'Deleted.')
 
 
-def add_asset_handler_base_fields(schema):
+def add_asset_handler_base_fields(schema, name, description):
     """Helper function for building schemas of asset-handling OEditor UIs."""
 
     schema.add_property(schema_fields.SchemaField(
-        'file', 'Upload New File', 'file',
-        description='You may upload a file to set or replace the content '
-        'of the asset.'))
+        'file', name, 'file', description=description))
     schema.add_property(schema_fields.SchemaField(
         'key', 'Key', 'string', editable=False, hidden=True))
     schema.add_property(schema_fields.SchemaField(
@@ -585,62 +535,100 @@ def add_asset_handler_display_field(schema):
     """Helper function for building schemas of asset-handling OEditor UIs."""
 
     schema.add_property(schema_fields.SchemaField(
-        'asset_url', 'Asset', 'string',
-        editable=False,
-        optional=True,
-        description='This is the asset for the native language for the course.',
+        'asset_url', 'Location', 'string', editable=False, optional=True,
         extra_schema_dict_values={
             'visu': {
                 'visuType': 'funcName',
                 'funcName': 'renderAsset'
-                }
-            }))
+            }
+        }))
 
 
-def generate_asset_rest_handler_schema():
+def generate_asset_rest_handler_schema(name, description):
     schema = schema_fields.FieldRegistry('Asset', description='Asset')
-    add_asset_handler_base_fields(schema)
+    add_asset_handler_base_fields(schema, name, description)
     return schema
 
 
-def generate_displayable_asset_rest_handler_schema():
-    schema = schema_fields.FieldRegistry('Asset', description='Asset')
+def generate_displayable_asset_rest_handler_schema(name, description):
+    schema = generate_asset_rest_handler_schema(name, description)
     add_asset_handler_display_field(schema)
-    add_asset_handler_base_fields(schema)
     return schema
 
+
+_SchemaDetails = collections.namedtuple('_SchemaDetails',
+                                        ['json', 'annotations'])
+
+def _asset_schema_details(schema):
+    return _SchemaDetails(json=schema.get_json_schema(),
+                          annotations=schema.get_schema_dict())
 
 class AssetItemRESTHandler(BaseRESTHandler):
     """Provides REST API for managing assets."""
 
     URI = '/rest/assets/item'
-    UNDISPLAYABLE_SCHEMA = generate_asset_rest_handler_schema()
-    UNDISPLAYABLE_SCHEMA_JSON = UNDISPLAYABLE_SCHEMA.get_json_schema()
-    UNDISPLAYABLE_SCHEMA_ANNOTATIONS_DICT = (
-        UNDISPLAYABLE_SCHEMA.get_schema_dict())
-    DISPLAYABLE_SCHEMA = generate_displayable_asset_rest_handler_schema()
-    DISPLAYABLE_SCHEMA_JSON = DISPLAYABLE_SCHEMA.get_json_schema()
-    DISPLAYABLE_SCHEMA_ANNOTATIONS_DICT = DISPLAYABLE_SCHEMA.get_schema_dict()
     REQUIRED_MODULES = [
         'inputex-string', 'gcb-uneditable', 'inputex-file',
         'inputex-hidden', 'io-upload-iframe']
 
     XSRF_TOKEN_NAME = 'asset-upload'
 
+    # Two-tuples of JSON schema (from get_json_schema()) and annotations
+    # dict (from get_schema_dict()) from customized schemas corresponding
+    # to specific "base" asset path prefixes (see asset_paths.as_base).
+    _SCHEMAS = {
+        '/assets/css/': _asset_schema_details(
+            generate_asset_rest_handler_schema(
+                'Upload New CSS',
+                messages.IMAGES_DOCS_UPLOAD_NEW_CSS_DESCRIPTION)),
+        '/assets/html/': _asset_schema_details(
+            generate_asset_rest_handler_schema(
+                'Upload New HTML',
+                messages.IMAGES_DOCS_UPLOAD_NEW_HTML_DESCRIPTION)),
+        '/assets/lib/': _asset_schema_details(
+            generate_asset_rest_handler_schema(
+                'Upload New JavaScript',
+                messages.IMAGES_DOCS_UPLOAD_NEW_JS_DESCRIPTION)),
+        '/views/': _asset_schema_details(
+            generate_asset_rest_handler_schema(
+                'Upload New Template',
+                messages.IMAGES_DOCS_UPLOAD_NEW_TEMPLATE_DESCRIPTION)),
+        '/assets/img/': _asset_schema_details(
+            generate_displayable_asset_rest_handler_schema(
+                'Upload New Image',
+                messages.IMAGES_DOCS_UPLOAD_NEW_IMAGE_DESCRIPTION)),
+    }
+
+    # Two-tuple like those in _SCHEMAS above, but generic, for use when the
+    # asset path prefix is not found in the _SCHEMAS keys.
+    _UNKNOWN_SCHEMA = _asset_schema_details(
+        generate_asset_rest_handler_schema(
+            'Upload New File',
+            messages.IMAGES_DOCS_UPLOAD_NEW_FILE_DESCRIPTION))
+
+    @classmethod
+    def get_schema_details(cls, path):
+        for base in cls._SCHEMAS.keys():
+            if asset_paths.does_path_match_base(path, base):
+                return cls._SCHEMAS[base]
+        return cls._UNKNOWN_SCHEMA
+
     def _can_write_payload_to_base(self, payload, base):
         """Determine if a given payload type can be put in a base directory."""
         # Binary data can go in images; text data can go anywhere else.
-        if _is_asset_in_allowed_bases(base, ALLOWED_ASSET_BINARY_BASES):
+        if asset_paths.AllowedBases.is_path_allowed(
+            base, bases=asset_paths.AllowedBases.binary_bases()):
             return True
         else:
-            return is_text_payload(payload) and _is_asset_in_allowed_bases(
-                base, ALLOWED_ASSET_TEXT_BASES)
+            return (is_text_payload(payload) and
+                    asset_paths.AllowedBases.is_path_allowed(
+                        base, bases=asset_paths.AllowedBases.text_bases()))
 
     def get(self):
         """Provides empty initial content for asset upload editor."""
         # TODO(jorr): Pass base URI through as request param when generalized.
         key = self.request.get('key')
-        base = _match_allowed_bases(key)
+        base = asset_paths.AllowedBases.match_allowed_bases(key)
         if not base:
             transforms.send_json_response(
                 self, 400, 'Malformed request.', {'key': key})
@@ -653,6 +641,8 @@ class AssetItemRESTHandler(BaseRESTHandler):
         fs = self.app_context.fs.impl
         if fs.isfile(fs.physical_to_logical(key)):
             json_payload['asset_url'] = key
+        else:
+            json_payload['asset_url'] = asset_paths.relative_base(base)
         transforms.send_json_response(
             self, 200, 'Success.', payload_dict=json_payload,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN_NAME))
@@ -661,7 +651,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
         is_valid, payload, upload = self._validate_post()
         if is_valid:
             key = payload['key']
-            base = payload['base']
+            base = asset_paths.as_key(payload['base'])
             if key == base:
                 # File name not given on setup; we are uploading a new file.
                 filename = os.path.split(self.request.POST['file'].filename)[1]
@@ -696,7 +686,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
 
         payload = transforms.loads(request['payload'])
         base = payload['base']
-        if not _is_asset_in_allowed_bases(base):
+        if not asset_paths.AllowedBases.is_path_allowed(base):
             transforms.send_file_upload_response(
                 self, 400, 'Malformed request.', {'key': base})
             return False, None, None

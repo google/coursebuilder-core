@@ -75,7 +75,7 @@ from models import entities
 from models import services
 from models import transforms
 from models import utils
-from modules import dashboard
+from modules.dashboard import asset_paths
 
 from google.appengine.api import mail
 from google.appengine.api import mail_errors
@@ -966,14 +966,7 @@ def register_module():
     """Registers the module with the Registry."""
 
     def on_module_enabled():
-        dashboard.filer.ALLOWED_ASSET_TEXT_BASES = (
-            dashboard.filer.ALLOWED_ASSET_TEXT_BASES.union(
-                ['views/notifications']))
-
-    def on_module_disabled():
-        dashboard.filer.ALLOWED_ASSET_TEXT_BASES = (
-            dashboard.filer.ALLOWED_ASSET_TEXT_BASES.difference(
-                ['views/notifications']))
+        asset_paths.AllowedBases.add_text_base('views/notifications')
 
     global custom_module  # pylint: disable=global-statement
 
@@ -990,7 +983,6 @@ def register_module():
         'Notifications', 'Student notification management system.',
         cron_handlers,
         [],
-        notify_module_disabled=on_module_disabled,
         notify_module_enabled=on_module_enabled
     )
 
