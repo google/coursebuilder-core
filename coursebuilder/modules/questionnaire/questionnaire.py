@@ -270,7 +270,10 @@ class QuestionnaireDataSource(data_sources.AbstractDbTableRestDataSource):
             else:
                 return str(value)
 
-        transform_fn = cls._build_transform_fn(source_context)
+        if source_context.send_uncensored_pii_data:
+            transform_fn = lambda x: x
+        else:
+            transform_fn = cls._build_transform_fn(source_context)
 
         response_list = []
 
