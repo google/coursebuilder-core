@@ -21,7 +21,7 @@ __author__ = [
 import os
 import zipfile
 from modules.i18n_dashboard import jobs
-from tests.functional import modules_i18n_dashboard
+from modules.i18n_dashboard import i18n_dashboard_tests
 from tools.etl import etl
 from tools.etl import testing
 
@@ -29,7 +29,7 @@ from tools.etl import testing
 
 
 class _JobTestBase(
-        testing.EtlTestBase, modules_i18n_dashboard.CourseLocalizationTestBase):
+        testing.EtlTestBase, i18n_dashboard_tests.CourseLocalizationTestBase):
 
     def setUp(self):
         super(_JobTestBase, self).setUp()

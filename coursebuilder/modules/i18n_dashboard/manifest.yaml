@@ -1,0 +1,38 @@
+tests:
+  functional:
+    - modules.i18n_dashboard.i18n_dashboard_tests.CourseContentTranslationTests = 15
+    - modules.i18n_dashboard.i18n_dashboard_tests.I18nDashboardHandlerTests = 4
+    - modules.i18n_dashboard.i18n_dashboard_tests.I18nProgressDeferredUpdaterTests = 5
+    - modules.i18n_dashboard.i18n_dashboard_tests.IsTranslatableRestHandlerTests = 3
+    - modules.i18n_dashboard.i18n_dashboard_tests.LazyTranslatorTests = 5
+    - modules.i18n_dashboard.i18n_dashboard_tests.ResourceBundleKeyTests = 2
+    - modules.i18n_dashboard.i18n_dashboard_tests.ResourceRowTests = 6
+    - modules.i18n_dashboard.i18n_dashboard_tests.SampleCourseLocalizationTest = 17
+    - modules.i18n_dashboard.i18n_dashboard_tests.TranslationConsoleRestHandlerTests = 8
+    - modules.i18n_dashboard.i18n_dashboard_tests.TranslationConsoleValidationTests = 5
+    - modules.i18n_dashboard.i18n_dashboard_tests.TranslationImportExportTests = 53
+    - modules.i18n_dashboard.i18n_dashboard_tests.TranslatorRoleTests = 2
+    - modules.i18n_dashboard.jobs_tests.BaseJobTest = 9
+    - modules.i18n_dashboard.jobs_tests.DeleteTranslationsTest = 3
+    - modules.i18n_dashboard.jobs_tests.DownloadTranslationsTest = 5
+    - modules.i18n_dashboard.jobs_tests.RoundTripTest = 1
+    - modules.i18n_dashboard.jobs_tests.TranslateToReversedCaseTest = 1
+    - modules.i18n_dashboard.jobs_tests.UploadTranslationsTest = 5
+
+files:
+  - modules/i18n_dashboard/__init__.py
+  - modules/i18n_dashboard/i18n_dashboard.py
+  - modules/i18n_dashboard/i18n_dashboard_tests.py
+  - modules/i18n_dashboard/jobs.py
+  - modules/i18n_dashboard/jobs_tests.py
+  - modules/i18n_dashboard/messages.py
+  - modules/i18n_dashboard/resources/css/global_i18n.css
+  - modules/i18n_dashboard/resources/css/i18n_dashboard.css
+  - modules/i18n_dashboard/resources/js/i18n_dashboard.js
+  - modules/i18n_dashboard/templates/delete_translations.js
+  - modules/i18n_dashboard/templates/download_translations.js
+  - modules/i18n_dashboard/templates/i18n_dashboard.html
+  - modules/i18n_dashboard/templates/lazy_loader_error.html
+  - modules/i18n_dashboard/templates/translation_console.css
+  - modules/i18n_dashboard/templates/translation_console.js
+  - modules/i18n_dashboard/templates/upload_translations.js

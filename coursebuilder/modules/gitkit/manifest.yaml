@@ -1,0 +1,34 @@
+tests:
+  functional:
+    - modules.gitkit.gitkit_tests.AccountChooserCustomizationHandlersTest = 2
+    - modules.gitkit.gitkit_tests.BaseHandlerTest = 3
+    - modules.gitkit.gitkit_tests.EmailMappingTest = 6
+    - modules.gitkit.gitkit_tests.EmailRestHandlerTest = 5
+    - modules.gitkit.gitkit_tests.GitkitServiceTest = 9
+    - modules.gitkit.gitkit_tests.OobChangeEmailResponseTest = 7
+    - modules.gitkit.gitkit_tests.OobFailureResponseTest = 6
+    - modules.gitkit.gitkit_tests.OobResetPasswordResponseTest = 7
+    - modules.gitkit.gitkit_tests.RuntimeAndRuntimeConfigTest = 12
+    - modules.gitkit.gitkit_tests.SignInContinueHandlerTest = 4
+    - modules.gitkit.gitkit_tests.SignInHandlerTest = 11
+    - modules.gitkit.gitkit_tests.SignOutContinueHandlerTest = 5
+    - modules.gitkit.gitkit_tests.SignOutHandlerTest = 2
+    - modules.gitkit.gitkit_tests.StudentFederatedEmailTest = 2
+    - modules.gitkit.gitkit_tests.UsersServiceTest = 16
+    - modules.gitkit.gitkit_tests.WidgetHandlerTest = 2
+
+files:
+  - modules/gitkit/__init__.py
+  - modules/gitkit/gitkit.py
+  - modules/gitkit/gitkit_tests.py
+  - modules/gitkit/resources/config.yaml
+  - modules/gitkit/resources/favicon.ico
+  - modules/gitkit/templates/branding.html
+  - modules/gitkit/templates/change_email.html
+  - modules/gitkit/templates/change_email.txt
+  - modules/gitkit/templates/change_email_subject.txt
+  - modules/gitkit/templates/reset_password.html
+  - modules/gitkit/templates/reset_password.txt
+  - modules/gitkit/templates/reset_password_subject.txt
+  - modules/gitkit/templates/signout.html
+  - modules/gitkit/templates/widget.html

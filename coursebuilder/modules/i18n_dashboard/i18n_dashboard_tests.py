@@ -1691,8 +1691,8 @@ class CourseContentTranslationTests(actions.TestBase):
         assessment = self.course.add_assessment()
         assessment.title = 'Test Assessment'
         assessment.html_content = """
-            <question quid="%s" weight="1" instanceid="test_question"></question>
-        """ % self._add_question()
+            <question quid="%s" weight="1" instanceid="test_question">%s
+        """ % (self._add_question(), '</question>')
         self.course.save()
 
         page_html = self.get('assessment?name=%s' % assessment.unit_id).body
@@ -1719,8 +1719,8 @@ class CourseContentTranslationTests(actions.TestBase):
         assessment = self.course.add_assessment()
         assessment.title = 'Test Assessment'
         assessment.html_content = """
-            <question quid="%s" weight="1" instanceid="test_question"></question>
-        """ % qu_id
+            <question quid="%s" weight="1" instanceid="test_question">%s
+        """ % (qu_id, '</question>')
         self.course.save()
 
         # Store translation data for the question
@@ -2864,6 +2864,8 @@ class TranslatorRoleTests(actions.TestBase):
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
 
+        # Need to muck with internals of code under test.
+        # pylint: disable=protected-access
         self.old_registered_permission = roles.Roles._REGISTERED_PERMISSIONS
         roles.Roles.REGISTERED_PERMISSIONS = {}
 
@@ -3730,6 +3732,8 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
         config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
 
+        # Need to muck with internals of code under test.
+        # pylint: disable=protected-access
         old_memcache_make_async_call = memcache._CLIENT._make_async_call
         old_db_make_rpc_call = datastore_rpc.BaseConnection._make_rpc_call
         try:
