@@ -10,6 +10,7 @@ Usage: $0 [-f] [-d <data_path>] [-s] [-p <port>] [-a <admin_port>] [-h]
 -s  Set the storage path to $HOME/.cb_data
 -p <port>  Set the port the CourseBuilder server listens on (defaults to 8081)
 -a <port>  Set the port the AppEngine admin server listens on (defaults to 8000)
+-x <port>  Set the port the CourseBuilder API server listens on (defaults to 8082)
 -h  Show this message
 
 EOF
@@ -21,7 +22,7 @@ CB_PORT=8081
 CLEAR_DATASTORE=true
 DATA_PATH=''
 
-while getopts fd:sp:a:h option
+while getopts fd:sp:a:x:h option
 do
     case $option
     in
@@ -30,6 +31,7 @@ do
         s)  DATA_PATH="$HOME/.cb_data";;
         p)  CB_PORT="$OPTARG" ;;
         a)  ADMIN_PORT="$OPTARG" ;;
+        x)  API_PORT="$OPTARG" ;;
         h)  usage; exit 0;;
         *)  usage; exit 1;;
     esac
