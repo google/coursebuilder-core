@@ -36,11 +36,19 @@
       </tr>
     </thead>
     <tbody>
-      {% for asset in assets if asset.overridden%}
+      {% for asset in overridden_assets %}
         {{ asset_row(asset) }}
       {% endfor %}
     </tbody>
   </table>
+  {% if not overridden_assets|length %}
+    <div class="gcb-list__empty-message-wrapper">
+      <div class="gcb-list__empty-message">No items</div>
+    </div>
+  {% endif %}
+</div>
+
+<div class="gcb-list gcb-list--autostripe">
   <table>
     <thead>
       <tr>
@@ -49,12 +57,12 @@
       </tr>
     </thead>
     <tbody>
-      {% for asset in assets if not asset.overridden %}
+      {% for asset in inherited_assets %}
         {{ asset_row(asset) }}
       {% endfor %}
     </tbody>
   </table>
-  {% if not assets|length %}
+  {% if not inherited_assets|length %}
     <div class="gcb-list__empty-message-wrapper">
       <div class="gcb-list__empty-message">No items</div>
     </div>

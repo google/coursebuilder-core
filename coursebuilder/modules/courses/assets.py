@@ -88,9 +88,13 @@ def _list_and_format_file_list(
 
         assets.append(Asset(filename, overridden, edit_url))
 
+    overridden_assets = [asset for asset in assets if asset.overridden]
+    inherited_assets = [asset for asset in assets if not asset.overridden]
+
     return safe_dom.Template(
         jinja_utils.get_template('asset_list.html', [TEMPLATE_DIR]),
-        assets=assets, can_upload=can_upload, caption_if_empty=caption_if_empty,
+        inherited_assets=inherited_assets, overridden_assets=overridden_assets,
+        can_upload=can_upload, caption_if_empty=caption_if_empty,
         upload_url=upload_url)
 
 def _get_filter_data(handler):
