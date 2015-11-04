@@ -1073,7 +1073,7 @@ class ResourceLesson(resource.AbstractResourceHandler):
             hidden=True))
         lesson.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string', extra_schema_dict_values={
-                'className': 'inputEx-Field title-holder'},
+                'className': 'inputEx-Field content-holder'},
             description=messages.LESSON_TITLE_DESCRIPTION))
         lesson.add_property(schema_fields.SchemaField(
             'unit_id', 'Unit', 'string', i18n=False,
@@ -1091,6 +1091,7 @@ class ResourceLesson(resource.AbstractResourceHandler):
         lesson.add_property(schema_fields.SchemaField(
             'objectives', 'Lesson Body', 'html', optional=True,
             extra_schema_dict_values={
+                'className': 'content-holder',
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value}))
         lesson.add_property(schema_fields.SchemaField(
             'notes', 'Text Version URL', 'string', optional=True,

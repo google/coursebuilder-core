@@ -1793,7 +1793,8 @@ def lesson_rest_handler_schema_load_hook(lesson_field_registry):
         'skills', 'Skills', optional=True, item_type=skill_type,
         description=messages.SKILLS_LESSON_DESCRIPTION,
         extra_schema_dict_values={
-            'className': 'skill-panel inputEx-Field inputEx-ListField'}))
+            'className': (
+                'skill-panel inputEx-Field inputEx-ListField content-holder')}))
 
 
 def lesson_rest_handler_pre_load_hook(lesson, lesson_dict):

@@ -5,16 +5,14 @@ $(function() {
 
   function editContent() {
     $('#cb-oeditor-form div.inputEx-fieldWrapper').hide();
-    $('#cb-oeditor-form div.inputEx-fieldWrapper > .cb-editor-field, ' +
-        '#cb-oeditor-form div.inputEx-fieldWrapper > .title-holder')
-        .parent().show();
+    $('#cb-oeditor-form div.inputEx-fieldWrapper .content-holder')
+        .closest('.inputEx-fieldWrapper').show();
   }
 
   function editSettings() {
     $('#cb-oeditor-form div.inputEx-fieldWrapper').show();
-    $('#cb-oeditor-form div.inputEx-fieldWrapper > .cb-editor-field, ' +
-        '#cb-oeditor-form div.inputEx-fieldWrapper > .title-holder')
-        .parent().hide();
+    $('#cb-oeditor-form div.inputEx-fieldWrapper .content-holder')
+        .closest('.inputEx-fieldWrapper').hide();
   }
 
   function bind() {
