@@ -12,7 +12,10 @@ function bindDatetimeField(Y) {
       var that = this;
       $('<button>Clear</button>')
           .addClass('inputEx-DatePicker-ClearButton')
-          .click(function(){ that.clear() })
+          .click(function(){
+            that.clear();
+            that.validateDateTimeConsistent();
+          })
           .insertBefore(that.divEl.lastChild);
 
       if (this.options.description) {
@@ -20,6 +23,24 @@ function bindDatetimeField(Y) {
             .text(this.options.description)
             .insertBefore(that.divEl.lastChild);
       }
+      this.on('updated', this.validateDateTimeConsistent);
+    },
+    validateDateTimeConsistent: function() {
+      var dateField = this.inputs[0];
+      var timeField = this.inputs[1];
+      if (!timeField.isEmpty() &&
+          timeField.getValue() != '00:00:00' &&
+          dateField.isEmpty()) {
+        $(dateField.divEl).addClass('inputEx-invalid');
+        return false;
+      }
+      $(dateField.divEl).removeClass('inputEx-invalid');
+      return true;
+    },
+    validate: function() {
+      return (
+          DatetimeField.superclass.validate.call(this) &&
+          this.validateDateTimeConsistent());
     },
     setValue: function(val, sendUpdatedEvt) {
       if (val) {
