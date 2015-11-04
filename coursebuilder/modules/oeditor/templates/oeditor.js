@@ -416,6 +416,7 @@ function onPageLoad(env) {
   // set initial UI state
   document.getElementById("formContainer").style.display = "none";
   cbShowMsg("Loading...");
+  setupTooltips();
 }
 
 function getYuiConfig(bundle_lib_files) {
@@ -582,6 +583,7 @@ function mainYuiFunction(Y) {
 
   moveMarkedFormElementsOutOfFieldset(Y);
   addRequiredFieldsMessage(Y);
+  tooltipifyHelpText();
 
   // Show a confirmation box if there are unsaved changes.
   if (! isFramed()) {
@@ -1035,6 +1037,10 @@ TopLevelEditorControls.prototype = {
       cbHideMsg();
     }
     this._env.onFormLoad(this._Y);
+
+    cb_global.form.on('updated', function(event) {
+      tooltipifyHelpText();
+    });
   },
 
   _onPopulateFormFailure: function () {
@@ -1058,4 +1064,61 @@ function isNewFormLayout(){
   var SCHEMA = cb_global.schema;
   return (SCHEMA._inputex && SCHEMA._inputex.className
     && SCHEMA._inputex.className.indexOf('new-form-layout') > -1)
+}
+
+// Tooltips
+
+function tooltipifyHelpText() {
+  $('.inputEx-description').each(function(){
+    var original = $(this);
+    var label = original.closest('.inputEx-fieldWrapper').find(
+      '.inputEx-label').eq(0);
+
+    var icon = $(
+      '<div class="icon material-icons gcb-form-help-icon">help</div>');
+    icon.attr({id: original.attr('id')});
+
+    var tip = $('<div class="mdl-tooltip gcb-form-tooltip"></div>');
+    tip.attr({'for': original.attr('id')});
+    tip.html(original.html());
+
+    label.prepend(icon);
+    label.prepend(tip);
+    original.remove();
+  });
+  window.componentHandler.upgradeAllRegistered();
+}
+
+function setupTooltips() {
+  function removeTooltip() {
+    this.element_.classList.remove(this.CssClasses_.IS_ACTIVE);
+  }
+
+  function cancelRemoveTooltip() {
+    clearTimeout(this.leaveTimer);
+  }
+
+  MaterialTooltip.prototype.handleMouseLeave_ = function() {
+    this.leaveTimer = setTimeout(removeTooltip.bind(this), 500);
+  }
+
+  var original_enter = MaterialTooltip.prototype.handleMouseEnter_;
+  MaterialTooltip.prototype.handleMouseEnter_ = function(event) {
+    cancelRemoveTooltip.call(this);
+    return original_enter.call(this, event);
+  }
+
+  var original_init = MaterialTooltip.prototype.init;
+  MaterialTooltip.prototype.init = function() {
+    original_init.call(this);
+
+    if (this.element_) {
+      this.element_.addEventListener(
+        'mouseleave', this.handleMouseLeave_.bind(this));
+      this.element_.addEventListener(
+        'mouseenter', cancelRemoveTooltip.bind(this));
+      this.element_.addEventListener(
+        'touchend', cancelRemoveTooltip.bind(this));
+    }
+  }
 }

@@ -50,6 +50,9 @@ div.inputEx-Field textarea {
 div.inputEx-Field > select {
   max-width: 100%;
 }
+.inputEx-StringField-wrapper {
+  display: inline-block;
+}
 div.inputEx-StringField-wrapper input {
   margin-top: 2px;
   margin-bottom: 2px;
@@ -476,12 +479,18 @@ div.mc-question,
 div.mc-description,
 div.mc-selection,
 div.set-scores-toggle,
+div.sa-question,
+div.sa-hint,
+div.sa-feedback,
+div.sa-description,
+div.sa-rows,
+div.sa-columns,
 .toggle-feedback {
-  margin-left: 87px;
+  margin-left: 110px;
   float: none;
 }
 div.mc-bool-option {
-  margin-left: 115px;
+  margin-left: 150px;
 }
 div.mc-bool-option .inputEx-description {
   display: inline-block;
@@ -573,15 +582,6 @@ div.sa-grader-text,
 div.sa-grader-feedback {
   margin-top: 5px;
 }
-div.sa-question,
-div.sa-hint,
-div.sa-feedback,
-div.sa-description,
-div.sa-rows,
-div.sa-columns {
-  margin-left: 87px;
-  float: none;
-}
 #cb-oeditor-form .sa-description input,
 #cb-oeditor-form .sa-grader-text input {
   width: 506px;  /* allow for 2px padding */
@@ -591,7 +591,7 @@ div.sa-columns {
 div.sa-grader-text,
 div.sa-grader-feedback,
 .sa-grader-container .toggle-feedback {
-  margin-left: 67px;
+  margin-left: 82px;
   float: none;
 }
 div.sa-grader-question {
@@ -601,7 +601,7 @@ div.sa-grader {
   width: 650px;
 }
 div.sa-grader > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
-  width:60px;
+  width: 75px;
 }
 div.sa-grader + a { /* The delete choice button */
   float: right;
@@ -949,4 +949,27 @@ div.new-form-layout .inputEx-Field.embed-code-snippet-display textarea {
   height: 3em;
   overflow-x: auto;
   overflow-y: auto;
+}
+.mdl-tooltip.gcb-form-tooltip {
+  text-align: left;
+  max-width: 400px;
+  margin-left: -110px !important;
+}
+.mdl-tooltip.gcb-form-tooltip a {
+  color: rgb(255, 162, 94);
+}
+.gcb-form-help-icon {
+  float: right;
+}
+.icon {
+  display: inline-block;
+  border: none;
+  vertical-align: middle;
+  font-size: 16px;
+  margin: 0;
+  padding: 0 4px;
+  color: #555;
+  background-color: inherit;
+  text-decoration: none;
+  cursor: pointer;
 }
