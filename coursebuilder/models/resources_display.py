@@ -935,7 +935,7 @@ class ResourceAssessment(ResourceUnitBase):
             description=messages.ASSESSMENT_SINGLE_SUBMISSION_DESCRIPTION))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SUBMISSION_DUE_DATE_KEY),
-            'Submission Due Date', 'string', optional=True,
+            'Due Date', 'string', optional=True,
             description=str(messages.ASSESSMENT_DUE_DATE_FORMAT_DESCRIPTION),
             extra_schema_dict_values={'_type': 'datetime'}))
         course_opts.add_property(schema_fields.SchemaField(
