@@ -147,6 +147,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.whitelist.WhitelistTest': 13,
     'tests.unit.etl_mapreduce.HistogramTests': 5,
     'tests.unit.etl_mapreduce.FlattenJsonTests': 4,
+    'tests.unit.etl_remote.EnvironmentTests': 3,
     'tests.unit.common_catch_and_log.CatchAndLogTests': 6,
     'tests.unit.common_locales.LocalesTests': 2,
     'tests.unit.common_locales.ParseAcceptLanguageTests': 6,

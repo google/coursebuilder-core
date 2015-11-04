@@ -245,6 +245,7 @@ tests/unit/common_schema_fields.py
 tests/unit/common_tags.py
 tests/unit/common_utils.py
 tests/unit/etl_mapreduce.py
+tests/unit/etl_remote.py
 tests/unit/gift_examples.txt
 tests/unit/gift_parser_tests.py
 tests/unit/javascript_tests.py

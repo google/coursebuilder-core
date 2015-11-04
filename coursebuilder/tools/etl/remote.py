@@ -64,8 +64,32 @@ class Environment(object):
         self._server = server
         self._testing = testing
 
+    def _die(self, message):
+        _LOG.error(message)
+        sys.exit(1)
+
+    def _get_auth_error_message(self):
+        return (
+            'Unable to authenticate. The most likely cause is that you are '
+            'missing OAuth2 credentials. For help getting those credentials, '
+            'see %s. Original error was:\n%s' % (
+                _AUTH_HELP_URL, self._get_formatted_last_traceback()))
+
     def _get_formatted_last_traceback(self):
-        return ''.join(traceback.format_tb(sys.exc_info()[2]))
+        # We're always called via _die(); cut out everything up to and including
+        # the _die() call. Then, put the actual exception we encountered back,
+        # and reformat the header.
+        stack_lines = traceback.extract_stack()[:-3]
+        trace = ''.join(traceback.format_list(stack_lines))
+        trace += '  ' + traceback.format_exc().lstrip(
+            'Traceback (most_recent call last):\n  ')
+        return 'Traceback (most recent call last):\n%s' % trace
+
+    def _get_sdk_too_old_message(self):
+        return (
+            'Unable to authenticate. Your Google App Engine SDK is old and '
+            'does not support OAuth2. You must upgrade to version 1.9.27 or '
+            'later.')
 
     def _get_secure(self):
         """Returns boolean indicating whether or not to use https."""
@@ -82,24 +106,35 @@ class Environment(object):
         """Returns True if environment is dev_appserver and False otherwise."""
         return self._server.startswith(_LOCAL_SERVER_PREFIX)
 
-    def establish(self):
-        """Establishes the environment for RPC execution."""
+    def _sdk_remote_api_stub_supports_oauth2(self, stub):
+        # The user may have an SDK that predates OAuth2 support. In that case,
+        # we need to tell them so they can upgrade. This should only happen if a
+        # user is customizing their deployment; if they use the SDK we specify,
+        # they will have OAuth2 support.
+        return hasattr(stub, 'ConfigureRemoteApiForOAuth')
+
+    def establish(self, stub=None):
+        """Establishes the environment for RPC execution.
+
+        Args:
+            stub: None or remote_api_stub. Injectable for tests only.
+        """
+        stub = stub if stub is not None else remote_api_stub
+
         if self._testing:
             return
 
+        if not self._sdk_remote_api_stub_supports_oauth2(stub):
+            self._die(self._get_sdk_too_old_message())
+
         try:
-            remote_api_stub.ConfigureRemoteApiForOAuth(
+            stub.ConfigureRemoteApiForOAuth(
                 self._get_server(), self._path, secure=self._get_secure())
-            remote_api_stub.MaybeInvokeAuthentication()
+            stub.MaybeInvokeAuthentication()
         # Must be broad -- we cannot know what types of exceptions App Engine
         # raises due to auth errors. pylint: disable=bare-except
         except:
-            _LOG.error(
-                'Unable to authenticate. The most likely cause is that you '
-                'are missing OAuth2 credentials. For help getting those '
-                'credentials, see %s. Original error was:\n%s',
-                    _AUTH_HELP_URL, self._get_formatted_last_traceback())
-            sys.exit(1)
+            self._die(self._get_auth_error_message())
 
     def get_info(self):
         """Returns string representation of the environment for logging."""
