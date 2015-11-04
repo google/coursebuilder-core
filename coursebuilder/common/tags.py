@@ -171,7 +171,7 @@ SPB+uxAAAAAElFTkSuQmCC
             schema_fields.SchemaField(
                 'unused_id', '', 'string', optional=True,
                 editable=False, extra_schema_dict_values={
-                    'value': message,
+                    'value': str(message),
                     'visu': {
                         'visuType': 'funcName',
                         'funcName': 'disableSave'}}))

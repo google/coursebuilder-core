@@ -60,10 +60,11 @@ DOCUMENT_HEIGHT_DESCRIPTION = """
 The document displays with this height; the width is set automatically.
 """
 
-GOOGLE_DRIVE_UNAVAILABLE = """
+# TODO(johncox): replace placeholder URL once target link is determined.
+GOOGLE_DRIVE_UNAVAILABLE = safe_dom.assemble_text_message("""
 Before embedding a Google Drive object, Google APIs must be configured for this
 course.
-"""
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
 
 DOCUMENT_ID_DESCRIPTION = """
 Paste the ID of the Google Drive item you want to use or pick one in the

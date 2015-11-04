@@ -304,24 +304,27 @@ function renderAsset(Y, uri) {
 
 /**
  * Expose a method to disable the save button by means of an annotation in the
- * schema. Use the 'uneditable' schema type with visuType=functName and
- * funcname=disableSave.
+ * schema. Use the 'uneditable' schema type with visuType=funcName and
+ * funcName=disableSave.
  *
  * @param {YUI Root} Y the current YUI root object
  * @param {string} value the value of the uneditable schema field
  * @param {object} env the CB environment table
  */
 function disableSave(Y, value, env) {
-  if (env.form) {
+  setTimeout(function() {
+    // Timeout is needed because this function is called during the setup of
+    // env.form and so the variable is not set until the end of the execution
+    // thread.
     for (var i = 0; i < env.form.buttons.length; i++) {
       var button = env.form.buttons[i];
       if (button.options.type == 'submit-link') {
         env.form.buttons[i].disable();
       }
     }
-  }
+  }, 0);
   var div = document.createElement('div');
-  div.appendChild(document.createTextNode(value));
+  div.innerHTML = value;
   return div;
 }
 
