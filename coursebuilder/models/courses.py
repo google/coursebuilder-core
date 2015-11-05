@@ -3408,6 +3408,8 @@ course:
         browsable = settings['course']['browsable']
         can_register = settings['reg_form']['can_register']
         for name, setting in COURSE_AVAILABILITY_POLICIES.iteritems():
+            if not now_available:
+                return COURSE_AVAILABILITY_PRIVATE
             if (setting['now_available'] == now_available and
                 setting['browsable'] == browsable and
                 setting['can_register'] == can_register):
