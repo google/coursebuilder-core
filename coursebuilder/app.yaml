@@ -86,7 +86,6 @@ handlers:
   application_readable: true # TODO(nretallack): deprecate this
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
-  login: admin
   secure: always
 - url: /cron/.*
   script: main.app

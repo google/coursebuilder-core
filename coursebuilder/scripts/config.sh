@@ -44,3 +44,6 @@ export SERVER=appengine.google.com
 # ALLOW_STATIC_SERV to 'false' below; if your local environment has a value of
 # GCB_ALLOW_STATIC_SERV set, it will be used as a default instead
 export ALLOW_STATIC_SERV=${GCB_ALLOW_STATIC_SERV:-true}
+
+# Configure dev_appserver. Allow OAuth2 authentication of remote_api endpoints.
+export OAUTH_IS_ADMIN=1

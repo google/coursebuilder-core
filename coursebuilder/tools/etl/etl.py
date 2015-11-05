@@ -200,9 +200,9 @@ _COURSE_JSON_PATH_SUFFIX = 'data/course.json'
 _COURSE_YAML_PATH_SUFFIX = 'course.yaml'
 # String. Message the user must type to confirm datastore deletion.
 _DELETE_DATASTORE_CONFIRMATION_INPUT = 'YES, DELETE'
-# Default value of --api_port passed to the dev appserver. Keep this in sync
-# with the value in scripts/parse_start_args.sh's API_PORT.
-_DEV_APPSERVER_API_HOST_DEFAULT_PORT = 8082
+# Default value of --port passed to the dev appserver. Keep this in sync
+# with the value in scripts/parse_start_args.sh's CB_PORT.
+_DEV_APPSERVER_DEFAULT_PORT = 8081
 # List of types which are not to be downloaded.  These are types which
 # are either known to be transient, disposable state classes (e.g.,
 # map/reduce's "_AE_... classes), or legacy types no longer required.
@@ -331,13 +331,12 @@ def create_args_parser():
             'on the target system that are also present in the archive. Note '
             'that this operation is dangerous and may result in data loss.'))
     parser.add_argument(
-        '--port', default=_DEV_APPSERVER_API_HOST_DEFAULT_PORT,
+        '--port', default=_DEV_APPSERVER_DEFAULT_PORT,
         help=(
             'If running against localhost, this is the port remote API '
             'requests are sent to. Default is %s. Ignored if running against '
             'non-localhost deployments. Must be the value passed to '
-            'dev_appserver.py via --api_port.' % (
-                _DEV_APPSERVER_API_HOST_DEFAULT_PORT)))
+            'dev_appserver.py via --port.' % (_DEV_APPSERVER_DEFAULT_PORT)))
     parser.add_argument(
         '--resume', action='store_true',
         help=(

@@ -10,14 +10,12 @@ Usage: $0 [-f] [-d <data_path>] [-s] [-p <port>] [-a <admin_port>] [-h]
 -s  Set the storage path to $HOME/.cb_data
 -p <port>  Set the port the CourseBuilder server listens on (defaults to 8081)
 -a <port>  Set the port the AppEngine admin server listens on (defaults to 8000)
--x <port>  Set the port the CourseBuilder API server listens on (defaults to 8082)
 -h  Show this message
 
 EOF
 }
 
 ADMIN_PORT=8000
-API_PORT=8082
 CB_PORT=8081
 CLEAR_DATASTORE=true
 DATA_PATH=''
@@ -31,7 +29,6 @@ do
         s)  DATA_PATH="$HOME/.cb_data";;
         p)  CB_PORT="$OPTARG" ;;
         a)  ADMIN_PORT="$OPTARG" ;;
-        x)  API_PORT="$OPTARG" ;;
         h)  usage; exit 0;;
         *)  usage; exit 1;;
     esac
@@ -56,8 +53,6 @@ done
 
 start_cb_server=( python $GOOGLE_APP_ENGINE_HOME/dev_appserver.py \
     --admin_port=$ADMIN_PORT \
-    --api_host=0.0.0.0 \
-    --api_port=$API_PORT \
     --clear_datastore=$CLEAR_DATASTORE \
     --datastore_consistency_policy=consistent \
     --host=0.0.0.0 \
