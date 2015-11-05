@@ -21,6 +21,7 @@ function bindDatetimeField(Y) {
       if (this.options.description) {
         $('<div class="inputEx-description">')
             .text(this.options.description)
+            .attr('id', this.options.id + '-desc')
             .insertBefore(that.divEl.lastChild);
       }
       this.on('updated', this.validateDateTimeConsistent);
