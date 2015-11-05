@@ -312,6 +312,9 @@ DISTRIBUTED_LIBS="\
 "
 
 echo Using third party Python packages from $DISTRIBUTED_LIBS_DIR
+if [ ! -d "$COURSEBUILDER_RESOURCES/lib" ]; then
+  mkdir -p "$COURSEBUILDER_RESOURCES/lib"
+fi
 if [ ! -d "$DISTRIBUTED_LIBS_DIR" ]; then
   mkdir -p "$DISTRIBUTED_LIBS_DIR"
 fi
@@ -325,9 +328,19 @@ for lib in "$DISTRIBUTED_LIBS_DIR"/*; do
   fi
 done
 for lib in $DISTRIBUTED_LIBS ; do
-  if [ ! -f "$DISTRIBUTED_LIBS_DIR/$lib" ]; then
-    echo "Adding CB distribution runtime library $lib to $DISTRIBUTED_LIBS_DIR"
-    curl --location --silent $CB_ARCHIVE_LIB_URL/$lib -o "$DISTRIBUTED_LIBS_DIR/$lib"
+  IS_NEW=false
+  if [ ! -f "$COURSEBUILDER_RESOURCES/lib/$lib.gcb_download_succeeded" ]; then
+    echo "Downloading CB runtime library $lib to $COURSEBUILDER_RESOURCES/lib/"
+    rm -rf "$COURSEBUILDER_RESOURCES/lib/$lib"
+    curl --location --silent $CB_ARCHIVE_LIB_URL/$lib -o \
+      "$COURSEBUILDER_RESOURCES/lib/$lib"
+    touch "$COURSEBUILDER_RESOURCES/lib/$lib.gcb_download_succeeded"
+    IS_NEW=true
+  fi
+  if [ "$IS_NEW" = true ] || [ ! -f "$DISTRIBUTED_LIBS_DIR/$lib" ]; then
+    echo "Adding CB runtime library $lib"
+    rm -rf "$DISTRIBUTED_LIBS_DIR/$lib"
+    cp "$COURSEBUILDER_RESOURCES/lib/$lib" "$DISTRIBUTED_LIBS_DIR/$lib"
   fi
 done
 

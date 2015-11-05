@@ -1421,7 +1421,7 @@ def _test_only(parsed_args):
     global BUILD_DIR  # pylint: disable=global-statement
     BUILD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-    log('Running test_only: %s' % parsed_args)
+    log('Running task "test": %s' % parsed_args)
     log('Working directory: %s' % os.getcwd())
     log('Source directory: %s' % build_dir())
     if parsed_args.deep_clean:
@@ -1440,7 +1440,7 @@ def _test_and_release(parsed_args):
     global BUILD_DIR  # pylint: disable=global-statement
     BUILD_DIR = '/tmp/%s-build-%s' % (PRODUCT_NAME, release_label)
 
-    log('Running test_and_release: %s' % parsed_args)
+    log('Running task "release": %s' % parsed_args)
     return _do_a_release(
         os.path.abspath(os.path.join(os.path.dirname(__file__), '..')),
         os.getcwd(), release_label)
