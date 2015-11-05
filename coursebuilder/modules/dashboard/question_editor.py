@@ -301,7 +301,7 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
         gift_questions.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         gift_questions.add_property(schema_fields.SchemaField(
-            'description', 'Group description', 'string', optional=True,
+            'description', 'Group Description', 'string', optional=True,
             description=messages.GIFT_GROUP_DESCRIPTION_DESCRIPTION,
             extra_schema_dict_values={'className': 'gift-description'}))
         gift_questions.add_property(schema_fields.SchemaField(

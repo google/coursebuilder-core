@@ -682,7 +682,7 @@ function EditSkillPopup(skillList, locationList, skillId) {
       '<div class="edit-skill-popup">' +
       '  <h2 class="title"></h2>' +
       '  <div class="form-row">' +
-      '    <label>Skill</label>' +
+      '    <label class="required-label">Skill</label>' +
       '    <input type="text" class="skill-name"' +
       '        placeholder="e.g. Structure Tables">' +
       '  </div>' +

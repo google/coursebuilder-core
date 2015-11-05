@@ -288,6 +288,16 @@ COURSE_GOOGLE_TAG_MANAGER_ID_DESCRIPTION = safe_dom.assemble_text_message("""
 This ID is used to add Google Tag Manager functionality to this course.
 """, 'https://code.google.com/p/course-builder/wiki/Dashboard')
 
+# TODO(johncox): replace placeholder URL once target link is determined.
+COURSE_GOOGLE_API_KEY_DESCRIPTION = safe_dom.assemble_text_message("""
+The Google API Key is required to enable certain functionality.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+# TODO(johncox): replace placeholder URL once target link is determined.
+
+COURSE_GOOGLE_CLIENT_ID_DESCRIPTION = safe_dom.assemble_text_message("""
+The Google Client ID is required to enable certain functionality.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+
 UNIT_HEADER_DESCRIPTION = """
 This content appears at the top of the unit page.
 """
@@ -322,6 +332,10 @@ This provides a hint to the answer.
 """
 
 MULTIPLE_CHOICE_FEEDBACK_DESCRIPTION = """
+This provides feedback to the student for this entire question.
+"""
+
+MULTIPLE_CHOICE_CHOICE_FEEDBACK_DESCRIPTION = """
 This text provides feedback to the student for this particular answer choice.
 """
 

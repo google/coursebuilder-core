@@ -505,6 +505,7 @@ function mainYuiFunction(Y) {
   Y.inputEx.regexps.url = URL_VALIDATION_REGEX;
   Y.inputEx.messages.invalidUrl =
     'Links to other sites must start with "http" or "https".';
+  Y.inputEx.messages.required = null;
 
   // Add a new visu handler to inputEx, to look for a named function. It must
   // be a member of cb_global.inputEx.visus and should accept Y and the value of

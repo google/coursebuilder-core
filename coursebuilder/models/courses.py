@@ -2553,10 +2553,12 @@ class Course(object):
         if COURSES_CAN_USE_GOOGLE_APIS.value:
             opts.add_property(schema_fields.SchemaField(
                 CONFIG_KEY_GOOGLE_API_KEY, 'Google API Key', 'string',
-                optional=True, i18n=False, description='Google API Key'))
+                description=str(messages.COURSE_GOOGLE_API_KEY_DESCRIPTION),
+                i18n=False, optional=True))
             opts.add_property(schema_fields.SchemaField(
                 CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client ID', 'string',
-                optional=True, i18n=False, description='Google Client Id'))
+                description=str(messages.COURSE_GOOGLE_CLIENT_ID_DESCRIPTION),
+                i18n=False, optional=True))
 
     @classmethod
     def create_base_settings_schema(cls):

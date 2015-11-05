@@ -55,6 +55,10 @@ table.skill-map-table ol.comma-list li:last-child:after {
 .chart-container {
   margin: 50px;
 }
+.required-label:after {
+  content: "*";
+  color: #f00;
+}
 
 /*
  * Skill competency analytics styles.

@@ -218,7 +218,8 @@ class ResourceMCQuestion(ResourceQuestionBase):
             supportCustomTags, optional=False)
         cls._add_html_field_to(
             mc_question, 'defaultFeedback', 'Feedback', 'mc-question',
-            supportCustomTags)
+            supportCustomTags,
+            description=messages.MULTIPLE_CHOICE_FEEDBACK_DESCRIPTION)
 
         mc_question.add_property(schema_fields.SchemaField(
             'permute_choices', 'Randomize Choices', 'boolean',
@@ -260,10 +261,10 @@ class ResourceMCQuestion(ResourceQuestionBase):
         cls._add_html_field_to(
             choice_type, 'feedback', 'Feedback', 'mc-choice-feedback',
             supportCustomTags,
-            description=messages.MULTIPLE_CHOICE_FEEDBACK_DESCRIPTION)
+            description=messages.MULTIPLE_CHOICE_CHOICE_FEEDBACK_DESCRIPTION)
 
         choices_array = schema_fields.FieldArray(
-            'choices', '', item_type=choice_type, optional=True,
+            'choices', None, item_type=choice_type,
             extra_schema_dict_values={
                 'className': 'mc-choice-container',
                 'listAddLabel': 'Add a choice',
@@ -1079,7 +1080,8 @@ class ResourceLesson(resource.AbstractResourceHandler):
         lesson.add_property(schema_fields.SchemaField(
             'unit_id', 'Unit', 'string', i18n=False,
             description=messages.LESSON_PARENT_UNIT_DESCRIPTION,
-            select_data=unit_list))
+            select_data=unit_list,
+            extra_schema_dict_values={'required': False}))
         lesson.add_property(schema_fields.SchemaField(
             'video', 'Video ID', 'string', hidden=not has_video_id,
             optional=True, description=messages.LESSON_VIDEO_ID_DESCRIPTION))

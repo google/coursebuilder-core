@@ -286,7 +286,7 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
             extra_schema_dict_values={
                 '_type': 'datetime',
                 'className': 'inputEx-CombineField gcb-datetime '
-                'inputEx-fieldWrapper date-only'}))
+                'inputEx-fieldWrapper date-only inputEx-required'}))
         resources_display.LabelGroupsHelper.add_labels_schema_fields(
             schema, 'announcement')
         schema.add_property(schema_fields.SchemaField(

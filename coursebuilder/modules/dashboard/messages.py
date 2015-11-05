@@ -114,5 +114,5 @@ This describes this role for your reference.
 
 ROLE_USER_EMAILS_DESCRIPTION = """
 This list of email addresses represents the members of this role.
-Separate addresses with a comma or space.
+Separate addresses with a comma, space, or newline.
 """
