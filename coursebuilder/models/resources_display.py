@@ -325,7 +325,7 @@ class ResourceQuestionGroup(resource.AbstractResourceHandler):
             item_array_classes += ' empty-question-list'
 
         item_array = schema_fields.FieldArray(
-            'items', '', item_type=item_type,
+            'items', None, item_type=item_type,
             extra_schema_dict_values={
                 'className': item_array_classes,
                 'sortable': 'true',
