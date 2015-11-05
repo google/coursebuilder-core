@@ -443,6 +443,7 @@ class LabelGroupsHelper(object):
                     field['name'], field['label'], description=str(description),
                     extra_schema_dict_values={
                         '_type': 'checkbox-list',
+                        'noItemsHideField': True,
                     },
                     item_type=schema_fields.SchemaField(None, None, 'string',
                         extra_schema_dict_values={'_type': 'boolean'},

@@ -16,6 +16,7 @@ function bindCheckboxListField(Y) {
       this.options.choices = Y.Lang.isArray(options.choices) ?
         options.choices : [];
       this.options.noItemsMessage = options.noItemsMessage || 'No items';
+      this.options.noItemsHideField = options.noItemsHideField || false;
     },
 
     renderComponent: function() {
@@ -26,10 +27,18 @@ function bindCheckboxListField(Y) {
         return that.renderSubField(choice);
       })
       if (!this.options.choices.length) {
-        noItemsNode = $(
-          '<div class="inputEx-CheckboxListField-noItems"></div>');
-        noItemsNode.text(this.options.noItemsMessage);
-        noItemsNode.appendTo(this.wrapEl);
+        if (this.options.noItemsHideField) {
+          // wait until that.fieldContainer is attached to the DOM so we can
+          // find its parent.
+          setTimeout(function(){
+            $(that.fieldContainer).closest('.inputEx-fieldWrapper').remove();
+          }, 0);
+        } else {
+          var noItemsNode = $(
+            '<div class="inputEx-CheckboxListField-noItems"></div>');
+          noItemsNode.text(this.options.noItemsMessage);
+          noItemsNode.appendTo(this.wrapEl);
+        }
       }
     },
 
