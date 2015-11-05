@@ -22,6 +22,8 @@ files:
   - modules/courses/roles.py
   - modules/courses/settings.py
   - modules/courses/templates/asset_list.html
+  - modules/courses/templates/availability.css
+  - modules/courses/templates/availability.js
   - modules/courses/templates/label_list.html
   - modules/courses/templates/question_group_list.html
   - modules/courses/templates/question_list.html

@@ -1,0 +1,61 @@
+/*
+ * Styling for the Course Availability settings page.
+ */
+.availability-manager .inputEx-List-link,
+.availability-manager .content-availability .inputEx-Group-legend,
+.availability-manager .content-availability .inputEx-label,
+.availability-manager .content-availability .inputEx-description {
+  display: none !important;
+}
+.availability-manager .content-availability > span:first-child {
+  display: none;
+}
+.availability-manager .content-availability {
+  display: inline-block;
+  background-color: #fff;
+  border: solid #e0e0e0 1px;
+  border-radius: 3px;
+}
+.availability-manager .content-availability .inputEx-ListField-childContainer
+    > div:first-child .inputEx-label {
+  /* Display the labels from the first row as column headers */
+  display: block !important;
+  float: none;
+  margin: 0 0 10px 0;
+  width: 100%;
+  min-height: 20px;
+}
+.availability-manager .content-availability .inputEx-label label {
+  font-weight: normal !important;
+  font-style: italic;
+  float: left;
+  margin-top: 2px;
+}
+.availability-manager .content-availability .inputEx-label .gcb-form-help-icon {
+  float: none;
+}
+.availability-manager .content-element {
+  width: 100%;
+}
+.availability-manager .content-element > fieldset {
+  border-top: none !important;
+  margin: 2px 0 !important;
+}
+.availability-manager .content-element > fieldset > .inputEx-fieldWrapper {
+  float: left;
+  vertical-align: top;
+}
+.availability-manager .content-element > fieldset
+    > .inputEx-fieldWrapper +.inputEx-fieldWrapper {
+  float: right;
+  width: 200px;
+  margin-left: 20px;
+}
+.availability-manager .content-element .indent {
+  padding-left: 20px;
+}
+.availability-manager .empty-list {
+  padding: 20px;
+  text-align: center;
+  font-style: italic;
+}

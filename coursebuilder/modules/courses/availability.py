@@ -16,6 +16,9 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import os
+
+import appengine_config
 from common import crypto
 from common import schema_fields
 from controllers import utils
@@ -28,6 +31,9 @@ from modules.oeditor import oeditor
 
 custom_module = None
 
+_TEMPLATES_DIR = os.path.join(
+    appengine_config.BUNDLE_ROOT, 'modules', 'courses', 'templates')
+
 
 class AvailabilityRESTHandler(utils.BaseRESTHandler):
 
@@ -39,12 +45,18 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         schema = cls.get_schema()
         return oeditor.ObjectEditor.get_html_for(
             handler, schema.get_json_schema(), schema.get_schema_dict(),
-            'dummy_key', cls.URL, exit_url='', exit_button_caption='')
+            'dummy_key', cls.URL, additional_dirs=[_TEMPLATES_DIR], exit_url='',
+            exit_button_caption='', extra_css_files=['availability.css'],
+            extra_js_files=['availability.js'])
 
     @classmethod
     def get_schema(cls):
-        ret = schema_fields.FieldRegistry('Availability',
-                                          'Course Availability Settings')
+        ret = schema_fields.FieldRegistry(
+            'Availability', 'Course Availability Settings',
+            extra_schema_dict_values={
+                'className': (
+                    'inputEx-Group new-form-layout hidden-header '
+                    'availability-manager')})
         ret.add_property(schema_fields.SchemaField(
             'course_availability', 'Course Availability', 'string',
             description='This sets the availability of the course for '
@@ -59,7 +71,8 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'syllabus.',
             i18n=False, optional=True))
         element_settings = schema_fields.FieldRegistry(
-            'Element Settings', 'Availability settings for course elements')
+            'Element Settings', 'Availability settings for course elements',
+            extra_schema_dict_values={'className': 'content-element'})
         element_settings.add_property(schema_fields.SchemaField(
             'type', 'Element Kind', 'string',
             i18n=False, optional=True, editable=False, hidden=True))
@@ -71,7 +84,16 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             i18n=False, optional=True, editable=False, hidden=True))
         element_settings.add_property(schema_fields.SchemaField(
             'name', 'Element Title', 'string',
-            i18n=False, optional=True, editable=False))
+            i18n=False, optional=True, editable=False,
+            extra_schema_dict_values={'className': 'title'}))
+        element_settings.add_property(schema_fields.SchemaField(
+            'shown_when_unavailable', 'Shown When Unavailable', 'boolean',
+            description='If checked, the content displays its '
+            'title in the syllabus even when it is private.  '
+            '<a href="https://code.google.com/p/course-builder/'
+            'wiki/CourseBuilderChecklist">Learn more...</a>',
+            i18n=False, optional=True,
+            extra_schema_dict_values={'className': 'shown'}))
         element_settings.add_property(schema_fields.SchemaField(
             'availability', 'Content Availability', 'string',
             description='Content defaults to the availability '
@@ -80,17 +102,12 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             '<a href="https://code.google.com/p/course-builder'
             '/wiki/CourseBuilderChecklist">Learn more...</a>',
             i18n=False, optional=True,
-            select_data=[(a, a.title()) for a in courses.AVAILABILITY_VALUES]))
-        element_settings.add_property(schema_fields.SchemaField(
-            'shown_when_unavailable', 'Shown When Unavailable', 'boolean',
-            description='If checked, the content displays its '
-            'title in the syllabus even when it is private.  '
-            '<a href="https://code.google.com/p/course-builder/'
-            'wiki/CourseBuilderChecklist">Learn more...</a>',
-            i18n=False, optional=True))
+            select_data=[(a, a.title()) for a in courses.AVAILABILITY_VALUES],
+            extra_schema_dict_values={'className': 'availability'}))
         ret.add_property(schema_fields.FieldArray(
             'element_settings', 'Content Availability',
-            item_type=element_settings, optional=True))
+            item_type=element_settings, optional=True,
+            extra_schema_dict_values={'className': 'content-availability'}))
         ret.add_property(schema_fields.SchemaField(
             'whitelist', 'Students Allowed to Register', 'text',
             description='Only students with email addresses in this list may '
