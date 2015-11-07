@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="/modules/guide/_static/img/favicon.ico">
+    <title>Course Builder Guide</title>
+  <body unresolved>
+    <codelab-app>
+      {% for course_slug, course_title, category_color, units in courses %}
+          {% for unit_id, unit_title, unit_desc, unit_duration in units %}
+              <codelab-card label="{{ unit_title }}"
+                  url="{{ course_slug }}/guide?unit_id={{ unit_id }}"
+                  icon="/modules/guide/_static/img/book-icon-md.png"
+                  category="{{ course_title }}"
+                  duration="{{ unit_duration }}"
+                  color="{{ category_color }}"
+              >{{ unit_desc }}</codelab-card>
+          {% endfor %}
+      {% endfor %}
+    </codelab-app>
+  </body>
+</html>

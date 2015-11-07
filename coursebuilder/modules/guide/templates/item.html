@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <base href="{{ gcb_course_base }}" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport"
+        content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+    <meta name="theme-color" content="#4F7DC9">
+    <link rel="shortcut icon" href="/modules/guide/_static/img/favicon.ico">
+
+    <!-- Course Builder -->
+    <link rel="stylesheet" href="/modules/assessment_tags/resources/questions.css">
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/minimal.mobile.css"
+        media="only screen and (max-device-width: 1024px)">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/modules/assessment_tags/resources/grading_lib.js"></script>
+    <script src="/modules/assessment_tags/resources/grading.js"></script>
+
+    <!-- separate audit and gcbCanPost*Events support into a new file; include it here -->
+    <script src="assets/lib/activity-generic-1.3.js"></script>
+    <script>
+        var questionData = {};
+        var eventXsrfToken = '{{ event_xsrf_token }}';
+        {% if record_tag_events %}
+          var gcbCanPostTagEvents = true;
+        {% endif %}
+        {% if record_page_events %}
+          var gcbCanPostPageEvents = true;
+        {% endif %}
+        {% if record_events %}
+          var gcbCanPostEvents = true;
+        {% endif %}
+
+        {% if transient_student %}
+          var transientStudent = true;
+        {% else %}
+          var transientStudent = false;
+        {% endif %}
+      </script>
+
+      <!-- butterbar support -->
+      <script src="/modules/oeditor/resources/butterbar.js"></script>
+      <link rel="stylesheet" type="text/css"
+          href="/modules/oeditor/resources/butterbar.css" media="screen" />
+  </head>
+  <body>
+    <div class="gcb-butterbar-container">
+      <div id="gcb-butterbar-top" class="gcb-butterbar" style="margin-top:50px" aria-live="polite">
+        <p id="gcb-butterbar-message"></p>
+        <a id="gcb-butterbar-close">X</a>
+      </div>
+    </div>
+    <codelab-codelab
+      label="{{ unit_title }}"
+      feedback_link="{{ feedback_link }}"
+      category="{{ course_title }}"
+      color="{{ category_color }}"
+    >
+        {% for lesson in lessons %}
+            <codelab-step
+                label="{{ lesson.title }}"
+                duration="{{ lesson.duration }}"
+            >
+                {% include 'lesson.html' %}
+                {% for item in display_content %}
+                    {{ item }}
+                {% endfor %}
+            </codelab-step>
+        {% endfor %}
+    </codelab-codelab>
+  </body>
+</html>

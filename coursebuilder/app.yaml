@@ -34,6 +34,7 @@ env_variables:
     modules.data_removal.data_removal
     modules.embed.embed
     modules.extra_tabs.extra_tabs
+    modules.guide.guide
     modules.i18n_dashboard.i18n_dashboard
     modules.invitation.invitation
     modules.manual_progress.manual_progress

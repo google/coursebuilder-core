@@ -1,0 +1,11 @@
+tests:
+  functional:
+    - modules.guide.guide_tests.GuideTests = 4
+
+files:
+  - modules/guide/__init__.py
+  - modules/guide/guide.py
+  - modules/guide/guide_tests.py
+  - modules/guide/manifest.yaml
+  - modules/guide/templates/item.html
+  - modules/guide/templates/list.html

@@ -28,6 +28,52 @@ from models import review
 from models import roles
 
 
+class StudentCourseView(object):
+    """A class that gives access to course, enforcing student permissions."""
+
+    def __init__(self, course, student):
+        self.course = course
+        self.student = student
+
+        availability = course.get_course_availability()
+        self.units_by_unit_id = None
+
+    def _get_units(self):
+        if self.units_by_unit_id is None:
+            if self.student:
+                units = self.course.get_track_matching_student(self.student)
+            else:
+                units = self.course.get_units()
+
+            self.units_by_unit_id = collections.OrderedDict()
+            for unit in units:
+                if not self.course.is_unit_available(unit):
+                    continue
+                self.units_by_unit_id[str(unit.unit_id)] = unit
+
+        return self.units_by_unit_id
+
+    def get_units(self):
+        if roles.Roles.is_course_admin(self.course.app_context):
+            return self.course.get_units()
+        return self._get_units().values()
+
+    def get_lessons(self, unit_id):
+        if roles.Roles.is_course_admin(self.course.app_context):
+            return self.course.get_lessons(unit_id)
+
+        if not str(unit_id) in self._get_units():
+            return []
+
+        lessons = []
+        unit = self.course.find_unit_by_id(unit_id)
+        for lesson in self.course.get_lessons(unit_id):
+            if not self.course.is_lesson_available(unit, lesson):
+                continue
+            lessons.append(lesson)
+        return lessons
+
+
 def is_progress_recorded(handler, student):
     if student.is_transient:
         return False
