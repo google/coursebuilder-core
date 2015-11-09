@@ -1,0 +1,15 @@
+{
+  "name": "polymer",
+  "description": "Polymer component bundle for Course Builder Guide experience",
+  "dependencies": {
+    "polymer": "Polymer/polymer#~1.2.1",
+    "polymer-cookie": "Polymer/polymer-cookie#~0.3.0",
+    "iron-elements": "PolymerElements/iron-elements#~1.0.4",
+    "paper-dialog": "PolymerElements/paper-dialog#~1.0.2",
+    "paper-elements": "PolymerElements/paper-elements#~1.0.5",
+    "highlightjs": "~8.8.0"
+  },
+  "resolutions": {
+    "polymer": "~1.2.1"
+  }
+}
