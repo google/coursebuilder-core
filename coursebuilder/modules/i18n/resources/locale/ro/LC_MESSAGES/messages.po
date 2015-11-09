@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-02 07:00-0800\n"
+"POT-Creation-Date: 2015-11-09 08:46-0800\n"
 "PO-Revision-Date: 2015-11-02 07:00-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ro <LL@li.org>\n"
@@ -24,7 +24,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1178
+#: experimental/coursebuilder/models/resources_display.py:1171
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "Unitatea %(index)s – %(title)s"
@@ -32,7 +32,7 @@ msgstr "Unitatea %(index)s – %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1198
+#: experimental/coursebuilder/models/resources_display.py:1191
 #, python-format
 msgid "Unit %s"
 msgstr "Unitatea %s"
@@ -95,23 +95,23 @@ msgid " JavaScript should be enabled to grade this question. "
 msgstr " JavaScript trebuie să fie activat pentru a evalua această întrebare. "
 
 #. Alt text for image representing student progress.
+#. Alt text for image showing student progress.
 #. Text shown after an assignment whose review has been completed.
 #. Shown in the student profile page, next to an assessment title. States
 #. whether the assessment has been completed.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:44
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:45
-#: experimental/coursebuilder/views/macros.html:27
-#: experimental/coursebuilder/views/macros.html:28
+#: experimental/coursebuilder/views/macros.html:22
 #: experimental/coursebuilder/views/review_dashboard.html:58
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
 msgstr "Finalizată"
 
 #. Alt text for image representing student progress.
+#. Alt text for image showing student progress.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:49
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:50
-#: experimental/coursebuilder/views/macros.html:14
-#: experimental/coursebuilder/views/macros.html:15
+#: experimental/coursebuilder/views/macros.html:11
 msgid "Not yet started"
 msgstr "Neîncepută"
 
@@ -149,7 +149,7 @@ msgstr " Indiciu "
 #. as content to external web pages. (I.e., some external site wants
 #. to use this assignment as part of a page's content, but this
 #. is not permitted)
-#: experimental/coursebuilder/modules/assessments/assessments.py:121
+#: experimental/coursebuilder/modules/assessments/assessments.py:122
 msgid "Peer-review assignments cannot be embedded in external pages."
 msgstr "Temele evaluate de colegi nu pot fi încorporate în pagini externe."
 
@@ -300,11 +300,10 @@ msgid "Review your peers' assignments by clicking on the button below."
 msgstr "Evaluați temele colegilor dând clic pe butonul de mai jos."
 
 #. Text for the button on the assignment submission confirmation page.
-#. Displayed in the course contents page. Indicates a page to which students
-#. can go to review other students' assignments.
+#. Displayed in the course contents page. Indicates a page to
+#. which students can go to review other students' assignments.
 #: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
-#: experimental/coursebuilder/views/macros.html:99
-#: experimental/coursebuilder/views/macros.html:106
+#: experimental/coursebuilder/modules/courses/unit_outline.py:515
 msgid "Review peer assignments"
 msgstr "Evaluați temele colegilor"
 
@@ -822,13 +821,13 @@ msgstr "Trimiteți"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:362
+#: experimental/coursebuilder/modules/search/resources.py:363
 #: experimental/coursebuilder/views/unit.html:84
 msgid "Lesson"
 msgstr "Lecție"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:728
+#: experimental/coursebuilder/modules/search/resources.py:730
 msgid "Announcement"
 msgstr "Anunț"
 
@@ -1184,8 +1183,7 @@ msgid "Registrations for this course are not open."
 msgstr "Înregistrările pentru acest curs nu sunt deschise."
 
 #. Title for the course syllabus on the main contents page.
-#: experimental/coursebuilder/views/course.html:44
-#: experimental/coursebuilder/views/preview.html:31
+#: experimental/coursebuilder/views/course.html:45
 msgid "Syllabus"
 msgstr "Programă"
 
@@ -1269,26 +1267,15 @@ msgstr "Versiune text"
 msgid "This lesson is not available."
 msgstr "Această lecție nu este disponibilă."
 
-#. Alt text for image representing student progress.
-#: experimental/coursebuilder/views/macros.html:11
-#: experimental/coursebuilder/views/macros.html:12
+#. Alt text for image showing student progress.
+#: experimental/coursebuilder/views/macros.html:8
 msgid "Not yet submitted"
 msgstr "Netrimisă"
 
-#. Alt text for image representing student progress.
-#: experimental/coursebuilder/views/macros.html:21
-#: experimental/coursebuilder/views/macros.html:22
+#. Alt text for image showing student progress.
+#: experimental/coursebuilder/views/macros.html:17
 msgid "In progress"
 msgstr "În desfășurare"
-
-#. Menu item.
-#. Navigation breadcrumb.
-#: experimental/coursebuilder/views/macros.html:290
-#: experimental/coursebuilder/views/macros.html:294
-#: experimental/coursebuilder/views/macros.html:344
-#: experimental/coursebuilder/views/unit.html:86
-msgid "Activity"
-msgstr "Activitate"
 
 #. Text appearing just before an input field containing a student's answer.
 #: experimental/coursebuilder/views/readonly_assessment.html:31
@@ -1573,6 +1560,11 @@ msgstr "Afișați programa"
 msgid "Hide Syllabus"
 msgstr "Ascundeți programa"
 
+#. Navigation breadcrumb.
+#: experimental/coursebuilder/views/unit.html:86
+msgid "Activity"
+msgstr "Activitate"
+
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
 #: experimental/coursebuilder/views/unit.html:112
@@ -1594,5 +1586,4 @@ msgstr "Pagina următoare"
 #: experimental/coursebuilder/views/unit.html:142
 msgid "End"
 msgstr "Sfârșit"
-
 

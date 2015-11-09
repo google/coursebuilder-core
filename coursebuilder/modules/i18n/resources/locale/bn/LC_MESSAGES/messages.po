@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-02 07:00-0800\n"
+"POT-Creation-Date: 2015-11-09 08:46-0800\n"
 "PO-Revision-Date: 2015-11-02 07:00-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: bn <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1178
+#: experimental/coursebuilder/models/resources_display.py:1171
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "একক  %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "একক  %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1198
+#: experimental/coursebuilder/models/resources_display.py:1191
 #, python-format
 msgid "Unit %s"
 msgstr "%s ইউনিট"
@@ -94,23 +94,23 @@ msgid " JavaScript should be enabled to grade this question. "
 msgstr " এই প্রশ্নে গ্রেড দেওয়ার জন্য JavaScript সক্ষম থাকতে হবে৷ "
 
 #. Alt text for image representing student progress.
+#. Alt text for image showing student progress.
 #. Text shown after an assignment whose review has been completed.
 #. Shown in the student profile page, next to an assessment title. States
 #. whether the assessment has been completed.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:44
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:45
-#: experimental/coursebuilder/views/macros.html:27
-#: experimental/coursebuilder/views/macros.html:28
+#: experimental/coursebuilder/views/macros.html:22
 #: experimental/coursebuilder/views/review_dashboard.html:58
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
 msgstr "সম্পূর্ণ হয়েছে"
 
 #. Alt text for image representing student progress.
+#. Alt text for image showing student progress.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:49
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:50
-#: experimental/coursebuilder/views/macros.html:14
-#: experimental/coursebuilder/views/macros.html:15
+#: experimental/coursebuilder/views/macros.html:11
 msgid "Not yet started"
 msgstr "এখনো শুরু করেনি"
 
@@ -148,7 +148,7 @@ msgstr " ইঙ্গিত "
 #. as content to external web pages. (I.e., some external site wants
 #. to use this assignment as part of a page's content, but this
 #. is not permitted)
-#: experimental/coursebuilder/modules/assessments/assessments.py:121
+#: experimental/coursebuilder/modules/assessments/assessments.py:122
 msgid "Peer-review assignments cannot be embedded in external pages."
 msgstr ""
 "সহকর্মীকৃত-পর্যালোচনার অ্যাসাইনমেন্টগুলি বহিঃস্থ পৃষ্ঠাগুলিতে এমবেড করা "
@@ -305,11 +305,10 @@ msgid "Review your peers' assignments by clicking on the button below."
 msgstr "নীচের বোতামটিতে ক্লিক করে আপনার মিত্রগণের হস্তান্তরণগুলি পর্যালোচনা করুন৷"
 
 #. Text for the button on the assignment submission confirmation page.
-#. Displayed in the course contents page. Indicates a page to which students
-#. can go to review other students' assignments.
+#. Displayed in the course contents page. Indicates a page to
+#. which students can go to review other students' assignments.
 #: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
-#: experimental/coursebuilder/views/macros.html:99
-#: experimental/coursebuilder/views/macros.html:106
+#: experimental/coursebuilder/modules/courses/unit_outline.py:515
 msgid "Review peer assignments"
 msgstr "মিত্রগণের হস্তান্তরণগুলি পর্যালোচনা করুন"
 
@@ -826,13 +825,13 @@ msgstr "জমা দিন"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:362
+#: experimental/coursebuilder/modules/search/resources.py:363
 #: experimental/coursebuilder/views/unit.html:84
 msgid "Lesson"
 msgstr "পাঠ"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:728
+#: experimental/coursebuilder/modules/search/resources.py:730
 msgid "Announcement"
 msgstr "ঘোষণা"
 
@@ -1186,8 +1185,7 @@ msgid "Registrations for this course are not open."
 msgstr "এই পাঠ্যক্রমে নিবন্ধীকরণ বন্ধ আছে৷"
 
 #. Title for the course syllabus on the main contents page.
-#: experimental/coursebuilder/views/course.html:44
-#: experimental/coursebuilder/views/preview.html:31
+#: experimental/coursebuilder/views/course.html:45
 msgid "Syllabus"
 msgstr "পাঠক্রম"
 
@@ -1272,26 +1270,15 @@ msgstr "পাঠ্য সংস্করণ"
 msgid "This lesson is not available."
 msgstr "এই পাঠটি উপলব্ধ নেই৷"
 
-#. Alt text for image representing student progress.
-#: experimental/coursebuilder/views/macros.html:11
-#: experimental/coursebuilder/views/macros.html:12
+#. Alt text for image showing student progress.
+#: experimental/coursebuilder/views/macros.html:8
 msgid "Not yet submitted"
 msgstr "এখনো জমা দেয়নি"
 
-#. Alt text for image representing student progress.
-#: experimental/coursebuilder/views/macros.html:21
-#: experimental/coursebuilder/views/macros.html:22
+#. Alt text for image showing student progress.
+#: experimental/coursebuilder/views/macros.html:17
 msgid "In progress"
 msgstr "প্রগতিতে রয়েছে"
-
-#. Menu item.
-#. Navigation breadcrumb.
-#: experimental/coursebuilder/views/macros.html:290
-#: experimental/coursebuilder/views/macros.html:294
-#: experimental/coursebuilder/views/macros.html:344
-#: experimental/coursebuilder/views/unit.html:86
-msgid "Activity"
-msgstr "কার্যকলাপ"
 
 #. Text appearing just before an input field containing a student's answer.
 #: experimental/coursebuilder/views/readonly_assessment.html:31
@@ -1579,6 +1566,11 @@ msgstr "পাঠক্রম দেখান"
 msgid "Hide Syllabus"
 msgstr "পাঠক্রম লুকান"
 
+#. Navigation breadcrumb.
+#: experimental/coursebuilder/views/unit.html:86
+msgid "Activity"
+msgstr "কার্যকলাপ"
+
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
 #: experimental/coursebuilder/views/unit.html:112
@@ -1600,5 +1592,4 @@ msgstr "পরবর্তী পৃষ্ঠা"
 #: experimental/coursebuilder/views/unit.html:142
 msgid "End"
 msgstr "শেষ"
-
 
