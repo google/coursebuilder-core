@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-26 07:49-0700\n"
-"PO-Revision-Date: 2015-10-19 07:52-0700\n"
+"POT-Creation-Date: 2015-11-02 07:00-0800\n"
+"PO-Revision-Date: 2015-11-02 07:00-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ja <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1184
+#: experimental/coursebuilder/models/resources_display.py:1178
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "ユニット %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "ユニット %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1204
+#: experimental/coursebuilder/models/resources_display.py:1198
 #, python-format
 msgid "Unit %s"
 msgstr "ユニット %s"
@@ -169,17 +169,17 @@ msgstr "この課題の期限: "
 #. Text telling students what their recorded email address is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:52
 msgid "Your answers have been recorded under the email"
-msgstr ""
+msgstr "解答はこのメールに保存されました"
 
 #. Text telling students there are not answers recorded for them.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:56
 msgid "You have not submitted any answers to this assignment under the email"
-msgstr ""
+msgstr "この課題の解答をこのメールに送信していません"
 
 #. Text telling students what their recorded email address is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:61
 msgid "Your answers will be recorded under the email"
-msgstr ""
+msgstr "解答はこのメールに保存されます"
 
 #. Text telling students what their total score is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:71
@@ -799,7 +799,7 @@ msgstr "送信"
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/modules/search/resources.py:362
-#: experimental/coursebuilder/views/unit.html:85
+#: experimental/coursebuilder/views/unit.html:84
 msgid "Lesson"
 msgstr "レッスン"
 
@@ -853,27 +853,27 @@ msgid "Search is currently unavailable."
 msgstr "検索は現在利用できません。"
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:21
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:20
 msgid "Taught in this lesson:"
 msgstr "このレッスンの内容:"
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:45
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:44
 msgid "Depends on:"
 msgstr "必要なスキル:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:49
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:48
 msgid "This lesson doesn't have any prerequisites."
 msgstr "このレッスンの前のレッスンはありません。"
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:64
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:63
 msgid "Leads to:"
 msgstr "習得できるスキル:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:68
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:67
 msgid "This lesson isn't a prerequisite for any other lesson."
 msgstr "このレッスンに続くレッスンはありません。"
 
@@ -904,27 +904,27 @@ msgid "high"
 msgstr "高"
 
 #. Header for skills progress section
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:20
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:19
 msgid "Skills Progress"
 msgstr "スキルの進捗状況"
 
 #. List of acquired skills for a student
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:31
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:30
 msgid "Achievements"
 msgstr "習得スキル"
 
 #. Describe an empty set of acquired skills
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:35
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:34
 msgid "Currently, no acquired skills."
 msgstr "現在、習得したスキルはありません。"
 
 #. List of skills recommended to a student to learn
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:52
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:51
 msgid "Recommended Next"
 msgstr "おすすめのスキル"
 
 #. Describe an empty set of recommended skills
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:56
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:55
 msgid "Currently, you have no recommended skills."
 msgstr "現在、おすすめのスキルはありません。"
 
@@ -1111,7 +1111,7 @@ msgstr "言語:"
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/base_course.html:7
 #: experimental/coursebuilder/views/base_course.html:42
-#: experimental/coursebuilder/views/unit.html:76
+#: experimental/coursebuilder/views/unit.html:75
 msgid "Course"
 msgstr "コース"
 
@@ -1231,7 +1231,7 @@ msgstr "処理しています"
 #: experimental/coursebuilder/views/macros.html:290
 #: experimental/coursebuilder/views/macros.html:294
 #: experimental/coursebuilder/views/macros.html:344
-#: experimental/coursebuilder/views/unit.html:87
+#: experimental/coursebuilder/views/unit.html:86
 msgid "Activity"
 msgstr "アクティビティ"
 
@@ -1258,13 +1258,13 @@ msgid "Review"
 msgstr "レビュー"
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:55
+#: experimental/coursebuilder/views/review.html:54
 msgid "Back to the review dashboard."
 msgstr "レビュー ダッシュボードに戻る"
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:63
+#: experimental/coursebuilder/views/review.html:62
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -1273,36 +1273,36 @@ msgstr "このレビューの送信期限が過ぎています。送信期限は
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:68
+#: experimental/coursebuilder/views/review.html:67
 msgid "Due date for this review: "
 msgstr "このレビューの期限: "
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:77
+#: experimental/coursebuilder/views/review.html:76
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
 msgstr "ここで送信したスコアとコメントは他のメンバーが確認します。いったん送信したレビューを編集することはできません。"
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:86
+#: experimental/coursebuilder/views/review.html:85
 msgid "Reviewed assignment"
 msgstr "レビュー済みの課題"
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:89
+#: experimental/coursebuilder/views/review.html:88
 msgid "Assignment to review"
 msgstr "レビューする課題"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:116
+#: experimental/coursebuilder/views/review.html:115
 msgid "Submitted review"
 msgstr "送信済みのレビュー"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:131
+#: experimental/coursebuilder/views/review.html:130
 msgid "Review form"
 msgstr "レビュー フォーム"
 
@@ -1500,34 +1500,35 @@ msgid "No"
 msgstr "いいえ"
 
 #. Label on a control to show a class syllabus.
-#: experimental/coursebuilder/views/unit.html:49
+#: experimental/coursebuilder/views/unit.html:48
 msgid "Show Syllabus"
 msgstr "シラバスを表示"
 
 #. Label on a control to hide a class syllabus.
-#: experimental/coursebuilder/views/unit.html:53
+#: experimental/coursebuilder/views/unit.html:52
 msgid "Hide Syllabus"
 msgstr "シラバスを非表示"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
-#: experimental/coursebuilder/views/unit.html:113
+#: experimental/coursebuilder/views/unit.html:112
 msgid "This unit has no content."
 msgstr "このユニット内にコンテンツがありません。"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:134
+#: experimental/coursebuilder/views/unit.html:133
 msgid "Previous Page"
 msgstr "前のページ"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:140
+#: experimental/coursebuilder/views/unit.html:139
 msgid "Next Page"
 msgstr "次のページ"
 
 #. Text on the navigation button at the end of a lesson. It signals that the
 #. student has completed a unit (which is a series of lessons).
-#: experimental/coursebuilder/views/unit.html:143
+#: experimental/coursebuilder/views/unit.html:142
 msgid "End"
 msgstr "最後"
+
 

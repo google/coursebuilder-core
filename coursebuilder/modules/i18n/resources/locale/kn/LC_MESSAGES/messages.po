@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-26 07:49-0700\n"
-"PO-Revision-Date: 2015-10-19 07:52-0700\n"
+"POT-Creation-Date: 2015-11-02 07:00-0800\n"
+"PO-Revision-Date: 2015-11-02 07:00-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: kn <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1184
+#: experimental/coursebuilder/models/resources_display.py:1178
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "ಯೂನಿಟ್ %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "ಯೂನಿಟ್ %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1204
+#: experimental/coursebuilder/models/resources_display.py:1198
 #, python-format
 msgid "Unit %s"
 msgstr "ಯೂನಿಟ್‌ %s"
@@ -171,17 +171,17 @@ msgstr "ಈ ನಿಯೋಜನೆಗಾಗಿ ಅಂತಿಮ ದಿನಾಂಕ
 #. Text telling students what their recorded email address is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:52
 msgid "Your answers have been recorded under the email"
-msgstr ""
+msgstr "ನಿಮ್ಮ ಉತ್ತರಗಳನ್ನು ಇಮೇಲ್ ಅಡಿಯಲ್ಲಿ ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗಿದೆ"
 
 #. Text telling students there are not answers recorded for them.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:56
 msgid "You have not submitted any answers to this assignment under the email"
-msgstr ""
+msgstr "ಇಮೇಲ್ ಅಡಿಯಲ್ಲಿ ಈ ನಿಯೋಜನೆಗೆ ನೀವು ಯಾವುದೇ ಉತ್ತರಗಳನ್ನು ಸಲ್ಲಿಸಿಲ್ಲ"
 
 #. Text telling students what their recorded email address is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:61
 msgid "Your answers will be recorded under the email"
-msgstr ""
+msgstr "ನಿಮ್ಮ ಉತ್ತರಗಳನ್ನು ಇಮೇಲ್ ಅಡಿಯಲ್ಲಿ ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗುತ್ತದೆ"
 
 #. Text telling students what their total score is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:71
@@ -831,7 +831,7 @@ msgstr "ಸಲ್ಲಿಸಿ"
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/modules/search/resources.py:362
-#: experimental/coursebuilder/views/unit.html:85
+#: experimental/coursebuilder/views/unit.html:84
 msgid "Lesson"
 msgstr "ಪಾಠ"
 
@@ -885,27 +885,27 @@ msgid "Search is currently unavailable."
 msgstr "ಹುಡುಕಾಟ ಪ್ರಸ್ತುತ ಲಭ್ಯವಿಲ್ಲ."
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:21
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:20
 msgid "Taught in this lesson:"
 msgstr "ಈ ಪಾಠದಲ್ಲಿನ ಕಲಿಕೆ:"
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:45
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:44
 msgid "Depends on:"
 msgstr "ಇದರ ಮೇಲೆ ಅವಲಂಬಿತ:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:49
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:48
 msgid "This lesson doesn't have any prerequisites."
 msgstr "ಈ ಪಾಠವು ಯಾವುದೇ ಪೂರ್ವಾಪೇಕ್ಷಿತಗಳನ್ನು ಹೊಂದಿಲ್ಲ."
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:64
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:63
 msgid "Leads to:"
 msgstr "ಇದಕ್ಕೆ ಕಾರಣವಾಗುತ್ತದೆ:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:68
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:67
 msgid "This lesson isn't a prerequisite for any other lesson."
 msgstr "ಈ ಪಾಠವು ಯಾವುದೇ ಇತರ ಕೌಶಲ್ಯಗಳಿಗೆ ಪೂರ್ವಾಪೇಕ್ಷಿತವಾಗಿರುವುದಿಲ್ಲ."
 
@@ -936,27 +936,27 @@ msgid "high"
 msgstr "ಹೆಚ್ಚು"
 
 #. Header for skills progress section
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:20
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:19
 msgid "Skills Progress"
 msgstr "ಕೌಶಲ್ಯಗಳ ಪ್ರಗತಿ"
 
 #. List of acquired skills for a student
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:31
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:30
 msgid "Achievements"
 msgstr "ಸಾಧನೆಗಳು"
 
 #. Describe an empty set of acquired skills
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:35
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:34
 msgid "Currently, no acquired skills."
 msgstr "ಪ್ರಸ್ತುತ, ಯಾವುದೇ ಕೌಶಲ್ಯಗಳನ್ನು ಪಡೆಯಲಾಗಲಿಲ್ಲ."
 
 #. List of skills recommended to a student to learn
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:52
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:51
 msgid "Recommended Next"
 msgstr "ಮುಂದೆ ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ"
 
 #. Describe an empty set of recommended skills
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:56
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:55
 msgid "Currently, you have no recommended skills."
 msgstr "ಪ್ರಸ್ತುತ, ನೀವು ಯಾವುದೇ ಶಿಫಾರಸು ಮಾಡಲಾದ ಕೌಶಲ್ಯಗಳನ್ನು ಹೊಂದಿಲ್ಲ."
 
@@ -1162,7 +1162,7 @@ msgstr "ಭಾಷೆ:"
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/base_course.html:7
 #: experimental/coursebuilder/views/base_course.html:42
-#: experimental/coursebuilder/views/unit.html:76
+#: experimental/coursebuilder/views/unit.html:75
 msgid "Course"
 msgstr "ಕೋರ್ಸ್"
 
@@ -1298,7 +1298,7 @@ msgstr "ಪ್ರಗತಿಯಲ್ಲಿದೆ"
 #: experimental/coursebuilder/views/macros.html:290
 #: experimental/coursebuilder/views/macros.html:294
 #: experimental/coursebuilder/views/macros.html:344
-#: experimental/coursebuilder/views/unit.html:87
+#: experimental/coursebuilder/views/unit.html:86
 msgid "Activity"
 msgstr "ಚಟುವಟಿಕೆ"
 
@@ -1325,13 +1325,13 @@ msgid "Review"
 msgstr "ವಿಮರ್ಶೆ"
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:55
+#: experimental/coursebuilder/views/review.html:54
 msgid "Back to the review dashboard."
 msgstr "ವಿಮರ್ಶೆ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ ಹಿಂತಿರುಗಿ."
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:63
+#: experimental/coursebuilder/views/review.html:62
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -1342,13 +1342,13 @@ msgstr ""
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:68
+#: experimental/coursebuilder/views/review.html:67
 msgid "Due date for this review: "
 msgstr "ಈ ವಿಮರ್ಶೆಗಾಗಿ ಅಂತಿಮ ದಿನಾಂಕ: "
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:77
+#: experimental/coursebuilder/views/review.html:76
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
@@ -1358,23 +1358,23 @@ msgstr ""
 "ನಿಮಗೆ ಸಂಪಾದಿಸಲಾಗದಿರಬಹುದು."
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:86
+#: experimental/coursebuilder/views/review.html:85
 msgid "Reviewed assignment"
 msgstr "ವಿಮರ್ಶಿಸಲಾದ ನಿಯೋಜನೆ"
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:89
+#: experimental/coursebuilder/views/review.html:88
 msgid "Assignment to review"
 msgstr "ವಿಮರ್ಶೆಗಾಗಿ ನಿಯೋಜನೆ"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:116
+#: experimental/coursebuilder/views/review.html:115
 msgid "Submitted review"
 msgstr "ಸಲ್ಲಿಸಲಾದ ವಿಮರ್ಶೆ"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:131
+#: experimental/coursebuilder/views/review.html:130
 msgid "Review form"
 msgstr "ವಿಮರ್ಶೆ ಫಾರ್ಮ್"
 
@@ -1577,34 +1577,35 @@ msgid "No"
 msgstr "ಇಲ್ಲ"
 
 #. Label on a control to show a class syllabus.
-#: experimental/coursebuilder/views/unit.html:49
+#: experimental/coursebuilder/views/unit.html:48
 msgid "Show Syllabus"
 msgstr "ಪಠ್ಯಕ್ರಮ ತೋರಿಸಿ"
 
 #. Label on a control to hide a class syllabus.
-#: experimental/coursebuilder/views/unit.html:53
+#: experimental/coursebuilder/views/unit.html:52
 msgid "Hide Syllabus"
 msgstr "ಪಠ್ಯಕ್ರಮ ಮರೆಮಾಡಿ"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
-#: experimental/coursebuilder/views/unit.html:113
+#: experimental/coursebuilder/views/unit.html:112
 msgid "This unit has no content."
 msgstr "ಈ ಯೂನಿಟ್ ಯಾವುದೇ ವಿಷಯವನ್ನು ಹೊಂದಿಲ್ಲ."
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:134
+#: experimental/coursebuilder/views/unit.html:133
 msgid "Previous Page"
 msgstr "ಹಿಂದಿನ ಪುಟ"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:140
+#: experimental/coursebuilder/views/unit.html:139
 msgid "Next Page"
 msgstr "ಮುಂದಿನ ಪುಟ"
 
 #. Text on the navigation button at the end of a lesson. It signals that the
 #. student has completed a unit (which is a series of lessons).
-#: experimental/coursebuilder/views/unit.html:143
+#: experimental/coursebuilder/views/unit.html:142
 msgid "End"
 msgstr "ಅಂತ್ಯ"
+
 

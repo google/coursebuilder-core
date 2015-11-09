@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-10-26 07:49-0700\n"
-"PO-Revision-Date: 2015-10-19 07:52-0700\n"
+"POT-Creation-Date: 2015-11-02 07:00-0800\n"
+"PO-Revision-Date: 2015-11-02 07:00-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: lt <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -24,7 +24,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1184
+#: experimental/coursebuilder/models/resources_display.py:1178
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "%(index)s skyrius – „%(title)s“"
@@ -32,7 +32,7 @@ msgstr "%(index)s skyrius – „%(title)s“"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1204
+#: experimental/coursebuilder/models/resources_display.py:1198
 #, python-format
 msgid "Unit %s"
 msgstr "Matavimo vienetas (%s)"
@@ -172,17 +172,17 @@ msgstr "Šios užduoties terminas: "
 #. Text telling students what their recorded email address is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:52
 msgid "Your answers have been recorded under the email"
-msgstr ""
+msgstr "Jūsų atsakymai buvo įrašyti naudojant el. pašto adresą"
 
 #. Text telling students there are not answers recorded for them.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:56
 msgid "You have not submitted any answers to this assignment under the email"
-msgstr ""
+msgstr "Nepateikėte jokių šios užduoties atsakymų naudodami el. pašto adresą"
 
 #. Text telling students what their recorded email address is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:61
 msgid "Your answers will be recorded under the email"
-msgstr ""
+msgstr "Jūsų atsakymai bus įrašyti naudojant el. pašto adresą"
 
 #. Text telling students what their total score is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:71
@@ -819,7 +819,7 @@ msgstr "Pateikti"
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/modules/search/resources.py:362
-#: experimental/coursebuilder/views/unit.html:85
+#: experimental/coursebuilder/views/unit.html:84
 msgid "Lesson"
 msgstr "Pamoka"
 
@@ -873,27 +873,27 @@ msgid "Search is currently unavailable."
 msgstr "Paieška šiuo metu negalima."
 
 #. Header describing the skills for this lesson
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:21
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:20
 msgid "Taught in this lesson:"
 msgstr "Mokyta šioje pamokoje:"
 
 #. Header describing list of skills this lesson depends on
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:45
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:44
 msgid "Depends on:"
 msgstr "Priklauso nuo:"
 
 #. Describe an empty set of prerequisite skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:49
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:48
 msgid "This lesson doesn't have any prerequisites."
 msgstr "Šioje pamokoje nėra jokių būtinų sąlygų."
 
 #. Header describing list of skills this lesson leads to
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:64
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:63
 msgid "Leads to:"
 msgstr "Įgyjami įgūdžiai:"
 
 #. Describe an empty set of follow-on skills
-#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:68
+#: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:67
 msgid "This lesson isn't a prerequisite for any other lesson."
 msgstr "Ši pamoka nėra būtina norint dalyvauti bet kokioje kitoje pamokoje."
 
@@ -924,27 +924,27 @@ msgid "high"
 msgstr "aukštas"
 
 #. Header for skills progress section
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:20
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:19
 msgid "Skills Progress"
 msgstr "Įgūdžių įgijimo eiga"
 
 #. List of acquired skills for a student
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:31
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:30
 msgid "Achievements"
 msgstr "Laimėjimai"
 
 #. Describe an empty set of acquired skills
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:35
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:34
 msgid "Currently, no acquired skills."
 msgstr "Šiuo metu nėra jokių įgytų įgūdžių."
 
 #. List of skills recommended to a student to learn
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:52
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:51
 msgid "Recommended Next"
 msgstr "Rekomenduojama"
 
 #. Describe an empty set of recommended skills
-#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:56
+#: experimental/coursebuilder/modules/skill_map/templates/skills_progress.html:55
 msgid "Currently, you have no recommended skills."
 msgstr "Šiuo metu nėra jokių rekomenduojamų įgūdžių."
 
@@ -1142,7 +1142,7 @@ msgstr "Kalba:"
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/base_course.html:7
 #: experimental/coursebuilder/views/base_course.html:42
-#: experimental/coursebuilder/views/unit.html:76
+#: experimental/coursebuilder/views/unit.html:75
 msgid "Course"
 msgstr "Kursas"
 
@@ -1274,7 +1274,7 @@ msgstr "Vykdoma"
 #: experimental/coursebuilder/views/macros.html:290
 #: experimental/coursebuilder/views/macros.html:294
 #: experimental/coursebuilder/views/macros.html:344
-#: experimental/coursebuilder/views/unit.html:87
+#: experimental/coursebuilder/views/unit.html:86
 msgid "Activity"
 msgstr "Veikla"
 
@@ -1301,13 +1301,13 @@ msgid "Review"
 msgstr "Peržiūra"
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:55
+#: experimental/coursebuilder/views/review.html:54
 msgid "Back to the review dashboard."
 msgstr "Atgal į peržiūrų informacijos suvestinę."
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:63
+#: experimental/coursebuilder/views/review.html:62
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -1318,13 +1318,13 @@ msgstr ""
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:68
+#: experimental/coursebuilder/views/review.html:67
 msgid "Due date for this review: "
 msgstr "Šios peržiūros terminas: "
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:77
+#: experimental/coursebuilder/views/review.html:76
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
@@ -1333,23 +1333,23 @@ msgstr ""
 "Pateikę peržiūrą negalėsite jos redaguoti."
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:86
+#: experimental/coursebuilder/views/review.html:85
 msgid "Reviewed assignment"
 msgstr "Peržiūrėta užduotis"
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:89
+#: experimental/coursebuilder/views/review.html:88
 msgid "Assignment to review"
 msgstr "Užduotis, kurią reikia peržiūrėti"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:116
+#: experimental/coursebuilder/views/review.html:115
 msgid "Submitted review"
 msgstr "Pateikta peržiūra"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:131
+#: experimental/coursebuilder/views/review.html:130
 msgid "Review form"
 msgstr "Peržiūros forma"
 
@@ -1556,34 +1556,35 @@ msgid "No"
 msgstr "Ne"
 
 #. Label on a control to show a class syllabus.
-#: experimental/coursebuilder/views/unit.html:49
+#: experimental/coursebuilder/views/unit.html:48
 msgid "Show Syllabus"
 msgstr "Rodyti kurso programą"
 
 #. Label on a control to hide a class syllabus.
-#: experimental/coursebuilder/views/unit.html:53
+#: experimental/coursebuilder/views/unit.html:52
 msgid "Hide Syllabus"
 msgstr "Slėpti kurso programą"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
-#: experimental/coursebuilder/views/unit.html:113
+#: experimental/coursebuilder/views/unit.html:112
 msgid "This unit has no content."
 msgstr "Šiame skyriuje nėra turinio."
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:134
+#: experimental/coursebuilder/views/unit.html:133
 msgid "Previous Page"
 msgstr "Ankstesnis puslapis"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:140
+#: experimental/coursebuilder/views/unit.html:139
 msgid "Next Page"
 msgstr "Kitas puslapis"
 
 #. Text on the navigation button at the end of a lesson. It signals that the
 #. student has completed a unit (which is a series of lessons).
-#: experimental/coursebuilder/views/unit.html:143
+#: experimental/coursebuilder/views/unit.html:142
 msgid "End"
 msgstr "Pabaiga"
+
 
