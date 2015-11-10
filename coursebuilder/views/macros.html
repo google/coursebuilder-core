@@ -48,7 +48,7 @@
     <{{ inner_element_tag }} class="{{ inner_element_class|trim }}">
       {{ render_progress(outline_element) }}
       {% if outline_element.link and not suppress_link %}
-        <a href="{{ outline_element.link|safe }}">
+        <a href="{{ outline_element.link|escape }}">
       {% endif %}
       {{ outline_element.title }}
       {% if outline_element.link and not suppress_link %}

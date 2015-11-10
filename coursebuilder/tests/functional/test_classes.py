@@ -74,6 +74,7 @@ from tools.etl import testing
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
+from jinja2 import utils as jinja2_utils
 import webapp2
 
 # A number of data files in a test course.
@@ -2802,7 +2803,8 @@ class StudentAspectTest(actions.TestBase):
         # The default behavior is to show links to other units and lessons.
         response = self.get('unit?unit=2')
         for item in text_to_check:
-            assert_contains(item, response.body)
+            # Ensure link hrefs are escaped.
+            assert_contains(jinja2_utils.escape(item), response.body)
 
         with actions.OverriddenEnvironment(
                 {'unit': {'show_unit_links_in_leftnav': False}}):
@@ -4185,9 +4187,11 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         # Breadcrumbs.
         assert_contains_all_of(
             ['Unit 2</a></li>',
-             '<a href="unit?unit=14&lesson=15">',
-             '<a href="unit?unit=14&lesson=17">'], response.body)
-        assert '<a href="unit?unit=14&lesson=16">' not in response.body
+             '<a href="%s">' % jinja2_utils.escape('unit?unit=14&lesson=15'),
+             '<a href="%s">' % jinja2_utils.escape('unit?unit=14&lesson=17')],
+            response.body)
+        assert '<a href="%s">' % (
+            jinja2_utils.escape('unit?unit=14&lesson=16')) not in response.body
 
         # Clean up.
         sites.reset_courses()
