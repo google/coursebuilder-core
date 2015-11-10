@@ -56,9 +56,7 @@ find ./bower_components/ -type f -name "bower.json" -delete
 
 echo Zip things up into $SCRIPT_HOME/$OUTPUT_NAME.
 cp ./bower.json ./bower_components/
-pushd ./bower_components/
-zip -r ../$OUTPUT_NAME ./
-popd
+zip -r $OUTPUT_NAME ./bower_components/
 
 echo Cleaning up
 rm -rf ./bower_components/
