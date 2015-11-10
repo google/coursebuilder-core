@@ -513,7 +513,6 @@ div.mc-container div.inputEx-label {
 #cb-oeditor-form .mc-description input {
   width: 546px;  /* allow for 2px padding */
   margin: 0;
-  border: solid 1px #999;
 }
 div.set-scores-toggle {
   margin-top: 10px;
@@ -586,7 +585,6 @@ div.sa-grader-feedback {
 #cb-oeditor-form .sa-grader-text input {
   width: 506px;  /* allow for 2px padding */
   margin: 0;
-  border: solid 1px #999;
 }
 div.sa-grader-text,
 div.sa-grader-feedback,

@@ -51,6 +51,13 @@ ul.gcb-list, ol.gcb-list {
 
 /*** Row ***/
 
+.gcb-list__row,
+.gcb-list > table > tbody > tr {
+  transition: background-color 200ms;
+  height: 36px;
+  background-color: white;
+}
+
 /* Stripes:
  *
  * This can be used in two ways.  Either apply gcb-list__row--dark-stripe to
@@ -61,12 +68,6 @@ ul.gcb-list, ol.gcb-list {
 .gcb-list--autostripe .gcb-list__row:nth-child(even),
 .gcb-list--autostripe > table > tbody > tr:nth-child(even) {
   background-color:#f9f9f9;
-}
-
-.gcb-list__row,
-.gcb-list > table > tbody > tr {
-  transition: background-color 200ms;
-  height: 36px;
 }
 
 /* Hover needs to beat stripes */

@@ -506,6 +506,9 @@ label.settings.togglebutton {
   margin-bottom: 1em;
 }
 
+.mdl-layout-title {
+  font-size: 18px;
+}
 
 .mdl-layout__content {
   overflow: auto;
@@ -559,19 +562,10 @@ label.settings.togglebutton {
   color: #fff;
 }
 
-.mdl-navigation .gcb-menu .gcb-active-group .gcb-collapse__button {
-
-}
-
 .mdl-navigation__link .gcb-collapse__icon {
   position: absolute;
   right: 6px;
   margin-top: -3px;
-}
-
-/* Make the Courses menu item look like the others despite not being a group */
-#menu-item__courses {
-
 }
 
 #menu-item__courses.gcb-active {
@@ -644,9 +638,6 @@ label.settings.togglebutton {
 /* sub-groups */
 .gcb-menu__sub-group {
   border-top: solid 1px rgba(0, 0, 0, 0.15);
-}
-.gcb-menu__sub-group + .gcb-menu__sub-group {
-
 }
 
 /* etc */
