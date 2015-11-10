@@ -20,6 +20,7 @@ __author__ = [
 
 from common import crypto
 from common import users
+from common import utils as common_utils
 from controllers import sites
 from controllers import utils
 from models import models
@@ -208,6 +209,33 @@ class TextFileUploadTagTestCase(actions.TestBase):
         # The tag is not disabled
         self.assertNotIn('disabled', file_input.attrib)
         self.assertNotIn('disabled', submit.attrib)
+
+    def test_tag_before_and_after_submission(self):
+        assessment = self.course.add_assessment()
+        assessment.html_content = (
+            '<text-file-upload-tag '
+            '    display_length="100" instanceid="this-tag-id">'
+            '</text-file-upload-tag>')
+        self.course.save()
+
+        response = self.get('assessment?name=%s' % assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        warning = dom.find(
+            './/*[@class="user-upload-form-warning"]').text.strip()
+        self.assertEquals('Maximum file size is 1MB.', warning)
+
+        with common_utils.Namespace('ns_' + self._COURSE_NAME):
+            student, _ = models.Student.get_first_by_email(self._STUDENT_EMAIL)
+            student_work.Submission.write(
+                    assessment.unit_id, student.get_key(), 'contents')
+
+        response = self.get('assessment?name=%s' % assessment.unit_id)
+        dom = self.parse_html_string(response.body)
+        warning = dom.find(
+            './/*[@class="user-upload-form-warning"]').text.strip()
+        self.assertEquals(
+            'You have already submitted; submit again to replace your previous '
+            'entry.', warning)
 
     def test_tag_in_oeditor_preview_is_visible_but_disabled(self):
         response = self.post('oeditor/preview', {

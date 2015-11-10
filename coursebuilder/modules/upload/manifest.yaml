@@ -1,7 +1,7 @@
 tests:
   functional:
     - modules.upload.upload_tests.TextFileUploadHandlerTestCase = 8
-    - modules.upload.upload_tests.TextFileUploadTagTestCase = 2
+    - modules.upload.upload_tests.TextFileUploadTagTestCase = 3
 
 files:
   - modules/upload/__init__.py
