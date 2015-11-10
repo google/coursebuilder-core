@@ -8,18 +8,20 @@ set -e
 LN_TARGET="$COURSEBUILDER_RESOURCES"
 LN_SOURCE="$SOURCE_DIR/lib"
 
-# Declare resources subject to static serving
-declare -A STATIC_SERV
-STATIC_SERV["codemirror-4.5.0"]="codemirror"
-STATIC_SERV["inputex-3.1.0"]="inputex-3.1.0"
-STATIC_SERV["yui_2in3-2.9.0"]="2in3"
-STATIC_SERV["yui_3.6.0"]="yui_3.6.0"
-STATIC_SERV["d3-3.4.3"]="d3-3.4.3"
-STATIC_SERV["dc.js-1.6.0"]="dc.js-1.6.0"
-STATIC_SERV["crossfilter-1.3.7"]="crossfilter-1.3.7"
-STATIC_SERV["underscore-1.4.3"]="underscore-1.4.3"
-STATIC_SERV["material-design-iconic-font-1.1.1"]="material-design-icons"
-STATIC_SERV["dependo-0.1.4"]="dependo-0.1.4"
+# Declare resources subject to static serving. OS X is still on bash 3.x, so we
+# have to fake out associative arrays rather than use declare -A.
+STATIC_SERV=( \
+    "codemirror-4.5.0:codemirror"
+    "crossfilter-1.3.7:crossfilter-1.3.7"
+    "d3-3.4.3:d3-3.4.3"
+    "dc.js-1.6.0:dc.js-1.6.0"
+    "dependo-0.1.4:dependo-0.1.4"
+    "inputex-3.1.0:inputex-3.1.0"
+    "material-design-iconic-font-1.1.1:material-design-icons"
+    "underscore-1.4.3:underscore-1.4.3"
+    "yui_2in3-2.9.0:2in3"
+    "yui_3.6.0:yui_3.6.0" \
+)
 
 # Prepare files for static serving
 if [ "$ALLOW_STATIC_SERV" = true ] ; then
@@ -35,12 +37,13 @@ if [ "$ALLOW_STATIC_SERV" = true ] ; then
   fi
 
   # Unzip required files
-  for K in "${!STATIC_SERV[@]}"; do
-    if [ ! -f "$LN_SOURCE/_static/$K/.gcb_install_succeeded" ]; then
-      echo "Unzipping $K.zip into $LN_SOURCE/_static/$K"
-      unzip -o "$DISTRIBUTED_LIBS_DIR/$K.zip" \
-          -d "$LN_SOURCE/_static/$K" > /dev/null
-      touch "$LN_SOURCE/_static/$K/.gcb_install_succeeded"
+  for entry in "${STATIC_SERV[@]}"; do
+    KEY=${entry%%:*}
+    if [ ! -f "$LN_SOURCE/_static/$KEY/.gcb_install_succeeded" ]; then
+      echo "Unzipping $KEY.zip into $LN_SOURCE/_static/$KEY"
+      unzip -o "$DISTRIBUTED_LIBS_DIR/$KEY.zip" \
+          -d "$LN_SOURCE/_static/$KEY" > /dev/null
+      touch "$LN_SOURCE/_static/$KEY/.gcb_install_succeeded"
     fi
   done
 else
@@ -63,9 +66,11 @@ STATIC_YAML_TEXT+=$"env_variables:"$'\n'
 STATIC_YAML_TEXT+=$"  GCB_STATIC_SERV_ENABLED: $ALLOW_STATIC_SERV"$'\n'
 if [ "$ALLOW_STATIC_SERV" = true ] ; then
   STATIC_YAML_TEXT+=$"handlers:"$'\n'
-  for K in "${!STATIC_SERV[@]}"; do
-    STATIC_YAML_TEXT+=$"- url: /static/${STATIC_SERV[$K]}"$'\n'
-    STATIC_YAML_TEXT+=$"  static_dir: lib/_static/$K"$'\n'
+  for entry in "${STATIC_SERV[@]}"; do
+    KEY=${entry%%:*}
+    VALUE=${entry#*:}
+    STATIC_YAML_TEXT+=$"- url: /static/$VALUE"$'\n'
+    STATIC_YAML_TEXT+=$"  static_dir: lib/_static/$KEY"$'\n'
     STATIC_YAML_TEXT+=$"  expiration: 10m"$'\n'
   done
 fi
