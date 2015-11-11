@@ -108,7 +108,7 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
             self.template_value['embed_child_js_url'] = embed.EMBED_CHILD_JS_URL
             self.template_value['gcb_html_element_class'] = 'hide-controls'
 
-        self.render('assessment_page.html')
+        self.render('assessment_page.html', save_location=not embedded)
 
     def get_assessment_content(
             self, student, course, unit, as_lesson, embedded=False):
