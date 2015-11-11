@@ -554,6 +554,16 @@ class UnitTools(object):
 
         if 'workflow' in entity_dict:
             workflow_dict = entity_dict['workflow']
+
+            def convert_date(key):
+                due_date = workflow_dict.get(key)
+                if due_date:
+                    workflow_dict[key] = due_date.strftime(
+                        courses.ISO_8601_DATE_FORMAT)
+
+            convert_date(courses.SUBMISSION_DUE_DATE_KEY)
+            convert_date(courses.REVIEW_DUE_DATE_KEY)
+
             if len(courses.ALLOWED_MATCHERS_NAMES) == 1:
                 workflow_dict[courses.MATCHER_KEY] = (
                     courses.ALLOWED_MATCHERS_NAMES.keys()[0])
@@ -711,16 +721,14 @@ class UnitTools(object):
         workflow = unit.workflow
 
         if workflow.get_submission_due_date():
-            submission_due_date = workflow.get_submission_due_date().strftime(
-                courses.ISO_8601_DATE_FORMAT)
+            submission_due_date = workflow.get_submission_due_date()
         else:
-            submission_due_date = ''
+            submission_due_date = None
 
         if workflow.get_review_due_date():
-            review_due_date = workflow.get_review_due_date().strftime(
-                courses.ISO_8601_DATE_FORMAT)
+            review_due_date = workflow.get_review_due_date()
         else:
-            review_due_date = ''
+            review_due_date = None
 
         unit_common = self._unit_to_dict_common(unit)
         unit_common.update({
@@ -937,7 +945,7 @@ class ResourceAssessment(ResourceUnitBase):
             description=messages.ASSESSMENT_SINGLE_SUBMISSION_DESCRIPTION))
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.SUBMISSION_DUE_DATE_KEY),
-            'Due Date', 'string', optional=True,
+            'Due Date', 'datetime', optional=True,
             description=str(messages.ASSESSMENT_DUE_DATE_FORMAT_DESCRIPTION),
             extra_schema_dict_values={'_type': 'datetime'}))
         course_opts.add_property(schema_fields.SchemaField(
@@ -979,7 +987,7 @@ class ResourceAssessment(ResourceUnitBase):
                 'className': 'inputEx-Field html-review-form'}))
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_DUE_DATE_KEY),
-            'Review Due Date', 'string', optional=True,
+            'Review Due Date', 'datetime', optional=True,
             description=str(
                 messages.ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION),
             extra_schema_dict_values={'_type': 'datetime'}))

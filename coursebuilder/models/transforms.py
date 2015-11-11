@@ -79,10 +79,11 @@ _custom_type_serializer = {
     datastore_types.Key: _db_key_tostring}
 
 
-def dict_to_json(source_dict, schema=None):
+def dict_to_json(source_dict, schema=None, recurse=False):
     return schema_transforms.dict_to_json(
         source_dict,
-        custom_type_serializer=_custom_type_serializer, schema=schema)
+        custom_type_serializer=_custom_type_serializer, schema=schema,
+        recurse=recurse)
 
 
 def dumps(*args, **kwargs):

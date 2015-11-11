@@ -411,7 +411,8 @@ class CommonUnitRESTHandler(utils.BaseRESTHandler):
         schema.redact_entity_to_schema(entity, only_writable=False)
 
         transforms.send_json_response(
-            self, 200, '\n'.join(message), payload_dict=entity,
+            self, 200, '\n'.join(message),
+            payload_dict=transforms.dict_to_json(entity, recurse=True),
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token('put-unit'))
 
     def put(self):
@@ -735,7 +736,6 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
                 self, unit.unit_id)
         }
         return unit_dict
-
 
     @classmethod
     def can_view(cls, app_context):

@@ -58,11 +58,16 @@ def get_custom_serializer_for(value, custom_type_serializer=None):
     return None
 
 
-def dict_to_json(source_dict, custom_type_serializer=None, schema=None):
+def dict_to_json(
+        source_dict, custom_type_serializer=None, schema=None, recurse=False):
     """Converts Python dictionary into JSON dictionary using schema."""
     output = {}
     for key, value in source_dict.items():
-        if value is None or isinstance(value, SIMPLE_TYPES):
+        if isinstance(value, dict) and recurse:
+            output[key] = dict_to_json(
+                value, custom_type_serializer=custom_type_serializer,
+                recurse=recurse)
+        elif value is None or isinstance(value, SIMPLE_TYPES):
             output[key] = value
         elif isinstance(value, datetime.datetime):
             output[key] = value.strftime(ISO_8601_DATETIME_FORMAT)
@@ -80,6 +85,9 @@ def dict_to_json(source_dict, custom_type_serializer=None, schema=None):
 
 
 def _json_to_datetime(value, date_only=False):
+    if value is None:
+        return None
+
     DNMF = 'does not match format'
     if date_only:
         formats = _JSON_DATE_FORMATS
@@ -160,6 +168,10 @@ def json_to_dict(source_dict, schema, permit_none_values=False):
             if not is_optional:
                 raise ValueError('Missing required attribute: %s' % key)
             continue
+
+        # TODO(jorr): Make the policy for None values clearer and more
+        # consistent. Note that some types (string and datetime) always accept
+        # None but others (integer) don't.
 
         # Reifying from database may provide "null", which translates to
         # None.  As long as the field is optional (checked above), set

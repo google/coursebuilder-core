@@ -38,7 +38,21 @@
               <a href="{{ item.edit_action }}" class="gcb-edit-resource-button icon material-icons">edit</a>
             {% endif %}
           </h2>
-          <p>{{ item.date }}</p>
+          <p>
+            <script>
+              (function() {
+                function pad(num) {
+                  return (num < 10 ? '0' : '') + num;
+                }
+                var date = new Date({{ item.date }});
+                var year = date.getFullYear();
+                var month = pad(date.getMonth() + 1);
+                var day = pad(date.getDate());
+                var dateString = year + '-' + month + '-' + day;
+                document.write(dateString);
+              })();
+            </script>
+          </p>
           <p "margin: 20px 0px;">
           {{ item.html | gcb_tags }}
         {% endfor %}

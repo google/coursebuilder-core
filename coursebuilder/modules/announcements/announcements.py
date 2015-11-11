@@ -30,7 +30,6 @@ from common import utils as common_utils
 from common import schema_fields
 from controllers import utils
 from models import resources_display
-from models import courses
 from models import custom_modules
 from models import entities
 from models import models
@@ -97,6 +96,12 @@ class AnnouncementsHandlerMixin(object):
         template_items = []
         for item in items:
             item = transforms.entity_to_dict(item)
+            date = item.get('date')
+            if date:
+                date = datetime.datetime.combine(
+                    date, datetime.time(0, 0, 0, 0))
+                item['date'] = (
+                    date - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
 
             # add 'edit' actions
             if AnnouncementsRights.can_edit(self):
@@ -281,7 +286,7 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
                 'excludedCustomTags': tags.EditorBlacklists.COURSE_SCOPE},
             optional=True))
         schema.add_property(schema_fields.SchemaField(
-            'date', 'Date', 'string',
+            'date', 'Date', 'datetime',
             description=messages.ANNOUNCEMENT_DATE_DESCRIPTION,
             extra_schema_dict_values={
                 '_type': 'datetime',
@@ -328,7 +333,7 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
         # defaulting to 00:00:00
         date = entity_dict['date']
         date = datetime.datetime(date.year, date.month, date.day)
-        entity_dict['date'] = date.strftime(courses.ISO_8601_DATE_FORMAT)
+        entity_dict['date'] = date
 
         entity_dict.update(
             resources_display.LabelGroupsHelper.labels_to_field_data(
@@ -368,8 +373,7 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
             transforms.loads(payload), schema.get_json_schema_dict())
 
         # The datetime widget returns a datetime object and we need a UTC date.
-        update_dict['date'] = datetime.datetime.strptime(
-            update_dict['date'], courses.ISO_8601_DATE_FORMAT).date()
+        update_dict['date'] = update_dict['date'].date()
 
         entity.labels = common_utils.list_to_text(
             resources_display.LabelGroupsHelper.field_data_to_labels(
