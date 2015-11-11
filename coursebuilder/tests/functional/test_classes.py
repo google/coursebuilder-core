@@ -1954,7 +1954,7 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # check added
         response = actions.view_announcements(self)
-        assert_contains('New Announcement (Draft)', response.body)
+        assert_contains('New Announcement (Private)', response.body)
 
         # delete draft
         response = self.get('edit_announcements?action=edit_announcements')
@@ -2013,7 +2013,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             # Confirm change is visible on the page.
             response = self.get('announcements')
             assert_contains(
-                u'My Test Title Мой заголовок теста (Draft)', response.body)
+                u'My Test Title Мой заголовок теста (Private)', response.body)
 
         # REST GET not-existing item
         response = self.get('rest/announcements/item?key=not_existent_key')

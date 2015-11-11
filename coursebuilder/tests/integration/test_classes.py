@@ -62,7 +62,7 @@ class SampleCourseTests(integration.TestBase):
         ).click_view_item(
             0, pageobjects.AnnouncementsPage
         ).verify_announcement(
-            title=title + ' (Draft)', date='2013-03-01',
+            title=title + ' (Private)', date='2013-03-01',
             body='The new announcement')
 
     def test_admin_can_change_admin_user_emails(self):

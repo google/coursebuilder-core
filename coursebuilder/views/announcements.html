@@ -33,7 +33,7 @@
           <hr>
           <h2>
             <a name='{{ item.key }}'></a>
-            {{ item.title }} {% if item.is_draft %}(Draft){% endif %}
+            {{ item.title }} {% if item.is_draft %}(Private){% endif %}
             {% if item.edit_action %}
               <a href="{{ item.edit_action }}" class="gcb-edit-resource-button icon material-icons">edit</a>
             {% endif %}
