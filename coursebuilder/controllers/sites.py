@@ -1072,20 +1072,19 @@ def _courses_config_validator(rules_text, errors, expect_failures=True):
         return False
 
 
-def validate_new_course_entry_attributes(name, title, admin_email, errors):
+def _validate_new_course_entry_attributes(name, title, admin_email, errors):
     """Validates new course attributes."""
     if not name or len(name) < 3:
         errors.append(
-            'The unique name associated with the course must be at least '
-            'three characters long.')
+            'The course path must be at least three characters long.')
 
-    if not re.match('[_a-z0-9]+$', name, re.IGNORECASE):
+    if not re.match('[_a-z0-9]+$', name):
         errors.append(
-            'The unique name associated with the course should contain only '
+            'The course path should contain only '
             'lowercase letters, numbers, or underscores.')
 
     if len(name) >= _NAMESPACE_MAX_LENGTH:
-        errors.append('The unique name cannot be longer than 99 characters.')
+        errors.append('The course path cannot be longer than 99 characters.')
 
     if not title or len(title) < 3:
         errors.append('The course title is too short.')
@@ -1147,7 +1146,7 @@ def add_new_course_entry(unique_name, title, admin_email, errors):
     """Validates course attributes and adds the course."""
 
     # Validate.
-    validate_new_course_entry_attributes(
+    _validate_new_course_entry_attributes(
         unique_name, title, admin_email, errors)
     if errors:
         return

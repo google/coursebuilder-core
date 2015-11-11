@@ -121,16 +121,8 @@ class TestBase(suite.TestBase):
 
     def get_uid(self):
         """Generate a unique id string."""
-        uid = ''
-        for i in range(10):  # pylint: disable=unused-variable
-            j = random.randint(0, 61)
-            if j < 26:
-                uid += chr(65 + j)  # ascii capital letters
-            elif j < 52:
-                uid += chr(97 + j - 26)  # ascii lower case letters
-            else:
-                uid += chr(48 + j - 52)  # ascii digits
-        return uid
+        possible_chars = 'abcdefghijklmnopqrstuvwxyz1234567890'
+        return ''.join(random.choice(possible_chars) for _ in xrange(10))
 
     def create_new_course(self, login=True):
         """Create a new course with a unique name, using the admin tools."""
