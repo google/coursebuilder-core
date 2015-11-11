@@ -40,7 +40,7 @@ def enumerate_tests(filename, all_test_names):
     with open(filename) as fp:
         lines = fp.readlines()
 
-    cleaned_filename = filename.replace('.py', '').replace('/', '.')
+    cleaned_filename = filename.replace('.py', '').replace('/', '.').lstrip('.')
     current_class = None
     for line in lines:
         matches = CLASS_REGEX.match(line)
@@ -55,15 +55,20 @@ def enumerate_tests(filename, all_test_names):
                 (cleaned_filename, current_class, matches.group(1)))
 
 
-def enumerate_files(path, filenames):
-    """Recursively build up a list of all files under a directory."""
+def enumerate_test_files():
+    """Build a list of all test .py files within Course Builder."""
 
-    for item in os.listdir(path):
-        fullname = os.path.join(path, item)
-        if os.path.isdir(fullname):
-            enumerate_files(fullname, filenames)
-        elif os.path.isfile(fullname):
-            filenames.append(fullname)
+    ret = []
+    for dirpath, dirnames, filenames in os.walk('.'):
+        for filename in filenames:
+            if (dirpath.startswith('./modules/') and (
+                filename.endswith('_test.py') or
+                filename.endswith('_tests.py')) or
+                (dirpath.startswith('./tests/') and filename.endswith('.py'))):
+
+                path = os.path.join(dirpath, filename)
+                ret.append(path)
+    return ret
 
 
 def prune_completions(prefix, all_test_names):
@@ -85,23 +90,18 @@ def prune_completions(prefix, all_test_names):
     return completions
 
 
-def get_completions(prefix, tests_root):
+def get_completions(prefix):
     """Identify all completions, providng only those matching the prefix."""
 
-    filenames = []
-    enumerate_files(tests_root, filenames)
-
     all_test_names = []
-    for filename in filenames:
+    for filename in enumerate_test_files():
         enumerate_tests(filename, all_test_names)
-
     return prune_completions(prefix, all_test_names)
 
 
 def main():
     """Interface to outside world using sys.argv, stdout."""
-
-    for item in get_completions(sys.argv[2], 'tests'):
+    for item in get_completions(sys.argv[2]):
         print item
 
 
