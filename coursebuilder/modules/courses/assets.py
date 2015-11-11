@@ -95,7 +95,7 @@ def _list_and_format_file_list(
         jinja_utils.get_template('asset_list.html', [TEMPLATE_DIR]),
         inherited_assets=inherited_assets, overridden_assets=overridden_assets,
         can_upload=can_upload, caption_if_empty=caption_if_empty,
-        upload_url=upload_url)
+        upload_url=upload_url, links=links)
 
 def _get_filter_data(handler):
     course = courses.Course(handler)

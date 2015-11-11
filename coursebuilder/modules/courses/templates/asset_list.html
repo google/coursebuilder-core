@@ -11,14 +11,16 @@
 
 {% macro asset_row(asset) %}
   <tr>
-    <td>
-      <a
-        href="{{asset.external_url}}"
-        target="_blank"
-        class="material-icons gcb-list__icon gcb-list__icon--rowhover">
-        open_in_new
-      </a>
-    </td>
+    {% if links %}
+      <td>
+        <a
+          href="{{asset.external_url}}"
+          target="_blank"
+          class="material-icons gcb-list__icon gcb-list__icon--rowhover">
+          open_in_new
+        </a>
+      </td>
+    {% endif %}
     <td>
       <a href="{{asset.edit_url}}">
         {{asset.name}}
@@ -31,8 +33,10 @@
   <table>
     <thead>
       <tr>
-        <th class="gcb-list__cell--icon"></th>
-        <th>Overridden Items</th>
+        {% if links %}
+          <th class="gcb-list__cell--icon"></th>
+        {% endif %}
+        <th>My Items</th>
       </tr>
     </thead>
     <tbody>
@@ -52,8 +56,10 @@
   <table>
     <thead>
       <tr>
-        <th class="gcb-list__cell--icon"></th>
-        <th>Inherited Items</th>
+        {% if links %}
+          <th class="gcb-list__cell--icon"></th>
+        {% endif %}
+        <th>Default Items</th>
       </tr>
     </thead>
     <tbody>
