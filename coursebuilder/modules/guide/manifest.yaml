@@ -1,13 +1,17 @@
 tests:
   functional:
-    - modules.guide.guide_tests.GuideTests = 4
+    - modules.guide.guide_tests.GuideTests = 6
 
 files:
   - modules/guide/__init__.py
   - modules/guide/guide.py
   - modules/guide/guide_tests.py
   - modules/guide/manifest.yaml
+  - modules/guide/_static/components/guides.html
+  - modules/guide/_static/components/steps.html
+  - modules/guide/_static/img/book-icon-md.png
+  - modules/guide/_static/img/favicon.ico
   - modules/guide/scripts/bower.json
   - modules/guide/scripts/bower.sh
-  - modules/guide/templates/item.html
-  - modules/guide/templates/list.html
+  - modules/guide/templates/guides.html
+  - modules/guide/templates/steps.html

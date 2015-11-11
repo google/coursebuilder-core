@@ -22,7 +22,7 @@
 # Force shell to fail on any errors.
 set -e
 
-OUTPUT_NAME="polymer-guide-1.2.1.zip"
+OUTPUT_NAME="polymer-guide-1.2.0.zip"
 SCRIPT_HOME="$(dirname "$0")"
 
 pushd $SCRIPT_HOME

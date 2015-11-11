@@ -55,6 +55,11 @@ class GuideTests(actions.TestBase):
         dst_course.save()
         self.assertEquals(0, len(errors))
 
+    def test_polymer_components_zip_handler(self):
+        response = self.get(
+            '/modules/guide/resources/polymer/bower_components/bower.json')
+        self.assertEquals(200, response.status_int)
+
     def test_guide_disabled(self):
         with actions.OverriddenEnvironment(self.GUIDE_DISABLED):
             actions.login(ADMIN_EMAIL, is_admin=True)
@@ -74,24 +79,34 @@ class GuideTests(actions.TestBase):
             response = self.get('/modules/guide', expect_errors=True)
             self.assertEquals(200, response.status_int)
             self.assertIn(
-                'category="Guided Power Searching with Google"', response.body)
+                'category="Guided Power Searching with Google (private)"',
+                response.body)
 
             # student still can't
             actions.login('guest@sample.com')
             response = self.get('/modules/guide', expect_errors=True)
             self.assertEquals(404, response.status_int)
 
-    def test_guide_app(self):
+    def _test_guide_app(self, login):
         environ = self.PUBLIC.copy()
         environ.update(self.GUIDE_ENABLED)
         with actions.OverriddenEnvironment(environ):
-            actions.login('test@example.com')
+            if login:
+                actions.login('test@example.com')
             response = self.get('/modules/guide')
-            self.assertIn('<codelab-app>', response.body)
+            self.assertIn('<gcb-guide-container>', response.body)
             self.assertIn(
-                'category="Guided Power Searching with Google"', response.body)
+                'category="Guided Power Searching with Google"',
+                response.body)
+            self.assertIn('<gcb-guide-card', response.body)
             self.assertIn(  # note that we intentionally don't show "Unit 1 - "
-                '<codelab-card label="Introduction"', response.body)
+                'label="Introduction"', response.body)
+
+    def test_guide_app_with_login(self):
+        self._test_guide_app(True)
+
+    def test_guide_app_no_login(self):
+        self._test_guide_app(False)
 
     def test_guide_shows_all_unit_lessons(self):
         environ = self.PUBLIC.copy()
@@ -105,8 +120,29 @@ class GuideTests(actions.TestBase):
                 if unit.type != verify.UNIT_TYPE_UNIT:
                     continue
                 response = self.get('guide?unit_id=%s' % unit.unit_id)
-                self.assertIn('<codelab-codelab', response.body)
-                self.assertIn('<codelab-step', response.body)
+
+                # check unit details
                 self.assertIn(unit.title, response.body.decode('utf-8'))
+                self.assertIn(
+                    'unit_id="%s"' % unit.unit_id,
+                    response.body.decode('utf-8'))
+
+                # check polymer components
+                self.assertIn('<gcb-step-container', response.body)
+                self.assertIn('<gcb-step-container-data', response.body)
+                self.assertIn('<gcb-step-card', response.body)
+                self.assertIn('<gcb-step-card-data', response.body)
+
+                # check all lesson titles
                 for lesson in course.get_lessons(unit.unit_id):
+                    self.assertIn(
+                        'lesson_id="%s"' % lesson.lesson_id,
+                        response.body.decode('utf-8'))
                     self.assertIn(lesson.title, response.body.decode('utf-8'))
+
+                # check for specific lesson content and custom tags
+                self.assertIn('Check Answer', response.body)
+                self.assertIn('title="YouTube Video Player"', response.body)
+                self.assertIn(
+                    '<script src="/modules/'
+                    'assessment_tags/resources/grading.js">', response.body)

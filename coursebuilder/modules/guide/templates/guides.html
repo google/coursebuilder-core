@@ -6,19 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="shortcut icon" href="/modules/guide/_static/img/favicon.ico">
     <title>Course Builder Guide</title>
+
+    <!-- Polymer -->
+    <script
+      src="/modules/guide/resources/polymer/bower_components/webcomponentsjs/webcomponents.js">
+    </script>
+    <link rel="import" href="/modules/guide/_static/components/guides.html">
+
+  </head>
   <body unresolved>
-    <codelab-app>
+    <gcb-guide-container>
       {% for course_slug, course_title, category_color, units in courses %}
           {% for unit_id, unit_title, unit_desc, unit_duration in units %}
-              <codelab-card label="{{ unit_title }}"
+              <gcb-guide-card
+                  course_slug="{{ course_slug }}"
+                  unit_id="{{ unit_id }}"
+                  label="{{ unit_title }}"
                   url="{{ course_slug }}/guide?unit_id={{ unit_id }}"
-                  icon="/modules/guide/_static/img/book-icon-md.png"
                   category="{{ course_title }}"
                   duration="{{ unit_duration }}"
                   color="{{ category_color }}"
-              >{{ unit_desc }}</codelab-card>
+                  icon="/modules/guide/_static/img/book-icon-md.png"
+              >{{ unit_desc }}</gcb-guide-card>
           {% endfor %}
       {% endfor %}
-    </codelab-app>
+    </gcb-guide-container>
   </body>
 </html>
