@@ -2644,14 +2644,14 @@ class Course(object):
         assessment_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_ASSESSMENT, 'Assessments')
         assessment_opts.add_property(schema_fields.SchemaField(
-            'assessment_confirmations:result_text:pass', 'Passing Text',
-            'string', optional=True,
-            description=messages.ASSESSMENT_PASSING_TEXT,
+            'assessment_confirmations:result_text:pass',
+            'Final Assessment Passing Text', 'string',
+            description=messages.ASSESSMENT_PASSING_TEXT, optional=True,
             validator=must_contain_one_string_substitution))
         assessment_opts.add_property(schema_fields.SchemaField(
-            'assessment_confirmations:result_text:fail', 'Failing Text',
-            'string', optional=True,
-            description=messages.ASSESSMENT_FAILING_TEXT,
+            'assessment_confirmations:result_text:fail',
+            'Final Assessment Failing Text', 'string',
+            description=messages.ASSESSMENT_FAILING_TEXT, optional=True,
             validator=must_contain_one_string_substitution))
         assessment_opts.add_property(schema_fields.SchemaField(
             'unit:hide_assessment_navigation_buttons',

@@ -234,7 +234,8 @@ class QuestionTag(tags.BaseTag):
                 extra_schema_dict_values={
                     'value': '1',
                     'className': 'question-weight'},
-                description='The number of points for a correct answer.'))
+                description='The number of points for a correct answer. '
+                'If it is not set, it will default to one point.'))
 
         reg.add_sub_registry(
             'weight_holder', registry=weight_holder)

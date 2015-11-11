@@ -165,11 +165,13 @@ set, this has no effect.
 """
 
 ASSESSMENT_FAILING_TEXT = """
-This text is shown to a student upon receiving a failing result.
+This text is shown to a student upon receiving a failing result on the final
+assessment. Use "%s%%" to insert the student's score.
 """
 
 ASSESSMENT_PASSING_TEXT = """
-This text is shown to a student upon receiving a passing result.
+This text is shown to a student upon receiving a passing result on the final
+assessment. Use "%s%%" to insert the student's score.
 """
 
 HOMEPAGE_PRIVACY_URL_DESCRIPTION = """
