@@ -181,7 +181,7 @@ function appendOptions(select, data) {
 }
 
 function setUpCloneQuestion() {
-  $(".add-question-to-group").on("click", onCloneQuestionClick);
+  $(".clone-question").on("click", onCloneQuestionClick);
 }
 
 /**
