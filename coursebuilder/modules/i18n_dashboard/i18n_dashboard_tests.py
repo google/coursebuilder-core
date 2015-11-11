@@ -3615,8 +3615,7 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
         # check selected pages
         check_all_in(self.get('sample/course'), [
-            'dANIEL rUSSELL', 'pRE-COURSE ASSESSMENT', 'iNTRODUCTION',
-            'hANG oUT WITH'])
+            'dANIEL rUSSELL', 'pRE-COURSE ASSESSMENT', 'iNTRODUCTION'])
         check_all_in(self.get('sample/assessment?name=1'), [
             'tHANK YOU, AND HAVE FUN!', 'wHEN SEARCHING gOOGLE iMAGES',
             'a AND c', 'iF YOU DO NOT KNOW'])

@@ -652,7 +652,7 @@ def view_unit(browser):
     assert_contains('Unit 1 - Introduction', response.body)
     assert_contains('1.3 How search works', response.body)
     assert_contains('1.6 Finding text on a web page', response.body)
-    assert_contains('https://www.youtube.com/embed/1ppwmxidyIE', response.body)
+    assert_contains('1ppwmxidyIE', response.body)
     check_personalization(browser, response)
 
     assert_contains_all_of(BASE_HOOK_POINTS, response.body)

@@ -79,6 +79,7 @@ import webapp2
 
 # A number of data files in a test course.
 COURSE_FILE_COUNT = 70
+COURSE_UNIT_COUNT = 10
 
 # There is an expectation in our tests of automatic import of data/*.csv files,
 # which is achieved below by selecting an alternative factory method.
@@ -615,7 +616,7 @@ class InfrastructureTest(actions.TestBase):
 
         assert not dst_course_a.get_units()
         assert not dst_course_b.get_units()
-        assert 12 == len(src_course.get_units())
+        assert COURSE_UNIT_COUNT == len(src_course.get_units())
 
         # Import 1.2 course into 1.3.
         errors = []
@@ -1795,7 +1796,7 @@ class AdminAspectTest(actions.TestBase):
             'course:/add_new::ns_add_new')[0]
         assert_equals(u'new course (тест данные)', new_app_context.get_title())
         new_course = courses.Course(None, app_context=new_app_context)
-        assert len(new_course.get_units()) == 12 # The number of units in PSWG
+        assert len(new_course.get_units()) == COURSE_UNIT_COUNT
 
 
 class CourseAuthorAspectTest(actions.TestBase):
@@ -4316,8 +4317,8 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         u2, l2, _, as2 = self.calc_course_stats(dst_course)
 
         # the old and the new course have same number of units each
-        self.assertEqual(12, u1)
-        self.assertEqual(12, u2)
+        self.assertEqual(COURSE_UNIT_COUNT, u1)
+        self.assertEqual(COURSE_UNIT_COUNT, u2)
 
         # old course had lessons and activities
         self.assertEqual(29, l1)
