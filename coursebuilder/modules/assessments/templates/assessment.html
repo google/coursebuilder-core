@@ -7,6 +7,7 @@
     {{ assessment_title }}
     {% if is_read_write_course and is_course_admin %}
       <a href="dashboard?action=edit_assessment&key={{ unit_id }}"
+          target="_top"
           class="icon md-mode-edit gcb-edit-resource-button">
       </a>
     {% endif %}

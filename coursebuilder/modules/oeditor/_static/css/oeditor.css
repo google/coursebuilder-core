@@ -942,6 +942,9 @@ div.new-form-layout .inputEx-Field.embed-code-snippet-display {
   margin-right: 10px;
   float: none;
 }
+div.new-form-layout .inputEx-Field.embed-code-snippet-display .inputEx-StringField-wrapper {
+  width: 100%;
+}
 div.new-form-layout .inputEx-Field.embed-code-snippet-display textarea {
   width: 100%;
   height: 3em;
