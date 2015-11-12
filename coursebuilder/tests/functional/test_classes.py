@@ -1708,12 +1708,12 @@ class AdminAspectTest(actions.TestBase):
         assert_contains('Total: 2 item(s)', response.body)
 
         # Check course dashboard URL's.
-        assert_contains('<a href="/foo/dashboard">', response.body)
-        assert_contains('<a href="/bar/dashboard">', response.body)
+        assert_contains('<a href="/foo/dashboard"', response.body)
+        assert_contains('<a href="/bar/dashboard"', response.body)
 
         # Check course URL's.
-        assert_contains('<a href="/foo">', response.body)
-        assert_contains('<a href="/bar">', response.body)
+        assert_contains('<a href="/foo"', response.body)
+        assert_contains('<a href="/bar"', response.body)
 
         # Clean up.
         sites.reset_courses()

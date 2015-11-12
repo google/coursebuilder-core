@@ -36,7 +36,10 @@
           </a>
         </td>
         <td>
-          <a href="{{ course.slug }}">{{ course.slug }}</a>
+          <a href="{{ course.slug }}" target="_blank">
+            {{ course.slug }}
+            <i class="material-icons gcb-list__icon">open_in_new</i>
+          </a>
         </td>
         <td>
           {% if course.now_available %}

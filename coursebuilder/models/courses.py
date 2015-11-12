@@ -2484,7 +2484,7 @@ class Course(object):
             description=messages.HOMEPAGE_TITLE_DESCRIPTION))
 
         opts.add_property(schema_fields.SchemaField(
-            '_reserved:context_path', 'Course URL Component', 'uneditable',
+            '_reserved:context_path', 'Course Path', 'uneditable',
             description=messages.COURSE_URL_COMPONENT_DESCRIPTION,
             optional=True))
         opts.add_property(schema_fields.SchemaField(
