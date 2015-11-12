@@ -688,6 +688,10 @@
         Polymer.IronA11yKeysBehavior
       ],
 
+      listeners: {
+        'toc.iron-select': '_menuSelect'
+      },
+
       properties: {
         /**
          * Guide title
@@ -806,6 +810,12 @@
       keyBindings: {
         'left up pageup': 'selectPrevious',
         'right down pagedown': 'selectNext',
+      },
+
+      _menuSelect: function(event) {
+        this.async(function() {
+          this.select(this.$.toc.selected);
+        });
       },
 
       ready: function() {
