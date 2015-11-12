@@ -21,8 +21,8 @@
   <table>
     <thead>
       <tr>
-        <th>Course Title</th>
-        <th>Course Path</th>
+        <th>Title</th>
+        <th>URL Component</th>
         <th>Content Availability</th>
         <th class="gcb-list__cell--icon"></th>
       </tr>
@@ -38,9 +38,7 @@
         <td>
           <a href="{{ course.slug }}" target="_blank">
             {{ course.slug }}
-          </a>
-          <a href="{{ course.slug }}" target="_blank">
-            <i class="material-icons gcb-list__icon">open_in_new</i>
+            <i class="material-icons gcb-list__icon gcb-list__icon--rowhover">open_in_new</i>
           </a>
         </td>
         <td>

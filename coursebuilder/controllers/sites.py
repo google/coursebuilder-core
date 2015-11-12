@@ -1076,18 +1076,19 @@ def _validate_new_course_entry_attributes(name, title, admin_email, errors):
     """Validates new course attributes."""
     if not name or len(name) < 3:
         errors.append(
-            'The course path must be at least three characters long.')
+            'The URL component must be at least three characters long.')
 
     if not re.match('[_a-z0-9]+$', name):
         errors.append(
-            'The course path should contain only '
+            'The URL component should contain only '
             'lowercase letters, numbers, or underscores.')
 
     if len(name) >= _NAMESPACE_MAX_LENGTH:
-        errors.append('The course path cannot be longer than 99 characters.')
+        errors.append(
+            'The URL component cannot be longer than 99 characters.')
 
     if not title or len(title) < 3:
-        errors.append('The course title is too short.')
+        errors.append('The title is too short.')
 
     if not admin_email or '@' not in admin_email:
         errors.append('Please enter a valid email address.')

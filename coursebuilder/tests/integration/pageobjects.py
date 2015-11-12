@@ -538,10 +538,16 @@ class DashboardPage(PageObject):
         return AddCourseEditorPopup(self._tester)
 
     def has_course(self, slug):
-        # assuming you're already looking at the Courses page, determines
-        # whether a given course exists
-        main_content = self.find_element_by_id('gcb-main-content')
-        return bool(main_content.find_elements_by_link_text('/' + slug))
+        """Determines whether a given course exists.
+
+        Assumes you're already looking at the Courses page."""
+        self.find_element_by_id('add_course') # wait until page is visible
+        try:
+            self.find_element_by_css_selector(
+                '#gcb-main-content [href="/{}"]'.format(slug), pre_wait=False)
+            return True
+        except exceptions.NoSuchElementException:
+            return False
 
     def click_site_settings(self):
         self.ensure_menu_group_is_open('settings')

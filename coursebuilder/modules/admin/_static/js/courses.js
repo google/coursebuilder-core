@@ -8,17 +8,17 @@ $(function() {
         '<div class="add-course-panel">' +
         '  <h2 class="title"></h2>' +
         '  <div class="form-row">' +
-        '    <label>Course Title</label>' +
+        '    <label>Title</label>' +
         '    <input type="text" name="title"' +
         '        placeholder="e.g. New Course">' +
         '  </div>' +
         '  <div class="form-row">' +
-        '    <label>Course Path</label>' +
+        '    <label>URL Component</label>' +
         '    <input type="text" name="name"' +
         '        placeholder="e.g. new_course">' +
         '  </div>' +
         '  <div class="form-row">' +
-        '    <label>Course Admin</label>' +
+        '    <label>Admin</label>' +
         '    <input type="text" name="admin_email"' +
         '        placeholder="e.g. admin@example.com">' +
         '  </div>' +

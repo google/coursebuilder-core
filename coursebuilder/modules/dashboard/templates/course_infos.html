@@ -6,7 +6,7 @@
       {{course.title}}
       <ul>
         <li>Schema Version: {{course.version}}</li>
-        <li>Context Path: {{course.app_context.get_slug()}}</li>
+        <li>URL Component: {{course.app_context.get_slug()}}</li>
         <li>Datastore Namespace: {{course.app_context.get_namespace_name()}}</li>
         <li>File System: {{get_filesystem_type(course.app_context)}}</li>
 
