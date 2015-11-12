@@ -783,7 +783,7 @@ div.CodeMirror {
 #cb-oeditor-form .first-child > .yui-toolbar-container > fieldset {
   padding: 0;
   margin: 0;
-  border: 0;
+  border: 0 !important;
   position: absolute;
   bottom: 0;
   width: 100%;
