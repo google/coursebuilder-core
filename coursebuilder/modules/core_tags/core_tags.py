@@ -688,10 +688,7 @@ class Include(CoreTag):
         reg.add_property(schema_fields.SchemaField(
             'path', 'File Path', 'string', optional=False,
             select_data=select_data,
-            description='Select a file from within assets/html.  '
-            'The contents of this file will be inserted verbatim '
-            'at this point.  Note: HTML files for inclusion may '
-            'also be uploaded as assets.'))
+            description=messages.HTML_ASSET_FILE_PATH_DESCRIPTION))
         return reg
 
 
