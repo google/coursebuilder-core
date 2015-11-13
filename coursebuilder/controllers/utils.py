@@ -983,7 +983,9 @@ class BaseHandler(CourseHandler):
 
         if student.is_transient:
             if supports_transient_student and (
-                    self.app_context.get_environ()['course']['browsable']):
+                    courses.Course.is_course_browsable(self.app_context) or
+                    roles.Roles.is_course_admin(self.app_context) or
+                    roles.Roles.in_any_role(self.app_context)):
                 return TRANSIENT_STUDENT
             elif user is None:
                 self.redirect(

@@ -2,7 +2,7 @@ tests:
   functional:
     - modules.courses.courses_tests.AvailabilityTests = 28
     - modules.courses.courses_tests.BackgroundImportTests = 7
-    - modules.courses.courses_tests.CourseAccessPermissionsTests = 4
+    - modules.courses.courses_tests.CourseAccessPermissionsTests = 7
     - modules.courses.courses_tests.ReorderAccess = 2
     - modules.courses.courses_tests.UnitLessonEditorAccess = 3
 

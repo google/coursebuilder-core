@@ -25,6 +25,7 @@ from common import crypto
 from controllers import sites
 from controllers import utils
 from models import courses
+from models import custom_modules
 from models import models
 from models import review
 from models import transforms
@@ -56,12 +57,12 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
         self.course.save()
         actions.login(self.USER_EMAIL, is_admin=False)
 
-    def _add_role_with_permissions(self, permissions):
+    def _add_role_with_permissions(self, module, permissions):
         with common_utils.Namespace(self.NAMESPACE):
             role_dto = models.RoleDTO(None, {
                 'name': self.ROLE,
                 'users': [self.USER_EMAIL],
-                'permissions': {modules_courses.MODULE_NAME: permissions},
+                'permissions': {module: permissions},
                 })
             models.RoleDAO.save(role_dto)
 
@@ -73,6 +74,7 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
 
     def test_course_structure_reorder_permission(self):
         self._add_role_with_permissions(
+            modules_courses.MODULE_NAME,
             [constants.COURSE_OUTLINE_REORDER_PERMISSION])
         response = self.get('dashboard?action=outline')
         self.assertEquals(200, response.status_int)
@@ -100,6 +102,7 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
     def test_course_edit_settings_link(self):
         # Add role permission so we can see the course outline page at all.
         self._add_role_with_permissions(
+            modules_courses.MODULE_NAME,
             [constants.COURSE_OUTLINE_REORDER_PERMISSION])
 
         # Give this user permission to *edit* some random course property that's
@@ -164,6 +167,40 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
             self.assertEditabilityState(
                 soup.select(ASSESSMENT_SELECTOR)[0], False)
             self.assertEditabilityState(soup.select(LINK_SELECTOR)[0], True)
+
+    def test_when_user_is_not_in_any_roles_private_course_is_invisible(self):
+        self.course.set_course_availability(courses.COURSE_AVAILABILITY_PRIVATE)
+        response = self.get('course', expect_errors=True)
+        self.assertEquals(404, response.status_int)
+        response = self.get('unit?unit=%s' % self.unit.unit_id,
+                            expect_errors=True)
+        self.assertEquals(404, response.status_int)
+        response = self.get('assessment?name=%s' % self.assessment.unit_id,
+                            expect_errors=True)
+        self.assertEquals(404, response.status_int)
+
+    def test_user_in_admin_role_can_view_drafts(self):
+        self.course.set_course_availability(courses.COURSE_AVAILABILITY_PRIVATE)
+        self._add_role_with_permissions(
+            custom_modules.MODULE_NAME,
+            [custom_modules.SEE_DRAFTS_PERMISSION])
+        response = self.get('course')
+        self.assertEquals(200, response.status_int)
+        response = self.get('unit?unit=%s' % self.unit.unit_id)
+        self.assertEquals(200, response.status_int)
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        self.assertEquals(200, response.status_int)
+
+    def test_admin_can_view_drafts(self):
+        self.course.set_course_availability(courses.COURSE_AVAILABILITY_PRIVATE)
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        response = self.get('course')
+        self.assertEquals(200, response.status_int)
+        response = self.get('unit?unit=%s' % self.unit.unit_id)
+        self.assertEquals(200, response.status_int)
+        response = self.get('assessment?name=%s' % self.assessment.unit_id)
+        self.assertEquals(200, response.status_int)
+
 
 class UnitLessonEditorAccess(actions.TestBase):
 

@@ -16,6 +16,7 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+MODULE_NAME = 'Core REST services'
 ALL_LOCALES_PERMISSION = 'can_pick_all_locales'
 SEE_DRAFTS_PERMISSION = 'can_see_draft_content'
 
@@ -124,7 +125,7 @@ def register_core_module(global_handlers, namespaced_handlers):
         roles.Roles.register_permissions(core_module, permissions_callback)
 
     core_module = Module(
-        'Core REST services', 'A module to host core REST services',
+        MODULE_NAME, 'A module to host core REST services',
         global_handlers, namespaced_handlers,
         notify_module_enabled=notify_module_enabled)
     core_module.enable()

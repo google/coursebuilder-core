@@ -143,7 +143,7 @@ DEFAULT_COURSE_YAML_DICT = {
         'title': 'UNTITLED COURSE',
         'locale': 'en_US',
         'main_image': {},
-        'browsable': True,
+        'browsable': False,
         'now_available': False},
     'html_hooks': {},
     'preview': {},
@@ -3406,9 +3406,9 @@ course:
           current course state.
         """
         settings = self.app_context.get_environ()
-        now_available = settings['course']['now_available']
-        browsable = settings['course']['browsable']
-        can_register = settings['reg_form']['can_register']
+        now_available = settings['course'].get('now_available', False)
+        browsable = settings['course'].get('browsable', False)
+        can_register = settings['reg_form'].get('can_register', True)
         for name, setting in COURSE_AVAILABILITY_POLICIES.iteritems():
             if not now_available:
                 return COURSE_AVAILABILITY_PRIVATE
@@ -3417,6 +3417,10 @@ course:
                 setting['can_register'] == can_register):
                 return name
         return None
+
+    @classmethod
+    def is_course_browsable(cls, app_context):
+        return app_context.get_environ()['course'].get('browsable', False)
 
     def set_course_availability(self, name):
         """Configure course availability policy into settings.
