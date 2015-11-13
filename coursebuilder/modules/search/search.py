@@ -55,7 +55,7 @@ DEPRECATED = config.ConfigProperty(
         'This property has been deprecated; it is retained so that we '
         'will not generate no-such-variable error messages for existing '
         'installations that have this property set.'),
-    default_value=False, label='Automatically index search')
+    default_value=False, label='Automatically index search', deprecated=True)
 SEARCH_QUERIES_MADE = counters.PerfCounter(
     'gcb-search-queries-made',
     'The number of student queries made to the search module.')

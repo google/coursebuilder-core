@@ -75,40 +75,25 @@ CAN_PUT_DEBUG_INFO_INTO_PAGES = ConfigProperty(
     messages.SITE_SETTINGS_DEBUG_INFORMATION, False, label='Debug Information')
 
 # Whether to record page load/unload events in a database.
-CAN_PERSIST_PAGE_EVENTS = ConfigProperty(
-    'gcb_can_persist_page_events', bool, (
-        'Whether or not to record student page interactions in a '
-        'datastore. Without event recording, you cannot analyze student '
-        'page interactions. On the other hand, no event recording reduces '
-        'the number of datastore operations and minimizes the use of Google '
-        'App Engine quota. Turn event recording on if you want to analyze '
-        'this data.'),
-    False, label='Record page events')
-
+ConfigProperty(
+    'gcb_can_persist_page_events', bool,
+    'This property has been deprecated; this constructor is retained to '
+    'suppress warnings about unknown legacy settings.  Replaced by per-course '
+    'setting Enable Student Analytics.', deprecated=True)
 
 # Whether to record tag events in a database.
-CAN_PERSIST_TAG_EVENTS = ConfigProperty(
-    'gcb_can_persist_tag_events', bool, (
-        'Whether or not to record student tag interactions in a '
-        'datastore. Without event recording, you cannot analyze student '
-        'tag interactions. On the other hand, no event recording reduces '
-        'the number of datastore operations and minimizes the use of Google '
-        'App Engine quota. Turn event recording on if you want to analyze '
-        'this data.'),
-    False, label='Record tag events')
-
+ConfigProperty(
+    'gcb_can_persist_tag_events', bool,
+    'This property has been deprecated; this constructor is retained to '
+    'suppress warnings about unknown legacy settings.  Replaced by per-course '
+    'setting Enable Student Analytics.', deprecated=True)
 
 # Whether to record events in a database.
-CAN_PERSIST_ACTIVITY_EVENTS = ConfigProperty(
-    'gcb_can_persist_activity_events', bool, (
-        'Whether or not to record student activity interactions in a '
-        'datastore. Without event recording, you cannot analyze student '
-        'activity interactions. On the other hand, no event recording reduces '
-        'the number of datastore operations and minimizes the use of Google '
-        'App Engine quota. Turn event recording on if you want to analyze '
-        'this data.'),
-    False, label='Record activities')
-
+ConfigProperty(
+    'gcb_can_persist_activity_events', bool,
+    'This property has been deprecated; this constructor is retained to '
+    'suppress warnings about unknown legacy settings.  Replaced by per-course '
+    'setting Enable Student Analytics.', deprecated=True)
 
 # Date format string for displaying datetimes in UTC.
 # Example: 2013-03-21 13:00 UTC

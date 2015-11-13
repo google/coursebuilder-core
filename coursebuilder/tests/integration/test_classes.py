@@ -874,8 +874,7 @@ class EventsTest(integration.TestBase):
     def test_html5_video_events(self):
         name = self.create_new_course()[0]
 
-        # Set gcb_can_persist_tag_events so we will track video events.
-
+        # Set Enable Student Analytics so we will track video events.
         self.load_dashboard(name
         ).click_settings(
         ).set_checkbox_by_title(
