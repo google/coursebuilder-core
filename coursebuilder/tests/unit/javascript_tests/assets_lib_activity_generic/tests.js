@@ -28,9 +28,7 @@ describe('V 1.4 Activities and Assessments', function() {
     window.transientStudent = false;
 
     // Enable post events
-    window.gcbCanPostTagEvents = true;
-    window.gcbCanPostPageEvents = true;
-    window.gcbCanPostEvents = true;
+    window.gcbCanRecordStudentEvents = true;
 
     // Reset tag so that test order doesn't matter
     window.globallyUniqueTag = 0;

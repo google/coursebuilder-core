@@ -33,14 +33,8 @@
     <script>
         var questionData = {};
         var eventXsrfToken = '{{ event_xsrf_token }}';
-        {% if record_tag_events %}
-          var gcbCanPostTagEvents = true;
-        {% endif %}
-        {% if record_page_events %}
-          var gcbCanPostPageEvents = true;
-        {% endif %}
-        {% if record_events %}
-          var gcbCanPostEvents = true;
+        {% if record_tag_events or record_page_events or record_events %}
+          var gcbCanRecordStudentEvents  = true;
         {% endif %}
 
         {% if transient_student %}

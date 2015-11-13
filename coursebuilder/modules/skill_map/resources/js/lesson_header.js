@@ -19,7 +19,7 @@ SkillPanel.prototype = {
       type: 'open',
       isOpened: isOpened
     };
-    gcbAudit(gcbCanPostEvents, data, 'skill-panel', true)
+    gcbAudit(gcbCanRecordStudentEvents, data, 'skill-panel', true)
   },
 
   emitSkillHoverEvent: function(skillId) {
@@ -27,7 +27,7 @@ SkillPanel.prototype = {
       type: 'skill-hover',
       skillId: skillId
     };
-    gcbAudit(gcbCanPostEvents, data, 'skill-panel', true)
+    gcbAudit(gcbCanRecordStudentEvents, data, 'skill-panel', true)
   },
 
   bindOpenButton: function() {

@@ -2,7 +2,7 @@ describe('The student skill widget', function() {
 
   beforeEach(function() {
     var that = this;
-    gcbCanPostEvents = true;
+    gcbCanRecordStudentEvents = true;
     gcbAudit = jasmine.createSpy('gcbAudit');
     now = function() { return that.currentTimeMs; };
 
