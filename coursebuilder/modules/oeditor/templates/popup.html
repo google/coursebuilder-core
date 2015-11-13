@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/modules/dashboard/_static/css/mdl_undo.css"/>
 
     <style type="text/css">
-      body {
+      .oeditor-popup {
         position: absolute;
         min-height: inherit;
         font-family: arial,sans-serif;
@@ -33,9 +33,12 @@
         background: inherit;
         border: none;
       }
+      .oeditor-popup .gcb-butterbar-dashboard {
+        top: 7px;
+      }
     </style>
   </head>
-  <body>
+  <body class="oeditor-popup">
     <button class="close-button material-icons">close</button>
     {{ form_html }}
   </body>
