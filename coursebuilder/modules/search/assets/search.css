@@ -44,10 +44,14 @@
   padding-top: 20px;
 }
 
-.gcb-search-result-title {
+.gcb-search-result-content-link {
   font-size: 16px;
   text-decoration: underline;
   display: block;
+}
+
+.gcb-search-result-title {
+  font-size: 14px;
 }
 
 .gcb-search-url,
@@ -59,6 +63,7 @@
   width: 350px;
   vertical-align: top;
   display: inline-block;
+  margin-left: 15px;
 }
 
 .gcb-search-result.youtube iframe.shown {
@@ -72,6 +77,15 @@
   width: 150px;
   height: 100px;
   cursor: pointer;
+}
+
+.gcb-search-result.youtube img.icon {
+    width: 48px;
+    height: 48px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 3px ridge rgb(204, 204, 204);
+    cursor: pointer;
 }
 
 .gcb-search-navigation-bar {

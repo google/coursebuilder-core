@@ -199,7 +199,6 @@ class SearchTest(search_unit_tests.SearchTestBase):
             self.assertIn('v=aperature', response.body)
             self.assertIn('lemon', response.body)
             self.assertIn('Medicus Quis', response.body)
-            self.assertIn('- YouTube', response.body)
             self.assertIn('http://thumbnail.null', response.body)
 
             # Test to make sure empty notes field doesn't cause a urlfetch

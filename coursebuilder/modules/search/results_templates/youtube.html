@@ -1,12 +1,23 @@
 <div class="gcb-search-result youtube">
-  <a class="gcb-search-result-title" href="{{ result_url }}">
-    {{ result_title }} - YouTube
+  <a class="gcb-search-result-content-link" href="{{ result_url }}">
+    {# I18N: Title of a link on a search result page.  Link goes to
+       the part of the course where the search result, which is a
+       video, is part of a unit or lesson. #}
+    {{ gettext('View In Course') }}
   </a>
-  <img src="{{ thumbnail_url }}" class="shown">
+  {% if thumbnail_url %}
+    <img src="{{ thumbnail_url }}" class="shown">
+  {% else %}
+    <img src="/modules/core_tags/_static/images/youtube.png"
+         class="icon shown">
+  {% endif %}
   <iframe frameborder="0" class="hidden" allowfullscreen
       src="//www.youtube.com/embed/{{ video_id }}?start={{ start_time }}">
   </iframe>
   <span class="gcb-search-youtube-info">
+    {% if result_title %}
+      <div class="gcb-search-result-title">{{ result_title }}</div>
+    {% endif %}
     <a class="gcb-search-url"
         href="//www.youtube.com/watch?v={{ video_id }}">
       www.youtube.com/watch?v={{ video_id }}
