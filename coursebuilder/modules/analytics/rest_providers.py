@@ -505,7 +505,7 @@ class LabelsOnStudentsGenerator(jobs.AbstractCountingMapReduceJob):
 
     @staticmethod
     def get_description():
-        return 'labels on students'
+        return 'students by track'
 
     @staticmethod
     def entity_class():
@@ -529,7 +529,7 @@ class LabelsOnStudentsDataSource(data_sources.AbstractRestDataSource):
 
     @classmethod
     def get_title(cls):
-        return 'Labels on Students'
+        return 'Students by Track'
 
     @classmethod
     def get_default_chunk_size(cls):

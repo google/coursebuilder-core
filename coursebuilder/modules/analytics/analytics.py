@@ -71,7 +71,7 @@ def register_tabs():
             rest_providers.StudentAssessmentScoresDataSource])
     labels_on_students = analytics.Visualization(
         'labels_on_students',
-        'Labels on Students',
+        'Students by Track',
         'labels_on_students.html',
         data_source_classes=[rest_providers.LabelsOnStudentsDataSource])
     question_answers = analytics.Visualization(
