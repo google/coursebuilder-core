@@ -97,7 +97,7 @@ course:
 
 reg_form:
   # Header text for the course registration form.
-  header_text: |
+  header_text: >
     Welcome!  Please answer the following question, and you will be
     enrolled in the course.
 
@@ -125,10 +125,10 @@ reg_form:
 # with the student's actual score. ('%%' results in a single '%'.)
 assessment_confirmations:
   result_text:
-    pass: |
+    pass: >
       Based on your overall course score of %s%%, you have passed the course.
       Congratulations!
-    fail: |
+    fail: >
       Unfortunately, based on your overall course score of %s%%, you did not
       receive a sufficiently high score to obtain a certificate of completion.
       We encourage you to review the lessons noted and to attempt the
