@@ -1,9 +1,6 @@
 .course-outline {
   overflow: hidden;
 }
-.course-outline__content {
-  min-width: 1000px;
-}
 .course-outline ol.course,
 .course-outline ol.unit {
   list-style: none;
