@@ -1566,9 +1566,9 @@ class CountSkillCompletionsTests(BaseSkillMapTests):
         self.run_generator_job()
         job = CountSkillCompletion(self.app_context).load()
         output = jobs.MapReduceJob.get_results(job)
-        expected = [[str(self.skill1.id), self.skill1.name, 3, 0],
-                    [str(self.skill2.id), self.skill2.name, 1, 1],
-                    [str(self.skill3.id), self.skill3.name, 0, 0]]
+        expected = [[str(self.skill1.id), 3, 0],
+                    [str(self.skill2.id), 1, 1],
+                    [str(self.skill3.id), 0, 0]]
         self.assertEqual(sorted(expected), sorted(output))
 
     def test_build_additional_mapper_params(self):
@@ -1576,12 +1576,9 @@ class CountSkillCompletionsTests(BaseSkillMapTests):
         """
         job = CountSkillCompletion(self.app_context)
         result = job.build_additional_mapper_params(self.app_context)
-        expected = {
-            self.skill1.id: job.pack_name(self.skill1.id, self.skill1.name),
-            self.skill2.id: job.pack_name(self.skill2.id, self.skill2.name),
-            self.skill3.id: job.pack_name(self.skill3.id, self.skill3.name)
-            }
-        self.assertEqual({'skills': expected}, result)
+        self.assertEqual(
+            {'skill_ids': [self.skill1.id, self.skill2.id, self.skill3.id]},
+            result)
 
 
 class SkillAggregateRestHandlerTests(BaseSkillMapTests):

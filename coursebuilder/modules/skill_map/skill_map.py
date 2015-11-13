@@ -1348,7 +1348,6 @@ class SkillCompletionAggregate(models.BaseEntity):
     with the number of students that completed that skill before the given
     date.
     """
-    name = db.StringProperty()
     aggregate = db.TextProperty(indexed=False)
 
 
@@ -1369,26 +1368,7 @@ class CountSkillCompletion(jobs.MapReduceJob):
         """Creates a map from skill ids to skill names."""
         course = courses.Course.get(app_context)
         skill_map = SkillMap.load(course)
-        result = {}
-        for skill in skill_map.skills():
-            packed_name = self.pack_name(skill.id, skill.name)
-            if not packed_name:
-                logging.warning('Skill not processed: the id can\'t be packed.'
-                                ' Id %s', skill.id)
-                continue
-            result[skill.id] = packed_name
-        return {'skills': result}
-
-    @staticmethod
-    def pack_name(skill_id, skill_name):
-        join_str = '--'
-        if join_str not in str(skill_id):
-            return '{}{}{}'.format(skill_id, join_str, skill_name)
-        return None
-
-    @staticmethod
-    def unpack_name(packed_name):
-        return packed_name.split('--', 1)
+        return {'skill_ids': [skill.id for skill in skill_map.skills()]}
 
     @staticmethod
     def map(item):
@@ -1400,22 +1380,21 @@ class CountSkillCompletion(jobs.MapReduceJob):
             is not completed, then the date is None.
         """
         mapper_params = context.get().mapreduce_spec.mapper.params
-        skills = mapper_params.get('skills', {})
+        skill_ids = mapper_params.get('skill_ids', [])
         sprogress = SkillCompletionTracker().get_skills_progress(
-            item, skills.keys())
+            item, skill_ids)
 
         for skill_id, skill_progress in sprogress.iteritems():
             state, timestamp = skill_progress
             date_str = time.strftime(CountSkillCompletion.DATE_FORMAT,
                                      time.localtime(timestamp))
-            packed_name = skills[skill_id]
             if state == SkillCompletionTracker.COMPLETED:
-                yield packed_name, transforms.dumps((state, date_str))
+                yield skill_id, transforms.dumps((state, date_str))
             else:
-                yield packed_name, transforms.dumps((state, None))
+                yield skill_id, transforms.dumps((state, None))
 
     @staticmethod
-    def reduce(item_id, values):
+    def reduce(skill_id, values):
         """Aggregates the number of students that completed or are in progress.
 
         Saves the dates of completion in a SkillCompletionAggregate entity.
@@ -1427,10 +1406,9 @@ class CountSkillCompletion(jobs.MapReduceJob):
             is not completed, then the date is None.
 
         Yields:
-            A 4-uple with the following schema:
-                id, name, complete_count, in_progress_count
+            A 3-uple with the following schema:
+                id, complete_count, in_progress_count
         """
-        skill_id, name = CountSkillCompletion.unpack_name(item_id)
         in_progress_count = 0
         aggregate = defaultdict(lambda: 0)
         completed_count = 0
@@ -1448,9 +1426,9 @@ class CountSkillCompletion(jobs.MapReduceJob):
             partial_sum += aggregate[date]
             aggregate[date] = partial_sum
         # Store the entity
-        SkillCompletionAggregate(key_name=str(skill_id), name=name,
-                                 aggregate=transforms.dumps(aggregate)).put()
-        yield (skill_id, name, completed_count, in_progress_count)
+        SkillCompletionAggregate(
+            key_name=skill_id, aggregate=transforms.dumps(aggregate)).put()
+        yield (skill_id, completed_count, in_progress_count)
 
 
 class SkillAggregateRestHandler(utils.BaseRESTHandler):
