@@ -144,6 +144,11 @@ function bindEditorField(Y) {
       buttonSet = this.REDUCED_BUTTON_SET;
     }
     attrs.toolbar = $.extend(true, {}, {buttons: buttonSet});
+    // The YUI method of autocomputing the url from the CSS isn't working in
+    // Firefox in the inline editor, so set the url explicitly.
+    // See: yui2-editor.js Editor._getBlankImage()
+    attrs.blankimage = '/static/2in3/2in3-master/dist/2.9.0/build/' +
+        'yui2-skin-sam-editor/assets/skins/sam/blankimage.png';
 
     this.editor = new Y.YUI2.widget.Editor(textarea, attrs);
     this._disableHtmlCleaning();
