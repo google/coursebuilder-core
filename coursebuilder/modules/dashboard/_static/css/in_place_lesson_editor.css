@@ -4,7 +4,7 @@
  */
 
 div.in-place-lesson-editor {
-  margin: 20px 0;
+  margin: 20px 0 0 0;
 }
 div.in-place-lesson-editor > iframe {
   width: 100%;

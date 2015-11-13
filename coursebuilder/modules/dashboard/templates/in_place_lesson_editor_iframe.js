@@ -5,7 +5,7 @@
 $(function() {
   // Extra vertical padding at the bottom of the ifrane. This is primarily to
   // leave room for the oeditor's edit image popup.
-  VERTICAL_PADDING = 180;
+  VERTICAL_PADDING = 80;
 
   var currentHeight = 0;
 
@@ -18,12 +18,12 @@ $(function() {
   }
 
   function maybeResize() {
-    var height = $('html').height();
+    var height = $('body').height();
     if (height != currentHeight) {
       postMessage('in-place-lesson-editor-height-changed', {
         height: height + VERTICAL_PADDING
       });
-      currentHeight = height;
+      currentHeight = height + VERTICAL_PADDING;
     }
   }
 
