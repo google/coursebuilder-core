@@ -361,7 +361,7 @@ class PiiTests(actions.TestBase):
         unix_epoch = datetime.datetime(year=1970, month=1, day=1)
         expected_sec = (expected_end_date - unix_epoch).total_seconds()
         actual_sec = (end_date - unix_epoch).total_seconds()
-        self.assertLessEqual(expected_sec - actual_sec, 1.0)
+        self.assertLessEqual(expected_sec - actual_sec, 2.0)
 
     def test_pii_secret_expiration(self):
         token = data_pump.DataPumpJob._build_new_pii_encryption_token('1s')
