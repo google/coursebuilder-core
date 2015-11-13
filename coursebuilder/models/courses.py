@@ -2484,16 +2484,16 @@ class Course(object):
             description=messages.HOMEPAGE_TITLE_DESCRIPTION))
 
         opts.add_property(schema_fields.SchemaField(
-            '_reserved:context_path', 'Course URL Component', 'uneditable',
+            '_reserved:context_path', 'URL Component', 'uneditable',
             description=messages.COURSE_URL_COMPONENT_DESCRIPTION,
             optional=True))
         opts.add_property(schema_fields.SchemaField(
-            '_reserved:namespace', 'Course Namespace', 'uneditable',
+            '_reserved:namespace', 'Namespace', 'uneditable',
             description=messages.COURSE_NAMESPACE_DESCRIPTION,
             optional=True))
 
         opts.add_property(schema_fields.SchemaField(
-            'course:admin_user_emails', 'Course Admin Emails', 'string',
+            'course:admin_user_emails', 'Admin Emails', 'string',
             description=messages.COURSE_ADMIN_EMAILS_DESCRIPTION, i18n=False,
             optional=True))
 

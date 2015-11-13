@@ -507,7 +507,7 @@ def register_module():
     ]
 
     auto_index_enabled = schema_fields.SchemaField(
-        'course:' + AUTO_INDEX_SETTING, 'Auto-Index Course', 'boolean',
+        'course:' + AUTO_INDEX_SETTING, 'Auto-Index', 'boolean',
         description=str(messages.SEARCH_AUTO_INDEX_DESCRIPTION),
         i18n=False, optional=True)
     course_settings_fields = [
