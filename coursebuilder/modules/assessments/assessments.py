@@ -30,8 +30,6 @@ from models import review as models_review
 from models import student_work
 from models import transforms
 from models import utils as models_utils
-from models.models import Student
-from models.models import StudentAnswersEntity
 from modules.embed import embed
 from modules.review import domain
 from tools import verify
@@ -330,7 +328,7 @@ class AnswerHandler(AssignmentsModuleMixin, utils.BaseHandler):
         Returns:
             the student instance.
         """
-        student = Student.get_by_key_name(key_name)
+        student = models.Student.get_by_key_name(key_name)
         if not student or not student.is_enrolled:
             raise Exception(
                 'Expected enrolled student with key_name "%s".', key_name)
@@ -341,9 +339,9 @@ class AnswerHandler(AssignmentsModuleMixin, utils.BaseHandler):
         if not student.user_id:
             student.user_id = self.get_user().user_id()
 
-        answers = StudentAnswersEntity.get_by_key_name(student.user_id)
+        answers = models.StudentAnswersEntity.get_by_key_name(student.user_id)
         if not answers:
-            answers = StudentAnswersEntity(key_name=student.user_id)
+            answers = models.StudentAnswersEntity(key_name=student.user_id)
         answers.updated_on = datetime.datetime.now()
 
         models_utils.set_answer(answers, assessment_type, new_answers)

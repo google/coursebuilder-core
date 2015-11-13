@@ -27,19 +27,15 @@ from common import crypto
 from common import jinja_utils
 from common import safe_dom
 from controllers import utils
+from models import counters
 from models import courses
 from models import custom_modules
 from models import models
+from models import review as models_review
 from models import roles
 from models import student_work
 from models import transforms
-from models.counters import PerfCounter
-from models.models import Student
-from models.models import StudentProfileDAO
-from models.review import ReviewUtils
-from models.student_work import StudentWorkUtils
-from modules.assessments.assessments import AssessmentHandler
-from modules.assessments.assessments import create_readonly_assessment_params
+from modules.assessments import assessments
 from modules.courses import unit_outline
 from modules.review import domain
 from tools import verify
@@ -47,11 +43,11 @@ from tools import verify
 from google.appengine.ext import db
 
 
-COURSE_EVENTS_RECEIVED = PerfCounter(
+COURSE_EVENTS_RECEIVED = counters.PerfCounter(
     'gcb-course-events-received',
     'A number of activity/assessment events received by the server.')
 
-COURSE_EVENTS_RECORDED = PerfCounter(
+COURSE_EVENTS_RECORDED = counters.PerfCounter(
     'gcb-course-events-recorded',
     'A number of activity/assessment events recorded in a datastore.')
 
@@ -173,8 +169,8 @@ class CourseHandler(utils.BaseHandler):
                 student = utils.TRANSIENT_STUDENT
                 profile = None
             else:
-                student = Student.get_enrolled_student_by_user(user)
-                profile = StudentProfileDAO.get_profile_by_user(user)
+                student = models.Student.get_enrolled_student_by_user(user)
+                profile = models.StudentProfileDAO.get_profile_by_user(user)
                 self.template_value['has_global_profile'] = profile is not None
                 if not student:
                     student = utils.TRANSIENT_STUDENT
@@ -500,7 +496,7 @@ class UnitHandler(utils.BaseHandler):
         if outline_element:
             template_values['back_button_url'] = outline_element.prev_link
             template_values['next_button_url'] = outline_element.next_link
-        assessment_handler = AssessmentHandler()
+        assessment_handler = assessments.AssessmentHandler()
         assessment_handler.app_context = self.app_context
         assessment_handler.request = self.request
         return assessment_handler.get_assessment_content(
@@ -659,7 +655,8 @@ class ReviewDashboardHandler(utils.BaseHandler):
         #       has already been requested, but not all of these are completed.
         self.template_value['can_request_new_review'] = (
             len(review_steps) < required_review_count or
-            ReviewUtils.has_completed_all_assigned_reviews(review_steps)
+            models_review.ReviewUtils.has_completed_all_assigned_reviews(
+                review_steps)
         )
         self.render('review_dashboard.html')
 
@@ -707,7 +704,8 @@ class ReviewDashboardHandler(utils.BaseHandler):
         review_min_count = unit.workflow.get_review_min_count()
         can_request_new_review = (
             len(review_steps) < review_min_count or
-            ReviewUtils.has_completed_all_assigned_reviews(review_steps))
+            models_review.ReviewUtils.has_completed_all_assigned_reviews(
+                review_steps))
         if not can_request_new_review:
             self.template_value['review_min_count'] = review_min_count
             self.template_value['error_code'] = 'must_complete_more_reviews'
@@ -822,12 +820,15 @@ class ReviewHandler(utils.BaseHandler):
         self.template_value['event_xsrf_token'] = (
             crypto.XsrfTokenManager.create_xsrf_token('event-post'))
 
-        self.render('review.html')
+        # pylint: disable=protected-access
+        self.render('review.html', additional_dirs=[assessments._TEMPLATES_DIR])
 
     def configure_assessment_view_1_4(self, unit, submission_contents):
-        readonly_student_assessment = create_readonly_assessment_params(
-            self.get_course().get_assessment_content(unit),
-            StudentWorkUtils.get_answer_list(submission_contents))
+        readonly_student_assessment = \
+            assessments.create_readonly_assessment_params(
+                self.get_course().get_assessment_content(unit),
+                student_work.StudentWorkUtils.get_answer_list(
+                    submission_contents))
         self.template_value[
             'readonly_student_assessment'] = readonly_student_assessment
 
@@ -837,9 +838,9 @@ class ReviewHandler(utils.BaseHandler):
             submission_contents)
 
     def configure_readonly_review_1_4(self, unit, review_contents):
-        readonly_review_form = create_readonly_assessment_params(
+        readonly_review_form = assessments.create_readonly_assessment_params(
             self.get_course().get_review_content(unit),
-            StudentWorkUtils.get_answer_list(review_contents))
+            student_work.StudentWorkUtils.get_answer_list(review_contents))
         self.template_value['readonly_review_form'] = readonly_review_form
 
     def configure_readonly_review_1_5(self, unit, review_contents):
@@ -852,7 +853,7 @@ class ReviewHandler(utils.BaseHandler):
         self.template_value['assessment_script_src'] = (
             self.get_course().get_review_filename(unit.unit_id))
         saved_answers = (
-            StudentWorkUtils.get_answer_list(review_contents)
+            student_work.StudentWorkUtils.get_answer_list(review_contents)
             if review_contents else [])
         self.template_value['saved_answers'] = transforms.dumps(saved_answers)
 
