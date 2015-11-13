@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 import re
+import time
 
 from common import crypto
 from common import users
@@ -174,6 +175,7 @@ class EditorPrefsTests(actions.TestBase):
 
     def test_oeditor_returns_state(self):
         actions.login('user@example.com', is_admin=True)
+        xsrf_timestamp = long(time.time())
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
                 oeditor.EditorPrefsRestHandler.XSRF_TOKEN)
 
@@ -195,5 +197,17 @@ class EditorPrefsTests(actions.TestBase):
         actual = match.group(1)
         actual = transforms.loads('"%s"' % actual)
         actual = transforms.loads(actual[1:-1])
+
+        # If the time moves up to the next second between the moment we
+        # generate our expected XSRF token and the response to the GET call is
+        # made, the XSRF tokens will mismatch, and the test will fail.  Allow
+        # a tolerance of up to 5 sceonds to allow for that (and thus suppress
+        # test flakes.
+        tolerance = 0
+        while actual['xsrf_token'] != expected['xsrf_token'] and tolerance < 5:
+            tolerance += 1
+            expected['xsrf_token'] = crypto.XsrfTokenManager._create_token(
+                oeditor.EditorPrefsRestHandler.XSRF_TOKEN,
+                xsrf_timestamp + tolerance)
 
         self.assertEquals(expected, actual)
