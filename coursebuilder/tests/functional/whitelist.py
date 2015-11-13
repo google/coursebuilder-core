@@ -47,7 +47,7 @@ class WhitelistTest(actions.TestBase):
         def get_environ_new(slf):
             environ = slf.get_environ_old()
             environ['course']['now_available'] = True
-            environ['course']['whitelist'] = WhitelistTest._whitelist
+            environ['reg_form']['whitelist'] = WhitelistTest._whitelist
             return environ
         sites.ApplicationContext.get_environ = get_environ_new
 

@@ -3422,6 +3422,19 @@ course:
     def is_course_browsable(cls, app_context):
         return app_context.get_environ()['course'].get('browsable', False)
 
+    @classmethod
+    def is_course_available(cls, app_context):
+        return app_context.get_environ()['course'].get('now_available', False)
+
+    @classmethod
+    def get_whitelist(cls, app_context):
+        settings = app_context.get_environ()
+        reg_form_whitelist = settings['reg_form'].get('whitelist', '')
+        if reg_form_whitelist:
+            return reg_form_whitelist
+        legacy_whitelist = settings['course'].get('whitelist', '')
+        return legacy_whitelist
+
     def set_course_availability(self, name):
         """Configure course availability policy into settings.
 

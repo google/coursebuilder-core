@@ -729,13 +729,11 @@ class ApplicationContext(object):
 
     @property
     def now_available(self):
-        course = self.get_environ().get('course')
-        return course and course.get('now_available')
+        return Course.is_course_available(self)
 
     @property
     def whitelist(self):
-        course = self.get_environ().get('course')
-        return '' if not course else course.get('whitelist', '')
+        return Course.get_whitelist(self)
 
     def set_current_locale(self, locale):
         old_locale = self.get_current_locale()
