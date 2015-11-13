@@ -174,18 +174,18 @@
     </style>
     <iron-media-query query="(max-width:767px)" query-matches="{{isPhoneSize}}"></iron-media-query>
     <paper-material id="cover">
-      <div class="card" layout="" vertical$="{{!isPhoneSize}}" horizontal$="{{isPhoneSize}}">
-        <div on-tap="open" layout="" horizontal="" center=""
+      <div class$="{{_computeCardClass(isPhoneSize)}}">
+        <div on-tap="open"
             class$="{{_computeClass(categories)}}" style$="{{_computeStyle(color)}}">
           <div id="icon" class$="{{_computeClass2(categories)}}"></div>
           <h2 class="card-title" hidden$="{{isPhoneSize}}">{{label}}</h2>
         </div>
-        <div flex$="{{isPhoneSize}}">
+        <div class="flex">
           <div class="description">
             <h2 class="card-title" hidden$="{{!isPhoneSize}}">{{label}}</h2>
             <span>{{description}}</span>
           </div>
-          <div class="action" layout="" horizontal="" center="">
+          <div class="action">
             <div>
               <span hidden$="{{_computeHidden(duration)}}">
               <iron-icon icon="image:timelapse" style="height: 24px; width: 24px;"></iron-icon>
@@ -280,6 +280,9 @@
         },
         _computeExpression4: function (duration) {
           return this.roundUp(duration / 60);
+        },
+        _computeCardClass: function(isPhoneSize) {
+          return 'card layout ' + (isPhoneSize ? 'horizontal' : 'vertical');
         }
       });
     }());
@@ -314,12 +317,13 @@
         width: 50%;
         margin: 0;
         color: #fff; }
-        .logo img {
-          width: 126px; }
-        .logo h1 {
-          font-weight: 300;
-          font-size: 30px;
-          margin: 0; }
+      .logo h1 {
+        font-weight: 300;
+        font-size: 30px;
+        margin: 0; }
+      .logo-icon {
+        width: 96px;
+        height: 96px; }
 
       .content {
         margin: 60px 60px 0 0;
@@ -352,12 +356,14 @@
         .logo {
           height: 100%;
           width: 100%; }
-          .logo img {
-            width: auto;
-            height: 60%;
-            margin: 0 16px; }
+        .logo-icon {
+            margin: 0 16px;
+            width: 24px;}
           .logo h1 {
             font-size: 24px; }
+          .logo paper-icon-button {
+            margin-right: 0px;
+          }
         .menu {
           width: 90%;
           margin: 16px; }
@@ -370,7 +376,7 @@
       <paper-header-panel mode="waterfall" drawer="">
         <paper-toolbar class="tall" middle-justify="end" hidden$="{{isPhoneSize}}">
           <span class="middle logo">
-            <iron-icon icon="social:school" style="width: 96px; height: 96px;"></iron-icon>
+            <iron-icon icon="social:school" class="logo-icon"></iron-icon>
             <h1>Guides</h1>
           </span>
         </paper-toolbar>
@@ -382,9 +388,9 @@
       </paper-header-panel>
       <paper-header-panel mode="{{_computeMode(isPhoneSize)}}" main="" id="main">
         <paper-toolbar class$="{{_computeClass(isPhoneSize)}}">
-          <span class="logo" layout="" horizontal="" center="" hidden$="{{!isPhoneSize}}">
+          <span class="logo layout horizontal center" hidden$="{{!isPhoneSize}}">
             <paper-icon-button id="menu_button" icon="menu" noink="" on-click="toggleDrawer"></paper-icon-button>
-            <iron-icon icon="social:school" style="width: 96px; height: 96px;"></iron-icon>
+            <iron-icon icon="social:school" class="logo-icon"></iron-icon>
             <h1>Guides</h1>
           </span>
         </paper-toolbar>

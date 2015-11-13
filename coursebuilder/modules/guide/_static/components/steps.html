@@ -110,12 +110,6 @@
         padding: 24px;
       }
 
-      @media (max-width: 800px) {
-        .instructions {
-          margin: 0 0 16px 0;
-        }
-      }
-
       footer {
         color: var(--gcb-step-card-footer-text-color);
         height: 120px;
@@ -480,12 +474,13 @@
       :host {
         line-height: 24px;
         --paper-menu: {
-          cursor: pointer;
           margin: 16px 16px 0 12px;
           background: var(--gcb-step-container-background);
         };
         --paper-drawer-panel-left-drawer-container: {
           background: var(--gcb-step-container-background);
+          z-index: 20;
+          overflow-y: auto;
         };
         --paper-drawer-panel-main-container: {
           background: var(--gcb-step-container-background);
@@ -526,6 +521,7 @@
       .navbutton {
         position: absolute;
         bottom: 32px;
+        z-index: 10;
       }
 
       .navbutton.prevbutton {
@@ -623,22 +619,24 @@
 
       <paper-toolbar>
         <paper-icon-button icon="menu" hidden$="{{!narrow}}" on-tap="_toggleDrawer"></paper-icon-button>
-        <paper-icon-button icon="arrow-back" on-tap="_goToHome" hidden$="{{narrow}}"></paper-icon-button>
         <h1>{{title}}</h1>
         <div id="countdown" title="Time remaining" class="flex" hidden$="{{!_isPositiveNum(duration)}}">
           <iron-icon icon="schedule"></iron-icon> <span>{{remaining}}</span> min remaining
         </div>
       </paper-toolbar>
 
-      <paper-drawer-panel narrow="{{narrow}}" selected="true" id="drawer">
-
-        <div drawer>
+      <paper-drawer-panel narrow="{{narrow}}" selected="true" id="drawer" class="layout vertical">
+        <div drawer class="fit">
           <paper-menu id="toc">
             <template is="dom-repeat" items="{{steps}}">
               <paper-item class$="{{_tocItemClass(selected, index)}}">
                 <i>{{item.step}}</i><span>{{item.label}}</span>
               </paper-item>
             </template>
+            <paper-item on-tap="_goToHome">
+              <iron-icon icon="arrow-back"></iron-icon>
+              <span>Back to guides</span>
+            </paper-item>
           </paper-menu>
         </div>
 
@@ -647,27 +645,23 @@
               on-neon-animation-finish="_scrollIntoStepView">
             <content select="gcb-step-card"></content>
           </neon-animated-pages>
+          <paper-fab raised class="navbutton prevbutton" icon="chevron-left"
+            on-tap="selectPrevious"
+            title="Previous step"
+            disabled$="{{_isFirstStep(selected)}}">
+          </paper-fab>
+          <paper-fab raised class="navbutton nextbutton" icon="chevron-right"
+            on-tap="selectNext"
+            title="{{_nextFabTitle(selected)}}">
+          </paper-fab>
+          <paper-fab raised completed class="navbutton donebutton" icon="done"
+            on-tap="_goToHome"
+            title="Complete guide"
+            hidden$="{{_hideDoneFab(selected)}}">
+          </paper-fab>
         </div>
 
       </paper-drawer-panel>
-
-      <paper-fab raised class="navbutton prevbutton" icon="chevron-left"
-        on-tap="selectPrevious"
-        title="Previous step"
-        hidden$="{{_hideNavFabPrev()}}"
-        disabled$="{{_isFirstStep(selected)}}">
-      </paper-fab>
-      <paper-fab raised class="navbutton nextbutton" icon="chevron-right"
-        on-tap="selectNext"
-        title="{{_nextFabTitle(selected)}}"
-        hidden$="{{_hideNavFabNext()}}">
-      </paper-fab>
-      <paper-fab raised completed class="navbutton donebutton" icon="done"
-        on-tap="_goToHome"
-        title="Complete guide"
-        hidden$="{{_hideDoneFab(selected)}}">
-      </paper-fab>
-
     </paper-header-panel>
 
     <paper-dialog id="resumeDialog" modal>
@@ -825,7 +819,7 @@
 
       attached: function() {
         var duration = 0;
-        var steps = this.$.pages.items.map(function(item, i) {
+        var steps = this.$.pages.getEffectiveChildren().map(function(item, i) {
           duration += item.duration;
           item.feedbackLink = this.feedbackLink;
           item.step = i + 1;
@@ -1000,14 +994,6 @@
         }
         var items = this.$.pages.getEffectiveChildren();
         return items && items.length && stepIndex >= items.length - 1;
-      },
-
-      _hideNavFabPrev: function() {
-        return false;
-      },
-
-      _hideNavFabNext: function() {
-        return false;
       },
 
       _hideDoneFab: function(stepIndex) {
