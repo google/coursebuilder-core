@@ -28,41 +28,44 @@ Minimal Example:
 
 */
 
-.gcb-collapse--opened {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.gcb-collapse--opened + .gcb-collapse--opened {
-  border-top: none;
-  margin-top: 0;
-}
-
 .gcb-collapse__content-wrapper {
   overflow: hidden;
 }
 
 .gcb-collapse__content {
   transition-property: margin-top;
-  transition-duration: 0.2s;
+  transition-duration: .2s;
+  display: none;
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .gcb-collapse__button {
+  transition-property: background-color, border-color;
+  transition-duration: .2s;
+  border: 0 solid transparent;
+  border-bottom-width: 1px;
+  background-color: rgba(0, 0, 0, 0);
   font-weight: bold;
 }
 
 .gcb-collapse__icon {
   transition-property: transform;
-  transition-duration: 0.2s;
+  transition-duration: .2s;
+}
+
+.gcb-collapse--opened .gcb-collapse__button {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.gcb-collapse--opened .gcb-collapse__content {
+  /* Overrides the inline style calculated by the JavaScript on startup */
+  margin-top: 0 !important;
+  display: block;
 }
 
 .gcb-collapse--opened .gcb-collapse__icon {
   transform: rotate(-180deg);
-}
-
-.gcb-collapse--opened .gcb-collapse__content {
-  border-top: solid 1px rgba(0, 0, 0, 0.15);
-  /* Overrides the inline style calculated by the JavaScript on startup */
-  margin-top: 0 !important;
 }
 
 .gcb-collapse--opened .gcb-collapse__content .gcb-menu__sub-group:first-child {

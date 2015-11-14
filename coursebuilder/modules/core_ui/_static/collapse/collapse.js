@@ -11,6 +11,39 @@ function updateCollapse() {
   });
 }
 
+if (!window.requestAnimationFrame) {
+  window.requestAnimationFrame = window.setTimeout;
+}
+
+function toggleCollapse(collapse, open) {
+  var ANIMATION_MS = 200;
+
+  if (collapse.data('gcb-collapse-timeout')) {
+    clearTimeout(collapse.data('gcb-collapse-timeout'));
+  }
+
+  // Display the element one frame before the animation begins
+  // Can't use $.show() here because it will realize the element may already
+  // be visible, but one frame later it won't be and we need to prevent that.
+  requestAnimationFrame(function() {
+    var content = collapse.find('.gcb-collapse__content');
+    content.css({display: 'block'});
+
+    requestAnimationFrame(function() {
+      collapse.toggleClass('gcb-collapse--opened', open);
+
+      if (!open) {
+        collapse.addClass('gcb-collapse--closing');
+
+        collapse.data('gcb-collapse-timeout', setTimeout(function() {
+          collapse.removeClass('gcb-collapse--closing');
+          content.css({display: 'none'});
+        }, ANIMATION_MS));
+      }
+    });
+  });
+}
+
 function setUpCollapse() {
   $(document.body).on('click', '.gcb-collapse__button', function() {
     var button = $(this);
@@ -19,14 +52,20 @@ function setUpCollapse() {
     if (collapse.hasClass('gcb-collapse--disabled')) {
       return;
     }
-    if (!collapse.is('.gcb-collapse--opened')) {
-      accordion.find('.gcb-collapse').removeClass('gcb-collapse--opened');
+
+    if (collapse.hasClass('gcb-collapse--opened')) {
+      // close it
+      toggleCollapse(collapse, false);
+    } else {
+      // open it and close another
+      var otherCollapse = accordion.find('.gcb-collapse.gcb-collapse--opened');
+      if (otherCollapse.length) {
+        toggleCollapse(otherCollapse, false);
+      }
+      toggleCollapse(collapse, true);
     }
-    collapse.toggleClass('gcb-collapse--opened');
   });
-  $(function() {
-    updateCollapse();
-  });
+  updateCollapse();
 }
 
 $(function(){
