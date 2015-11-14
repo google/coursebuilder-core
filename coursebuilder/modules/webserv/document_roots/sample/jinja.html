@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel="shortcut icon" href="favicon.ico">
+  </head>
+  <body>
+    <p>Course Builder Web Server supports
+        <a href=''http://jinja.pocoo.org/>Jinja2</a> -- a full featured
+        template engine for Python.
+    </p>
+
+    <p>Here is a list of all currently available server variables:</p>
+    <ul>
+      {% for name, value in gcb_webserv_metadata: %}
+          <li><b>{{ name }}</b>: {{ value }}</li>
+      {% endfor %}
+    </ul>
+</body>
+</html>

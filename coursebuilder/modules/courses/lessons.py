@@ -1035,10 +1035,8 @@ def on_module_enabled(unused_custom_module):
 
 def get_namespaced_handlers():
     return [
-        ('/', CourseHandler),
         ('/activity', UnitHandler),
         ('/course', CourseHandler),
         ('/review', ReviewHandler),
         ('/reviewdashboard', ReviewDashboardHandler),
-        ('/unit', UnitHandler),
-        ]
+        ('/unit', UnitHandler)]

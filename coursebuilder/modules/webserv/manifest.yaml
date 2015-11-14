@@ -1,0 +1,15 @@
+tests:
+  functional:
+    - modules.webserv.webserv_tests.WebservTests = 8
+
+files:
+  - modules/webserv/__init__.py
+  - modules/webserv/document_roots/sample/favicon.ico
+  - modules/webserv/document_roots/sample/index.html
+  - modules/webserv/document_roots/sample/index.md
+  - modules/webserv/document_roots/sample/jinja.html
+  - modules/webserv/document_roots/sample/main.css
+  - modules/webserv/document_roots/sample/your_logo_here.png
+  - modules/webserv/manifest.yaml
+  - modules/webserv/webserv.py
+  - modules/webserv/webserv_tests.py

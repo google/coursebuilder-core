@@ -1321,6 +1321,10 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
                 or Roles.is_course_admin(context)
                 or Roles.in_any_role(context))
 
+    def is_star_route(self, handler):
+        return isinstance(handler, utils.StarRouteHandlerMixin) or (
+            issubclass(handler, utils.StarRouteHandlerMixin))
+
     def _get_handler_factory_for_path(self, path):
         """Picks a handler to handle the path."""
         # Checks if path maps in its entirety.
@@ -1338,9 +1342,15 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
                 partial_path += '/' + part
                 if partial_path in ApplicationRequestHandler.urls_map:
                     handler = ApplicationRequestHandler.urls_map[partial_path]
-                    if isinstance(handler, utils.StarRouteHandlerMixin) or (
-                        issubclass(handler, utils.StarRouteHandlerMixin)):
+                    if self.is_star_route(handler):
                         candidate = handler
+
+        # check if root handler exists; it will not be matched above as it's
+        # the least specific of all
+        if not candidate:
+            handler = ApplicationRequestHandler.urls_map.get('/')
+            if handler and self.is_star_route(handler):
+                candidate = handler
 
         return candidate
 
@@ -1547,7 +1557,7 @@ class SmartRoute(webapp2.SimpleRoute):
     def match(self, request):
         candidate = super(SmartRoute, self).match(request)
         if not candidate:
-            return candidate
+            return None
         elif self.is_active(
                 self.handler, self.template, request.method, request.path):
             return candidate
@@ -1559,11 +1569,6 @@ class WSGIRouter(webapp2.Router):
 
     def __init__(self, routes):
         assert routes and isinstance(routes, list), 'Expected a list'
-        all_routes = set()
-        for route, _ in routes:
-            assert route not in all_routes, 'Duplicate route %s' % route
-            all_routes.add(route)
-
         self.route_class = SmartRoute
         super(WSGIRouter, self).__init__(routes)
 

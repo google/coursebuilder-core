@@ -1,0 +1,3 @@
+This is a test file to verify that only *.html files are subject to Jinja templating.
+For example: this variable {{ course_info.course.title }} should not be expanded
+because this file is *.css.

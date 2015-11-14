@@ -163,8 +163,8 @@ def create_jinja_environment(loader, locale=None, autoescape=True):
     return jinja_environment
 
 
-def get_template(
-    template_name, dirs, autoescape=True, handler=None, default_locale='en_US'):
+def create_and_configure_jinja_environment(
+    dirs, autoescape=True, handler=None, default_locale='en_US'):
     """Sets up an environment and gets jinja template."""
 
     # Defer to avoid circular import.
@@ -184,4 +184,10 @@ def get_template(
 
     jinja_environment.filters['gcb_tags'] = get_gcb_tags_filter(handler)
 
-    return jinja_environment.get_template(template_name)
+    return jinja_environment
+
+
+def get_template(
+    template_name, dirs, autoescape=True, handler=None, default_locale='en_US'):
+    return create_and_configure_jinja_environment(
+        dirs, autoescape, handler, default_locale).get_template(template_name)

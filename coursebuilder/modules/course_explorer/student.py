@@ -46,27 +46,17 @@ _STRING_PROPERTY_MAX_BYTES = 500
 
 
 class IndexPageHandler(webapp2.RequestHandler, utils.QueryableRouteMixin):
-    """Handles routing of root URL."""
+    """Handles routing of root URL '/'."""
 
     @classmethod
     def can_handle_route_method_path_now(cls, route, method, path):
-        return True
+        return course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value
 
     def get(self):
-        """Handles GET requests."""
-        if course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
-            self.redirect('/explorer')
+        if not course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
+            self.error(404)
             return
-
-        index = sites.get_course_index()
-        if index.get_all_courses():
-            course = index.get_course_for_path('/')
-            if not course:
-                course = index.get_all_courses()[0]
-            self.redirect(utils.ApplicationHandler.canonicalize_url_for(
-                course, '/course?use_last_location=true'))
-        else:
-            self.redirect('/admin/welcome')
+        self.redirect('/explorer')
 
 
 class BaseStudentHandler(webapp2.RequestHandler):

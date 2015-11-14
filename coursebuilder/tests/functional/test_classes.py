@@ -227,6 +227,11 @@ class WSGIRoutingTest(actions.TestBase):
                 self.response.out.write(
                     'Success on "%s"' % self.request.path)
 
+        class _AlwaysFailingHandler(utils.ApplicationHandler):
+
+            def get(self):
+                raise Exception('I always fail')
+
         class _InactiveHandler(
             utils.ApplicationHandler, utils.QueryableRouteMixin):
 
@@ -238,17 +243,26 @@ class WSGIRoutingTest(actions.TestBase):
             def get(self):
                 raise Exception('Must not be called')
 
-        all_routes = [
+        global_routes = [
+            # many handlers can be bound to the same global route;
+            # we later check that only the first active one fires
+            ('/a', _InactiveHandler),
             ('/a', _Vocal200Handler),
+            ('/a', _AlwaysFailingHandler)]
+
+        namespaced_routes = [
+            # only one handler can be bund to a namespaced route
+            ('/a', _Vocal200Handler)]
+
+        common_routes = [
             (r'/b(.*)', _VocalRegexBound200Handler),
             ('/c', _VocalStar200Handler),
             ('/d', _Aborting404Handler),
             ('/e', _EmptyError404Handler),
-            ('/f', _FullError404Handler),
-            ('/g', _InactiveHandler)]
+            ('/f', _FullError404Handler)]
 
-        global_routes = [] + all_routes
-        namespaced_routes = [] + all_routes
+        global_routes = global_routes + common_routes
+        namespaced_routes = namespaced_routes + common_routes
         sites.ApplicationRequestHandler.bind(namespaced_routes)
         app_routes = [(r'(.*)', sites.ApplicationRequestHandler)]
 
@@ -271,16 +285,10 @@ class WSGIRoutingTest(actions.TestBase):
                 ('/a', _Handler_A),
                 ('/a', _Handler_B)])
 
-        # check that one can not bind two handlers to the same global route
-        with self.assertRaises(Exception):
-            app = webapp2.WSGIApplication()
-            app.router = sites.WSGIRouter([
-                ('/a', _Handler_A),
-                ('/a', _Handler_B)])
-
-    def test_inactive_handler(self):
-        response = self.testapp.get('/g', expect_errors=True)
-        self.assertEqual(404, response.status_code)
+    def test_inactive_handler_is_skipped(self):
+        response = self.testapp.get('/a', expect_errors=True)
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('Success', response.body)
         self.assertTrue(self.has_inactive_handler_fired)
 
     def test_global_routes(self):
