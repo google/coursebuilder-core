@@ -1070,7 +1070,7 @@ def _courses_config_validator(rules_text, errors, expect_failures=True):
         return False
 
 
-def _validate_new_course_entry_attributes(name, title, admin_email, errors):
+def validate_new_course_entry_attributes(name, title, admin_email, errors):
     """Validates new course attributes."""
     if not name or len(name) < 3:
         errors.append(
@@ -1145,7 +1145,7 @@ def add_new_course_entry(unique_name, title, admin_email, errors):
     """Validates course attributes and adds the course."""
 
     # Validate.
-    _validate_new_course_entry_attributes(
+    validate_new_course_entry_attributes(
         unique_name, title, admin_email, errors)
     if errors:
         return
@@ -1273,8 +1273,12 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         for url in urls:
             path_prefix = url[0]
             handler_class = url[1]
+            if path_prefix in urls_map and (
+                    handler_class != urls_map[path_prefix]):
+                raise Exception(
+                    'Path prefix %s defined by %s is being redefined by %s' % (
+                        path_prefix, urls_map[path_prefix], handler_class))
             urls_map[path_prefix] = handler_class
-
             # add child handlers
             if hasattr(handler_class, 'get_child_routes'):
                 cls.bind_to(handler_class.get_child_routes(), urls_map)
@@ -1377,7 +1381,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
         # make sure this response has not been dispatched yet
         if self.response.status_code != 200 or self.response.body:
-            self._finalize_response(
+            self.finalize_response(
                 self.request, self.response, self.response.status_code)
             return
 
@@ -1394,7 +1398,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             unset_path_info()
 
     @classmethod
-    def _get_status_code_from_dispatch_exception(cls, verb, path, e):
+    def get_status_code_from_dispatch_exception(cls, verb, path, e):
         if isinstance(e, webapp2.HTTPException):
             status_code = e.code
         else:
@@ -1411,7 +1415,6 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         # don't want them to be set or used because routing phase if over by now
         self.request.route_args = []
         self.request.route_kwargs = {}
-
         set_default_response_headers(handler)
 
         self.before_method(handler, verb, path)
@@ -1421,7 +1424,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
                 handler.dispatch()
                 status_code = handler.response.status_code
             except Exception as e:  # pylint: disable=broad-except
-                status_code = self._get_status_code_from_dispatch_exception(
+                status_code = self.get_status_code_from_dispatch_exception(
                     verb, path, e)
             self._finalize_namespaced_response(
                 handler.app_context,
@@ -1441,7 +1444,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             not is_rest_handler)
 
     @classmethod
-    def _finalize_response(cls, request, response, status_code):
+    def finalize_response(cls, request, response, status_code):
         if cls._needs_error_handler(request, response, status_code):
             error_handler = cls.GLOBAL_ERROR_HANDLER
             if not error_handler:
@@ -1492,7 +1495,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     def _error_404(self, path):
         """Fail with 404."""
         self.error(404)
-        self._finalize_response(self.request, self.response, 404)
+        self.finalize_response(self.request, self.response, 404)
 
     def _login_or_404(self, path):
         """If no user, offer login page, otherwise fail 404."""
@@ -1500,18 +1503,6 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             self.redirect(users.create_login_url(path))
         else:
             self._error_404(path)
-
-    def handle_exception(self, e, debug_mode):
-        method = None
-        path = None
-        if self.request:
-            method = self.request.method.lower()
-            path = self.request.path
-        status_code = self._get_status_code_from_dispatch_exception(
-            method, path, e)
-        if status_code >= 500:
-            logging.error(e)
-        self._finalize_response(self.request, self.response, status_code)
 
     def get(self, path):
         self.invoke_http_verb('GET', path, self._login_or_404)
@@ -1526,8 +1517,55 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         self.invoke_http_verb('DELETE', path, self._error_404)
 
 
+def handle_exception(request, response, e):
+    method = None
+    path = None
+    if request:
+        method = request.method.lower()
+        path = request.path
+    status_code = (
+        ApplicationRequestHandler.get_status_code_from_dispatch_exception(
+            method, path, e))
+    if status_code >= 500:
+        logging.error(e)
+    ApplicationRequestHandler.finalize_response(
+        request, response, status_code)
+
+
+class SmartRoute(webapp2.SimpleRoute):
+    """A route that can dynamically choose whether it's active or not."""
+
+    def is_active(self, handler, route, method, path):
+        try:
+            if callable(handler.can_handle_route_method_path_now):
+                return handler.can_handle_route_method_path_now(
+                    route, method, path)
+        except AttributeError:
+            pass
+        return True
+
+    def match(self, request):
+        candidate = super(SmartRoute, self).match(request)
+        if not candidate:
+            return candidate
+        elif self.is_active(
+                self.handler, self.template, request.method, request.path):
+            return candidate
+        else:
+            return None
+
 class WSGIRouter(webapp2.Router):
     """Router that provides finalizaton."""
+
+    def __init__(self, routes):
+        assert routes and isinstance(routes, list), 'Expected a list'
+        all_routes = set()
+        for route, _ in routes:
+            assert route not in all_routes, 'Duplicate route %s' % route
+            all_routes.add(route)
+
+        self.route_class = SmartRoute
+        super(WSGIRouter, self).__init__(routes)
 
     def dispatch(self, request, response):
         result = super(WSGIRouter, self).dispatch(request, response)
@@ -1535,7 +1573,7 @@ class WSGIRouter(webapp2.Router):
             response = result
 
         # pylint: disable=protected-access
-        ApplicationRequestHandler._finalize_response(
+        ApplicationRequestHandler.finalize_response(
             request, response, response.status_code)
 
         return response

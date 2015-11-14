@@ -123,6 +123,7 @@ class WSGIRoutingTest(actions.TestBase):
         super(WSGIRoutingTest, self).setUp()
         sites.setup_courses('')
         actions.login('test@example.com', is_admin=True)
+        self.has_inactive_handler_fired = False
 
     def tearDown(self):
         sites.reset_courses()
@@ -178,6 +179,8 @@ class WSGIRoutingTest(actions.TestBase):
     def getApp(self):
         """Setup test WSGI app with variety of test handlers."""
 
+        outer_self = self
+
         class _Aborting404Handler(utils.ApplicationHandler):
 
             def get(self):
@@ -224,13 +227,25 @@ class WSGIRoutingTest(actions.TestBase):
                 self.response.out.write(
                     'Success on "%s"' % self.request.path)
 
+        class _InactiveHandler(
+            utils.ApplicationHandler, utils.QueryableRouteMixin):
+
+            @classmethod
+            def can_handle_route_method_path_now(cls, route, method, path):
+                outer_self.has_inactive_handler_fired = True
+                return False
+
+            def get(self):
+                raise Exception('Must not be called')
+
         all_routes = [
             ('/a', _Vocal200Handler),
             (r'/b(.*)', _VocalRegexBound200Handler),
             ('/c', _VocalStar200Handler),
             ('/d', _Aborting404Handler),
             ('/e', _EmptyError404Handler),
-            ('/f', _FullError404Handler)]
+            ('/f', _FullError404Handler),
+            ('/g', _InactiveHandler)]
 
         global_routes = [] + all_routes
         namespaced_routes = [] + all_routes
@@ -241,6 +256,32 @@ class WSGIRoutingTest(actions.TestBase):
         app.router = sites.WSGIRouter(global_routes + app_routes)
 
         return app
+
+    def test_routes_are_unique(self):
+
+        class _Handler_A(utils.ApplicationHandler):
+            pass
+
+        class _Handler_B(utils.ApplicationHandler):
+            pass
+
+        # check that one can not bind two handlers to the same namespaced route
+        with self.assertRaises(Exception):
+            sites.ApplicationRequestHandler.bind([
+                ('/a', _Handler_A),
+                ('/a', _Handler_B)])
+
+        # check that one can not bind two handlers to the same global route
+        with self.assertRaises(Exception):
+            app = webapp2.WSGIApplication()
+            app.router = sites.WSGIRouter([
+                ('/a', _Handler_A),
+                ('/a', _Handler_B)])
+
+    def test_inactive_handler(self):
+        response = self.testapp.get('/g', expect_errors=True)
+        self.assertEqual(404, response.status_code)
+        self.assertTrue(self.has_inactive_handler_fired)
 
     def test_global_routes(self):
         # this route works without courses; it does NOT support '*'
@@ -311,7 +352,9 @@ class WSGIRoutingTest(actions.TestBase):
         # retest all global routes
         self.test_global_routes()
 
-        self.assertEqual(200, self.testapp.get('/foo/a').status_code)
+        response = self.testapp.get('/foo/a')
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('Success', response.body)
 
         # regex routes don't work in our courses; one must use mixin class
         # StarRouteHandlerMixin

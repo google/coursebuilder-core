@@ -84,6 +84,10 @@ app = users.AuthInterceptorWSGIApplication(
     None,
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=not appengine_config.PRODUCTION_MODE)
+
+# setup router
 app.router = sites.WSGIRouter(
     lifecycle_routes + global_routes + appstats_routes + app_routes)
-app.handle_exception = sites.ApplicationRequestHandler.handle_exception
+
+# hook exception handling
+app.handle_exception = sites.handle_exception

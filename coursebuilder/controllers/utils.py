@@ -119,6 +119,14 @@ class StarRouteHandlerMixin(object):
     pass
 
 
+class QueryableRouteMixin(object):
+    """Add to handler to dynamically choose whether it's active or not."""
+
+    @classmethod
+    def can_handle_route_method_path_now(cls, route, method, path):
+        raise NotImplementedError()
+
+
 class PageInitializer(object):
     """Abstract class that defines an interface to initialize page headers."""
 

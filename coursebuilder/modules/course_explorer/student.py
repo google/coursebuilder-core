@@ -26,13 +26,11 @@ import appengine_config
 from common import jinja_utils
 from common import users
 from controllers import sites
-from controllers.utils import ApplicationHandler
-from controllers.utils import PageInitializerService
-from controllers.utils import XsrfTokenManager
-from models import courses as Courses
+from controllers import utils
+from models import courses as models_courses
+from models import models
+from models import roles
 from models import transforms
-from models.models import StudentProfileDAO
-from models.roles import Roles
 
 # We want to use views file in both /views and /modules/course_explorer/views.
 TEMPLATE_DIRS = [
@@ -47,8 +45,12 @@ STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID = 'rename-student-global'
 _STRING_PROPERTY_MAX_BYTES = 500
 
 
-class IndexPageHandler(webapp2.RequestHandler):
+class IndexPageHandler(webapp2.RequestHandler, utils.QueryableRouteMixin):
     """Handles routing of root URL."""
+
+    @classmethod
+    def can_handle_route_method_path_now(cls, route, method, path):
+        return True
 
     def get(self):
         """Handles GET requests."""
@@ -61,7 +63,7 @@ class IndexPageHandler(webapp2.RequestHandler):
             course = index.get_course_for_path('/')
             if not course:
                 course = index.get_all_courses()[0]
-            self.redirect(ApplicationHandler.canonicalize_url_for(
+            self.redirect(utils.ApplicationHandler.canonicalize_url_for(
                 course, '/course?use_last_location=true'))
         else:
             self.redirect('/admin/welcome')
@@ -81,19 +83,20 @@ class BaseStudentHandler(webapp2.RequestHandler):
 
     def initialize_student_state(self):
         """Initialize course information related to student."""
-        PageInitializerService.get().initialize(self.template_values)
+        utils.PageInitializerService.get().initialize(self.template_values)
         self.enrolled_courses_dict = {}
         self.courses_progress_dict = {}
         user = users.get_current_user()
         if not user:
             return
 
-        profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
+        profile = models.StudentProfileDAO.get_profile_by_user_id(
+            user.user_id())
         if not profile:
             return
 
         self.template_values['register_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('register-post'))
+            utils.XsrfTokenManager.create_xsrf_token('register-post'))
 
         self.enrolled_courses_dict = transforms.loads(profile.enrollment_info)
         if self.enrolled_courses_dict:
@@ -106,8 +109,8 @@ class BaseStudentHandler(webapp2.RequestHandler):
         """Get all the public courses."""
         public_courses = []
         for course in sites.get_all_courses():
-            if ((course.now_available and Roles.is_user_whitelisted(course))
-                or Roles.is_course_admin(course)):
+            if ((course.now_available and roles.Roles.is_user_whitelisted(
+                    course)) or roles.Roles.is_course_admin(course)):
                 public_courses.append(course)
         return public_courses
 
@@ -151,7 +154,8 @@ class BaseStudentHandler(webapp2.RequestHandler):
 
     def initialize_page_and_get_user(self):
         """Add basic fields to template and return user."""
-        self.template_values['course_info'] = Courses.COURSE_TEMPLATE_DICT
+        self.template_values['course_info'] = (
+            models_courses.COURSE_TEMPLATE_DICT)
         self.template_values['course_info']['course'] = {
             'locale': self.get_locale_for_user()}
         self.template_values['page_locale'] = 'en'
@@ -160,14 +164,16 @@ class BaseStudentHandler(webapp2.RequestHandler):
             self.template_values['loginUrl'] = users.create_login_url('/')
         else:
             self.template_values['email'] = user.email()
-            self.template_values['is_super_admin'] = Roles.is_super_admin()
+            self.template_values[
+                'is_super_admin'] = roles.Roles.is_super_admin()
             self.template_values['logoutUrl'] = users.create_logout_url('/')
         return user
 
     def is_valid_xsrf_token(self, action):
         """Asserts the current request has proper XSRF token or fails."""
         token = self.request.get('xsrf_token')
-        return token and XsrfTokenManager.is_xsrf_token_valid(token, action)
+        return token and utils.XsrfTokenManager.is_xsrf_token_valid(
+            token, action)
 
 
 class NullHtmlHooks(object):
@@ -185,9 +191,9 @@ class ProfileHandler(BaseStudentHandler):
     """Global profile handler for a student."""
 
     def _storable_in_string_property(self, value):
-        # db.StringProperty can hold 500B. len(1_unicode_char) == 1, so len() is
-        # not a good proxy for unicode string size. Instead, cast to utf-8-
-        # encoded str first.
+        # db.StringProperty can hold 500B. len(1_unicode_char) == 1,
+        # so len() is not a good proxy for unicode string size. Instead,
+        # cast to utf-8-encoded str first.
         return len(value.encode('utf-8')) <= _STRING_PROPERTY_MAX_BYTES
 
     def get(self):
@@ -203,11 +209,11 @@ class ProfileHandler(BaseStudentHandler):
 
         courses = self.get_public_courses()
         self.template_values['student'] = (
-            StudentProfileDAO.get_profile_by_user_id(user.user_id()))
+            models.StudentProfileDAO.get_profile_by_user_id(user.user_id()))
         self.template_values['navbar'] = {'profile': True}
         self.template_values['courses'] = self.get_enrolled_courses(courses)
         self.template_values['student_edit_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token(
+            utils.XsrfTokenManager.create_xsrf_token(
                 STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID))
         self.template_values['html_hooks'] = NullHtmlHooks()
         self.template_values['student_preferences'] = {}
@@ -232,7 +238,7 @@ class ProfileHandler(BaseStudentHandler):
             self.error(400)
             return
 
-        StudentProfileDAO.update(
+        models.StudentProfileDAO.update(
             user.user_id(), None, nick_name=new_name, profile_only=True)
         self.redirect('/explorer/profile')
 
@@ -301,5 +307,6 @@ class AssetsHandler(webapp2.RequestHandler):
 
         filename = '%s/assets/%s' % (appengine_config.BUNDLE_ROOT, path)
         with open(filename, 'r') as f:
-            self.response.headers['Content-Type'] = self.get_mime_type(filename)
+            self.response.headers[
+                'Content-Type'] = self.get_mime_type(filename)
             self.response.write(f.read())
