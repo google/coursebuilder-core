@@ -565,13 +565,12 @@ class DatastoreBackedFileSystem(object):
                 for data_entity in FileDataEntity.get_by_key_name(keys):
                     data_shards.append(data_entity.data)
                 data = ''.join(data_shards)
-                if data:
-                    # TODO: Note that this will ask the cache to accept
-                    # potentially very large items.  The caching strategy both
-                    # for in-memory and Memcache should be revisited to
-                    # determine how best to address chunking strategies.
-                    self.cache.put(filename, metadata, data)
-                    return FileStreamWrapped(metadata, data)
+                # TODO: Note that this will ask the cache to accept
+                # potentially very large items.  The caching strategy both
+                # for in-memory and Memcache should be revisited to
+                # determine how best to address chunking strategies.
+                self.cache.put(filename, metadata, data)
+                return FileStreamWrapped(metadata, data)
 
             # lets us cache the (None, None) so next time we asked for this key
             # we fall right into the inherited section without trying to load
