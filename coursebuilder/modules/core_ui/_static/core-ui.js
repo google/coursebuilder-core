@@ -1,4 +1,9 @@
 (function() {
+  // protect against double-loading
+  if (window.gcb) {
+    return;
+  }
+
   window.gcb = {
     _XSSI_PREFIX: ")]}'",
     parseJsonResponse: function(responseString) {
@@ -19,6 +24,10 @@
     lightbox: {
       js: ['_static/lightbox/lightbox.js'],
       css: ['_static/lightbox/lightbox.css']
+    },
+    'toggle-button': {
+      js: [],
+      css: ['_static/toggle-button/toggle-button.css']
     }
   };
   var base = '/modules/core_ui/';

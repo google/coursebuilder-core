@@ -954,7 +954,7 @@ class QuestionEditorPage(EditorPageObject):
     def set_question(self, question):
         # Click the first tabbar button to select plain text
         self.find_element_by_css_selector(
-            '.mc-question .editor-field-tabbar button', index=1).click()
+            '.mc-question .gcb-toggle-button-bar button', index=1).click()
 
         self.setvalue_codemirror(0, question)
         return self
@@ -979,7 +979,7 @@ class MultipleChoiceEditorPage(QuestionEditorPage):
     def set_answer(self, n, answer):
         # Click the first button on the n'th tabbar to select plain text extry
         self.find_element_by_css_selector(
-            '.mc-choice-text .editor-field-tabbar', index=n
+            '.mc-choice-text .gcb-toggle-button-bar', index=n
         ).find_elements_by_tag_name('button')[1].click()
         index = 2 * n + 2
         self.setvalue_codemirror(index, answer)
@@ -1333,14 +1333,16 @@ class AddLesson(CourseContentElement):
         return self
 
     def select_content(self):
-        button = self.find_element_by_css_selector('.togglebutton.md-settings')
+        button = self.find_element_by_css_selector(
+            '.gcb-toggle-button.md-settings')
         self._tester.assertTrue(button.find_element_by_css_selector(
             'input[type="checkbox"]').is_selected())
         button.click()
         return self
 
     def select_settings(self):
-        button = self.find_element_by_css_selector('.togglebutton.md-settings')
+        button = self.find_element_by_css_selector(
+            '.gcb-toggle-button.md-settings')
         self._tester.assertFalse(button.find_element_by_css_selector(
             'input[type="checkbox"]').is_selected())
         button.click()

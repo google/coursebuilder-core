@@ -699,16 +699,19 @@ function bindEditorField(Y) {
     this.previewEditor = new PreviewEditor(this.previewDiv);
 
     // Bind the buttons
-    this.tabbar = new TabBar('editor-field-tabbar');
-    this.tabbar.addTab(this.RICH_TEXT_EDITOR_LABEL, 'material-icons',
+    this.tabbar = new TabBar('gcb-toggle-button-bar');
+    this.tabbar.addTab(
+        this.RICH_TEXT_EDITOR_LABEL, 'material-icons gcb-toggle-button',
         function() {
           that.setEditorType(that.RICH_TEXT_EDITOR);
         });
-    this.tabbar.addTab(this.HTML_EDITOR_LABEL, 'material-icons',
+    this.tabbar.addTab(
+        this.HTML_EDITOR_LABEL, 'material-icons gcb-toggle-button',
         function() {
           that.setEditorType(that.HTML_EDITOR);
         });
-    this.tabbar.addTab(this.PREVIEW_EDITOR_LABEL, 'material-icons',
+    this.tabbar.addTab(
+        this.PREVIEW_EDITOR_LABEL, 'material-icons gcb-toggle-button',
         function() {
           that.setEditorType(that.PREVIEW_EDITOR);
         });

@@ -15,7 +15,8 @@ function ToggleButton(label, className) {
   var that = this;
 
   this.root = $('<label></label>');
-  this.root.addClass('togglebutton').addClass(className).text(label);
+  this.root.addClass('gcb-toggle-button gcb-toggle-button--alone').addClass(
+    className).text(label);
 
   this.checkbox = $('<input type="checkbox">');
   this.root.append(this.checkbox);

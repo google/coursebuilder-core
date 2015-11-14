@@ -183,15 +183,13 @@ SkillTable.prototype = {
     var that = this;
 
     this._content = $(
-      '<div class="controls gcb-button-toolbar">' +
-      '  <button class="material-icons selected" disabled>view_list</button>' +
-      '  <button class="material-icons graph-view clickable" title="Show Skills graph">' +
-      '    insert_chart' +
-      '  </button>' +
-      '  <button class="material-icons add-new-skill" title="Add skill">' +
-      '    add_box' +
-      '  </button>' +
-      '  </form>' +
+      '<div class="controls gcb-toggle-button-bar gcb-button-toolbar">' +
+      '  <button class="material-icons gcb-toggle-button selected" disabled>' +
+      '     view_list</button>' +
+      '  <button class="material-icons gcb-toggle-button graph-view clickable' +
+      '     " title="Show Skills graph">insert_chart</button>' +
+      '  <button class="material-icons gcb-toggle-button add-new-skill"' +
+      '     title="Add skill">add_box</button>' +
       '</div>' +
       '<div class="gcb-list gcb-list--autostripe">' +
       '  <table class="skill-map-table"></table>' +

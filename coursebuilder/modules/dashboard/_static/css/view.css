@@ -496,7 +496,7 @@ div.codemirror-container-readonly div.CodeMirror {
 .title-text {
   vertical-align: middle;
 }
-label.settings.togglebutton {
+label.settings.gcb-toggle-button {
   vertical-align: sub;
 }
 .gcb-message {

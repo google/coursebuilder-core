@@ -1,0 +1,39 @@
+/*
+ * CSS for the ToggleButton class.
+ */
+.gcb-toggle-button {
+  box-sizing: border-box;
+  width: 38px;
+  height: 28px;
+  margin: 0;
+  margin-right: 5px;
+  padding: 1px 6px;
+  border: 0;
+  outline: 0;
+  border-radius: 4px;
+  color: rgb(136, 136, 136);
+  background-color: transparent;
+  font-size: 24px;
+  cursor: pointer;
+}
+.gcb-toggle-button:hover, .gcb-toggle-button.selected {
+  border: 1px solid rgb(204, 204, 204);
+  color: rgb(68, 68, 68);
+}
+.gcb-toggle-button:hover {
+  background-color: rgb(232, 232, 232);
+}
+.gcb-toggle-button.selected {
+  background-color: rgb(221, 221, 221);
+}
+.gcb-toggle-button input[type="checkbox"] {
+  display: none;
+}
+.gcb-toggle-button--alone {
+  height: 32px;
+  width: 32px;
+  padding: 5px;
+  border: solid 1px rgb(204, 204, 204);
+  background-color: rgb(240, 240, 240);
+  font-size: 20px;
+}

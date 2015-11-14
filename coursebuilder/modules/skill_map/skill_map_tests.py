@@ -1178,13 +1178,13 @@ class SkillMapHandlerTests(actions.TestBase):
         response = self.get(self.GRAPH_URL)
         self.assertEqual(200, response.status_int)
 
-        dom = self.parse_html_string(response.body)
-        graph_div = dom.find('.//*[@class="graph"]')
-        assert graph_div is not None
-        assert dom.find('.//div[@class="gcb-button-toolbar"]')
+        dom = self.parse_html_string_to_soup(response.body)
+
+        graph_div = dom.select('.graph')[0]
+        assert len(dom.select('.gcb-button-toolbar'))
 
         # verify that skills is the active tab for the skills graph
-        skills_tab = dom.find('.//a[@id="menu-item__edit__skills_table"]')
+        skills_tab = dom.select('a#menu-item__edit__skills_table')[0]
         assert 'gcb-active' in skills_tab.get('class')
 
     def test_dependency_graph(self):
@@ -1197,10 +1197,10 @@ class SkillMapHandlerTests(actions.TestBase):
         response = self.get(self.GRAPH_URL)
 
         self.assertEqual(200, response.status_int)
-        dom = self.parse_html_string(response.body)
-        graph_div = dom.find('.//*[@class="graph"]')
-        assert graph_div is not None
-        assert dom.find('.//div[@class="gcb-button-toolbar"]')
+        dom = self.parse_html_string_to_soup(response.body)
+
+        graph_div = dom.select('.graph')[0]
+        assert len(dom.select('.gcb-button-toolbar'))
 
         nodes = json.loads(graph_div.get('data-nodes'))
         self.assertEqual(2, len(nodes))
