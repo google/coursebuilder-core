@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-09 08:46-0800\n"
+"POT-Creation-Date: 2015-11-16 08:13-0800\n"
 "PO-Revision-Date: 2015-11-02 07:00-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: nl <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1171
+#: experimental/coursebuilder/models/resources_display.py:1179
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "Eenheid %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "Eenheid %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1191
+#: experimental/coursebuilder/models/resources_display.py:1199
 #, python-format
 msgid "Unit %s"
 msgstr "Eenheid %s"
@@ -148,7 +148,7 @@ msgstr " Tip "
 #. as content to external web pages. (I.e., some external site wants
 #. to use this assignment as part of a page's content, but this
 #. is not permitted)
-#: experimental/coursebuilder/modules/assessments/assessments.py:122
+#: experimental/coursebuilder/modules/assessments/assessments.py:120
 msgid "Peer-review assignments cannot be embedded in external pages."
 msgstr ""
 "Opdrachten die worden gecontroleerd door medeleerlingen, kunnen niet "
@@ -156,7 +156,7 @@ msgstr ""
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:38
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:39
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -166,32 +166,32 @@ msgstr ""
 "deadline voor de opdracht was %(submission_due_date)s."
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:43
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:44
 msgid "Due date for this assignment: "
 msgstr "Deadline voor deze opdracht: "
 
 #. Text telling students what their recorded email address is.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:52
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:53
 msgid "Your answers have been recorded under the email"
 msgstr "Uw antwoorden zijn vastgelegd met het e-mailadres"
 
 #. Text telling students there are not answers recorded for them.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:56
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:57
 msgid "You have not submitted any answers to this assignment under the email"
 msgstr "U heeft geen antwoorden voor deze opdracht verzonden met het e-mailadres"
 
 #. Text telling students what their recorded email address is.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:61
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:62
 msgid "Your answers will be recorded under the email"
 msgstr "Uw antwoorden worden vastgelegd met het e-mailadres"
 
 #. Text telling students what their total score is.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:71
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:72
 msgid "Score:"
 msgstr "Score:"
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:82
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:83
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -203,22 +203,22 @@ msgstr ""
 "uw medecursisten."
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:97
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:98
 msgid "Submitted assignment"
 msgstr "Ingediende opdracht"
 
 #. Text telling students the date their answers were submitted
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:102
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:103
 msgid "Submitted on"
 msgstr "Ingediend op"
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:127
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:128
 msgid "Reviews received"
 msgstr "Ontvangen beoordelingen"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:134
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:135
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -229,17 +229,17 @@ msgstr ""
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:141
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:142
 msgid "Go to the review dashboard"
 msgstr "Ga naar het beoordelingsdashboard"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:146
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:147
 msgid "You have not received any peer reviews yet."
 msgstr "U heeft nog geen beoordelingen door medecursisten ontvangen."
 
 #. Text shown for an assessment that has not been made public.
-#: experimental/coursebuilder/modules/assessments/templates/assessment.html:179
+#: experimental/coursebuilder/modules/assessments/templates/assessment.html:180
 msgid "This assessment is not available."
 msgstr "Deze opdracht is niet beschikbaar."
 
@@ -879,6 +879,13 @@ msgstr "Geen resultaten voor \"%(query)s\""
 msgid "Search is currently unavailable."
 msgstr "Zoeken is momenteel niet beschikbaar."
 
+#. Title of a link on a search result page.  Link goes to        the part of
+#. the course where the search result, which is a        video, is part of a
+#. unit or lesson.
+#: experimental/coursebuilder/modules/search/results_templates/youtube.html:6
+msgid "View In Course"
+msgstr ""
+
 #. Header describing the skills for this lesson
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:20
 msgid "Taught in this lesson:"
@@ -1285,13 +1292,13 @@ msgid "Answer:"
 msgstr "Antwoord:"
 
 #. A question in the registration form.
-#: experimental/coursebuilder/views/register.html:50
-#: experimental/coursebuilder/views/register.html:56
+#: experimental/coursebuilder/views/register.html:54
+#: experimental/coursebuilder/views/register.html:60
 msgid "What is your name?"
 msgstr "Wat is uw naam?"
 
 #. Button at the end of the registration form for a course.
-#: experimental/coursebuilder/views/register.html:68
+#: experimental/coursebuilder/views/register.html:72
 msgid "Enroll"
 msgstr "Inschrijven"
 
