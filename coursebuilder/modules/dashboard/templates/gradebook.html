@@ -163,7 +163,7 @@
             <col span="1" class="col-score col-not-tallied"></col>
           {% endif %}
         {% endfor %}
-        {% if unit.contents | length > 1 and item.tallied %}
+        {% if item.questions | length > 1 and item.tallied %}
           <col span="1" class="col-total"></col>
         {% endif %}
       {% endfor %}
@@ -217,7 +217,7 @@
               </div>
             </th>
           {% endfor %}
-          {% if unit.contents | length > 1 and item.tallied %}
+          {% if item.questions | length > 1 and item.tallied %}
             <th class="subtotal-title">
               <div class="clip">
                 <div class="rotate">

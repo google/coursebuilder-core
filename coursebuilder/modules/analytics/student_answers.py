@@ -469,7 +469,7 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
                 # column.
                 if len(unit['contents']) > 1:
                     for item in unit['contents']:
-                        if item['tallied']:
+                        if len(item['questions']) > 1 and item['tallied']:
                             item['colspan'] += 1
                             unit_colspan += 1
                 # +1 for unit total column
@@ -503,26 +503,34 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
             if unit.type == verify.UNIT_TYPE_ASSESSMENT:
                 q_keys, contents = _add_assessment(unit)
                 if q_keys:
-                    question_keys += q_keys + ['subtotal']
+                    question_keys += q_keys
+                    if len(q_keys) > 1:
+                        question_keys += ['subtotal']
                     unit_contents.append(contents)
             if unit.pre_assessment:
                 assessment = course.find_unit_by_id(unit.pre_assessment)
                 if assessment:
                     q_keys, contents = _add_sub_assessment(unit, assessment)
                     if q_keys:
-                        question_keys += q_keys + ['subtotal']
+                        question_keys += q_keys
+                        if len(q_keys) > 1:
+                            question_keys += ['subtotal']
                         unit_contents.append(contents)
             for lesson in course.get_lessons(unit.unit_id):
                 q_keys, contents = _add_lesson(unit, lesson)
                 if q_keys:
-                    question_keys += q_keys + ['subtotal']
+                    question_keys += q_keys
+                    if len(q_keys) > 1 and contents['tallied']:
+                        question_keys += ['subtotal']
                     unit_contents.append(contents)
             if unit.post_assessment:
                 assessment = course.find_unit_by_id(unit.post_assessment)
                 if assessment:
                     q_keys, contents = _add_sub_assessment(unit, assessment)
                     if q_keys:
-                        question_keys += q_keys + ['subtotal']
+                        question_keys += q_keys
+                        if len(q_keys) > 1:
+                            question_keys += ['subtotal']
                         unit_contents.append(contents)
 
             if unit_contents:
@@ -533,10 +541,6 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
                     'contents': unit_contents,
                     })
 
-                # If there is only one sub-component within the unit, pop off
-                # the 'subtotal' column.
-                if len(unit_contents) == 1:
-                    question_keys.pop()
                 question_keys.append('total')
 
         _count_colspans(units)
