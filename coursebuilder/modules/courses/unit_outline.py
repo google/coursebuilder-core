@@ -28,68 +28,6 @@ from models import review
 from models import roles
 
 
-class StudentCourseView(object):
-    """A class that gives access to course, enforcing student permissions."""
-
-    def __init__(self, course, student):
-        self.course = course
-        self.student = student
-
-        availability = course.get_course_availability()
-        self.units_by_unit_id = None
-
-    def _get_units(self):
-        if self.units_by_unit_id is None:
-            if self.student:
-                units = self.course.get_track_matching_student(self.student)
-            else:
-                units = self.course.get_units()
-
-            self.units_by_unit_id = collections.OrderedDict()
-            for unit in units:
-                if not self.course.is_unit_available(unit):
-                    continue
-                self.units_by_unit_id[str(unit.unit_id)] = unit
-
-        return self.units_by_unit_id
-
-    def get_units(self):
-        if roles.Roles.is_course_admin(self.course.app_context):
-            return self.course.get_units()
-        return self._get_units().values()
-
-    def get_lessons(self, unit_id):
-        if roles.Roles.is_course_admin(self.course.app_context):
-            return self.course.get_lessons(unit_id)
-
-        if not str(unit_id) in self._get_units():
-            return []
-
-        lessons = []
-        unit = self.course.find_unit_by_id(unit_id)
-        for lesson in self.course.get_lessons(unit_id):
-            if not self.course.is_lesson_available(unit, lesson):
-                continue
-            lessons.append(lesson)
-        return lessons
-
-
-def is_progress_recorded(handler, student):
-    if student.is_transient:
-        return False
-    if handler.can_record_student_events():
-        return True
-    course = handler.get_course()
-    units = handler.get_track_matching_student(student)
-    for unit in units:
-        if unit.manual_progress:
-            return True
-        for lesson in course.get_lessons(unit.unit_id):
-            if lesson.manual_progress:
-                return True
-    return False
-
-
 Displayability = collections.namedtuple(
     'Displayability', [
         'is_displayed',  # Whether this element should be available at all.
@@ -150,7 +88,7 @@ class OutlineElement(dict):
             return None
 
 
-class CourseOutline(object):
+class StudentCourseView(object):
     """Produces an iterable list of OutlineElement course outline elements.
 
     The list of items is adjusted according to permissions, course settings,
@@ -174,12 +112,12 @@ class CourseOutline(object):
     TODO: Eventually make results of this class available as a REST service.
     """
 
-    def __init__(self, handler, student, unit=None, lesson_or_assessment=None):
-        self._handler = handler
-        self._course = handler.get_course()
+    def __init__(self, course, student=None, unit=None,
+                 lesson_or_assessment=None):
+        self._course = course
         self._reviews_processor = self._course.get_reviews_processor()
         self._app_context = self._course.app_context
-        self._student = student
+        self._student = student or models.TransientStudent()
         self._student_preferences = (
             models.StudentPreferencesDAO.load_or_default())
         self._settings = self._app_context.get_environ()
@@ -210,8 +148,9 @@ class CourseOutline(object):
         # function also referenced elsewhere to decide this.  Note that
         # assessment progress is always recorded due to saving answers/scores;
         # is_progress_recorded refers to event-based progress items.
-        self._is_progress_recorded = is_progress_recorded(handler, student)
-        if student and not student.is_transient:
+        units = self._course.get_track_matching_student(self._student)
+        self._is_progress_recorded = self._get_is_progress_recorded(units)
+        if not self._student.is_transient:
             self._tracker = self._course.get_progress_tracker()
             self._progress = self._tracker.get_or_create_progress(student)
         else:
@@ -219,18 +158,26 @@ class CourseOutline(object):
             self._progress = None
 
         self._contents = []
-        self._traverse_course()
+        self._accessible_units = []
+        self._accessible_lessons = collections.defaultdict(list)
+        self._traverse_course(units)
 
     @property
     def contents(self):
         return self._contents
+
+    def get_units(self):
+        return self._accessible_units
+
+    def get_lessons(self, unit_id):
+        return self._accessible_lessons[str(unit_id)]
 
     def find_element(self, ids):
         element = self
         for element_id in ids:
             found_element = False
             for sub_element in element.contents:
-                if sub_element.id == element_id:
+                if str(sub_element.id) == str(element_id):
                     found_element = True
                     element = sub_element
                     break
@@ -238,9 +185,29 @@ class CourseOutline(object):
                 return None
         return element
 
-    def _traverse_course(self):
-        units = self._handler.get_track_matching_student(self._student)
+    def is_visible(self, ids):
+        element = self.find_element(ids)
+        return bool(element and element.link)
 
+    def is_progress_recorded(self):
+        return self._is_progress_recorded
+
+    def _get_is_progress_recorded(self, units):
+        if self._student.is_transient:
+            return False
+        settings = self._app_context.get_environ().get('course')
+        if settings and settings.get('can_record_student_events'):
+            return True
+
+        for unit in units:
+            if unit.manual_progress:
+                return True
+            for lesson in self._course.get_lessons(unit.unit_id):
+                if lesson.manual_progress:
+                    return True
+        return False
+
+    def _traverse_course(self, units):
         for unit in units:
             # If this is a pre/post assessment, defer and let the unit it's
             # in add the item.
@@ -415,6 +382,8 @@ class CourseOutline(object):
         return ret
 
     def _build_elements_for_unit(self, unit, unit_displayability):
+        if unit_displayability.is_link_displayed:
+            self._accessible_units.append(unit)
         element = self._build_element_common(
             unit, unit_displayability, 'unit?unit=%s' % unit.unit_id)
         element.kind = 'unit'
@@ -439,6 +408,8 @@ class CourseOutline(object):
                     element.contents.extend(
                         self._build_elements_for_lesson(
                             unit, lesson, lesson_displayability))
+                if lesson_displayability.is_link_displayed:
+                    self._accessible_lessons[str(unit.unit_id)].append(lesson)
             if unit.post_assessment:
                 assessment = self._course.find_unit_by_id(unit.post_assessment)
                 assessment_displayability = self._determine_displayability(
@@ -460,6 +431,8 @@ class CourseOutline(object):
         return [element]
 
     def _build_elements_for_link(self, unit, displayability):
+        if displayability.is_link_displayed:
+            self._accessible_units.append(unit)
         # Cast href to string to get rid of possible LazyTranslator wrapper.
         link = str(unit.href) if unit.href else None
         element = self._build_element_common(unit, displayability, link)
@@ -468,6 +441,9 @@ class CourseOutline(object):
 
     def _build_elements_for_assessment(self, unit, displayability,
                                     owning_unit=None):
+        if displayability.is_link_displayed:
+            self._accessible_units.append(unit)
+
         ret = []
         if owning_unit:
             link = 'unit?unit=%s&assessment=%s' % (
@@ -512,7 +488,7 @@ class CourseOutline(object):
         ret.is_available_to_visitors = displayability.is_available_to_visitors
         # I18N: Displayed in the course contents page. Indicates a page to
         # which students can go to review other students' assignments.
-        ret.title = self._handler.gettext('Review peer assignments')
+        ret.title = self._app_context.gettext('Review peer assignments')
 
         if not self._student.is_transient:
             ret.is_progress_recorded = True
@@ -537,6 +513,8 @@ class CourseOutline(object):
         cu = custom_units.UnitTypeRegistry.get(unit.custom_unit_type)
         if not cu:
             return None
+        if displayability.is_link_displayed:
+            self._accessible_units.append(unit)
 
         link_dest = self._app_context.canonicalize_url(cu.visible_url(unit))
         element = self._build_element_common(

@@ -30,6 +30,7 @@ from models import review as models_review
 from models import student_work
 from models import transforms
 from models import utils as models_utils
+from modules.courses import unit_outline
 from modules.embed import embed
 from modules.review import domain
 from tools import verify
@@ -69,10 +70,12 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
         """Handles GET requests."""
         embedded = bool(self.request.get('embedded'))
 
-        student = self.personalize_page_and_get_enrolled(
-            supports_transient_student=True)
-        if not student:
-            return
+        student = None
+        user = self.personalize_page_and_get_user()
+        if user:
+            student = models.Student.get_enrolled_student_by_user(user)
+        student = student or models.TransientStudent()
+
 
         # Extract incoming args, binding to self if needed.
         assessment_name = self.request.get('name')
@@ -92,8 +95,8 @@ class AssessmentHandler(AssignmentsModuleMixin, utils.BaseHandler):
 
         # If the assessment is not currently available, and the user does not
         # have the permission to see drafts redirect to the main page.
-        if (not course.is_unit_available(unit) and
-            not custom_modules.can_see_drafts(self.app_context)):
+        student_view = unit_outline.StudentCourseView(course, student)
+        if not student_view.is_visible([self.unit_id]):
             self.redirect('/')
             return
 

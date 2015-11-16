@@ -101,8 +101,7 @@ class GuideApplicationHandler(utils.ApplicationHandler):
                         continue
 
                 units = []
-                for unit in unit_outline.StudentCourseView(
-                        course, None).get_units():
+                for unit in unit_outline.StudentCourseView(course).get_units():
                     if unit.type != verify.UNIT_TYPE_UNIT:
                         continue
                     units.append((
@@ -140,9 +139,10 @@ class GuideUnitHandler(utils.BaseHandler):
                 lesson_duration_min if lesson_duration_min else 0)
 
     def prepare(self, student, unit_id, config, template_data):
-        unit = self.get_course().find_unit_by_id(unit_id)
+        course = self.get_course()
+        unit = course.find_unit_by_id(unit_id)
         lessons = unit_outline.StudentCourseView(
-            self.get_course(), student).get_lessons(unit_id)
+            course, student=student).get_lessons(unit_id)
         self.add_duration_to(config, lessons)
 
         category_color = config.get(GUIDE_COLOR)

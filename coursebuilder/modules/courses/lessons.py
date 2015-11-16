@@ -183,12 +183,14 @@ class CourseHandler(utils.BaseHandler):
                 self.redirect(last_location)
                 return
 
-            course_availability = self.get_course().get_course_availability()
+            course = self.get_course()
+            course_availability = course.get_course_availability()
             settings = self.app_context.get_environ()
             self._set_show_registration_settings(settings, student, profile,
                                                  course_availability)
             self._set_show_image_or_video(settings)
-            self._set_common_values(settings, student, course_availability)
+            self._set_common_values(settings, student, course,
+                                    course_availability)
         finally:
             models.MemcacheManager.end_readonly()
         self.render('course.html')
@@ -219,11 +221,12 @@ class CourseHandler(utils.BaseHandler):
                 self.template_value['register_xsrf_token'] = (
                     crypto.XsrfTokenManager.create_xsrf_token('register-post'))
 
-    def _set_common_values(self, settings, student, course_availability):
+    def _set_common_values(self, settings, student, course,
+                           course_availability):
         self.template_value['transient_student'] = student.is_transient
         self.template_value['navbar'] = {'course': True}
-        course_outline = unit_outline.CourseOutline(self, student)
-        self.template_value['course_outline'] = course_outline.contents
+        student_view = unit_outline.StudentCourseView(course, student)
+        self.template_value['course_outline'] = student_view.contents
         self.template_value['course_availability'] = course_availability
         self.template_value['show_lessons_in_syllabus'] = (
             settings['course'].get('show_lessons_in_syllabus', False))
@@ -261,12 +264,12 @@ class UnitHandler(utils.BaseHandler):
         """Handles GET requests."""
         models.MemcacheManager.begin_readonly()
         try:
-            student = self.personalize_page_and_get_enrolled(
-                supports_transient_student=True)
-            if not student:
-                return
+            student = None
+            user = self.personalize_page_and_get_user()
+            if user:
+                student = models.Student.get_enrolled_student_by_user(user)
+            student = student or models.TransientStudent()
 
-            # Extract incoming args
             unit, lesson, assessment = extract_unit_and_lesson_or_assessment(
                 self)
             unit_id = unit.unit_id
@@ -274,10 +277,9 @@ class UnitHandler(utils.BaseHandler):
             # If the unit is not currently available, and the user does not have
             # the permission to see drafts, redirect to the main page.
             course = self.get_course()
-            available_units = self.get_track_matching_student(student)
-            if ((not course.is_unit_available(unit) or
-                 unit not in available_units) and
-                not custom_modules.can_see_drafts(self.app_context)):
+            student_view = unit_outline.StudentCourseView(
+                course, student, unit, lesson or assessment)
+            if not student_view.is_visible([unit_id]):
                 self.redirect('/')
                 return
 
@@ -296,16 +298,14 @@ class UnitHandler(utils.BaseHandler):
 
             course_availability = course.get_course_availability()
             settings = self.app_context.get_environ()
-            course_outline = unit_outline.CourseOutline(
-                self, student, unit, lesson or assessment)
-            self.template_value['course_outline'] = course_outline.contents
+            self.template_value['course_outline'] = student_view.contents
             self.template_value['course_availability'] = course_availability
             if (unit.show_contents_on_one_page and
                 'confirmation' not in self.request.params):
-                self._show_all_contents(student, unit, course_outline)
+                self._show_all_contents(student, unit, student_view)
             else:
                 self._show_single_element(student, unit, lesson, assessment,
-                                          course_outline)
+                                          student_view)
 
             for extra_content_hook in self.EXTRA_CONTENT:
                 extra_content = extra_content_hook(self.app_context)
@@ -337,7 +337,7 @@ class UnitHandler(utils.BaseHandler):
     def _apply_gcb_tags(self, text):
         return jinja_utils.get_gcb_tags_filter(self)(text)
 
-    def _show_all_contents(self, student, unit, course_outline):
+    def _show_all_contents(self, student, unit, student_view):
         course = self.get_course()
         self.init_template_values(self.app_context.get_environ())
 
@@ -349,13 +349,13 @@ class UnitHandler(utils.BaseHandler):
         if unit.pre_assessment:
             display_content.append(self.get_assessment_display_content(
                 student, unit, course.find_unit_by_id(unit.pre_assessment),
-                course_outline, {}))
+                student_view, {}))
 
         for lesson in course.get_lessons(unit.unit_id):
             self.lesson_id = lesson.lesson_id
             self.lesson_is_scored = lesson.scored
             template_values = copy.copy(self.template_value)
-            self.set_lesson_content(student, unit, lesson, course_outline,
+            self.set_lesson_content(student, unit, lesson, student_view,
                                     template_values)
             display_content.append(self.render_template_to_html(
                 template_values, 'lesson_common.html'))
@@ -365,7 +365,7 @@ class UnitHandler(utils.BaseHandler):
         if unit.post_assessment:
             display_content.append(self.get_assessment_display_content(
                 student, unit, course.find_unit_by_id(unit.post_assessment),
-                course_outline, {}))
+                student_view, {}))
 
         if unit.unit_footer:
             display_content.append(self._apply_gcb_tags(unit.unit_footer))
@@ -448,7 +448,7 @@ class UnitHandler(utils.BaseHandler):
         return False
 
     def _show_single_element(self, student, unit, lesson, assessment,
-                             course_outline):
+                             student_view):
         # Add markup to page which depends on the kind of content.
 
         # need 'activity' to be True or False, and not the string 'true' or None
@@ -462,23 +462,23 @@ class UnitHandler(utils.BaseHandler):
         if assessment:
             if 'confirmation' in self.request.params:
                 self.set_confirmation_content(student, unit, assessment,
-                                              course_outline)
+                                              student_view)
                 self.template_value['assessment_name'] = (
                     self.template_value.get('assessment_name').lower())
                 display_content.append(self.render_template_to_html(
                     self.template_value, 'test_confirmation_content.html'))
             else:
                 display_content.append(self.get_assessment_display_content(
-                    student, unit, assessment, course_outline,
+                    student, unit, assessment, student_view,
                     self.template_value))
         elif lesson:
             self.lesson_id = lesson.lesson_id
             self.lesson_is_scored = lesson.scored
             if is_activity:
-                self.set_activity_content(student, unit, lesson, course_outline)
+                self.set_activity_content(student, unit, lesson, student_view)
             else:
                 self.set_lesson_content(student, unit, lesson,
-                                        course_outline, self.template_value)
+                                        student_view, self.template_value)
             display_content.append(self.render_template_to_html(
                     self.template_value, 'lesson_common.html'))
         if (unit.unit_footer and
@@ -488,10 +488,10 @@ class UnitHandler(utils.BaseHandler):
         self.template_value['display_content'] = display_content
 
     def get_assessment_display_content(self, student, unit, assessment,
-                                       course_outline, template_values):
+                                       student_view, template_values):
         template_values['page_type'] = ASSESSMENT_PAGE_TYPE
         template_values['assessment'] = assessment
-        outline_element = course_outline.find_element(
+        outline_element = student_view.find_element(
             [unit.unit_id, assessment.unit_id])
         if outline_element:
             template_values['back_button_url'] = outline_element.prev_link
@@ -503,7 +503,7 @@ class UnitHandler(utils.BaseHandler):
             student, self.get_course(), assessment, as_lesson=True)
 
     def set_confirmation_content(self, student, unit, assessment,
-                                 course_outline):
+                                 student_view):
         course = self.get_course()
         self.template_value['page_type'] = ASSESSMENT_CONFIRMATION_PAGE_TYPE
         self.template_value['unit'] = unit
@@ -519,17 +519,17 @@ class UnitHandler(utils.BaseHandler):
         self.template_value['result'] = course.get_overall_result(student)
         # Confirmation page's prev link goes back to assessment itself, not
         # assessment's previous page.
-        outline_element = course_outline.find_element(
+        outline_element = student_view.find_element(
             [unit.unit_id, assessment.unit_id])
         if outline_element:
             self.template_value['back_button_url'] = outline_element.link
             self.template_value['next_button_url'] = outline_element.next_link
 
-    def set_activity_content(self, student, unit, lesson, course_outline):
+    def set_activity_content(self, student, unit, lesson, student_view):
         self.template_value['page_type'] = ACTIVITY_PAGE_TYPE
         self.template_value['lesson'] = lesson
         self.template_value['lesson_id'] = lesson.lesson_id
-        outline_element = course_outline.find_element(
+        outline_element = student_view.find_element(
             [unit.unit_id, lesson.lesson_id])
         if outline_element:
             self.template_value['back_button_url'] = outline_element.prev_link
@@ -542,7 +542,7 @@ class UnitHandler(utils.BaseHandler):
         self.template_value['page_type'] = 'activity'
         self.template_value['title'] = lesson.activity_title
 
-        if unit_outline.is_progress_recorded(self, student):
+        if student_view.is_progress_recorded():
             # Mark this page as accessed. This is done after setting the
             # student progress template value, so that the mark only shows up
             # after the student visits the page for the first time.
@@ -559,12 +559,12 @@ class UnitHandler(utils.BaseHandler):
                 self.app_context, unit, lesson, student)
         return title
 
-    def set_lesson_content(self, student, unit, lesson, course_outline,
+    def set_lesson_content(self, student, unit, lesson, student_view,
                            template_values):
         template_values['page_type'] = UNIT_PAGE_TYPE
         template_values['lesson'] = lesson
         template_values['lesson_id'] = lesson.lesson_id
-        outline_element = course_outline.find_element(
+        outline_element = student_view.find_element(
             [unit.unit_id, lesson.lesson_id])
         if outline_element:
             template_values['back_button_url'] = outline_element.prev_link
@@ -572,8 +572,7 @@ class UnitHandler(utils.BaseHandler):
         template_values['page_type'] = 'unit'
         template_values['title'] = self._get_lesson_title(unit, lesson, student)
 
-        if (not lesson.manual_progress and
-            unit_outline.is_progress_recorded(self, student)):
+        if not lesson.manual_progress and student_view.is_progress_recorded():
             # Mark this page as accessed. This is done after setting the
             # student progress template value, so that the mark only shows up
             # after the student visits the page for the first time.
