@@ -259,6 +259,15 @@ COURSE_AVAILABILITY_POLICIES = collections.OrderedDict([
 ])
 
 
+Displayability = collections.namedtuple(
+    'Displayability', [
+        'is_displayed',  # Whether this element should be available at all.
+        'is_link_displayed',  # Whether title is a clickable link to content.
+        'is_available_to_students',  # For annotation in admin-only views.
+        'is_available_to_visitors'],  # For annotation in admin-only views.
+    )
+
+
 def copy_attributes(source, target, converter):
     """Copies source object attributes into a target using a converter."""
     for source_name, value in converter.items():
@@ -3417,6 +3426,125 @@ course:
                 setting['can_register'] == can_register):
                 return name
         return None
+
+    @classmethod
+    def get_element_displayability(
+        cls, course_availability, student_is_transient, can_see_drafts,
+        course_element, parent_displayability=None):
+        """Determine whether an element is visible and/or linkable.
+
+        Here, we are relying on a behavior of the rest of this class, to wit:
+        If the parent is not displayable, then this function is not called to
+        establish displayability of any contents.  E.g., suppose we have a
+        registration-required course, and a unit that is private, and does not
+        permit display of its title on the syllabus.  No lesson or pre/post
+        assessment in that unit can have its title displayed since the unit
+        is suppressed.  Rather than writing some seriously nasty convoluted
+        logic here, we just presume the rest of the world will be wise enough
+        to just not call us to ask about it.
+
+        Args:
+          course_elment: A unit or lesson object.  Anything that can respond to
+              .availability -> public, private, use-course and
+              .shown_when_unavailable -> True/False
+          parent_element: Displayability instance, as determined by this
+              function, for the parent of the element, or None if there is no
+              parent.
+        Returns:
+          A Displayability instance.
+        """
+
+        # TODO(psimakov): add dedicated tests for this function;
+        # for now the functionality here is implicitly tested in:
+        # modules.courses.courses_tests.AvailabilityTests
+
+        is_displayed = False
+        is_link_displayed = False
+        is_available_to_students = False
+        is_available_to_visitors = False
+
+        # Course being set to private trumps permissions in units.  This
+        # is because we need to have one single place where we can force
+        # the course offline without any "well, except when...." cases.
+        if course_availability == COURSE_AVAILABILITY_PRIVATE:
+            pass
+
+        # If course is browse-only or browse-available, every element which
+        # does not explicitly make itself private is available.
+        elif course_availability in (
+            COURSE_AVAILABILITY_REGISTRATION_OPTIONAL,
+            COURSE_AVAILABILITY_PUBLIC):
+
+            if course_element.availability == AVAILABILITY_UNAVAILABLE:
+                if course_element.shown_when_unavailable:
+                    is_displayed = True
+                    is_link_displayed = False
+                    is_available_to_students = False
+                    is_available_to_visitors = False
+            if course_element.availability in (AVAILABILITY_AVAILABLE,
+                                               AVAILABILITY_COURSE):
+                is_displayed = True
+                is_link_displayed = True
+                is_available_to_students = True
+                is_available_to_visitors = True
+
+        # If course is registration-only, then availablity is conditional on
+        # whether the current student is registered.
+        elif course_availability == (
+            COURSE_AVAILABILITY_REGISTRATION_REQUIRED):
+            if course_element.availability == AVAILABILITY_UNAVAILABLE:
+                if course_element.shown_when_unavailable:
+                    is_displayed = True
+                    is_link_displayed = False
+                    is_available_to_students = False
+                    is_available_to_visitors = False
+
+            elif course_element.availability == AVAILABILITY_AVAILABLE:
+                is_displayed = True
+                is_link_displayed = True
+                is_available_to_students = True
+                is_available_to_visitors = True
+
+            elif course_element.availability == AVAILABILITY_COURSE:
+                if student_is_transient:
+                    is_displayed = True
+                    is_link_displayed = False
+                    is_available_to_students = True
+                    is_available_to_visitors = False
+                else:
+                    is_displayed = True
+                    is_link_displayed = True
+                    is_available_to_students = True
+                    is_available_to_visitors = False
+
+        # If the parent is not available in display/link mode, then neither
+        # is the child.
+        if parent_displayability:
+            is_displayed = min(
+                parent_displayability.is_displayed,
+                is_displayed)
+            is_link_displayed = min(
+                parent_displayability.is_link_displayed,
+                is_link_displayed)
+            is_available_to_students = min(
+                parent_displayability.is_available_to_students,
+                is_available_to_students)
+            is_available_to_visitors = min(
+                parent_displayability.is_available_to_visitors,
+                is_available_to_visitors)
+
+        # Users with this permission (which includes course and site admins)
+        # can always see and navigate to every item in student-view contexts.
+        # This trumps even the course being private, since admins need to be
+        # able to actually see what students _would_ see if they could.
+        if can_see_drafts:
+            is_displayed = True
+            is_link_displayed = True
+
+        return Displayability(is_displayed,
+                              is_link_displayed,
+                              is_available_to_students,
+                              is_available_to_visitors)
 
     @classmethod
     def is_course_browsable(cls, app_context):
