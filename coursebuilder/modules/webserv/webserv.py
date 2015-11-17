@@ -15,8 +15,17 @@
 """Webserv, a module for static content publishing.
 
   TODO(psimakov):
+      - how does one md doc refer to another
+          - make foo.html map to foo.md if foo.html does not exist
+      - map vfs folder
+      - add caching directives
+          - cache files of type: none, all but html/md, all
+          - cache duration: none, 5 min, 1 h, 4 h, 24 h
+      - add support for document_roots/sample/_static/*.*
       - cache various streams (and especially md/jinja) in memcache
       - make sure gcb tags expand properly
+      - don't directly handle /<course_slug>; but redirect to
+          /<course_slug>/index.html
 
 """
 
@@ -48,13 +57,20 @@ WEBSERV_DOC_ROOTS_DIR_NAME = 'document_roots'
 WEBSERV_DOC_ROOT = 'doc_root'
 WEBSERV_JINJA_ENABLED = 'jinja_enabled'
 WEBSERV_MD_ENABLED = 'md_enabled'
+WEBSERV_AVAILABILITY = 'availability'
 
 BANNED_SLUGS = set(['admin', 'dashboard'])
 GOOD_SLUG_REGEX = '^[A-Za-z0-9_-]*$'
 
 ADMIN_HOME_PAGE = '/admin/welcome'
 COURSE_HOME_PAGE = '/course?use_last_location=true'
-WEBSERV_HOME_PAGE = 'index.html'
+WEBSERV_HOME_PAGE = '/index.html'
+REGISTER_HOME = '/register'
+
+AVAILABILITY_SELECT_DATA = [
+    (courses.AVAILABILITY_AVAILABLE, 'Public'),
+    (courses.AVAILABILITY_UNAVAILABLE, 'Unavailable'),
+    (courses.AVAILABILITY_COURSE, 'Course')]
 
 webserv_module = None
 
@@ -72,7 +88,7 @@ def make_doc_root_select_data():
         for adir in dirs:
             select_data.append((adir, adir))
         del dirs[:]
-    return select_data
+    return sorted(select_data)
 
 
 def slug_validator(value, errors):
@@ -83,6 +99,13 @@ def slug_validator(value, errors):
             errors.append(
                 'Slug value %s contains invalid characters; '
                 'valid characters are A..Z, a..z, 0..9, _ and -.' % value)
+
+
+class WebServerDisplayableElement(object):
+
+    def __init__(self, availability):
+        self.availability = availability
+        self.shown_when_unavailable = False
 
 
 class RootHandler(utils.ApplicationHandler):
@@ -108,6 +131,14 @@ class RootHandler(utils.ApplicationHandler):
 class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
     """A class that will handle web requests."""
 
+    def prepare_metadata(self, course_availability, student):
+        env = self.app_context.get_environ()
+        self.init_template_values(env)
+        self.set_common_values(
+            env, student, self.get_course(), course_availability)
+        self.template_value['gcb_os_env'] = os.environ
+        self.template_value['gcb_course_env'] = self.app_context.get_environ()
+
     def get_mime_type(self, filename, default='application/octet-stream'):
         guess = mimetypes.guess_type(filename)[0]
         if guess is None:
@@ -126,13 +157,10 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
     def get_path(self, config):
         path = self.norm_path(self.app_context, config, self.request.path)
         if path == '/':
-            path = '/index.html'
+            path = WEBSERV_HOME_PAGE
         return os.path.normpath(path)
 
-    def prepare_metadata(self):
-        self.init_template_values(self.app_context.get_environ())
-        self.template_value['gcb_os_env'] = os.environ
-        self.template_value['gcb_course_env'] = self.app_context.get_environ()
+    def get_metadata(self):
         metadata = {}
         metadata.update(self.template_value.items())
         del metadata['course_info']
@@ -155,7 +183,7 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
                 relname, template_dirs, handler=self)
 
         self.response.headers['Content-Type'] = 'text/html'
-        self.template_value['gcb_webserv_metadata'] = self.prepare_metadata()
+        self.template_value['gcb_webserv_metadata'] = self.get_metadata()
         self.response.write(template.render(self.template_value))
 
     def do_plain(self, config, filename, relname):
@@ -176,7 +204,7 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
             self.do_plain(config, filename, relname)
             return
 
-        text = markdown.markdown(open(filename, 'r').read())
+        text = markdown.markdown(open(filename, 'r').read().decode('utf-8'))
         if config.get(WEBSERV_JINJA_ENABLED):
             self.render_jinja(config, from_string=text)
             return
@@ -206,11 +234,30 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
         target = extension_to_target.get(ext, self.do_plain)
         target(config, filename, relname)
 
+    def webserv_get(self, config):
+        course_avail = self.get_course().get_course_availability()
+        self_avail = config.get(WEBSERV_AVAILABILITY)
+
+        # get user, student
+        user, student, profile = self.get_user_student_profile()
+        self.prepare_metadata(course_avail, student)
+
+        # check rights
+        displayability = courses.Course.get_element_displayability(
+            course_avail, student.is_transient,
+            custom_modules.can_see_drafts(self.app_context),
+            WebServerDisplayableElement(self_avail))
+        if not displayability.is_displayed:
+            self.error(404)
+            return
+
+        # render content
+        self.serve_resource(config)
+
     def get(self):
-        processor = None
         config = get_config(self.app_context)
         if config.get(WEBSERV_ENABLED):
-            self.serve_resource(config)
+            self.webserv_get(config)
         else:
             if self.path_translated in ['/', '/course']:
                 super(WebServer, self).get()
@@ -249,9 +296,21 @@ def get_schema_fields():
         'Markdown Enabled', 'boolean', optional=True, i18n=False,
         description='Whether to apply Markdown Processor to *.md '
             'files before serving them.')
+    availability = schema_fields.SchemaField(
+        WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_AVAILABILITY,
+        'Availability', 'boolean', optional=True, i18n=False,
+        select_data=AVAILABILITY_SELECT_DATA,
+        description='This controls who can access the content. '
+            'Public - content is open to the public; anyone '
+            'can access; no login or registration required. '
+            'Unavailable - content is not accessible by the '
+            'public; only course admins can access. '
+            'Course - same as Course content availability; '
+            'require login and registration, if Course requires it.')
+
     return (
         lambda _: enabled, lambda _: slug, lambda _: doc_root,
-        lambda _: enabled_jinja, lambda _: enabled_md)
+        lambda _: enabled_jinja, lambda _: enabled_md, lambda _: availability)
 
 
 def register_module():

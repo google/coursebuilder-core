@@ -160,20 +160,24 @@ class CourseHandler(utils.BaseHandler):
         """Add child handlers for REST."""
         return [('/rest/events', EventsRESTHandler)]
 
+    def get_user_student_profile(self):
+        user = self.personalize_page_and_get_user()
+        if user is None:
+            student = utils.TRANSIENT_STUDENT
+            profile = None
+        else:
+            student = models.Student.get_enrolled_student_by_user(user)
+            profile = models.StudentProfileDAO.get_profile_by_user(user)
+            self.template_value['has_global_profile'] = profile is not None
+            if not student:
+                student = utils.TRANSIENT_STUDENT
+        return user, student, profile
+
     def get(self):
         """Handles GET requests."""
         models.MemcacheManager.begin_readonly()
         try:
-            user = self.personalize_page_and_get_user()
-            if user is None:
-                student = utils.TRANSIENT_STUDENT
-                profile = None
-            else:
-                student = models.Student.get_enrolled_student_by_user(user)
-                profile = models.StudentProfileDAO.get_profile_by_user(user)
-                self.template_value['has_global_profile'] = profile is not None
-                if not student:
-                    student = utils.TRANSIENT_STUDENT
+            user, student, profile = self.get_user_student_profile()
 
             # If we are on this page due to visiting the course base URL
             # (and not base url plus "/course"), redirect registered students
@@ -189,7 +193,7 @@ class CourseHandler(utils.BaseHandler):
             self._set_show_registration_settings(settings, student, profile,
                                                  course_availability)
             self._set_show_image_or_video(settings)
-            self._set_common_values(settings, student, course,
+            self.set_common_values(settings, student, course,
                                     course_availability)
         finally:
             models.MemcacheManager.end_readonly()
@@ -221,7 +225,7 @@ class CourseHandler(utils.BaseHandler):
                 self.template_value['register_xsrf_token'] = (
                     crypto.XsrfTokenManager.create_xsrf_token('register-post'))
 
-    def _set_common_values(self, settings, student, course,
+    def set_common_values(self, settings, student, course,
                            course_availability):
         self.template_value['transient_student'] = student.is_transient
         self.template_value['navbar'] = {'course': True}
