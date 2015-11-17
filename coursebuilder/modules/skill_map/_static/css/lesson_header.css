@@ -22,6 +22,7 @@ div.skill-panel .empty-skill-list-message {
 }
 div.skill-panel div.skills-in-this-lesson ol.skill-display-root {
   display: inline-block;
+  overflow-x: inherit;
 }
 div.skill-panel div.open-control {
   margin-top: 3px;
