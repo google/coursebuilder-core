@@ -1514,10 +1514,16 @@ class SkillMapDataSource(data_sources.SynchronousQuery):
             skill name, count of completions, counts of 'in progress'
         Adds a row for each skill in the output of CountSkillCompletion job.
         """
-        result = jobs.MapReduceJob.get_results(counts_generator)
-        # remove the id of the skill
-        result = [i[1:] for i in result]
-        template_values['counts'] = transforms.dumps(sorted(result))
+        course = courses.Course.get(app_context)
+        skill_map = SkillMap.load(course)
+
+        results = {int(result[0]): result[1:]
+            for result in jobs.MapReduceJob.get_results(counts_generator)}
+
+        template_values['counts'] = transforms.dumps([
+            [skill.name] + results[skill.id]
+            for skill in skill_map.skills()
+            if skill.id in results])
 
 
 class SkillCompletionTracker(object):

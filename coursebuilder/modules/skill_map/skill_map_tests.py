@@ -50,6 +50,7 @@ from modules.skill_map.skill_map import SkillRestHandler
 from modules.skill_map.skill_map import SkillCompletionAggregate
 from modules.skill_map.skill_map import _SkillDao
 from modules.skill_map.skill_map import SkillCompletionTracker
+from modules.skill_map.skill_map import SkillMapDataSource
 from modules.skill_map.skill_map_metrics import SkillMapMetrics
 from modules.skill_map.skill_map_metrics import CHAINS_MIN_LENGTH
 from modules.skill_map.recommender import SkillRecommender
@@ -1570,6 +1571,13 @@ class CountSkillCompletionsTests(BaseSkillMapTests):
                     [str(self.skill2.id), 1, 1],
                     [str(self.skill3.id), 0, 0]]
         self.assertEqual(sorted(expected), sorted(output))
+
+        template_values = {}
+        SkillMapDataSource.fill_values(self.app_context, template_values, job)
+        self.assertEqual(transforms.loads(template_values['counts']), [
+            [self.skill1.name, 3, 0],
+            [self.skill2.name, 1, 1],
+            [self.skill3.name, 0, 0]])
 
     def test_build_additional_mapper_params(self):
         """The additional param in a dictionary mapping from skills to lessons.
