@@ -19,21 +19,26 @@
   <form id="edit_assignment" action="{{ edit_url }}" method="GET">
     <input type="hidden" name="action" value="{{ edit_assignment_action }}">
 
-    Assignment Name:
-    <select name="unit_id">
-      {% for unit in peer_reviewed_units %}
-        <option value="{{ unit.unit_id }}"
-          {% if unit_id == unit.unit_id %}selected{% endif %}>
-          {{ unit.title }}
-        </option>
-      {% endfor %}
-    </select>
+    <div class="form-field">
+      Assignment Name:
+      <select name="unit_id">
+        {% for unit in peer_reviewed_units %}
+          <option value="{{ unit.unit_id }}"
+            {% if unit_id == unit.unit_id %}selected{% endif %}>
+            {{ unit.title }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
 
-    <br>
+    <div class="form-field">
+      Student email address:
+      <input type="text" name="reviewee_id" value="{{reviewee_id}}">
+    </div>
 
-    Student email address: <input type="text" name="reviewee_id" value="{{reviewee_id}}">
-
-    <input type="submit" class="gcb-button" value="Show Reviews Received">
+    <div class="form-field">
+      <input type="submit" class="gcb-button" value="Show Reviews Received">
+    </div>
   </form>
 
   {% if readonly_student_assessment %}

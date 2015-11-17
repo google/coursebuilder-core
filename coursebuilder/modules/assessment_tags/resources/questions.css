@@ -23,7 +23,7 @@
 .qt-question-item {
   margin: 20px 0;
 }
-.qt-question, .qt-choices, .qt-feedback {
+.qt-question, .qt-choices, .qt-feedback, .form-field {
   margin: 10px 0;
 }
 .qt-feedback {
