@@ -15,17 +15,15 @@
 """Webserv, a module for static content publishing.
 
   TODO(psimakov):
-      - how does one md doc refer to another
-          - make foo.html map to foo.md if foo.html does not exist
+      - don't directly handle /<course_slug>; but redirect to
+          /<course_slug>/index.html
+      - add support for document_roots/sample/_static/*.*
       - map vfs folder
       - add caching directives
           - cache files of type: none, all but html/md, all
           - cache duration: none, 5 min, 1 h, 4 h, 24 h
-      - add support for document_roots/sample/_static/*.*
       - cache various streams (and especially md/jinja) in memcache
-      - make sure gcb tags expand properly
-      - don't directly handle /<course_slug>; but redirect to
-          /<course_slug>/index.html
+      - try to support gcb tags without {{ ... }} notation
 
 """
 
@@ -212,18 +210,39 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
         self.response.headers['Content-Type'] = 'text/html'
         self.response.write(text)
 
+    def replace_last(self, text, find, replace):
+        li = text.rsplit(find, 1)
+        return replace.join(li)
+
+    def get_target_filename(self, doc_root, config):
+        doc_root = os.path.normpath(doc_root)
+        relname = self.get_path(config)
+        base_name = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)),
+            WEBSERV_DOC_ROOTS_DIR_NAME, doc_root)
+
+        # try filename as given
+        filename = base_name + relname
+        if os.path.isfile(filename):
+            return filename, relname
+
+        # try alternative filename name for markdown
+        if config.get(WEBSERV_MD_ENABLED) and filename.endswith('.html'):
+            relname = self.replace_last(relname, '.html', '.md')
+            filename = base_name + relname
+            if os.path.isfile(filename):
+                return filename, relname
+
+        return None, None
+
     def serve_resource(self, config):
         doc_root = config.get(WEBSERV_DOC_ROOT)
         if not doc_root:
             self.error(404)
             return
 
-        doc_root = os.path.normpath(doc_root)
-        relname = self.get_path(config)
-        filename = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)),
-            WEBSERV_DOC_ROOTS_DIR_NAME, doc_root) + relname
-        if not os.path.isfile(filename):
+        filename, relname = self.get_target_filename(doc_root, config)
+        if filename is None:
             self.error(404)
             return
 
@@ -268,7 +287,7 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
 def get_schema_fields():
     enabled = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_ENABLED,
-        'Enabled', 'boolean', optional=True, i18n=False,
+        'Enabled', 'boolean', optional=False, i18n=False,
         description='Whether to enable static content serving '
             'for this course.')
     slug = schema_fields.SchemaField(
@@ -288,17 +307,17 @@ def get_schema_fields():
             '/modules/webserv/document_roots/.')
     enabled_jinja = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_JINJA_ENABLED,
-        'Templating Enabled', 'boolean', optional=True, i18n=False,
+        'Templating Enabled', 'boolean', optional=False, i18n=False,
         description='Whether to apply Jinja Template Processor to *.html '
             'files before serving them.')
     enabled_md = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_MD_ENABLED,
-        'Markdown Enabled', 'boolean', optional=True, i18n=False,
+        'Markdown Enabled', 'boolean', optional=False, i18n=False,
         description='Whether to apply Markdown Processor to *.md '
             'files before serving them.')
     availability = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_AVAILABILITY,
-        'Availability', 'boolean', optional=True, i18n=False,
+        'Availability', 'boolean', optional=False, i18n=False,
         select_data=AVAILABILITY_SELECT_DATA,
         description='This controls who can access the content. '
             'Public - content is open to the public; anyone '

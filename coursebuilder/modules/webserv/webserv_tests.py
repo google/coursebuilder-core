@@ -212,51 +212,65 @@ class WebservTests(actions.TestBase):
         self._init_course('test')
         actions.login('guest@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled(md_enabled=False)):
-            response = self.get('/test/foo/index.md')
+            response = self.get('/test/foo/markdown.md')
             self.assertNotIn('<h1>A First Level Header</h1>', response.body)
             self.assertIn('{{ course_info.course.title }}', response.body)
             self.assertNotIn('Power Searching with Google', response.body)
 
         with actions.OverriddenEnvironment(self.enabled(md_enabled=True)):
-            response = self.get('/test/foo/index.md')
+            response = self.get('/test/foo/markdown.md')
             self.assertIn('<h1>A First Level Header</h1>', response.body)
             self.assertIn('{{ course_info.course.title }}', response.body)
             self.assertNotIn('Power Searching with Google', response.body)
 
-        with actions.OverriddenEnvironment(self.enabled(
-                md_enabled=True, jinja_enabled=True)):
-            response = self.get('/test/foo/index.md')
-            self.assertIn('<h1>A First Level Header</h1>', response.body)
-            self.assertNotIn('{{ course_info.course.title }}', response.body)
-            self.assertIn('<em>Power Searching with Google</em>', response.body)
+    def test_markdown_alternative_names(self):
+        # when an author creates markdown document foo.md and wants to add
+        # a link to a document bar.md he may specify either bar.html or
+        # bar.md as link target; here we tests that markdown.html is
+        # accessible; it does not really exist in the filesystem; a system
+        # will pretend it exists when markdown is enabled and that it does
+        # not exist when markdown is disabled
+        self._init_course('test')
+        actions.login('guest@example.com', is_admin=True)
 
-    def test_markdown_with_and_without_jinja(self):
+        with actions.OverriddenEnvironment(self.enabled(md_enabled=True)):
+            response = self.get('/test/foo/markdown.html')
+            self.assertIn('<h1>A First Level Header</h1>', response.body)
+            self.assertIn('{{ course_info.course.title }}', response.body)
+            self.assertNotIn('Power Searching with Google', response.body)
+            self.assertNoPage('/test/foo/main.html')
+
+        with actions.OverriddenEnvironment(self.enabled(md_enabled=False)):
+            self.assertNoPage('/test/foo/markdown.html')
+            self.assertNoPage('/test/foo/main.html')
+
+    def test_markdown_jinja_permutations(self):
         self._init_course('test')
         actions.login('guest@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled(
                 md_enabled=False, jinja_enabled=False)):
-            response = self.get('/test/foo/index.md')
+            response = self.get('/test/foo/markdown.md')
             self.assertNotIn('<h1>A First Level Header</h1>', response.body)
             self.assertIn('{{ course_info.course.title }}', response.body)
             self.assertNotIn('Power Searching with Google', response.body)
 
         with actions.OverriddenEnvironment(self.enabled(
                 md_enabled=True, jinja_enabled=False)):
-            response = self.get('/test/foo/index.md')
+            response = self.get('/test/foo/markdown.md')
             self.assertIn('<h1>A First Level Header</h1>', response.body)
             self.assertIn('{{ course_info.course.title }}', response.body)
             self.assertNotIn('Power Searching with Google', response.body)
 
         with actions.OverriddenEnvironment(self.enabled(
                 md_enabled=False, jinja_enabled=True)):
-            response = self.get('/test/foo/index.md')
+            response = self.get('/test/foo/markdown.md')
             self.assertNotIn('<h1>A First Level Header</h1>', response.body)
             self.assertIn('{{ course_info.course.title }}', response.body)
             self.assertNotIn('Power Searching with Google', response.body)
 
         with actions.OverriddenEnvironment(self.enabled(
                 md_enabled=True, jinja_enabled=True)):
-            response = self.get('/test/foo/index.md')
+            response = self.get('/test/foo/markdown.md')
             self.assertIn('<h1>A First Level Header</h1>', response.body)
             self.assertNotIn('{{ course_info.course.title }}', response.body)
             self.assertIn('Power Searching with Google', response.body)
@@ -274,12 +288,12 @@ class WebservTests(actions.TestBase):
             with actions.OverriddenEnvironment(env):
                 actions.login('student@example.com', is_admin=True)
                 self.assertPage('/test/foo/index.html', ' Web Server')
-                self.assertPage('/test/foo/index.md', ' Web Server')
+                self.assertPage('/test/foo/markdown.md', ' Web Server')
                 self.assertPage('/test/foo/main.css', ' Web Server')
 
                 actions.login('student@example.com')
                 self.assertNoPage('/test/foo/index.html')
-                self.assertNoPage('/test/foo/index.md')
+                self.assertNoPage('/test/foo/markdown.md')
                 self.assertNoPage('/test/foo/main.css')
 
     def test_availability_course(self):
@@ -291,7 +305,7 @@ class WebservTests(actions.TestBase):
             courses.COURSE_AVAILABILITY_PRIVATE]})
         with actions.OverriddenEnvironment(env):
             self.assertNoPage('/test/foo/index.html')
-            self.assertNoPage('/test/foo/index.md')
+            self.assertNoPage('/test/foo/markdown.md')
             self.assertNoPage('/test/foo/main.css')
 
         for availability in [
@@ -303,5 +317,5 @@ class WebservTests(actions.TestBase):
                 availability]})
             with actions.OverriddenEnvironment(env):
                 self.assertPage('/test/foo/index.html', 'Web Server')
-                self.assertPage('/test/foo/index.md', 'Web Server')
+                self.assertPage('/test/foo/markdown.md', 'Web Server')
                 self.assertPage('/test/foo/main.css', 'Web Server')
