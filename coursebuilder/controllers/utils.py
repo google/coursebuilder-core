@@ -582,6 +582,13 @@ class ApplicationHandler(webapp2.RequestHandler):
                 (parts.scheme, parts.netloc, base, None, None, None))
         return base
 
+    def error(self, error_code, hint=None):
+        if hint and not appengine_config.PRODUCTION_MODE:
+            logging.info(
+                'Error %s on path %s: %s',
+                error_code, self.request.path if self.request else None, hint)
+        super(ApplicationHandler, self).error(error_code)
+
     def render_template_to_html(self, template_values, template_file,
                                 additional_dirs=None):
         courses.Course.set_current(self.get_course())
@@ -697,16 +704,29 @@ class CourseHandler(ApplicationHandler):
         self.course = None
         self.template_value = {}
 
-    def get_user(self):
+    @classmethod
+    def get_user(cls):
         """Get the current user."""
         return users.get_current_user()
 
-    def get_student(self):
+    @classmethod
+    def get_student(cls):
         """Get the current student."""
-        user = self.get_user()
+        user = cls.get_user()
         if user is None:
             return None
         return Student.get_by_user(user)
+
+    @classmethod
+    def get_user_and_student_or_transient(cls):
+        user = cls.get_user()
+        if user is None:
+            student = TRANSIENT_STUDENT
+        else:
+            student = Student.get_enrolled_student_by_user(user)
+            if not student:
+                student = TRANSIENT_STUDENT
+        return user, student
 
     def _pick_first_valid_locale_from_list(self, desired_locales):
         available_locales = self.app_context.get_allowed_locales()

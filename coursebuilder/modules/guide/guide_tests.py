@@ -34,22 +34,28 @@ class GuideTests(actions.TestBase):
 
     PRIVATE = {'course': {'now_available': False}}
 
+    GUIDE_UNAVAILABLE = {'modules': {'guide': {
+        'availability': 'unavailable'}}}
+
     GUIDE_DISABLED = {'modules': {'guide': {'enabled': False}}}
 
-    GUIDE_ENABLED = {'modules': {'guide': {'enabled': True}}}
+    GUIDE_ENABLED = {'modules': {'guide': {
+        'enabled': True, 'availability': 'public'}}}
 
     def setUp(self):
         super(GuideTests, self).setUp()
-        self._import_sample_course()
-        sites.setup_courses('course:/test::ns_guide')
+        self._import_sample_course(ns='guide')
+        self._import_sample_course(ns='other')
+        sites.setup_courses('course:/test::ns_guide\ncourse:/other::ns_other')
         self.base = '/test'
 
-    def _import_sample_course(self):
+    def _import_sample_course(self, ns='guide'):
         dst_app_context = actions.simple_add_course(
-            'guide', 'guide_tests@google.com',
-            'Guided Power Searching with Google')
+            ns, '%s_tests@google.com' % ns,
+            'Power Searching with Google (%s)' % ns)
         dst_course = courses.Course(None, dst_app_context)
-        src_app_context = sites.get_all_courses('course:/:/:')[0]
+        all_courses = sites.get_all_courses('course:/:/:')
+        src_app_context = all_courses[len(all_courses) - 1]
         errors = []
         dst_course.import_from(src_app_context, errors)
         dst_course.save()
@@ -76,10 +82,10 @@ class GuideTests(actions.TestBase):
         with actions.OverriddenEnvironment(environ):
             # admin can see it
             actions.login('guest@sample.com', is_admin=True)
-            response = self.get('/modules/guide', expect_errors=True)
+            response = self.get('/modules/guide')
             self.assertEquals(200, response.status_int)
             self.assertIn(
-                'category="Guided Power Searching with Google (private)"',
+                'category="Power Searching with Google (guide) (private)"',
                 response.body)
 
             # student still can't
@@ -96,7 +102,7 @@ class GuideTests(actions.TestBase):
             response = self.get('/modules/guide')
             self.assertIn('<gcb-guide-container>', response.body)
             self.assertIn(
-                'category="Guided Power Searching with Google"',
+                'category="Power Searching with Google (guide)"',
                 response.body)
             self.assertIn('<gcb-guide-card', response.body)
             self.assertIn(  # note that we intentionally don't show "Unit 1 - "
@@ -112,7 +118,7 @@ class GuideTests(actions.TestBase):
         environ = self.PUBLIC.copy()
         environ.update(self.GUIDE_ENABLED)
         with actions.OverriddenEnvironment(environ):
-            actions.login('test@example.com')
+            actions.login('test@example.com', is_admin=True)
 
             app_ctx = sites.get_all_courses()[0]
             course = courses.Course(None, app_context=app_ctx)
@@ -146,3 +152,60 @@ class GuideTests(actions.TestBase):
                 self.assertIn(
                     '<script src="/modules/'
                     'assessment_tags/resources/grading.js">', response.body)
+
+    def test_public_guide_does_not_need_login(self):
+        actions.logout()
+        environ = self.PUBLIC.copy()
+        environ.update(self.GUIDE_ENABLED)
+        with actions.OverriddenEnvironment(environ):
+            response = self.get('/modules/guide')
+            self.assertEquals(200, response.status_int)
+            self.assertIn(
+                'category="Power Searching with Google (guide)"',
+                response.body)
+            app_ctx = sites.get_all_courses()[0]
+            course = courses.Course(None, app_context=app_ctx)
+            for unit in course.get_units():
+                if unit.type != verify.UNIT_TYPE_UNIT:
+                    continue
+                response = self.get('guide?unit_id=%s' % unit.unit_id)
+                self.assertIn(unit.title, response.body.decode('utf-8'))
+
+
+        environ.update(self.GUIDE_UNAVAILABLE)
+        with actions.OverriddenEnvironment(environ):
+            response = self.get('/modules/guide', expect_errors=True)
+            self.assertEquals(404, response.status_int)
+            for unit in course.get_units():
+                if unit.type != verify.UNIT_TYPE_UNIT:
+                    continue
+                response = self.get(
+                    'guide?unit_id=%s' % unit.unit_id, expect_errors=True)
+                self.assertEquals(404, response.status_int)
+
+    def test_guide_private_course_public(self):
+        actions.logout()
+        environ = self.PUBLIC.copy()
+        environ.update(self.GUIDE_ENABLED)
+        environ.update(self.GUIDE_UNAVAILABLE)
+        with actions.OverriddenEnvironment(environ):
+            response = self.get('/modules/guide', expect_errors=True)
+            self.assertEquals(404, response.status_int)
+
+    def test_courses_with_different_availabilities(self):
+        app_context_1 = sites.get_course_for_path('/test')
+        course_1 = courses.Course(None, app_context_1)
+        course_1.set_course_availability(courses.COURSE_AVAILABILITY_PUBLIC)
+
+        app_context_2 = sites.get_course_for_path('/other')
+        course_2 = courses.Course(None, app_context_2)
+        course_2.set_course_availability(courses.COURSE_AVAILABILITY_PRIVATE)
+
+        actions.logout()
+        with actions.OverriddenEnvironment(self.GUIDE_ENABLED):
+            response = self.get('/modules/guide')
+            self.assertEquals(200, response.status_int)
+            self.assertIn('category="Power Searching with Google (guide)"',
+                          response.body)
+            self.assertNotIn('category="Power Searching with Google (other)"',
+                          response.body)

@@ -52,6 +52,12 @@ GUIDE_ENABLED_FOR_THIS_COURSE = 'enabled'
 GUIDE_COLOR = 'color'
 GUIDE_COLOR_DEFAULT = '#00838F'
 GUIDE_DURATION = 'duration'
+GUIDE_AVAILABILITY = 'availability'
+
+AVAILABILITY_SELECT_DATA = [
+    (courses.AVAILABILITY_AVAILABLE, 'Public'),
+    (courses.AVAILABILITY_UNAVAILABLE, 'Unavailable'),
+    (courses.AVAILABILITY_COURSE, 'Course')]
 
 MAIN_HANDLER_URL = '/modules/guide'
 
@@ -61,8 +67,30 @@ def unit_title(unit, app_context):
 
 
 def get_config(app_context):
-    return app_context.get_environ(
+    config = app_context.get_environ(
         ).get('modules', {}).get('guide', {})
+    if not config:
+        config = {}
+    return config
+
+
+class GuideDisplayableElement(object):
+
+    def __init__(self, availability):
+        self.availability = availability
+        self.shown_when_unavailable = False
+
+
+def can_display_guide_to_current_user(course, config):
+    user, student = (
+        utils.CourseHandler.get_user_and_student_or_transient())
+    course_avail = course.get_course_availability()
+    self_avail = config.get(GUIDE_AVAILABILITY)
+    displayability = courses.Course.get_element_displayability(
+        course_avail, student.is_transient,
+        custom_modules.can_see_drafts(course.app_context),
+        GuideDisplayableElement(self_avail))
+    return student, displayability.is_link_displayed, displayability
 
 
 class GuideApplicationHandler(utils.ApplicationHandler):
@@ -80,11 +108,20 @@ class GuideApplicationHandler(utils.ApplicationHandler):
             with common_utils.Namespace(app_context.namespace):
                 course = courses.Course(None, app_context)
 
+                # check rights
                 config = get_config(app_context)
-                if not config or not config.get(
-                        GUIDE_ENABLED_FOR_THIS_COURSE):
+                if not config.get(GUIDE_ENABLED_FOR_THIS_COURSE):
+                    continue
+                student, can_display, displayability = (
+                    can_display_guide_to_current_user(course, config))
+                if not can_display:
                     continue
 
+                # prepare values to render
+                title = app_context.get_title()
+                if not displayability.is_available_to_visitors and (
+                        roles.Roles.is_course_admin(app_context)):
+                    title += ' (%s)' % course.get_course_availability()
                 slug = app_context.get_slug()
                 if slug == '/':
                     slug = ''
@@ -92,14 +129,7 @@ class GuideApplicationHandler(utils.ApplicationHandler):
                 if not category_color:
                     category_color = GUIDE_COLOR_DEFAULT
 
-                title = app_context.get_title()
-                mode = course.get_course_availability()
-                if not mode == courses.COURSE_AVAILABILITY_PUBLIC:
-                    if roles.Roles.is_course_admin(app_context):
-                        title += ' (%s)' % mode
-                    else:
-                        continue
-
+                # iterate units
                 units = []
                 for unit in unit_outline.StudentCourseView(course).get_units():
                     if unit.type != verify.UNIT_TYPE_UNIT:
@@ -110,8 +140,8 @@ class GuideApplicationHandler(utils.ApplicationHandler):
                         self.get_duration(config, course, unit)
                     ))
 
-                all_courses.append((
-                    slug, title, category_color, units,))
+                if units:
+                    all_courses.append((slug, title, category_color, units,))
 
         sorted(all_courses, key=lambda x: x[1])
         return all_courses
@@ -121,7 +151,7 @@ class GuideApplicationHandler(utils.ApplicationHandler):
 
         all_courses = self.get_courses()
         if not all_courses:
-            self.error(404)
+            self.error(404, 'No courses to display')
             return
 
         template_data['courses'] = sorted(all_courses, key=lambda x: x[1])
@@ -138,11 +168,7 @@ class GuideUnitHandler(utils.BaseHandler):
             lesson.duration = '%s' % (
                 lesson_duration_min if lesson_duration_min else 0)
 
-    def prepare(self, student, unit_id, config, template_data):
-        course = self.get_course()
-        unit = course.find_unit_by_id(unit_id)
-        lessons = unit_outline.StudentCourseView(
-            course, student=student).get_lessons(unit_id)
+    def prepare(self, config, view, student, unit, lessons, template_data):
         self.add_duration_to(config, lessons)
 
         category_color = config.get(GUIDE_COLOR)
@@ -158,33 +184,47 @@ class GuideUnitHandler(utils.BaseHandler):
         template_data['feedback_link'] = (
             self.app_context.get_environ()['course'].get('forum_url', ''))
 
-    def get(self):
-        student = self.personalize_page_and_get_enrolled(
-            supports_transient_student=True)
-        if not student:
-            return
-
-        config = get_config(self.app_context)
-        if not config or not config.get(GUIDE_ENABLED_FOR_THIS_COURSE):
-            self.error(403)
+    def guide_get(self, config):
+        student, can_display, displayability = (
+            can_display_guide_to_current_user(self.get_course(), config))
+        if not can_display:
+            self.error(
+                404, 'Negative displayability: %s' % str(displayability))
             return
 
         unit_id = self.request.get('unit_id')
         if not unit_id:
-            self.error(404)
+            self.error(404, 'Bad unit_id')
             return
-        self.prepare(student, unit_id, config, self.template_value)
+
+        view = unit_outline.StudentCourseView(
+            self.get_course(), student=student)
+        unit = self.get_course().find_unit_by_id(unit_id)
+        if not unit in view.get_units():
+            self.error(404, 'Unit not visible')
+            return
+
+        self.prepare(config, view, student, unit,
+            view.get_lessons(unit.unit_id), self.template_value)
 
         template = jinja_utils.get_template(
             'steps.html', TEMPLATE_DIRS, handler=self)
         self.response.write(template.render(self.template_value))
+
+    def get(self):
+        config = get_config(self.app_context)
+        if config.get(GUIDE_ENABLED_FOR_THIS_COURSE):
+            self.guide_get(config)
+        else:
+            self.error(404, 'Guide is disabled: %s' % config)
+            return
 
 
 def get_schema_fields():
     enabled = schema_fields.SchemaField(
         GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_ENABLED_FOR_THIS_COURSE,
         'Enabled', 'boolean',
-        optional=True, i18n=False, editable=True,
+        optional=False, i18n=False, editable=True,
         description=str(safe_dom.NodeList().append(safe_dom.Text(
             'Whether to include this course into Guide experience, '
             'which can be accessed at ')
@@ -206,8 +246,20 @@ def get_schema_fields():
         description=(
             'Average duration in minutes of a lesson in this unit. '
             'Enter "0" to prevent display of lesson and unit durations.'))
+    availability = schema_fields.SchemaField(
+        GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_AVAILABILITY,
+        'Availability', 'boolean', optional=False, i18n=False,
+        select_data=AVAILABILITY_SELECT_DATA,
+        description='This controls who can access the content. '
+            'Public - content is open to the public; anyone '
+            'can access; no login or registration required. '
+            'Unavailable - content is not accessible by the '
+            'public; only course admins can access. '
+            'Course - same as Course content availability; '
+            'require login and registration, if Course requires it.')
 
-    return (lambda c: enabled, lambda c: color, lambda c: duration)
+    return (lambda _: enabled, lambda _: color, lambda _: duration,
+            lambda _: availability)
 
 
 def register_module():
