@@ -2450,6 +2450,7 @@ class Course(object):
             description='This is the email address of the Google Group forum '
             'for this course. It can be at googlegroups.com or at your own '
             'domain, but must correspond to a Google Group.', i18n=True))
+        return opts
 
     @classmethod
     def create_course_settings_schema(cls, reg):
@@ -2568,112 +2569,113 @@ class Course(object):
                 CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client ID', 'string',
                 description=str(messages.COURSE_GOOGLE_CLIENT_ID_DESCRIPTION),
                 i18n=False, optional=True))
+        return opts
 
     @classmethod
-    def create_base_settings_schema(cls):
-        """Create the registry for course properties."""
-
-        reg = schema_fields.FieldRegistry('Settings',
-            extra_schema_dict_values={
-                'className': 'inputEx-Group new-form-layout hidden-header'})
-
-        cls.create_forum_settings_schema(reg)
-        cls.create_course_settings_schema(reg)
-
-        registration_opts = reg.add_sub_registry(
+    def create_registration_settings_schema(cls, reg):
+        opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_REGISTRATION, 'Registration',
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
-        registration_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'reg_form:header_text', 'Introduction', 'string', optional=True,
             description=messages.REGISTRATION_INTRODUCTION))
-        registration_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             # Note: Not directly user-editable; now controlled as part of a
             # cluster of settings from modules/courses/availability.py
             'reg_form:can_register', 'Enable Registrations', 'boolean',
             description='Checking this box allows new students to register for '
             'the course.',
             optional=True, hidden=True, editable=False, i18n=False))
-        registration_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'reg_form:additional_registration_fields', 'Registration Form',
             'html', description=str(messages.REGISTRATION_REGISTRATION_FORM),
             optional=True))
-        registration_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             # Note: Not directly user-editable; now controlled as part of a
             # cluster of settings from modules/courses/availability.py
             'course:whitelist', 'Whitelisted Students', 'text',
             description='A list of email addresses of students who may register'
             '.  Separate email addresses by commas or spaces.',
             optional=True, hidden=True, editable=False, i18n=False))
-        registration_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'course:send_welcome_notifications',
             'Send Welcome Email', 'boolean',
             description=messages.REGISTRATION_SEND_WELCOME_EMAIL,
             optional=True))
-        registration_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_sender',
             'Email Sender', 'string', optional=True,
             i18n=False,
             description=str(messages.REGISTRATION_EMAIL_SENDER)))
-        registration_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_subject',
             'Email Subject', 'string', optional=True,
             description=messages.REGISTRATION_EMAIL_SUBJECT))
-        registration_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_body',
             'Email Body', 'text', optional=True,
             description=messages.REGISTRATION_EMAIL_BODY))
+        return opts
 
+    @classmethod
+    def create_unit_settings_schema(cls, reg):
         # Unit level settings.
-        unit_opts = reg.add_sub_registry(
+        opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_UNITS_AND_LESSONS, 'Units & lessons',
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
-        unit_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'unit:hide_lesson_navigation_buttons',
             'Hide Lesson Nav', 'boolean',
             description=messages.UNIT_HIDE_LESSON_NAV, optional=True))
-        unit_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'unit:show_unit_links_in_leftnav', 'Show Unit Link',
             'boolean', description=messages.UNIT_SHOW_UNIT_LINK,
             optional=True))
-        unit_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'course:display_unit_title_without_index',
             'Hide Unit Numbers', 'boolean',
             description=messages.UNIT_HIDE_UNIT_NUMBERS, optional=True))
+        return opts
 
+    @classmethod
+    def create_assessment_settings_schema(cls, reg):
         def must_contain_one_string_substitution(value, errors):
             if value and len(re.findall(r'%s', value)) != 1:
                 errors.append(
                     'Value must contain exactly one string substitution '
                     'marker "%s".')
 
-        assessment_opts = reg.add_sub_registry(
+        opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_ASSESSMENT, 'Assessments')
-        assessment_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'assessment_confirmations:result_text:pass',
             'Final Assessment Passing Text', 'string',
             description=messages.ASSESSMENT_PASSING_TEXT, optional=True,
             validator=must_contain_one_string_substitution))
-        assessment_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'assessment_confirmations:result_text:fail',
             'Final Assessment Failing Text', 'string',
             description=messages.ASSESSMENT_FAILING_TEXT, optional=True,
             validator=must_contain_one_string_substitution))
-        assessment_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'unit:hide_assessment_navigation_buttons',
             'Hide Assessment Nav', 'boolean',
             description=messages.UNIT_HIDE_ASSESSMENT_NAV,
             optional=True))
+        return opts
 
-        i18n_opts = reg.add_sub_registry(
+    @classmethod
+    def create_translation_settings_schema(cls, reg):
+        opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_I18N, 'Translations',
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
-        i18n_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'course:can_student_change_locale', 'Show Language Picker',
             'boolean',
             description=str(messages.TRANSLATIONS_SHOW_LANGUAGE_PICKER),
@@ -2681,7 +2683,7 @@ class Course(object):
         locale_data_for_select = [
             (loc, locales.get_locale_display_name(loc))
             for loc in locales.get_system_supported_locales()]
-        i18n_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'course:locale', 'Base language', 'string',
             description=messages.TRANSLATIONS_BASE_LANGUAGE, i18n=False,
             select_data=locale_data_for_select,
@@ -2700,7 +2702,7 @@ class Course(object):
         locale_type.add_property(schema_fields.SchemaField(
             cls.SCHEMA_LOCALE_AVAILABILITY, 'Availability',
             'boolean', optional=True, select_data=select_data))
-        i18n_opts.add_property(schema_fields.FieldArray(
+        opts.add_property(schema_fields.FieldArray(
             'extra_locales', 'Other Languages', item_type=locale_type,
             description=messages.TRANSLATIONS_OTHER_LANGUAGES,
             extra_schema_dict_values={
@@ -2708,9 +2710,25 @@ class Course(object):
                 'listAddLabel': 'Add a language',
                 'listRemoveLabel': 'Delete language'},
             optional=True))
-        i18n_opts.add_property(schema_fields.SchemaField(
+        opts.add_property(schema_fields.SchemaField(
             'course:prevent_translation_edits', 'Prevent Edits', 'boolean',
             optional=True, description=messages.TRANSLATIONS_PREVENT_EDITS))
+        return opts
+
+    @classmethod
+    def create_base_settings_schema(cls):
+        """Create the registry for course properties."""
+
+        reg = schema_fields.FieldRegistry('Settings',
+            extra_schema_dict_values={
+                'className': 'inputEx-Group new-form-layout hidden-header'})
+
+        cls.create_forum_settings_schema(reg)
+        cls.create_course_settings_schema(reg)
+        cls.create_registration_settings_schema(reg)
+        cls.create_unit_settings_schema(reg)
+        cls.create_assessment_settings_schema(reg)
+        cls.create_translation_settings_schema(reg)
         return reg
 
     @classmethod
