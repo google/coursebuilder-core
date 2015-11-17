@@ -520,9 +520,10 @@ class FilesItemRESTHandler(BaseRESTHandler):
         transforms.send_json_response(self, 200, 'Deleted.')
 
 
-def add_asset_handler_base_fields(schema, name, description):
+def generate_asset_rest_handler_schema(name, description, displayable=False):
     """Helper function for building schemas of asset-handling OEditor UIs."""
 
+    schema = schema_fields.FieldRegistry('Asset', description='Asset')
     schema.add_property(schema_fields.SchemaField(
         'file', name, 'file', description=description))
     schema.add_property(schema_fields.SchemaField(
@@ -530,29 +531,15 @@ def add_asset_handler_base_fields(schema, name, description):
     schema.add_property(schema_fields.SchemaField(
         'base', 'Base', 'string', editable=False, hidden=True))
 
-
-def add_asset_handler_display_field(schema):
-    """Helper function for building schemas of asset-handling OEditor UIs."""
+    location_dict = {}
+    if displayable:
+        location_dict['visu'] = {
+            'visuType': 'funcName',
+            'funcName': 'renderAsset'}
 
     schema.add_property(schema_fields.SchemaField(
         'asset_url', 'Location', 'string', editable=False, optional=True,
-        extra_schema_dict_values={
-            'visu': {
-                'visuType': 'funcName',
-                'funcName': 'renderAsset'
-            }
-        }))
-
-
-def generate_asset_rest_handler_schema(name, description):
-    schema = schema_fields.FieldRegistry('Asset', description='Asset')
-    add_asset_handler_base_fields(schema, name, description)
-    return schema
-
-
-def generate_displayable_asset_rest_handler_schema(name, description):
-    schema = generate_asset_rest_handler_schema(name, description)
-    add_asset_handler_display_field(schema)
+        extra_schema_dict_values=location_dict))
     return schema
 
 
@@ -594,9 +581,10 @@ class AssetItemRESTHandler(BaseRESTHandler):
                 'Upload New Template',
                 messages.IMAGES_DOCS_UPLOAD_NEW_TEMPLATE_DESCRIPTION)),
         '/assets/img/': _asset_schema_details(
-            generate_displayable_asset_rest_handler_schema(
+            generate_asset_rest_handler_schema(
                 'Upload New Image',
-                messages.IMAGES_DOCS_UPLOAD_NEW_IMAGE_DESCRIPTION)),
+                messages.IMAGES_DOCS_UPLOAD_NEW_IMAGE_DESCRIPTION,
+                displayable=True)),
     }
 
     # Two-tuple like those in _SCHEMAS above, but generic, for use when the
