@@ -98,6 +98,6 @@ The document displays with this height; the width is set automatically.
 
 HTML_ASSET_FILE_PATH_DESCRIPTION = """
 The path to an HTML file (e.g., "assets/html/example.html"). The contents of
-that file will be inserted verbatim at this point. You can upload HTLML files to
+that file will be inserted verbatim at this point. You can upload HTML files to
 assets/html in Create > HTML.
 """

@@ -35,7 +35,7 @@ class WebservTests(actions.TestBase):
             'registration_optional', 'registration_required'], (
                 sorted(courses.COURSE_AVAILABILITY_POLICIES.keys())))
         self.assertEquals(
-            ['course', 'public', 'unavailable'],
+            ['course', 'private', 'public'],
             sorted(courses.AVAILABILITY_VALUES))
 
     def disabled(self):

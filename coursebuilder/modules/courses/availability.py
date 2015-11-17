@@ -60,16 +60,11 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         ret.add_property(schema_fields.SchemaField(
             'course_availability', 'Course Availability', 'string',
             description='This sets the availability of the course for '
-            'registered and unregistered users.',
+            'registered and unregistered students.',
             i18n=False, optional=True,
             select_data=[
                 (p, p.replace('_', ' ').title())
                 for p in courses.COURSE_AVAILABILITY_POLICIES]))
-        ret.add_property(schema_fields.SchemaField(
-            'show_lessons_in_syllabus', 'Show Lessons in Syllabus', 'boolean',
-            description='When checked, lessons are shown in the course '
-            'syllabus.',
-            i18n=False, optional=True))
         element_settings = schema_fields.FieldRegistry(
             'Element Settings', 'Availability settings for course elements',
             extra_schema_dict_values={'className': 'content-element'})
@@ -83,11 +78,11 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'indent', 'Indent', 'boolean',
             i18n=False, optional=True, editable=False, hidden=True))
         element_settings.add_property(schema_fields.SchemaField(
-            'name', 'Element Title', 'string',
+            'name', 'Course Outline', 'string',
             i18n=False, optional=True, editable=False,
             extra_schema_dict_values={'className': 'title'}))
         element_settings.add_property(schema_fields.SchemaField(
-            'shown_when_unavailable', 'Shown When Unavailable', 'boolean',
+            'shown_when_unavailable', 'Shown When Private', 'boolean',
             description='If checked, the content displays its '
             'title in the syllabus even when it is private.  '
             '<a href="https://code.google.com/p/course-builder/'
@@ -166,11 +161,8 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         course = self.get_course()
         course_availability = course.get_course_availability()
         settings = course.get_environ(self.app_context)
-        show_lessons_in_syllabus = settings['course'].get(
-            'show_lessons_in_syllabus', False)
         entity = {
             'course_availability': course_availability,
-            'show_lessons_in_syllabus': show_lessons_in_syllabus,
             'whitelist': settings['reg_form']['whitelist'],
             'element_settings': self.traverse_course(self.get_course()),
         }
@@ -201,11 +193,6 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         if whitelist is not None:
             settings['reg_form']['whitelist'] = whitelist
 
-        show_lessons_in_syllabus = payload.get(
-            'show_lessons_in_syllabus')
-        if show_lessons_in_syllabus is not None:
-            settings['course']['show_lessons_in_syllabus'] = bool(
-                show_lessons_in_syllabus)
         course.save_settings(settings)
 
         course_availability = payload.get('course_availability')

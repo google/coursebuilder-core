@@ -224,12 +224,12 @@ LEGACY_HUMAN_GRADER_WORKFLOW = yaml.safe_dump({
 
 # Availability policies that can be used for units and lessons.
 AVAILABILITY_AVAILABLE = 'public'
-AVAILABILITY_UNAVAILABLE = 'unavailable'
+AVAILABILITY_UNAVAILABLE = 'private'
 AVAILABILITY_COURSE = 'course'
 AVAILABILITY_VALUES = [
-    AVAILABILITY_AVAILABLE,
     AVAILABILITY_UNAVAILABLE,
-    AVAILABILITY_COURSE]
+    AVAILABILITY_COURSE,
+    AVAILABILITY_AVAILABLE]
 
 COURSE_AVAILABILITY_PRIVATE = 'private'
 COURSE_AVAILABILITY_REGISTRATION_REQUIRED = 'registration_required'
@@ -2515,14 +2515,6 @@ class Course(object):
             optional=True, hidden=True, editable=False, i18n=False))
 
         opts.add_property(schema_fields.SchemaField(
-            # Note: Not settable from traditional settings page; available
-            # from modules/courses/availability.py
-            'course:show_lessons_in_syllabus', 'Show Lessons in Syllabus',
-            'boolean',
-            description='When checked, show lesson titles in course syllabus.',
-            optional=True, hidden=True, editable=False, i18n=False))
-
-        opts.add_property(schema_fields.SchemaField(
             'course:blurb', 'Abstract', 'html',
             description=messages.HOMEPAGE_ABSTRACT_DESCRIPTION,
             extra_schema_dict_values={
@@ -2639,6 +2631,11 @@ class Course(object):
             'course:display_unit_title_without_index',
             'Hide Unit Numbers', 'boolean',
             description=messages.UNIT_HIDE_UNIT_NUMBERS, optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            'course:show_lessons_in_syllabus', 'Show Lessons in Syllabus',
+            'boolean',
+            description='If checked, show lesson titles in course syllabus.',
+            optional=True, i18n=False))
         return opts
 
     @classmethod
