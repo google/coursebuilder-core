@@ -163,14 +163,14 @@ div.settings-list {
 div.new-form-layout div.settings-list.wide {
   width: inherit;
   float: none;
-  margin-left: 90px;
+  margin-left: 140px;
   min-width: 700px;
 }
-div.new-form-layout div.settings-list.wide > span:first-child {
+div.new-form-layout div.settings-list > span:first-child {
   display: none;
 }
 div.settings-list > div.inputEx-ListField-childContainer > div {
-  margin-top: 15px;
+  margin-bottom: 15px;
 }
 div.settings-list a.inputEx-List-link {
   color: #000;
