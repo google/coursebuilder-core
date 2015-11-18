@@ -166,6 +166,9 @@ function bindEditorField(Y) {
     this.toolbarSlideInProgress = false;
     this.editor.on('editorWindowFocus', this._onEditorWindowFocus.bind(this));
     this.editor.on('editorWindowBlur', this._onEditorWindowBlur.bind(this));
+    $(this.root)
+        .on('mouseenter', function() { that.mouseEntered = true })
+        .on('mouseleave', function() { that.mouseEntered = false });
 
     this._customTagManager = new DummyCustomTagManager();
     if (options.supportCustomTags) {
@@ -540,9 +543,7 @@ function bindEditorField(Y) {
     // A loss of focus can occur when (i) the font name chooser grabs the
     // focus, or (ii) when the image or link editor opens. Don't hide the
     // toolbar in those cases.
-    return ! this.toolbarSlideInProgress &&
-        ! $('.yui-toolbar-fontname').hasClass('yui-button-hover') &&
-        $('.yui-editor-panel').hasClass('yui-overlay-hidden')
+    return !this.toolbarSlideInProgress && !this.mouseEntered;
   };
   RichTextEditor.prototype._onEditorWindowBlur = function() {
     if (this._slideOutIsAllowed()) {
