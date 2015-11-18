@@ -322,17 +322,25 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
 
         return json_payload
 
-    def _process_extra_locales(self, extra_locales):
+    def _process_extra_locales(self, default_locale, extra_locales):
         """Make sure each locale has a label to go along."""
-        existing = set([
-            label.title for label in models.LabelDAO.get_all_of_type(
-                models.LabelDTO.LABEL_TYPE_LOCALE)])
 
-        course_locale = self.app_context.default_locale
-        for extra_locale in extra_locales + [{'locale': course_locale}]:
-            locale = extra_locale['locale']
-            if locale in existing:
-                continue
+        existing_locale_labels = models.LabelDAO.get_all_of_type(
+            models.LabelDTO.LABEL_TYPE_LOCALE)
+
+        existing = {label.title for label in existing_locale_labels}
+        required = {l['locale']  for l in extra_locales} | {default_locale}
+
+        need_added = required - existing
+        need_deleted = existing - required
+
+        # Delete unused locale labels
+        for label_dto in existing_locale_labels:
+            if label_dto.title in need_deleted:
+                models.LabelDAO.delete(label_dto)
+
+        # Add new required labels
+        for locale in need_added:
             models.LabelDAO.save(models.LabelDTO(
                 None, {'title': locale,
                        'version': '1.0',
@@ -352,7 +360,11 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
             return
 
         if 'extra_locales' in request_data:
-            self._process_extra_locales(request_data['extra_locales'])
+            default_locale = (
+                request_data.get('course', {}).get('locale')
+                or self.app_context.default_locale)
+            self._process_extra_locales(
+                default_locale, request_data['extra_locales'])
 
         return request_data
 

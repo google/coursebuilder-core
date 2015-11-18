@@ -1900,3 +1900,76 @@ class AvailabilityTests(actions.TestBase):
         response = self.get('unit?unit=7&assessment=14')
         self.assertEquals('unit?unit=7&assessment=13',
                           get_last_location_href(response))
+
+
+class CourseSettingsRESTHandlerTests(actions.TestBase):
+    _ADMIN_EMAIL = 'admin@foo.com'
+    _COURSE_NAME = 'course_settings'
+    _USER_EMAIL = 'user@foo.com'
+    _NAMESPACE = 'ns_%s' % _COURSE_NAME
+    _URI = 'rest/course/settings'
+    _XSRF_ACTION = 'basic-course-settings-put'
+
+    def setUp(self):
+        super(CourseSettingsRESTHandlerTests, self).setUp()
+        self.base = '/' + self._COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self._COURSE_NAME, self._ADMIN_EMAIL, 'Course Settings')
+        self.course = courses.Course(None, self.app_context)
+
+    def tearDown(self):
+        sites.reset_courses()
+        super(CourseSettingsRESTHandlerTests, self).tearDown()
+
+    def _get_locale_label_titles(self):
+        with common_utils.Namespace(self._NAMESPACE):
+            locale_label_list = models.LabelDAO.get_all_of_type(
+                models.LabelDTO.LABEL_TYPE_LOCALE)
+            return {label.title for label in locale_label_list}
+
+    def _put_extra_locales(self, base_locale, extra_locales):
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            self._XSRF_ACTION)
+        payload = {
+            'course:locale': base_locale,
+            'extra_locales': [
+                {'locale': locale, 'availability': 'available'}
+                for locale in extra_locales]
+        }
+        request = {
+            'key': 'course.yaml',
+            'payload': transforms.dumps(payload),
+            'xsrf_token': xsrf_token
+        }
+        response = self.put(self._URI, {'request': transforms.dumps(request)})
+        self.assertEquals(200, response.status_int)
+        response = transforms.loads(response.body)
+        self.assertEquals(200, response['status'])
+
+    def test_process_extra_locales(self):
+        """Expect locale lables to be kept in sync with locale settings."""
+        actions.login(self._ADMIN_EMAIL)
+
+        # Expect no locale lables to have been set up
+        self.assertEquals(set(), self._get_locale_label_titles())
+
+        # Expect the base and two extra locales to have been set
+        self._put_extra_locales('en_US', ['en_GB', 'el'])
+        self.assertEquals(
+            {'en_US', 'en_GB', 'el'}, self._get_locale_label_titles())
+
+        # Expect one of the locales to have been deleted
+        self._put_extra_locales('en_US', ['el'])
+        self.assertEquals(
+            {'en_US', 'el'}, self._get_locale_label_titles())
+
+        # Expect one to be removed and one to be added
+        self._put_extra_locales('en_US', ['fr'])
+        self.assertEquals(
+            {'en_US', 'fr'}, self._get_locale_label_titles())
+
+        # Expect base locale to change
+        self._put_extra_locales('el', ['fr'])
+        self.assertEquals(
+            {'el', 'fr'}, self._get_locale_label_titles())
+
