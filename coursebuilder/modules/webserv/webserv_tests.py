@@ -21,11 +21,10 @@ from controllers import sites
 from models import courses
 from tests.functional import actions
 
-
-class WebservTests(actions.TestBase):
+class WebservFunctionalTests(actions.TestBase):
 
     def setUp(self):
-        super(WebservTests, self).setUp()
+        super(WebservFunctionalTests, self).setUp()
         sites.setup_courses('')
 
         # make sure we know of all course availability values; if these change,
@@ -69,24 +68,32 @@ class WebservTests(actions.TestBase):
     def _init_course(self, slug):
         self._import_sample_course()
         sites.setup_courses('course:/%s::ns_webserv' % slug)
-        self.base = '/%s' % slug
 
     def assertNoPage(self, url):
         response = self.get(url, expect_errors=True)
         self.assertEquals(404, response.status_int)
 
+    def assertRedirectPage(self, url, location, partial=False):
+        response = self.get(url, expect_errors=True)
+        self.assertEquals(302, response.status_int)
+        if partial:
+            self.assertIn(location, response.location)
+        else:
+            self.assertEquals('http://localhost' + location, response.location)
+
     def assertPage(self, url, text):
         response = self.get(url)
         self.assertEquals(200, response.status_int, response)
-        self.assertIn(text, response.body)
+        if text:
+            self.assertIn(text, response.body)
 
     def test_no_course_no_webserver(self):
         actions.login('guest@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.disabled()):
+            self.assertRedirectPage('/', '/admin/welcome')
             self.assertNoPage('/test')
             self.assertNoPage('/test/course')
             self.assertNoPage('/test/anything-here/anything.html')
-
             self.assertNoPage('/foo/index.html')
             self.assertNoPage('/foo/')
             self.assertNoPage('/foo')
@@ -95,79 +102,72 @@ class WebservTests(actions.TestBase):
         self._init_course('test')
         actions.login('guest@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.disabled()):
+            self.assertRedirectPage('/', '/test/course?use_last_location=true')
             self.assertPage('/test', 'Searching')
             self.assertPage('/test/', 'Searching')
             self.assertPage('/test/course', 'Searching')
-            self.assertNoPage('/test/anything-here/anything.html')
-
             self.assertNoPage('/test/foo/index.html')
             self.assertNoPage('/test/foo/')
+            self.assertNoPage('/test/anything-here/anything.html')
 
     def test_course_and_webserver(self):
         self._init_course('test')
         actions.login('guest@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled()):
+            self.assertRedirectPage('/', '/test/foo/')
+            self.assertPage('/test', 'Power Searching')
+            self.assertPage('/test/', 'Power Searching')
             self.assertPage('/test/course', 'Power Searching')
             self.assertNoPage('/test/anything-here/anything.html')
-
-            self.assertPage('/test/foo/index.html', 'Web Server')
+            self.assertRedirectPage('/test/foo', '/test/foo/')
             self.assertPage('/test/foo/', 'Web Server')
-            self.assertPage('/test/foo', 'Web Server')
-            self.assertPage('/test/', 'Web Server')
-            self.assertPage('/test', 'Web Server')
+            self.assertPage('/test/foo/index.html', 'Web Server')
             self.assertNoPage('/test/badPage.html')
+
+            # note how existing URLs still work, including /assets/...
+            self.assertPage('/test/course', 'Power Searching')
+            self.assertPage('/test/dashboard', 'Advanced site settings')
+            self.assertPage('/admin/welcome', 'Welcome to Course Builder')
+            self.assertPage('/test/assets/img/Image7.7.png', None)
+
+            # fetch static resource; note it returns 404, because static
+            # serving does not work in the test server
+            self.assertNoPage('/modules/webserv/_static/book-icon-md.png')
 
     def test_course_slug_webserver_no_slug(self):
         self._init_course('test')
         actions.login('guest@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled(slug='')):
-            self.assertPage('/test/course', 'Power Searching')
-            self.assertNoPage('/test/anything-here/anything.html')
-
-            response = self.get('/')
-            self.assertEquals(302, response.status_int, response)
-            self.assertIn('http://localhost/test/index.html', response.location)
-
-            self.assertPage('/test/index.html', 'Web Server')
+            self.assertRedirectPage('/', '/test/')
+            self.assertRedirectPage('/test', '/test/')
             self.assertPage('/test/', 'Web Server')
-            self.assertPage('/test', 'Web Server')
+            self.assertPage('/test/course', 'Power Searching')
+            self.assertPage('/test/index.html', 'Web Server')
             self.assertNoPage('/test/badPage.html')
 
     def test_course_no_slug_webserver_slug(self):
         self._init_course('')
         actions.login('guest@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled()):
+            self.assertRedirectPage('/', '/foo/')
             self.assertPage('/course', 'Power Searching')
-            self.assertNoPage('/anything-here/anything.html')
-
-            response = self.get('/')
-            self.assertEquals(302, response.status_int, response)
-            self.assertIn('http://localhost/index.html', response.location)
-
-            self.assertPage('/foo/index.html', 'Web Server')
+            self.assertRedirectPage('/foo', '/foo/')
             self.assertPage('/foo/', 'Web Server')
-            self.assertPage('/foo', 'Web Server')
+            self.assertPage('/foo/index.html', 'Web Server')
+            self.assertNoPage('/anything-here/anything.html')
             self.assertNoPage('/foo/badPage.html')
 
     def test_course_no_slug_webserver_no_slug(self):
         self._init_course('')
         actions.login('guest@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled(slug='')):
-            # note how /course is still available; enabling web server
-            # on '/' does not shadow any existing namespaced routes!!!
+            self.assertPage('/', 'Web Server')
             self.assertPage('/course', 'Power Searching')
             self.assertNoPage('/anything-here/anything.html')
-
-            response = self.get('/')
-            self.assertEquals(302, response.status_int, response)
-            self.assertIn('http://localhost/index.html', response.location)
-
             self.assertPage('/index.html', 'Web Server')
-
             self.assertNoPage('/foo/index.html')
             self.assertNoPage('/foo/')
             self.assertNoPage('/foo')
-            self.assertNoPage('/foo/')
 
     def test_html_with_and_without_jinja(self):
         self._init_course('test')
@@ -296,13 +296,54 @@ class WebservTests(actions.TestBase):
                 self.assertNoPage('/test/foo/markdown.md')
                 self.assertNoPage('/test/foo/main.css')
 
-    def test_availability_course(self):
+    def test_availability_course_student(self):
         self._init_course('test')
         actions.login('student@example.com')
+
+        for availability in [
+                courses.COURSE_AVAILABILITY_PRIVATE,
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]:
+            env = self.enabled(availability=courses.AVAILABILITY_COURSE)
+            env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
+                availability]})
+            with actions.OverriddenEnvironment(env):
+                self.assertNoPage('/test/foo/index.html')
+                self.assertNoPage('/test/foo/markdown.md')
+                self.assertNoPage('/test/foo/main.css')
+
+        for availability in [
+                courses.COURSE_AVAILABILITY_PUBLIC,
+                courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL]:
+            env = self.enabled(availability=courses.AVAILABILITY_COURSE)
+            env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
+                availability]})
+            with actions.OverriddenEnvironment(env):
+                self.assertPage('/test/foo/index.html', 'Web Server')
+                self.assertPage('/test/foo/markdown.md', 'Web Server')
+                self.assertPage('/test/foo/main.css', 'Web Server')
+
+    def test_availability_course_anonymous_user(self):
+        self._init_course('test')
+        actions.logout()
+
+        login_at = 'https://www.google.com/accounts/Login'
 
         env = self.enabled(availability=courses.AVAILABILITY_COURSE)
         env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
             courses.COURSE_AVAILABILITY_PRIVATE]})
+        with actions.OverriddenEnvironment(env):
+            self.assertRedirectPage(
+                '/test/foo/index.html', login_at, partial=True)
+            self.assertRedirectPage(
+                '/test/foo/index.html', login_at, partial=True)
+            self.assertRedirectPage(
+                '/test/foo/markdown.md', login_at, partial=True)
+            self.assertRedirectPage(
+                '/test/foo/main.css', login_at, partial=True)
+
+        env = self.enabled(availability=courses.AVAILABILITY_COURSE)
+        env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]})
         with actions.OverriddenEnvironment(env):
             self.assertNoPage('/test/foo/index.html')
             self.assertNoPage('/test/foo/markdown.md')
@@ -310,7 +351,6 @@ class WebservTests(actions.TestBase):
 
         for availability in [
                 courses.COURSE_AVAILABILITY_PUBLIC,
-                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
                 courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL]:
             env = self.enabled(availability=courses.AVAILABILITY_COURSE)
             env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[

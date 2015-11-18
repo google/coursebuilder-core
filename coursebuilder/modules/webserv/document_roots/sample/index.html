@@ -2,18 +2,25 @@
 <html>
   <head>
     <link rel="shortcut icon" href="favicon.ico">
+    <link rel="stylesheet" type="text/css" href="main.css">
   </head>
   <body>
-    <img src='your_logo_here.png' />
     <p>Welcome to Course Builder Web Server!</p>
+    <hr />
     <ul>
-    <li>Here is a server variable hat shows a course name:
-        <b>{{ course_info.course.title }}</b></li>
-    <li>Here is a link to a Markdown page: <a href='markdown.html'>markdown.html</a>.</li>
-    <li>Here is a video:
-        {{ '<gcb-youtube videoid="1ppwmxidyIE"></gcb-youtube>' | gcb_tags }}</li>
-    <li>Here is a link to a <a href='jinja.html'>web page</a> using Jinja
-        templating engine.</li>
+      <li>Here is a server variable that shows a title of the current course:
+          <b>{{ course_info.course.title }}</b></li>
+      <li>Here is a link to a <a href='markdown.html'>web page authored in Markdown</a>.</li>
+      <li>Here is a link to a <a href='jinja.html'>web page using the Jinja</a>
+          templating engine.</li>
+      <li>Here is a video:
+          {{ '<gcb-youtube videoid="1ppwmxidyIE"></gcb-youtube>' | gcb_tags }}</li>
+      <li>Here is an image from /modules/webserv/doc_roots/sample/...:
+          <img src='your_logo_here.png' /></li>
+      <li>Here is an image from /assets/...:
+          <img src='assets/img/Image11.1.png' /></li>
+      <li>Here is an image from /modules/webserv/_static/...:
+          <img src='/modules/webserv/_static/book-icon-md.png' /></li>
     </ul>
   </body>
 </html>

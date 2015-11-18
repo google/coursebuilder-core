@@ -15,8 +15,6 @@
 """Webserv, a module for static content publishing.
 
   TODO(psimakov):
-      - don't directly handle /<course_slug>; but redirect to
-          /<course_slug>/index.html
       - add support for document_roots/sample/_static/*.*
       - map vfs folder
       - add caching directives
@@ -62,7 +60,6 @@ GOOD_SLUG_REGEX = '^[A-Za-z0-9_-]*$'
 
 ADMIN_HOME_PAGE = '/admin/welcome'
 COURSE_HOME_PAGE = '/course?use_last_location=true'
-WEBSERV_HOME_PAGE = '/index.html'
 REGISTER_HOME = '/register'
 
 AVAILABILITY_SELECT_DATA = [
@@ -76,6 +73,11 @@ webserv_module = None
 def get_config(app_context):
     return app_context.get_environ().get(
         'modules', {}).get('webserv', {})
+
+
+def get_slug(config):
+    slug = config.get(WEBSERV_SLUG)
+    return '/%s' % slug if slug else '/'
 
 
 def make_doc_root_select_data():
@@ -106,8 +108,20 @@ class WebServerDisplayableElement(object):
         self.shown_when_unavailable = False
 
 
-class RootHandler(utils.ApplicationHandler):
+class RootHandler(utils.ApplicationHandler, utils.QueryableRouteMixin):
     """Handles routing to '/'."""
+
+    @classmethod
+    def can_handle_route_method_path_now(cls, route, method, path):
+        index = sites.get_course_index()
+        app_context = index.get_course_for_path('/')
+        if app_context:
+            config = get_config(app_context)
+            if config.get(WEBSERV_ENABLED):
+                slug = get_slug(config)
+                if slug == '/':
+                    return False
+        return True
 
     def get(self):
         index = sites.get_course_index()
@@ -117,17 +131,37 @@ class RootHandler(utils.ApplicationHandler):
                 course = index.get_all_courses()[0]
             config = get_config(course)
             if config.get(WEBSERV_ENABLED):
-                location = WEBSERV_HOME_PAGE
+                location = get_slug(config)
+                if location != '/':
+                    location += '/'
             else:
                 location = COURSE_HOME_PAGE
             self.redirect(utils.ApplicationHandler.canonicalize_url_for(
-                course, location))
+                course, location), normalize=False)
         else:
             self.redirect(ADMIN_HOME_PAGE)
 
 
 class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
     """A class that will handle web requests."""
+
+    def get_base_path(self, config):
+        web_server_slug = get_slug(config)
+        course_slug = self.app_context.get_slug()
+        path = ''
+        if course_slug != '/':
+            path = course_slug
+            if web_server_slug != '/':
+                path += web_server_slug
+        else:
+            path = web_server_slug
+        return path
+
+    def get_mime_type(self, filename, default='application/octet-stream'):
+        guess = mimetypes.guess_type(filename)[0]
+        if guess is None:
+            return default
+        return guess
 
     def prepare_metadata(self, course_availability, student):
         env = self.app_context.get_environ()
@@ -136,27 +170,6 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
             env, student, self.get_course(), course_availability)
         self.template_value['gcb_os_env'] = os.environ
         self.template_value['gcb_course_env'] = self.app_context.get_environ()
-
-    def get_mime_type(self, filename, default='application/octet-stream'):
-        guess = mimetypes.guess_type(filename)[0]
-        if guess is None:
-            return default
-        return guess
-
-    def norm_path(self, app_context, config, path):
-        course_slug = app_context.get_slug()
-        slug = '/%s' % config.get(WEBSERV_SLUG)
-        if path and path.startswith(course_slug):
-            path = sites.unprefix(path, course_slug)
-        if path and path.startswith(slug):
-            path = sites.unprefix(path, slug)
-        return path
-
-    def get_path(self, config):
-        path = self.norm_path(self.app_context, config, self.request.path)
-        if path == '/':
-            path = WEBSERV_HOME_PAGE
-        return os.path.normpath(path)
 
     def get_metadata(self):
         metadata = {}
@@ -214,9 +227,8 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
         li = text.rsplit(find, 1)
         return replace.join(li)
 
-    def get_target_filename(self, doc_root, config):
+    def get_target_filename(self, doc_root, relname, config):
         doc_root = os.path.normpath(doc_root)
-        relname = self.get_path(config)
         base_name = os.path.join(
             os.path.abspath(os.path.dirname(__file__)),
             WEBSERV_DOC_ROOTS_DIR_NAME, doc_root)
@@ -226,34 +238,45 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
         if os.path.isfile(filename):
             return filename, relname
 
-        # try alternative filename name for markdown
+        # try index.html assuming this filename is folder
+        if os.path.isdir(filename):
+            filename = os.path.join(filename, 'index.html')
+            relname = '/index.html'
+            if os.path.isfile(filename):
+                return filename, relname
+
+        # try alternative filename for markdown
         if config.get(WEBSERV_MD_ENABLED) and filename.endswith('.html'):
             relname = self.replace_last(relname, '.html', '.md')
-            filename = base_name + relname
+            filename = self.replace_last(filename, '.html', '.md')
             if os.path.isfile(filename):
                 return filename, relname
 
         return None, None
 
-    def serve_resource(self, config):
+    def serve_resource(self, config, relname):
         doc_root = config.get(WEBSERV_DOC_ROOT)
         if not doc_root:
-            self.error(404)
+            self.error(404, 'No doc_root')
             return
 
-        filename, relname = self.get_target_filename(doc_root, config)
+        # get absolute filename of requested file
+        filename, relname = self.get_target_filename(doc_root, relname, config)
         if filename is None:
-            self.error(404)
+            self.error(404, 'Bad filename %s' % filename)
             return
 
+        # map to a specific processor based on extension
         _, ext = os.path.splitext(filename)
         if ext:
             ext = ext[1:]
         extension_to_target = {'html': self.do_html, 'md': self.do_markdown}
         target = extension_to_target.get(ext, self.do_plain)
+
+        # render
         target(config, filename, relname)
 
-    def webserv_get(self, config):
+    def webserv_get(self, config, relname):
         course_avail = self.get_course().get_course_availability()
         self_avail = config.get(WEBSERV_AVAILABILITY)
 
@@ -266,22 +289,40 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
             course_avail, student.is_transient,
             custom_modules.can_see_drafts(self.app_context),
             WebServerDisplayableElement(self_avail))
-        if not displayability.is_displayed:
-            self.error(404)
+        if not displayability.is_link_displayed:
+            self.error(404, 'Negative displayability: %s' % str(displayability))
             return
 
         # render content
-        self.serve_resource(config)
+        return self.serve_resource(config, relname)
 
     def get(self):
         config = get_config(self.app_context)
-        if config.get(WEBSERV_ENABLED):
-            self.webserv_get(config)
+
+        # first take care of URL that have no ending slash; these can be
+        # '/course_slug' or '/course_slug/web_server_slug'; note that either
+        # can be '/'
+        base_path = self.get_base_path(config)
+
+        if base_path == self.request.path and (
+                base_path != '/') and config.get(WEBSERV_ENABLED):
+            self.redirect(base_path + '/', normalize=False)
+            return
+
+        if (self.request.path).startswith(
+                base_path) and config.get(WEBSERV_ENABLED):
+            # handle '/course_slug/web_server_slug' requests if path matches
+            if base_path == '/':
+                relname = self.request.path
+            else:
+                relname = self.request.path[len(base_path):]
+            self.webserv_get(config, relname)
         else:
             if self.path_translated in ['/', '/course']:
+                # dispatch to existing course handler
                 super(WebServer, self).get()
             else:
-                self.error(404)
+                self.error(404, 'No handlers found')
 
 
 def get_schema_fields():

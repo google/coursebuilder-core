@@ -1,4 +1,16 @@
-This is a Course Builder Web Server module test file to verify that only
-*.html files are subject to Jinja templating. For example: this variable
-{{ course_info.course.title }} should not be expanded because this file
-is *.css.
+/*
+
+    This is a Course Builder Web Server module test file to verify that only
+    *.html files are subject to Jinja templating. For example: this variable
+    {{ course_info.course.title }} should not be expanded because this file
+    is *.css.
+
+*/
+
+img {
+    height: 48px;
+}
+
+li {
+  padding-bottom: 8px;
+}
