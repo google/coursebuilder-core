@@ -504,8 +504,6 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
                 q_keys, contents = _add_assessment(unit)
                 if q_keys:
                     question_keys += q_keys
-                    if len(q_keys) > 1:
-                        question_keys += ['subtotal']
                     unit_contents.append(contents)
             if unit.pre_assessment:
                 assessment = course.find_unit_by_id(unit.pre_assessment)
