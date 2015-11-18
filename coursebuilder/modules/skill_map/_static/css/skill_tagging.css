@@ -139,6 +139,9 @@ div.edit-skill-popup ol.location-display-root button.close {
   font-size: 16px;
   color: #aaa;
 }
+div.edit-skill-popup ol.question-display-root button.close {
+  margin-left: 1em;
+}
 div.edit-skill-popup div.controls {
   text-align: right;
 }
