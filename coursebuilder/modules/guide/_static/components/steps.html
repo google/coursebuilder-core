@@ -548,6 +548,7 @@
         overflow: hidden;
         border-radius: 4px;
         padding: 6px 16px;
+        cursor: pointer;
       }
 
       .toc-item i {
@@ -633,7 +634,7 @@
                 <i>{{item.step}}</i><span>{{item.label}}</span>
               </paper-item>
             </template>
-            <paper-item on-tap="_goToHome">
+            <paper-item class="toc-item" on-tap="_goToHome">
               <iron-icon icon="arrow-back"></iron-icon>
               <span>Back to guides</span>
             </paper-item>
