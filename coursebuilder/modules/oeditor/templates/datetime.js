@@ -20,7 +20,7 @@ function bindDatetimeField(Y) {
 
       if (this.options.description) {
         $('<div class="inputEx-description">')
-            .text(this.options.description)
+            .html(this.options.description)
             .attr('id', this.options.id + '-desc')
             .insertBefore(that.divEl.lastChild);
       }
