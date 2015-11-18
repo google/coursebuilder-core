@@ -359,7 +359,7 @@ class UnitLessonCompletionTracker(object):
             if question.type == question.MULTIPLE_CHOICE:
                 q_id = 'u.%s.l.%s.c.%s' % (
                     unit.unit_id, lesson.lesson_id, cpt['instanceid'])
-                lesson_label = str(lesson.index) or lesson.title
+                lesson_label = str(lesson.index or lesson.title)
                 if lesson_label.startswith('Lesson '):
                     lesson_label = lesson_label.replace('Lesson ', '', 1)
                 label = 'Unit %s Lesson %s, Question %s' % (
@@ -385,7 +385,7 @@ class UnitLessonCompletionTracker(object):
                 if question.type == question.MULTIPLE_CHOICE:
                     q_id = 'u.%s.l.%s.c.%s.i.%s' % (
                         unit.unit_id, lesson.lesson_id, cpt['instanceid'], ind)
-                    lesson_label = str(lesson.index) or lesson.title
+                    lesson_label = str(lesson.index or lesson.title)
                     if lesson_label.startswith('Lesson '):
                         lesson_label = lesson_label.replace('Lesson ', '', 1)
                     label = ('Unit %s Lesson %s, Question Group %s Question %s'
