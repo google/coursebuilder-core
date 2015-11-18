@@ -946,19 +946,7 @@
       },
 
       _goToHome: function () {
-        var index;
-        var parts = location.search.substring(1).split('&');
-        for (var i = 0; i < parts.length; i++) {
-          var param = parts[i].split('=');
-          if (param[0] === 'index') {
-            index = param[1];
-            break;
-          }
-        }
-        if (!index) {
-          index = '/modules/guide';
-        }
-        window.location.href = decodeURIComponent(index);
+        window.location.href = '/modules/guide';
       },
 
       _trackHeaderMode: function() {
