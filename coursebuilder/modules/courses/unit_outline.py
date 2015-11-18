@@ -50,6 +50,7 @@ class OutlineElement(dict):
 
     ALLOWED_FIELDS = [
         'id',  # ID of Unit13 or Lesson13
+        'course_element',  # Reference to a Unit or Lesson object
         'contents',  # Array of OutlineElement sub-items, possibly empty.
         'is_active',  # True if outline is for page showing this item's content.
         'kind',  # {'unit', 'assessment', 'link', 'lesson', 'peer_review'}
@@ -103,8 +104,7 @@ class StudentCourseView(object):
     TODO: Eventually make results of this class available as a REST service.
     """
 
-    def __init__(self, course, student=None, unit=None,
-                 lesson_or_assessment=None):
+    def __init__(self, course, student=None, selected_ids=None):
         self._course = course
         self._reviews_processor = self._course.get_reviews_processor()
         self._app_context = self._course.app_context
@@ -112,15 +112,6 @@ class StudentCourseView(object):
         self._student_preferences = (
             models.StudentPreferencesDAO.load_or_default())
         self._settings = self._app_context.get_environ()
-
-        self._outer_id = self._inner_id = None
-        if unit:
-            self._outer_id = unit.unit_id
-            if lesson_or_assessment:
-                if hasattr(lesson_or_assessment, 'lesson_id'):
-                    self._inner_id = lesson_or_assessment.lesson_id
-                else:
-                    self._inner_id = lesson_or_assessment.unit_id
 
         # Find out course availability policy.  Mostly this is for
         # distinguishing whether we are in 'registration_required' versus
@@ -150,12 +141,17 @@ class StudentCourseView(object):
 
         self._contents = []
         self._accessible_units = []
+        self._active_elements = []
         self._accessible_lessons = collections.defaultdict(list)
         self._traverse_course(units)
+        self._identify_active_items(selected_ids)
 
     @property
     def contents(self):
         return self._contents
+
+    def get_active_elements(self):
+        return self._active_elements
 
     def get_units(self):
         return self._accessible_units
@@ -198,6 +194,54 @@ class StudentCourseView(object):
                     return True
         return False
 
+    def _identify_active_items(self, selected_ids):
+        """Find best match to desired hierarchy of course items."""
+        selected_ids = selected_ids or []
+
+        # Iterate down the list of selected IDs, finding the chosen item.
+        element = self
+        for selected_id in selected_ids:
+            for sub_element in element.contents:
+                if str(sub_element.id) == str(selected_id):
+                    element = sub_element
+                    element.is_active = True
+                    self._active_elements.append(element)
+                    break
+            else:
+                # If we don't find every item on the list of desired IDs, we
+                # didn't match anything.  However, overspecifying when we end
+                # at an all-on-one-page unit is OK.  This nicely supports old
+                # links from when the unit wasn't on-one-page as well as an
+                # edge case for showing the confirmation page when submitting
+                # pre/post assessments in all-on-one-page units.
+                if (not hasattr(element, 'course_element') or
+                    not hasattr(element.course_element,
+                                'show_contents_on_one_page') or
+                    not element.course_element.show_contents_on_one_page):
+
+                    del self._active_elements[:]
+                    return
+
+        # 'element' is now pointing at the last valid thing found (possibly
+        # the entire course).  Walk down the hierarchy, selecting the first
+        # user-visible item within each sub-list.  This selects the correct
+        # sub-element when a URL is underspecified.
+        while True:
+            for sub_element in element.contents:
+                if sub_element.link:
+                    element = sub_element
+                    element.is_active = True
+                    self._active_elements.append(element)
+                    break
+            else:
+                break
+
+        # If the leaf of the selection hierarchy is not visible to the
+        # user, then we didn't find anything.
+        if self._active_elements and not self._active_elements[-1].link:
+            del self._active_elements[:]
+            return
+
     def _traverse_course(self, units):
         for unit in units:
             # If this is a pre/post assessment, defer and let the unit it's
@@ -223,17 +267,17 @@ class StudentCourseView(object):
                 e = self._build_elements_for_custom_unit(unit, displayability)
             self._contents.extend(e)
 
-    def _determine_displayability(self, course_element,
-                                  parent_displayability=None):
+    def _determine_displayability(self, course_element):
         return courses.Course.get_element_displayability(
             self._course_availability, self._student.is_transient,
-            self._can_see_drafts, course_element, parent_displayability)
+            self._can_see_drafts, course_element)
 
     def _build_element_common(self, element, displayability, link,
                               parent_element=None):
         if not displayability.is_displayed:
             raise ValueError('Should not add non-displayble elements')
         ret = OutlineElement()
+        ret.course_element = element
         ret.is_available_to_students = displayability.is_available_to_students
         ret.is_available_to_visitors = displayability.is_available_to_visitors
         if hasattr(element, 'lesson_id'):
@@ -249,10 +293,7 @@ class StudentCourseView(object):
                 ret.title = element.title
 
         if parent_element:
-            ret.is_active = (ret.id == self._inner_id)
             ret.parent_id = parent_element.unit_id
-        else:
-            ret.is_active = (ret.id == self._outer_id)
 
         if displayability.is_link_displayed:
             ret.link = link
@@ -280,14 +321,13 @@ class StudentCourseView(object):
             if unit.pre_assessment:
                 assessment = self._course.find_unit_by_id(unit.pre_assessment)
                 assessment_displayability = self._determine_displayability(
-                    assessment, unit_displayability)
+                    assessment)
                 if assessment_displayability.is_displayed:
                     element.contents.extend(
                         self._build_elements_for_assessment(
                             assessment, assessment_displayability, unit))
             for lesson in self._course.get_lessons(unit.unit_id):
-                lesson_displayability = self._determine_displayability(
-                    lesson, unit_displayability)
+                lesson_displayability = self._determine_displayability(lesson)
                 if lesson_displayability.is_displayed:
                     element.contents.extend(
                         self._build_elements_for_lesson(
@@ -297,7 +337,7 @@ class StudentCourseView(object):
             if unit.post_assessment:
                 assessment = self._course.find_unit_by_id(unit.post_assessment)
                 assessment_displayability = self._determine_displayability(
-                    assessment, unit_displayability)
+                    assessment)
                 if assessment_displayability.is_displayed:
                     element.contents.extend(
                         self._build_elements_for_assessment(
@@ -312,6 +352,14 @@ class StudentCourseView(object):
                         prev_element.next_link = sub_element.link
                         sub_element.prev_link = prev_element.link
                     prev_element = sub_element
+
+            # If no sub-item within the unit is linkable, then don't bother
+            # allowing the unit itself to be linkable, unless the user is
+            # the admin, in which case do allow availability so that linking
+            # to the item from the course overview does not unexpectedly
+            # bounce the user out to the course syllabus page.
+            if prev_element is None and not self._can_see_drafts:
+                element.link = None
         return [element]
 
     def _build_elements_for_link(self, unit, displayability):
@@ -366,6 +414,7 @@ class StudentCourseView(object):
 
         ret = OutlineElement()
         ret.id = unit.unit_id
+        ret.course_element = unit
         ret.parent_id = unit.unit_id
         ret.kind = 'peer_review'
         ret.is_available_to_students = displayability.is_available_to_students

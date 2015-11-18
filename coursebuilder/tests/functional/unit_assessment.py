@@ -702,14 +702,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.assertNotIn(self.assessment_one.html_content, response.body,
             msg=('Private pre-assessment content should not be visible to '
                 'student'))
-        self.assertIn("This assessment is not available", response.body)
-
-        response = self.get(self._unit_assessment_url(
-            self.unit_one_lesson.unit_id, self.assessment_two.unit_id))
-        self.assertNotIn(self.assessment_two.html_content, response.body,
-            msg=('Private post-assessment content should not be visible to '
-                'student'))
-        self.assertIn("This assessment is not available", response.body)
+        self.assertEquals(response.status_int, 302)  # expect redir to /
 
         actions.login(ADMIN_EMAIL)
 

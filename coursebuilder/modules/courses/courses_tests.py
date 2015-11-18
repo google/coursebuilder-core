@@ -710,7 +710,8 @@ class AvailabilityTests(actions.TestBase):
                 'progress-notstarted-9', []),
         ]
     ALL_LEVELS_NO_LINKS_NO_PROGRESS = [
-        Element('Unit 1 - Unit One', None, None, []),
+        Element('Unit 1 - Unit One', None, None, [
+            Element('1.1 Lesson Zero', None, None, [])]),
         Element('Link One', None, None, []),
         Element('Assessment One', None, None, []),
         Element('Unit 2 - Unit Two', None, None, contents=[
@@ -730,7 +731,8 @@ class AvailabilityTests(actions.TestBase):
         Element('Assessment Three', None, None, []),
         ]
     ALL_LEVELS_WITH_LINKS_NO_PROGRESS = [
-        Element('Unit 1 - Unit One', 'unit?unit=1', None, []),
+        Element('Unit 1 - Unit One', 'unit?unit=1', None, [
+            Element('1.1 Lesson Zero', 'unit?unit=1&lesson=16', None, [])]),
         Element('Link One', 'http://www.foo.com', None, []),
         Element('Assessment One', 'assessment?name=3', None, []),
         Element('Unit 2 - Unit Two', 'unit?unit=4', None, contents=[
@@ -748,7 +750,8 @@ class AvailabilityTests(actions.TestBase):
         Element('Assessment Three', 'assessment?name=9', None, []),
         ]
     ALL_LEVELS_WITH_LINKS_ASSESSMENT_PROGRESS = [
-        Element('Unit 1 - Unit One', 'unit?unit=1', None, []),
+        Element('Unit 1 - Unit One', 'unit?unit=1', None, [
+            Element('1.1 Lesson Zero', 'unit?unit=1&lesson=16', None, [])]),
         Element('Link One', 'http://www.foo.com', None, []),
         Element('Assessment One', 'assessment?name=3',
                 'progress-notstarted-3', []),
@@ -828,6 +831,9 @@ class AvailabilityTests(actions.TestBase):
         self.mid_lesson.title = 'Mid Lesson'
         self.unit_three.pre_assessment = self.pre_assessment.unit_id
         self.unit_three.post_assessment = self.post_assessment.unit_id
+
+        self.lesson_zero = self.course.add_lesson(self.unit_one)
+        self.lesson_zero.title = 'Lesson Zero'
 
         self.course.save()
         self.action_url = '/%s/dashboard?action=%s' % (
@@ -1119,15 +1125,25 @@ class AvailabilityTests(actions.TestBase):
         self.course.set_course_availability(
             courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
 
-        # Not-even-logged-in users see links to all content
+        # Not-even-logged-in users see titles of everything, but since
+        # no sub-items within units are public, we don't get links to them.
         actions.logout()
-        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
-                          self._parse_leftnav(self.get('course')))
+        expected = [
+        Element('Unit 1 - Unit One', None, None, []),
+        Element('Link One', 'http://www.foo.com', None, []),
+        Element('Assessment One', 'assessment?name=3', None, []),
+        Element('Unit 2 - Unit Two', None, None, []),
+        Element('Link Two', 'http://www.bar.com', None, []),
+        Element('Assessment Two', 'assessment?name=6', None, []),
+        Element('Unit 3 - Unit Three', None, None, []),
+        Element('Link Three', None, None, []),
+        Element('Assessment Three', 'assessment?name=9', None, []),
+        ]
+        self.assertEquals(expected, self._parse_leftnav(self.get('course')))
 
         # Non-students see links to all content.
         actions.login(self.USER_EMAIL, is_admin=False)
-        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
-                          self._parse_leftnav(self.get('course')))
+        self.assertEquals(expected, self._parse_leftnav(self.get('course')))
 
         # Students see syllabus with links.
         actions.register(self, self.USER_EMAIL)
@@ -1148,6 +1164,16 @@ class AvailabilityTests(actions.TestBase):
             Element('Assessment Three (Public)', 'assessment?name=9', None, [])
             ]
         self.assertEquals(expected, self._parse_leftnav(self.get('course')))
+
+        # Now make lessons public as well; non-registered students should
+        # now see links to units.
+        self.lesson_zero.availability = courses.AVAILABILITY_AVAILABLE
+        self.lesson_one.availability = courses.AVAILABILITY_AVAILABLE
+        self.mid_lesson.availability = courses.AVAILABILITY_AVAILABLE
+        self.course.save()
+        actions.logout()
+        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                          self._parse_leftnav(self.get('course')))
 
     def test_syllabus_reg_optional_elements_private(self):
         self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
@@ -1363,7 +1389,7 @@ class AvailabilityTests(actions.TestBase):
             expected[replace_at_index] = replacement
             self.assertEquals(expected, actual)
 
-    def test_unavailable_owning_unit_overrides_lesson_publicness(self):
+    def test_unavailable_owning_unit_does_not_override_lesson_publicness(self):
         # Only experimenting on unit_two; make other items non-visible
         # to shorten expected results constants.
         self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
@@ -1418,14 +1444,15 @@ class AvailabilityTests(actions.TestBase):
             'course': {'show_lessons_in_syllabus': True}}):
 
             # Check as non-logged-in user; unit visible, last two items
-            # should be visible but not linkable, even though lesson 3
+            # should be visible, and lesson3 should be linkable, since it
             # is marked as public.
             actions.logout()
             response = self.get('course')
             self.assertEquals([
                 Element('Unit 2 - Unit Two', None, None, contents=[
                     Element('2.2 Lesson Two', None, None, []),
-                    Element('2.3 Lesson Three', None, None, [])])],
+                    Element('2.3 Lesson Three', 'unit?unit=4&lesson=12',
+                            None, [])])],
                 self._parse_leftnav(response))
 
             # Ditto for logged-in user
@@ -1434,7 +1461,8 @@ class AvailabilityTests(actions.TestBase):
             self.assertEquals([
                 Element('Unit 2 - Unit Two', None, None, contents=[
                     Element('2.2 Lesson Two', None, None, []),
-                    Element('2.3 Lesson Three', None, None, [])])],
+                    Element('2.3 Lesson Three', 'unit?unit=4&lesson=12',
+                            None, [])])],
                 self._parse_leftnav(response))
 
             # Registered students see both available lessons.

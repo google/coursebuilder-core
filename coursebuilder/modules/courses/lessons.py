@@ -100,39 +100,6 @@ def extract_unit_and_lesson(handler):
     return unit, _get_selected_or_first_lesson(handler, unit)
 
 
-def extract_unit_and_lesson_or_assessment(handler):
-    unit = _get_selected_unit_or_first_unit(handler)
-    if not unit:
-        return None, None, None
-
-    lesson = None
-    lesson_id = handler.request.get('lesson')
-    if lesson_id:
-        lesson = handler.get_course().find_lesson_by_id(unit, lesson_id)
-
-    assessment = None
-    assessment_id = handler.request.get('assessment')
-    if assessment_id:
-        assessment = handler.get_course().find_unit_by_id(assessment_id)
-
-    if lesson or assessment:
-        return unit, lesson, assessment
-
-    if unit.pre_assessment:
-        return unit, None, handler.get_course().find_unit_by_id(
-            unit.pre_assessment)
-
-    first_lesson = _get_first_lesson(handler, unit.unit_id)
-    if first_lesson:
-        return unit, first_lesson, None
-
-    if unit.post_assessment:
-        return unit, None, handler.get_course().find_unit_by_id(
-            unit.post_assessment)
-
-    return unit, None, None
-
-
 def get_unit_and_lesson_id_from_url(handler, url):
     """Extracts unit and lesson ids from a URL."""
     url_components = urlparse.urlparse(url)
@@ -274,18 +241,37 @@ class UnitHandler(utils.BaseHandler):
                 student = models.Student.get_enrolled_student_by_user(user)
             student = student or models.TransientStudent()
 
-            unit, lesson, assessment = extract_unit_and_lesson_or_assessment(
-                self)
-            unit_id = unit.unit_id
+            # What unit/lesson/assessment IDs are wanted for this request?
+            selected_ids = []
+            if 'unit' in self.request.params:
+                selected_ids.append(self.request.get('unit'))
+                if 'lesson' in self.request.params:
+                    selected_ids.append(self.request.get('lesson'))
+                elif 'assessment' in self.request.params:
+                    selected_ids.append(self.request.get('assessment'))
 
-            # If the unit is not currently available, and the user does not have
-            # the permission to see drafts, redirect to the main page.
+            # Build up an object giving this student's view on the course.
             course = self.get_course()
             student_view = unit_outline.StudentCourseView(
-                course, student, unit, lesson or assessment)
-            if not student_view.is_visible([unit_id]):
+                course, student, selected_ids)
+
+            # If the location in the course selected by GET arguments is not
+            # available, redirect to the course overview page.
+            active_elements = student_view.get_active_elements()
+            if not active_elements:
                 self.redirect('/')
                 return
+            unit = active_elements[0].course_element
+            if (not unit.show_contents_on_one_page and
+                len(active_elements) < len(selected_ids)):
+                self.redirect('/')
+                return
+            lesson = assessment = None
+            if len(active_elements) > 1:
+                if active_elements[1].kind == 'lesson':
+                    lesson = active_elements[1].course_element
+                else:
+                    assessment = active_elements[1].course_element
 
             # Set template values for nav bar and page type.
             self.template_value['navbar'] = {'course': True}
@@ -298,7 +284,7 @@ class UnitHandler(utils.BaseHandler):
             # progress indicators) in the lesson body. They are used by the
             # custom component renderers in the assessment_tags module.
             self.student = student
-            self.unit_id = unit_id
+            self.unit_id = unit.unit_id
 
             course_availability = course.get_course_availability()
             settings = self.app_context.get_environ()
@@ -308,6 +294,13 @@ class UnitHandler(utils.BaseHandler):
                 'confirmation' not in self.request.params):
                 self._show_all_contents(student, unit, student_view)
             else:
+                # For all-on-one-page units, the student view won't believe
+                # that pre/post assessments are separate, visibile things,
+                # so we must separately load the appropriate assessment.
+                if (unit.show_contents_on_one_page and
+                    'confirmation' in self.request.params):
+                    assessment = course.find_unit_by_id(
+                        self.request.get('assessment'))
                 self._show_single_element(student, unit, lesson, assessment,
                                           student_view)
 

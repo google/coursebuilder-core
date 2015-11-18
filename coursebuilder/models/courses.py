@@ -607,7 +607,7 @@ class Lesson12(object):
 
     @property
     def availability(self):
-        return AVAILABILITY_AVAILABLE
+        return AVAILABILITY_COURSE
 
     @property
     def auto_index(self):
@@ -1294,19 +1294,13 @@ class CourseModel13(object):
         else:
             raise ValueError('Unexpected value "%s" for unit availability; '
                              'expected one of: %s' % (
-                                 unit_or_lesson.availabilty,
+                                 unit_or_lesson.availability,
                                  ' '.join(AVAILABILITY_VALUES)))
+
     def is_unit_available(self, unit):
-        parent_unit = self.get_parent_unit(unit.unit_id)
-        if parent_unit and not self.is_unit_available(parent_unit):
-            return False
         return self._is_unit_or_lesson_available(unit)
 
     def is_lesson_available(self, unit, lesson):
-        if unit is None:
-            unit = self.find_unit_by_id(lesson.unit_id)
-        if not self.is_unit_available(unit):
-            return False
         return self._is_unit_or_lesson_available(lesson)
 
     def _flush_deleted_objects(self):
@@ -3445,7 +3439,7 @@ course:
     @classmethod
     def get_element_displayability(
         cls, course_availability, student_is_transient, can_see_drafts,
-        course_element, parent_displayability=None):
+        course_element):
         """Determine whether an element is visible and/or linkable.
 
         Here, we are relying on a behavior of the rest of this class, to wit:
@@ -3531,22 +3525,6 @@ course:
                     is_link_displayed = True
                     is_available_to_students = True
                     is_available_to_visitors = False
-
-        # If the parent is not available in display/link mode, then neither
-        # is the child.
-        if parent_displayability:
-            is_displayed = min(
-                parent_displayability.is_displayed,
-                is_displayed)
-            is_link_displayed = min(
-                parent_displayability.is_link_displayed,
-                is_link_displayed)
-            is_available_to_students = min(
-                parent_displayability.is_available_to_students,
-                is_available_to_students)
-            is_available_to_visitors = min(
-                parent_displayability.is_available_to_visitors,
-                is_available_to_visitors)
 
         # Users with this permission (which includes course and site admins)
         # can always see and navigate to every item in student-view contexts.
