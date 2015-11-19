@@ -6,7 +6,7 @@ $(function() {
     }
   }
   function updateShowWhenUnavailableCheckbox(rowData) {
-    if (rowData.availability.getValue() == 'unavailable') {
+    if (rowData.availability.getValue() == 'private') {
       rowData.shown_when_unavailable.enable();
     } else {
       rowData.shown_when_unavailable.setValue(false);
