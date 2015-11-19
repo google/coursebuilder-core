@@ -380,7 +380,7 @@
             <h1>Guides</h1>
           </span>
         </paper-toolbar>
-        <paper-menu selected="{{selectedCategory}}" attr-for-selected="label" class="menu" on-core-select="selectCategory">
+        <paper-menu selected="{{selectedCategory}}" attr-for-selected="label" class="menu">
           <template is="dom-repeat" items="{{categories}}" as="category" index-as="i">
             <paper-item label="{{category}}" class$="{{_computeClass2(categories, i)}}">{{category}}</paper-item>
           </template>
@@ -473,14 +473,10 @@
           var scrollContainer = this.$.main.$.mainContainer;
           var scrollTarget = this.cards_[this.categoryPositions_[this.selectedCategory]];
           smoothScroll(scrollContainer, scrollTarget, 1000, 60);
+          this.$.drawer.togglePanel();
         },
         isPhoneSizeChanged: function () {
           this.set('$.drawer.drawerWidth', this.isPhoneSize ? '40%' : '30%');
-        },
-        selectCategory: function (e) {
-          if (e.detail.isSelected) {
-            this.$.drawer.togglePanel();
-          }
         },
         toggleDrawer: function () {
           this.$.drawer.togglePanel();

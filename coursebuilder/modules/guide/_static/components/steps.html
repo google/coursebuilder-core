@@ -890,6 +890,7 @@
         if (this.selected === this.steps.length - 1 && !this._resumed) {
           this.fire('gcb-step-card-event-completed');
         }
+        this._toggleDrawer();
       },
 
       _stateLoaded: function() {
