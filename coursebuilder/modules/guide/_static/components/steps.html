@@ -618,8 +618,7 @@
 
     <paper-header-panel mode="seamed" id="header">
       <paper-toolbar>
-        <paper-icon-button icon="menu" hidden="{{!drawerOpen}}" on-tap="_toggleDrawer"></paper-icon-button>
-        <paper-icon-button icon="arrow-back" hidden="{{drawerOpen}}" on-tap="_goToHome"></paper-icon-button>
+        <paper-icon-button icon="menu" hidden$="{{!narrow}}" on-tap="_toggleDrawer"></paper-icon-button>
         <h1>{{title}}</h1>
         <div id="countdown" title="Time remaining" class="flex" hidden$="{{!_isPositiveNum(duration)}}">
           <iron-icon icon="schedule"></iron-icon> <span>{{remaining}}</span> min remaining
@@ -634,6 +633,10 @@
                 <i>{{item.step}}</i><span>{{item.label}}</span>
               </paper-item>
             </template>
+            <paper-item class="toc-item" on-tap="_goToHome">
+              <iron-icon icon="arrow-back"></iron-icon>
+              <span>Back to guides</span>
+            </paper-item>
           </paper-menu>
         </div>
 
@@ -812,7 +815,6 @@
       ready: function() {
         // select the step early, before localStorage is loaded
         this._updateStepIndexFromUrl();
-        this.drawerOpen = this.$.drawer.narrow;
       },
 
       attached: function() {
@@ -957,7 +959,6 @@
 
       _toggleDrawer: function() {
         this.$.drawer.togglePanel();
-        this.drawerOpen = !this.drawerOpen;
       },
 
       _tocItemClass: function(selected, i) {
