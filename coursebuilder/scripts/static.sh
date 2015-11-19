@@ -11,16 +11,17 @@ LN_SOURCE="$SOURCE_DIR/lib"
 # Declare resources subject to static serving. OS X is still on bash 3.x, so we
 # have to fake out associative arrays rather than use declare -A.
 STATIC_SERV=( \
-    "codemirror-4.5.0:codemirror"
-    "crossfilter-1.3.7:crossfilter-1.3.7"
-    "d3-3.4.3:d3-3.4.3"
-    "dc.js-1.6.0:dc.js-1.6.0"
-    "dependo-0.1.4:dependo-0.1.4"
-    "inputex-3.1.0:inputex-3.1.0"
-    "material-design-iconic-font-1.1.1:material-design-icons"
-    "underscore-1.4.3:underscore-1.4.3"
-    "yui_2in3-2.9.0:2in3"
-    "yui_3.6.0:yui_3.6.0" \
+    "codemirror-4.5.0:/static/codemirror"
+    "crossfilter-1.3.7:/static/crossfilter-1.3.7"
+    "d3-3.4.3:/static/d3-3.4.3"
+    "dc.js-1.6.0:/static/dc.js-1.6.0"
+    "dependo-0.1.4:/static/dependo-0.1.4"
+    "inputex-3.1.0:/static/inputex-3.1.0"
+    "material-design-iconic-font-1.1.1:/static/material-design-icons"
+    "polymer-guide-1.2.0:/modules/guide/resources/polymer"
+    "underscore-1.4.3:/static/underscore-1.4.3"
+    "yui_2in3-2.9.0:/static/2in3"
+    "yui_3.6.0:/static/yui_3.6.0" \
 )
 
 # Prepare files for static serving
@@ -69,7 +70,7 @@ if [ "$ALLOW_STATIC_SERV" = true ] ; then
   for entry in "${STATIC_SERV[@]}"; do
     KEY=${entry%%:*}
     VALUE=${entry#*:}
-    STATIC_YAML_TEXT+=$"- url: /static/$VALUE"$'\n'
+    STATIC_YAML_TEXT+=$"- url: $VALUE"$'\n'
     STATIC_YAML_TEXT+=$"  static_dir: lib/_static/$KEY"$'\n'
     STATIC_YAML_TEXT+=$"  expiration: 10m"$'\n'
   done
