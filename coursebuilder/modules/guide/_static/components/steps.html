@@ -617,7 +617,6 @@
     </iron-localstorage>
 
     <paper-header-panel mode="seamed" id="header">
-
       <paper-toolbar>
         <paper-icon-button icon="menu" hidden="{{!drawerOpen}}" on-tap="_toggleDrawer"></paper-icon-button>
         <paper-icon-button icon="arrow-back" hidden="{{drawerOpen}}" on-tap="_goToHome"></paper-icon-button>
@@ -827,6 +826,10 @@
         this._setSteps(steps);
         this._setDuration(duration);
         this._updateRemaining();
+
+        this.async(function(){
+          window.addEventListener('popstate', this._updateStepIndexFromUrl.bind(this));
+        });
 
         if (this.color) {
             this.customStyle['--gcb-step-container-header-background'] = this.color;
