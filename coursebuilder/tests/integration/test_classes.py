@@ -291,8 +291,8 @@ class AdminTests(integration.TestBase):
             'input[name=videoid]', '123'
         ).click_rte_save(
         ).click_preview(
-        ).ensure_preview_document_matches_regex(
-            'YouTube:<div class="gcb-video-container">'
+        ).ensure_preview_document_matches_text(
+            '<script>gcbTagYoutubeEnqueueVideo("123", '
         ).click_plain_text(
         ).ensure_instanceid_count_equals(
             1
@@ -437,9 +437,9 @@ class QuestionsTest(integration.TestBase):
         ).click_rte_close(
         ).click_preview(
         #---------------------------------------------- Confirm in preview
-        ).ensure_preview_document_matches_regex(
+        ).ensure_preview_document_matches_text(
             '23 points'
-        ).ensure_preview_document_matches_regex(
+        ).ensure_preview_document_matches_text(
             'What color is the sky?'
         ).click_rich_text(
 
@@ -467,13 +467,13 @@ class QuestionsTest(integration.TestBase):
         ).click_rte_close(
         ).click_preview(
         #---------------------------------------------- Confirm in preview
-        ).ensure_preview_document_matches_regex(
+        ).ensure_preview_document_matches_text(
             '24 points'
-        ).ensure_preview_document_matches_regex(
+        ).ensure_preview_document_matches_text(
             'Type "woof"'
-        ).ensure_preview_document_matches_regex(
+        ).ensure_preview_document_matches_text(
             '23 points'
-        ).ensure_preview_document_matches_regex(
+        ).ensure_preview_document_matches_text(
             'What color is the sky?'
         )
 

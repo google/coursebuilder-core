@@ -1085,30 +1085,34 @@ class AvailabilityTests(actions.TestBase):
         self.assertEquals(expected, self._parse_leftnav(response))
 
     def test_syllabus_reg_required_elements_same_as_course(self):
-        self.course.set_course_availability(
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+        with actions.OverriddenEnvironment({'course': {
+                'can_record_student_events': False}}):
 
-        # Not-even-logged-in users see syllabus items, but no links.
-        actions.logout()
-        self.assertEquals(self.TOP_LEVEL_NO_LINKS_NO_PROGRESS,
-                          self._parse_leftnav(self.get('course')))
+            self.course.set_course_availability(
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
 
-        # Non-students see syllabus, but nothing is linked.
-        actions.login(self.USER_EMAIL, is_admin=False)
-        self.assertEquals(self.TOP_LEVEL_NO_LINKS_NO_PROGRESS,
-                          self._parse_leftnav(self.get('course')))
+            # Not-even-logged-in users see syllabus items, but no links.
+            actions.logout()
+            self.assertEquals(self.TOP_LEVEL_NO_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
 
-        # Registered tudents see syllabus with links and assessment progress.
-        actions.register(self, self.USER_EMAIL)
-        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
-                          self._parse_leftnav(self.get('course')))
+            # Non-students see syllabus, but nothing is linked.
+            actions.login(self.USER_EMAIL, is_admin=False)
+            self.assertEquals(self.TOP_LEVEL_NO_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
 
-        # Admins see syllabus; no (Private) or (Public); all are linked.
-        # (Since admin is not also a registered student, no progress
-        # indicators) appear
-        actions.login(self.ADMIN_EMAIL, is_admin=True)
-        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
-                          self._parse_leftnav(self.get('course')))
+            # Registered tudents see syllabus with links and assessment
+            # progress.
+            actions.register(self, self.USER_EMAIL)
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+            # Admins see syllabus; no (Private) or (Public); all are linked.
+            # (Since admin is not also a registered student, no progress
+            # indicators) appear
+            actions.login(self.ADMIN_EMAIL, is_admin=True)
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
 
     def test_syllabus_reg_required_elements_public(self):
         self.unit_one.availability = courses.AVAILABILITY_AVAILABLE
@@ -1125,45 +1129,51 @@ class AvailabilityTests(actions.TestBase):
         self.course.set_course_availability(
             courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
 
-        # Not-even-logged-in users see titles of everything, but since
-        # no sub-items within units are public, we don't get links to them.
-        actions.logout()
-        expected = [
-        Element('Unit 1 - Unit One', None, None, []),
-        Element('Link One', 'http://www.foo.com', None, []),
-        Element('Assessment One', 'assessment?name=3', None, []),
-        Element('Unit 2 - Unit Two', None, None, []),
-        Element('Link Two', 'http://www.bar.com', None, []),
-        Element('Assessment Two', 'assessment?name=6', None, []),
-        Element('Unit 3 - Unit Three', None, None, []),
-        Element('Link Three', None, None, []),
-        Element('Assessment Three', 'assessment?name=9', None, []),
-        ]
-        self.assertEquals(expected, self._parse_leftnav(self.get('course')))
+        with actions.OverriddenEnvironment({'course': {
+                'can_record_student_events': False}}):
 
-        # Non-students see links to all content.
-        actions.login(self.USER_EMAIL, is_admin=False)
-        self.assertEquals(expected, self._parse_leftnav(self.get('course')))
-
-        # Students see syllabus with links.
-        actions.register(self, self.USER_EMAIL)
-        self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
-                          self._parse_leftnav(self.get('course')))
-
-        # Admins see syllabus; all marked (Public); all are linked.
-        actions.login(self.ADMIN_EMAIL, is_admin=True)
-        expected = [
-            Element('Unit 1 - Unit One (Public)', 'unit?unit=1', None, []),
-            Element('Link One (Public)', 'http://www.foo.com', None, []),
-            Element('Assessment One (Public)', 'assessment?name=3', None, []),
-            Element('Unit 2 - Unit Two (Public)', 'unit?unit=4', None, []),
-            Element('Link Two (Public)', 'http://www.bar.com', None, []),
-            Element('Assessment Two (Public)', 'assessment?name=6', None, []),
-            Element('Unit 3 - Unit Three (Public)', 'unit?unit=7', None, []),
-            Element('Link Three (Public)', None, None, []),
-            Element('Assessment Three (Public)', 'assessment?name=9', None, [])
+            # Not-even-logged-in users see titles of everything, but since
+            # no sub-items within units are public, we don't get links to them.
+            actions.logout()
+            expected = [
+                Element('Unit 1 - Unit One', None, None, []),
+                Element('Link One', 'http://www.foo.com', None, []),
+                Element('Assessment One', 'assessment?name=3', None, []),
+                Element('Unit 2 - Unit Two', None, None, []),
+                Element('Link Two', 'http://www.bar.com', None, []),
+                Element('Assessment Two', 'assessment?name=6', None, []),
+                Element('Unit 3 - Unit Three', None, None, []),
+                Element('Link Three', None, None, []),
+                Element('Assessment Three', 'assessment?name=9', None, []),
             ]
-        self.assertEquals(expected, self._parse_leftnav(self.get('course')))
+            self.assertEquals(expected, self._parse_leftnav(self.get('course')))
+
+            # Non-students see links to all content.
+            actions.login(self.USER_EMAIL, is_admin=False)
+            self.assertEquals(expected, self._parse_leftnav(self.get('course')))
+
+            # Students see syllabus with links.
+            actions.register(self, self.USER_EMAIL)
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
+
+            # Admins see syllabus; all marked (Public); all are linked.
+            actions.login(self.ADMIN_EMAIL, is_admin=True)
+            expected = [
+                Element('Unit 1 - Unit One (Public)', 'unit?unit=1', None, []),
+                Element('Link One (Public)', 'http://www.foo.com', None, []),
+                Element(
+                    'Assessment One (Public)', 'assessment?name=3', None, []),
+                Element('Unit 2 - Unit Two (Public)', 'unit?unit=4', None, []),
+                Element('Link Two (Public)', 'http://www.bar.com', None, []),
+                Element(
+                    'Assessment Two (Public)', 'assessment?name=6', None, []),
+                Element(
+                    'Unit 3 - Unit Three (Public)', 'unit?unit=7', None, []),
+                Element('Link Three (Public)', None, None, []),
+                Element(
+                    'Assessment Three (Public)', 'assessment?name=9', None, [])]
+            self.assertEquals(expected, self._parse_leftnav(self.get('course')))
 
         # Now make lessons public as well; non-registered students should
         # now see links to units.
@@ -1239,33 +1249,38 @@ class AvailabilityTests(actions.TestBase):
             self.assertEquals(expected, self._parse_leftnav(response))
 
     def test_syllabus_reg_optional_elements_same_as_course(self):
-        for _availability in (
-            courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL,
-            courses.COURSE_AVAILABILITY_PUBLIC):
-            self.course.set_course_availability(_availability)
+        with actions.OverriddenEnvironment({'course': {
+                'can_record_student_events': False}}):
 
-            # Check as non-logged-in user
-            actions.logout()
-            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
-                              self._parse_leftnav(self.get('course')))
+            for _availability in (
+                courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL,
+                courses.COURSE_AVAILABILITY_PUBLIC):
+                self.course.set_course_availability(_availability)
 
-            # Check as logged-in user
-            actions.login(self.USER_EMAIL, is_admin=False)
-            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
-                              self._parse_leftnav(self.get('course')))
-
-            # As registered student.  Registration only available with
-            # registration-optional; browse-only courses do not support this.
-            if _availability != courses.COURSE_AVAILABILITY_PUBLIC:
-                actions.register(self, self.USER_EMAIL)
-                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                # Check as non-logged-in user
+                actions.logout()
+                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
                                   self._parse_leftnav(self.get('course')))
-                actions.unregister(self)
 
-            # Check as admin
-            actions.login(self.ADMIN_EMAIL, is_admin=True)
-            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
-                              self._parse_leftnav(self.get('course')))
+                # Check as logged-in user
+                actions.login(self.USER_EMAIL, is_admin=False)
+                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                                  self._parse_leftnav(self.get('course')))
+
+                # As registered student.  Registration only available with
+                # registration-optional; browse-only courses do not support
+                # this.
+                if _availability != courses.COURSE_AVAILABILITY_PUBLIC:
+                    actions.register(self, self.USER_EMAIL)
+                    self.assertEquals(
+                        self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                        self._parse_leftnav(self.get('course')))
+                    actions.unregister(self)
+
+                # Check as admin
+                actions.login(self.ADMIN_EMAIL, is_admin=True)
+                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                                  self._parse_leftnav(self.get('course')))
 
     def test_syllabus_reg_optional_elements_public(self):
         self.unit_one.availability = courses.AVAILABILITY_AVAILABLE
@@ -1279,39 +1294,45 @@ class AvailabilityTests(actions.TestBase):
         self.assessment_three.availability = courses.AVAILABILITY_AVAILABLE
         self.course.save()
 
-        for _availability in (
-            courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL,
-            courses.COURSE_AVAILABILITY_PUBLIC):
-            self.course.set_course_availability(_availability)
+        with actions.OverriddenEnvironment({'course': {
+                'can_record_student_events': False}}):
 
-            # Check as non-logged-in user.
-            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
-                              self._parse_leftnav(self.get('course')))
+            for _availability in (
+                courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL,
+                courses.COURSE_AVAILABILITY_PUBLIC):
+                self.course.set_course_availability(_availability)
 
-            # Check as logged-in user.
-            actions.login(self.USER_EMAIL, is_admin=False)
-            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
-                              self._parse_leftnav(self.get('course')))
-
-            # As registered user (only meaningful when registration available)
-            if _availability != courses.COURSE_AVAILABILITY_PUBLIC:
-                actions.register(self, self.USER_EMAIL)
-                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                # Check as non-logged-in user.
+                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
                                   self._parse_leftnav(self.get('course')))
-                actions.unregister(self)
 
-            # Check as admin; all should show and be linked.  No
-            # public/private markers, since all items are available to all.
-            actions.login(self.ADMIN_EMAIL, is_admin=True)
-            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
-                              self._parse_leftnav(self.get('course')))
-            actions.logout()
+                # Check as logged-in user.
+                actions.login(self.USER_EMAIL, is_admin=False)
+                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                                  self._parse_leftnav(self.get('course')))
+
+                # As registered user (only meaningful when registration is
+                # available)
+                if _availability != courses.COURSE_AVAILABILITY_PUBLIC:
+                    actions.register(self, self.USER_EMAIL)
+                    self.assertEquals(
+                        self.TOP_LEVEL_WITH_LINKS_ASSESSMENT_PROGRESS,
+                        self._parse_leftnav(self.get('course')))
+                    actions.unregister(self)
+
+                # Check as admin; all should show and be linked.  No
+                # public/private markers, since all items are available to all.
+                actions.login(self.ADMIN_EMAIL, is_admin=True)
+                self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                                  self._parse_leftnav(self.get('course')))
+                actions.logout()
 
     def test_syllabus_with_lessons(self):
         self.course.set_course_availability(
             courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
-        with actions.OverriddenEnvironment({
-            'course': {'show_lessons_in_syllabus': True}}):
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True,
+                'can_record_student_events': False}}):
 
             # Check as non-logged-in user; labels but no links or progress.
             self.assertEquals(self.ALL_LEVELS_NO_LINKS_NO_PROGRESS,
@@ -1413,8 +1434,9 @@ class AvailabilityTests(actions.TestBase):
 
         # Check this from syllabus; don't want link suppression for active
         # lesson to confound the issue.
-        with actions.OverriddenEnvironment({
-            'course': {'show_lessons_in_syllabus': True}}):
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True,
+                'can_record_student_events': False}}):
 
             # Check as non-logged-in user; not even "Syllabus" should show.
             actions.logout()
@@ -1440,8 +1462,9 @@ class AvailabilityTests(actions.TestBase):
 
         # Check this from syllabus; don't want link suppression for active
         # lesson to confound the issue.
-        with actions.OverriddenEnvironment({
-            'course': {'show_lessons_in_syllabus': True}}):
+        with actions.OverriddenEnvironment({'course': {
+            'show_lessons_in_syllabus': True,
+            'can_record_student_events': False}}):
 
             # Check as non-logged-in user; unit visible, last two items
             # should be visible, and lesson3 should be linkable, since it
@@ -1483,8 +1506,9 @@ class AvailabilityTests(actions.TestBase):
 
         # Check this from syllabus; don't want link suppression for active
         # lesson to confound the issue.
-        with actions.OverriddenEnvironment({
-            'course': {'show_lessons_in_syllabus': True}}):
+        with actions.OverriddenEnvironment({'course': {
+            'show_lessons_in_syllabus': True,
+            'can_record_student_events': False}}):
 
             # Check as non-logged-in user; unit visible and linkable;
             # 1st unit still not visible; 2nd visible only, 3rd linkable.
@@ -1567,8 +1591,9 @@ class AvailabilityTests(actions.TestBase):
         self.course.save()
         self.course.set_course_availability(
             courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
-        with actions.OverriddenEnvironment({
-            'course': {'show_lessons_in_syllabus': True}}):
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True,
+                'can_record_student_events': False}}):
 
             # Logged in but non-student doesn't even see peer review
             actions.login(self.USER_EMAIL)

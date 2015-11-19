@@ -1209,7 +1209,7 @@ class CourseContentElement(DashboardEditor):
         self._tester.driver.switch_to_default_content()
         return self
 
-    def ensure_preview_document_matches_regex(self, regex, index=None):
+    def ensure_preview_document_matches_text(self, text, index=None):
         def preview_spinner_closed(driver):
             spinner = self.find_element_by_css_selector(
                 'div.preview-editor div.ajax-spinner', index, pre_wait=False)
@@ -1221,7 +1221,7 @@ class CourseContentElement(DashboardEditor):
             'div.preview-editor iframe', index)
         self._tester.driver.switch_to_frame(iframe)
         preview_html = self._tester.driver.page_source
-        self._tester.assertRegexpMatches(preview_html, regex)
+        self._tester.assertIn(text, preview_html)
         self._tester.driver.switch_to_default_content()
         return self
 

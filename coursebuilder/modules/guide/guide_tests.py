@@ -148,7 +148,8 @@ class GuideTests(actions.TestBase):
 
                 # check for specific lesson content and custom tags
                 self.assertIn('Check Answer', response.body)
-                self.assertIn('title="YouTube Video Player"', response.body)
+                self.assertIn(
+                    '<script>gcbTagYoutubeEnqueueVideo("', response.body)
                 self.assertIn(
                     '<script src="/modules/'
                     'assessment_tags/resources/grading.js">', response.body)

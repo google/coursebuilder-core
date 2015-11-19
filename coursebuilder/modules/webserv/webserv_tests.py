@@ -185,8 +185,8 @@ class WebservFunctionalTests(actions.TestBase):
             self.assertNotIn('{{ course_info.course.title }}', response.body)
             self.assertIn('Power Searching with Google', response.body)
             self.assertIn(
-                'https://www.youtube.com/embed/1ppwmxidyIE', response.body)
-            self.assertIn('title="YouTube Video Player"', response.body)
+                '<script>gcbTagYoutubeEnqueueVideo("1ppwmxidyIE", ',
+                response.body)
 
             response = self.get('/test/foo/main.css')
             self.assertIn('{{ course_info.course.title }}', response.body)

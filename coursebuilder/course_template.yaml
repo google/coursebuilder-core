@@ -23,6 +23,7 @@
 
 course:
   can_student_change_locale: true
+  can_record_student_events: true
 
 ####################################
 # Information about your institution

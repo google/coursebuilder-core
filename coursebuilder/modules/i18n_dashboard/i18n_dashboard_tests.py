@@ -1541,53 +1541,57 @@ class CourseContentTranslationTests(actions.TestBase):
                 './/div[@class="gcb-lesson-content"]/p')])
         self.assertIsNone(dom.find('.//div[@class="gcb-translation-error"]'))
 
-    def test_custom_tag_expanded(self):
-        source_video_id = 'Kdg2drcUjYI'
-        target_video_id = 'jUfccP5Rl5M'
-        unit_header = (
-            'text'
-            '<gcb-youtube videoid="%s" instanceid="c4CLTDvttJEu">'
-            '</gcb-youtube>') % source_video_id
+    def test_custom_tag_expanded_without_analytics(self):
+        with actions.OverriddenEnvironment(
+                {'course': {'can_record_student_events': False}}):
 
-        unit = self.course.add_unit()
-        unit.title = 'Tag Unit'
-        unit.unit_header = unit_header
-        self.course.save()
+            source_video_id = 'Kdg2drcUjYI'
+            target_video_id = 'jUfccP5Rl5M'
+            unit_header = (
+                'text'
+                '<gcb-youtube videoid="%s" instanceid="c4CLTDvttJEu">'
+                '</gcb-youtube>') % source_video_id
 
-        unit_bundle = {
-            'title': {
-                'type': 'string',
-                'source_value': '',
-                'data': [
-                    {'source_value': 'Tag Unit', 'target_value': 'TAG UNIT'}]
-            },
-            'unit_header': {
-                'type': 'html',
-                'source_value': unit_header,
-                'data': [
-                    {
-                        'source_value': (
-                            'text<gcb-youtube#1 videoid="%s" />'
-                        ) % source_video_id,
-                        'target_value': (
-                            'TEXT<gcb-youtube#1 videoid="%s" />'
-                        ) % target_video_id}]
+            unit = self.course.add_unit()
+            unit.title = 'Tag Unit'
+            unit.unit_header = unit_header
+            self.course.save()
+
+            unit_bundle = {
+                'title': {
+                    'type': 'string',
+                    'source_value': '',
+                    'data': [{
+                        'source_value': 'Tag Unit',
+                        'target_value': 'TAG UNIT'}]
+                },
+                'unit_header': {
+                    'type': 'html',
+                    'source_value': unit_header,
+                    'data': [
+                        {
+                            'source_value': (
+                                'text<gcb-youtube#1 videoid="%s" />'
+                            ) % source_video_id,
+                            'target_value': (
+                                'TEXT<gcb-youtube#1 videoid="%s" />'
+                            ) % target_video_id}]
+                }
             }
-        }
-        unit_key_el = ResourceBundleKey(
-            resources_display.ResourceUnit.TYPE, unit.unit_id, 'el')
-        ResourceBundleDAO.save(
-            ResourceBundleDTO(str(unit_key_el), unit_bundle))
+            unit_key_el = ResourceBundleKey(
+                resources_display.ResourceUnit.TYPE, unit.unit_id, 'el')
+            ResourceBundleDAO.save(
+                ResourceBundleDTO(str(unit_key_el), unit_bundle))
 
-        page_html = self.get('unit?unit=%s' % unit.unit_id).body
-        dom = self.parse_html_string(page_html)
-        main = dom.find('.//div[@id="gcb-main-article"]/div[2]')
-        self.assertEquals('TEXT', main.text.strip())
-        self.assertEquals('div', main[0].tag)
-        self.assertEquals('gcb-video-container', main[0].attrib['class'])
-        self.assertEquals(1, len(main[0]))
-        self.assertEquals('iframe', main[0][0].tag)
-        self.assertIn(target_video_id, main[0][0].attrib['src'])
+            page_html = self.get('unit?unit=%s' % unit.unit_id).body
+            dom = self.parse_html_string(page_html)
+            main = dom.find('.//div[@id="gcb-main-article"]/div[2]')
+            self.assertEquals('TEXT', main.text.strip())
+            self.assertEquals('div', main[0].tag)
+            self.assertEquals('gcb-video-container', main[0].attrib['class'])
+            self.assertEquals(1, len(main[0]))
+            self.assertEquals('iframe', main[0][0].tag)
+            self.assertIn(target_video_id, main[0][0].attrib['src'])
 
     def test_custom_tag_with_body_is_translated(self):
         tag_string = (
