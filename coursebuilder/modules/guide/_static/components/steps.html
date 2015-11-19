@@ -591,7 +591,7 @@
         color: #333333;
       }
 
-      .toc-item.iron-selected {
+      .toc-item.selected {
         color: #333333;
         background-color: #DFE0E2;
         font-weight: 500;
@@ -600,8 +600,8 @@
       .toc-item.completed i,
       .toc-item.completed i::before,
       .toc-item.completed i::after,
-      .toc-item.iron-selected i,
-      .toc-item.iron-selected i:before {
+      .toc-item.selected i,
+      .toc-item.selected i:before {
         border-color: #00BCD4;
       }
 
@@ -965,6 +965,9 @@
         var cls = ['toc-item'];
         if (i < selected) {
           cls.push('completed');
+        }
+        if (i == selected) {
+          cls.push('selected');
         }
         return cls.join(' ');
       },
