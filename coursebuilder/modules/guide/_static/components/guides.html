@@ -108,8 +108,10 @@
         border-radius: 4px;
         background-color: #fff; }
         .card paper-button {
-          color: #0097A7;
-          font-weight: 500; }
+          color: #fff;
+          background: #00BCD4;
+          font-weight: 500;
+          padding: 2px;}
         .card paper-button:hover {
           background: #ECEFF1; }
 
@@ -193,7 +195,7 @@
                 </span>
             </div>
             <div>
-              <paper-button noink="" on-tap="open">Start</paper-button>
+              <paper-button raised on-tap="open" style$="{{_computeStyle(color)}}">Start</paper-button>
             </div>
           </div>
         </div>
