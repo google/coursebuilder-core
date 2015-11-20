@@ -300,6 +300,10 @@ window.GcbGoogleDriveTagParent = (function(
     // itself for use. When we're done initializing, we need to signal back to
     // the child that we're ready for input, and the child needs to not send
     // input until this happens or input will vanish.
+    if (module._allApisLoaded()) {
+      module._onGoogleApiLoaded();
+      return;
+    }
     GoogleScriptManager.insertAll()
   };
 
