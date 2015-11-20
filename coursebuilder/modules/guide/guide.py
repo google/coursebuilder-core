@@ -44,8 +44,6 @@ TEMPLATE_DIRS = [
         appengine_config.BUNDLE_ROOT, 'views'),
 ]
 
-RESOURCES_URI = '/modules/guide/resources'
-
 GUIDE_SETTINGS_SCHEMA_SECTION = 'modules:guide'
 GUIDE_URL = 'url'
 GUIDE_ENABLED_FOR_THIS_COURSE = 'enabled'
@@ -55,11 +53,9 @@ GUIDE_DURATION = 'duration'
 GUIDE_AVAILABILITY = 'availability'
 
 AVAILABILITY_SELECT_DATA = [
-    (courses.AVAILABILITY_AVAILABLE, 'Public'),
-    (courses.AVAILABILITY_UNAVAILABLE, 'Unavailable'),
-    (courses.AVAILABILITY_COURSE, 'Course')]
-
-MAIN_HANDLER_URL = '/modules/guide'
+    (courses.AVAILABILITY_UNAVAILABLE, 'Private'),
+    (courses.AVAILABILITY_COURSE, 'Course'),
+    (courses.AVAILABILITY_AVAILABLE, 'Public')]
 
 
 def unit_title(unit, app_context):
@@ -223,40 +219,45 @@ class GuideUnitHandler(utils.BaseHandler):
 def get_schema_fields():
     enabled = schema_fields.SchemaField(
         GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_ENABLED_FOR_THIS_COURSE,
-        'Enabled', 'boolean',
-        optional=False, i18n=False, editable=True,
-        description=str(safe_dom.NodeList().append(safe_dom.Text(
-            'Whether to include this course into Guide experience, '
-            'which can be accessed at ')
-        ).append(safe_dom.assemble_link(
-            '/modules/guide', '/modules/guide', target="_blank")
+        'Enable Guides', 'boolean',
+        optional=True, i18n=False, editable=True,
+        description=str(safe_dom.NodeList(
         ).append(safe_dom.Text(
-            '. Only courses that have "public" availability and Guide '
-            'enabled are included. If no public courses are available, '
-            'Guide experience is disabled.'))))
+            'If checked, this course will be included in the guides '
+            'experience accessible at ')
+        ).append(safe_dom.assemble_link(
+            '/modules/guides', '/modules/guides', target="_blank")
+        ).append(safe_dom.Text(
+            '. Course must not be Private or require Registration. ')
+        ).append(safe_dom.assemble_link(
+            'TBD', 'Learn more...', target="_blank"))))
     color = schema_fields.SchemaField(
         GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_COLOR,
         'Color', 'string',
         optional=True, i18n=False, editable=True,
-        description='Color to use for this course\'s units (#00FF00).')
+        description='The color scheme for this course\'s guides must '
+            'be expressed as a web color hex triplet, beginning with '
+            'an "#". If blank, #00838F will be used.')
     duration = schema_fields.SchemaField(
         GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_DURATION,
         'Duration', 'integer',
         optional=True, i18n=False, editable=True, default_value=0,
         description=(
-            'Average duration in minutes of a lesson in this unit. '
-            'Enter "0" to prevent display of lesson and unit durations.'))
+            'Specify the average length of each lesson in the course in '
+            'minutes and it will be used to estimate the duration of each '
+            'guide. If blank or set to 0, duration will not be shown.'))
     availability = schema_fields.SchemaField(
         GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_AVAILABILITY,
-        'Availability', 'boolean', optional=False, i18n=False,
+        'Availability', 'boolean', optional=True, i18n=False,
         select_data=AVAILABILITY_SELECT_DATA,
-        description='This controls who can access the content. '
-            'Public - content is open to the public; anyone '
-            'can access; no login or registration required. '
-            'Unavailable - content is not accessible by the '
-            'public; only course admins can access. '
-            'Course - same as Course content availability; '
-            'require login and registration, if Course requires it.')
+        default_value=courses.AVAILABILITY_COURSE,
+        description=str(safe_dom.NodeList(
+        ).append(safe_dom.Text(
+            'Guides default to the availability of the course, '
+            'but may also be restricted to admins (Private) or open to '
+            'the public (Public). ')
+        ).append(safe_dom.assemble_link(
+            'TBD', 'Learn more...', target="_blank"))))
 
     return (lambda _: enabled, lambda _: color, lambda _: duration,
             lambda _: availability)
@@ -269,7 +270,7 @@ def register_module():
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             GUIDE_SETTINGS_SCHEMA_SECTION] += get_schema_fields()
         settings.CourseSettingsHandler.register_settings_section(
-            GUIDE_SETTINGS_SCHEMA_SECTION, title='Guide')
+            GUIDE_SETTINGS_SCHEMA_SECTION, title='Guides')
 
     # we now register ZIP handler; here is a test URL:
     #   /modules/guide/resources/polymer/bower_components/bower.json
@@ -277,8 +278,8 @@ def register_module():
         appengine_config.BUNDLE_ROOT, 'lib', 'polymer-guide-1.2.0.zip'))
 
     global_routes = [
-        (RESOURCES_URI + '/polymer/(.*)', polymer_js_handler),
-        (MAIN_HANDLER_URL, GuideApplicationHandler),]
+        ('/modules/guide/resources' + '/polymer/(.*)', polymer_js_handler),
+        ('/modules/guides', GuideApplicationHandler),]
     namespaced_routes = [('/guide', GuideUnitHandler),]
 
     global guide_module  # pylint: disable=global-statement

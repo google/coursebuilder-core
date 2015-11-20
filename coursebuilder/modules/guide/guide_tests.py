@@ -69,11 +69,11 @@ class GuideTests(actions.TestBase):
     def test_guide_disabled(self):
         with actions.OverriddenEnvironment(self.GUIDE_DISABLED):
             actions.login(ADMIN_EMAIL, is_admin=True)
-            response = self.get('/modules/guide', expect_errors=True)
+            response = self.get('/modules/guides', expect_errors=True)
             self.assertEquals(404, response.status_int)
 
             actions.login('guest@sample.com')
-            response = self.get('/modules/guide', expect_errors=True)
+            response = self.get('/modules/guides', expect_errors=True)
             self.assertEquals(404, response.status_int)
 
     def test_guide_enabled_but_course_is_private(self):
@@ -82,7 +82,7 @@ class GuideTests(actions.TestBase):
         with actions.OverriddenEnvironment(environ):
             # admin can see it
             actions.login('guest@sample.com', is_admin=True)
-            response = self.get('/modules/guide')
+            response = self.get('/modules/guides')
             self.assertEquals(200, response.status_int)
             self.assertIn(
                 'category="Power Searching with Google (guide) (private)"',
@@ -90,7 +90,7 @@ class GuideTests(actions.TestBase):
 
             # student still can't
             actions.login('guest@sample.com')
-            response = self.get('/modules/guide', expect_errors=True)
+            response = self.get('/modules/guides', expect_errors=True)
             self.assertEquals(404, response.status_int)
 
     def _test_guide_app(self, login):
@@ -99,7 +99,7 @@ class GuideTests(actions.TestBase):
         with actions.OverriddenEnvironment(environ):
             if login:
                 actions.login('test@example.com')
-            response = self.get('/modules/guide')
+            response = self.get('/modules/guides')
             self.assertIn('<gcb-guide-container>', response.body)
             self.assertIn(
                 'category="Power Searching with Google (guide)"',
@@ -159,7 +159,7 @@ class GuideTests(actions.TestBase):
         environ = self.PUBLIC.copy()
         environ.update(self.GUIDE_ENABLED)
         with actions.OverriddenEnvironment(environ):
-            response = self.get('/modules/guide')
+            response = self.get('/modules/guides')
             self.assertEquals(200, response.status_int)
             self.assertIn(
                 'category="Power Searching with Google (guide)"',
@@ -175,7 +175,7 @@ class GuideTests(actions.TestBase):
 
         environ.update(self.GUIDE_UNAVAILABLE)
         with actions.OverriddenEnvironment(environ):
-            response = self.get('/modules/guide', expect_errors=True)
+            response = self.get('/modules/guides', expect_errors=True)
             self.assertEquals(404, response.status_int)
             for unit in course.get_units():
                 if unit.type != verify.UNIT_TYPE_UNIT:
@@ -190,7 +190,7 @@ class GuideTests(actions.TestBase):
         environ.update(self.GUIDE_ENABLED)
         environ.update(self.GUIDE_UNAVAILABLE)
         with actions.OverriddenEnvironment(environ):
-            response = self.get('/modules/guide', expect_errors=True)
+            response = self.get('/modules/guides', expect_errors=True)
             self.assertEquals(404, response.status_int)
 
     def test_courses_with_different_availabilities(self):
@@ -204,7 +204,7 @@ class GuideTests(actions.TestBase):
 
         actions.logout()
         with actions.OverriddenEnvironment(self.GUIDE_ENABLED):
-            response = self.get('/modules/guide')
+            response = self.get('/modules/guides')
             self.assertEquals(200, response.status_int)
             self.assertIn('category="Power Searching with Google (guide)"',
                           response.body)
