@@ -487,6 +487,10 @@
         };
       }
 
+      iron-icon {
+        margin-right: 12px;
+      }
+
       paper-toolbar {
         background: var(--gcb-step-container-header-background);
       }
@@ -495,6 +499,20 @@
         --paper-fab-keyboard-focus-background: var(--gcb-step-container-fab-background);
         --paper-fab-background: var(--gcb-step-container-fab-background);
       }
+
+      paper-menu {
+        margin-top: 0px;
+        padding-top: 0px;
+      }
+
+      paper-item {
+        cursor: pointer;
+      }
+
+      paper-item:focus {
+        background-color: #DFE0E2;
+      }
+
 
       h1 {
         font-size: 22px;
@@ -540,6 +558,12 @@
       .navbutton.donebutton {
         --paper-fab-keyboard-focus-background: #4CAF50;
         --paper-fab-background: #4CAF50;
+      }
+
+      .title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .toc-item {
@@ -619,24 +643,24 @@
     <paper-header-panel mode="seamed" id="header">
       <paper-toolbar>
         <paper-icon-button icon="menu" hidden$="{{!narrow}}" on-tap="_toggleDrawer"></paper-icon-button>
-        <h1>{{title}}</h1>
+        <h1 class="title">{{title}}</h1>
         <div id="countdown" title="Time remaining" class="flex" hidden$="{{!_isPositiveNum(duration)}}">
           <iron-icon icon="schedule"></iron-icon> <span>{{remaining}}</span> min remaining
         </div>
       </paper-toolbar>
 
       <paper-drawer-panel narrow="{{narrow}}" selected="true" id="drawer" class="layout vertical">
-        <div drawer class="fit">
+        <div drawer class="fit layout vertical">
+          <paper-item class="layout horizontal" on-tap="_goToHome">
+            <iron-icon icon="arrow-back"></iron-icon>
+            <span>Back to guides</span>
+          </paper-item>
           <paper-menu id="toc">
             <template is="dom-repeat" items="{{steps}}">
               <paper-item class$="{{_tocItemClass(selected, index)}}">
                 <i>{{item.step}}</i><span>{{item.label}}</span>
               </paper-item>
             </template>
-            <paper-item class="toc-item" on-tap="_goToHome">
-              <iron-icon icon="arrow-back"></iron-icon>
-              <span>Back to guides</span>
-            </paper-item>
           </paper-menu>
         </div>
 
@@ -660,7 +684,6 @@
             hidden$="{{_hideDoneFab(selected)}}">
           </paper-fab>
         </div>
-
       </paper-drawer-panel>
     </paper-header-panel>
 
@@ -895,7 +918,8 @@
         if (this.selected === this.steps.length - 1 && !this._resumed) {
           this.fire('gcb-step-card-event-completed');
         }
-        this._toggleDrawer();
+
+        this.$.drawer.closeDrawer();
       },
 
       _stateLoaded: function() {
