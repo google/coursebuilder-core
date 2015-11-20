@@ -163,6 +163,10 @@
           color: #607D8B;
           margin-left: 8px; }
 
+      .card-body {
+        width: 100%;
+      }
+
       /* ***** Reponsive ***** */
       @media (max-width: 767px) {
         :host {
@@ -182,7 +186,7 @@
           <div id="icon" class$="{{_computeClass2(categories)}}"></div>
           <h2 class="card-title" hidden$="{{isPhoneSize}}">{{label}}</h2>
         </div>
-        <div class="flex">
+        <div class="card-body">
           <div class="description">
             <h2 class="card-title" hidden$="{{!isPhoneSize}}">{{label}}</h2>
             <span>{{description}}</span>
