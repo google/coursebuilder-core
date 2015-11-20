@@ -347,7 +347,7 @@ class LabelsDataSource(data_sources.AbstractSmallRestDataSource):
         ret = []
         for label in models.LabelDAO.get_all_iter():
             label_type = None
-            for label_type in models.LableDTO.LABEL_TYPES:
+            for label_type in models.LabelDTO.LABEL_TYPES:
                 if label_type.type == label.type:
                     break
             user_editable = (
