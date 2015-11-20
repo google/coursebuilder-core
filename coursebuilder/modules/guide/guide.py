@@ -54,8 +54,7 @@ GUIDE_AVAILABILITY = 'availability'
 
 AVAILABILITY_SELECT_DATA = [
     (courses.AVAILABILITY_UNAVAILABLE, 'Private'),
-    (courses.AVAILABILITY_COURSE, 'Course'),
-    (courses.AVAILABILITY_AVAILABLE, 'Public')]
+    (courses.AVAILABILITY_COURSE, 'Course')]
 
 
 def unit_title(unit, app_context):
