@@ -37,6 +37,7 @@ import markdown
 
 import appengine_config
 from common import jinja_utils
+from common import safe_dom
 from common import schema_fields
 from controllers import sites
 from controllers import utils
@@ -63,9 +64,9 @@ COURSE_HOME_PAGE = '/course?use_last_location=true'
 REGISTER_HOME = '/register'
 
 AVAILABILITY_SELECT_DATA = [
-    (courses.AVAILABILITY_AVAILABLE, 'Public'),
-    (courses.AVAILABILITY_UNAVAILABLE, 'Unavailable'),
-    (courses.AVAILABILITY_COURSE, 'Course')]
+    (courses.AVAILABILITY_UNAVAILABLE, 'Private'),
+    (courses.AVAILABILITY_COURSE, 'Course'),
+    (courses.AVAILABILITY_AVAILABLE, 'Public'),]
 
 webserv_module = None
 
@@ -328,45 +329,52 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
 def get_schema_fields():
     enabled = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_ENABLED,
-        'Enabled', 'boolean', optional=False, i18n=False,
-        description='Whether to enable static content serving '
-            'for this course.')
+        'Enable Web server', 'boolean', optional=True, i18n=False,
+        description=str(safe_dom.NodeList(
+            ).append(safe_dom.Text(
+                'If checked, static content uploaded for this course '
+                'will be served. ')
+            ).append(safe_dom.assemble_link(
+                'TBD', 'Learn more...', target="_blank"))))
     slug = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_SLUG,
-        'Path', 'string', optional=True, i18n=False,
+        'URL component', 'string', optional=True, i18n=False,
         validator=slug_validator,
-        description='A path where static content will be accessible. '
-            'If value of "sample" is specified, the content will be '
-            'accessible at the URL "/sample". Leave this value blank to '
-            'access the content at the URL "/".')
+        description='This is added to the end of the course URL to '
+            'access the web server content root. If blank, the root '
+            'course URL is used.')
     doc_root = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_DOC_ROOT,
-        'Document Root', 'string', optional=False, i18n=False,
+        'Content root', 'string', optional=False, i18n=False,
         select_data=make_doc_root_select_data(),
-        description='A folder containing static resources. '
-            'It must be part of your deployment and located under '
-            '/modules/webserv/document_roots/.')
+        description=str(safe_dom.NodeList(
+            ).append(safe_dom.Text(
+                'This is the directory within /modules/webserv/document_roots '
+                'to use as the web server content root. ')
+            ).append(safe_dom.assemble_link(
+                'TBD', 'Learn more...', target="_blank"))))
     enabled_jinja = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_JINJA_ENABLED,
-        'Templating Enabled', 'boolean', optional=False, i18n=False,
-        description='Whether to apply Jinja Template Processor to *.html '
-            'files before serving them.')
+        'Process templates', 'boolean', optional=True, i18n=False,
+        description='If checked, the Jinja Template Processor will be applied '
+            'to *.html files before serving them.')
     enabled_md = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_MD_ENABLED,
-        'Markdown Enabled', 'boolean', optional=False, i18n=False,
-        description='Whether to apply Markdown Processor to *.md '
-            'files before serving them.')
+        'Process markdown', 'boolean', optional=True, i18n=False,
+        description='If checked, the Markdown Processor will be applied to '
+            '*.md files before serving them.')
     availability = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_AVAILABILITY,
         'Availability', 'boolean', optional=False, i18n=False,
+        default_value=courses.AVAILABILITY_COURSE,
         select_data=AVAILABILITY_SELECT_DATA,
-        description='This controls who can access the content. '
-            'Public - content is open to the public; anyone '
-            'can access; no login or registration required. '
-            'Unavailable - content is not accessible by the '
-            'public; only course admins can access. '
-            'Course - same as Course content availability; '
-            'require login and registration, if Course requires it.')
+        description=str(safe_dom.NodeList(
+            ).append(safe_dom.Text(
+                'Web pages default to the availability of the course, but may '
+                'also be restricted to admins (Private) or open to the public '
+                '(Public). ')
+            ).append(safe_dom.assemble_link(
+                'TBD', 'Learn more...', target="_blank"))))
 
     return (
         lambda _: enabled, lambda _: slug, lambda _: doc_root,
