@@ -329,7 +329,7 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
 def get_schema_fields():
     enabled = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_ENABLED,
-        'Enable Web server', 'boolean', optional=True, i18n=False,
+        'Enable Web Server', 'boolean', optional=True, i18n=False,
         description=str(safe_dom.NodeList(
             ).append(safe_dom.Text(
                 'If checked, static content uploaded for this course '
@@ -338,14 +338,14 @@ def get_schema_fields():
                 'TBD', 'Learn more...', target="_blank"))))
     slug = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_SLUG,
-        'URL component', 'string', optional=True, i18n=False,
+        'URL Component', 'string', optional=True, i18n=False,
         validator=slug_validator,
         description='This is added to the end of the course URL to '
             'access the web server content root. If blank, the root '
             'course URL is used.')
     doc_root = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_DOC_ROOT,
-        'Content root', 'string', optional=False, i18n=False,
+        'Content Root', 'string', optional=True, i18n=False,
         select_data=make_doc_root_select_data(),
         description=str(safe_dom.NodeList(
             ).append(safe_dom.Text(
@@ -355,17 +355,17 @@ def get_schema_fields():
                 'TBD', 'Learn more...', target="_blank"))))
     enabled_jinja = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_JINJA_ENABLED,
-        'Process templates', 'boolean', optional=True, i18n=False,
+        'Process Templates', 'boolean', optional=True, i18n=False,
         description='If checked, the Jinja Template Processor will be applied '
             'to *.html files before serving them.')
     enabled_md = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_MD_ENABLED,
-        'Process markdown', 'boolean', optional=True, i18n=False,
+        'Process Markdown', 'boolean', optional=True, i18n=False,
         description='If checked, the Markdown Processor will be applied to '
             '*.md files before serving them.')
     availability = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_AVAILABILITY,
-        'Availability', 'boolean', optional=False, i18n=False,
+        'Availability', 'boolean', optional=True, i18n=False,
         default_value=courses.AVAILABILITY_COURSE,
         select_data=AVAILABILITY_SELECT_DATA,
         description=str(safe_dom.NodeList(

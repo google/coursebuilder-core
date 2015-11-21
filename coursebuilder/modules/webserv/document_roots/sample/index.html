@@ -7,6 +7,7 @@
   <body>
     <p>Welcome to Course Builder Web Server!</p>
     <hr />
+    Some of these examples require template or markdown processing.
     <ul>
       <li>Here is a server variable that shows a title of the current course:
           <b>{{ course_info.course.title }}</b></li>
@@ -17,7 +18,7 @@
           {{ '<gcb-youtube videoid="1ppwmxidyIE"></gcb-youtube>' | gcb_tags }}</li>
       <li>Here is an image from /modules/webserv/doc_roots/sample/...:
           <img src='your_logo_here.png' /></li>
-      <li>Here is an image from /assets/...:
+      <li>Here is an image from /assets/... (requires default URL component):
           <img src='assets/img/Image11.1.png' /></li>
       <li>Here is an image from /modules/webserv/_static/...:
           <img src='/modules/webserv/_static/book-icon-md.png' /></li>
