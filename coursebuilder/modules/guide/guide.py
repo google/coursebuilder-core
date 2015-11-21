@@ -97,6 +97,9 @@ class GuideApplicationHandler(utils.ApplicationHandler):
                 unit.unit_id))) if lesson_duration_min else 0
         return total_duration_secs
 
+    def format_availability(self, text):
+        return text.replace('_', ' ').title()
+
     def get_courses(self):
         all_courses = []
         for app_context in sorted(sites.get_all_courses()):
@@ -116,7 +119,8 @@ class GuideApplicationHandler(utils.ApplicationHandler):
                 title = app_context.get_title()
                 if not displayability.is_available_to_visitors and (
                         roles.Roles.is_course_admin(app_context)):
-                    title += ' (%s)' % course.get_course_availability()
+                    title += ' (%s)' % self.format_availability(
+                        course.get_course_availability())
                 slug = app_context.get_slug()
                 if slug == '/':
                     slug = ''
@@ -126,7 +130,8 @@ class GuideApplicationHandler(utils.ApplicationHandler):
 
                 # iterate units
                 units = []
-                for unit in unit_outline.StudentCourseView(course).get_units():
+                for unit in unit_outline.StudentCourseView(
+                        course, student=student).get_units():
                     if unit.type != verify.UNIT_TYPE_UNIT:
                         continue
                     units.append((
@@ -226,8 +231,7 @@ def get_schema_fields():
             'experience accessible at ')
         ).append(safe_dom.assemble_link(
             '/modules/guides', '/modules/guides', target="_blank")
-        ).append(safe_dom.Text(
-            '. Course must not be Private or require Registration. ')
+        ).append(safe_dom.Text('. Course must not be Private. ')
         ).append(safe_dom.assemble_link(
             'TBD', 'Learn more...', target="_blank"))))
     color = schema_fields.SchemaField(
@@ -236,7 +240,7 @@ def get_schema_fields():
         optional=True, i18n=False, editable=True,
         description='The color scheme for this course\'s guides must '
             'be expressed as a web color hex triplet, beginning with '
-            'an "#". If blank, #00838F will be used.')
+            'a "#". If blank, #00838F will be used.')
     duration = schema_fields.SchemaField(
         GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_DURATION,
         'Duration', 'integer',
@@ -253,8 +257,7 @@ def get_schema_fields():
         description=str(safe_dom.NodeList(
         ).append(safe_dom.Text(
             'Guides default to the availability of the course, '
-            'but may also be restricted to admins (Private) or open to '
-            'the public (Public). ')
+            'but may also be restricted to admins (Private). ')
         ).append(safe_dom.assemble_link(
             'TBD', 'Learn more...', target="_blank"))))
 

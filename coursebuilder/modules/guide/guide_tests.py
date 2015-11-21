@@ -85,7 +85,7 @@ class GuideTests(actions.TestBase):
             response = self.get('/modules/guides')
             self.assertEquals(200, response.status_int)
             self.assertIn(
-                'category="Power Searching with Google (guide) (private)"',
+                'category="Power Searching with Google (guide) (Private)"',
                 response.body)
 
             # student still can't
