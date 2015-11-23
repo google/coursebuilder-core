@@ -96,22 +96,12 @@ class WhitelistTest(actions.TestBase):
         response = self.get('/whitelist_test/course', expect_errors=True)
         self.assertEquals(404, response.status_int)
 
-    def _expect_invisible_with_login_redirect(self):
-        response = self.get('/explorer')
-        self.assertNotIn('Whitelist Test', response.body)
-        # Not quite a standard 'invisible' response - a non-logged-in
-        # user will get redirected to the login page, rather than
-        # just served a 404.
-        response = self.get('/whitelist_test/course')
-        self.assertEquals(302, response.status_int)
-        self.assertIn('accounts/Login', response.location)
-
     def test_no_whitelist_not_logged_in(self):
         self._expect_visible()
 
     def test_course_whitelist_not_logged_in(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
-        self._expect_invisible_with_login_redirect()
+        self._expect_invisible()
 
     def test_course_whitelist_as_admin(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
@@ -131,7 +121,7 @@ class WhitelistTest(actions.TestBase):
     def test_global_whitelist_not_logged_in(self):
         config.Registry.test_overrides[
             roles.GCB_WHITELISTED_USERS.name] = STUDENT_WHITELIST
-        self._expect_invisible_with_login_redirect()
+        self._expect_invisible()
 
     def test_global_whitelist_as_admin(self):
         config.Registry.test_overrides[

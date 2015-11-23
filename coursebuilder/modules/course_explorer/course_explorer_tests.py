@@ -195,9 +195,10 @@ class CourseExplorerDisabledTest(actions.TestBase):
         actions.assert_contains(
             'http://localhost/admin/welcome', response.location)
 
-        response = self.get('/assets/img/your_logo_here.png')
-        actions.assert_equals(response.status_int, 302)
-        actions.assert_contains('accounts/Login', response.location)
+        # check course level assets are not accessible
+        response = self.get(
+            '/assets/img/your_logo_here.png', expect_errors=True)
+        actions.assert_equals(response.status_int, 404)
 
         # check explorer pages are not accessible
         not_accessibles = [

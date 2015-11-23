@@ -1507,15 +1507,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         self.error(404)
         self.finalize_response(self.request, self.response, 404)
 
-    def _login_or_404(self, path):
-        """If no user, offer login page, otherwise fail 404."""
-        if not users.get_current_user():
-            self.redirect(users.create_login_url(path))
-        else:
-            self._error_404(path)
-
     def get(self, path):
-        self.invoke_http_verb('GET', path, self._login_or_404)
+        self.invoke_http_verb('GET', path, self._error_404)
 
     def post(self, path):
         self.invoke_http_verb('POST', path, self._error_404)

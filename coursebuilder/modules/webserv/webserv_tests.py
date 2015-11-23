@@ -326,25 +326,12 @@ class WebservFunctionalTests(actions.TestBase):
         self._init_course('test')
         actions.logout()
 
-        login_at = 'https://www.google.com/accounts/Login'
-
-        env = self.enabled(availability=courses.AVAILABILITY_COURSE)
-        env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
-            courses.COURSE_AVAILABILITY_PRIVATE]})
-        with actions.OverriddenEnvironment(env):
-            self.assertRedirectPage(
-                '/test/foo/index.html', login_at, partial=True)
-            self.assertRedirectPage(
-                '/test/foo/index.html', login_at, partial=True)
-            self.assertRedirectPage(
-                '/test/foo/markdown.md', login_at, partial=True)
-            self.assertRedirectPage(
-                '/test/foo/main.css', login_at, partial=True)
-
-        env = self.enabled(availability=courses.AVAILABILITY_COURSE)
-        env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]})
-        with actions.OverriddenEnvironment(env):
+        for availability in [
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
+                courses.COURSE_AVAILABILITY_PRIVATE]:
+            env = self.enabled(availability=courses.AVAILABILITY_COURSE)
+            env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
+                availability]})
             self.assertNoPage('/test/foo/index.html')
             self.assertNoPage('/test/foo/markdown.md')
             self.assertNoPage('/test/foo/main.css')

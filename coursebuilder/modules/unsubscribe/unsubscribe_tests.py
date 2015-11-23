@@ -20,6 +20,7 @@ import urlparse
 
 from common import utils
 from controllers import sites
+from models import courses
 from modules.unsubscribe import unsubscribe
 from tests.functional import actions
 
@@ -146,6 +147,8 @@ class UnsubscribeHandlerTests(BaseUnsubscribeTests):
 
     def test_unsubscribe_request_with_no_email_prompts_for_login(self):
         actions.logout()
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+        course.set_course_availability(courses.COURSE_AVAILABILITY_PUBLIC)
         response = self.get('modules/unsubscribe')
         self.assertEquals(302, response.status_int)
         self.assertEquals(
