@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-16 08:13-0800\n"
-"PO-Revision-Date: 2015-11-02 07:00-0800\n"
+"POT-Creation-Date: 2015-11-23 07:52-0800\n"
+"PO-Revision-Date: 2015-11-23 07:52-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ko <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -148,7 +148,7 @@ msgstr " 힌트 "
 #. as content to external web pages. (I.e., some external site wants
 #. to use this assignment as part of a page's content, but this
 #. is not permitted)
-#: experimental/coursebuilder/modules/assessments/assessments.py:120
+#: experimental/coursebuilder/modules/assessments/assessments.py:123
 msgid "Peer-review assignments cannot be embedded in external pages."
 msgstr "외부 페이지에 동료가 검토한 과제를 삽입할 수 없습니다."
 
@@ -296,7 +296,7 @@ msgstr "아래 버튼을 클릭하여 다른 사람의 과제를 검토하세요
 #. Displayed in the course contents page. Indicates a page to
 #. which students can go to review other students' assignments.
 #: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
-#: experimental/coursebuilder/modules/courses/unit_outline.py:515
+#: experimental/coursebuilder/modules/courses/unit_outline.py:424
 msgid "Review peer assignments"
 msgstr "과제 검토"
 
@@ -858,7 +858,7 @@ msgstr "현재 검색을 사용할 수 없습니다."
 #. unit or lesson.
 #: experimental/coursebuilder/modules/search/results_templates/youtube.html:6
 msgid "View In Course"
-msgstr ""
+msgstr "강의로 보기"
 
 #. Header describing the skills for this lesson
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:20
@@ -1537,4 +1537,5 @@ msgstr "다음 페이지"
 #: experimental/coursebuilder/views/unit.html:142
 msgid "End"
 msgstr "종료"
+
 

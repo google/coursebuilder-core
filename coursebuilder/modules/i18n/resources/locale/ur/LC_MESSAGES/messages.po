@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-16 08:13-0800\n"
-"PO-Revision-Date: 2015-11-02 07:00-0800\n"
+"POT-Creation-Date: 2015-11-23 07:52-0800\n"
+"PO-Revision-Date: 2015-11-23 07:52-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ur <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -148,7 +148,7 @@ msgstr " اشارہ "
 #. as content to external web pages. (I.e., some external site wants
 #. to use this assignment as part of a page's content, but this
 #. is not permitted)
-#: experimental/coursebuilder/modules/assessments/assessments.py:120
+#: experimental/coursebuilder/modules/assessments/assessments.py:123
 msgid "Peer-review assignments cannot be embedded in external pages."
 msgstr "ہمسر کے جائزے کی تفویضات کو خارجی صفحات میں سرایت نہیں کیا جاسکتا ہے۔"
 
@@ -176,7 +176,7 @@ msgstr "آپ کے جوابات کو ای میل کے تحت ریکارڈ کر ل
 #. Text telling students there are not answers recorded for them.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:57
 msgid "You have not submitted any answers to this assignment under the email"
-msgstr "آپ نے ای میل کے تحت اس تفویض کا کوئی جواب جمع نہیں کرایا ہے"
+msgstr "آپ نے ای میل کے تحت اس اسائنمنٹ کا کوئی جواب جمع نہیں کرایا ہے"
 
 #. Text telling students what their recorded email address is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:62
@@ -306,7 +306,7 @@ msgstr "ذیل کے بٹن پر کلک کرکے اپنے ہمسروں کی اس�
 #. Displayed in the course contents page. Indicates a page to
 #. which students can go to review other students' assignments.
 #: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
-#: experimental/coursebuilder/modules/courses/unit_outline.py:515
+#: experimental/coursebuilder/modules/courses/unit_outline.py:424
 msgid "Review peer assignments"
 msgstr "ہمسر کی اسائنمنٹس کا جائزہ لیں"
 
@@ -881,7 +881,7 @@ msgstr "تلاش فی الحال ‏دستیاب نہیں ہے۔"
 #. unit or lesson.
 #: experimental/coursebuilder/modules/search/results_templates/youtube.html:6
 msgid "View In Course"
-msgstr ""
+msgstr "کورس میں دیکھیں"
 
 #. Header describing the skills for this lesson
 #: experimental/coursebuilder/modules/skill_map/templates/lesson_header.html:20
@@ -1592,4 +1592,5 @@ msgstr "اگلا صفحہ"
 #: experimental/coursebuilder/views/unit.html:142
 msgid "End"
 msgstr "اختتام"
+
 
