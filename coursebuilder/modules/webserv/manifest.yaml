@@ -1,6 +1,6 @@
 tests:
   functional:
-    - modules.webserv.webserv_tests.WebservFunctionalTests = 13
+    - modules.webserv.webserv_tests.WebservFunctionalTests = 12
 
 files:
   - modules/webserv/__init__.py

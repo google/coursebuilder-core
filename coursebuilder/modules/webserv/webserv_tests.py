@@ -39,16 +39,12 @@ class WebservFunctionalTests(actions.TestBase):
 
     def disabled(self):
         return {
-            'course': courses.COURSE_AVAILABILITY_POLICIES[
-                  courses.COURSE_AVAILABILITY_PUBLIC],
             'modules': {'webserv': {'enabled': False}}}
 
     def enabled(
             self, slug='foo', jinja_enabled=False, md_enabled=False,
             availability=courses.AVAILABILITY_COURSE):
         return {
-            'course':  courses.COURSE_AVAILABILITY_POLICIES[
-                  courses.COURSE_AVAILABILITY_PUBLIC],
             'modules': {'webserv': {
                 'enabled': True, 'doc_root': 'sample',
                 'jinja_enabled': jinja_enabled, 'md_enabled': md_enabled,
@@ -63,11 +59,14 @@ class WebservFunctionalTests(actions.TestBase):
         errors = []
         dst_course.import_from(src_app_context, errors)
         dst_course.save()
+        self.base = ''
         self.assertEquals(0, len(errors))
+        return dst_course
 
     def _init_course(self, slug):
-        self._import_sample_course()
+        course = self._import_sample_course()
         sites.setup_courses('course:/%s::ns_webserv' % slug)
+        return course
 
     def assertNoPage(self, url):
         response = self.get(url, expect_errors=True)
@@ -87,8 +86,18 @@ class WebservFunctionalTests(actions.TestBase):
         if text:
             self.assertIn(text, response.body)
 
+    def register(self):
+        self.base = '/test'
+        actions.register(self, 'Test Student')
+        self.base = ''
+
+    def unregister(self):
+        self.base = '/test'
+        actions.unregister(self)
+        self.base = ''
+
     def test_no_course_no_webserver(self):
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.disabled()):
             self.assertRedirectPage('/', '/admin/welcome')
             self.assertNoPage('/test')
@@ -100,7 +109,7 @@ class WebservFunctionalTests(actions.TestBase):
 
     def test_course_no_webserver(self):
         self._init_course('test')
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.disabled()):
             self.assertRedirectPage('/', '/test/course?use_last_location=true')
             self.assertPage('/test', 'Searching')
@@ -112,7 +121,7 @@ class WebservFunctionalTests(actions.TestBase):
 
     def test_course_and_webserver(self):
         self._init_course('test')
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled()):
             self.assertRedirectPage('/', '/test/foo/')
             self.assertPage('/test', 'Power Searching')
@@ -136,7 +145,7 @@ class WebservFunctionalTests(actions.TestBase):
 
     def test_course_slug_webserver_no_slug(self):
         self._init_course('test')
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled(slug='')):
             self.assertRedirectPage('/', '/test/')
             self.assertRedirectPage('/test', '/test/')
@@ -147,7 +156,7 @@ class WebservFunctionalTests(actions.TestBase):
 
     def test_course_no_slug_webserver_slug(self):
         self._init_course('')
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled()):
             self.assertRedirectPage('/', '/foo/')
             self.assertPage('/course', 'Power Searching')
@@ -159,7 +168,7 @@ class WebservFunctionalTests(actions.TestBase):
 
     def test_course_no_slug_webserver_no_slug(self):
         self._init_course('')
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled(slug='')):
             self.assertPage('/', 'Web Server')
             self.assertPage('/course', 'Power Searching')
@@ -171,7 +180,7 @@ class WebservFunctionalTests(actions.TestBase):
 
     def test_html_with_and_without_jinja(self):
         self._init_course('test')
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
         with actions.OverriddenEnvironment(self.enabled(jinja_enabled=False)):
             response = self.get('/test/foo/index.html')
             self.assertIn('{{ course_info.course.title }}', response.body)
@@ -196,7 +205,7 @@ class WebservFunctionalTests(actions.TestBase):
             self.assertIn(
                 '<li><b>is_super_admin</b>: True</li>', response.body)
             self.assertIn('Pre-course assessment', response.body)
-            self.assertIn('guest@example.com', response.body)
+            self.assertIn('admin@example.com', response.body)
 
         actions.login('student@example.com')
         with actions.OverriddenEnvironment(self.enabled(jinja_enabled=True)):
@@ -205,12 +214,13 @@ class WebservFunctionalTests(actions.TestBase):
             self.assertNotIn(
                 '<li><b>is_super_admin</b>: True</li>', response.body)
             self.assertNotIn('Pre-course assessment', response.body)
-            self.assertNotIn('guest@example.com', response.body)
+            self.assertNotIn('student@example.com', response.body)
             self.assertIn('can only be seen by the by admin', response.body)
 
     def test_html_with_and_without_markdown(self):
         self._init_course('test')
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
+
         with actions.OverriddenEnvironment(self.enabled(md_enabled=False)):
             response = self.get('/test/foo/markdown.md')
             self.assertNotIn('<h1>A First Level Header</h1>', response.body)
@@ -231,7 +241,7 @@ class WebservFunctionalTests(actions.TestBase):
         # will pretend it exists when markdown is enabled and that it does
         # not exist when markdown is disabled
         self._init_course('test')
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
 
         with actions.OverriddenEnvironment(self.enabled(md_enabled=True)):
             response = self.get('/test/foo/markdown.html')
@@ -246,7 +256,8 @@ class WebservFunctionalTests(actions.TestBase):
 
     def test_markdown_jinja_permutations(self):
         self._init_course('test')
-        actions.login('guest@example.com', is_admin=True)
+        actions.login('admin@example.com', is_admin=True)
+
         with actions.OverriddenEnvironment(self.enabled(
                 md_enabled=False, jinja_enabled=False)):
             response = self.get('/test/foo/markdown.md')
@@ -276,17 +287,17 @@ class WebservFunctionalTests(actions.TestBase):
             self.assertIn('Power Searching with Google', response.body)
 
     def test_availability_unavailable(self):
-        self._init_course('test')
+        course = self._init_course('test')
+        env = self.enabled(availability=courses.AVAILABILITY_UNAVAILABLE)
+
         for availability in [
                 courses.COURSE_AVAILABILITY_PRIVATE,
                 courses.COURSE_AVAILABILITY_PUBLIC,
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
                 courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL]:
-            env = self.enabled(availability=courses.AVAILABILITY_UNAVAILABLE)
-            env.update({
-                'course': courses.COURSE_AVAILABILITY_POLICIES[availability]})
+            course.set_course_availability(availability)
             with actions.OverriddenEnvironment(env):
-                actions.login('student@example.com', is_admin=True)
+                actions.login('admin@example.com', is_admin=True)
                 self.assertPage('/test/foo/index.html', ' Web Server')
                 self.assertPage('/test/foo/markdown.md', ' Web Server')
                 self.assertPage('/test/foo/main.css', ' Web Server')
@@ -296,53 +307,62 @@ class WebservFunctionalTests(actions.TestBase):
                 self.assertNoPage('/test/foo/markdown.md')
                 self.assertNoPage('/test/foo/main.css')
 
-    def test_availability_course_student(self):
-        self._init_course('test')
-        actions.login('student@example.com')
-
-        for availability in [
-                courses.COURSE_AVAILABILITY_PRIVATE,
-                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]:
-            env = self.enabled(availability=courses.AVAILABILITY_COURSE)
-            env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
-                availability]})
-            with actions.OverriddenEnvironment(env):
-                self.assertNoPage('/test/foo/index.html')
-                self.assertNoPage('/test/foo/markdown.md')
-                self.assertNoPage('/test/foo/main.css')
+    def test_availability_course(self):
+        course = self._init_course('test')
+        env = self.enabled(availability=courses.AVAILABILITY_COURSE)
 
         for availability in [
                 courses.COURSE_AVAILABILITY_PUBLIC,
                 courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL]:
-            env = self.enabled(availability=courses.AVAILABILITY_COURSE)
-            env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
-                availability]})
+            course.set_course_availability(availability)
             with actions.OverriddenEnvironment(env):
+                actions.logout()
                 self.assertPage('/test/foo/index.html', 'Web Server')
                 self.assertPage('/test/foo/markdown.md', 'Web Server')
                 self.assertPage('/test/foo/main.css', 'Web Server')
 
-    def test_availability_course_anonymous_user(self):
-        self._init_course('test')
-        actions.logout()
+                actions.login('student@example.com')
+                self.assertPage('/test/foo/index.html', 'Web Server')
+                self.assertPage('/test/foo/markdown.md', 'Web Server')
+                self.assertPage('/test/foo/main.css', 'Web Server')
+
+                if availability == (
+                        courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL):
+                    self.register()
+                    self.assertPage('/test/foo/index.html', ' Web Server')
+                    self.assertPage('/test/foo/markdown.md', ' Web Server')
+                    self.assertPage('/test/foo/main.css', ' Web Server')
+                    self.unregister()
+
+                actions.login('admin@example.com', is_admin=True)
+                self.assertPage('/test/foo/index.html', ' Web Server')
+                self.assertPage('/test/foo/markdown.md', ' Web Server')
+                self.assertPage('/test/foo/main.css', ' Web Server')
 
         for availability in [
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
                 courses.COURSE_AVAILABILITY_PRIVATE]:
-            env = self.enabled(availability=courses.AVAILABILITY_COURSE)
-            env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
-                availability]})
-            self.assertNoPage('/test/foo/index.html')
-            self.assertNoPage('/test/foo/markdown.md')
-            self.assertNoPage('/test/foo/main.css')
-
-        for availability in [
-                courses.COURSE_AVAILABILITY_PUBLIC,
-                courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL]:
-            env = self.enabled(availability=courses.AVAILABILITY_COURSE)
-            env.update({'course': courses.COURSE_AVAILABILITY_POLICIES[
-                availability]})
+            course.set_course_availability(availability)
             with actions.OverriddenEnvironment(env):
-                self.assertPage('/test/foo/index.html', 'Web Server')
-                self.assertPage('/test/foo/markdown.md', 'Web Server')
-                self.assertPage('/test/foo/main.css', 'Web Server')
+                actions.logout()
+                self.assertNoPage('/test/foo/index.html')
+                self.assertNoPage('/test/foo/markdown.md')
+                self.assertNoPage('/test/foo/main.css')
+
+                actions.login('student@example.com')
+                self.assertNoPage('/test/foo/index.html')
+                self.assertNoPage('/test/foo/markdown.md')
+                self.assertNoPage('/test/foo/main.css')
+
+                if availability == (
+                        courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED):
+                    self.register()
+                    self.assertPage('/test/foo/index.html', ' Web Server')
+                    self.assertPage('/test/foo/markdown.md', ' Web Server')
+                    self.assertPage('/test/foo/main.css', ' Web Server')
+                    self.unregister()
+
+                actions.login('admin@example.com', is_admin=True)
+                self.assertPage('/test/foo/index.html', ' Web Server')
+                self.assertPage('/test/foo/markdown.md', ' Web Server')
+                self.assertPage('/test/foo/main.css', ' Web Server')
