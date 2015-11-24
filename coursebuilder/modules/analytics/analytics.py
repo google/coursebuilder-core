@@ -23,6 +23,7 @@ from models import courses
 from models import custom_modules
 from models import data_sources
 from models import data_removal
+from models import services
 from modules.analytics import answers_aggregator
 from modules.analytics import clustering
 from modules.analytics import gradebook
@@ -164,10 +165,13 @@ def get_namespaced_handlers():
 
 def register_module():
 
+    can_record_student_events_name = 'course:' + CAN_RECORD_STUDENT_EVENTS
     can_record_student_events = schema_fields.SchemaField(
-        'course:' + CAN_RECORD_STUDENT_EVENTS, 'Enable Student Analytics',
+        can_record_student_events_name, 'Enable Student Analytics',
         'boolean', i18n=False, optional=True,
-        description=str(messages.ANALYTICS_ENABLE_STUDENT_DESCRIPTION))
+        description=services.help_urls.make_learn_more_message(
+            messages.ANALYTICS_ENABLE_STUDENT_DESCRIPTION,
+            can_record_student_events_name))
     course_settings_fields = [
         lambda course: can_record_student_events
     ]

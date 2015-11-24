@@ -24,6 +24,7 @@ from models import roles
 from models import transforms
 from models import models
 from models import resources_display
+from models import services
 from modules.assessment_tags import gift
 from modules.dashboard import dto_editor
 from modules.dashboard import utils as dashboard_utils
@@ -306,7 +307,9 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
             extra_schema_dict_values={'className': 'gift-description'}))
         gift_questions.add_property(schema_fields.SchemaField(
             'questions', 'Questions', 'text',
-            description=str(messages.GIFT_QUESTIONS_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.GIFT_QUESTIONS_DESCRIPTION,
+                'dashboard:gift_questions:questions'),
             extra_schema_dict_values={'className': 'gift-questions'}))
         return gift_questions
 

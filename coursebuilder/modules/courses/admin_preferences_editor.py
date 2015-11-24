@@ -20,6 +20,7 @@ from common import schema_fields
 from common import users
 from models import models
 from models import roles
+from models import services
 from modules.courses import messages
 from modules.dashboard import dashboard
 from modules.dashboard import dto_editor
@@ -77,11 +78,14 @@ class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):
             'id', '', 'string', optional=True, hidden=True))
         ret.add_property(schema_fields.SchemaField(
             'show_hooks', 'Enable Hook Edits', 'boolean',
-            description=str(messages.ENABLE_HOOK_EDITS), optional=True,
-            hidden=False))
+            description=services.help_urls.make_learn_more_message(
+                messages.ENABLE_HOOK_EDITS, 'settings:debugging:show_hooks'),
+            optional=True, hidden=False))
         ret.add_property(schema_fields.SchemaField(
             'show_jinja_context', 'Show Jinja Context', 'boolean',
-            description=str(messages.SHOW_JINJA_CONTEXT), optional=True,
+            description=services.help_urls.make_learn_more_message(
+                messages.SHOW_JINJA_CONTEXT,
+                'settings:debugging:show_jinja_context'), optional=True,
             hidden=False))
         return ret
 

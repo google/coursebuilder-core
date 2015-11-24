@@ -45,6 +45,7 @@ from models import custom_modules
 from models import data_removal
 from models import data_sources
 from models import models
+from models import services
 from models import transforms
 from modules.questionnaire import messages
 
@@ -105,15 +106,19 @@ class QuestionnaireTag(tags.ContextAwareTag):
         reg.add_property(
             schema_fields.SchemaField(
                 'form-id', 'Form ID', 'string', i18n=False,
-                description=str(messages.RTE_QUESTIONNAIRE_FORM_ID)))
+                description=services.help_urls.make_learn_more_message(
+                    messages.RTE_QUESTIONNAIRE_FORM_ID,
+                    'questionnaire:questionnaire:form_id')))
         reg.add_property(
             schema_fields.SchemaField(
-                'button-label', 'Submit Label', 'string',
-                i18n=True, description=messages.RTE_QUESTIONNAIRE_SUBMIT_LABEL))
+                'button-label', 'Submit Label', 'string', i18n=True,
+                description=str(messages.RTE_QUESTIONNAIRE_SUBMIT_LABEL)))
         reg.add_property(
             schema_fields.SchemaField(
                 'disabled', 'Disable Fields', 'boolean', optional=True,
-                description=str(messages.RTE_QUESTIONNAIRE_DISABLE_FIELDS)))
+                description=services.help_urls.make_learn_more_message(
+                    messages.RTE_QUESTIONNAIRE_DISABLE_FIELDS,
+                    'questionnaire:questionnaire:disabled')))
         reg.add_property(
             schema_fields.SchemaField(
                 'post-message', 'Submission Text', 'text', optional=True,

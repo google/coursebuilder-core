@@ -34,6 +34,7 @@ from models import courses
 from models import custom_modules
 from models import models
 from models import roles
+from models import services
 from models import transforms
 from modules.core_tags import messages
 from modules.oeditor import oeditor
@@ -218,7 +219,9 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
             runtime = _Runtime(handler.app_context)
             if not runtime.configured():
                 return self.unavailable_schema(
-                    messages.GOOGLE_DRIVE_UNAVAILABLE)
+                    services.help_urls.make_learn_more_message(
+                        messages.GOOGLE_DRIVE_UNAVAILABLE,
+                        'core_tags:google_drive:unavailable'))
 
             api_key = runtime.get_api_key()
             client_id = runtime.get_client_id()
@@ -599,7 +602,9 @@ class GoogleGroup(CoreTag):
         reg = schema_fields.FieldRegistry(GoogleGroup.name())
         reg.add_property(schema_fields.SchemaField(
             'group', 'Group Name', 'string', i18n=False,
-            description=str(messages.RTE_GOOGLE_GROUP_GROUP_NAME)))
+            description=services.help_urls.make_learn_more_message(
+                messages.RTE_GOOGLE_GROUP_GROUP_NAME,
+                'core_tags:google_group:name')))
         reg.add_property(schema_fields.SchemaField(
             'category', 'Category Name', 'string', optional=True, i18n=False,
             description=messages.RTE_GOOGLE_GROUP_CATEGORY_NAME))
@@ -731,7 +736,8 @@ class Markdown(tags.ContextAwareTag, CoreTag):
         reg = schema_fields.FieldRegistry(Markdown.name())
         reg.add_property(schema_fields.SchemaField(
             'markdown', 'Markdown', 'text',
-            description=str(messages.RTE_MARKDOWN_MARKDOWN),
+            description=services.help_urls.make_learn_more_message(
+                messages.RTE_MARKDOWN_MARKDOWN, 'core_tags:markdown:markdown'),
             extra_schema_dict_values={
                 'mode': 'markdown', '_type': 'code',
             }, optional=False))

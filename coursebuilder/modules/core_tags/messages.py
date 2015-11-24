@@ -18,17 +18,14 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
-from common import safe_dom
-
 
 RTE_GOOGLE_GROUP_CATEGORY_NAME = """
 This is the name of the Google Group Category, if any was set up.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-RTE_GOOGLE_GROUP_GROUP_NAME = safe_dom.assemble_text_message("""
+RTE_GOOGLE_GROUP_GROUP_NAME = """
 This is the name of the Google Group. The group must be @googlegroups.com.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 RTE_IFRAME_EMBED_URL = """
 This is the URL to be embedded as an iframe. Links to other sites must start with "https".
@@ -46,10 +43,9 @@ RTE_IFRAME_WIDTH = """
 This is the width of the iframe, in pixels.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-RTE_MARKDOWN_MARKDOWN = safe_dom.assemble_text_message("""
+RTE_MARKDOWN_MARKDOWN = """
 This is the markdown text.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 DOCUMENT_LINK_DESCRIPTION = """
 This is the link from the Google Docs "Publish to the web" dialog to embed the
@@ -60,11 +56,10 @@ DOCUMENT_HEIGHT_DESCRIPTION = """
 The document displays with this height; the width is set automatically.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-GOOGLE_DRIVE_UNAVAILABLE = safe_dom.assemble_text_message("""
+GOOGLE_DRIVE_UNAVAILABLE = """
 Before embedding a Google Drive object, Google APIs must be configured for this
 course.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 DOCUMENT_ID_DESCRIPTION = """
 Paste the ID of the Google Drive item you want to use or pick one in the

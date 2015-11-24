@@ -18,19 +18,15 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
-from common import safe_dom
 
-
-# TODO(johncox): replace placeholder URL once target link is determined.
-RTE_QUESTIONNAIRE_DISABLE_FIELDS = safe_dom.assemble_text_message("""
+RTE_QUESTIONNAIRE_DISABLE_FIELDS = """
 If checked, the form will display with all fields disabled. This is used to
 display the results of a questionnaire on a different page.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-RTE_QUESTIONNAIRE_FORM_ID = safe_dom.assemble_text_message("""
+RTE_QUESTIONNAIRE_FORM_ID = """
 This is the unique ID for this form.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 RTE_QUESTIONNAIRE_SUBMISSION_TEXT = """
 This text is displayed to the student after they submit their responses.

@@ -28,6 +28,7 @@ from common import safe_dom
 from common import schema_fields
 from common import tags
 from common import utils as common_utils
+from models import services
 from tools import verify
 
 DRAFT_TEXT = messages.DRAFT_TEXT
@@ -863,7 +864,9 @@ class ResourceUnit(ResourceUnitBase):
             optional=True))
         schema.add_property(schema_fields.SchemaField(
             'manual_progress', 'Allow Progress Override', 'boolean',
-            description=str(messages.UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION,
+                'course:%s:manual_progress' % ResourceUnitBase.UNIT_TYPE),
             optional=True))
         schema.add_property(schema_fields.SchemaField(
             'unit_header', 'Header', 'html', optional=True,
@@ -923,11 +926,15 @@ class ResourceAssessment(ResourceUnitBase):
             i18n=False, optional=False))
         course_opts.add_property(schema_fields.SchemaField(
             'content', 'Assessment Content (JavaScript)', 'text', optional=True,
-            description=str(messages.ASSESSMENT_CONTENT_JAVASCRIPT_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.ASSESSMENT_CONTENT_JAVASCRIPT_DESCRIPTION,
+                'course:%s:content' % ResourceUnitBase.ASSESSMENT_TYPE),
             extra_schema_dict_values={'className': 'inputEx-Field content'}))
         course_opts.add_property(schema_fields.SchemaField(
             'html_content', 'Assessment Content', 'html', optional=True,
-            description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.ASSESSMENT_CONTENT_DESCRIPTION,
+                'course:%s:html_content' % ResourceUnitBase.ASSESSMENT_TYPE),
             extra_schema_dict_values={
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags': tags.EditorBlacklists.ASSESSMENT_SCOPE,
@@ -955,12 +962,18 @@ class ResourceAssessment(ResourceUnitBase):
         course_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.GRADER_KEY), 'Grading Method', 'string',
             select_data=ALLOWED_GRADERS_NAMES.items(), optional=True,
-            description=str(messages.ASSESSMENT_GRADING_METHOD_DESCRIPTION)))
+            description=services.help_urls.make_learn_more_message(
+                messages.ASSESSMENT_GRADING_METHOD_DESCRIPTION,
+                'course:%s:%s' % (
+                    ResourceUnitBase.ASSESSMENT_TYPE,
+                    workflow_key(courses.GRADER_KEY)))))
         reg.add_sub_registry('assessment', 'Assessment Config',
                              registry=course_opts)
 
         review_opts = reg.add_sub_registry('review_opts', 'Peer review',
-            description=str(messages.ASSESSMENT_DETAILS_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.ASSESSMENT_DETAILS_DESCRIPTION,
+                'course:%s:review_opts' % ResourceUnitBase.ASSESSMENT_TYPE),
             extra_schema_dict_values={'id': 'peer-review-group'})
 
         if len(courses.ALLOWED_MATCHERS_NAMES) > 1:
@@ -972,8 +985,9 @@ class ResourceAssessment(ResourceUnitBase):
         review_opts.add_property(schema_fields.SchemaField(
             'review_form', 'Reviewer Feedback Form (JavaScript)', 'text',
             optional=True,
-            description=str(
-                messages.ASSESSMENT_REVIEWER_FEEDBACK_FORM_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.ASSESSMENT_REVIEWER_FEEDBACK_FORM_DESCRIPTION,
+                'course:%s:review_form' % ResourceUnitBase.ASSESSMENT_TYPE),
             extra_schema_dict_values={
                 'className': 'inputEx-Field review-form'}))
         review_opts.add_property(schema_fields.SchemaField(
@@ -988,18 +1002,22 @@ class ResourceAssessment(ResourceUnitBase):
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_DUE_DATE_KEY),
             'Review Due Date', 'datetime', optional=True,
-            description=str(
-                messages.ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION,
+                workflow_key(courses.REVIEW_DUE_DATE_KEY)),
             extra_schema_dict_values={'_type': 'datetime'}))
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_MIN_COUNT_KEY),
             'Review Min Count', 'integer', optional=True,
-            description=str(
-                messages.ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION)))
+            description=services.help_urls.make_learn_more_message(
+                messages.ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION,
+                workflow_key(courses.REVIEW_MIN_COUNT_KEY))))
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_WINDOW_MINS_KEY),
             'Review Window Timeout', 'integer', optional=True,
-            description=str(messages.ASSESSMENT_REVIEW_TIMEOUT_IN_MINUTES)))
+            description=services.help_urls.make_learn_more_message(
+                messages.ASSESSMENT_REVIEW_TIMEOUT_IN_MINUTES,
+                workflow_key(courses.REVIEW_WINDOW_MINS_KEY))))
         return reg
 
 
@@ -1119,13 +1137,16 @@ class ResourceLesson(resource.AbstractResourceHandler):
             description=messages.LESSON_ACTIVITY_LISTED_DESCRIPTION))
         lesson.add_property(schema_fields.SchemaField(
             'activity', 'Activity', 'text', optional=True,
-            description=str(messages.LESSON_ACTIVITY_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.LESSON_ACTIVITY_DESCRIPTION,
+                'course:lesson:activity'),
             extra_schema_dict_values={
                 'className': 'inputEx-Field activityHolder'}))
         lesson.add_property(schema_fields.SchemaField(
             'manual_progress', 'Allow Progress Override', 'boolean',
-            description=str(
-                messages.LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION,
+                'course:lesson:manual_progress'),
             optional=True))
         return lesson
 

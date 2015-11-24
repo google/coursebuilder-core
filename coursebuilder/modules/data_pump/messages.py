@@ -18,34 +18,28 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
-from common import safe_dom
-
 
 DATASET_NAME = """
 This is the name of the BigQuery dataset to which to pump the tables. If it is
 not set, it will default to the name of this course.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-JSON_KEY = safe_dom.assemble_text_message("""
+JSON_KEY = """
 This is the JSON key for the instance where BigQuery is to be run.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-PII_ENCRYPTION_TOKEN = safe_dom.assemble_text_message("""
+PII_ENCRYPTION_TOKEN = """
 This encryption secret is used to obscure PII fields when they are pushed to
 BigQuery. It will be automatically generated after all required fields are
 satisfied and you click 'Save'.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-PROJECT_ID = safe_dom.assemble_text_message("""
+PROJECT_ID = """
 This is the ID of the Google Cloud project to which to send data.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-TABLE_LIFETIME = safe_dom.assemble_text_message("""
+TABLE_LIFETIME = """
 This is the amount of time a table pushed to BigQuery will last. Specify with
 "w" or "d" to represent weeks or days. If blank, the default of 30 days (i.e.,
 30d) will be used.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""

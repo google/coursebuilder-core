@@ -16,20 +16,14 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
-from common import safe_dom
 
-
-ABOUT_THE_COURSE_DESCRIPTION = safe_dom.assemble_text_message("""
-This information is configured by an administrator from the Admin pages.
-""", None)
-
-CONTENTS_OF_THE_COURSE_DESCRIPTION = safe_dom.assemble_text_message("""
+CONTENTS_OF_THE_COURSE_DESCRIPTION = """
 The course.yaml file contains all course-level settings.  It can be
 modified from other settings sub-tabs, or directly edited in its
 raw form here.
-""", 'https://code.google.com/p/course-builder/wiki/CourseSettings')
+"""
 
-COURSE_TEMPLATE_DESCRIPTION = safe_dom.assemble_text_message("""
+COURSE_TEMPLATE_DESCRIPTION = """
 The course_template.yaml file provides default values for course settings.
 These values are not dynamically editable, but you can override them
 by editing your course.yaml file directly, or by changing settings in
@@ -39,33 +33,19 @@ You can also change the default settings for all courses by editing
 the course_template.yaml file on disk and re-pushing CourseBuilder to
 AppEngine.  Changing the defaults in the file will not erase or
 override any course-specific settings you may have made.
-""", None)
+"""
 
-DATA_FILES_DESCRIPTION = safe_dom.assemble_text_message("""
-The lesson.csv file contains the contents of your lesson. The unit.csv file
-contains the course related content shown on the homepage. These files are
-located in your Course Builder installation. Edit them directly with an editor
-like Notepad++. Be careful, some editors will add extra characters, which may
-prevent the uploading of these files.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
-
-# TODO(johncox): replace placeholder URL once target link is determined.
-EMBED_ASSESSMENT_DESCRIPTION = safe_dom.assemble_text_message("""
+EMBED_ASSESSMENT_DESCRIPTION = """
 This link allows the assessment to be embedded in any web page.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-ENABLE_HOOK_EDITS = safe_dom.assemble_text_message("""
+ENABLE_HOOK_EDITS = """
 If checked, controls on course pages will be displayed to permit editing of HTML
 inclusions (hook points). Otherwise, the course pages will appear as students
 would see it.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
-SETTINGS_DESCRIPTION = safe_dom.assemble_text_message(
-    None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Settings')
-
-# TODO(johncox): replace placeholder URL once target link is determined.
-SHOW_JINJA_CONTEXT = safe_dom.assemble_text_message("""
+SHOW_JINJA_CONTEXT = """
 If checked, a dump of Jinja context contents will be displayed at the bottom of
 course pages (only for admins and only on the development server).
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""

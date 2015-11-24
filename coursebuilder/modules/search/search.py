@@ -41,6 +41,7 @@ from models import counters
 from models import courses
 from models import custom_modules
 from models import jobs
+from models import services
 from models import transforms
 from modules.dashboard import dashboard
 
@@ -508,7 +509,8 @@ def register_module():
 
     auto_index_enabled = schema_fields.SchemaField(
         'course:' + AUTO_INDEX_SETTING, 'Auto-Index', 'boolean',
-        description=str(messages.SEARCH_AUTO_INDEX_DESCRIPTION),
+        description=services.help_urls.make_learn_more_message(
+            messages.SEARCH_AUTO_INDEX_DESCRIPTION, 'course:auto_index'),
         i18n=False, optional=True)
     course_settings_fields = [
         lambda course: auto_index_enabled

@@ -18,11 +18,8 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
-from common import safe_dom
 
-
-# TODO(johncox): replace placeholder URL once target link is determined.
-REMOVAL_POLICY = safe_dom.assemble_text_message("""
+REMOVAL_POLICY = """
 This describes the data removal policy used when a student unregisters from this
 course.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""

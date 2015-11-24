@@ -16,12 +16,9 @@
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
-from common import safe_dom
 
-
-# TODO(johncox): replace placeholder URL once target link is determined.
-ANALYTICS_ENABLE_STUDENT_DESCRIPTION = safe_dom.assemble_text_message("""
+ANALYTICS_ENABLE_STUDENT_DESCRIPTION = """
 If checked, student events (e.g., page views and assessment answers) will be
 recorded. This enables analytics, but may increase App Engine quota usage.
 Analytics requires the use of the Google Cloud Storage default bucket.
-""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+"""

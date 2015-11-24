@@ -1,0 +1,11 @@
+tests:
+  functional:
+    - modules.help_urls.help_urls_tests.RedirectHandlerTest = 3
+    - modules.help_urls.help_urls_tests.ServicesHelpUrlsTest = 8
+    - modules.help_urls.help_urls_tests.TopicValidationTest = 3
+
+files:
+  - modules/help_urls/__init__.py
+  - modules/help_urls/help_urls.py
+  - modules/help_urls/help_urls_tests.py
+  - modules/help_urls/topics.py

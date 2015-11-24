@@ -47,6 +47,7 @@ from common.utils import Namespace
 import models
 from models import MemcacheManager
 from models import QuestionImporter
+from models import services
 from tools import verify
 
 from google.appengine.api import namespace_manager
@@ -2523,7 +2524,8 @@ class Course(object):
 
         opts.add_property(schema_fields.SchemaField(
             'course:main_image:url', 'Image or Video', 'string',
-            description=str(messages.IMAGE_OR_VIDEO_DESCRIPTION),
+            description=services.help_urls.make_learn_more_message(
+                messages.IMAGE_OR_VIDEO_DESCRIPTION, 'course:main_image:url'),
             extra_schema_dict_values={'_type': 'url', 'showMsg': True},
             optional=True))
 
@@ -2535,25 +2537,32 @@ class Course(object):
             'base:show_gplus_button', 'Show G+ Button', 'boolean',
             description=messages.HOMEPAGE_SHOW_GPLUS_BUTTON_DESCRIPTION,
             optional=True))
-
         opts.add_property(schema_fields.SchemaField(
             'course:google_analytics_id', 'Google Analytics ID', 'string',
-            optional=True, i18n=False, description=str(
-                messages.COURSE_GOOGLE_ANALYTICS_ID_DESCRIPTION)))
+            optional=True, i18n=False,
+            description=services.help_urls.make_learn_more_message(
+                messages.COURSE_GOOGLE_ANALYTICS_ID_DESCRIPTION,
+                'course:google_analytics_id')))
         opts.add_property(schema_fields.SchemaField(
             'course:google_tag_manager_id', 'Google Tag Manager ID',
-            'string', optional=True, i18n=False, description=str(
-                messages.COURSE_GOOGLE_TAG_MANAGER_ID_DESCRIPTION)))
+            'string', optional=True, i18n=False,
+            description=services.help_urls.make_learn_more_message(
+                messages.COURSE_GOOGLE_TAG_MANAGER_ID_DESCRIPTION,
+                'course:google_tag_manager_id')))
 
         # Course-level Google API configuration settings.
         if COURSES_CAN_USE_GOOGLE_APIS.value:
             opts.add_property(schema_fields.SchemaField(
                 CONFIG_KEY_GOOGLE_API_KEY, 'Google API Key', 'string',
-                description=str(messages.COURSE_GOOGLE_API_KEY_DESCRIPTION),
+                description=services.help_urls.make_learn_more_message(
+                    messages.COURSE_GOOGLE_API_KEY_DESCRIPTION,
+                    CONFIG_KEY_GOOGLE_API_KEY),
                 i18n=False, optional=True))
             opts.add_property(schema_fields.SchemaField(
                 CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client ID', 'string',
-                description=str(messages.COURSE_GOOGLE_CLIENT_ID_DESCRIPTION),
+                description=services.help_urls.make_learn_more_message(
+                    messages.COURSE_GOOGLE_CLIENT_ID_DESCRIPTION,
+                    CONFIG_KEY_GOOGLE_CLIENT_ID),
                 i18n=False, optional=True))
         return opts
 
@@ -2576,8 +2585,9 @@ class Course(object):
             optional=True, hidden=True, editable=False, i18n=False))
         opts.add_property(schema_fields.SchemaField(
             'reg_form:additional_registration_fields', 'Registration Form',
-            'html', description=str(messages.REGISTRATION_REGISTRATION_FORM),
-            optional=True))
+            'html', description=services.help_urls.make_learn_more_message(
+                messages.REGISTRATION_REGISTRATION_FORM,
+                'reg_form:additonal_registration_fields'), optional=True))
         opts.add_property(schema_fields.SchemaField(
             # Note: Not directly user-editable; now controlled as part of a
             # cluster of settings from modules/courses/availability.py
@@ -2594,7 +2604,9 @@ class Course(object):
             'course:welcome_notifications_sender',
             'Email Sender', 'string', optional=True,
             i18n=False,
-            description=str(messages.REGISTRATION_EMAIL_SENDER)))
+            description=services.help_urls.make_learn_more_message(
+                messages.REGISTRATION_EMAIL_SENDER,
+                'course:welcome_notifications_sender')))
         opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_subject',
             'Email Subject', 'string', optional=True,
@@ -2669,7 +2681,9 @@ class Course(object):
         opts.add_property(schema_fields.SchemaField(
             'course:can_student_change_locale', 'Show Language Picker',
             'boolean',
-            description=str(messages.TRANSLATIONS_SHOW_LANGUAGE_PICKER),
+            description=services.help_urls.make_learn_more_message(
+                messages.TRANSLATIONS_SHOW_LANGUAGE_PICKER,
+                'course:can_student_change_locale'),
             optional=True))
         locale_data_for_select = [
             (loc, locales.get_locale_display_name(loc))

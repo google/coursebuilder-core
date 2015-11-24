@@ -16,10 +16,8 @@
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
-from common import safe_dom
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-CERTIFICATE_CRITERIA_DESCRIPTION = safe_dom.assemble_text_message("""
+CERTIFICATE_CRITERIA_DESCRIPTION = """
 These are the criteria which students must meet to be awarded a certificate
 of completion. To receive a certificate, a student must meet all criteria.
-""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+"""

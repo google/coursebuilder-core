@@ -55,6 +55,7 @@ from models import custom_modules
 from models import data_sources
 from models import jobs
 from models import models
+from models import services
 from modules.analytics import student_aggregate
 from modules.certificate import custom_criteria
 from modules.certificate import messages
@@ -325,7 +326,9 @@ def get_criteria_editor_schema(course):
     return schema_fields.FieldArray(
         'certificate_criteria', 'Certificate Criteria',
         item_type=criterion_type,
-        description=str(messages.CERTIFICATE_CRITERIA_DESCRIPTION),
+        description=services.help_urls.make_learn_more_message(
+            messages.CERTIFICATE_CRITERIA_DESCRIPTION,
+            'certificate:certificate_criteria'),
         extra_schema_dict_values={
             'is_peer_assessment_table': is_peer_assessment_table,
             'className': 'settings-list',

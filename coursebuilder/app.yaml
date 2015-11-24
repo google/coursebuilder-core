@@ -16,6 +16,8 @@ env_variables:
   GCB_APPSTATS_ENABLED: false
 
   GCB_REGISTERED_MODULES:
+    # Used by other modules during schema construction -- must come first.
+    modules.help_urls.help_urls
     modules.core_ui.core_ui
     modules.dashboard.dashboard
     modules.activity_tag.activity_tag

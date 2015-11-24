@@ -16,11 +16,8 @@
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
-from common import safe_dom
 
-
-# TODO(johncox): replace placeholder URL once target link is determined.
-SEARCH_AUTO_INDEX_DESCRIPTION = safe_dom.assemble_text_message("""
+SEARCH_AUTO_INDEX_DESCRIPTION = """
 If checked, course content will be automatically indexed each day to allow
 up-to-date searching.
-""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+"""

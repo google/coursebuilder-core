@@ -30,6 +30,7 @@ from models import courses
 from models import models
 from models import permissions
 from models import roles
+from models import services
 from models import transforms
 from modules.courses import constants
 from modules.courses import messages
@@ -549,7 +550,9 @@ def _get_settings_advanced(handler):
     template_values['sections'] = [
         {
             'title': 'Contents of course.yaml file',
-            'description': messages.CONTENTS_OF_THE_COURSE_DESCRIPTION,
+            'description': services.help_urls.make_learn_more_message(
+                messages.CONTENTS_OF_THE_COURSE_DESCRIPTION,
+                'course:advanced:description', to_string=False),
             'actions': actions,
             'children': yaml_info,
             'code': yaml_lines,

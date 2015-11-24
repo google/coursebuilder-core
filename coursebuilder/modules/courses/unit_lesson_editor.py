@@ -31,6 +31,7 @@ from models import custom_units
 from models import jobs
 from models import permissions
 from models import roles
+from models import services
 from models import transforms
 from modules.courses import constants
 from modules.courses import messages
@@ -722,7 +723,9 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             extra_schema_dict_values={
                 'disabled': True,
                 'className': 'inputEx-Field embed-code-snippet-display'},
-            description=str(messages.EMBED_ASSESSMENT_DESCRIPTION)))
+            description=services.help_urls.make_learn_more_message(
+                messages.EMBED_ASSESSMENT_DESCRIPTION,
+                'course:assessment:snippet')))
         schema.add_sub_registry('embed', '', registry=reg)
 
         permissions.SchemaPermissionRegistry.redact_schema_to_permitted_fields(

@@ -59,18 +59,16 @@ LESSON_ACTIVITY_LISTED_DESCRIPTION = """
 Whether the activity should be viewable as a stand-alone item in the unit index.
 """
 
-LESSON_ACTIVITY_DESCRIPTION = safe_dom.assemble_text_message("""
+LESSON_ACTIVITY_DESCRIPTION = """
 Note: Activities defined in the "Activity" area are deprecated, please use the
 "Lesson Body" area instead. Old-style activities are automatically
 converted during "Import Course".
-""", ('https://code.google.com/p/course-builder/wiki/CreateActivities'
-      '#Writing_activities'))
+"""
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = safe_dom.assemble_text_message("""
+LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = """
 If checked, the manual progress REST API permits users to manually mark a
 unit or lesson as complete, overriding the automatic progress tracking.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 LESSON_AVAILABILITY_DESCRIPTION = """
 If this lesson is "%s", only admins can see it. If it is "%s", then anyone
@@ -132,15 +130,10 @@ If this assessment is "%s", this controls whether or not its title is
 still shown to students on the syllabus page.
 """ % DRAFT_TEXT
 
-ASSESSMENT_CONTENT_DESCRIPTION_TEXT = "Assessment questions and answers."
+ASSESSMENT_CONTENT_DESCRIPTION = "Assessment questions and answers."
 
-ASSESSMENT_CONTENT_DESCRIPTION = safe_dom.assemble_text_message(
-    ASSESSMENT_CONTENT_DESCRIPTION_TEXT,
-    'https://code.google.com/p/course-builder/wiki/CreateAssessments')
-
-ASSESSMENT_CONTENT_JAVASCRIPT_DESCRIPTION = safe_dom.assemble_text_message(
-    "%s (JavaScript format)." % ASSESSMENT_CONTENT_DESCRIPTION_TEXT,
-    'https://code.google.com/p/course-builder/wiki/CreateAssessments')
+ASSESSMENT_CONTENT_JAVASCRIPT_DESCRIPTION = (
+    "%s (JavaScript format)." % ASSESSMENT_CONTENT_DESCRIPTION)
 
 ASSESSMENT_POINTS_DESCRIPTION = """
 This is the number of points to assign to this assessment.
@@ -196,39 +189,36 @@ The instructor details are displayed to students on the course homepage.
 HOMEPAGE_SHOW_GPLUS_BUTTON_DESCRIPTION = """
 If checked, a G+ button will be displayed in the header of all pages.
 """
-# TODO(johncox): replace placeholder URL once target link is determined.
-ASSESSMENT_GRADING_METHOD_DESCRIPTION = safe_dom.assemble_text_message("""
+
+ASSESSMENT_GRADING_METHOD_DESCRIPTION = """
 If this is set to "Peer review", this assessment will use the Peer Review
 module. Otherwise, it will be graded automatically.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
-
-ASSESSMENT_DETAILS_DESCRIPTION = safe_dom.assemble_text_message("""
-Properties and restrictions of your assessment.
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
-
-ASSESSMENT_REVIEWER_FEEDBACK_FORM_DESCRIPTION = safe_dom.assemble_text_message(
 """
+
+ASSESSMENT_DETAILS_DESCRIPTION = """
+Properties and restrictions of your assessment.
+"""
+
+ASSESSMENT_REVIEWER_FEEDBACK_FORM_DESCRIPTION = """
 Review form questions and answers (JavaScript format).
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
+"""
 
 ASSESSMENT_REVIEWER_FEEDBACK_FORM_HTML_DESCRIPTION = """
 Add the content that reviewers of a Peer Review assignment see.
 """
 
-ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION = safe_dom.assemble_text_message(
-"""
+ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION = """
 The review date must be later than the Submission Date.
 Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
 in the UTC timezone.
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
+"""
 
-ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION = safe_dom.assemble_text_message(
-    None, 'https://code.google.com/p/course-builder/wiki/PeerReview')
+ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION = None
 
-ASSESSMENT_REVIEW_TIMEOUT_IN_MINUTES = safe_dom.assemble_text_message("""
+ASSESSMENT_REVIEW_TIMEOUT_IN_MINUTES = """
 How long a reviewer has to review an assignment once the reviewer accepts the
 assignment.  This value should be specified in minutes.
-""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
+"""
 
 UNIT_TITLE_DESCRIPTION = """
 The unit title is displayed to students on the syllabus page.
@@ -251,11 +241,10 @@ If checked, all assessments, lessons, and activties in this unit are shown on
 one page. Otherwise, each is shown on its own page.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = safe_dom.assemble_text_message("""
+UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = """
 If checked, the manual progress REST API permits users to manually mark a
 unit or lesson as complete, overriding the automatic progress tracking.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 UNIT_HIDE_ASSESSMENT_NAV = """
 If checked, the "Previous Page" and "Next Page" buttons will be omitted from
@@ -280,25 +269,21 @@ This list of email addresses represents the administrators for this course.
 Separate addresses with a comma, space, or newline.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-COURSE_GOOGLE_ANALYTICS_ID_DESCRIPTION = safe_dom.assemble_text_message("""
+COURSE_GOOGLE_ANALYTICS_ID_DESCRIPTION = """
 This ID is used to add Google Analytics functionality to this course.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-COURSE_GOOGLE_TAG_MANAGER_ID_DESCRIPTION = safe_dom.assemble_text_message("""
+COURSE_GOOGLE_TAG_MANAGER_ID_DESCRIPTION = """
 This ID is used to add Google Tag Manager functionality to this course.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-COURSE_GOOGLE_API_KEY_DESCRIPTION = safe_dom.assemble_text_message("""
+COURSE_GOOGLE_API_KEY_DESCRIPTION = """
 The Google API Key is required to enable certain functionality.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
-# TODO(johncox): replace placeholder URL once target link is determined.
+"""
 
-COURSE_GOOGLE_CLIENT_ID_DESCRIPTION = safe_dom.assemble_text_message("""
+COURSE_GOOGLE_CLIENT_ID_DESCRIPTION = """
 The Google Client ID is required to enable certain functionality.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 UNIT_HEADER_DESCRIPTION = """
 This content appears at the top of the unit page.
@@ -361,12 +346,11 @@ If checked, translations cannot be edited. This can be set to prevent accidental
 or undesired edits to translated content.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-TRANSLATIONS_SHOW_LANGUAGE_PICKER = safe_dom.assemble_text_message("""
+TRANSLATIONS_SHOW_LANGUAGE_PICKER = """
 If checked, students can select among the available languages at any time via a
 language picker. Otherwise, the desire language must be assigned during
 registration.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 REGISTRATION_EMAIL_BODY = """
 This is the body for welcome emails. Use the string {{student_name}} to include
@@ -375,11 +359,10 @@ avoid spamming, you should always include {{unsubscribe_url}} in your message to
 add a link which the recipient can use to unsubscribe from future mailings.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-REGISTRATION_EMAIL_SENDER = safe_dom.assemble_text_message("""
+REGISTRATION_EMAIL_SENDER = """
 This is the "from" email address for welcome emails. It must be set to a valid
 value for App Engine email.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 REGISTRATION_EMAIL_SUBJECT = """
 This is the subject line for welcome emails. Use the string {{student_name}} to
@@ -391,10 +374,9 @@ REGISTRATION_INTRODUCTION = """
 This introduction text is shown to students at the top of the registration page.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-REGISTRATION_REGISTRATION_FORM = safe_dom.assemble_text_message("""
+REGISTRATION_REGISTRATION_FORM = """
 This text or question is shown below the default registration question.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 REGISTRATION_SEND_WELCOME_EMAIL = """
 If checked, welcome emails will be sent when new students register for the
@@ -539,11 +521,10 @@ page linked to the Organization URL. Links to other sites must start with "http"
 or "https".
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-IMAGE_OR_VIDEO_DESCRIPTION = safe_dom.assemble_text_message("""
+IMAGE_OR_VIDEO_DESCRIPTION = """
 URL for the preview image or YouTube video shown on the course homepage. Videos
 must use the YouTube embed URL.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""
 
 IMAGE_DESCRIPTION_DESCRIPTION = """
 This is the alt text for the preview image on the course syllabus page (useful
@@ -572,13 +553,3 @@ This is the basename of your course in the URL.
 COURSE_NAMESPACE_DESCRIPTION = """
 This is the namespace for your course.
 """
-
-# TODO(johncox): replace placeholder URL once target link is determined.
-GOOGLE_API_KEY_DESCRIPTION = safe_dom.assemble_text_message("""
-The Google API Key is required to enable certain functionality.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
-
-# TODO(johncox): replace placeholder URL once target link is determined.
-GOOGLE_CLIENT_ID_DESCRIPTION = safe_dom.assemble_text_message("""
-The Google Client ID is required to enable certain functionality.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')

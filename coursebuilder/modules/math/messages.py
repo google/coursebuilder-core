@@ -18,14 +18,11 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
-from common import safe_dom
-
 
 RTE_MATH_MATHEMATICAL_FORMULA = """
 This is the formula to display.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-RTE_MATH_TYPE = safe_dom.assemble_text_message("""
+RTE_MATH_TYPE = """
 This is the type of formula script.
-""", 'https://code.google.com/p/course-builder/wiki/Dashboard')
+"""

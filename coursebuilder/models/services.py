@@ -22,6 +22,39 @@ class Service(object):
         raise NotImplementedError()
 
 
+class HelpUrls(Service):
+
+    def get(self, topic_id):
+        """Gets the help URL for a given topic_id string.
+
+        Args:
+            topic_id: string. The unique identifier of the topic to get a help
+                url for.
+
+        Returns:
+            String. The help URL for the requested topic_id.
+
+        Raises:
+            ValueError: if no URL mapping exists for the requested topic_id.
+        """
+        raise NotImplementedError()
+
+    def make_learn_more_message(self, text, topic_id, to_string=False):
+        """Makes a sanitized message with a 'Learn more' link for display in UI.
+
+        Args:
+            text: string. Text of the help message.
+            topic_id: string. Unique identifier for the help message to get a
+                redirect URL for.
+            to_string: boolean. If True, returns a string. If False, returns a
+                safe_dom.NodeList.
+
+        Raises:
+            ValueError: if no URL mapping exists for the requested topic_id.
+        """
+        raise NotImplementedError()
+
+
 class Notifications(Service):
 
     def query(self, to, intent):
@@ -132,5 +165,6 @@ class Unsubscribe(Service):
         raise NotImplementedError()
 
 
+help_urls = HelpUrls()
 notifications = Notifications()
 unsubscribe = Unsubscribe()

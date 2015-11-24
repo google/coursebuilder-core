@@ -35,6 +35,7 @@ from models import custom_modules
 from models import data_removal as models_data_removal
 from models import jobs
 from models import models
+from models import services
 from models import transforms
 from modules.admin import admin
 from modules.data_removal import messages
@@ -709,14 +710,16 @@ def _build_removal_policy_schema():
     select_data = [(policy.get_name(), policy.get_description())
                     for policy in DataRemovalPolicyRegistry.get_all()]
     select_data.sort(key=lambda item: item[0])
+    name = DATA_REMOVAL_SETTINGS_SECTION + ':' + REMOVAL_POLICY
     data_removal_policy = schema_fields.SchemaField(
-        DATA_REMOVAL_SETTINGS_SECTION + ':' + REMOVAL_POLICY,
+        name,
         'Removal Policy', 'string',
         optional=True,
         i18n=False,
         select_data=select_data,
         default_value=ImmediateRemovalPolicy.get_name(),
-        description=str(messages.REMOVAL_POLICY))
+        description=services.help_urls.make_learn_more_message(
+            messages.REMOVAL_POLICY, name))
     return data_removal_policy
 
 

@@ -25,6 +25,7 @@ from common import schema_fields
 from common import tags
 from controllers import sites
 from models import custom_modules
+from models import services
 from modules.math import messages
 
 MATH_MODULE_URI = '/modules/math'
@@ -80,7 +81,8 @@ class MathTag(tags.ContextAwareTag):
                 optional=True,
                 select_data=[('TeX', 'TeX'), ('MML', 'MathML')],
                 extra_schema_dict_values={'value': 'TeX'},
-                description=str(messages.RTE_MATH_TYPE)))
+                description=services.help_urls.make_learn_more_message(
+                    messages.RTE_MATH_TYPE, 'math:math:input_type')))
         reg.add_property(
             schema_fields.SchemaField(
                 'formula', 'Mathematical Formula', 'text',

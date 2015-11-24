@@ -18,6 +18,7 @@ __author__ = 'John Orr (jorr@google.com)'
 
 from common import safe_dom
 
+
 ROLES_DESCRIPTION = """
 Manage the different roles associated with your course.
 A role binds a set of permissions to a set of users. The role editor allows you
@@ -45,12 +46,11 @@ This is the description of the question group created for the imported
 questions.
 """
 
-# TODO(johncox): replace placeholder URL once target link is determined.
-GIFT_QUESTIONS_DESCRIPTION = safe_dom.assemble_text_message("""
+GIFT_QUESTIONS_DESCRIPTION = """
 Each question is imported as a separate question (named Q1, Q2, etc.).
 Additionally, a question group is added with all the questions. Course Builder
 supports multiple choice, true-false, short answer, and numerical questions.
-""", "https://code.google.com/p/course-builder/wiki/Dashboard")
+"""
 
 IMAGES_DOCS_UPLOAD_NEW_FILE_DESCRIPTION = """
 Upload a file to set or replace the content of this asset.

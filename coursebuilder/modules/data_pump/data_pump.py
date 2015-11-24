@@ -46,6 +46,7 @@ from models import courses
 from models import custom_modules
 from models import data_sources
 from models import jobs
+from models import services
 from models import transforms
 from modules.courses import settings
 from modules.dashboard import dashboard
@@ -1162,10 +1163,11 @@ def register_module():
                 'or dashes. IDs must start with a letter and may not end '
                 'with a dash.')
 
+    _project_id_name = DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PROJECT_ID
     project_id = schema_fields.SchemaField(
-        DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PROJECT_ID,
-        'Project ID', 'string',
-        description=str(messages.PROJECT_ID), i18n=False,
+        _project_id_name, 'Project ID', 'string',
+        description=services.help_urls.make_learn_more_message(
+            messages.PROJECT_ID, _project_id_name), i18n=False,
         validator=validate_project_id)
     dataset_name = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + DATASET_NAME,
@@ -1194,9 +1196,11 @@ def register_module():
                 'pasting in the JSON version, not the .p12 (PKCS12) file.' +
                 str(ex))
 
+    _json_key_name = DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + JSON_KEY
     json_key = schema_fields.SchemaField(
-        DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + JSON_KEY,
-        'JSON Key', 'text', description=str(messages.JSON_KEY), i18n=False,
+        _json_key_name, 'JSON Key', 'text',
+        description=services.help_urls.make_learn_more_message(
+            messages.JSON_KEY, _json_key_name), i18n=False,
         validator=validate_json_key)
 
     def validate_table_lifetime(value, errors):
@@ -1209,16 +1213,21 @@ def register_module():
                 'has some problems; please check the instructions below '
                 'the field for instructions on accepted formats.')
 
+    _table_lifetime_name = (
+        DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + TABLE_LIFETIME)
     table_lifetime = schema_fields.SchemaField(
-        DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + TABLE_LIFETIME,
-        'Table Lifetime', 'string', optional=True, i18n=False,
-        validator=validate_table_lifetime,
-        description=str(messages.TABLE_LIFETIME))
+        _table_lifetime_name, 'Table Lifetime', 'string', optional=True,
+        i18n=False, validator=validate_table_lifetime,
+        description=services.help_urls.make_learn_more_message(
+            messages.TABLE_LIFETIME, _table_lifetime_name))
 
+    _pii_encryption_token_name = (
+        DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PII_ENCRYPTION_TOKEN)
     pii_encryption_token = schema_fields.SchemaField(
-        DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PII_ENCRYPTION_TOKEN,
-        'PII Encryption Token', 'string', optional=True, i18n=False,
-        editable=False, description=str(messages.PII_ENCRYPTION_TOKEN))
+        _pii_encryption_token_name, 'PII Encryption Token', 'string',
+        optional=True, i18n=False, editable=False,
+        description=services.help_urls.make_learn_more_message(
+            messages.PII_ENCRYPTION_TOKEN, _pii_encryption_token_name))
 
     course_settings_fields = (
         lambda c: project_id,
