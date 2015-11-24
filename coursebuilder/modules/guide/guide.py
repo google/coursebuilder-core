@@ -98,7 +98,18 @@ class GuideApplicationHandler(utils.ApplicationHandler):
         return total_duration_secs
 
     def format_availability(self, text):
-        return text.replace('_', ' ').title()
+        return text.capitalize().replace('_', ' ')
+
+    def format_title(self, app_context, course, displayability, config):
+        title = app_context.get_title()
+        if config.get(GUIDE_AVAILABILITY) == courses.AVAILABILITY_UNAVAILABLE:
+            title += ' (Private)'
+        else:
+            if not displayability.is_available_to_visitors and (
+                    roles.Roles.is_course_admin(app_context)):
+                title += ' (%s)' % self.format_availability(
+                    course.get_course_availability())
+        return title
 
     def get_courses(self):
         all_courses = []
@@ -116,11 +127,8 @@ class GuideApplicationHandler(utils.ApplicationHandler):
                     continue
 
                 # prepare values to render
-                title = app_context.get_title()
-                if not displayability.is_available_to_visitors and (
-                        roles.Roles.is_course_admin(app_context)):
-                    title += ' (%s)' % self.format_availability(
-                        course.get_course_availability())
+                title = self.format_title(
+                    app_context, course, displayability, config)
                 slug = app_context.get_slug()
                 if slug == '/':
                     slug = ''
