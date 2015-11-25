@@ -222,16 +222,61 @@ class WebservFunctionalTests(actions.TestBase):
         actions.login('admin@example.com', is_admin=True)
 
         with actions.OverriddenEnvironment(self.enabled(md_enabled=False)):
+            response = self.get('/test/foo/index.md')
+            self.assertIn('gcb-md-header: /md_header.html', response.body)
+            self.assertNotIn(
+                '<title>Course Builder Markdown Page</title>', response.body)
+            self.assertIn('gcb-md-footer: /md_footer.html', response.body)
+            self.assertNotIn(
+                '<p>Powered by Course Builder!</p>', response.body)
+
             response = self.get('/test/foo/markdown.md')
             self.assertNotIn('<h1>A First Level Header</h1>', response.body)
+            self.assertNotIn('<h2 id="my-second-level-header">', response.body)
             self.assertIn('{{ course_info.course.title }}', response.body)
             self.assertNotIn('Power Searching with Google', response.body)
 
         with actions.OverriddenEnvironment(self.enabled(md_enabled=True)):
+            response = self.get('/test/foo/index.md')
+            self.assertNotIn('gcb-md-header: /md_header.html', response.body)
+            self.assertIn(
+                '<title>Course Builder Markdown Page</title>', response.body)
+            self.assertNotIn('gcb-md-footer: /md_footer.html', response.body)
+            self.assertIn(
+                '<p>Powered by Course Builder!</p>', response.body)
+
             response = self.get('/test/foo/markdown.md')
             self.assertIn('<h1>A First Level Header</h1>', response.body)
+            self.assertIn('<h2 id="my-second-level-header">', response.body)
             self.assertIn('{{ course_info.course.title }}', response.body)
             self.assertNotIn('Power Searching with Google', response.body)
+
+    def test_markdown_page_query_string(self):
+        self._init_course('test')
+        actions.login('admin@example.com', is_admin=True)
+
+        with actions.OverriddenEnvironment(self.enabled(md_enabled=True)):
+            response = self.get(
+                '/test/foo/markdown.md?default_header_footer=true')
+            self.assertIn('<!-- MD_DEFAULT_HEADER -->', response.body)
+            self.assertNotIn(
+                '<title>Course Builder Markdown Page</title>', response.body)
+            self.assertIn('<!-- MD_DEFAULT_FOOTER -->', response.body)
+            self.assertNotIn(
+                '<p>Powered by Course Builder!</p>', response.body)
+
+            response = self.get('/test/foo/markdown.md')
+            self.assertNotIn('<!-- MD_DEFAULT_HEADER -->', response.body)
+            self.assertIn(
+                '<title>Course Builder Markdown Page</title>', response.body)
+            self.assertNotIn('<!-- MD_DEFAULT_FOOTER -->', response.body)
+            self.assertIn(
+                '<p>Powered by Course Builder!</p>', response.body)
+
+            response = self.get(
+                '/test/foo/markdown.md?body_only=true')
+            self.assertNotIn('<head>', response.body)
+            self.assertIn('<h1>A First Level Header</h1>', response.body)
 
     def test_markdown_alternative_names(self):
         # when an author creates markdown document foo.md and wants to add

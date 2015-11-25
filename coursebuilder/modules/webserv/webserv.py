@@ -56,6 +56,8 @@ WEBSERV_JINJA_ENABLED = 'jinja_enabled'
 WEBSERV_MD_ENABLED = 'md_enabled'
 WEBSERV_AVAILABILITY = 'availability'
 
+MD_EXTENSIONS = ['markdown.extensions.attr_list', 'markdown.extensions.meta']
+
 BANNED_SLUGS = set(['admin', 'dashboard'])
 GOOD_SLUG_REGEX = '^[A-Za-z0-9_-]*$'
 
@@ -69,6 +71,10 @@ AVAILABILITY_SELECT_DATA = [
     (courses.AVAILABILITY_AVAILABLE, 'Public'),]
 
 webserv_module = None
+
+
+def get_file_content_utf_8(filename):
+    return open(filename, 'r').read().decode('utf-8')
 
 
 def get_config(app_context):
@@ -141,6 +147,62 @@ class RootHandler(utils.ApplicationHandler, utils.QueryableRouteMixin):
                 course, location), normalize=False)
         else:
             self.redirect(ADMIN_HOME_PAGE)
+
+
+class MarkdownMetadataHandler(object):
+    """Class to help extract metadata from MD documents."""
+
+    MD_ROOT_DOCUMENT_NAME = '/index.md'
+    MD_DEFAULT_HEADER = (
+        '<!DOCTYPE html>\n<html>\n<head>'
+        '<!-- MD_DEFAULT_HEADER --></head>\n<body>')
+    MD_DEFAULT_FOOTER = '<!-- MD_DEFAULT_FOOTER --></body>\n</html>'
+
+    def __init__(self, web_server, config, md, relname, default_header_footer):
+        self.web_server = web_server
+        self.config = config
+        self.md = md
+        self.current_doc_relname = relname
+        self.current_doc_metadata = md.Meta
+        self.default_header_footer = default_header_footer
+        self.top_doc_metadata = None
+
+    def get(self, name):
+        """Get metadata from current document or top index.md."""
+        if name in self.current_doc_metadata:
+            return self.current_doc_metadata[name]
+        if self.top_doc_metadata is None:
+            self.top_doc_metadata = {}
+            filename, relname = self.web_server.get_target_filename(
+                self.config.get(WEBSERV_DOC_ROOT),
+                self.MD_ROOT_DOCUMENT_NAME, self.config)
+            if filename:
+                self.md.convert(get_file_content_utf_8(filename))
+                self.top_doc_metadata = self.md.Meta
+        if name in self.top_doc_metadata:
+            return self.top_doc_metadata[name]
+        return None
+
+    def get_file_content_from_md_property(self, name, default):
+        fn = self.get(name)
+        if fn:
+            filename, relname = self.web_server.get_target_filename(
+                self.config.get(WEBSERV_DOC_ROOT), fn[0], self.config)
+            if filename:
+                return get_file_content_utf_8(filename)
+        return default
+
+    def get_header(self):
+        if self.default_header_footer:
+            return self.MD_DEFAULT_HEADER
+        return self.get_file_content_from_md_property(
+            'gcb-md-header', self.MD_DEFAULT_HEADER)
+
+    def get_footer(self):
+        if self.default_header_footer:
+            return self.MD_DEFAULT_FOOTER
+        return self.get_file_content_from_md_property(
+            'gcb-md-footer', self.MD_DEFAULT_FOOTER)
 
 
 class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
@@ -216,13 +278,24 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
             self.do_plain(config, filename, relname)
             return
 
-        text = markdown.markdown(open(filename, 'r').read().decode('utf-8'))
+        md = markdown.Markdown(extensions=MD_EXTENSIONS)
+        body = md.convert(get_file_content_utf_8(filename))
+        body_only = self.request.get('body_only', 'FALSE').upper() == 'TRUE'
+        default_header_footer = self.request.get(
+            'default_header_footer', 'FALSE').upper() == 'TRUE'
+        meta = MarkdownMetadataHandler(
+            self, config, md, relname, default_header_footer)
+        if body_only:
+            content = body
+        else:
+            content = meta.get_header() + body + meta.get_footer()
+
         if config.get(WEBSERV_JINJA_ENABLED):
-            self.render_jinja(config, from_string=text)
+            self.render_jinja(config, from_string=content)
             return
 
         self.response.headers['Content-Type'] = 'text/html'
-        self.response.write(text)
+        self.response.write(content)
 
     def replace_last(self, text, find, replace):
         li = text.rsplit(find, 1)
