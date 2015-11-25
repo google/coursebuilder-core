@@ -14,14 +14,7 @@
 
 """Webserv, a module for static content publishing.
 
-  TODO(psimakov):
-      - add support for document_roots/sample/_static/*.*
-      - map vfs folder
-      - add caching directives
-          - cache files of type: none, all but html/md, all
-          - cache duration: none, 5 min, 1 h, 4 h, 24 h
-      - cache various streams (and especially md/jinja) in memcache
-      - try to support gcb tags without {{ ... }} notation
+  TODO(psimakov): support gcb tags without {{ ... }} notation
 
 """
 
@@ -29,6 +22,8 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
 import collections
+from datetime import datetime
+from datetime import timedelta
 import mimetypes
 import os
 import re
@@ -54,6 +49,7 @@ WEBSERV_DOC_ROOTS_DIR_NAME = 'document_roots'
 WEBSERV_DOC_ROOT = 'doc_root'
 WEBSERV_JINJA_ENABLED = 'jinja_enabled'
 WEBSERV_MD_ENABLED = 'md_enabled'
+WEBSERV_CACHING = 'caching'
 WEBSERV_AVAILABILITY = 'availability'
 
 MD_EXTENSIONS = ['markdown.extensions.attr_list', 'markdown.extensions.meta']
@@ -70,7 +66,38 @@ AVAILABILITY_SELECT_DATA = [
     (courses.AVAILABILITY_COURSE, 'Course'),
     (courses.AVAILABILITY_AVAILABLE, 'Public'),]
 
+CACHING_NONE = 'none'
+CACHING_5_MIN = '5-min'
+CACHING_1_HOUR = '1-hour'
+CACHING_1_DAY = '1-day'
+
+CACHING_SELECT_DATA = [
+    (CACHING_NONE, 'Don\'t cache'),
+    (CACHING_5_MIN, 'Cache for 5 minutes'),
+    (CACHING_1_HOUR, 'Cache for 1 hour'),
+    (CACHING_1_DAY, 'Cache for 24 hours')]
+
+EXPIRES_IN_THE_PAST = 'Mon, 01 Jan 1990 00:00:00 GMT'
+
 webserv_module = None
+
+
+def set_caching_headers_for(response, duration_min):
+    if duration_min < 0:
+        raise ValueError('Expected non-negative duration: %s', duration_min)
+    expires = datetime.utcnow() + timedelta(minutes=duration_min)
+    response.cache_control.no_cache = None
+    response.cache_control.must_revalidate = None
+    response.cache_control.public = 'public'
+    response.cache_control.max_age = str(duration_min * 60)
+    response.expires = expires.strftime("%a, %d %b %Y %H:%M:%S GMT")
+    response.pragma = None
+
+def set_no_caching_headers_for(response):
+    response.cache_control.no_cache = True
+    response.cache_control.must_revalidate = True
+    response.expires = EXPIRES_IN_THE_PAST
+    response.pragma = 'no-cache'
 
 
 def get_file_content_utf_8(filename):
@@ -240,7 +267,21 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
         del metadata['course_info']
         return collections.OrderedDict(sorted(metadata.items())).items()
 
-    def render_jinja(self, config, relname=None, from_string=None):
+    @classmethod
+    def set_cache_control(cls, config, response):
+        caching = config.get(WEBSERV_CACHING, CACHING_NONE)
+        if CACHING_NONE == caching:
+            set_no_caching_headers_for(response)
+        elif CACHING_5_MIN == caching:
+            set_caching_headers_for(response, 5)
+        elif CACHING_1_HOUR == caching:
+            set_caching_headers_for(response, 60)
+        elif CACHING_1_DAY == caching:
+            set_caching_headers_for(response, 60 * 24)
+        else:
+            raise Exception('Unknown caching policy: %s', caching)
+
+    def do_jinja(self, config, relname=None, from_string=None):
         assert relname or from_string
         template_dirs = [
             os.path.join(
@@ -264,6 +305,7 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
         with open(filename, 'r') as stream:
             self.response.headers[
                 'Content-Type'] = self.get_mime_type(filename)
+            self.set_cache_control(config, self.response)
             self.response.write(stream.read())
 
     def do_html(self, config, filename, relname):
@@ -271,7 +313,7 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
             self.do_plain(config, filename, relname)
             return
 
-        self.render_jinja(config, relname=relname)
+        self.do_jinja(config, relname=relname)
 
     def do_markdown(self, config, filename, relname):
         if not config.get(WEBSERV_MD_ENABLED):
@@ -291,9 +333,10 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
             content = meta.get_header() + body + meta.get_footer()
 
         if config.get(WEBSERV_JINJA_ENABLED):
-            self.render_jinja(config, from_string=content)
+            self.do_jinja(config, from_string=content)
             return
 
+        self.set_cache_control(config, self.response)
         self.response.headers['Content-Type'] = 'text/html'
         self.response.write(content)
 
@@ -436,9 +479,18 @@ def get_schema_fields():
         'Process Markdown', 'boolean', optional=True, i18n=False,
         description='If checked, the Markdown Processor will be applied to '
             '*.md files before serving them.')
+    caching = schema_fields.SchemaField(
+        WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_CACHING,
+        'Caching Policy', 'string', optional=True, i18n=False,
+        default_value=CACHING_NONE, select_data=CACHING_SELECT_DATA,
+        description='This controls whether the web pages can be cached by the '
+            'web browsers, and for how long. When you are actively working on '
+            'content, you should set the caching to None so that you see your '
+            'changes immediately.  You will also need to ask your browser to '
+            'reload pages that it has already cached.')
     availability = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_AVAILABILITY,
-        'Availability', 'boolean', optional=True, i18n=False,
+        'Availability', 'string', optional=True, i18n=False,
         default_value=courses.AVAILABILITY_COURSE,
         select_data=AVAILABILITY_SELECT_DATA,
         description=str(safe_dom.NodeList(
@@ -448,10 +500,10 @@ def get_schema_fields():
                 '(Public). ')
             ).append(safe_dom.assemble_link(
                 'TBD', 'Learn more...', target="_blank"))))
-
     return (
         lambda _: enabled, lambda _: slug, lambda _: doc_root,
-        lambda _: enabled_jinja, lambda _: enabled_md, lambda _: availability)
+        lambda _: enabled_jinja, lambda _: enabled_md, lambda _: availability,
+        lambda _: caching)
 
 
 def register_module():

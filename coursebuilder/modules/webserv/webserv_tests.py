@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 from controllers import sites
 from models import courses
+from modules.webserv import webserv
 from tests.functional import actions
 
 class WebservFunctionalTests(actions.TestBase):
@@ -43,12 +44,14 @@ class WebservFunctionalTests(actions.TestBase):
 
     def enabled(
             self, slug='foo', jinja_enabled=False, md_enabled=False,
-            availability=courses.AVAILABILITY_COURSE):
+            availability=courses.AVAILABILITY_COURSE,
+            caching=webserv.CACHING_NONE):
         return {
             'modules': {'webserv': {
                 'enabled': True, 'doc_root': 'sample',
                 'jinja_enabled': jinja_enabled, 'md_enabled': md_enabled,
-                'slug': slug, 'availability': availability}}}
+                'slug': slug, 'availability': availability,
+                'caching': caching}}}
 
     def _import_sample_course(self):
         dst_app_context = actions.simple_add_course(
@@ -411,3 +414,52 @@ class WebservFunctionalTests(actions.TestBase):
                 self.assertPage('/test/foo/index.html', ' Web Server')
                 self.assertPage('/test/foo/markdown.md', ' Web Server')
                 self.assertPage('/test/foo/main.css', ' Web Server')
+
+    def assert_no_cache(self, response):
+        self.assertIn('no-cache', response.headers['Cache-Control'])
+        self.assertIn('no-cache', response.headers['Pragma'])
+        self.assertNotIn('public', response.headers['Cache-Control'])
+        self.assertNotIn('max-age', response.headers['Cache-Control'])
+        self.assertIn(
+            webserv.EXPIRES_IN_THE_PAST, response.headers['Expires'])
+
+    def assert_cached(self, response, duration_min):
+        self.assertNotIn('no-cache', response.headers['Cache-Control'])
+        self.assertNotIn('Pragma', response.headers)
+        self.assertIn('public', response.headers['Cache-Control'])
+        self.assertIn(
+            'max-age=%s' % (60 * duration_min),
+            response.headers['Cache-Control'])
+        self.assertNotIn(
+            webserv.EXPIRES_IN_THE_PAST, response.headers['Expires'])
+
+    def test_caching(self):
+        course = self._init_course('test')
+        actions.login('admin@example.com', is_admin=True)
+
+        with actions.OverriddenEnvironment(self.enabled(
+                md_enabled=True, jinja_enabled=True)):
+            for url in [
+                    '/test/foo/main.css',
+                    '/test/foo/index.html',
+                    '/test/foo/markdown.md']:
+                self.assert_no_cache(self.get(url))
+
+        with actions.OverriddenEnvironment(self.enabled(
+                md_enabled=True, jinja_enabled=True,
+                caching=webserv.CACHING_5_MIN)):
+            response = self.get('/test/foo/main.css')
+            self.assert_cached(response, 5)
+            for url in [
+                    '/test/foo/index.html',
+                    '/test/foo/markdown.md']:
+                self.assert_no_cache(self.get(url))
+
+        with actions.OverriddenEnvironment(self.enabled(
+                md_enabled=True, jinja_enabled=False,
+                caching=webserv.CACHING_1_HOUR)):
+            for url in [
+                    '/test/foo/main.css',
+                    '/test/foo/index.html',
+                    '/test/foo/markdown.md']:
+                self.assert_cached(self.get(url), 60)
