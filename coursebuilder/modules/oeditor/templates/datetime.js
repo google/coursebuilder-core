@@ -7,12 +7,17 @@ function bindDatetimeField(Y) {
     render: function() {
       DatetimeField.superclass.render.call(this);
       Y.one(this.divEl).addClass('gcb-datetime')
-          .addClass('inputEx-fieldWrapper')
-          .on('click', function(e) { e.preventDefault() });
+          .addClass('inputEx-fieldWrapper');
       var that = this;
+
+      // Do not allow buttons to submit the form
+      $(this.divEl).on('click', 'button', function(e) {
+        e.preventDefault();
+      });
+
       $('<button>Clear</button>')
           .addClass('inputEx-DatePicker-ClearButton')
-          .click(function(){
+          .click(function() {
             that.clear();
             that.validateDateTimeConsistent();
           })
