@@ -337,9 +337,13 @@ class ExampleEmbedAndHandlerV1SingleCourseTest(ExampleEmbedTestBase):
 
 class EmbedSnippetTest(actions.TestBase):
 
-    def _get_fake_handler(self):
+    def tearDown(self):
+        embed.Registry._bindings = {}
+        super(EmbedSnippetTest, self).tearDown()
+
+    def _get_fake_handler(self, slug='/the_course'):
         app_context = sites.ApplicationContext(
-            'course', '/the_course', None, None, None)
+            'course', slug, None, None, None)
         request = FakeRequest('GET', 'https://www.example.com')
         return FakeHandler(app_context, request)
 
@@ -351,6 +355,17 @@ class EmbedSnippetTest(actions.TestBase):
             '<script src="https://www.example.com/modules/embed/v1/embed.js">'
             '</script>\n'
             '<cb-embed src="https://www.example.com/the_course/modules/embed'
+            '/v1/resource/fragment/fake_key"></cb-embed>',
+            embed.AbstractEmbed.get_embed_snippet(handler, key))
+
+    def test_snippet_for_registered_embed_and_empty_namespace(self):
+        embed.Registry.bind('fragment', embed.AbstractEmbed)
+        handler = self._get_fake_handler(slug='/')
+        key = 'fake_key'
+        self.assertEquals(
+            '<script src="https://www.example.com/modules/embed/v1/embed.js">'
+            '</script>\n'
+            '<cb-embed src="https://www.example.com/modules/embed'
             '/v1/resource/fragment/fake_key"></cb-embed>',
             embed.AbstractEmbed.get_embed_snippet(handler, key))
 
@@ -468,7 +483,7 @@ class UrlParserTest(actions.TestBase):
 
     def test_get_kind_returns_none_if_suffix_malformed(self):
         one_arg = (
-            'http://example.com/namespace/modules/embed/resource/v1/malformed')
+            'http://example.com/namespace/modules/embed/v1/resource/malformed')
         self.assertIsNone(embed.UrlParser.get_kind(one_arg))
 
         one_arg_with_spaces = (
@@ -476,9 +491,9 @@ class UrlParserTest(actions.TestBase):
             'resource/ malformed ')
         self.assertIsNone(embed.UrlParser.get_kind(one_arg_with_spaces))
 
-    def test_get_kind_returns_none_if_url_missing_namespace(self):
-        global_url = 'http://example.com/modules/embed/resource/v1/kind/id'
-        self.assertIsNone(embed.UrlParser.get_kind(global_url))
+    def test_get_kind_returns_value_if_url_missing_namespace(self):
+        global_url = 'http://example.com/modules/embed/v1/resource/kind/id'
+        self.assertEquals('kind', embed.UrlParser.get_kind(global_url))
 
     def test_get_kind_returns_none_if_url_missing_parts(self):
         no_protocol = 'example.com/namespace/modules/embed/v1/resource/kind/id'
@@ -511,9 +526,9 @@ class UrlParserTest(actions.TestBase):
             'resource/ malformed ')
         self.assertIsNone(embed.UrlParser.get_id_or_name(one_arg_with_spaces))
 
-    def test_get_id_or_name_returns_none_if_url_missing_namespace(self):
-        global_url = 'http://example.com/modules/embed/resource/v1/kind/id'
-        self.assertIsNone(embed.UrlParser.get_id_or_name(global_url))
+    def test_get_id_or_name_returns_value_if_url_missing_namespace(self):
+        global_url = 'http://example.com/modules/embed/v1/resource/kind/id'
+        self.assertEquals('id', embed.UrlParser.get_id_or_name(global_url))
 
     def test_get_id_or_name_returns_none_if_url_missing_parts(self):
         no_protocol = 'example.com/namespace/modules/embed/v1/resource/kind/id'

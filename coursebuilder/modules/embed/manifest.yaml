@@ -1,7 +1,7 @@
 tests:
   functional:
     - modules.embed.embed_tests.DemoHandlerTest = 2
-    - modules.embed.embed_tests.EmbedSnippetTest = 2
+    - modules.embed.embed_tests.EmbedSnippetTest = 3
     - modules.embed.embed_tests.ExampleEmbedAndHandlerV1ChildCoursesTest = 5
     - modules.embed.embed_tests.ExampleEmbedAndHandlerV1SingleCourseTest = 3
     - modules.embed.embed_tests.FinishAuthHandlerTest = 1

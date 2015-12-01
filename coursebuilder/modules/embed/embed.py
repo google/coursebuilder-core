@@ -202,6 +202,8 @@ class AbstractEmbed(object):
 
         host_url = handler.request.host_url
         slug = handler.app_context.get_slug()
+        if slug == '/':
+            slug = ''
 
         script_src = '%s%s' % (host_url, _EMBED_JS_URL)
         cb_embed_src = '%s%s%s/%s/%s' % (
@@ -249,9 +251,14 @@ class AbstractEmbed(object):
     def get_slug(cls, handler, target_slug=None):
         """Gets target_slug, falling back to slug of handler's app_context."""
         if target_slug is not None:
-            return target_slug
+            slug = target_slug
+        else:
+            slug = handler.get_course().app_context.get_slug()
 
-        return handler.get_course().app_context.get_slug()
+        if slug == '/':
+            return ''
+        else:
+            return slug
 
     @classmethod
     def _check_redirect_url(cls, url):
@@ -411,10 +418,14 @@ class UrlParser(object):
     @classmethod
     def _get_parts(cls, url):
         parts = url.split('/')
-        if len(parts) != 10:
+        if len(parts) == 10:
+            # A URL with an explicit namespace
+            _, _, _, _, modules, embed, version, _, kind, id_or_name = parts
+        elif len(parts) == 9:
+            # A URL with root ('/') namespace
+            _, _, _, modules, embed, version, _, kind, id_or_name = parts
+        else:
             return None
-
-        _, _, _, _, modules, embed, version, _, kind, id_or_name = parts
 
         if (modules != _MODULES) or (embed != _EMBED) or (version != _V1):
             return None
