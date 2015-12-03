@@ -24,8 +24,10 @@ from common import schema_fields
 from controllers import utils
 from models import courses
 from models import roles
+from models import services
 from models import transforms
 from modules.courses import constants
+from modules.courses import messages
 from modules.dashboard import dashboard
 from modules.oeditor import oeditor
 
@@ -83,20 +85,16 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             extra_schema_dict_values={'className': 'title'}))
         element_settings.add_property(schema_fields.SchemaField(
             'shown_when_unavailable', 'Shown When Private', 'boolean',
-            description='If checked, the content displays its '
-            'title in the syllabus even when it is private.  '
-            '<a href="https://code.google.com/p/course-builder/'
-            'wiki/CourseBuilderChecklist">Learn more...</a>',
-            i18n=False, optional=True,
+            description=services.help_urls.make_learn_more_message(
+                messages.AVAILABILITY_SHOWN_WHEN_UNAVAILABLE_DESCRIPTION,
+                'course:availability:shown_when_unavailable'), i18n=False,
+            optional=True,
             extra_schema_dict_values={'className': 'shown'}))
         element_settings.add_property(schema_fields.SchemaField(
             'availability', 'Availability', 'string',
-            description='Content defaults to the availability '
-            'of the course, but may also be restricted to admins '
-            '(Private) or open to the public (Public). '
-            '<a href="https://code.google.com/p/course-builder'
-            '/wiki/CourseBuilderChecklist">Learn more...</a>',
-            i18n=False, optional=True,
+            description=services.help_urls.make_learn_more_message(
+                messages.AVAILABILITY_AVAILABILITY_DESCRIPTION,
+                'course:availability:availability'), i18n=False, optional=True,
             select_data=[(a, a.title()) for a in courses.AVAILABILITY_VALUES],
             extra_schema_dict_values={'className': 'availability'}))
         ret.add_property(schema_fields.FieldArray(

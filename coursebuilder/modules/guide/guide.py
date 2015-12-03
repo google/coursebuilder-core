@@ -30,6 +30,7 @@ from models import courses
 from models import custom_modules
 from models import resources_display
 from models import roles
+from models import services
 from modules.courses import settings
 from modules.courses import unit_outline
 from tools import verify
@@ -229,9 +230,10 @@ class GuideUnitHandler(utils.BaseHandler):
 
 
 def get_schema_fields():
+    enabled_name = (
+        GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_ENABLED_FOR_THIS_COURSE)
     enabled = schema_fields.SchemaField(
-        GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_ENABLED_FOR_THIS_COURSE,
-        'Enable Guides', 'boolean',
+        enabled_name, 'Enable Guides', 'boolean',
         optional=True, i18n=False, editable=True,
         description=str(safe_dom.NodeList(
         ).append(safe_dom.Text(
@@ -241,7 +243,8 @@ def get_schema_fields():
             '/modules/guides', '/modules/guides', target="_blank")
         ).append(safe_dom.Text('. Course must not be Private. ')
         ).append(safe_dom.assemble_link(
-            'TBD', 'Learn more...', target="_blank"))))
+            services.help_urls.get(enabled_name), 'Learn more...',
+            target="_blank"))))
     color = schema_fields.SchemaField(
         GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_COLOR,
         'Color', 'string',
@@ -257,9 +260,9 @@ def get_schema_fields():
             'Specify the average length of each lesson in the course in '
             'minutes and it will be used to estimate the duration of each '
             'guide. If blank or set to 0, duration will not be shown.'))
+    availabiliy_name = GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_AVAILABILITY
     availability = schema_fields.SchemaField(
-        GUIDE_SETTINGS_SCHEMA_SECTION + ':' + GUIDE_AVAILABILITY,
-        'Availability', 'boolean', optional=True, i18n=False,
+        availabiliy_name, 'Availability', 'boolean', optional=True, i18n=False,
         select_data=AVAILABILITY_SELECT_DATA,
         default_value=courses.AVAILABILITY_COURSE,
         description=str(safe_dom.NodeList(
@@ -267,7 +270,8 @@ def get_schema_fields():
             'Guides default to the availability of the course, '
             'but may also be restricted to admins (Private). ')
         ).append(safe_dom.assemble_link(
-            'TBD', 'Learn more...', target="_blank"))))
+            services.help_urls.get(availabiliy_name), 'Learn more...',
+            target="_blank"))))
 
     return (lambda _: enabled, lambda _: color, lambda _: duration,
             lambda _: availability)

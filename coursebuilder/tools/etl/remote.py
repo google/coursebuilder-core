@@ -25,7 +25,8 @@ import traceback
 from google.appengine.ext.remote_api import remote_api_stub
 
 # Url of help documentation we send the user to if there is an authentication
-# error.
+# error. Cannot use services.help_urls because this code runs outside the CB
+# module system.
 _AUTH_HELP_URL = 'https://code.google.com/p/course-builder/wiki/EtlAuth'
 # String. Prefix used to detect if a server is running locally.
 _LOCAL_SERVER_PREFIX = 'localhost'

@@ -208,12 +208,14 @@ Add the content that reviewers of a Peer Review assignment see.
 """
 
 ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION = """
-The review date must be later than the Submission Date.
-Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
-in the UTC timezone.
+Reviews must be completed by this date. Must be after the actual assessment due
+date.
 """
 
-ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION = None
+ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION = """
+This is the minimum number of reviews a student must complete to get credit for
+the assessment.
+"""
 
 ASSESSMENT_REVIEW_TIMEOUT_IN_MINUTES = """
 How long a reviewer has to review an assignment once the reviewer accepts the

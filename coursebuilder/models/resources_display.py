@@ -412,10 +412,7 @@ class LabelGroupsHelper(object):
                 'The {content} is part of these tracks. If none are selected, '
                 'it will be part of all tracks.',
             'type_id': models.LabelDTO.LABEL_TYPE_COURSE_TRACK,
-            'learn_more':
-                # TODO(johncox): replace placeholder URL once target link is
-                # determined.
-                'https://code.google.com/p/course-builder/wiki/Dashboard',
+            'topic_id': 'labels:%s' % TRACKS_FIELD_NAME,
         },
         {
             'name': LOCALES_FIELD_NAME,
@@ -436,10 +433,10 @@ class LabelGroupsHelper(object):
         for field in cls.FIELDS:
             if field['name'] not in exclude_types:
                 description = field['description'].format(content=type_name)
-                learn_more = field.get('learn_more')
-                if learn_more:
-                    description = safe_dom.assemble_text_message(
-                        description, learn_more)
+                topic_id = field.get('topic_id')
+                if topic_id:
+                    description = services.help_urls.make_learn_more_message(
+                        description, topic_id)
 
                 schema.add_property(schema_fields.FieldArray(
                     field['name'], field['label'], description=str(description),
@@ -1002,16 +999,12 @@ class ResourceAssessment(ResourceUnitBase):
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_DUE_DATE_KEY),
             'Review Due Date', 'datetime', optional=True,
-            description=services.help_urls.make_learn_more_message(
-                messages.ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION,
-                workflow_key(courses.REVIEW_DUE_DATE_KEY)),
+            description=messages.ASSESSMENT_REVIEW_DUE_DATE_FORMAT_DESCRIPTION,
             extra_schema_dict_values={'_type': 'datetime'}))
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_MIN_COUNT_KEY),
             'Review Min Count', 'integer', optional=True,
-            description=services.help_urls.make_learn_more_message(
-                messages.ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION,
-                workflow_key(courses.REVIEW_MIN_COUNT_KEY))))
+            description=messages.ASSESSMENT_REVIEW_MIN_COUNT_DESCRIPTION))
         review_opts.add_property(schema_fields.SchemaField(
             workflow_key(courses.REVIEW_WINDOW_MINS_KEY),
             'Review Window Timeout', 'integer', optional=True,

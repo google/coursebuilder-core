@@ -2587,7 +2587,7 @@ class Course(object):
             'reg_form:additional_registration_fields', 'Registration Form',
             'html', description=services.help_urls.make_learn_more_message(
                 messages.REGISTRATION_REGISTRATION_FORM,
-                'reg_form:additonal_registration_fields'), optional=True))
+                'reg_form:additional_registration_fields'), optional=True))
         opts.add_property(schema_fields.SchemaField(
             # Note: Not directly user-editable; now controlled as part of a
             # cluster of settings from modules/courses/availability.py

@@ -54,8 +54,6 @@ _ALL = [
         'https://code.google.com/p/course-builder/wiki/CourseSettings')),
     ('course:assessment:content', _LegacyUrl(
         'https://code.google.com/p/course-builder/wiki/CreateAssessments')),
-    ('course:assessment:datetime', _LegacyUrl(
-        'https://code.google.com/p/course-builder/wiki/PeerReview')),
     ('course:assessment:html_content', _LegacyUrl(
         'https://code.google.com/p/course-builder/wiki/CreateAssessments')),
     ('course:assessment:review_form', _LegacyUrl(
@@ -65,6 +63,12 @@ _ALL = [
     ('course:assessment:snippet', _DEFAULT_SUFFIX),
     ('course:assessment:workflow:grader', _DEFAULT_SUFFIX),
     ('course:auto_index', _DEFAULT_SUFFIX),
+    ('course:availability:availability', _LegacyUrl(
+        'https://code.google.com/p/course-builder/wiki/'
+        'CourseBuilderChecklist')),
+    ('course:availability:shown_when_unavailable', _LegacyUrl(
+        'https://code.google.com/p/course-builder/wiki/'
+        'CourseBuilderChecklist')),
     ('course:can_record_student_events', _DEFAULT_SUFFIX),
     ('course:can_student_change_locale', _DEFAULT_SUFFIX),
     ('course:google:api_key', _DEFAULT_SUFFIX),
@@ -79,21 +83,34 @@ _ALL = [
     ('course:unit:manual_progress', _DEFAULT_SUFFIX),
     ('course:welcome_notifications_sender', _DEFAULT_SUFFIX),
     ('dashboard:gift_questions:questions', _DEFAULT_SUFFIX),
+    ('dashboard:powered_by', _LegacyUrl(
+        'https://code.google.com/p/course-builder/')),
     ('data_pump:json_key', _DEFAULT_SUFFIX),
     ('data_pump:pii_encryption_token', _DEFAULT_SUFFIX),
     ('data_pump:project_id', _DEFAULT_SUFFIX),
     ('data_pump:table_lifetime', _DEFAULT_SUFFIX),
     ('data_removal:removal_policy', _DEFAULT_SUFFIX),
+    ('help:documentation', _LegacyUrl(
+        'https://code.google.com/p/course-builder/wiki/'
+        'CourseBuilderChecklist')),
+    ('help:forum', _LegacyUrl(
+        'https://groups.google.com/forum/?fromgroups#!categories/'
+        'course-builder-forum/general-troubleshooting')),
+    ('help:videos', _LegacyUrl(
+        'https://www.youtube.com/playlist?list=PLFB_aGY5EfxeltJfJZwkjqDLAW'
+        'dMfSpES')),
+    ('labels:tracks', _DEFAULT_SUFFIX),
     ('math:math:input_type', _DEFAULT_SUFFIX),
+    ('modules:guide:availability', _DEFAULT_SUFFIX),
+    ('modules:guide:enabled', _DEFAULT_SUFFIX),
+    ('modules:webserv:availability', _DEFAULT_SUFFIX),
+    ('modules:webserv:doc_root', _DEFAULT_SUFFIX),
+    ('modules:webserv:enabled', _DEFAULT_SUFFIX),
     ('questionnaire:questionnaire:disabled', _DEFAULT_SUFFIX),
     ('questionnaire:questionnaire:form_id', _DEFAULT_SUFFIX),
-    ('reg_form:additonal_registration_fields', _DEFAULT_SUFFIX),
+    ('reg_form:additional_registration_fields', _DEFAULT_SUFFIX),
     ('settings:debugging:show_hooks', _DEFAULT_SUFFIX),
     ('settings:debugging:show_jinja_context', _DEFAULT_SUFFIX),
-    ('workflow:review_due_date', _LegacyUrl(
-        'https://code.google.com/p/course-builder/wiki/PeerReview')),
-    ('workflow:review_min_count', _LegacyUrl(
-        'https://code.google.com/p/course-builder/wiki/PeerReview')),
     ('workflow:review_window_mins', _LegacyUrl(
         'https://code.google.com/p/course-builder/wiki/PeerReview'))
 ]

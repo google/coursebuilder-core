@@ -56,6 +56,7 @@ from controllers.utils import ReflectiveRequestHandler
 from models import config
 from models import custom_modules
 from models import roles
+from models import services
 from models.models import RoleDAO
 from common import menus
 
@@ -429,6 +430,8 @@ class DashboardHandler(
             os.environ['CURRENT_VERSION_ID'])
         template_values['extra_css_href_list'] = self.EXTRA_CSS_HREF_LIST
         template_values['extra_js_href_list'] = self.EXTRA_JS_HREF_LIST
+        template_values['powered_by_url'] = services.help_urls.get(
+            'dashboard:powered_by')
         if not template_values.get('sections'):
             template_values['sections'] = []
         if not appengine_config.PRODUCTION_MODE:
@@ -587,19 +590,15 @@ def make_help_menu():
 
     DashboardHandler.add_sub_nav_mapping(
         'help', 'documentation', 'Documentation',
-        href='https://code.google.com/p/course-builder/wiki/CourseBuilderCheckl'
-        'ist', target='_blank')
+        href=services.help_urls.get('help:documentation'), target='_blank')
 
     DashboardHandler.add_sub_nav_mapping(
-        'help', 'forum', 'Support',
-        href='https://groups.google.com/forum/?fromgroups#!categories/'
-        'course-builder-forum/general-troubleshooting',
+        'help', 'forum', 'Support', href=services.help_urls.get('help:forum'),
         target='_blank')
 
     DashboardHandler.add_sub_nav_mapping(
-        'help', 'videos', 'Videos',
-        href='https://www.youtube.com/playlist?list=PLFB_aGY5EfxeltJfJZwkjqDLAW'
-        'dMfSpES', target='_blank')
+        'help', 'videos', 'Videos', href=services.help_urls.get('help:videos'),
+        target='_blank')
 
 def get_visible_courses():
     result = []

@@ -38,6 +38,7 @@ from controllers import sites
 from controllers import utils
 from models import courses
 from models import custom_modules
+from models import services
 from modules.courses import lessons
 from modules.courses import settings
 
@@ -443,15 +444,16 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
 
 
 def get_schema_fields():
+    enabled_name = WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_ENABLED
     enabled = schema_fields.SchemaField(
-        WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_ENABLED,
-        'Enable Web Server', 'boolean', optional=True, i18n=False,
+        enabled_name, 'Enable Web Server', 'boolean', optional=True, i18n=False,
         description=str(safe_dom.NodeList(
             ).append(safe_dom.Text(
                 'If checked, static content uploaded for this course '
                 'will be served. ')
             ).append(safe_dom.assemble_link(
-                'TBD', 'Learn more...', target="_blank"))))
+                services.help_urls.get(enabled_name), 'Learn more...',
+                target="_blank"))))
     slug = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_SLUG,
         'URL Component', 'string', optional=True, i18n=False,
@@ -459,16 +461,17 @@ def get_schema_fields():
         description='This is added to the end of the course URL to '
             'access the web server content root. If blank, the root '
             'course URL is used.')
+    doc_root_name = WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_DOC_ROOT
     doc_root = schema_fields.SchemaField(
-        WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_DOC_ROOT,
-        'Content Root', 'string', optional=True, i18n=False,
+        doc_root_name, 'Content Root', 'string', optional=True, i18n=False,
         select_data=make_doc_root_select_data(),
         description=str(safe_dom.NodeList(
             ).append(safe_dom.Text(
                 'This is the directory within /modules/webserv/document_roots '
                 'to use as the web server content root. ')
             ).append(safe_dom.assemble_link(
-                'TBD', 'Learn more...', target="_blank"))))
+                services.help_urls.get(doc_root_name), 'Learn more...',
+                target="_blank"))))
     enabled_jinja = schema_fields.SchemaField(
         WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_JINJA_ENABLED,
         'Process Templates', 'boolean', optional=True, i18n=False,
@@ -488,9 +491,10 @@ def get_schema_fields():
             'content, you should set the caching to None so that you see your '
             'changes immediately.  You will also need to ask your browser to '
             'reload pages that it has already cached.')
+    availability_name = (
+        WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_AVAILABILITY)
     availability = schema_fields.SchemaField(
-        WEBSERV_SETTINGS_SCHEMA_SECTION + ':' + WEBSERV_AVAILABILITY,
-        'Availability', 'string', optional=True, i18n=False,
+        availability_name, 'Availability', 'string', optional=True, i18n=False,
         default_value=courses.AVAILABILITY_COURSE,
         select_data=AVAILABILITY_SELECT_DATA,
         description=str(safe_dom.NodeList(
@@ -499,7 +503,8 @@ def get_schema_fields():
                 'also be restricted to admins (Private) or open to the public '
                 '(Public). ')
             ).append(safe_dom.assemble_link(
-                'TBD', 'Learn more...', target="_blank"))))
+                services.help_urls.get(availability_name), 'Learn more...',
+                target="_blank"))))
     return (
         lambda _: enabled, lambda _: slug, lambda _: doc_root,
         lambda _: enabled_jinja, lambda _: enabled_md, lambda _: availability,
