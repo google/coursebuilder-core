@@ -5,7 +5,7 @@ ol.skill-display-root {
   list-style-type: none;
   padding: 0;
   margin: 0;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 ol.skill-display-root > li.skill {
   display: inline-block;
