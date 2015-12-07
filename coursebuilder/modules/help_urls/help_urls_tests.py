@@ -87,13 +87,6 @@ class ServicesHelpUrlsTest(TestBase):
         os.environ = self.old_os_environ
         super(ServicesHelpUrlsTest, self).tearDown()
 
-    def test_get_for_topic_id_with_default_suffix(self):
-        os.environ['GCB_PRODUCT_VERSION'] = '1.2.3'
-        self._set_topics([('topic_id', topics._DEFAULT_SUFFIX)])
-
-        self.assertEquals(
-            help_urls._DEFAULT_URL, services.help_urls.get('topic_id'))
-
     def test_get_for_topic_id_with_legacy_url_uses_verbatim_value(self):
         os.environ['GCB_PRODUCT_VERSION'] = '1.2.3'
         self._set_topics(

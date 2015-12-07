@@ -55,7 +55,7 @@ from models import services
 from modules.help_urls import topics
 
 
-_BASE_URL = 'https://www.google.com/edu/openonline/cb/docs'
+_BASE_URL = 'https://www.google.com/edu/openonline/course-builder/docs'
 # Legacy documentation URL. Fall through to this whenever an item is in
 # topics._ALL but its value is topics._DEFAULT.
 # TODO(johncox): remove this once topics._ALL is fully populated.
@@ -93,9 +93,6 @@ class _TopicRegistry(object):
             raise ValueError('No URL suffix found for topic "%s"' % topic_id)
 
         # Treat as module-protected. pylint: disable=protected-access
-        if isinstance(suffix, topics._DefaultSuffix):
-            return _DEFAULT_URL
-
         if isinstance(suffix, topics._LegacyUrl):
             return suffix.value
 
