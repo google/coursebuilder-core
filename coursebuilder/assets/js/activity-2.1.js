@@ -26,8 +26,7 @@
 //    That is, the object contains properties such as the type of question, a
 //    regular expression indicating the correct answer, a string to show in
 //    case of either correct or incorrect answers or to show when the student
-//    asks for help. For more information on how to specify the object, please
-//    see http://code.google.com/p/course-builder/wiki/CreateActivities.
+//    asks for help.
 
 var activity = [
 

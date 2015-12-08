@@ -26,8 +26,7 @@
 //    That is, the object contains properties such as the type of question, a
 //    regular expression indicating the correct answer, a string to show in
 //    case of either correct or incorrect answers or to show when the student
-//    asks for help. For more information on how to specify the object, please
-//    see http://code.google.com/p/course-builder/wiki/CreateActivities.
+//    asks for help.
 
 var activity = [
   '<table border="2"><tr><td> <b>Search Tips:</b><p> <ul><li>Use quotes to search for a phrase.</li><li>Quotes glue words together; there can be additional words before or after the phrase, but the phrase will always stay together in the results.</li><li>Use OR to include more than one way of expressing an idea.</li><li>If an idea on one side of the OR is more than one word, it needs quotes around it (for example [handkerchief OR "facial tissue"])</li></ul> </tr></td></table>',

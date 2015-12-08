@@ -26,8 +26,7 @@
 //    That is, the object contains properties such as the type of question, a
 //    regular expression indicating the correct answer, a string to show in
 //    case of either correct or incorrect answers or to show when the student
-//    asks for help. For more information on how to specify the object, please
-//    see http://code.google.com/p/course-builder/wiki/CreateActivities.
+//    asks for help.
 
 var activity = [
 
@@ -52,8 +51,7 @@ var activity = [
 // Note that the following code (that is not part of the definition of the
 // 'activity' variable) needs to be surrounded with the commented tags
 // '// <gcb-no-verify>' and '// </gcb-no-verify>', so that the verifier script
-// in tools/verify.py does not treat the code as invalid. For more details,
-// please see https://code.google.com/p/course-builder/wiki/VerifyCode
+// in tools/verify.py does not treat the code as invalid.
 
 
 //<gcb-no-verify>
