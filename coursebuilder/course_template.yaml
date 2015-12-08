@@ -52,7 +52,7 @@ html_hooks:
     # include any analytics code that covers all your course webpages, you can
     # do so here: see
     #
-    # https://code.google.com/p/course-builder/wiki/ReachAndEngagementMetrics.
+    # https://www.google.com/edu/openonline/edukit/create.html
     #
     # for details.
     before_head_tag_ends: '<!-- base.before_head_tag_ends -->'

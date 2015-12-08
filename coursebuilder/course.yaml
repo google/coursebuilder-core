@@ -49,8 +49,7 @@ course:
     alt_text:
 
   # Forum email. For details, see
-  #
-  #     http://code.google.com/p/course-builder/wiki/WebForums.
+  # https://www.google.com/edu/openonline/edukit/forums.html
   forum_email: My-Course@googlegroups.com
 
   # Locale for internationalization. See modules/i18n/resources/locale for
