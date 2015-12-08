@@ -118,6 +118,7 @@ lib/mathjax-fonts-2.3.0.zip
 lib/mrs-mapreduce-0.9.zip
 lib/networkx-1.9.1.zip
 lib/oauth-1.0.1.zip
+lib/polymer-guide-1.2.0.zip
 lib/pyparsing-1.5.7.zip
 lib/rdflib-4.2.2-dev.zip
 lib/reportlab-3.1.8.zip
