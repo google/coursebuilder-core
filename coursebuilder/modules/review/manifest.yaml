@@ -14,6 +14,7 @@ files:
   - modules/review/cron.py
   - modules/review/dashboard.py
   - modules/review/domain.py
+  - modules/review/manifest.yaml
   - modules/review/peer.py
   - modules/review/peer_tests.py
   - modules/review/review.py

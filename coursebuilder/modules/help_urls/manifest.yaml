@@ -8,4 +8,5 @@ files:
   - modules/help_urls/__init__.py
   - modules/help_urls/help_urls.py
   - modules/help_urls/help_urls_tests.py
+  - modules/help_urls/manifest.yaml
   - modules/help_urls/topics.py

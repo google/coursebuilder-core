@@ -488,6 +488,7 @@ class DeveloperWorkflowTester(object):
         self.test_module_can_not_declare_tests_for_another_module()
         self.test_module_manifest_is_validated_1()
         self.test_module_manifest_is_validated_2()
+        self.test_manifest_must_include_manifest_yaml()
         self.test_class_name_expansion()
         self.test_developer_test_workflow_with_test_sh()
         self.test_developer_test_workflow_with_project_py()
@@ -506,6 +507,7 @@ class DeveloperWorkflowTester(object):
                 - foo
                 - bar
                 - baz
+                - manifest.yaml
             '''
         manifest = ModuleManifest('sample', manifest_data=manifest_data)
 
@@ -514,7 +516,7 @@ class DeveloperWorkflowTester(object):
             'tests']['functional'][0] == 'modules.sample.baz = 6'
         assert manifest.data[
             'tests']['integration'][0] == 'modules.sample.bar = 7'
-        assert manifest.data['files'] == ['foo', 'bar', 'baz']
+        assert manifest.data['files'] == ['foo', 'bar', 'baz', 'manifest.yaml']
 
         integration, non_integration = manifest.get_tests()
         assert 1 == len(integration)
@@ -525,6 +527,8 @@ class DeveloperWorkflowTester(object):
             tests:
                 unknown:
                     - foo = 7
+            files:
+                - manifest.yaml
             '''
         try:
             ModuleManifest('sample', manifest_data=manifest_data)
@@ -537,6 +541,8 @@ class DeveloperWorkflowTester(object):
             tests:
                 unit:
                     - foo : bar
+            files:
+                - manifest.yaml
             '''
         try:
             ModuleManifest('sample', manifest_data=manifest_data)
@@ -549,6 +555,8 @@ class DeveloperWorkflowTester(object):
             tests:
                 unit:
                     - modules.module_name_a.tests.tests.Main = 25
+            files:
+                - manifest.yaml
             '''
         ModuleManifest(
             'module_name_a', manifest_data=manifest_data).get_tests()
@@ -558,6 +566,18 @@ class DeveloperWorkflowTester(object):
         except:  # pylint: disable=bare-except
             return
         raise Exception('Expected to fail')
+
+    def test_manifest_must_include_manifest_yaml(self):
+        manifest_data = '''
+            files:
+                - foo
+        '''
+        try:
+            ModuleManifest('module_name', manifest_data=manifest_data)
+        except:  # pylint: disable=bare-except
+            return
+        raise Exception('Expected to fail')
+
 
     def test_class_name_expansion(self):
         """Developer can test all methods of one class."""
@@ -677,6 +697,8 @@ class ModuleManifest(object):
         if complaints:
             raise Exception('Failed to parse manifest file %s: %s' % (
                 manifest_fn, complaints))
+        if 'manifest.yaml' not in [os.path.basename(f) for f in data['files']]:
+            raise Exception('Manifest must name itself in the "files" section.')
         return data
 
     def _test_line_to_dict(self, line):

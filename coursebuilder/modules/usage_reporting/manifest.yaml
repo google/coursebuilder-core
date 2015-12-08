@@ -16,6 +16,7 @@ files:
   - modules/usage_reporting/constants.py
   - modules/usage_reporting/course_creation.py
   - modules/usage_reporting/enrollment.py
+  - modules/usage_reporting/manifest.yaml
   - modules/usage_reporting/messaging.py
   - modules/usage_reporting/students.py
   - modules/usage_reporting/templates/consent_banner.html

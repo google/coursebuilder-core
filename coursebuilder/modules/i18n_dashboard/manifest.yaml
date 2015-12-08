@@ -25,6 +25,7 @@ files:
   - modules/i18n_dashboard/i18n_dashboard_tests.py
   - modules/i18n_dashboard/jobs.py
   - modules/i18n_dashboard/jobs_tests.py
+  - modules/i18n_dashboard/manifest.yaml
   - modules/i18n_dashboard/messages.py
   - modules/i18n_dashboard/resources/css/global_i18n.css
   - modules/i18n_dashboard/resources/css/i18n_dashboard.css

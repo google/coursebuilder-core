@@ -1,4 +1,5 @@
 files:
+  - modules/i18n/manifest.yaml
   - modules/i18n/resources/locale/af/LC_MESSAGES/messages.mo
   - modules/i18n/resources/locale/af/LC_MESSAGES/messages.po
   - modules/i18n/resources/locale/am/LC_MESSAGES/messages.mo

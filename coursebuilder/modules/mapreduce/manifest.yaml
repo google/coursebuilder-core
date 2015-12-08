@@ -1,4 +1,5 @@
 files:
   - modules/mapreduce/__init__.py
+  - modules/mapreduce/manifest.yaml
   - modules/mapreduce/mapreduce_module.py
   - modules/mapreduce/messages.py

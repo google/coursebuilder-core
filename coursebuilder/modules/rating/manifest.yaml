@@ -5,6 +5,7 @@ tests:
 
 files:
   - modules/rating/__init__.py
+  - modules/rating/manifest.yaml
   - modules/rating/messages.py
   - modules/rating/rating.py
   - modules/rating/rating_tests.py

@@ -18,6 +18,7 @@ files:
   - modules/courses/courses_tests.py
   - modules/courses/import_running.html
   - modules/courses/lessons.py
+  - modules/courses/manifest.yaml
   - modules/courses/messages.py
   - modules/courses/outline.py
   - modules/courses/roles.py

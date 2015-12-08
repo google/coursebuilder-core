@@ -20,6 +20,7 @@ files:
   - modules/embed/embed_integration_tests.py
   - modules/embed/embed_pageobjects.py
   - modules/embed/embed_tests.py
+  - modules/embed/manifest.yaml
   - modules/embed/static/v1/embed.css
   - modules/embed/static/v1/embed_child.css
   - modules/embed/templates/v1/demo.html

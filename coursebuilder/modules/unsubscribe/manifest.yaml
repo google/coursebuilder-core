@@ -6,6 +6,7 @@ tests:
 
 files:
   - modules/unsubscribe/__init__.py
+  - modules/unsubscribe/manifest.yaml
   - modules/unsubscribe/templates/resubscribe.html
   - modules/unsubscribe/templates/unsubscribe.html
   - modules/unsubscribe/unsubscribe.py

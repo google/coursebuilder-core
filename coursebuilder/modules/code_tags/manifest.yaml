@@ -6,6 +6,7 @@ files:
   - modules/code_tags/__init__.py
   - modules/code_tags/code_tags.py
   - modules/code_tags/code_tags_tests.py
+  - modules/code_tags/manifest.yaml
   - modules/code_tags/messages.py
   - modules/code_tags/resources/code_tags.css
   - modules/code_tags/resources/code_tags.js

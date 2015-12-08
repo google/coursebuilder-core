@@ -5,6 +5,7 @@ tests:
 
 files:
   - modules/upload/__init__.py
+  - modules/upload/manifest.yaml
   - modules/upload/messages.py
   - modules/upload/resources/script_add.png
   - modules/upload/templates/form.html

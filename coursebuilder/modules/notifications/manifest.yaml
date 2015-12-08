@@ -11,6 +11,7 @@ tests:
 files:
   - modules/notifications/__init__.py
   - modules/notifications/cron.py
+  - modules/notifications/manifest.yaml
   - modules/notifications/notifications.py
   - modules/notifications/notifications_tests.py
   - modules/notifications/stats.html

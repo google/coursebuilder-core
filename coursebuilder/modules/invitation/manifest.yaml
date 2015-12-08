@@ -8,6 +8,7 @@ files:
   - modules/invitation/__init__.py
   - modules/invitation/invitation.py
   - modules/invitation/invitation_tests.py
+  - modules/invitation/manifest.yaml
   - modules/invitation/messages.py
   - modules/invitation/resources/css/invitation.css
   - modules/invitation/resources/js/invitation.js

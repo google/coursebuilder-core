@@ -8,5 +8,6 @@ files:
   - modules/data_removal/data_removal.py
   - modules/data_removal/data_removal_tests.py
   - modules/data_removal/delete_confirmation.html
+  - modules/data_removal/manifest.yaml
   - modules/data_removal/messages.py
   - modules/data_removal/removal_models.py

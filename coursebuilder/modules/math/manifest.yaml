@@ -4,6 +4,7 @@ tests:
 
 files:
   - modules/math/__init__.py
+  - modules/math/manifest.yaml
   - modules/math/math.py
   - modules/math/math_tests.py
   - modules/math/messages.py

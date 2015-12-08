@@ -8,6 +8,7 @@ files:
   - modules/search/__init__.py
   - modules/search/assets/search.css
   - modules/search/assets/search.js
+  - modules/search/manifest.yaml
   - modules/search/messages.py
   - modules/search/resources.py
   - modules/search/results_templates/basic.html

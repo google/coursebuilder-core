@@ -13,6 +13,7 @@ files:
   - modules/assessment_tags/javascript_tests/grading_button_fixture.html
   - modules/assessment_tags/javascript_tests/karma.conf.js
   - modules/assessment_tags/javascript_tests/tests.js
+  - modules/assessment_tags/manifest.yaml
   - modules/assessment_tags/questions.py
   - modules/assessment_tags/resources/grading.js
   - modules/assessment_tags/resources/grading_lib.js

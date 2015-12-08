@@ -11,4 +11,5 @@ files:
   - modules/data_pump/data_pump.html
   - modules/data_pump/data_pump.py
   - modules/data_pump/data_pump_tests.py
+  - modules/data_pump/manifest.yaml
   - modules/data_pump/messages.py

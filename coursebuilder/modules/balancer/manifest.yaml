@@ -10,4 +10,5 @@ files:
   - modules/balancer/__init__.py
   - modules/balancer/balancer.py
   - modules/balancer/balancer_tests.py
+  - modules/balancer/manifest.yaml
   - modules/balancer/messages.py

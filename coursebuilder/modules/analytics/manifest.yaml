@@ -20,6 +20,7 @@ files:
   - modules/analytics/clustering.py
   - modules/analytics/gradebook.py
   - modules/analytics/location_aggregator.py
+  - modules/analytics/manifest.yaml
   - modules/analytics/messages.py
   - modules/analytics/page_event_aggregator.py
   - modules/analytics/rest_providers.py

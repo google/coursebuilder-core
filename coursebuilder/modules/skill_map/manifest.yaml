@@ -34,6 +34,7 @@ files:
   - modules/skill_map/javascript_tests/student_skill_widget/fixture.html
   - modules/skill_map/javascript_tests/student_skill_widget/karma.conf.js
   - modules/skill_map/javascript_tests/student_skill_widget/tests.js
+  - modules/skill_map/manifest.yaml
   - modules/skill_map/messages.py
   - modules/skill_map/rdf.py
   - modules/skill_map/recommender.py

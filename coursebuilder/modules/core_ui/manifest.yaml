@@ -15,4 +15,5 @@ files:
   - modules/core_ui/javascript_tests/fixture.html
   - modules/core_ui/javascript_tests/karma.conf.js
   - modules/core_ui/javascript_tests/tests.js
+  - modules/core_ui/manifest.yaml
   - modules/core_ui/templates/style_guide/style_guide.html

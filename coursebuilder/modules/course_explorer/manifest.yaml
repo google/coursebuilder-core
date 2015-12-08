@@ -8,6 +8,7 @@ files:
   - modules/course_explorer/__init__.py
   - modules/course_explorer/course_explorer.py
   - modules/course_explorer/course_explorer_tests.py
+  - modules/course_explorer/manifest.yaml
   - modules/course_explorer/messages.py
   - modules/course_explorer/student.py
   - modules/course_explorer/views/base_explorer.html

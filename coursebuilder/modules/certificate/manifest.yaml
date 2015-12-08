@@ -17,6 +17,7 @@ files:
   - modules/certificate/javascript_tests/fixture.html
   - modules/certificate/javascript_tests/karma.conf.js
   - modules/certificate/javascript_tests/tests.js
+  - modules/certificate/manifest.yaml
   - modules/certificate/messages.py
   - modules/certificate/resources/css/certificate.css
   - modules/certificate/resources/images/cert.png

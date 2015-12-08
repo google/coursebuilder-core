@@ -6,5 +6,6 @@ files:
   - modules/extra_tabs/__init__.py
   - modules/extra_tabs/extra_tabs.py
   - modules/extra_tabs/extra_tabs_tests.py
+  - modules/extra_tabs/manifest.yaml
   - modules/extra_tabs/messages.py
   - modules/extra_tabs/templates/extra_tab_page.html

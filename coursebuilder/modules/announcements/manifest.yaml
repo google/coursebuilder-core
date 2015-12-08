@@ -2,4 +2,5 @@ files:
   - modules/announcements/__init__.py
   - modules/announcements/announcements.py
   - modules/announcements/templates/announcement_list.html
+  - modules/announcements/manifest.yaml
   - modules/announcements/messages.py

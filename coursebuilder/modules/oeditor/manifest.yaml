@@ -15,6 +15,7 @@ files:
   - modules/oeditor/_static/js/resize_iframes.js
   - modules/oeditor/javascript_tests/karma.conf.js
   - modules/oeditor/javascript_tests/tests.js
+  - modules/oeditor/manifest.yaml
   - modules/oeditor/oeditor.py
   - modules/oeditor/oeditor_tests.py
   - modules/oeditor/oeditor_unit_tests.py

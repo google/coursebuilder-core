@@ -12,6 +12,7 @@ files:
   - modules/questionnaire/javascript_tests/form_data.json
   - modules/questionnaire/javascript_tests/karma.conf.js
   - modules/questionnaire/javascript_tests/tests.js
+  - modules/questionnaire/manifest.yaml
   - modules/questionnaire/messages.py
   - modules/questionnaire/questionnaire.py
   - modules/questionnaire/questionnaire_tests.py

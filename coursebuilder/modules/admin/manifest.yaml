@@ -10,5 +10,6 @@ files:
   - modules/admin/admin.py
   - modules/admin/admin_tests.py
   - modules/admin/config.py
+  - modules/admin/manifest.yaml
   - modules/admin/templates/courses.html
   - modules/admin/templates/welcome.html

@@ -21,6 +21,7 @@ files:
   - modules/gitkit/__init__.py
   - modules/gitkit/gitkit.py
   - modules/gitkit/gitkit_tests.py
+  - modules/gitkit/manifest.yaml
   - modules/gitkit/resources/config.yaml
   - modules/gitkit/resources/favicon.ico
   - modules/gitkit/templates/branding.html

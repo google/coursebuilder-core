@@ -30,6 +30,7 @@ files:
   - modules/core_tags/core_tags_unit_tests.py
   - modules/core_tags/javascript_tests/karma.conf.js
   - modules/core_tags/javascript_tests/tests.js
+  - modules/core_tags/manifest.yaml
   - modules/core_tags/messages.py
   - modules/core_tags/templates/drive_error.html
   - modules/core_tags/templates/drive_item.html
