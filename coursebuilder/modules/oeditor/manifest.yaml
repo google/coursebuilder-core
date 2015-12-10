@@ -19,6 +19,7 @@ files:
   - modules/oeditor/oeditor.py
   - modules/oeditor/oeditor_tests.py
   - modules/oeditor/oeditor_unit_tests.py
+  - modules/oeditor/templates/array_select.js
   - modules/oeditor/templates/checkbox-list.js
   - modules/oeditor/templates/code.js
   - modules/oeditor/templates/datetime.js

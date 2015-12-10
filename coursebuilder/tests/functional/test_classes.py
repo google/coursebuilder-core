@@ -6048,7 +6048,7 @@ var activity = [
         # activity_title, activity_listed, activity
         # `video` and `id' are other hidden fields that are irrelevant to this
         # test.
-        self.assert_num_hidden_annotations(response.body, 5)
+        self.assert_num_hidden_annotations(response.body, 6)
 
         # add a lesson w. old-style activity
         lesson = course.add_lesson(unit)
@@ -6067,7 +6067,7 @@ var activity = [
         response = self.get('/test/dashboard?action=edit_lesson&key=3')
         self.assertEqual(200, response.status_int)
         # the `video` and `id` fields will still be hidden
-        self.assert_num_hidden_annotations(response.body, 2)
+        self.assert_num_hidden_annotations(response.body, 3)
 
         # cleaning up
         sites.reset_courses()

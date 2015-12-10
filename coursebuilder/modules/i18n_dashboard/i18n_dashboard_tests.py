@@ -887,7 +887,7 @@ class I18nProgressDeferredUpdaterTests(actions.TestBase):
 
         edit_lesson_payload = {
             'key': lesson.lesson_id,
-            'unit_id': unit.unit_id,
+            'unit_id': [{'label': '', 'value': unit.unit_id, 'selected': True}],
             'title': 'Test Lesson',
             'objectives': '<p>a</p><p>b</p>',
             'auto_index': True,

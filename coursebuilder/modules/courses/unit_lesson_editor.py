@@ -914,7 +914,8 @@ class LessonRESTHandler(utils.BaseRESTHandler):
             self.get_schema(course, key).get_json_schema_dict())
 
         lesson.title = updates_dict['title']
-        lesson.unit_id = updates_dict['unit_id']
+        lesson.unit_id = common_utils.find(
+            lambda unit: unit['selected'], updates_dict['unit_id'])['value']
         lesson.scored = (updates_dict['scored'] == 'scored')
         lesson.objectives = updates_dict['objectives']
         lesson.video = updates_dict['video']

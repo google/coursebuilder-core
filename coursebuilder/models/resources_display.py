@@ -1075,13 +1075,6 @@ class ResourceLesson(resource.AbstractResourceHandler):
 
         # Note GcbRte relies on the structure of this schema. Do not change
         # without checking the dependency.
-        unit_list = []
-        for unit in units:
-            if unit.type == 'U':
-                unit_list.append(
-                    (unit.unit_id,
-                     cgi.escape(display_unit_title(unit, course.app_context))))
-
         lesson_data = cls.get_data_dict(course, key)
         has_video_id = bool(lesson_data.get('video'))
 
@@ -1096,11 +1089,10 @@ class ResourceLesson(resource.AbstractResourceHandler):
             'title', 'Title', 'string', extra_schema_dict_values={
                 'className': 'inputEx-Field content-holder'},
             description=messages.LESSON_TITLE_DESCRIPTION))
-        lesson.add_property(schema_fields.SchemaField(
-            'unit_id', 'Unit', 'string', i18n=False,
-            description=messages.LESSON_PARENT_UNIT_DESCRIPTION,
-            select_data=unit_list,
-            extra_schema_dict_values={'required': False}))
+        lesson.add_property(create_select_array_schema(
+            'unit_id', 'Contained in Unit',
+            messages.LESSON_PARENT_UNIT_DESCRIPTION))
+
         lesson.add_property(schema_fields.SchemaField(
             'video', 'Video ID', 'string', hidden=not has_video_id,
             optional=True, description=messages.LESSON_VIDEO_ID_DESCRIPTION))
@@ -1154,10 +1146,21 @@ class ResourceLesson(resource.AbstractResourceHandler):
         else:
             activity = ''
 
+        units = course.get_units()
+        unit_list = []
+        for unit in units:
+            if unit.type == 'U':
+                unit_list.append({
+                    'value': str(unit.unit_id),
+                    'label': cgi.escape(
+                        display_unit_title(unit, course.app_context)),
+                    'selected': str(lesson.unit_id) == str(unit.unit_id),
+                    })
+
         lesson_dict = {
             'key': lesson.lesson_id,
             'title': lesson.title,
-            'unit_id': lesson.unit_id,
+            'unit_id': unit_list,
             'scored': 'scored' if lesson.scored else 'not_scored',
             'objectives': lesson.objectives,
             'video': lesson.video,
@@ -1236,3 +1239,20 @@ def display_lesson_title(unit, lesson, app_context):
     span.add_text(lesson.title)
     span.set_attribute('className', _class)
     return content
+
+
+def create_select_array_schema(field_name, field_title, description):
+    select_element = schema_fields.FieldRegistry(title=None)
+    select_element.add_property(schema_fields.SchemaField(
+        'value', 'Value', 'string',
+        editable=False, hidden=True, i18n=False))
+    select_element.add_property(schema_fields.SchemaField(
+        'label', 'Label', 'string',
+        i18n=False, editable=False))
+    select_element.add_property(schema_fields.SchemaField(
+        'selected', 'Selected', 'boolean', default_value=False,
+        i18n=False, editable=False))
+    return schema_fields.FieldArray(
+        field_name, field_title, description=description,
+        item_type=select_element, optional=True,
+        extra_schema_dict_values={'_type': 'array-select'})

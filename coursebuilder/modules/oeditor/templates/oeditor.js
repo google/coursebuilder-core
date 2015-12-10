@@ -407,7 +407,10 @@ function onPageLoad(env) {
   });
   YUI.add("gcb-checkbox-list", bindCheckboxListField, '3.1.0', {
     requires: ['inputex-checkbox']
-  })
+  });
+  YUI.add("gcb-array-select", bindArraySelectField, '3.1.0', {
+    requires: ['inputex-select']
+  });
   YUI(getYuiConfig(env.bundle_lib_files)).use(
     env.required_modules,
     mainYuiFunction);
