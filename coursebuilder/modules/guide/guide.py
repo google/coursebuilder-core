@@ -86,7 +86,7 @@ def can_display_guide_to_current_user(course, config):
         course_avail, student.is_transient,
         custom_modules.can_see_drafts(course.app_context),
         GuideDisplayableElement(self_avail))
-    return student, displayability.is_link_displayed, displayability
+    return student, displayability.is_content_available, displayability
 
 
 class GuideApplicationHandler(utils.ApplicationHandler):

@@ -252,7 +252,7 @@ class StudentCourseView(object):
 
             # If item is not available to this user, skip it.
             displayability = self._determine_displayability(unit)
-            if not displayability.is_displayed:
+            if not displayability.is_name_visible:
                 continue
 
             e = []
@@ -274,7 +274,7 @@ class StudentCourseView(object):
 
     def _build_element_common(self, element, displayability, link,
                               parent_element=None):
-        if not displayability.is_displayed:
+        if not displayability.is_name_visible:
             raise ValueError('Should not add non-displayble elements')
         ret = OutlineElement()
         ret.course_element = element
@@ -295,7 +295,7 @@ class StudentCourseView(object):
         if parent_element:
             ret.parent_id = parent_element.unit_id
 
-        if displayability.is_link_displayed:
+        if displayability.is_content_available:
             ret.link = link
             if (self._student_preferences and
                 self._student_preferences.last_location and link and
@@ -307,7 +307,7 @@ class StudentCourseView(object):
         return ret
 
     def _build_elements_for_unit(self, unit, unit_displayability):
-        if unit_displayability.is_link_displayed:
+        if unit_displayability.is_content_available:
             self._accessible_units.append(unit)
         element = self._build_element_common(
             unit, unit_displayability, 'unit?unit=%s' % unit.unit_id)
@@ -322,23 +322,23 @@ class StudentCourseView(object):
                 assessment = self._course.find_unit_by_id(unit.pre_assessment)
                 assessment_displayability = self._determine_displayability(
                     assessment)
-                if assessment_displayability.is_displayed:
+                if assessment_displayability.is_name_visible:
                     element.contents.extend(
                         self._build_elements_for_assessment(
                             assessment, assessment_displayability, unit))
             for lesson in self._course.get_lessons(unit.unit_id):
                 lesson_displayability = self._determine_displayability(lesson)
-                if lesson_displayability.is_displayed:
+                if lesson_displayability.is_name_visible:
                     element.contents.extend(
                         self._build_elements_for_lesson(
                             unit, lesson, lesson_displayability))
-                if lesson_displayability.is_link_displayed:
+                if lesson_displayability.is_content_available:
                     self._accessible_lessons[str(unit.unit_id)].append(lesson)
             if unit.post_assessment:
                 assessment = self._course.find_unit_by_id(unit.post_assessment)
                 assessment_displayability = self._determine_displayability(
                     assessment)
-                if assessment_displayability.is_displayed:
+                if assessment_displayability.is_name_visible:
                     element.contents.extend(
                         self._build_elements_for_assessment(
                             assessment, assessment_displayability, unit))
@@ -363,7 +363,7 @@ class StudentCourseView(object):
         return [element]
 
     def _build_elements_for_link(self, unit, displayability):
-        if displayability.is_link_displayed:
+        if displayability.is_content_available:
             self._accessible_units.append(unit)
         # Cast href to string to get rid of possible LazyTranslator wrapper.
         link = str(unit.href) if unit.href else None
@@ -373,7 +373,7 @@ class StudentCourseView(object):
 
     def _build_elements_for_assessment(self, unit, displayability,
                                     owning_unit=None):
-        if displayability.is_link_displayed:
+        if displayability.is_content_available:
             self._accessible_units.append(unit)
 
         ret = []
@@ -446,7 +446,7 @@ class StudentCourseView(object):
         cu = custom_units.UnitTypeRegistry.get(unit.custom_unit_type)
         if not cu:
             return None
-        if displayability.is_link_displayed:
+        if displayability.is_content_available:
             self._accessible_units.append(unit)
 
         link_dest = self._app_context.canonicalize_url(cu.visible_url(unit))

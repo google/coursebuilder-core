@@ -262,10 +262,24 @@ COURSE_AVAILABILITY_POLICIES = collections.OrderedDict([
 
 Displayability = collections.namedtuple(
     'Displayability', [
-        'is_displayed',  # Whether this element should be available at all.
-        'is_link_displayed',  # Whether title is a clickable link to content.
-        'is_available_to_students',  # For annotation in admin-only views.
-        'is_available_to_visitors'],  # For annotation in admin-only views.
+        # Whether the student can see that this item exists.  E.g., from the
+        # syllabus, is the name of the element displayed at all?  Note that
+        # this does not govern whether the current user may see the actual
+        # content of the item; here we just care about seeing the name.
+        'is_name_visible',
+
+        # Whether content of the element is available to the student.  This
+        # should also be used to govern whether a link is added to the name
+        # of the element (assuming is_name_visible is True)
+        'is_content_available',
+
+        # These items are only relevant for admin users; since admins can
+        # always see all content, we add markup to pages to indicate whether
+        # certain items are visible only because of the admin privileges
+        # (and not available to students and/or visitors)
+        'is_available_to_students',
+        'is_available_to_visitors'
+        ],
     )
 
 
@@ -3481,8 +3495,8 @@ course:
         # for now the functionality here is implicitly tested in:
         # modules.courses.courses_tests.AvailabilityTests
 
-        is_displayed = False
-        is_link_displayed = False
+        is_name_visible = False
+        is_content_available = False
         is_available_to_students = False
         is_available_to_visitors = False
 
@@ -3500,14 +3514,14 @@ course:
 
             if course_element.availability == AVAILABILITY_UNAVAILABLE:
                 if course_element.shown_when_unavailable:
-                    is_displayed = True
-                    is_link_displayed = False
+                    is_name_visible = True
+                    is_content_available = False
                     is_available_to_students = False
                     is_available_to_visitors = False
             if course_element.availability in (AVAILABILITY_AVAILABLE,
                                                AVAILABILITY_COURSE):
-                is_displayed = True
-                is_link_displayed = True
+                is_name_visible = True
+                is_content_available = True
                 is_available_to_students = True
                 is_available_to_visitors = True
 
@@ -3517,26 +3531,26 @@ course:
             COURSE_AVAILABILITY_REGISTRATION_REQUIRED):
             if course_element.availability == AVAILABILITY_UNAVAILABLE:
                 if course_element.shown_when_unavailable:
-                    is_displayed = True
-                    is_link_displayed = False
+                    is_name_visible = True
+                    is_content_available = False
                     is_available_to_students = False
                     is_available_to_visitors = False
 
             elif course_element.availability == AVAILABILITY_AVAILABLE:
-                is_displayed = True
-                is_link_displayed = True
+                is_name_visible = True
+                is_content_available = True
                 is_available_to_students = True
                 is_available_to_visitors = True
 
             elif course_element.availability == AVAILABILITY_COURSE:
                 if student_is_transient:
-                    is_displayed = True
-                    is_link_displayed = False
+                    is_name_visible = True
+                    is_content_available = False
                     is_available_to_students = True
                     is_available_to_visitors = False
                 else:
-                    is_displayed = True
-                    is_link_displayed = True
+                    is_name_visible = True
+                    is_content_available = True
                     is_available_to_students = True
                     is_available_to_visitors = False
 
@@ -3545,11 +3559,11 @@ course:
         # This trumps even the course being private, since admins need to be
         # able to actually see what students _would_ see if they could.
         if can_see_drafts:
-            is_displayed = True
-            is_link_displayed = True
+            is_name_visible = True
+            is_content_available = True
 
-        return Displayability(is_displayed,
-                              is_link_displayed,
+        return Displayability(is_name_visible,
+                              is_content_available,
                               is_available_to_students,
                               is_available_to_visitors)
 

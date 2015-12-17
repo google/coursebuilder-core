@@ -407,7 +407,7 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
             course_avail, student.is_transient,
             custom_modules.can_see_drafts(self.app_context),
             WebServerDisplayableElement(self_avail))
-        if not displayability.is_link_displayed:
+        if not displayability.is_content_available:
             self.error(404, 'Negative displayability: %s' % str(displayability))
             return
 
