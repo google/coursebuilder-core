@@ -210,7 +210,9 @@ _EXCLUDE_TYPES = set([
     # Map/reduce internal types:
     '_AE_Barrier_Index',
     '_AE_MR_MapreduceState',
+    '_AE_MR_OutputFile',
     '_AE_MR_ShardState',
+    '_AE_MR_TaskPayload',
     '_AE_Pipeline_Barrier',
     '_AE_Pipeline_Record',
     '_AE_Pipeline_Slot',
@@ -924,7 +926,8 @@ def _verify_downloadability(type_names):
                     'Class %s has no safe_key method.  This probably means '
                     'it is non-permanent (e.g., job control for map/reduce), '
                     'or similar internal state.  Consider adding this type '
-                    'to the permanent exclusions list in tools/etl/etl.py. ')
+                    'to the permanent exclusions list in tools/etl/etl.py. ' %
+                    type_name)
         except Exception:  # pylint: disable=broad-except
             problems.append(
                 'Could not locate the Python code for the type %s.' % type_name)

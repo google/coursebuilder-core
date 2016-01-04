@@ -4973,7 +4973,8 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             ['--datastore_types', 'HasNoSafeKeyMethod'])
         with self.assertRaises(SystemExit):
             etl.main(download_datastore_args, testing=True)
-        self.assertLogContains('CRITICAL: Class %s has no safe_key method.')
+        self.assertLogContains(
+            'CRITICAL: Class HasNoSafeKeyMethod has no safe_key method.')
 
     def test_download_datastore_succeeds(self):
         """Test download of datastore data and archive creation."""
