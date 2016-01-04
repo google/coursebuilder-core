@@ -35,7 +35,6 @@ from models.progress import UnitLessonCompletionTracker
 from modules.analytics import clustering
 from modules.analytics import gradebook
 from modules.analytics import student_aggregate
-from modules.analytics import student_answers
 from tests.functional import actions
 from tools.etl import etl
 
@@ -1888,7 +1887,7 @@ class GradebookCsvTests(actions.TestBase):
             self.unit_two.unit_id, self.u2_l1.lesson_id, 0, self.q_a_id,
             None, None, a1, s1, w1, True]]
         user = users.get_current_user()
-        student_answers.QuestionAnswersEntity(
+        gradebook.QuestionAnswersEntity(
             key_name=user.user_id(), data=transforms.dumps(answers)).put()
 
         expected_scores = self.expected_score_headers + ','.join(
@@ -1927,7 +1926,7 @@ class GradebookCsvTests(actions.TestBase):
             [self.assessment.unit_id, None, 1, self.q_g_id,
              None, None, 'eight', 8, 8, True]]
         user = users.get_current_user()
-        student_answers.QuestionAnswersEntity(
+        gradebook.QuestionAnswersEntity(
             key_name=user.user_id(), data=transforms.dumps(answers)).put()
 
         actions.login(self.STUDENT_EMAIL)
@@ -1950,7 +1949,7 @@ class GradebookCsvTests(actions.TestBase):
             [self.assessment.unit_id, None, 1, self.q_g_id,
              None, None, 'eighteen', 18, 18, True]]
         user = users.get_current_user()
-        student_answers.QuestionAnswersEntity(
+        gradebook.QuestionAnswersEntity(
             key_name=user.user_id(), data=transforms.dumps(answers)).put()
 
         expected_scores = self.expected_score_headers
@@ -2009,7 +2008,7 @@ class GradebookCsvTests(actions.TestBase):
             answers = [[
                 assessment.unit_id, None, 0, q_id,
                 None, None, 'to comma, or not to comma', 0, 1, True]]
-            student_answers.QuestionAnswersEntity(
+            gradebook.QuestionAnswersEntity(
                 key_name=user.user_id(), data=transforms.dumps(answers)).put()
 
             self._verify(
@@ -2022,7 +2021,7 @@ class GradebookCsvTests(actions.TestBase):
         gradebook_url = ('/%s/dashboard?action=analytics_gradebook' %
                          self.COURSE_NAME)
         # Treat as module-protected. pylint: disable=protected-access
-        job_name = student_answers.RawAnswersGenerator(
+        job_name = gradebook.RawAnswersGenerator(
             self.app_context)._job_name
 
         # No results => No button and no too-much-data text

@@ -88,8 +88,8 @@ def register_tabs():
         'Gradebook',
         'gradebook.html',
         data_source_classes=[
-            student_answers.RawAnswersDataSource,
-            student_answers.OrderedQuestionsDataSource])
+            gradebook.RawAnswersDataSource,
+            gradebook.OrderedQuestionsDataSource])
     clusters_visualization = analytics.Visualization(
         'clusters',
         'Cluster Manager',
@@ -202,10 +202,9 @@ def register_module():
         data_sources.Registry.register(
             student_answers.CourseQuestionsDataSource)
         data_sources.Registry.register(student_answers.CourseUnitsDataSource)
-        data_sources.Registry.register(student_answers.AnswersDataSource)
-        data_sources.Registry.register(student_answers.RawAnswersDataSource)
-        data_sources.Registry.register(
-            student_answers.OrderedQuestionsDataSource)
+        data_sources.Registry.register(gradebook.AnswersDataSource)
+        data_sources.Registry.register(gradebook.RawAnswersDataSource)
+        data_sources.Registry.register(gradebook.OrderedQuestionsDataSource)
 
         data_sources.Registry.register(
             synchronous_providers.QuestionStatsSource)
@@ -230,7 +229,7 @@ def register_module():
         data_removal.Registry.register_indexed_by_user_id_remover(
             student_aggregate.StudentAggregateEntity.delete_by_key)
         data_removal.Registry.register_indexed_by_user_id_remover(
-            student_answers.QuestionAnswersEntity.delete_by_key)
+            gradebook.QuestionAnswersEntity.delete_by_key)
 
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             courses.Course.SCHEMA_SECTION_COURSE] += course_settings_fields
