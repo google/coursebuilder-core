@@ -32,7 +32,7 @@ from models import messages as models_messages
 from controllers import utils
 from modules.explorer import constants
 from modules.explorer import messages
-from modules.drive import dashboard_handler
+from modules.dashboard import dashboard_handler
 from modules.oeditor import oeditor
 
 GCB_ENABLE_COURSE_EXPLORER_PAGE = config.ConfigProperty(

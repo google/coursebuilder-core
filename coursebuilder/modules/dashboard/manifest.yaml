@@ -20,6 +20,7 @@ files:
   - modules/dashboard/_static/css/view.css
   - modules/dashboard/asset_paths.py
   - modules/dashboard/dashboard.py
+  - modules/dashboard/dashboard_handler.py
   - modules/dashboard/dashboard_tests.py
   - modules/dashboard/dashboard_unit_tests.py
   - modules/dashboard/dto_editor.py
