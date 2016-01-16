@@ -76,8 +76,9 @@ class PageObject(object):
             return self._tester.driver.find_elements_by_css_selector(
                 selector)[index]
 
-    def find_elements_by_css_selector(self, selector):
-        self.wait().until(ec.visibility_of_element_located(
+    def find_elements_by_css_selector(self, selector, pre_wait=True):
+        if pre_wait:
+            self.wait().until(ec.visibility_of_element_located(
                 (by.By.CSS_SELECTOR, selector)))
         return self._tester.driver.find_elements_by_css_selector(selector)
 
@@ -378,6 +379,10 @@ class AnnouncementsEditorPage(EditorPageObject):
 class LoginPage(PageObject):
     """Page object to model the interactions with the login page."""
 
+    def __init__(self, tester, continue_page=RootPage):
+        super(LoginPage, self).__init__(tester)
+        self._continue_page = continue_page
+
     def login(self, login, admin=False, post_wait=True):
         self.wait().until(ec.element_to_be_clickable((by.By.ID, 'email')))
         email = self.find_element_by_id('email')
@@ -389,7 +394,7 @@ class LoginPage(PageObject):
         login_button.click()
         if post_wait:
             self.wait().until(ec.staleness_of((login_button)))
-        return RootPage(self._tester)
+        return self._continue_page(self._tester)
 
 
 class DashboardPage(PageObject):

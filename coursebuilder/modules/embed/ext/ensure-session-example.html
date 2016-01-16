@@ -1,0 +1,39 @@
+<html>
+  <head>
+    <script>
+      /**
+       * This function is needed only for Course Buider tests. Do not include it
+       * in production uses.
+       */
+      function config_for_test() {
+        if (window.location.hash) {
+          return JSON.parse(window.location.hash.substring(1));
+        } else {
+          return null;
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <p id="ensure-session-example-para-1">
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+      commodo consequat.
+    </p>
+
+    <script src="ensure-session.js"></script>
+    <script>
+      gcbSession.login(config_for_test() || {
+        cbHost: 'https://my-coursebuilder.appspot.com'
+      });
+    </script>
+
+    <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+      commodo consequat.
+    </p>
+  </body>
+</html>

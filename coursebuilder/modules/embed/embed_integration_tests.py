@@ -18,8 +18,14 @@ __author__ = [
     'John Cox (johncox@google.com)',
 ]
 
+import SimpleHTTPServer
+import SocketServer
+import socket
+import threading
+
 from modules.embed import embed
 from modules.embed import embed_pageobjects
+from tests import suite
 from tests.integration import integration
 from tests.integration import pageobjects
 
@@ -232,3 +238,58 @@ class EmbedModuleTest(integration.TestBase):
         for cb_embed in demo_page.get_cb_embed_elements():
             page = demo_page.load_embed(cb_embed)
             self.assert_is_embed_page(page, self.SAMPLE_COURSE_TITLE)
+
+
+class EnsureSessionTest(integration.TestBase):
+    PORT = 3123
+
+    def setUp(self):
+        super(EnsureSessionTest, self).setUp()
+
+        class TestServer(SocketServer.TCPServer):
+            # Don't want to wait for TIME_WAIT for shutdown
+            allow_reuse_address = True
+
+        try:
+            self._server = TestServer(
+                ("", self.PORT), SimpleHTTPServer.SimpleHTTPRequestHandler)
+        except socket.error, ex:
+            print """
+                ==========================================================
+                Failed to bind to port %d.
+                This may mean you have another server running on that
+                port, or you may have a hung test process.
+
+                Kill running server from command line via:
+                lsof -i tcp:%d -Fp | tr -d p | xargs kill -9
+                ==========================================================
+            """ % (self.PORT, self.PORT)
+            raise ex
+
+        server_thread = threading.Thread(target=self._server.serve_forever)
+        server_thread.start()
+
+    def tearDown(self):
+        self._server.shutdown()
+        self._server.server_close()
+        super(EnsureSessionTest, self).tearDown()
+
+    def test_ensure_session_with_button(self):
+        example_page = embed_pageobjects.EnsureSessionExamplePage(self).load(
+            'http://localhost:%s' % self.PORT,
+            suite.TestBase.INTEGRATION_SERVER_BASE_URL,
+            redirect=False
+        ).assert_start_button_is_visible(
+        ).click_start_button(
+        ).login(
+            'user@example.com'
+        ).assert_start_button_is_not_visible()
+
+    def test_ensure_session_with_auto_redirect(self):
+        example_page = embed_pageobjects.EnsureSessionExamplePage(self).load(
+            'http://localhost:%s' % self.PORT,
+            suite.TestBase.INTEGRATION_SERVER_BASE_URL,
+            redirect=True
+        ).login(
+            'user@example.com'
+        ).assert_start_button_is_not_visible()

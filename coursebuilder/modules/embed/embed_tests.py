@@ -543,3 +543,16 @@ class UrlParserTest(actions.TestBase):
             'http://example.com/namespace/modules/embed/v1/resource/kind/'
             ' id_or_name ')
         self.assertEquals('id_or_name', embed.UrlParser.get_id_or_name(url))
+
+
+class EnsureSessionTests(actions.TestBase):
+
+    def test_ensure_session_requires_continue_parameter(self):
+        response = self.get(
+            '/modules/embed/v1/ensure_session', expect_errors=True)
+        self.assertEquals(400, response.status_int)
+
+        response = self.get(
+            '/modules/embed/v1/ensure_session'
+            '?continue=http%3A%2F%2Fx20example.com/foo/html')
+        self.assertEquals(302, response.status_int)

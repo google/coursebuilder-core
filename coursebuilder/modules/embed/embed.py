@@ -105,6 +105,9 @@ _EMBED_LIB_JS_URL = '%s/%s' % (_BASE_URL_V1, _EMBED_LIB_JS_NAME)
 _EMBED_LIB_JS_URL_NAME = 'embed_lib_js_url'
 _ENROLL_ERROR_NAME = 'enroll_error.html'
 _ENROLL_ERROR_URL = _BASE_URL_V1 + '/enroll_error'
+_ENSURE_SESSION_URL = '%s/ensure_session' % _BASE_URL_V1
+_ENSURE_SESSION_DATA_NAME = 'ensure_session_data.html'
+_ENSURE_SESSION_DATA_URL = '%s/ensure_session_data.js' % _BASE_URL_V1
 _ENV_NAME = 'env'
 _ERRORS_DEMO_URL = _DEMO_URL + '/errors'
 _EXAMPLE_NAME = 'example.html'
@@ -602,6 +605,32 @@ class _FinishAuthHandler(controllers_utils.BaseHandler):
         }))
 
 
+class _EnsureSession(controllers_utils.ApplicationHandler):
+
+    def get(self):
+        continue_url = str(self.request.get('continue'))
+        if not continue_url:
+            self.error(400, 'Missing required continue parameter')
+            return
+
+        if users.get_current_user():
+            self.redirect(continue_url)
+        else:
+            self.redirect(users.create_login_url('%s?%s' % (
+                _ENSURE_SESSION_URL,
+                urllib.urlencode({'continue': continue_url}))))
+
+
+class _EnsureSessionData(controllers_utils.ApplicationHandler):
+
+    def get(self):
+        self.response.headers['Content-Type'] = 'script/javascript'
+        self.response.cache_control.no_cache = True
+        self.response.write(
+            _TEMPLATES_ENV.get_template(_ENSURE_SESSION_DATA_NAME).render(
+                {'in_session': bool(users.get_current_user())}))
+
+
 class _ExampleEmbed(AbstractEmbed):
     """Reference implementation of an Embed.
 
@@ -663,6 +692,8 @@ _GLOBAL_HANDLERS = [
     (_GLOBAL_ERRORS_DEMO_URL, _GlobalErrorsDemoHandler),
     (_LOCAL_ERRORS_DEMO_URL, _LocalErrorsDemoHandler),
     (_STATIC_URL, tags.ResourcesHandler),
+    (_ENSURE_SESSION_URL, _EnsureSession),
+    (_ENSURE_SESSION_DATA_URL, _EnsureSessionData)
 ]
 _NAMESPACED_HANDLERS = [
     (_DISPATCH_URL, _DispatchHandler),

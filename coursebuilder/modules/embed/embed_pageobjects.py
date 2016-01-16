@@ -18,6 +18,7 @@ __author__ = [
     'John Cox (johncox@google.com)',
 ]
 
+from models import transforms
 from tests.integration import pageobjects
 
 from selenium.common import exceptions
@@ -234,3 +235,50 @@ class SignInPage(AbstractIframeContentsPageObject):
 
         raise exceptions.InvalidSwitchToTargetException(
             'Unable to find login window')
+
+
+class EnsureSessionExamplePage(pageobjects.PageObject):
+    URL = 'modules/embed/ext/ensure-session-example.html'
+
+    def load(
+            self, static_server_base_url, course_builder_base_url,
+            redirect=False):
+
+        config = {}
+        config['cbHost'] = course_builder_base_url
+        if redirect:
+            config['redirect'] = True
+
+        self.get('%s/%s#%s' % (
+            static_server_base_url, self.URL, transforms.dumps(config)))
+
+        if redirect:
+            return pageobjects.LoginPage(
+                self._tester, continue_page=EnsureSessionExamplePage)
+        else:
+            return self
+
+    def _get_start_button(self, pre_wait=True):
+        # Check that the page is visible
+        self._tester.assertIsNotNone(
+            self.find_element_by_id('ensure-session-example-para-1'))
+
+        buttons = self.find_elements_by_css_selector(
+            '.cb-embed-sign-in-button', pre_wait=pre_wait)
+        if buttons:
+            return buttons[0]
+        else:
+            return None
+
+    def assert_start_button_is_visible(self):
+        self._tester.assertIsNotNone(self._get_start_button())
+        return self
+
+    def assert_start_button_is_not_visible(self):
+        self._tester.assertIsNone(self._get_start_button(pre_wait=False))
+        return self
+
+    def click_start_button(self):
+        self._get_start_button().click()
+        return pageobjects.LoginPage(
+            self._tester, continue_page=EnsureSessionExamplePage)

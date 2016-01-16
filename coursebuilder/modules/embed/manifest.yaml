@@ -2,6 +2,7 @@ tests:
   functional:
     - modules.embed.embed_tests.DemoHandlerTest = 2
     - modules.embed.embed_tests.EmbedSnippetTest = 3
+    - modules.embed.embed_tests.EnsureSessionTests = 1
     - modules.embed.embed_tests.ExampleEmbedAndHandlerV1ChildCoursesTest = 5
     - modules.embed.embed_tests.ExampleEmbedAndHandlerV1SingleCourseTest = 3
     - modules.embed.embed_tests.FinishAuthHandlerTest = 1
@@ -13,6 +14,7 @@ tests:
     - modules.embed.embed_tests.UrlParserTest = 12
   integration:
     - modules.embed.embed_integration_tests.EmbedModuleTest = 4
+    - modules.embed.embed_integration_tests.EnsureSessionTest = 2
 
 files:
   - modules/embed/__init__.py
@@ -20,6 +22,8 @@ files:
   - modules/embed/embed_integration_tests.py
   - modules/embed/embed_pageobjects.py
   - modules/embed/embed_tests.py
+  - modules/embed/ext/ensure-session-example.html
+  - modules/embed/ext/ensure-session.js
   - modules/embed/manifest.yaml
   - modules/embed/static/v1/embed.css
   - modules/embed/static/v1/embed_child.css
@@ -29,6 +33,7 @@ files:
   - modules/embed/templates/v1/embed_child.js
   - modules/embed/templates/v1/embed_lib.js
   - modules/embed/templates/v1/enroll_error.html
+  - modules/embed/templates/v1/ensure_session_data.html
   - modules/embed/templates/v1/example.html
   - modules/embed/templates/v1/finish_auth.html
   - modules/embed/templates/v1/global_errors.html
