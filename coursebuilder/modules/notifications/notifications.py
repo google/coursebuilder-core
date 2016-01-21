@@ -267,10 +267,10 @@ class Status(object):
     FAILED = 'failed'
     PENDING = 'pending'
     SUCCEEDED = 'succeeded'
-    _STATES = frozenset((FAILED, PENDING, SUCCEEDED))
+    STATES = frozenset((FAILED, PENDING, SUCCEEDED))
 
     def __init__(self, to, sender, intent, enqueue_date, state):
-        assert state in self._STATES
+        assert state in self.STATES
 
         self.enqueue_date = enqueue_date
         self.intent = intent

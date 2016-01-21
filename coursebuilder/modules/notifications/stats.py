@@ -42,12 +42,12 @@ class _Result(object):
         self.bins = [self.last_hour, self.last_day, self.last_week]
         self._totals = {'all': 0}
         self._totals.update(
-            {state: 0 for state in notifications.Status._STATES})
+            {state: 0 for state in notifications.Status.STATES})
 
     def add(self, state, dt):
         # Datastore values may no longer be found in code; silently
         # discard if so.
-        if state in notifications.Status._STATES:
+        if state in notifications.Status.STATES:
             self._totals['all'] += 1
             self._totals[state] += 1
             for selected in self.bins:
@@ -71,7 +71,7 @@ class _Bin(object):
 
     def __init__(self, name, cutoff):
         # Treating as module-protected. pylint: disable=protected-access
-        self._data = {state: 0 for state in notifications.Status._STATES}
+        self._data = {state: 0 for state in notifications.Status.STATES}
         self.cutoff = cutoff
         self.name = name
 

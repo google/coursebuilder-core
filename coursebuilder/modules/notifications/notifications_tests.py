@@ -1262,7 +1262,7 @@ class StatsTest(actions.TestBase):
         on_week = self.now - datetime.timedelta(days=7)
 
         all_state_and_date_permutations = [x for x in itertools.product(
-            notifications.Status._STATES,
+            notifications.Status.STATES,
             [self.now, within_hour, on_hour, within_day, on_day, within_week,
              on_week]
             )]
@@ -1294,5 +1294,5 @@ class StatsTest(actions.TestBase):
         bad_state = 'bad'
         self.result.add(bad_state, self.now)
 
-        self.assertNotIn(bad_state, notifications.Status._STATES)
+        self.assertNotIn(bad_state, notifications.Status.STATES)
         self.assertEqual(0, self.result.total())
