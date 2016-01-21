@@ -217,6 +217,7 @@ def start_integration_server_process(
         fp = open(_fn, 'w')
         fp.writelines([
             'env_variables:\n',
+            '  GCB_TEST_MODE: true\n'
             '  GCB_REGISTERED_MODULES_CUSTOM:\n'])
         fp.writelines(['    %s\n' % module for module in modules])
         fp.close()

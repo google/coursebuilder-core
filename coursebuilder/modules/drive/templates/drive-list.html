@@ -1,0 +1,129 @@
+<script>
+var JOB_STATUS_URL = {{ job_status_url|to_json }};
+</script>
+
+<div class="butterbar-alike">
+  <form action="{{ job_url }}" method="POST">
+    <input
+      type="hidden"
+      name="xsrf_token_{{ job_xsrf_action }}"
+      value="{{ job_xsrf_token }}" />
+
+    <span class="running-state">
+      Job Status: Running.
+      <button class="gcb-button gcb-icon-button" name="action" value="cancel">
+        <i class="icon material-icons">cancel</i>
+        cancel
+      </button>
+    </span>
+
+    <span class="idle-state">
+      Job Status: Idle.
+    </span>
+  </form>
+</div>
+
+<div class="gcb-button-toolbar">
+  <a class="gcb-button" href="{{ add_url }}">Add Items</a>
+</div>
+
+<form action="{{ sync_url }}" method="post">
+  <input
+    type="hidden"
+    name="xsrf_token_{{ sync_xsrf_action }}"
+    value="{{ sync_xsrf_token }}" />
+  <div class="gcb-list gcb-list--autostripe">
+    <table>
+      <thead>
+        <tr>
+          <th class="gcb-list__cell--icon"></th>
+          <th width="250">Name</th>
+          <th>Rest</th>
+          {% for header_hook in header_hooks %}
+            {{ header_hook(app_context) }}
+          {% endfor %}
+          <th>Type</th>
+          <th>Availability</th>
+          <th>Sync Schedule</th>
+          <th>Last Sync</th>
+          <th>Status</th>
+          <th width="50">Sync</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr id='file-{{ item.key }}'>
+            <td>
+              <a
+                {% if item.type == 'doc' %}
+                  href="https://docs.google.com/document/d/{{ item.key }}"
+                {% elif item.type == 'sheet' %}
+                  href="https://docs.google.com/spreadsheets/d/{{ item.key }}"
+                {% endif %}
+                target="_blank"
+                class="gcb-list__icon gcb-list__icon--rowhover material-icons"
+                >open_in_new</a>
+            </td>
+
+            <td class="title">
+              <a href="{{ item_url }}?key={{ item.key }}">
+                {{ item.title }}
+              </a>
+            </td>
+
+            <td>
+              <a
+                href="{{ content_url }}?key={{ item.key }}"
+                target="_blank"
+                class="gcb-list__icon gcb-list__icon--rowhover material-icons"
+              >open_in_new</a>
+            </td>
+
+            {% for row_hook in row_hooks %}
+              {{ row_hook(app_context, item) }}
+            {% endfor %}
+
+            <td>
+              {{ item.type }}
+            </td>
+
+            <td>
+              {{ item.availability }}
+            </td>
+
+            <td>
+              {{ item.sync_interval_human }}
+            </td>
+
+            <td
+              {% if item.last_synced %}
+                class="local-datetime" data-timestamp="{{ item.last_synced }}"
+              {% endif %}
+              ></td>
+
+            <td>
+              <span
+                  {% if item.sync_status == 'failed' %}
+                    title="{{ item.last_error }}"
+                  {% endif %}>
+                {{ item.sync_status_human }}
+              </span>
+            </td>
+
+            <td>
+              <button class="gcb-button sync-button" name="key" value="{{ item.key }}">
+                Sync
+              </button>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if not items|length %}
+      <div class="gcb-list__empty-message-wrapper">
+        <div class="gcb-list__empty-message">No items</div>
+      </div>
+    {% endif %}
+  </div>
+</form>

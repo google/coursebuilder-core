@@ -475,6 +475,29 @@ class ContentChunkDAO(object):
             key=lambda dto: dto.id)
 
     @classmethod
+    def get_or_new_by_uid(cls, uid):
+        result = cls.get_one_by_uid(uid)
+        if result is not None:
+            return result
+        else:
+            type_id, resource_id = cls._split_uid(uid)
+            return ContentChunkDTO({
+                'type_id': type_id,
+                'resource_id': resource_id,
+            })
+
+    @classmethod
+    def get_one_by_uid(cls, uid):
+        matches = cls.get_by_uid(uid)
+        if matches:
+            # There is a data race in the DAO -- it's possible to create two
+            # entries at the same time with the same UID. If that happened,
+            # use the first one saved.
+            return matches[0]
+        else:
+            return None
+
+    @classmethod
     def make_uid(cls, type_id, resource_id):
         """Makes a uid string (or None) from the given strings (or Nones)."""
         if type_id is None and resource_id is None:

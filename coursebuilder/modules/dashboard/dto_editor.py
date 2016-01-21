@@ -113,6 +113,17 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
     # from the dict which was the payload of a PUT request.
     PRE_SAVE_HOOKS = ()
 
+    # Enable other modules to act after an instance is deleted. Each member must
+    # be a function of the form:
+    #     callback(question)
+    PRE_DELETE_HOOKS = ()
+
+    EXTRA_JS_FILES = ()
+    SCHEMA_VERSIONS = ['1.0']
+
+    # Determines whether this handler can create new items.  If not, it can only
+    # update existing items.
+    CAN_CREATE = True
 
     def sanitize_input_dict(self, json_dict):
         """Give subclasses a hook to clean up incoming data before storage.
@@ -154,6 +165,9 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
         """Give subclasses a hook to perform an action after saving."""
         pass
 
+    def pre_delete_hook(self, dto):
+        pass
+
     def is_deletion_allowed(self, dto):
         """Allow subclasses to check referential integrity before delete.
 
@@ -182,10 +196,26 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
         """Subclass provides default values to initialize editor form."""
         raise NotImplementedError('Subclasses must override this function.')
 
+    def get_and_populate_dto(self, key, python_dict):
+        """Find the record and update its dict, but do not save it yet."""
+        if key:
+            return self.DAO.DTO(key, python_dict)
+        else:
+            return self.DAO.DTO(None, python_dict)
+
+    @classmethod
+    def get_schema(cls):
+        raise NotImplementedError('Subclasses must override this function.')
+
     def put(self):
         """Store a DTO in the datastore in response to a PUT."""
         request = transforms.loads(self.request.get('request'))
         key = request.get('key')
+
+        if not key and not self.CAN_CREATE:
+            transforms.send_json_response(
+                self, 404, 'Key is required in URL.', {})
+            return
 
         if not self.assert_xsrf_token_or_fail(
                 request, self.XSRF_TOKEN, {'key': key}):
@@ -217,11 +247,7 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
             self.validation_error('\n'.join(errors), key=key)
             return
 
-        if key:
-            item = self.DAO.DTO(key, python_dict)
-        else:
-            item = self.DAO.DTO(None, python_dict)
-
+        item = self.get_and_populate_dto(key, python_dict)
         self.pre_save_hook(item)
         common_utils.run_hooks(self.PRE_SAVE_HOOKS, item, python_dict)
         key_after_save = self.DAO.save(item)
@@ -250,6 +276,8 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
             return
 
         if self.is_deletion_allowed(item):
+            self.pre_delete_hook(item)
+            common_utils.run_hooks(self.PRE_DELETE_HOOKS, item)
             self.DAO.delete(item)
             transforms.send_json_response(self, 200, 'Deleted.')
 
@@ -263,18 +291,26 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
 
         if key:
             item = self.DAO.load(key)
+            if item is None:
+                transforms.send_json_response(
+                    self, 404, 'Not found.', {'key': key})
+                return
             version = item.dict.get('version')
             if version not in self.SCHEMA_VERSIONS:
                 transforms.send_json_response(
-                    self, 403, 'Version %s not supported.' % version,
+                    self, 400, 'Version %s not supported.' % version,
                     {'key': key})
                 return
             display_dict = copy.copy(item.dict)
             display_dict['id'] = item.id
             common_utils.run_hooks(self.PRE_LOAD_HOOKS, item, display_dict)
             payload_dict = self.transform_for_editor_hook(display_dict)
-        else:
+        elif self.CAN_CREATE:
             payload_dict = self.get_default_content()
+        else:
+            transforms.send_json_response(
+                self, 404, 'Key is required in URL.', {})
+            return
 
         transforms.send_json_response(
             self, 200, 'Success',

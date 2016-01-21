@@ -19,3 +19,6 @@ cron:
   # Compromise between keeping costs due to batch run down versus preventing
   # user re-registration while deletion is not yet complete.
   schedule: every sunday 05:30
+- description: Sync Google Drive documents
+  url: /cron/drive/sync
+  schedule: every 1 hours

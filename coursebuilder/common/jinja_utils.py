@@ -30,6 +30,7 @@ from common import caching
 from common import messages
 from models import config
 from models import models
+from models import transforms
 from models.counters import PerfCounter
 
 
@@ -68,6 +69,24 @@ def js_string_raw(data):
 
 def js_string(data):
     return jinja2.utils.Markup(js_string_raw(data))
+
+
+def _escape_js(data):
+    """Escapes JSON/JavaScript for use in inline <script> tags.
+
+    It prevents the browser from parsing HTML end tags or HTML entities inside
+    the JavaScript.
+    """
+
+    data = data.replace("'", "\\u0027")
+    data = data.replace('<', '\\u003c')
+    data = data.replace('>', '\\u003e')
+    data = data.replace('&', '\\u0026')
+    return data
+
+
+def _to_json_jinja(data):
+    return jinja2.utils.Markup(_escape_js(transforms.dumps(data)))
 
 
 def get_gcb_tags_filter(handler):
@@ -145,6 +164,7 @@ def create_jinja_environment(loader, locale=None, autoescape=True):
         extensions=['jinja2.ext.i18n'], bytecode_cache=cache, loader=loader)
 
     jinja_environment.filters['js_string'] = js_string
+    jinja_environment.filters['to_json'] = _to_json_jinja
 
     if locale:
         i18n.get_i18n().set_locale(locale)
@@ -191,3 +211,8 @@ def get_template(
     template_name, dirs, autoescape=True, handler=None, default_locale='en_US'):
     return create_and_configure_jinja_environment(
         dirs, autoescape, handler, default_locale).get_template(template_name)
+
+
+def render_partial_template(name, dirs, values, **kwargs):
+    return jinja2.utils.Markup(
+        get_template(name, dirs, **kwargs).render(values))

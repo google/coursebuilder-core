@@ -122,7 +122,7 @@ class CourseSettingsHandler(object):
     @classmethod
     def register_settings_section(
         cls, settings, name=None, placement=None, title=None,
-        sub_group_name=None):
+        schema_provider=None, sub_group_name=None):
         """Register a group of settings for a module.
 
         Args:
@@ -136,6 +136,9 @@ class CourseSettingsHandler(object):
             e.g., 'units', 'i18n', etc.
           placement: Determines ordering in the menu.  See common/menus.py.
           title: Display name for this settings submenu.
+          schema_provider: A function that takes a course and returns an
+            instance of schema_fields.SchemaField or schema_fields.FieldRegistry
+            which will be used as the form for this settings page.
           sub_group_name: see dashboard.
         """
         if isinstance(settings, basestring):
@@ -177,6 +180,11 @@ class CourseSettingsHandler(object):
                 permissions.SchemaPermissionRegistry.build_view_checker(
                     constants.SCOPE_COURSE_SETTINGS,
                     cls.GROUP_SETTINGS_LISTS[name]))
+
+            if schema_provider:
+                courses.Course.OPTIONS_SCHEMA_PROVIDER_TITLES[name] = title
+                courses.Course.OPTIONS_SCHEMA_PROVIDERS[name].append(
+                    schema_provider)
 
 
 class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):

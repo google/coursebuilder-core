@@ -1,0 +1,35 @@
+tests:
+  functional:
+    - modules.drive.tests.functional.DriveTests = 10
+    - modules.drive.tests.unit.ApiClientTests = 2
+
+files:
+  - modules/drive/constants.py
+  - modules/drive/cron.py
+  - modules/drive/dashboard_handler.py
+  - modules/drive/drive_api_client_mock.py
+  - modules/drive/drive_api_client.py
+  - modules/drive/drive_api_manager.py
+  - modules/drive/drive_models.py
+  - modules/drive/drive.py
+  - modules/drive/drive_settings.py
+  - modules/drive/errors.py
+  - modules/drive/handlers.py
+  - modules/drive/__init__.py
+  - modules/drive/jobs.py
+  - modules/drive/manifest.yaml
+  - modules/drive/messages.py
+  - modules/drive/_static/script.js
+  - modules/drive/_static/style.css
+  - modules/drive/templates/drive-add.html
+  - modules/drive/templates/drive-list.html
+  - modules/drive/templates/drive-misconfigured.html
+  - modules/drive/templates/drive-not-configured.html
+  - modules/drive/templates/drive-timeout.html
+  - modules/drive/tests/fixtures/sheet_data.json
+  - modules/drive/tests/fixtures/sheet_meta.json
+  - modules/drive/tests/fixtures/worksheet1.json
+  - modules/drive/tests/fixtures/worksheet2.json
+  - modules/drive/tests/functional.py
+  - modules/drive/tests/__init__.py
+  - modules/drive/tests/unit.py

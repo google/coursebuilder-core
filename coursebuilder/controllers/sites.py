@@ -117,6 +117,7 @@ import zipfile
 import utils
 import webapp2
 from webapp2_extras import i18n
+from webob import exc
 
 import appengine_config
 from common import caching
@@ -1433,6 +1434,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             try:
                 handler.dispatch()
                 status_code = handler.response.status_code
+            except exc.HTTPRedirection as e:
+                raise e
             except Exception as e:  # pylint: disable=broad-except
                 status_code = self.get_status_code_from_dispatch_exception(
                     verb, path, e)
@@ -1521,6 +1524,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
 
 def handle_exception(request, response, e):
+    # This function can return a WSGI application and webapp2 will render it.
+    # Webob exceptions are WSGI applications.
+    if isinstance(e, exc.HTTPRedirection):
+        return e
+
     method = None
     path = None
     if request:

@@ -145,6 +145,10 @@ def gcb_appstats_enabled():
     return 'True' == os.environ.get('GCB_APPSTATS_ENABLED')
 
 
+def gcb_test_mode():
+    return  os.environ.get('GCB_TEST_MODE', 'false').upper() == 'TRUE'
+
+
 def webapp_add_wsgi_middleware(app):
     """Enable AppStats if requested."""
     if gcb_appstats_enabled():

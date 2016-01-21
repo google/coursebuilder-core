@@ -62,11 +62,6 @@ ADMIN_HOME_PAGE = '/admin/welcome'
 COURSE_HOME_PAGE = '/course?use_last_location=true'
 REGISTER_HOME = '/register'
 
-AVAILABILITY_SELECT_DATA = [
-    (courses.AVAILABILITY_UNAVAILABLE, 'Private'),
-    (courses.AVAILABILITY_COURSE, 'Course'),
-    (courses.AVAILABILITY_AVAILABLE, 'Public'),]
-
 CACHING_NONE = 'none'
 CACHING_5_MIN = '5-min'
 CACHING_1_HOUR = '1-hour'
@@ -134,13 +129,6 @@ def slug_validator(value, errors):
             errors.append(
                 'Slug value %s contains invalid characters; '
                 'valid characters are A..Z, a..z, 0..9, _ and -.' % value)
-
-
-class WebServerDisplayableElement(object):
-
-    def __init__(self, availability):
-        self.availability = availability
-        self.shown_when_unavailable = False
 
 
 class RootHandler(utils.ApplicationHandler, utils.QueryableRouteMixin):
@@ -395,20 +383,14 @@ class WebServer(lessons.CourseHandler, utils.StarRouteHandlerMixin):
         target(config, filename, relname)
 
     def webserv_get(self, config, relname):
-        course_avail = self.get_course().get_course_availability()
-        self_avail = config.get(WEBSERV_AVAILABILITY)
-
         # get user, student
-        user, student, profile = self.get_user_student_profile()
-        self.prepare_metadata(course_avail, student)
+        _user, student, _profile = self.get_user_student_profile()
+        self.prepare_metadata(
+            self.get_course().get_course_availability(), student)
 
         # check rights
-        displayability = courses.Course.get_element_displayability(
-            course_avail, student.is_transient,
-            custom_modules.can_see_drafts(self.app_context),
-            WebServerDisplayableElement(self_avail))
-        if not displayability.is_content_available:
-            self.error(404, 'Negative displayability: %s' % str(displayability))
+        if not self.check_availability(config.get(WEBSERV_AVAILABILITY)):
+            self.error(404, 'Not displayable')
             return
 
         # render content
@@ -496,7 +478,7 @@ def get_schema_fields():
     availability = schema_fields.SchemaField(
         availability_name, 'Availability', 'string', optional=True, i18n=False,
         default_value=courses.AVAILABILITY_COURSE,
-        select_data=AVAILABILITY_SELECT_DATA,
+        select_data=courses.AVAILABILITY_SELECT_DATA,
         description=str(safe_dom.NodeList(
             ).append(safe_dom.Text(
                 'Web pages default to the availability of the course, but may '

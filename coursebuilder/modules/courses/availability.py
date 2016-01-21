@@ -95,7 +95,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             description=services.help_urls.make_learn_more_message(
                 messages.AVAILABILITY_AVAILABILITY_DESCRIPTION,
                 'course:availability:availability'), i18n=False, optional=True,
-            select_data=[(a, a.title()) for a in courses.AVAILABILITY_VALUES],
+            select_data=courses.AVAILABILITY_SELECT_DATA,
             extra_schema_dict_values={'className': 'availability'}))
         ret.add_property(schema_fields.FieldArray(
             'element_settings', 'Content Availability',

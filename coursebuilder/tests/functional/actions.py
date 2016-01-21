@@ -242,6 +242,9 @@ class TestBase(suite.AppEngineTestBase):
     def setUp(self):
         super(TestBase, self).setUp()
 
+        self.test_mode_value = os.environ.get('GCB_TEST_MODE', None)
+        os.environ['GCB_TEST_MODE'] = 'true'
+
         memcache.flush_all()
         sites.ApplicationContext.clear_per_process_cache()
 
@@ -259,6 +262,12 @@ class TestBase(suite.AppEngineTestBase):
     def tearDown(self):
         self.assert_default_namespace()
         sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = self.auto_deploy
+
+        if self.test_mode_value is None:
+            del os.environ['GCB_TEST_MODE']
+        else:
+            os.environ['GCB_TEST_MODE'] = self.test_mode_value
+
         super(TestBase, self).tearDown()
 
     def canonicalize(self, href, response=None):

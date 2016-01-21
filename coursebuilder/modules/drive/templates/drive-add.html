@@ -1,0 +1,55 @@
+<p>
+  Share documents with
+  <span class="callout">{{ service_account_email }}</span>
+  to make them appear in this list.
+</p>
+
+<form action="{{ add_url }}" method="POST">
+  <input
+    type="hidden"
+    name="xsrf_token_{{ add_action }}"
+    value="{{ add_xsrf_token }}" />
+  <div class="gcb-list gcb-list--autostripe">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th width="50">Add</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr id='file-{{ item.key }}'>
+
+            <td class="title">
+              {{ item.title }}
+            </td>
+
+            <td>
+              {{ item.type}}
+            </td>
+
+            <td>
+              {% if item.can_sync %}
+                <button
+                    class="gcb-button add-button"
+                    name="key"
+                    value="{{ item.key }}">
+                  add
+                </button>
+              {% endif %}
+            </td>
+
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if not items|length %}
+      <div class="gcb-list__empty-message-wrapper">
+        <div class="gcb-list__empty-message">No items</div>
+      </div>
+    {% endif %}
+  </div>
+</form>

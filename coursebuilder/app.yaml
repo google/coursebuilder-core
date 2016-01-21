@@ -14,6 +14,7 @@ env_variables:
   # to improve performance.  See
   # https://cloud.google.com/appengine/docs/python/tools/appstats
   GCB_APPSTATS_ENABLED: false
+  GCB_TEST_MODE: false
 
   GCB_REGISTERED_MODULES:
     # Used by other modules during schema construction -- must come first.
@@ -34,6 +35,7 @@ env_variables:
     modules.certificate.certificate
     modules.data_pump.data_pump
     modules.data_removal.data_removal
+    modules.drive.drive
     modules.embed.embed
     modules.extra_tabs.extra_tabs
     modules.guide.guide

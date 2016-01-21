@@ -348,26 +348,11 @@ class GoogleDriveRESTHandler(utils.BaseRESTHandler):
             self, 200, 'Success.', payload_dict={'key': str(key)})
 
     def _save_content_chunk(self, contents, type_id, resource_id):
-        key = None
-        uid = models.ContentChunkDAO.make_uid(type_id, resource_id)
-        matches = models.ContentChunkDAO.get_by_uid(uid)
-
-        if not matches:
-            key = models.ContentChunkDAO.save(models.ContentChunkDTO({
-                'content_type': 'text/html',
-                'contents': contents,
-                'resource_id': resource_id,
-                'type_id': type_id,
-            }))
-        else:
-            # There is a data race in the DAO -- it's possible to create two
-            # entries at the same time with the same UID. If that happened,
-            # use the first one saved.
-            dto = matches[0]
-            dto.contents = contents
-            dto.content_type = 'text/html'
-            key = models.ContentChunkDAO.save(dto)
-
+        dto = models.ContentChunkDAO.get_or_new_by_uid(
+            models.ContentChunkDAO.make_uid(type_id, resource_id))
+        dto.content_type = 'text/html'
+        dto.contents = contents
+        key = models.ContentChunkDAO.save(dto)
         return key
 
 
@@ -385,17 +370,12 @@ class GoogleDriveTagRenderer(utils.BaseHandler):
             self._handle_error(400, 'Bad request')
             return
 
-        matches = models.ContentChunkDAO.get_by_uid(
+        chunk = models.ContentChunkDAO.get_one_by_uid(
             models.ContentChunkDAO.make_uid(type_id, resource_id))
 
-        if not matches:
+        if chunk is None:
             self._handle_error(404, 'Content chunk not found')
             return
-
-        # There is a data race in the DAO -- it's possible to create two entries
-        # at the same time with the same UID. If that happened, use the first
-        # one saved.
-        chunk = matches[0]
 
         template = jinja_utils.get_template(
             'drive_item.html', [_TEMPLATES_ABSPATH])

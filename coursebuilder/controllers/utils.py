@@ -175,9 +175,6 @@ class ReflectiveRequestHandler(object):
     GET/POST parameter.
     """
 
-    def create_xsrf_token(self, action):
-        return XsrfTokenManager.create_xsrf_token(action)
-
     def get(self):
         """Handles GET."""
         action = self.request.get('action')
@@ -615,10 +612,19 @@ class ApplicationHandler(webapp2.RequestHandler):
         else:
             return location
 
-    def redirect(self, location, normalize=True):
+    def redirect(self, location, normalize=True, abort=False):
         if normalize:
             location = self.canonicalize_url(location)
-        super(ApplicationHandler, self).redirect(location)
+        super(ApplicationHandler, self).redirect(location, abort=abort)
+
+    def create_xsrf_token(self, action):
+        return XsrfTokenManager.create_xsrf_token(action)
+
+    def before_method(self, method, path):
+        pass
+
+    def after_method(self, method, path):
+        pass
 
 
 class NoopInstanceLifecycleRequestHandler(webapp2.RequestHandler):
@@ -943,6 +949,25 @@ class CourseHandler(ApplicationHandler):
     def can_record_student_events(self):
         settings = self.app_context.get_environ().get('course')
         return settings and settings.get('can_record_student_events')
+
+    def check_displayability(self, availability, shown_when_unavailable=False):
+        """Get a Displayability object for this availability level."""
+        class Element(object):
+            def __init__(self, availability, shown_when_unavailable):
+                self.availability = availability
+                self.shown_when_unavailable = shown_when_unavailable
+
+        _user, student = self.get_user_and_student_or_transient()
+        return courses.Course.get_element_displayability(
+            self.get_course().get_course_availability(),
+            student.is_transient,
+            custom_modules.can_see_drafts(self.app_context),
+            Element(availability, shown_when_unavailable),
+        )
+
+    def check_availability(self, availability):
+        """Check if content with this availability level should be visible."""
+        return self.check_displayability(availability).is_content_available
 
 
 class BaseHandler(CourseHandler):
@@ -1556,3 +1581,7 @@ def get_namespaced_handlers():
     return [
         (JobStatusRESTHandler.URL, JobStatusRESTHandler)
     ]
+
+
+def map_handler_urls(handlers):
+    return [('/' + handler.URL, handler) for handler in handlers]
