@@ -1333,6 +1333,64 @@ def _lint(parsed_args):
                 raise RuntimeError('Pylint tests failed.')
 
 
+def _is_external_symlink(link_path, root_path):
+    is_external = (
+        os.path.islink(link_path)
+        and not os.path.realpath(link_path).startswith(root_path))
+
+    if is_external and link_path.startswith(os.path.realpath(link_path)):
+        raise Exception("Circular external symlink: {}".format(link_path))
+
+    return is_external
+
+
+class CopyTask(object):
+    def __init__(self, from_path, to_path):
+        self.from_path = from_path
+        self.to_path = to_path
+
+    def perform(self):
+        if os.path.isdir(self.from_path):
+            shutil.copytree(self.from_path, self.to_path)
+        else:
+            shutil.copy2(self.from_path, self.to_path)
+
+
+def _symlink_copy_task(path, source_dir, dest_dir):
+    return CopyTask(
+        os.path.realpath(path),
+        os.path.join(dest_dir, os.path.relpath(path, source_dir)))
+
+
+def _do_copy_tasks(copy_tasks):
+    for task in copy_tasks:
+        task.perform()
+
+
+def _copy_files(source_dir_name, build_dir_name):
+    """Copies local files and files referenced by external symlinks"""
+    # Work-around for lack of 'nonlocal' keyword in this version of Python
+    external_copy_tasks = [[]]
+    def ignore_external_symlinks(path, names):
+        """Returns names of external symlinks and aggregates their paths"""
+        ignored_names = set([name for name in names if
+            _is_external_symlink(os.path.join(path, name), source_dir_name)])
+
+        external_copy_tasks[0] += [
+            _symlink_copy_task(
+                os.path.join(path, name), source_dir_name, build_dir_name)
+            for name in ignored_names]
+        return ignored_names
+
+    log('Copying local files...')
+    shutil.copytree(
+        source_dir_name, build_dir_name, symlinks=True,
+        ignore=ignore_external_symlinks)
+
+    log('Copying external files...')
+    _do_copy_tasks(external_copy_tasks[0])
+
+
 def _prepare_filesystem(
     source_dir_name, target_dir_name, build_dir_name, deep_clean=False):
     """Prepare various directories used in the release process."""
@@ -1343,7 +1401,7 @@ def _prepare_filesystem(
     log('Build temp directory: %s' % build_dir_name)
 
     remove_dir(build_dir_name)
-    shutil.copytree(source_dir_name, build_dir_name, symlinks=True)
+    _copy_files(source_dir_name, build_dir_name)
     shell_env = _get_config_sh_shell_env()
 
     if deep_clean:
