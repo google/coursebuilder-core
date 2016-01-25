@@ -18,9 +18,11 @@ __author__ = [
     'nretallack@google.com (Nick Retallack)',
 ]
 
+import json
 
 from common import crypto
 from common import utils
+from models import models
 from models import transforms
 from modules.drive import drive_api_client_mock
 from modules.drive import drive_models
@@ -28,7 +30,8 @@ from modules.drive import handlers
 from tests.functional import actions
 
 
-class DriveTests(actions.TestBase):
+class DriveTestBase(actions.TestBase):
+
     ADMIN_EMAIL = 'admin@example.com'
     COURSE_NAME = 'drive-course'
 
@@ -45,10 +48,8 @@ class DriveTests(actions.TestBase):
         )),
     )
 
-    # setup
-
     def setUp(self):
-        super(DriveTests, self).setUp()
+        super(DriveTestBase, self).setUp()
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         self.app_context = actions.simple_add_course(
             self.COURSE_NAME, self.ADMIN_EMAIL, 'Drive Course')
@@ -58,15 +59,18 @@ class DriveTests(actions.TestBase):
         with utils.Namespace(self.app_context.namespace):
             self.setup_schedule_for_file('3')
             self.setup_schedule_for_file('5')
+            self.setup_schedule_for_file('6', synced=True)
 
         # remove all hooks
         for handler, hooks in self.HANDLER_HOOKS:
             for hook in hooks:
                 self.swap(handler, hook, [])
 
-    def setup_schedule_for_file(self, file_id):
+    def setup_schedule_for_file(
+            self, file_id, availability='private', synced=False):
         # pylint: disable=protected-access
-        meta = drive_api_client_mock._APIClientWrapperMock().get_file_meta(
+        client_mock = drive_api_client_mock._APIClientWrapperMock()
+        meta = client_mock.get_file_meta(
             file_id)
         # pylint: enable=protected-access
         dto = drive_models.DriveSyncDAO.load_or_new(file_id)
@@ -75,6 +79,32 @@ class DriveTests(actions.TestBase):
             'title': meta.title,
             'type': meta.type,
             'sync_interval': 'hour',
+            'availability': availability,
+        })
+
+        if synced:
+            content_chunk = models.ContentChunkDTO({
+                'type_id': meta.type,
+                'resource_id': meta.file_id,
+            })
+
+            if meta.type == 'sheet':
+                content_chunk.contents = json.dumps(client_mock.get_sheet_data(
+                    file_id).to_json())
+                content_chunk.content_type = 'application/json'
+            else:
+                content_chunk.contents = client_mock.get_doc_as_html(file_id)
+                content_chunk.content_type = 'text/html'
+
+            models.ContentChunkDAO.save(content_chunk)
+            dto.sync_succeeded()
+
+        drive_models.DriveSyncDAO.save(dto)
+
+    def set_availability_for_file(self, file_id, availability):
+        dto = drive_models.DriveSyncDAO.load_or_new(file_id)
+        dto.dict.update({
+            'availability': availability,
         })
         drive_models.DriveSyncDAO.save(dto)
 
@@ -96,16 +126,18 @@ class DriveTests(actions.TestBase):
     def assertRestStatus(self, response, status):
         self.assertEqual(transforms.loads(response.body)['status'], status)
 
-    # tests
+
+class DriveTests(DriveTestBase):
 
     def test_settings_page(self):
         self.get('dashboard?action=settings_drive')
 
     def test_list_page(self):
         soup = self.get_page('modules/drive')
-        self.assertRowCount(soup, 2)
+        self.assertRowCount(soup, 3)
         self.assertPresent(soup.select('#file-3'))
         self.assertPresent(soup.select('#file-5'))
+        self.assertPresent(soup.select('#file-6'))
 
     def test_add_page(self):
         soup = self.get_page('modules/drive/add')
@@ -221,6 +253,23 @@ class DriveTests(actions.TestBase):
         self.assertEqual(
             response.headers['Content-Type'], 'text/html; charset=utf-8')
         self.assertEqual(response.body, '<p>Some HTML</p>')
+
+    def test_content_permissions(self):
+        # as admin, you can access this
+        response = self.get('modules/drive/item/content?key=6')
+        self.assertEqual(response.status_code, 200)
+
+        # as nobody, you can't
+        actions.logout()
+        response = self.get(
+            'modules/drive/item/content?key=6', expect_errors=True)
+        self.assertEqual(response.status_code, 404)
+
+        # unless it's public
+        self.set_availability_for_file('6', 'public')
+        response = self.get(
+            'modules/drive/item/content?key=6', expect_errors=True)
+        self.assertEqual(response.status_code, 404)
 
     def test_cron_job(self):
         # ensure chunks don't exist

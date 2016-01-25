@@ -35,6 +35,8 @@ class _APIClientWrapperMock(object):
             '4', 'unknown', '4 Some Unknown File', 1),
         drive_api_client.DriveItem(
             '5', drive_api_client.DOC_TYPE, '5 Another Test Doc', 1),
+        drive_api_client.DriveItem(
+            '6', drive_api_client.SHEET_TYPE, '6 Synced Sheet', 1)
     ]
 
     client_email = 'service-account@example.com'
