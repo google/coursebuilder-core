@@ -127,6 +127,8 @@ _ALL = [
     ('data_removal:removal_policy',
      '/create-a-course/course-settings.html'
      '#removal-policy'),
+    ('modules:drive:service_account_json',
+     '/index.html'),
     ('help:documentation',
      '/index.html'),
     ('help:forum', _LegacyUrl(

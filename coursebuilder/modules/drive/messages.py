@@ -19,15 +19,24 @@ __author__ = [
 ]
 
 SERVICE_ACCOUNT_JSON_DESCRIPTION = """
-Create a service account in AppEngine and paste the JSON here.
+Create a service account in Google App Engine and paste the JSON here.
 """
 
-DRIVE_SECRET_JSON_PARSE_FAILURE = """
+SERVICE_ACCOUNT_JSON_PARSE_FAILURE = """
 The JSON is invalid.  Make sure you copy the whole thing including any curly
 braces.  Do not use the P12 format."""
 
-DRIVE_SECRET_MISSING_FIELDS = """
+SERVICE_ACCOUNT_JSON_MISSING_FIELDS = """
 The JSON is valid but it doesn't look like a service account key. Try creating a
 new "Service account key" in the Credentials section of the developer console.
 You can only download this JSON when you first create the key.  You can't use
 the "Download JSON" button later as this will not include the key."""
+
+SYNC_FREQUENCY_DESCRIPTION = """
+The document will be checked for changes in Google Drive this often.
+"""
+
+AVAILABILITY_DESCRIPTION = """
+Synced items default to the availability of the course, but may also be
+restricted to admins (Private) or open to the public (Public).
+"""

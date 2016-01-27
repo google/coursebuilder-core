@@ -21,6 +21,7 @@ __author__ = [
 import json
 
 from common import schema_fields
+from models import services
 from modules.courses import settings
 from modules.drive import errors
 from modules.drive import messages
@@ -33,17 +34,21 @@ def validate_secrets_text(text, validation_errors):
         try:
             drive_api_client.validate_secrets(json.loads(text))
         except (ValueError, TypeError):
-            validation_errors.append(messages.DRIVE_SECRET_JSON_PARSE_FAILURE)
+            validation_errors.append(
+                messages.SERVICE_ACCOUNT_JSON_PARSE_FAILURE)
         except errors.Misconfigured:
-            validation_errors.append(messages.DRIVE_SECRET_MISSING_FIELDS)
+            validation_errors.append(
+                messages.SERVICE_ACCOUNT_JSON_MISSING_FIELDS)
 
 
 def drive_settings_schema_provider(unused_course):
+    field = '{}:{}'.format(constants.MODULE_NAME,
+        constants.SERVICE_ACCOUNT_JSON_FIELD_NAME)
     return schema_fields.SchemaField(
-        '{}:{}'.format(constants.MODULE_NAME,
-        constants.SERVICE_ACCOUNT_JSON_FIELD_NAME),
-        'Service Account JSON', 'text',
-        description=messages.SERVICE_ACCOUNT_JSON_DESCRIPTION,
+        field, 'Service Account JSON', 'text',
+        description=services.help_urls.make_learn_more_message(
+            messages.SERVICE_ACCOUNT_JSON_DESCRIPTION,
+            'modules:{}'.format(field)),
         i18n=False, optional=True, validator=validate_secrets_text)
 
 

@@ -20,6 +20,7 @@ import json
 
 from common import utils as common_utils
 from controllers import utils
+from models import courses
 from models import models
 from models import transforms
 from modules.dashboard import dto_editor
@@ -227,6 +228,7 @@ class DriveAddListHandler(AbstractDriveDashboardHandler):
             'title': data.title,
             'type': data.type,
             'sync_interval': drive_models.SYNC_INTERVAL_MANUAL,
+            'availability': courses.AVAILABILITY_COURSE,
             'version': '1.0',
         })
         drive_models.DriveSyncDAO.save(dto)

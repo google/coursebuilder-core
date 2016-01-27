@@ -22,7 +22,7 @@ import os
 import appengine_config
 
 MODULE_NAME = 'drive'
-MODULE_TITLE = 'Drive'
+MODULE_TITLE = 'Google Drive'
 SERVICE_ACCOUNT_JSON_FIELD_NAME = 'service_account_json'
 TEMPLATE_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', MODULE_NAME, 'templates')

@@ -37,16 +37,16 @@ var JOB_STATUS_URL = {{ job_status_url|to_json }};
       <thead>
         <tr>
           <th class="gcb-list__cell--icon"></th>
-          <th width="250">Name</th>
-          <th>Rest</th>
+          <th width="20%">Name</th>
+          <th>REST</th>
           {% for header_hook in header_hooks %}
             {{ header_hook(app_context) }}
           {% endfor %}
           <th>Type</th>
           <th>Availability</th>
-          <th>Sync Schedule</th>
-          <th>Last Sync</th>
+          <th>Sync Frequency</th>
           <th>Status</th>
+          <th width="150">Last Synced</th>
           <th width="50">Sync</th>
         </tr>
       </thead>
@@ -88,18 +88,12 @@ var JOB_STATUS_URL = {{ job_status_url|to_json }};
             </td>
 
             <td>
-              {{ item.availability }}
+              {{ item.availability|capitalize }}
             </td>
 
             <td>
               {{ item.sync_interval_human }}
             </td>
-
-            <td
-              {% if item.last_synced %}
-                class="local-datetime" data-timestamp="{{ item.last_synced }}"
-              {% endif %}
-              ></td>
 
             <td>
               <span
@@ -109,6 +103,12 @@ var JOB_STATUS_URL = {{ job_status_url|to_json }};
                 {{ item.sync_status_human }}
               </span>
             </td>
+
+            <td
+              {% if item.last_synced %}
+                class="local-datetime" data-timestamp="{{ item.last_synced }}"
+              {% endif %}
+              ></td>
 
             <td>
               <button class="gcb-button sync-button" name="key" value="{{ item.key }}">

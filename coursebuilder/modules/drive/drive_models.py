@@ -26,6 +26,7 @@ from google.appengine.ext import db
 from models import courses
 from models import models
 from common import schema_fields
+from modules.drive import messages
 
 
 class DriveSyncEntity(models.BaseEntity):
@@ -195,9 +196,9 @@ class DriveSyncDAO(models.BaseJsonDao):
 
 def get_drive_sync_entity_schema():
     schema = schema_fields.FieldRegistry(
-            'Drive Item',
-            description='A file from Google Drive',
-            extra_schema_dict_values={
+        'Google Drive Sync Item',
+        description='sync',
+        extra_schema_dict_values={
             'className': 'inputEx-Group new-form-layout',
         })
 
@@ -211,13 +212,15 @@ def get_drive_sync_entity_schema():
         'id', 'ID', 'string', editable=False, i18n=False, optional=True))
 
     schema.add_property(schema_fields.SchemaField(
-        'sync_interval', 'Sync how often?', 'string',
+        'sync_interval', 'Sync Frequency', 'string',
+        description=messages.SYNC_FREQUENCY_DESCRIPTION,
         i18n=False,
         select_data=SYNC_INTERVAL_OPTIONS,
     ))
 
     schema.add_property(schema_fields.SchemaField(
         'availability', 'Availability', 'string',
+        description=messages.AVAILABILITY_DESCRIPTION,
         default_value=courses.AVAILABILITY_COURSE,
         i18n=False,
         select_data=courses.AVAILABILITY_SELECT_DATA,
@@ -234,7 +237,7 @@ SYNC_INTERVAL_DAY = 'day'
 SYNC_INTERVAL_HOUR = 'hour'
 
 SYNC_INTERVAL_OPTIONS = (
-    (SYNC_INTERVAL_MANUAL, 'Manually'),
+    (SYNC_INTERVAL_MANUAL, 'Manual only'),
     (SYNC_INTERVAL_DAY, 'Daily'),
     (SYNC_INTERVAL_HOUR, 'Hourly'),
 )

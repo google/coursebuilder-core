@@ -25,7 +25,7 @@ from modules.drive import handlers
 def register_module():
 
     handlers.DriveListHandler.add_to_menu(
-        'edit', constants.MODULE_NAME, 'Drive')
+        'edit', constants.MODULE_NAME, constants.MODULE_TITLE)
 
     drive_settings.make_drive_settings_section()
 
