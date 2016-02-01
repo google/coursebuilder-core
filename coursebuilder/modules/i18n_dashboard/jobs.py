@@ -21,16 +21,16 @@ __author__ = [
 import logging
 import os
 import sys
-import zipfile
-from babel import localedata
-from common import utils as common_utils
 from models import courses
 from modules.i18n_dashboard import i18n_dashboard
 from tools.etl import etl_lib
 
+_LOG = logging.getLogger('coursebuilder.modules.i18n_dashboard.jobs')
+_LOG.setLevel(logging.INFO)
+
 
 def _die(message):
-    logging.critical(message)
+    _LOG.critical(message)
     sys.exit(1)
 
 
@@ -145,6 +145,22 @@ class DownloadTranslations(_BaseJob):
                 'all': self._EXPORT_ALL,
                 'new': self._EXPORT_NEW,
             }))
+        self.parser.add_argument(
+            '--separate_files_by_type', action='store_true',
+            help='Extract translatable content into separate files by type.  '
+            'Configurations, questions and the contents of individual units '
+            'and lessons are extracted into separate files, rather than one '
+            'big file.  This can be helpful to reduce the size of individual '
+            '.po files, as well as making the context more clear for short '
+            'phrases that might otherwise get inappropriately combined into '
+            'the same translation item if they were in one big file.')
+        self.parser.add_argument(
+            '--encoded_angle_brackets', action='store_true',
+            help='Encode angle brackets as square brackets in downloaded .po '
+            'file content.  This can be helpful for translation bureaus '
+            'that cannot cope with embedded HTML markup in original or '
+            'translated content.  Be sure to also supply this flag when '
+            're-uploading translated content.')
         self._add_locales_argument(self.parser)
 
     def main(self):
@@ -155,20 +171,22 @@ class DownloadTranslations(_BaseJob):
         locales = self._get_locales(
             self.args.locales, app_context.get_all_locales(),
             app_context.default_locale, self.etl_args.course_url_prefix)
+        exporter = i18n_dashboard.TranslationContents(
+            self.args.separate_files_by_type)
         download_handler = i18n_dashboard.TranslationDownloadRestHandler
-        translations = download_handler.build_translations(
-            courses.Course.get(app_context), locales, 'all')
+        download_handler.build_translations(
+            courses.Course.get(app_context), locales, self.args.export,
+            exporter)
+        if self.args.encoded_angle_brackets:
+            exporter.encode_angle_to_square_brackets()
 
-        if not translations.keys():
+        if exporter.is_empty():
             _die(
                 'No translations found for course at %s; exiting' % (
                     self.etl_args.course_url_prefix))
-
-        with open(self.args.path, 'w') as f:
-            i18n_dashboard.TranslationDownloadRestHandler.build_zip_file(
-                courses.Course.get(app_context), f, translations, locales)
-
-        logging.info('Translations saved to ' + self.args.path)
+        with open(self.args.path, 'w') as fp:
+            exporter.write_zip_file(app_context, fp)
+        _LOG.info('Translations saved to ' + self.args.path)
 
 
 class TranslateToReversedCase(_BaseJob):
@@ -198,39 +216,47 @@ class UploadTranslations(_BaseJob):
         --job_args='/tmp/file.zip'
     """
 
-    _PO_EXTENSION = '.po'
-    _ZIP_EXTENSION = '.zip'
-    _EXTENSIONS = frozenset([
-        _PO_EXTENSION,
-        _ZIP_EXTENSION,
-    ])
-
     _UPLOAD_HANDLER = i18n_dashboard.TranslationUploadRestHandler
 
     def _configure_parser(self):
         self.parser.add_argument(
             'path', type=str, help='.zip or .po file containing translations. '
             'If a .zip file is given, its internal structure is unimportant; '
-            'all .po files it contains will be processed. We do no validation '
-            'on file contents.')
+            'all .po files it contains will be processed.')
+        self.parser.add_argument(
+            '--encoded_angle_brackets', action='store_true',
+            help='When uploading, convert angle brackets that were encoded '
+            'as square brackets back to angle brackets.')
+        self.parser.add_argument(
+            '--warn_not_found', action='store_true',
+            help='When uploading, warn about translatable items that exist '
+            'in the course that had no matching item in the uploaded .po file. '
+            'Do not use this when uploading partial .po files (as created '
+            'when downloading with the --separate_files_by_type flag -- this '
+            'will then warn about all the items not for that partial file.')
+        self.parser.add_argument(
+            '--warn_not_used', action='store_const', const=True, default=True,
+            help='When uploading, warn about translation items found in the '
+            '.po file that did not match current course content (and thus '
+            'were not incorporated into the translations for the course)')
 
     def main(self):
-        self._check_file(self.args.path)
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
-        extension = self._get_file_extension(self.args.path)
 
+        # Parse content from .zip of .po files, or single .po file.
+        with open(self.args.path) as fp:
+            data = fp.read()
+        importer = self._UPLOAD_HANDLER.load_file_content(app_context, data)
+        if self.args.encoded_angle_brackets:
+            importer.decode_square_to_angle_brackets()
+
+        # Add the locales being uploaded to the UI; these may not exist if we
+        # are uploading to a clone of a course.
         course = courses.Course.get(app_context)
-        self._configure_babel(course)
-        if extension == self._PO_EXTENSION:
-            translations = self._process_po_file(self.args.path)
-        elif extension == self._ZIP_EXTENSION:
-            translations = self._process_zip_file(self.args.path)
-
-        # Add the locales being uploaded to the UI.
         environ = course.get_environ(app_context)
         extra_locales = environ.setdefault('extra_locales', [])
-        for locale in translations:
+        for locale in importer.get_locales():
             if not any(
                     l[courses.Course.SCHEMA_LOCALE_LOCALE] == locale
                     for l in extra_locales):
@@ -241,54 +267,7 @@ class UploadTranslations(_BaseJob):
         course.save_settings(environ)
 
         # Make updates to the translations
-        self._update_translations(course, translations)
-
-    @classmethod
-    def _check_file(cls, path):
-        extension = cls._get_file_extension(path)
-        if not extension or extension not in cls._EXTENSIONS:
-            _die(
-                'Invalid file extension: "%s". Choices are: %s' % (
-                    extension, ', '.join(sorted(cls._EXTENSIONS))))
-
-        cls._check_file_exists(path)
-
-    @classmethod
-    def _configure_babel(cls, course):
-        with common_utils.ZipAwareOpen():
-            # Internally, babel uses the 'en' locale, and we must configure it
-            # before we make babel calls.
-            localedata.load('en')
-            # Also load the course's default language.
-            localedata.load(course.default_locale)
-
-    @classmethod
-    def _get_file_extension(cls, path):
-        return os.path.splitext(path)[-1]
-
-    @classmethod
-    def _process_po_file(cls, po_file_path):
-        translations = cls._UPLOAD_HANDLER.build_translations_defaultdict()
-        with open(po_file_path) as f:
-            cls._UPLOAD_HANDLER.parse_po_file(translations, f.read())
-        return translations
-
-    @classmethod
-    def _process_zip_file(cls, zip_file_path):
-        zf = zipfile.ZipFile(zip_file_path, 'r', allowZip64=True)
-        translations = cls._UPLOAD_HANDLER.build_translations_defaultdict()
-        for zipinfo in zf.infolist():
-            if cls._get_file_extension(zipinfo.filename) != cls._PO_EXTENSION:
-                continue
-            logging.info('Processing ' + zipinfo.filename)
-            po_contents = zf.read(zipinfo.filename)
-            cls._UPLOAD_HANDLER.parse_po_file(translations, po_contents)
-        zf.close()
-        return translations
-
-    @classmethod
-    def _update_translations(cls, course, translations):
-        messages = []
-        cls._UPLOAD_HANDLER.update_translations(course, translations, messages)
+        messages = self._UPLOAD_HANDLER.update_translations(
+            course, importer, self.args.warn_not_found, self.args.warn_not_used)
         for message in messages:
-            logging.info(message)
+            _LOG.info(message)

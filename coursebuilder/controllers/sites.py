@@ -795,7 +795,7 @@ class ApplicationContext(object):
         path = abspath(self.get_home_folder(), GCB_DATA_FOLDER_NAME)
         return path
 
-    def gettext(self, text):
+    def gettext(self, text, log_exception=True):
         """Render localized text in the default locale.
 
         This method should be used in place of gettext.gettext, as it will
@@ -812,7 +812,8 @@ class ApplicationContext(object):
             translator.set_locale(self.get_current_locale())
             return translator.gettext(text)
         except Exception:  # pylint: disable=broad-except
-            logging.exception('Unable to translate %s', text)
+            if log_exception:
+                logging.exception('Unable to translate %s', text)
             return text
 
     def get_template_environ(self, locale, additional_dirs):

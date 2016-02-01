@@ -1075,8 +1075,8 @@ class ResourceLesson(resource.AbstractResourceHandler):
 
         # Note GcbRte relies on the structure of this schema. Do not change
         # without checking the dependency.
-        lesson_data = cls.get_data_dict(course, key)
-        has_video_id = bool(lesson_data.get('video'))
+        lesson_element = course.find_lesson_by_id(None, key)
+        has_video_id = bool(lesson_element and lesson_element.video)
 
         lesson = schema_fields.FieldRegistry(
             'Lesson', description='Lesson', extra_schema_dict_values={
@@ -1193,7 +1193,8 @@ def get_unit_title_template(app_context):
         # will be replaced with a number indicating the unit's
         # sequence I18N: number within the course, and the %(title)
         # with the unit's title.
-        return app_context.gettext('Unit %(index)s - %(title)s')
+        return app_context.gettext('Unit %(index)s - %(title)s',
+                                   log_exception=False)
 
 
 def display_unit_title(unit, app_context):
@@ -1213,7 +1214,7 @@ def display_short_unit_title(unit, app_context):
     # I18N: Message displayed as title for unit within a course.  The
     # "%s" will be replaced with the index number of the unit within
     # the course.  E.g., "Unit 1", "Unit 2" and so on.
-    unit_title = app_context.gettext('Unit %s')
+    unit_title = app_context.gettext('Unit %s', log_exception=False)
     return unit_title % unit.index
 
 

@@ -209,6 +209,89 @@ class IsTranslatableRestHandlerTests(actions.TestBase):
         self.assertFalse(dto.is_translatable)
 
 
+class TranslationContentsTests(actions.TestBase):
+
+    def test_file_selection_all_in_one(self):
+        contents = i18n_dashboard.TranslationContents(
+            separate_files_by_type=False)
+        resource_key_question = i18n_dashboard.ResourceBundleKey(
+            resources_display.ResourceSAQuestion.TYPE, '123', 'de')
+        resource_key_lesson_1 = i18n_dashboard.ResourceBundleKey(
+            resources_display.ResourceLesson.TYPE, '234', 'de')
+        resource_key_lesson_2 = i18n_dashboard.ResourceBundleKey(
+            resources_display.ResourceLesson.TYPE, '345', 'de')
+
+        file_question = contents.get_file(resource_key_question)
+        file_lesson_1 = contents.get_file(resource_key_lesson_1)
+        file_lesson_2 = contents.get_file(resource_key_lesson_2)
+
+        self.assertEqual(file_question, file_lesson_1)
+        self.assertEqual(file_question, file_lesson_2)
+
+    def test_file_selection_separate_files(self):
+        contents = i18n_dashboard.TranslationContents(
+            separate_files_by_type=True)
+        resource_key_question = i18n_dashboard.ResourceBundleKey(
+            resources_display.ResourceSAQuestion.TYPE, '123', 'de')
+        resource_key_lesson_1 = i18n_dashboard.ResourceBundleKey(
+            resources_display.ResourceLesson.TYPE, '234', 'de')
+        resource_key_lesson_2 = i18n_dashboard.ResourceBundleKey(
+            resources_display.ResourceLesson.TYPE, '345', 'de')
+
+        file_question = contents.get_file(resource_key_question)
+        file_lesson_1 = contents.get_file(resource_key_lesson_1)
+        file_lesson_2 = contents.get_file(resource_key_lesson_2)
+
+        self.assertNotEqual(file_question, file_lesson_1)
+        self.assertNotEqual(file_question, file_lesson_2)
+        self.assertNotEqual(file_lesson_1, file_lesson_2)
+
+        self.assertNotEqual(file_question.file_name, file_lesson_1.file_name)
+        self.assertNotEqual(file_question.file_name, file_lesson_2.file_name)
+        self.assertNotEqual(file_lesson_1.file_name, file_lesson_2.file_name)
+
+    def _verify_encoding(self, original):
+        encoded = (
+            i18n_dashboard.TranslationMessage.encode_angle_brackets(
+                original))
+        decoded = (
+            i18n_dashboard.TranslationMessage.decode_angle_brackets(
+                encoded))
+        self.assertEquals(original, decoded)
+        if any([c in original for c in '[]<>\\']):
+            self.assertNotEquals(original, encoded)
+        else:
+            self.assertEquals(original, encoded)
+
+    def test_bracket_encoding(self):
+        self._verify_encoding('')
+        self._verify_encoding('A simple string')
+        self._verify_encoding('<p>')
+        self._verify_encoding('<i>italic</i>')
+        self._verify_encoding('tag <i>not</i> at start or end of string')
+        self._verify_encoding('[braces at beginning and ending of string]')
+        self._verify_encoding('braces [within] string')
+        self._verify_encoding('multiple [braces [ not necessarily []]] paired')
+        self._verify_encoding('\\')
+        self._verify_encoding('[\\]')
+        self._verify_encoding(']\\[')
+        self._verify_encoding('a[\\]b')
+        self._verify_encoding('a]\\[b')
+        self._verify_encoding('<\\>')
+        self._verify_encoding('<\\\\>')
+        self._verify_encoding('>\\<')
+        self._verify_encoding('a<\\>b')
+        self._verify_encoding('a>\\<b')
+        self._verify_encoding('<<')
+        self._verify_encoding('<<<<<<<<<<<<<<<<<<')
+        self._verify_encoding('>>>>>>>>>>>>>>>>>>')
+        self._verify_encoding('[[[[[[[[[[[[[[[[[[')
+        self._verify_encoding(']]]]]]]]]]]]]]]]]]')
+        self._verify_encoding('<<<not necessarily> balanced <>><<angles<')
+        self._verify_encoding('mixed <b>[brackets] and </b>braces')
+        self._verify_encoding('[[<\\<[]<><[<\\[>]\\\\[>>>\\>>>>>>>\\')
+
+
 class I18nDashboardHandlerTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
     COURSE_NAME = 'i18n_course'
@@ -2061,13 +2144,19 @@ class TranslationImportExportTests(actions.TestBase):
             params={'request': transforms.dumps(request)})
         return response
 
-    def _do_upload(self, contents):
+    def _do_upload(self, contents, warn_not_used=False, warn_not_found=False):
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
             i18n_dashboard.TranslationUploadRestHandler.XSRF_TOKEN_NAME)
         response = self.post(
             '/%s%s' % (self.COURSE_NAME,
                        i18n_dashboard.TranslationUploadRestHandler.URL),
-            {'request': transforms.dumps({'xsrf_token': xsrf_token})},
+            {'request': transforms.dumps({
+                'xsrf_token': xsrf_token,
+                'payload': transforms.dumps({
+                    'warn_not_found': warn_not_found,
+                    'warn_not_used': warn_not_used,
+                    }),
+                })},
             upload_files=[('file', 'doesntmatter', contents)])
         return response
 
@@ -2328,6 +2417,10 @@ class TranslationImportExportTests(actions.TestBase):
                 message.startswith('For Deutsch (de), made 1 total replacem'))
 
     def test_upload_ui_with_unexpected_resource(self):
+        # Here, we are uploading something where we will have a match on
+        # "Lesson Title" in the translation item key, but we will then _not_
+        # match on any location (there is no lesson:999 in the course)
+
         # Do export to force creation of progress, bundle entities
         self._do_download({'locales': [{'locale': 'de', 'checked': True}],
                            'export_what': 'all'}, method='post')
@@ -2337,13 +2430,18 @@ class TranslationImportExportTests(actions.TestBase):
             '#: GCB-1|title|string|lesson:999:de:0\n'
             '#| msgid ""\n'
             'msgid "Lesson Title"\n'
-            'msgstr "Lektion Titel"\n')
+            'msgstr "Lektion Titel"\n', warn_not_used=True, warn_not_found=True)
         messages = self._parse_messages(response)
-        self.assertIn('Translation file had 1 items for resource '
-                      '"lesson:999:de", but course had no such resource.',
-                      messages)
+        self.assertIn(
+            'Unused translation in file messages.po for '
+            '"Lesson Title" -> "Lektion Titel" for locations: lesson:999:de',
+            messages)
 
     def test_upload_ui_with_unexpected_translation(self):
+        # Here, we are uploading something where we will not have a match
+        # on the "FizzBuzz" item key, although that item will have a valid
+        # location (lesson:4:de is a valid location target)
+
         # Do export to force creation of progress, bundle entities
         self._do_download({'locales': [{'locale': 'de', 'checked': True}],
                            'export_what': 'all'}, method='post')
@@ -2353,10 +2451,12 @@ class TranslationImportExportTests(actions.TestBase):
             '#: GCB-1|title|string|lesson:4:de:0\n'
             '#| msgid ""\n'
             'msgid "FizzBuzz"\n'
-            'msgstr "Lektion Titel"\n')
+            'msgstr "Lektion Titel"\n', warn_not_used=True, warn_not_found=True)
         messages = self._parse_messages(response)
-        self.assertIn('Translation for "FizzBuzz" present but not used.',
-                      messages)
+        self.assertIn(
+            'Unused translation in file messages.po for '
+            '"FizzBuzz" -> "Lektion Titel" for locations: lesson:4:de',
+            messages)
 
     def test_upload_ui_with_missing_translation(self):
         # Do export to force creation of progress, bundle entities
@@ -2368,9 +2468,10 @@ class TranslationImportExportTests(actions.TestBase):
             '#: GCB-1|title|string|lesson:4:de:0\n'
             '#| msgid ""\n'
             'msgid "FizzBuzz"\n'
-            'msgstr "Lektion Titel"\n')
+            'msgstr "Lektion Titel"\n', warn_not_found=True, warn_not_used=True)
         messages = self._parse_messages(response)
-        self.assertIn('Did not find translation for "Lesson Title"', messages)
+        self.assertIn(
+            'Did not find translation for "Lesson Title" at lesson:4', messages)
 
     def test_upload_ui_with_blank_translation(self):
         resource_count = 19
@@ -2689,7 +2790,7 @@ class TranslationImportExportTests(actions.TestBase):
                              TranslationUploadRestHandler.URL),
                   {'request': transforms.dumps({
                       'xsrf_token': cgi.escape(xsrf_token),
-                      'payload': transforms.dumps({'key', ''})})},
+                      'payload': transforms.dumps({'key': ''})})},
                   upload_files=[('file', 'doesntmatter', upload_contents)])
 
         # Download the translations; verify the doubling.
@@ -2938,7 +3039,7 @@ class CourseLocalizationTestBase(actions.TestBase):
     def _import_course(self):
         email = 'test_course_localization@google.com'
         actions.login(email, is_admin=True)
-        actions.simple_add_course('first', email, 'My First Course')
+        return actions.simple_add_course('first', email, 'My First Course')
 
 
 class SampleCourseLocalizationTest(CourseLocalizationTestBase):

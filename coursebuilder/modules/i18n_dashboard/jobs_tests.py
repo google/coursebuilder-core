@@ -20,8 +20,10 @@ __author__ = [
 
 import os
 import zipfile
+from models import courses
 from modules.i18n_dashboard import jobs
 from modules.i18n_dashboard import i18n_dashboard_tests
+from tests.functional import actions
 from tools.etl import etl
 from tools.etl import testing
 
@@ -104,6 +106,20 @@ class _JobTestBase(
 
         self.run_job(
             'modules.i18n_dashboard.jobs.UploadTranslations', job_args=job_args)
+
+    def extract_zipfile(self):
+        extracted = []
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            for zipinfo in zf.infolist():
+                path = os.path.join(self.test_tempdir, zipinfo.filename)
+                dirname = os.path.dirname(path)
+                if not os.path.exists(dirname):
+                    os.makedirs(dirname)
+                with open(path, 'w') as f:
+                    fromzip = zf.open(zipinfo.filename)
+                    f.write(fromzip.read())
+                    extracted.append(path)
+        return extracted
 
 
 class BaseJobTest(_JobTestBase):
@@ -261,28 +277,13 @@ class UploadTranslationsTest(_JobTestBase):
         with zipfile.ZipFile(self.zipfile_name, 'w') as zf:
             zf.writestr('filename', contents)
 
-    def extract_zipfile(self):
-        extracted = []
-        with zipfile.ZipFile(self.zipfile_name) as zf:
-            for zipinfo in zf.infolist():
-                path = os.path.join(self.test_tempdir, zipinfo.filename)
-                os.makedirs(os.path.dirname(path))
-                with open(path, 'w') as f:
-                    fromzip = zf.open(zipinfo.filename)
-                    f.write(fromzip.read())
-                    extracted.append(path)
-
-        return extracted
-
     def test_dies_if_path_does_not_exist(self):
         args = [
             'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
             self.url_prefix, 'localhost', '--job_args=%s' % self.zipfile_name]
 
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(IOError):
             etl.main(etl.create_args_parser().parse_args(args), testing=True)
-
-        self.assertIn('File does not exist', self.get_log())
 
     def test_dies_if_path_has_bad_file_extension(self):
         args = [
@@ -290,10 +291,8 @@ class UploadTranslationsTest(_JobTestBase):
             self.url_prefix, 'localhost',
             '--job_args=%s' % self.zipfile_name + '.bad']
 
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(IOError):
             etl.main(etl.create_args_parser().parse_args(args), testing=True)
-
-        self.assertIn('Invalid file extension: ".bad"', self.get_log())
 
     def test_dies_if_cannot_get_app_context_for_course_url_prefix(self):
         self.create_zip_file('contents')
@@ -368,3 +367,61 @@ class RoundTripTest(_JobTestBase):
         self.run_upload_job()
         response = self.get('first/dashboard?action=i18n_dashboard')
         self.assert_ln_locale_in_course(response)
+
+    def test_separate_files(self):
+        app_context = self._import_course()
+        course = courses.Course(None, app_context=app_context)
+        unit = course.add_unit()
+        lesson = course.add_lesson(unit)
+        lesson.objectives = 'some text'
+        course.save()
+
+        self.run_translate_job()
+        self.run_download_job('--job_args=%s --separate_files_by_type' %
+                              self.zipfile_name)
+        paths = self.extract_zipfile()
+        actual = sorted([os.path.basename(path) for path in paths])
+        expected = [
+            'course_settings.po',
+            'html_hook.po',
+            'lesson_2.po',
+            'unit_1.po'
+            ]
+        self.assertEquals(expected, actual)
+
+    def test_square_brackets(self):
+        app_context = self._import_course()
+        course = courses.Course(None, app_context=app_context)
+        assessment = course.add_assessment()
+        assessment.html_content = '<b>[in [square] brackets]</b>'
+        course.save()
+        self.run_translate_job()
+        self.run_download_job('--job_args=%s --encoded_angle_brackets' %
+                             self.zipfile_name)
+
+        # Open the downloaded .zip file; check the contents of the .po file
+        # to ensure we have an HTML tag converted to square brackets, and
+        # that the literal square brackets in the text were escaped.
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            data = zf.read('locale/ln/LC_MESSAGES/messages.po')
+        lines = data.split('\n')
+        index = lines.index(
+            'msgid "[b#1]\\\\[in \\\\[square\\\\] brackets\\\\][/b#1]"')
+        self.assertGreater(index, -1)
+
+        # Overwrite the .zip file with a new .po file that contains a
+        # translated version of the text w/ square brackets, and upload.
+        lines[index + 1] = (
+            'msgstr "[b#1]\\\\[IN \\\\[ROUND\\\\] BRACKETS\\\\][/b#1]"')
+        data = '\n'.join(lines)
+        with zipfile.ZipFile(self.zipfile_name, 'w') as zf:
+            zf.writestr('locale/ln/LC_MESSAGES/messages.po', data)
+            zf.close()
+        self.run_upload_job('--job_args=%s --encoded_angle_brackets' %
+                            self.zipfile_name)
+
+        # Verify that the translated version is visible in the page.
+        actions.login('admin@foo.com', is_admin=True)
+        response = self.get('first/assessment?name=%s&hl=ln' %
+                            assessment.unit_id)
+        self.assertIn('<b>[IN [ROUND] BRACKETS]</b>', response.body)
