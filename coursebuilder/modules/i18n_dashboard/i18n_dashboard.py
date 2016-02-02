@@ -595,6 +595,9 @@ class TranslationFile(object):
     def __init__(self, locale, file_name):
         self._locale = locale
         self._file_name = file_name
+
+        # List of TranslationLocation, keyed by content of translatable text
+        # fragment in course base language.
         self._translations = collections.OrderedDict()
 
     def get_message(self, key):
@@ -712,8 +715,9 @@ class TranslationMessage(object):
         if translation and not any(self._translations):
             self._translations = set([translation])
 
-    def add_location(self, loc_key, loc_name, loc_type):
-        self._locations[loc_key] = TranslationLocation(loc_name, loc_type)
+    def add_location(self, resource_bundle_key, loc_name, loc_type):
+        self._locations[str(resource_bundle_key)] = TranslationLocation(
+            loc_name, loc_type)
 
     def add_comment(self, comment):
         comment = unicode(comment)  # May be Node or NodeList.
@@ -1036,7 +1040,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
                 self.XSRF_TOKEN_NAME))
 
     @staticmethod
-    def build_translations(course, locales, export_what, exporter):
+    def build_translations(course, locales, export_what, exporter, config=None):
         """Build up a dictionary of all translated strings -> locale.
 
         For each {original-string,locale}, keep track of the course
@@ -1058,8 +1062,8 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
         """
 
         app_context = course.app_context
-        transformer = xcontent.ContentTransformer(
-            config=I18nTranslationContext.get(app_context))
+        config = config or I18nTranslationContext.get(app_context)
+        transformer = xcontent.ContentTransformer(config=config)
         resource_key_map = TranslatableResourceRegistry.get_resources_and_keys(
             course)
 
@@ -1159,7 +1163,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
 
                 # Set source string and location.
                 message_entry = exporter.get_file(key).get_message(message)
-                message_entry.add_location(str(key), section_name, section_type)
+                message_entry.add_location(key, section_name, section_type)
 
                 # Describe the location where the item is found.
                 message_entry.add_comment(description)
@@ -1362,7 +1366,6 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
     @staticmethod
     def parse_po_file(importer, po_file_content):
         """Collect translations from .po file and group by bundle key."""
-
         pseudo_file = cStringIO.StringIO(po_file_content)
         the_catalog = pofile.read_po(pseudo_file)
         locale = None
@@ -1391,15 +1394,16 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                 message_element = importer.get_file(
                     resource_bundle_key).get_message(message_id)
                 message_element.add_translation(message.string)
-                message_element.add_location(loc_key, loc_name, loc_type)
+                message_element.add_location(resource_bundle_key,
+                                             loc_name, loc_type)
 
     @staticmethod
     def update_translations(course, importer, warn_not_found=False,
-                            warn_not_used=False):
+                            warn_not_used=False, config=None):
         translation_messages = []
         app_context = course.app_context
-        transformer = xcontent.ContentTransformer(
-            config=I18nTranslationContext.get(app_context))
+        config = config or I18nTranslationContext.get(app_context)
+        transformer = xcontent.ContentTransformer(config=config)
         i18n_progress_dtos = I18nProgressDAO.get_all()
         progress_by_key = {p.id: p for p in i18n_progress_dtos}
         resource_key_map = TranslatableResourceRegistry.get_resources_and_keys(
@@ -1499,7 +1503,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
         return translation_messages
 
     @staticmethod
-    def load_file_content(app_context, file_content):
+    def load_file_content(app_context, file_content, importer):
         # Internally, babel uses the 'en' locale, and we must configure it
         # before we make babel calls.
         with common_utils.ZipAwareOpen():
@@ -1516,7 +1520,6 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
             with common_utils.ZipAwareOpen():
                 localedata.load(locale)
 
-        importer = TranslationContents()
         try:
             zf = zipfile.ZipFile(cStringIO.StringIO(file_content), 'r')
             for item in zf.infolist():
@@ -1525,7 +1528,6 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                         importer, zf.read(item))
         except zipfile.BadZipfile:
             TranslationUploadRestHandler.parse_po_file(importer, file_content)
-        return importer
 
     def post(self):
         if appengine_config.PRODUCTION_MODE:
@@ -1565,8 +1567,9 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
         payload = transforms.loads(request.get('payload', '{}'))
         warn_not_used = payload.get('warn_not_used', False)
         warn_not_found = payload.get('warn_not_found', False)
+        importer = TranslationContents()
         try:
-            importer = self.load_file_content(self.app_context, file_content)
+            self.load_file_content(self.app_context, file_content, importer)
         except UnicodeDecodeError:
             transforms.send_file_upload_response(
                 self, 400,

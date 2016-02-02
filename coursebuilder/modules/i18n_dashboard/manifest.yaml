@@ -16,7 +16,7 @@ tests:
     - modules.i18n_dashboard.jobs_tests.BaseJobTest = 9
     - modules.i18n_dashboard.jobs_tests.DeleteTranslationsTest = 3
     - modules.i18n_dashboard.jobs_tests.DownloadTranslationsTest = 5
-    - modules.i18n_dashboard.jobs_tests.RoundTripTest = 3
+    - modules.i18n_dashboard.jobs_tests.RoundTripTest = 4
     - modules.i18n_dashboard.jobs_tests.TranslateToReversedCaseTest = 1
     - modules.i18n_dashboard.jobs_tests.UploadTranslationsTest = 5
 

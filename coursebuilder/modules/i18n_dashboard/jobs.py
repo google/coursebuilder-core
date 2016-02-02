@@ -21,9 +21,19 @@ __author__ = [
 import logging
 import os
 import sys
+from common import xcontent
 from models import courses
 from modules.i18n_dashboard import i18n_dashboard
 from tools.etl import etl_lib
+
+# Locale code for indicating that the locale in this file is not really
+# the locale we should be using.  Instead, a locale to use must be
+# provided via an ETL job flag or HTTP parameter.  Again, to keep Babel happy,
+# this needs to be in Babel's supported set.  'gv' is for Manx, a Celtic
+# locale, with somewhere between 100 and 1000 speakers, depending on when
+# and how you ask, so pretty good odds we're not going to be actually using
+# this for real courses.
+AGNOSTIC_EXPORT_LOCALE = 'gv'
 
 _LOG = logging.getLogger('coursebuilder.modules.i18n_dashboard.jobs')
 _LOG.setLevel(logging.INFO)
@@ -44,6 +54,25 @@ class _BaseJob(etl_lib.CourseJob):
             'export. If omitted, all locales except the default locale for the '
             'course will be exported. Passed locales must exist for the '
             'specified course.')
+
+    @classmethod
+    def _add_suppress_tags_argument(cls, parser):
+        parser.add_argument(
+            '--suppress_nondefault_composable_tags', action='store_true',
+            help='Use only very basic rules for composing/decomposing '
+            'contents of HTML tags.  Not recommended for use, unless '
+            'you know your translation bureau cannot support .po files '
+            'exported without use of this flag.')
+
+    @classmethod
+    def _build_translation_config(cls, args, app_context):
+        config = i18n_dashboard.I18nTranslationContext.get(app_context)
+        if args.suppress_nondefault_composable_tags:
+            config.opaque_decomposable_tag_names = list(
+                xcontent.DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES)
+            config.RECOMPOSABLE_ATTRIBUTES_MAP = dict(
+                xcontent.DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
+        return config
 
     @classmethod
     def _check_file_exists(cls, path):
@@ -161,22 +190,50 @@ class DownloadTranslations(_BaseJob):
             'that cannot cope with embedded HTML markup in original or '
             'translated content.  Be sure to also supply this flag when '
             're-uploading translated content.')
+        self.parser.add_argument(
+            '--locale_agnostic', action='store_true',
+            help='Download .po file(s) using a single locale of "gv".  '
+            '"gv" locale.  When using this flag in combination with the '
+            '--export=new setting, you may specify --locales=.... to restrict '
+            'the locales you want to consider when establishing whether to '
+            'export items for which the base-locale content is newer.  '
+            'If --locales is not given, all locales are considered.  '
+            'When using --export=all, you need not set --locales.')
         self._add_locales_argument(self.parser)
+        self._add_suppress_tags_argument(self.parser)
 
     def main(self):
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
         self._check_file_does_not_exist(self.args.path)
 
-        locales = self._get_locales(
-            self.args.locales, app_context.get_all_locales(),
-            app_context.default_locale, self.etl_args.course_url_prefix)
-        exporter = i18n_dashboard.TranslationContents(
-            self.args.separate_files_by_type)
-        download_handler = i18n_dashboard.TranslationDownloadRestHandler
-        download_handler.build_translations(
+        all_locales = app_context.get_all_locales()
+        if self.args.locale_agnostic and self.args.export == self._EXPORT_ALL:
+            # If we're locale-agnostic and exporting everything, just pick any
+            # one locale.  Naming more locales would just force unnecessary
+            # repetitive work.
+            all_locales.remove(app_context.default_locale)
+            if not all_locales:
+                _die('Course must have at least one translatable locale '
+                     'configured in the translation settings.')
+            locales = all_locales[:1]
+        else:
+            locales = self._get_locales(
+                self.args.locales, all_locales,
+                app_context.default_locale, self.etl_args.course_url_prefix)
+
+        if self.args.locale_agnostic:
+            exporter = OverriddenLocaleTranslationContents(
+                separate_files_by_type=self.args.separate_files_by_type,
+                locale_to_use=AGNOSTIC_EXPORT_LOCALE)
+        else:
+            exporter = i18n_dashboard.TranslationContents(
+                self.args.separate_files_by_type)
+
+        config = self._build_translation_config(self.args, app_context)
+        i18n_dashboard.TranslationDownloadRestHandler.build_translations(
             courses.Course.get(app_context), locales, self.args.export,
-            exporter)
+            exporter, config=config)
         if self.args.encoded_angle_brackets:
             exporter.encode_angle_to_square_brackets()
 
@@ -239,6 +296,18 @@ class UploadTranslations(_BaseJob):
             help='When uploading, warn about translation items found in the '
             '.po file that did not match current course content (and thus '
             'were not incorporated into the translations for the course)')
+        self.parser.add_argument(
+            '--force_locale',
+            help='When uploading, force the upload to be done to the named '
+            'locale, rather than the locale encoded in the location keys '
+            'embedded in the file.  This is useful when you have previously '
+            'done a file download that is locale-agnostic, and now you are '
+            'uploading one of a number of returned translations.  '
+            'NOTE: If you get this wrong, this will simply overwrite the '
+            'incorrect locale\'s translations.  The only way to recover '
+            'the overwritten items is by uploading a file with the correct '
+            'content, or restoring from backups.')
+        self._add_suppress_tags_argument(self.parser)
 
     def main(self):
         app_context = self._get_app_context_or_die(
@@ -247,7 +316,14 @@ class UploadTranslations(_BaseJob):
         # Parse content from .zip of .po files, or single .po file.
         with open(self.args.path) as fp:
             data = fp.read()
-        importer = self._UPLOAD_HANDLER.load_file_content(app_context, data)
+
+        if self.args.force_locale:
+            importer = OverriddenLocaleTranslationContents(
+                locale_to_use=self.args.force_locale)
+        else:
+            importer = i18n_dashboard.TranslationContents()
+
+        self._UPLOAD_HANDLER.load_file_content(app_context, data, importer)
         if self.args.encoded_angle_brackets:
             importer.decode_square_to_angle_brackets()
 
@@ -267,7 +343,62 @@ class UploadTranslations(_BaseJob):
         course.save_settings(environ)
 
         # Make updates to the translations
+        config = self._build_translation_config(self.args, app_context)
         messages = self._UPLOAD_HANDLER.update_translations(
-            course, importer, self.args.warn_not_found, self.args.warn_not_used)
+            course, importer, warn_not_found=self.args.warn_not_found,
+            warn_not_used=self.args.warn_not_used, config=config)
         for message in messages:
             _LOG.info(message)
+
+
+class OverriddenLocaleTranslationContents(i18n_dashboard.TranslationContents):
+
+    def __init__(self, separate_files_by_type=False,
+                 locale_to_use=AGNOSTIC_EXPORT_LOCALE):
+        super(OverriddenLocaleTranslationContents, self).__init__(
+            separate_files_by_type)
+        self._locale_to_use = locale_to_use
+
+    def get_file(self, resource_bundle_key):
+        resource_key = resource_bundle_key.resource_key
+        file_name = self._choose_file_name(resource_key)
+        file_key = (self._locale_to_use, file_name)
+        if file_key not in self._files:
+            self._files[file_key] = OverriddenLocaleTranslationFile(
+                self._locale_to_use, file_name)
+        return self._files[file_key]
+
+
+class OverriddenLocaleTranslationFile(i18n_dashboard.TranslationFile):
+
+    def __init__(self, locale, file_name):
+        super(OverriddenLocaleTranslationFile, self).__init__(
+            locale, file_name)
+        self._locale_to_use = locale
+
+    def get_message(self, key):
+        if key not in self._translations:
+            self._translations[key] = OverriddenLocaleTranslationMessage(
+                self._locale_to_use)
+        return self._translations[key]
+
+
+class OverriddenLocaleTranslationMessage(i18n_dashboard.TranslationMessage):
+
+    def __init__(self, locale_to_use):
+        super(OverriddenLocaleTranslationMessage, self).__init__()
+        self._locale_to_use = locale_to_use
+
+    def add_location(self, resource_bundle_key, loc_name, loc_type):
+        resource_key = resource_bundle_key.resource_key
+        fixed_location_bundle_key = i18n_dashboard.ResourceBundleKey(
+            resource_key.type, resource_key.key, self._locale_to_use)
+        super(OverriddenLocaleTranslationMessage, self).add_location(
+            fixed_location_bundle_key, loc_name, loc_type)
+
+    def add_translation(self, translation):
+        # Location-agnostic exports never send existing translations.
+        if self._locale_to_use == AGNOSTIC_EXPORT_LOCALE:
+            translation = ''
+        super(OverriddenLocaleTranslationMessage, self).add_translation(
+            translation)

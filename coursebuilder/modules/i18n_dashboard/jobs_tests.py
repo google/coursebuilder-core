@@ -20,8 +20,11 @@ __author__ = [
 
 import os
 import zipfile
+
+from common import utils as common_utils
 from models import courses
 from modules.i18n_dashboard import jobs
+from modules.i18n_dashboard import i18n_dashboard
 from modules.i18n_dashboard import i18n_dashboard_tests
 from tests.functional import actions
 from tools.etl import etl
@@ -263,7 +266,6 @@ class DownloadTranslationsTest(_JobTestBase):
         self.run_download_job('--job_args=%s --locales=ln' % self.zipfile_name)
         self.assert_zipfile_contains_only_ln_locale(self.zipfile_name)
 
-
 class TranslateToReversedCaseTest(_JobTestBase):
 
     def test_dies_if_cannot_get_app_context_for_course_url_prefix(self):
@@ -425,3 +427,197 @@ class RoundTripTest(_JobTestBase):
         response = self.get('first/assessment?name=%s&hl=ln' %
                             assessment.unit_id)
         self.assertIn('<b>[IN [ROUND] BRACKETS]</b>', response.body)
+
+    def test_locale_agnostic_lifecycle(self):
+        app_context = self._import_course()
+        course = courses.Course(None, app_context=app_context)
+        unit = course.add_unit()
+        unit.title = 'Title in base language'
+        course.save()
+        extra_env = {
+            'extra_locales': [
+                {'locale': 'de', 'availability': 'available'},
+                {'locale': 'fr', 'availability': 'available'},
+            ]
+        }
+        bundle_key_de = str(i18n_dashboard.ResourceBundleKey(
+            'unit', str(unit.unit_id), 'de'))
+        bundle_key_fr = str(i18n_dashboard.ResourceBundleKey(
+            'unit', str(unit.unit_id), 'fr'))
+
+        # Do language-agnostic export; should get locale 'gv'.
+        with actions.OverriddenEnvironment(extra_env):
+            self.run_download_job(
+                '--job_args=%s '
+                '--locale_agnostic '
+                '--export=all' %
+                self.zipfile_name)
+
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            data = zf.read('locale/%s/LC_MESSAGES/messages.po' %
+                           jobs.AGNOSTIC_EXPORT_LOCALE)
+        lines = data.split('\n')
+        index = lines.index('msgid "Title in base language"')
+        self.assertGreater(index, -1)
+
+        # Provide 'translation' for unit title to 'German'.
+        lines[index + 1] = 'msgstr "Title in German"'
+        data = '\n'.join(lines)
+        with zipfile.ZipFile(self.zipfile_name, 'w') as zf:
+            zf.writestr('locale/%s/LC_MESSAGES/messages.po' %
+                        jobs.AGNOSTIC_EXPORT_LOCALE, data)
+            zf.close()
+
+        # Run upload, forcing locale to German.
+        self.run_upload_job('--job_args=%s --force_locale=de' %
+                            self.zipfile_name)
+
+        # Verify that we now have DE translation bundle.
+        with common_utils.Namespace(self.NAMESPACE):
+            bundle = i18n_dashboard.ResourceBundleDAO.load(bundle_key_de)
+            self.assertEquals(
+                'Title in German',
+                bundle.dict['title']['data'][0]['target_value'])
+
+        # Also upload to 'fr', which will give us the wrong content, but
+        # the user said "--force", so we force it.
+        self.run_upload_job('--job_args=%s --force_locale=fr' %
+                            self.zipfile_name)
+
+        # Verify that we now have FR translation bundle.
+        with common_utils.Namespace(self.NAMESPACE):
+            bundle = i18n_dashboard.ResourceBundleDAO.load(bundle_key_fr)
+            self.assertEquals(
+                'Title in German',
+                bundle.dict['title']['data'][0]['target_value'])
+
+        # Do a locale-agnostic download, specifying all content.
+        # Since it's --export=all, we should get the unit title, but
+        # since it's locale agnostic, we should get no translated text.
+        os.unlink(self.zipfile_name)
+        with actions.OverriddenEnvironment(extra_env):
+            self.run_download_job(
+                '--job_args=%s '
+                '--locale_agnostic '
+                '--export=all' %
+                self.zipfile_name)
+
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            data = zf.read('locale/%s/LC_MESSAGES/messages.po' %
+                           jobs.AGNOSTIC_EXPORT_LOCALE)
+        lines = data.split('\n')
+        index = lines.index('msgid "Title in base language"')
+        self.assertGreater(index, -1)
+        self.assertEquals('msgstr ""', lines[index + 1])
+
+        # Do locale-agnostic download, specifying only new content.
+        # We don't specificy locale, which means we should consider
+        # 'de' and 'fr'.  But since both of those are up-to-date,
+        # we shouldn't see the translation for the unit title even
+        # appear in the output file.
+        os.unlink(self.zipfile_name)
+        with actions.OverriddenEnvironment(extra_env):
+            self.run_download_job(
+                '--job_args=%s '
+                '--locale_agnostic '
+                '--export=new' %
+                self.zipfile_name)
+
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            data = zf.read('locale/%s/LC_MESSAGES/messages.po' %
+                           jobs.AGNOSTIC_EXPORT_LOCALE)
+        lines = data.split('\n')
+        self.assertEquals(0, lines.count('msgid "Title in base language"'))
+
+        # Modify unit title.
+        unit = course.find_unit_by_id(unit.unit_id)
+        unit.title = 'New and improved title in the base language'
+        course.save()
+
+        # Submit a new translation of the changed title, but only for DE.
+        os.unlink(self.zipfile_name)
+        with actions.OverriddenEnvironment(extra_env):
+            self.run_download_job(
+                '--job_args=%s '
+                '--locale_agnostic '
+                '--locales=de '
+                '--export=new' %
+                self.zipfile_name)
+
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            data = zf.read('locale/%s/LC_MESSAGES/messages.po' %
+                           jobs.AGNOSTIC_EXPORT_LOCALE)
+        lines = data.split('\n')
+        index = lines.index(
+            'msgid "New and improved title in the base language"')
+        self.assertGreater(index, -1)
+        lines[index + 1] = 'msgstr = "New and improved German title"'
+        data = '\n'.join(lines)
+        with zipfile.ZipFile(self.zipfile_name, 'w') as zf:
+            zf.writestr('locale/%s/LC_MESSAGES/messages.po' %
+                        jobs.AGNOSTIC_EXPORT_LOCALE, data)
+            zf.close()
+
+        # Run upload, forcing locale to German.
+        self.run_upload_job('--job_args=%s --force_locale=de' %
+                            self.zipfile_name)
+
+        # Locale-agnostic download, for DE only, and only for 'new'
+        # items.  Since we've updated the translation bundle since
+        # the time we updated the course, we don't expect to see the
+        # unit title exported to the .po file.
+        os.unlink(self.zipfile_name)
+        with actions.OverriddenEnvironment(extra_env):
+            self.run_download_job(
+                '--job_args=%s '
+                '--locales=de '
+                '--locale_agnostic '
+                '--export=new' %
+                self.zipfile_name)
+
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            data = zf.read('locale/%s/LC_MESSAGES/messages.po' %
+                           jobs.AGNOSTIC_EXPORT_LOCALE)
+        lines = data.split('\n')
+        self.assertEquals(
+            0,
+            lines.count('msgid "New and improved title in the base language"'))
+
+        # Exact same download, but change 'de' to 'fr'.  Since the FR
+        # translation was not updated, we should see that item in the
+        # export.
+        os.unlink(self.zipfile_name)
+        with actions.OverriddenEnvironment(extra_env):
+            self.run_download_job(
+                '--job_args=%s '
+                '--locales=fr '
+                '--locale_agnostic '
+                '--export=new' %
+                self.zipfile_name)
+
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            data = zf.read('locale/%s/LC_MESSAGES/messages.po' %
+                           jobs.AGNOSTIC_EXPORT_LOCALE)
+        lines = data.split('\n')
+        self.assertEquals(
+            1,
+            lines.count('msgid "New and improved title in the base language"'))
+
+        # Download again, leaving off the locales argument.  This should
+        # find both locales, and in this case, since at least one of the
+        # locales has not been updated, we should, again, see that item.
+        os.unlink(self.zipfile_name)
+        with actions.OverriddenEnvironment(extra_env):
+            self.run_download_job(
+                '--job_args=%s '
+                '--locale_agnostic '
+                '--export=new' %
+                self.zipfile_name)
+
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            data = zf.read('locale/%s/LC_MESSAGES/messages.po' %
+                           jobs.AGNOSTIC_EXPORT_LOCALE)
+        lines = data.split('\n')
+        self.assertEquals(
+            1,
+            lines.count('msgid "New and improved title in the base language"'))

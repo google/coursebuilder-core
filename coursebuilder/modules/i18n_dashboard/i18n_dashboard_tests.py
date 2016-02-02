@@ -3022,6 +3022,10 @@ class TranslatorRoleTests(actions.TestBase):
 
 class CourseLocalizationTestBase(actions.TestBase):
 
+    COURSE = 'first'
+    NAMESPACE = 'ns_%s' % COURSE
+    ADMIN_EMAIL = 'test_course_localization@google.com'
+
     def setUp(self):
         super(CourseLocalizationTestBase, self).setUp()
         if sites.GCB_COURSES_CONFIG.name in sites.Registry.test_overrides:
@@ -3037,9 +3041,9 @@ class CourseLocalizationTestBase(actions.TestBase):
         super(CourseLocalizationTestBase, self).tearDown()
 
     def _import_course(self):
-        email = 'test_course_localization@google.com'
-        actions.login(email, is_admin=True)
-        return actions.simple_add_course('first', email, 'My First Course')
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        return actions.simple_add_course(self.COURSE, self.ADMIN_EMAIL,
+                                         'My First Course')
 
 
 class SampleCourseLocalizationTest(CourseLocalizationTestBase):
