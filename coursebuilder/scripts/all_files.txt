@@ -152,6 +152,7 @@ models/entity_transforms.py
 models/event_transforms.py
 models/jobs.py
 models/messages.py
+models/model_caching.py
 models/models.py
 models/permissions.py
 models/progress.py

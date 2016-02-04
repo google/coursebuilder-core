@@ -25,6 +25,7 @@ from common import utils as common_utils
 from controllers import sites
 from controllers import utils
 from models import courses
+from models import model_caching
 from models import models
 from models import transforms
 from modules.courses import settings
@@ -401,7 +402,8 @@ class HtmlHookTest(actions.TestBase):
         with common_utils.Namespace(NAMESPACE):
             i18n_dashboard.ResourceBundleDAO.delete(
                 i18n_dashboard.ResourceBundleDTO(str(hook_key), hook_bundle))
-        i18n_dashboard.ProcessScopedResourceBundleCache.instance().clear()
+        model_caching.CacheFactory.get_cache_instance(
+            i18n_dashboard.RESOURCE_BUNDLE_CACHE_NAME).clear()
 
         response = self.get(BASE_URL)
         dom = self.parse_html_string(response.body)

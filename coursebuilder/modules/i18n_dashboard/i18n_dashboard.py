@@ -53,11 +53,10 @@ from models import resources_display
 from models import custom_modules
 from models import custom_units
 from models import jobs
+from models import model_caching
 from models import models
 from models import roles
 from models import transforms
-from models.config import ConfigProperty
-from models.counters import PerfCounter
 from modules.courses import settings
 from modules.courses import unit_lesson_editor
 from modules.dashboard import dashboard
@@ -100,6 +99,10 @@ TRANSLATABLE_FIELDS_FILTER = schema_fields.FieldFilter(
 # Lingala ( http://en.wikipedia.org/wiki/Lingala ) is not likely to be
 # a target language for courses hosted in CB in the next few years.
 PSEUDO_LANGUAGE = 'ln'
+
+RESOURCE_BUNDLE_CACHE_NAME = 'resource_bundle'
+RESOURCE_BUNDLE_CACHE_MAX_SIZE_BYTES = 16 * 1024 * 1024
+RESOURCE_BUNDLE_CACHE_TTL_SEC = 5 * 60
 
 custom_module = None
 
@@ -1628,174 +1631,6 @@ class I18nProgressManager(caching.RequestScopedSingleton):
         return cls.instance(course)._get(rsrc, type_str, key)
 
 
-# all caches must have limits
-MAX_GLOBAL_CACHE_SIZE_BYTES = 16 * 1024 * 1024
-
-# we don't track deletions; deleted item will hang around this long
-CACHE_ENTRY_TTL_SEC = 5 * 60
-
-# Global memcache controls.
-CAN_USE_RESOURCE_BUNDLE_IN_PROCESS_CACHE = ConfigProperty(
-    'gcb_can_use_resource_bundle_in_process_cache', bool,
-    messages.SITE_SETTINGS_CACHE_TRANSLATIONS, default_value=True,
-    label='Cache Translations')
-
-
-class ProcessScopedResourceBundleCache(caching.ProcessScopedSingleton):
-    """This class holds in-process global cache of VFS objects."""
-
-    @classmethod
-    def get_cache_len(cls):
-        # pylint: disable=protected-access
-        return len(
-            ProcessScopedResourceBundleCache.instance()._cache.items.keys())
-
-    @classmethod
-    def get_cache_size(cls):
-        # pylint: disable=protected-access
-        return ProcessScopedResourceBundleCache.instance()._cache.total_size
-
-    def __init__(self):
-        self._cache = caching.LRUCache(
-            max_size_bytes=MAX_GLOBAL_CACHE_SIZE_BYTES)
-        self._cache.get_entry_size = self._get_entry_size
-
-    def _get_entry_size(self, key, value):
-        return sys.getsizeof(key) + sys.getsizeof(value) if value else 0
-
-    @property
-    def cache(self):
-        return self._cache
-
-
-class ResourceBundleCacheEntry(caching.AbstractCacheEntry):
-    """Cache entry representing a file."""
-
-    def __init__(self, entity):
-        self.entity = entity
-        self.created_on = datetime.datetime.utcnow()
-
-    def getsizeof(self):
-        return (
-            ResourceBundleEntity.getsizeof(self.entity) +
-            sys.getsizeof(self.created_on))
-
-    def has_expired(self):
-        age = (datetime.datetime.utcnow() - self.created_on).total_seconds()
-        return age > CACHE_ENTRY_TTL_SEC
-
-    def is_up_to_date(self, key, update):
-        if update and self.entity:
-            return update.updated_on == self.entity.updated_on
-        return not update and not self.entity
-
-    def updated_on(self):
-        if self.entity:
-            return self.entity.updated_on
-        return None
-
-    @classmethod
-    def externalize(cls, key, entry):
-        entity = entry.entity
-        if not entity:
-            return None
-        return ResourceBundleDAO.DTO(
-            entity.key().id_or_name(), transforms.loads(entity.data))
-
-    @classmethod
-    def internalize(cls, key, entity):
-        return cls(entity)
-
-
-class ResourceBundleCacheConnection(caching.AbstractCacheConnection):
-
-    PERSISTENT_ENTITY = ResourceBundleEntity
-    CACHE_ENTRY = ResourceBundleCacheEntry
-
-    @classmethod
-    def init_counters(cls):
-        super(ResourceBundleCacheConnection, cls).init_counters()
-
-        cls.CACHE_INHERITED = PerfCounter(
-            'gcb-models-ResourceBundleConnection-cache-inherited',
-            'A number of times an object was obtained from the inherited vfs.')
-
-    @classmethod
-    def is_enabled(cls):
-        return CAN_USE_RESOURCE_BUNDLE_IN_PROCESS_CACHE.value
-
-    def __init__(self, namespace):
-        super(ResourceBundleCacheConnection, self).__init__(namespace)
-        self.cache = ProcessScopedResourceBundleCache.instance().cache
-
-    def get_updates_when_empty(self):
-        """Load in all ResourceBundles when cache is empty."""
-        q = self.PERSISTENT_ENTITY.all()
-        for entity in caching.iter_all(q):
-            self.put(entity.key().name(), entity)
-            self.CACHE_UPDATE_COUNT.inc()
-
-        # we don't have any updates to apply; all items are new
-        return {}
-
-
-RB_CACHE_LEN = models.counters.PerfCounter(
-    'gcb-models-ResourceBundleCacheConnection-cache-len',
-    'A total number of items in cache.')
-RB_CACHE_SIZE_BYTES = PerfCounter(
-    'gcb-models-ResourceBundleCacheConnection-cache-bytes',
-    'A total size of items in cache in bytes.')
-
-RB_CACHE_LEN.poll_value = ProcessScopedResourceBundleCache.get_cache_len
-RB_CACHE_SIZE_BYTES.poll_value = (
-    ProcessScopedResourceBundleCache.get_cache_size)
-
-
-ResourceBundleCacheConnection.init_counters()
-
-
-class I18nResourceBundleManager(caching.RequestScopedSingleton):
-    """Class that provides access to in-process ResourceBundle cache.
-
-    This class only supports get() and does not intercept put() or delete()
-    and is unaware of changes to ResourceBundles made in this very process.
-    When ResourceBundles change, the changes will be picked up when new instance
-    of this class is created. If you are watching perfomance counters, you will
-    see EVICT and EXPIRE being incremented, but not DELETE or PUT.
-    """
-
-    def __init__(self, namespace):
-        self._conn = ResourceBundleCacheConnection.new_connection(namespace)
-
-    def _get(self, key):
-        found, stream = self._conn.get(key)
-        if found and stream:
-            return stream
-        entity = ResourceBundleDAO.ENTITY_KEY_TYPE.get_entity_by_key(
-            ResourceBundleEntity, str(key))
-        if entity:
-            self._conn.put(key, entity)
-            return ResourceBundleDAO.DTO(
-                entity.key().id_or_name(), transforms.loads(entity.data))
-        self._conn.CACHE_NOT_FOUND.inc()
-        self._conn.put(key, None)
-        return None
-
-    def _get_multi(self, keys):
-        return [self._get(key) for key in keys]
-
-    @classmethod
-    def get(cls, app_context, key):
-        # pylint: disable=protected-access
-        return cls.instance(app_context.get_namespace_name())._get(key)
-
-    @classmethod
-    def get_multi(cls, app_context, keys):
-        # pylint: disable=protected-access
-        return cls.instance(
-            app_context.get_namespace_name())._get_multi(keys)
-
-
 class I18nTranslationContext(caching.RequestScopedSingleton):
 
     def __init__(self, app_context):
@@ -2362,8 +2197,8 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                 self, 401, 'Access denied.', {'key': str(key)})
             return
 
-        resource_bundle_dto = I18nResourceBundleManager.get(
-            self.app_context, str(key))
+        resource_bundle_dto = model_caching.CacheFactory.get_manager_class(
+            RESOURCE_BUNDLE_CACHE_NAME).get(self.app_context, str(key))
         transformer = xcontent.ContentTransformer(
             config=I18nTranslationContext.get(self.app_context))
         course = self.get_course()
@@ -2973,8 +2808,8 @@ def translate_lessons(course, locale):
         str(ResourceBundleKey(
             resources_display.ResourceLesson.TYPE, lesson.lesson_id, locale))
         for lesson in lesson_list]
-    bundle_list = I18nResourceBundleManager.get_multi(
-        course.app_context, key_list)
+    bundle_list = model_caching.CacheFactory.get_manager_class(
+        RESOURCE_BUNDLE_CACHE_NAME).get_multi(course.app_context, key_list)
 
     for key, lesson, bundle in zip(key_list, lesson_list, bundle_list):
         if bundle is not None:
@@ -2989,7 +2824,8 @@ def translate_units(course, locale):
     for unit in unit_list:
         key = resources_display.ResourceUnitBase.key_for_unit(unit, course)
         key_list.append(ResourceBundleKey(key.type, key.key, locale))
-    bundle_list = I18nResourceBundleManager.get_multi(
+    bundle_list = model_caching.CacheFactory.get_manager_class(
+        RESOURCE_BUNDLE_CACHE_NAME).get_multi(
         course.app_context, key_list)
     unit_tools = resources_display.UnitTools(course)
 
@@ -3023,7 +2859,8 @@ def translate_html_hooks(html_hooks_dict):
     key_list = [
         ResourceBundleKey(utils.ResourceHtmlHook.TYPE, name, locale) for
         name in html_hooks_dict.iterkeys()]
-    bundle_list = I18nResourceBundleManager.get_multi(app_context, key_list)
+    bundle_list = model_caching.CacheFactory.get_manager_class(
+        RESOURCE_BUNDLE_CACHE_NAME).get_multi(app_context, key_list)
     for key, bundle in zip(key_list, bundle_list):
         if bundle is None:
             continue
@@ -3061,7 +2898,8 @@ def translate_course_env(env):
         ResourceBundleKey(
             resources_display.ResourceCourseSettings.TYPE, key, locale)
         for key in courses.Course.get_schema_sections()]
-    bundle_list = I18nResourceBundleManager.get_multi(app_context, key_list)
+    bundle_list = model_caching.CacheFactory.get_manager_class(
+        RESOURCE_BUNDLE_CACHE_NAME).get_multi(app_context, key_list)
 
     course = courses.Course.get(app_context)
     for key, bundle in zip(key_list, bundle_list):
@@ -3092,7 +2930,8 @@ def translate_dto_list(course, dto_list, resource_key_list):
     key_list = [
         ResourceBundleKey(key.type, key.key, locale)
         for key in resource_key_list]
-    bundle_list = I18nResourceBundleManager.get_multi(app_context, key_list)
+    bundle_list = model_caching.CacheFactory.get_manager_class(
+        RESOURCE_BUNDLE_CACHE_NAME).get_multi(app_context, key_list)
 
     for key, dto, bundle in zip(key_list, dto_list, bundle_list):
         if bundle is None:
@@ -3174,6 +3013,13 @@ def denormalize(s):
 
 
 def notify_module_enabled():
+    model_caching.CacheFactory.build(
+        RESOURCE_BUNDLE_CACHE_NAME, 'Cache Translations',
+        messages.SITE_SETTINGS_CACHE_TRANSLATIONS,
+        RESOURCE_BUNDLE_CACHE_MAX_SIZE_BYTES,
+        RESOURCE_BUNDLE_CACHE_TTL_SEC,
+        ResourceBundleDAO)
+
     TranslatableResourceRegistry.register(TranslatableResourceCourseSettings)
     TranslatableResourceRegistry.register(TranslatableResourceCourseComponents)
     TranslatableResourceRegistry.register(TranslatableResourceQuestions)

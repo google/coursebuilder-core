@@ -842,19 +842,21 @@ class CourseHandler(ApplicationHandler):
         # it is not; we also have circular import dependencies if we were to
         # put them at the top...
         from models import vfs
-        from modules.i18n_dashboard import i18n_dashboard
+        from models import model_caching
         vfs_items = cls._cache_debug_info(
             vfs.ProcessScopedVfsCache.instance().cache)
-        rb_items = cls._cache_debug_info(
-            i18n_dashboard.ProcessScopedResourceBundleCache.instance().cache)
-        return ''.join([
-              '\nDebug Info: %s' % datetime.datetime.utcnow(),
-              '\n\nServer Environment Variables: %s' % '\n'.join([
-                  'item: %s, %s' % (key, value)
-                  for key, value in os.environ.iteritems()]),
-              '\n\nVfsCacheKeys:\n%s' % '\n'.join(vfs_items),
-              '\n\nResourceBundlesCache:\n%s' % '\n'.join(rb_items),
-              ])
+        cache_sections = [
+            '',
+            'Debug Info: %s' % datetime.datetime.utcnow(),
+            'Server Environment Variables: %s' % '\n'.join([
+                'item: %s, %s' % (key, value)
+                for key, value in os.environ.iteritems()]),
+            'VfsCacheKeys:\n%s' % '\n'.join(vfs_items),
+        ]
+        for cache_instance in model_caching.CacheFactory.all_instances():
+            line = '\n'.join(cls._cache_debug_info(cache_instance.cache))
+            cache_sections.append(line)
+        return '\n\n'.join(cache_sections)
 
     def init_template_values(self, environ, prefs=None):
         """Initializes template variables with common values."""
