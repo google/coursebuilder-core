@@ -22,7 +22,9 @@ import logging
 import os
 import sys
 from common import xcontent
+from models import config
 from models import courses
+from models import models
 from modules.i18n_dashboard import i18n_dashboard
 from tools.etl import etl_lib
 
@@ -46,33 +48,43 @@ def _die(message):
 
 class _BaseJob(etl_lib.CourseJob):
 
-    @classmethod
-    def _add_locales_argument(cls, parser):
-        parser.add_argument(
+    def _configure_parser(self):
+        self.parser.add_argument(
             '--locales', default=[], type=lambda s: s.split(','),
             help='Comma-delimited list of locales (for example, "af") to '
             'export. If omitted, all locales except the default locale for the '
             'course will be exported. Passed locales must exist for the '
             'specified course.')
-
-    @classmethod
-    def _add_suppress_tags_argument(cls, parser):
-        parser.add_argument(
+        self.parser.add_argument(
             '--suppress_nondefault_composable_tags', action='store_true',
             help='Use only very basic rules for composing/decomposing '
             'contents of HTML tags.  Not recommended for use, unless '
             'you know your translation bureau cannot support .po files '
             'exported without use of this flag.')
+        self.parser.add_argument(
+            '--suppress_memcache', type=bool, default=True,
+            help='Suppress using memcache when looking up objects.  This '
+            'is to work around a known issue with Memcache and DB relating '
+            'to old-style protocol buffers.  See '
+            'https://code.google.com/p/googleappengine/issues/detail?id=7876 '
+            'It\'s also a good idea in general; since this job will touch '
+            'many, many objects in an unusual pattern, it\'s worthwhile to '
+            'not spam all of these objects into the memcache.'
+            )
+
+    def _apply_parsed_args(self):
+        if self.args.suppress_memcache:
+            config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = False
 
     @classmethod
     def _build_translation_config(cls, args, app_context):
-        config = i18n_dashboard.I18nTranslationContext.get(app_context)
+        cfg = i18n_dashboard.I18nTranslationContext.get(app_context)
         if args.suppress_nondefault_composable_tags:
-            config.opaque_decomposable_tag_names = list(
+            cfg.opaque_decomposable_tag_names = list(
                 xcontent.DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES)
-            config.RECOMPOSABLE_ATTRIBUTES_MAP = dict(
+            cfg.RECOMPOSABLE_ATTRIBUTES_MAP = dict(
                 xcontent.DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
-        return config
+        return cfg
 
     @classmethod
     def _check_file_exists(cls, path):
@@ -127,9 +139,10 @@ class DeleteTranslations(_BaseJob):
     """
 
     def _configure_parser(self):
-        self._add_locales_argument(self.parser)
+        super(DeleteTranslations, self)._configure_parser()
 
     def main(self):
+        super(DeleteTranslations, self)._apply_parsed_args()
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
         locales = self._get_locales(
@@ -163,6 +176,7 @@ class DownloadTranslations(_BaseJob):
     ])
 
     def _configure_parser(self):
+        super(DownloadTranslations, self)._configure_parser()
         self.parser.add_argument(
             'path', type=str, help='Path of the file to save output to')
         self.parser.add_argument(
@@ -199,10 +213,9 @@ class DownloadTranslations(_BaseJob):
             'export items for which the base-locale content is newer.  '
             'If --locales is not given, all locales are considered.  '
             'When using --export=all, you need not set --locales.')
-        self._add_locales_argument(self.parser)
-        self._add_suppress_tags_argument(self.parser)
 
     def main(self):
+        super(DownloadTranslations, self)._apply_parsed_args()
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
         self._check_file_does_not_exist(self.args.path)
@@ -230,10 +243,10 @@ class DownloadTranslations(_BaseJob):
             exporter = i18n_dashboard.TranslationContents(
                 self.args.separate_files_by_type)
 
-        config = self._build_translation_config(self.args, app_context)
+        cfg = self._build_translation_config(self.args, app_context)
         i18n_dashboard.TranslationDownloadRestHandler.build_translations(
             courses.Course.get(app_context), locales, self.args.export,
-            exporter, config=config)
+            exporter, config=cfg)
         if self.args.encoded_angle_brackets:
             exporter.encode_angle_to_square_brackets()
 
@@ -276,6 +289,7 @@ class UploadTranslations(_BaseJob):
     _UPLOAD_HANDLER = i18n_dashboard.TranslationUploadRestHandler
 
     def _configure_parser(self):
+        super(UploadTranslations, self)._configure_parser()
         self.parser.add_argument(
             'path', type=str, help='.zip or .po file containing translations. '
             'If a .zip file is given, its internal structure is unimportant; '
@@ -307,9 +321,9 @@ class UploadTranslations(_BaseJob):
             'incorrect locale\'s translations.  The only way to recover '
             'the overwritten items is by uploading a file with the correct '
             'content, or restoring from backups.')
-        self._add_suppress_tags_argument(self.parser)
 
     def main(self):
+        super(UploadTranslations, self)._apply_parsed_args()
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
 
@@ -343,10 +357,10 @@ class UploadTranslations(_BaseJob):
         course.save_settings(environ)
 
         # Make updates to the translations
-        config = self._build_translation_config(self.args, app_context)
+        cfg = self._build_translation_config(self.args, app_context)
         messages = self._UPLOAD_HANDLER.update_translations(
             course, importer, warn_not_found=self.args.warn_not_found,
-            warn_not_used=self.args.warn_not_used, config=config)
+            warn_not_used=self.args.warn_not_used, config=cfg)
         for message in messages:
             _LOG.info(message)
 
