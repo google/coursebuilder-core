@@ -1,6 +1,6 @@
 tests:
   functional:
-    - modules.drive.tests.functional.DriveTests = 11
+    - modules.drive.tests.functional.DriveTests = 12
   unit:
     - modules.drive.tests.unit.ApiClientTests = 2
 

@@ -276,6 +276,12 @@ class DriveItemRESTHandler(dto_editor.BaseDatastoreRestHandler):
         common_utils.run_hooks(cls.SCHEMA_LOAD_HOOKS, schema)
         return schema
 
+    @classmethod
+    def get_and_populate_dto(cls, key, python_dict):
+        dto = cls.DAO.load(key)
+        dto.dict.update(python_dict)
+        return dto
+
 
 class DriveContentHandler(utils.CourseHandler):
     URL = 'modules/drive/item/content'

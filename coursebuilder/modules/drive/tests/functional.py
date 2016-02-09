@@ -307,4 +307,28 @@ class DriveTests(DriveTestBase):
             'key': '1000',
         }, expect_errors=True)
 
+    def test_update_wont_clobber_status(self):
+        # This fixture should already have a sync time
+        with utils.Namespace(self.app_context.namespace):
+            dto = drive_models.DriveSyncDAO.load('6')
+            self.assertIsNotNone(dto.last_synced)
 
+        # update existing record
+        self.assertRestStatus(self.put('rest/modules/drive/item', {
+            'request': transforms.dumps({
+                'xsrf_token':
+                    crypto.XsrfTokenManager.create_xsrf_token(
+                        'drive-item-rest'),
+                'key': '6',
+                'payload': transforms.dumps({
+                    'sync_interval': 'hour',
+                    'version': '1.0',
+                    'availability': 'public',
+                }),
+            }),
+        }), 200)
+
+        # The sync time should still exist
+        with utils.Namespace(self.app_context.namespace):
+            dto = drive_models.DriveSyncDAO.load('6')
+            self.assertIsNotNone(dto.last_synced)
