@@ -509,7 +509,8 @@ class UnitLessonCompletionTracker(object):
 
         self._set_entity_value(progress, event_key, self.IN_PROGRESS_STATE)
         course = self._get_course()
-        for unit in course.get_track_matching_student(student):
+        units, lessons = course.get_track_matching_student(student)
+        for unit in units:
             if course.get_parent_unit(unit.unit_id):
                 # Completion of an assessment-as-lesson rolls up to its
                 # containing unit; it is not considered for overall course

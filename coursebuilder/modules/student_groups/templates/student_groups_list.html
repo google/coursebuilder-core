@@ -1,0 +1,40 @@
+<div class="gcb-list gcb-list--autostripe">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th class="gcb-list__cell--icon"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for student_group in student_groups %}
+        <tr>
+          <td>
+            <a href="dashboard?action={{ edit_action }}&key={{ student_group.id }}">
+              {{student_group.name}}
+            </a>
+          </td>
+          <td>
+            {{ student_group.description }}
+          </td>
+          <td>
+            <div
+               class="delete-button"
+               data-group-name="{{ student_group.name }}"
+               data-delete-url="{{ student_group.delete_url }}">
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if not student_groups|length %}
+    <div class="gcb-list__empty-message-wrapper">
+      <div class="gcb-list__empty-message">No items</div>
+    </div>
+  {% endif %}
+</div>
+<script src="/modules/student_groups/_static/js/student_groups_list.js">
+</script>

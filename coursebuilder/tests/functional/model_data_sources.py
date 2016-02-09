@@ -188,21 +188,21 @@ class PaginatedTableTest(DataSourceTest):
 
         # Single greater-equal filter
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank>=7').body)
+            '/rest/data/character/items?filters=rank>=7').body)
         self.assertEquals(3, len(response['data']))
         for character in response['data']:
             self.assertTrue(character['rank'] >= 7)
 
         # Single less-than filter
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank<7').body)
+            '/rest/data/character/items?filters=rank<7').body)
         self.assertEquals(7, len(response['data']))
         for character in response['data']:
             self.assertTrue(character['rank'] < 7)
 
         # Multiple filters finding some rows
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank<5&filter=goal=L').body)
+            '/rest/data/character/items?filters=rank<5&filters=goal=L').body)
         self.assertEquals(2, len(response['data']))
         for character in response['data']:
             self.assertTrue(character['rank'] < 5)
@@ -250,7 +250,7 @@ class PaginatedTableTest(DataSourceTest):
         actions.login(email, is_admin=True)
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank<7&ordering=rank').body)
+            '/rest/data/character/items?filters=rank<7&ordering=rank').body)
         self.assertEquals(7, len(response['data']))
         prev_rank = -1
         for character in response['data']:
@@ -262,25 +262,25 @@ class PaginatedTableTest(DataSourceTest):
         actions.login(email, is_admin=True)
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=foo').body)
+            '/rest/data/character/items?filters=foo').body)
         self._assert_have_critical_error(
             response,
             'Filter specification "foo" is not of the form: <name><op><value>')
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=foo=9').body)
+            '/rest/data/character/items?filters=foo=9').body)
         self._assert_have_critical_error(
             response,
             'field "foo" which is not in the schema for type "Character"')
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank=kitten').body)
+            '/rest/data/character/items?filters=rank=kitten').body)
         self._assert_have_critical_error(
             response,
             'invalid literal for int() with base 10: \'kitten\'')
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank<<7').body)
+            '/rest/data/character/items?filters=rank<<7').body)
         self._assert_have_critical_error(
             response,
             '"rank<<7" uses an unsupported comparison operation "<<"')
@@ -298,13 +298,13 @@ class PaginatedTableTest(DataSourceTest):
             'Property \'age\' is not indexed')
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=age>5').body)
+            '/rest/data/character/items?filters=age>5').body)
         self._assert_have_critical_error(
             response,
             'Property \'age\' is not indexed')
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank<7&ordering=goal').body)
+            '/rest/data/character/items?filters=rank<7&ordering=goal').body)
         self._assert_have_critical_error(
             response,
             'First ordering property must be the same as inequality filter')
@@ -501,7 +501,7 @@ class PaginatedTableTest(DataSourceTest):
         actions.login(email, is_admin=True)
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank>=5&ordering=rank'
+            '/rest/data/character/items?filters=rank>=5&ordering=rank'
             '&chunk_size=3&page_number=1').body)
         source_context = response['source_context']
         self.assertEquals(1, response['page_number'])
@@ -518,7 +518,7 @@ class PaginatedTableTest(DataSourceTest):
             ])
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank>=5&ordering=rank'
+            '/rest/data/character/items?filters=rank>=5&ordering=rank'
             '&chunk_size=3&page_number=0'
             '&source_context=%s' % source_context).body)
         source_context = response['source_context']
@@ -535,7 +535,7 @@ class PaginatedTableTest(DataSourceTest):
         actions.login(email, is_admin=True)
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank>=5&ordering=rank'
+            '/rest/data/character/items?filters=rank>=5&ordering=rank'
             '&chunk_size=3&page_number=1').body)
         source_context = response['source_context']
         self._verify_data([self.characters[4], self.characters[6]],
@@ -573,12 +573,12 @@ class PaginatedTableTest(DataSourceTest):
         actions.login(email, is_admin=True)
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank>=5'
+            '/rest/data/character/items?filters=rank>=5'
             '&chunk_size=3&page_number=0').body)
         source_context = response['source_context']
 
         response = transforms.loads(self.get(
-            '/rest/data/character/items?filter=rank<5'
+            '/rest/data/character/items?filters=rank<5'
             '&chunk_size=3&page_number=0'
             '&source_context=%s' % source_context).body)
         source_context = response['source_context']

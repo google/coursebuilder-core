@@ -380,7 +380,7 @@ function getEditCustomTagUrl(env, tagName) {
   return url;
 }
 
-function onPageLoad(env) {
+function startValueLoad(env) {
   if (!isFramed()) {
     // Kick of early asynchronous loading of the editor content while the rest
     // of the JS is initializing.
@@ -390,6 +390,10 @@ function onPageLoad(env) {
       dataType: 'text'
     });
   }
+}
+
+function onPageLoad(env) {
+  startValueLoad(env);
   /**
    * Define a rich text editor widget in the module "gcb-rte".
    */
@@ -539,6 +543,7 @@ function mainYuiFunction(Y) {
       new FramedEditorControls(Y, window.parent.frameProxy, cb_global,
           maybePerformAction, alertIfNotSavedChanges) :
       new TopLevelEditorControls(Y, cb_global);
+  cb_global.editorControls = editorControls;
 
   // choose buttons to show
   var saveButton = editorControls.getSaveButton(Y);

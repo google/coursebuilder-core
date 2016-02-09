@@ -1767,10 +1767,16 @@ class AbstractTranslatableResourceType(object):
 
     @classmethod
     def get_ordering(cls):
+        """Return an ORDERING_{FIRST,MIDDLE...} definition enum value.
+
+        This specifies where, in the list of translatable resource types,
+        this resource type should appear.
+        """
         raise NotImplementedError('Derived classes must implement this.')
 
     @classmethod
     def get_title(cls):
+        """Provide a section title describing items of this type."""
         raise NotImplementedError('Derived classes must implement this.')
 
     @classmethod
@@ -1786,7 +1792,13 @@ class AbstractTranslatableResourceType(object):
         should be in logical reading order to facilitate ease of translation
         as human translators move from one item to the next.
 
-        The resource key is used to look up a resource handler from
+        The resource should be a normal DTO.  This DTO's class should supply
+        POST_LOAD_HOOKS and POST_SAVE_HOOKS methods to cope with translation
+        changes.  The DTO must conform to the schema defined by your
+        implementation of resource.AbstractResourceHandler.
+
+        The resource key an instance of common.resource.Key that refers to the
+        resource DTO.  This key is used to look up a resource handler from
         common.resource.Registry.get() based on the resource_key.type.
 
         The resource is used with the resource-handler (obtained above based
@@ -1798,7 +1810,6 @@ class AbstractTranslatableResourceType(object):
           course: Standard Course Builder course object (models.courses.Course)
         Returns:
           Iterable of 2-tuples as detailed above.
-
         """
         raise NotImplementedError('Derived classes must implement this.')
 
@@ -2198,7 +2209,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
             return
 
         resource_bundle_dto = model_caching.CacheFactory.get_manager_class(
-            RESOURCE_BUNDLE_CACHE_NAME).get(self.app_context, str(key))
+            RESOURCE_BUNDLE_CACHE_NAME).get(str(key), self.app_context)
         transformer = xcontent.ContentTransformer(
             config=I18nTranslationContext.get(self.app_context))
         course = self.get_course()
@@ -2809,7 +2820,7 @@ def translate_lessons(course, locale):
             resources_display.ResourceLesson.TYPE, lesson.lesson_id, locale))
         for lesson in lesson_list]
     bundle_list = model_caching.CacheFactory.get_manager_class(
-        RESOURCE_BUNDLE_CACHE_NAME).get_multi(course.app_context, key_list)
+        RESOURCE_BUNDLE_CACHE_NAME).get_multi(key_list, course.app_context, )
 
     for key, lesson, bundle in zip(key_list, lesson_list, bundle_list):
         if bundle is not None:
@@ -2826,7 +2837,7 @@ def translate_units(course, locale):
         key_list.append(ResourceBundleKey(key.type, key.key, locale))
     bundle_list = model_caching.CacheFactory.get_manager_class(
         RESOURCE_BUNDLE_CACHE_NAME).get_multi(
-        course.app_context, key_list)
+            key_list, course.app_context)
     unit_tools = resources_display.UnitTools(course)
 
     for key, unit, bundle in zip(key_list, unit_list, bundle_list):
@@ -2860,7 +2871,7 @@ def translate_html_hooks(html_hooks_dict):
         ResourceBundleKey(utils.ResourceHtmlHook.TYPE, name, locale) for
         name in html_hooks_dict.iterkeys()]
     bundle_list = model_caching.CacheFactory.get_manager_class(
-        RESOURCE_BUNDLE_CACHE_NAME).get_multi(app_context, key_list)
+        RESOURCE_BUNDLE_CACHE_NAME).get_multi(key_list, app_context)
     for key, bundle in zip(key_list, bundle_list):
         if bundle is None:
             continue
@@ -2899,7 +2910,7 @@ def translate_course_env(env):
             resources_display.ResourceCourseSettings.TYPE, key, locale)
         for key in courses.Course.get_schema_sections()]
     bundle_list = model_caching.CacheFactory.get_manager_class(
-        RESOURCE_BUNDLE_CACHE_NAME).get_multi(app_context, key_list)
+        RESOURCE_BUNDLE_CACHE_NAME).get_multi(key_list, app_context)
 
     course = courses.Course.get(app_context)
     for key, bundle in zip(key_list, bundle_list):
@@ -2931,7 +2942,7 @@ def translate_dto_list(course, dto_list, resource_key_list):
         ResourceBundleKey(key.type, key.key, locale)
         for key in resource_key_list]
     bundle_list = model_caching.CacheFactory.get_manager_class(
-        RESOURCE_BUNDLE_CACHE_NAME).get_multi(app_context, key_list)
+        RESOURCE_BUNDLE_CACHE_NAME).get_multi(key_list, app_context)
 
     for key, dto, bundle in zip(key_list, dto_list, bundle_list):
         if bundle is None:

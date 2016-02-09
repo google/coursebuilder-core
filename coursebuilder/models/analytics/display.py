@@ -68,6 +68,7 @@ def _generate_display_html(template_renderer, xsrf, app_context,
             'name': rdsc.get_name(),
             'title': rdsc.get_title(),
             'chunk_size': rdsc.get_default_chunk_size(),
+            'filters': rdsc.get_filters(),
         })
         has_pagination = has_pagination or rdsc.get_default_chunk_size()
 

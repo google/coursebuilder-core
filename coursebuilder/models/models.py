@@ -1412,6 +1412,9 @@ class Student(BaseEntity):
     scores = db.TextProperty(indexed=False)
     labels = db.StringProperty(indexed=False)
 
+    # Group ID of group in which student is a member; can be None.
+    group_id = db.IntegerProperty(indexed=True)
+
     # In CB 1.8 and below an email was used as a key_name. This is no longer
     # true and a user_id is the key_name. We transparently support legacy
     # Student entity instances that still have email as key_name, but we no
@@ -1623,7 +1626,6 @@ class Student(BaseEntity):
             (value - self.last_seen_on).total_seconds() >
             STUDENT_LAST_SEEN_ON_UPDATE_SEC)
 
-
 class TransientStudent(object):
     """A transient student (i.e. a user who hasn't logged in or registered)."""
 
@@ -1666,19 +1668,21 @@ class EventEntity(BaseEntity):
 
     @classmethod
     @db.non_transactional
-    def _run_record_hooks(cls, source, user, data):
+    def _run_record_hooks(cls, source, user, data_dict):
         for listener in cls.EVENT_LISTENERS:
             try:
-                listener(source, user, data)
+                listener(source, user, data_dict)
             except Exception:  # On purpose. pylint: disable=broad-except
                 logging.exception(
                     'Event record hook failed: %s, %s, %s',
-                    source, user.user_id(), data)
+                    source, user.user_id(), data_dict)
 
     @classmethod
     def record(cls, source, user, data):
         """Records new event into a datastore."""
-        cls._run_record_hooks(source, user, data)
+        data_dict = transforms.loads(data)
+        cls._run_record_hooks(source, user, data_dict)
+        data = transforms.dumps(data_dict)
 
         event = cls()
         event.source = source

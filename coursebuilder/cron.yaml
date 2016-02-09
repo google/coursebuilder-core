@@ -22,3 +22,6 @@ cron:
 - description: Sync Google Drive documents
   url: /cron/drive/sync
   schedule: every 1 hours
+- description: Deletes any leftover temporary rows used to discover user ID.
+  url: /cron/student_groups/batch_delete
+  schedule: every day 06:00

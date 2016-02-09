@@ -330,7 +330,7 @@ def validate_object_matches_json_schema(obj, schema, path='', complaints=None):
                 expected_type = basestring
                 validator = is_valid_url
             elif schema['type'] in ('integer', 'timestamp'):
-                expected_type = int
+                expected_type = (int, long)
             elif schema['type'] in 'number':
                 expected_type = float
             elif schema['type'] in 'boolean':
@@ -356,4 +356,3 @@ def validate_object_matches_json_schema(obj, schema, path='', complaints=None):
                     'Unrecognized schema scalar type "%s" at %s' % (
                         schema['type'], path))
     return complaints
-

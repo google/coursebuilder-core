@@ -310,18 +310,16 @@ def record_event_listener(source, user, data):
 
     if source == 'tag-assessment':
         # Sent when the "Check Answer" button is presson in a lesson
-        data = transforms.loads(data)
         question_scores = _get_questions_scores_from_single_item(data)
 
     elif source == 'attempt-lesson':
         # Sent when the "Grade Questions" button is pressed in a lesson
         # or when the "Check Answers" button is pressed in an assessment
-        data = transforms.loads(data)
         question_scores = _get_questions_scores_from_many_items(data)
 
     elif source == 'submit-assessment':
         # Sent when an assignment is submitted.
-        data = transforms.loads(data)['values']
+        data = data['values']
         question_scores = _get_questions_scores_from_many_items(data)
 
     else:

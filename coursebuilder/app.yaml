@@ -51,6 +51,7 @@ env_variables:
     modules.review.review
     modules.search.search
     modules.skill_map.skill_map
+    modules.student_groups.student_groups
     modules.unsubscribe.unsubscribe
     modules.upload.upload
     modules.usage_reporting.usage_reporting

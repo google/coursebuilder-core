@@ -1238,7 +1238,8 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
     def _getSkillPanelWidget(self):
         url = 'unit?unit=%(unit)s&lesson=%(lesson)s' % {
             'unit': self.unit.unit_id, 'lesson': self.lesson.lesson_id}
-        dom = self.parse_html_string(self.get(url).body)
+        response = self.get(url)
+        dom = self.parse_html_string(response.body)
         self.assertEqual(
             'Test Lesson',
             dom.find('.//h1[@class="gcb-lesson-title"]').text.strip())
@@ -2489,7 +2490,7 @@ class EventListenerTests(BaseSkillMapTests):
         }
 
     def _record_and_expect(self, evt_type, data, sa_measure, sb_measure):
-        competency.record_event_listener(evt_type, self.user, json.dumps(data))
+        competency.record_event_listener(evt_type, self.user, data)
 
         measure = competency.SuccessRateCompetencyMeasure.load(
             self.user.user_id(), self.sa.id)

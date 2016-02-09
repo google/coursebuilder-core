@@ -109,6 +109,8 @@ class _AbstractRestDataSourceHandler(
         with catch_and_log_.consume_exceptions('Getting data schema'):
             schema = data_source_class.get_schema(
                 self.app_context, catch_and_log_, source_context)
+            for data_filter in data_source_class.get_filters():
+                schema.update(data_filter.get_schema())
             output['schema'] = schema
         with catch_and_log_.consume_exceptions('Loading required job output'):
             jobz = data_sources_utils.get_required_jobs(

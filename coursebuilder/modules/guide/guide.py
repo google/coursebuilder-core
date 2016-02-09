@@ -208,8 +208,9 @@ class GuideUnitHandler(utils.BaseHandler):
 
         view = unit_outline.StudentCourseView(
             self.get_course(), student=student)
-        unit = self.get_course().find_unit_by_id(unit_id)
-        if not unit in view.get_units():
+        unit = common_utils.find(
+            lambda u: str(u.unit_id) == str(unit_id), view.get_units())
+        if not unit:
             self.error(404, 'Unit not visible')
             return
 

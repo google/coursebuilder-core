@@ -1,0 +1,26 @@
+tests:
+  functional:
+    - modules.student_groups.student_groups_tests.AggregateEventTests = 1
+    - modules.student_groups.student_groups_tests.AvailabilityLifecycleTests = 13
+    - modules.student_groups.student_groups_tests.AvailabilityTests = 5
+    - modules.student_groups.student_groups_tests.GradebookTests = 4
+    - modules.student_groups.student_groups_tests.GroupLifecycleTests = 14
+    - modules.student_groups.student_groups_tests.I18nTests = 3
+    - modules.student_groups.student_groups_tests.OverrideTests = 5
+    - modules.student_groups.student_groups_tests.UserIdentityTests = 8
+    - modules.student_groups.student_groups_tests.UserIdLookupLifecycleTests = 3
+  integration:
+    - modules.student_groups.student_groups_integration_tests.AvailabilityTests = 1
+
+files:
+  - modules/student_groups/__init__.py
+  - modules/student_groups/_static/js/student_groups_list.js
+  - modules/student_groups/manifest.yaml
+  - modules/student_groups/messages.py
+  - modules/student_groups/student_groups.py
+  - modules/student_groups/student_groups_tests.py
+  - modules/student_groups/student_groups_pageobjects.py
+  - modules/student_groups/student_groups_integration_tests.py
+  - modules/student_groups/templates/student_group_availability.css
+  - modules/student_groups/templates/student_group_availability.js
+  - modules/student_groups/templates/student_groups_list.html

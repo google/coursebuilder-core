@@ -360,6 +360,10 @@ class I18nDashboardHandlerTests(actions.TestBase):
                 'rows': [],
             },
             {
+                'title': 'Student Groups',
+                'rows': [],
+            },
+            {
                 'title': 'HTML Hooks',
                 'rows': [
                     'base.after_body_tag_begins',
@@ -3889,9 +3893,11 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                     if not respects_quota:
                         over_quota[0] = True
                         lines.append(
-                            'Request metrics %s exceed RPC quota '
+                            'Request metrics '
+                            '[memcache:%s, db:%s] exceed RPC quota '
                             '[memcache:%s, db:%s]: %s (%s)' % (
-                                actual, memcache_quota, db_quota, hint, url))
+                                memcache_actual, db_actual,
+                                memcache_quota, db_quota, hint, url))
                         for stacktrace, count in memcache_stacks.iteritems():
                             lines.append('Memcache: %d calls to:' % count)
                             lines += [l.rstrip() for l in

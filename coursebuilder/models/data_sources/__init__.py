@@ -25,10 +25,14 @@ from models.data_sources import registry
 # code does not have to know about our internal structure.
 # pylint: disable=protected-access
 AbstractDbTableRestDataSource = paginated_table._AbstractDbTableRestDataSource
+AbstractFilter = base_types._AbstractFilter
+AbstractEnumFilter = base_types._AbstractEnumFilter
+AbstractRangeFilter = base_types._AbstractRangeFilter
 AbstractRestDataSource = base_types._AbstractRestDataSource
 AbstractSmallRestDataSource = base_types._AbstractSmallRestDataSource
 AbstractContextManager = base_types._AbstractContextManager
 DbTableContext = paginated_table._DbTableContext
+EnumFilterChoice = base_types._EnumFilterChoice
 NullContextManager = base_types._NullContextManager
 Registry = registry._Registry
 SynchronousQuery = base_types._SynchronousQuery

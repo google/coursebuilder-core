@@ -25,6 +25,8 @@ from models import config
 from models import counters
 from models import transforms
 
+from google.appengine.api import namespace_manager
+
 
 CacheFactoryEntry = collections.namedtuple(
     'CacheFactoryEntry',
@@ -200,16 +202,22 @@ class CacheFactory(object):
                 return [self._get(key) for key in keys]
 
             @classmethod
-            def get(cls, app_context, key):
+            def get(cls, key, app_context=None):
+                if app_context:
+                    namespace = app_context.get_namespace_name()
+                else:
+                    namespace = namespace_manager.get_namespace()
                 # pylint: disable=protected-access
-                return cls.instance(
-                    app_context.get_namespace_name())._get(key)
+                return cls.instance(namespace)._get(key)
 
             @classmethod
-            def get_multi(cls, app_context, keys):
+            def get_multi(cls, keys, app_context=None):
+                if app_context:
+                    namespace = app_context.get_namespace_name()
+                else:
+                    namespace = namespace_manager.get_namespace()
                 # pylint: disable=protected-access
-                return cls.instance(
-                    app_context.get_namespace_name())._get_multi(keys)
+                return cls.instance(namespace)._get_multi(keys)
 
         cache_len = counters.PerfCounter(
             'gcb-models-%sCacheConnection-cache-len' %

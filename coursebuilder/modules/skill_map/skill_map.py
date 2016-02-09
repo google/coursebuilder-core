@@ -1844,13 +1844,17 @@ def filter_visible_lessons(handler, student, skill):
     """Filter out references to lessons which are not visible."""
     visible_lessons = []
     course = handler.get_course()
+    units, lessons = handler.get_track_matching_student(student)
+    unit_ids = [str(unit.unit_id) for unit in units]
+    lesson_ids = [str(lesson.lesson_id) for lesson in lessons]
     for lesson_location in skill.lessons:
         unit, lesson = resources_display.ResourceLesson.get_resource(
             handler.get_course(), lesson_location.id)
         if not (
             course.is_unit_available(unit) and
             course.is_lesson_available(unit, lesson) and
-            unit in handler.get_track_matching_student(student)
+            str(unit.unit_id) in unit_ids and
+            (not lesson or str(lesson.lesson_id) in lesson_ids)
         ):
             continue
         visible_lessons.append(lesson_location)

@@ -42,7 +42,7 @@ from tests import suite
 
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
-
+from google.appengine.ext.testbed import datastore_stub_util
 
 # All URLs referred to from all the pages.
 UNIQUE_URLS_FOUND = {}
@@ -531,7 +531,9 @@ def get_form_by_action(response, action):
 
 def login(email, is_admin=False):
     assert email
-    user_id = str(int(email.encode('hex'), 16))
+    # Encode email to generate a bogus user ID using the same algorithm the
+    # App Engine internals use for the dev server when creating fake IDs.
+    user_id = datastore_stub_util.SynthesizeUserId(email)
     return login_with_specified_user_id(email, user_id, is_admin=is_admin)
 
 def login_with_specified_user_id(email, user_id, is_admin=False):
@@ -575,6 +577,7 @@ def register(browser, name, course=None):
     assert_equals(response.status_int, 302)
     assert_contains(
         'course#registration_confirmation', response.headers['location'])
+    browser.execute_all_deferred_tasks('user-lifecycle')
     check_profile(browser, name, course)
     return response
 

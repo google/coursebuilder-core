@@ -28,6 +28,23 @@
   .not-displayed {
     display: none;
   }
+  .gcb-rest-source-options {
+    flex-direction: row;
+  }
+  .gcb-rest-source-options > * {
+    display: inline-flex;
+  }
+  .gcb-rest-source-filters {
+    vertical-align: middle;
+    padding-left: 1em;
+  }
+  .gcb-rest-source-filter-options {
+    display: inline-block;
+    flex-direction: column;
+  }
+  .gcb-rest-source-filter-options .option-title {
+    font-weight: bold;
+  }
 </style>
 
 <div class="section">
@@ -79,9 +96,9 @@
       statistics on this page.</p>
   {% endif %}
   {% for rest_source in rest_sources|sort(attribute='title') %}
-    <div>
-    {% if rest_source.chunk_size > 0%}
-      {{ rest_source.title }}
+    <div class="gcb-rest-source-options">
+    {% if rest_source.chunk_size > 0 %}
+      <span>{{ rest_source.title }}</span>
       <button
          class="gcb-button"
          id="gcb_rest_source_page_request_zero_{{ rest_source.name }}"
@@ -100,7 +117,7 @@
          onclick="gcbRestSourcePageChange('{{ rest_source.name }}', -1);">
         &lt;
       </button>
-      Page:
+      <span>Page:</span>
       <span id="gcb_rest_source_page_number_{{ rest_source.name }}">
         0
       </span>
@@ -116,9 +133,7 @@
          onclick="gcbRestSourcePageChange('{{ rest_source.name }}', 10);">
         &gt;&gt;
       </button>
-      <!-- TODO(mgainer): Additional controls for filtering and ordering
-           based on schema. -->
-      Items per page:
+      <span>Items per page:</span>
       <!-- Use a form to permit <enter> to submit changed value for
            number of items per page of data. -->
       <form
@@ -140,6 +155,42 @@
              value="0">
       <span id="gcb_rest_source_page_number_{{ rest_source.name }}"
             style="display:none;"></span>
+    {% endif %}
+    {% if rest_source.filters %}
+      <span class="gcb-rest-source-filters"
+            id="gcb_rest_source_filters_{{ rest_source.name }}">
+        {% for filter in rest_source.filters %}
+          {% if filter.get_kind() == 'enum' %}
+            {% set choices = filter.get_choices() %}
+            {% if choices %}
+              <div class="gcb-rest-source-filter-options">
+                <div class="option-title">
+                  {{ filter.get_title() }}
+                </div>
+                <div>
+                <form action="#">
+                  <select
+                     class="gcb-rest-source-filter"
+                     onchange="gcbRestSourcePageChange(
+                               '{{rest_source.name}}', 0);">
+                    {% for choice in choices %}
+                    <option label="{{ choice.label }}"
+                            value="{{ choice.value }}"
+                            {% if choice.selected %}
+                            selected="true"
+                            {% endif %}>
+                      {% endfor %}
+                  </select>
+                </form>
+                </div>
+              </div>
+            {% endif %}
+          {% elif filter.get_kind() == 'range' %}
+            Range-based filters not yet supported.
+            <!-- TODO(mgainer): support range-based filtering. -->
+          {% endif %}
+        {% endfor %}
+      </span>
     {% endif %}
     </div>
     <div id="gcb_log_rest_source_{{ rest_source.name }}"></div>

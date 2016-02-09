@@ -33,7 +33,7 @@ from modules.oeditor import oeditor
 
 custom_module = None
 
-_TEMPLATES_DIR = os.path.join(
+TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'courses', 'templates')
 
 
@@ -47,7 +47,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         schema = cls.get_schema()
         return oeditor.ObjectEditor.get_html_for(
             handler, schema.get_json_schema(), schema.get_schema_dict(),
-            'dummy_key', cls.URL, additional_dirs=[_TEMPLATES_DIR], exit_url='',
+            'dummy_key', cls.URL, additional_dirs=[TEMPLATES_DIR], exit_url='',
             exit_button_caption='', extra_css_files=['availability.css'],
             extra_js_files=['availability.js'])
 
@@ -149,6 +149,19 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
                                  elements, indent=True)
         return elements
 
+    @classmethod
+    def construct_entity(cls, course):
+        """Expose as function for convenience in wrapping this handler."""
+
+        course_availability = course.get_course_availability()
+        settings = course.app_context.get_environ()
+        entity = {
+            'course_availability': course_availability,
+            'whitelist': settings['reg_form']['whitelist'],
+            'element_settings': cls.traverse_course(course),
+        }
+        return entity
+
     def get(self):
         if not roles.Roles.is_user_allowed(
             self.app_context, custom_module,
@@ -156,34 +169,33 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             transforms.send_json_response(self, 401, 'Access denied.')
             return
 
-        course = self.get_course()
-        course_availability = course.get_course_availability()
-        settings = course.get_environ(self.app_context)
-        entity = {
-            'course_availability': course_availability,
-            'whitelist': settings['reg_form']['whitelist'],
-            'element_settings': self.traverse_course(self.get_course()),
-        }
+        entity = self.construct_entity(self.get_course())
         transforms.send_json_response(
             self, 200, 'OK.', payload_dict=entity,
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(self.ACTION))
 
     def put(self):
-        request = transforms.loads(self.request.get('request'))
+        self.classmethod_put(self)
+
+    @classmethod
+    def classmethod_put(cls, handler):
+        """Expose as function for convenience in wrapping this hander."""
+
+        request = transforms.loads(handler.request.get('request'))
 
         # Check access permissions.  Not coming through dashboard, so must
         # do these for ourselves.
-        if not self.assert_xsrf_token_or_fail(request, self.ACTION,
+        if not handler.assert_xsrf_token_or_fail(request, handler.ACTION,
                                               {'key':'a'}):
             return
         if not roles.Roles.is_user_allowed(
-            self.app_context, custom_module,
+            handler.app_context, custom_module,
             constants.MODIFY_AVAILABILITY_PERMISSION):
-            transforms.send_json_response(self, 401, 'Access denied.')
+            transforms.send_json_response(handler, 401, 'Access denied.')
             return
 
-        course = self.get_course()
-        settings = self.app_context.get_environ()
+        course = handler.get_course()
+        settings = handler.app_context.get_environ()
         payload = transforms.loads(request.get('payload', '{}'))
 
         # Course-level changes: user whitelist, available/browsable/registerable
@@ -212,7 +224,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
                     element.shown_when_unavailable = (
                         item['shown_when_unavailable'])
         course.save()
-        transforms.send_json_response(self, 200, 'Saved.')
+        transforms.send_json_response(handler, 200, 'Saved.')
 
 
 def get_namespaced_handlers():

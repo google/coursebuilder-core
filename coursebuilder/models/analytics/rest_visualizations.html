@@ -151,8 +151,11 @@ function gcbSourceDataSelectionChange(source) {
 /* Collect user-specified parameters for a data source from the page. */
 function gcbRestSourceQueryParameters(source) {
   var params = {
-    'chunk_size': $('#gcb_rest_source_chunk_size_' + source)[0].value
-    // TODO(mgainer): Add support for filtering, ordering.
+    'chunk_size': $('#gcb_rest_source_chunk_size_' + source)[0].value,
+    'filters': $('#gcb_rest_source_filters_' + source +
+        ' .gcb-rest-source-filter').map(function(){
+          return $(this).val();
+    }).get().filter(function(value){ return value; })
   };
   return params;
 }
@@ -163,7 +166,21 @@ function gcbRestSourceParametersDifferFromPrevRequest(source, params) {
     return false;
   }
   for (var param in params) {
-    if (params[param] != dataSource.params[param]) {
+    if (Array.isArray(params[param])) {
+      if (!Array.isArray(dataSource.params[param]) ||
+          params[param].length != dataSource.params[param].length) {
+        console.log('Mismatched length!', params, dataSource.params);
+        return true;
+      }
+      for (var i = 0; i < params[param].length; i++) {
+        if (params[param][i] != dataSource.params[param][i]) {
+          console.log('Mismatched at index', i);
+          return true;
+        }
+      }
+    }
+    else if (params[param] != dataSource.params[param]) {
+      console.log('Parameters differ', source, params);
       return true;
     }
   }
@@ -173,8 +190,17 @@ function gcbRestSourceParametersDifferFromPrevRequest(source, params) {
 function gcbRestSourceParametersAsUrlParameters(params) {
   ret = '';
   for (var param in params) {
-    ret += '&' + encodeURIComponent(param);
-    ret += '=' + encodeURIComponent(params[param]);
+    var value = params[param];
+    if (Array.isArray(value)) {
+      for (var i = 0; i < value.length; i++) {
+        ret += '&' + encodeURIComponent(param)
+        ret += '=' + encodeURIComponent(value[i])
+      }
+    }
+    else {
+      ret += '&' + encodeURIComponent(param);
+      ret += '=' + encodeURIComponent(value);
+    }
   }
   return ret;
 }

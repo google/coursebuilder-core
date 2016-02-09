@@ -214,6 +214,49 @@ class EditorPageObject(PageObject):
         self._tester.assertEqual(expected_code_body, actual_code_body)
         return self
 
+    def _find_setting_by_title(self, title):
+
+        def find_setting(driver):
+            labels = driver.find_elements_by_tag_name('label')
+            for label in labels:
+                if label.text == title:
+                    return label
+            return False
+        self.wait().until(find_setting)
+        return find_setting(self._tester.driver)
+
+    def set_checkbox_by_title(self, title, value):
+        label = self._find_setting_by_title(title)
+        checkbox = label.find_element_by_xpath(
+            '../../div[@class="inputEx-Field inputEx-CheckBox"]'
+            '/input[@type="checkbox"]')
+        checked = checkbox.get_attribute('checked')
+        if (not checked and value) or (checked and not value):
+            checkbox.click()
+        return self
+
+    def set_text_field_by_title(self, title, value):
+        label = self._find_setting_by_title(title)
+        field = label.find_element_by_xpath(
+            '../..'
+            '/div[@class="inputEx-Field"]'
+            '/div[@class="inputEx-StringField-wrapper"]'
+            '/input[@type="text"]')
+        field.clear()
+        field.send_keys(value)
+        return self
+
+    def set_textarea_field_by_title(self, title, value):
+        label = self._find_setting_by_title(title)
+        field = label.find_element_by_xpath(
+            '../..'
+            '/div[@class="inputEx-Field"]'
+            '/div[@class="inputEx-StringField-wrapper"]'
+            '/textarea')
+        field.clear()
+        field.send_keys(value)
+        return self
+
 
 class DashboardEditor(EditorPageObject):
     """A base class for the editors accessed from the Dashboard."""
@@ -559,11 +602,19 @@ class DashboardPage(PageObject):
         self.find_element_by_id('menu-item__settings__site').click()
         return AdminSettingsPage(self._tester)
 
-    def click_availability(self):
-        self.ensure_menu_group_is_open('publish')
-        clickable = self.find_element_by_link_text('Availability')
+    def click_leftnav_item_by_link_text(self, menu_group_name, link_text,
+                                        page_handler_class):
+        self.ensure_menu_group_is_open(menu_group_name)
+        clickable = self.find_element_by_link_text(link_text)
         self.wait_for_page_load_after(clickable.click)
-        return CourseAvailabilityPage(self._tester)
+        return page_handler_class(self._tester)
+
+    def click_leftnav_item_by_id(self, menu_group_name, submenu_element_id,
+                                 page_handler_class):
+        self.ensure_menu_group_is_open(menu_group_name)
+        clickable = self.find_element_by_id(submenu_element_id)
+        self.wait_for_page_load_after(clickable.click)
+        return page_handler_class(self._tester)
 
 
 class CourseContentPage(RootPage):
@@ -757,38 +808,6 @@ class SettingsPage(EditorPageObject):
             return 'gcb-active' in tab.get_attribute('class')
 
         self.wait().until(successful_load)
-
-    def _find_setting_by_title(self, title):
-
-        def find_setting(driver):
-            labels = driver.find_elements_by_tag_name('label')
-            for label in labels:
-                if label.text == title:
-                    return label
-            return False
-        self.wait().until(find_setting)
-        return find_setting(self._tester.driver)
-
-    def set_checkbox_by_title(self, title, value):
-        label = self._find_setting_by_title(title)
-        checkbox = label.find_element_by_xpath(
-            '../../div[@class="inputEx-Field inputEx-CheckBox"]'
-            '/input[@type="checkbox"]')
-        checked = checkbox.get_attribute('checked')
-        if (not checked and value) or (checked and not value):
-            checkbox.click()
-        return self
-
-    def set_text_field_by_title(self, title, value):
-        label = self._find_setting_by_title(title)
-        field = label.find_element_by_xpath(
-            '../..'
-            '/div[@class="inputEx-Field"]'
-            '/div[@class="inputEx-StringField-wrapper"]'
-            '/input[@type="text"]')
-        field.clear()
-        field.send_keys(value)
-        return self
 
 
 class AdvancedSettingsPage(EditorPageObject):
@@ -1546,19 +1565,3 @@ class DatastorePage(PageObject):
             self._tester.driver.back()
 
         return data
-
-
-class CourseAvailabilityPage(EditorPageObject):
-
-    def set_course_availability(self, availability):
-        select.Select(self.find_element_by_name('course_availability')
-                      ).select_by_visible_text(availability)
-        return self
-
-    def set_whitelisted_students(self, emails):
-        textarea = self.find_element_by_css_selector(
-            'textarea[name="whitelist"]')
-        textarea.clear()
-        textarea.send_keys('\n'.join(emails))
-        return self
-

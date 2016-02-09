@@ -130,7 +130,7 @@ class StudentCourseView(object):
         # function also referenced elsewhere to decide this.  Note that
         # assessment progress is always recorded due to saving answers/scores;
         # is_progress_recorded refers to event-based progress items.
-        units = self._course.get_track_matching_student(self._student)
+        units, lessons = self._course.get_track_matching_student(self._student)
         self._is_progress_recorded = self._get_is_progress_recorded(units)
         if not self._student.is_transient:
             self._tracker = self._course.get_progress_tracker()
@@ -143,7 +143,7 @@ class StudentCourseView(object):
         self._accessible_units = []
         self._active_elements = []
         self._accessible_lessons = collections.defaultdict(list)
-        self._traverse_course(units)
+        self._traverse_course(units, lessons)
         self._identify_active_items(selected_ids)
 
     @property
@@ -242,7 +242,7 @@ class StudentCourseView(object):
             del self._active_elements[:]
             return
 
-    def _traverse_course(self, units):
+    def _traverse_course(self, units, lessons):
         for unit in units:
             # If this is a pre/post assessment, defer and let the unit it's
             # in add the item.
@@ -257,7 +257,7 @@ class StudentCourseView(object):
 
             e = []
             if unit.is_unit():
-                e = self._build_elements_for_unit(unit, displayability)
+                e = self._build_elements_for_unit(unit, lessons, displayability)
             elif unit.is_link():
                 e = self._build_elements_for_link(unit, displayability)
             elif (unit.is_assessment() and
@@ -306,7 +306,7 @@ class StudentCourseView(object):
             ret.description = element.description
         return ret
 
-    def _build_elements_for_unit(self, unit, unit_displayability):
+    def _build_elements_for_unit(self, unit, lessons, unit_displayability):
         if unit_displayability.is_content_available:
             self._accessible_units.append(unit)
         element = self._build_element_common(
@@ -326,7 +326,9 @@ class StudentCourseView(object):
                     element.contents.extend(
                         self._build_elements_for_assessment(
                             assessment, assessment_displayability, unit))
-            for lesson in self._course.get_lessons(unit.unit_id):
+            for lesson in lessons:
+                if str(lesson.unit_id) != str(unit.unit_id):
+                    continue
                 lesson_displayability = self._determine_displayability(lesson)
                 if lesson_displayability.is_name_visible:
                     element.contents.extend(
@@ -442,10 +444,10 @@ class StudentCourseView(object):
                 ret.progress = OutlineElement.PROGRESS_NOT_STARTED
         return [ret]
 
-    def _build_element_for_custom_unit(self, unit, displayability):
+    def _build_elements_for_custom_unit(self, unit, displayability):
         cu = custom_units.UnitTypeRegistry.get(unit.custom_unit_type)
         if not cu:
-            return None
+            return []
         if displayability.is_content_available:
             self._accessible_units.append(unit)
 
@@ -459,7 +461,7 @@ class StudentCourseView(object):
                 self._progress, unit.unit_id)
             if element.progress is not None:
                 element.is_progress_recorded = True
-        return element
+        return [element]
 
     def _build_elements_for_lesson(self, unit, lesson, displayability):
         link = 'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id)

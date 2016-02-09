@@ -259,7 +259,7 @@ class _DbTableContext(base_types._AbstractContextManager):
     @classmethod
     def build_from_web_request(cls, params, default_chunk_size):
         chunk_size = params.get('chunk_size')
-        filters = params.get_all('filter')
+        filters = params.get_all('filters')
         orderings = params.get_all('ordering')
         if not chunk_size and not filters and not orderings:
             return None

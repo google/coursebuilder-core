@@ -25,6 +25,7 @@ import threading
 
 from modules.embed import embed
 from modules.embed import embed_pageobjects
+from modules.student_groups import student_groups_pageobjects
 from tests import suite
 from tests.integration import integration
 from tests.integration import pageobjects
@@ -81,7 +82,9 @@ class EmbedModuleTest(integration.TestBase):
     def make_course_enrollable(self, name):
         self.load_dashboard(
             name
-        ).click_availability(
+        ).click_leftnav_item_by_link_text(
+            'publish', 'Availability',
+            student_groups_pageobjects.CourseAvailabilityPage
         ).set_course_availability('Registration Required'
         ).set_whitelisted_students(
             [self.email]
@@ -90,7 +93,9 @@ class EmbedModuleTest(integration.TestBase):
     def set_child_courses_and_make_course_available(
             self, parent_name, child_name):
         self.load_dashboard(parent_name
-        ).click_availability(
+        ).click_leftnav_item_by_link_text(
+            'publish', 'Availability',
+            student_groups_pageobjects.CourseAvailabilityPage
         ).set_course_availability('Registration Required'
         ).click_save()
 

@@ -646,6 +646,10 @@ class Lesson12(object):
     def manual_progress(self):
         return False
 
+    @property
+    def labels(self):
+        return None
+
 
 class CachedCourse12(AbstractCachedObject):
     """A representation of a Course12 optimized for storing in memcache."""
@@ -1052,6 +1056,10 @@ class Lesson13(object):
             self.availability = AVAILABILITY_UNAVAILABLE
         else:
             self.availability = AVAILABILITY_COURSE
+
+    @property
+    def labels(self):
+        return None
 
 
 class PersistentCourse13(object):
@@ -2340,8 +2348,25 @@ class Course(object):
     POST_LOAD_HOOKS = []
 
     # Holds callback functions which are passed the course env dict after it is
-    # loaded, to perform any further processing on it.
+    # loaded, to perform any further processing on it.  This is for applying
+    # environment modifications based on entities that are too large to
+    # reasonably cache.  When adding an item to this list, you should also
+    # modify the code of get_environ() to add something to the cache key
+    # to discriminate among your use cases.  NOTE: This will produce a
+    # combinatorial explosion in the number of cache entries; use this
+    # with caution.
     COURSE_ENV_POST_LOAD_HOOKS = []
+
+    # Callbacks used after cloning cached copy of environment for returning to
+    # callers.  Allows processing using entities which are, themselves,
+    # cache-able.  These hooks apply each time the env is cloned, and so do
+    # not contribute to an explosion of versions of env in caches.
+    #
+    # Callbacks are passed:
+    # - the current application context
+    # - the environment dict, which should be modified in place.
+    # Return values from callbacks are ignored.
+    COURSE_ENV_POST_COPY_HOOKS = []
 
     # Holds callback functions which are passed the course env dict after it is
     # saved.
@@ -2349,6 +2374,18 @@ class Course(object):
 
     # Data which is patched onto the course environment - for testing use only.
     ENVIRON_TEST_OVERRIDES = {}
+
+    # Callback functions for modifying course content elements (units and
+    # lessons) when these are cloned in 'get_track_matching_student()'.
+    # Parameters are:
+    # - The current course
+    # - The Student object - may be a real Student, TransientStudent or None
+    # - List of units (possibly empty, but non-None)
+    # - List of lessons (possibly empty, but non-None)
+    # Hooks are expected to modify the units and lessons in place.  Any
+    # modifications are allowed, since these do not affect the official cached
+    # or stored copies.
+    COURSE_ELEMENT_STUDENT_VIEW_HOOKS = []
 
     SCHEMA_SECTION_COURSE = 'homepage'
     SCHEMA_SECTION_REGISTRATION = 'registration'
@@ -2386,6 +2423,34 @@ class Course(object):
             os.environ.get('CURRENT_VERSION_ID'), locale)
 
     @classmethod
+    def _run_env_post_copy_hooks(cls, app_context, env):
+        env = copy.deepcopy(env)
+
+        # Monkey patch to defend against infinite recursion. Downstream
+        # calls do not reload the env but just return the copy we have here.
+        old_get_environ = cls.get_environ
+        try:
+            cls.get_environ = classmethod(lambda cl, ac: env)
+            common_utils.run_hooks(
+                cls.COURSE_ENV_POST_COPY_HOOKS, app_context, env)
+        finally:
+            # Restore the original method from monkey-patch
+            cls.get_environ = old_get_environ
+        return env
+
+    @classmethod
+    def _run_env_post_load_hooks(cls, env):
+        old_get_environ = cls.get_environ
+        try:
+            cls.get_environ = classmethod(lambda cl, ac: env)
+            common_utils.run_hooks(
+                cls.COURSE_ENV_POST_LOAD_HOOKS, env)
+        finally:
+            # Restore the original method from monkey-patch
+            cls.get_environ = old_get_environ
+
+
+    @classmethod
     def get_environ(cls, app_context):
         """Returns currently defined course settings as a dictionary."""
         # pylint: disable=protected-access
@@ -2393,7 +2458,7 @@ class Course(object):
         # get from local cache
         env = app_context._cached_environ
         if env:
-            return copy.deepcopy(env)
+            return cls._run_env_post_copy_hooks(app_context, env)
 
         # get from global cache
         _locale = app_context.get_current_locale()
@@ -2401,33 +2466,23 @@ class Course(object):
         env = models.MemcacheManager.get(
             _key, namespace=app_context.get_namespace_name())
         if env:
-            return env
+            return cls._run_env_post_copy_hooks(app_context, env)
 
         models.MemcacheManager.begin_readonly()
         try:
             # get from datastore
             env = cls._load_environ(app_context)
+            cls._run_env_post_load_hooks(env)
 
-            # Monkey patch to defend against infinite recursion. Downstream
-            # calls do not reload the env but just return the copy we have here.
-            old_get_environ = cls.get_environ
-            cls.get_environ = classmethod(lambda cl, ac: env)
-            try:
-                # run hooks
-                for hook in cls.COURSE_ENV_POST_LOAD_HOOKS:
-                    hook(env)
-
-                # put into local and global cache
-                app_context._cached_environ = env
-                models.MemcacheManager.set(
-                    _key, env, namespace=app_context.get_namespace_name())
-            finally:
-                # Restore the original method from monkey-patch
-                cls.get_environ = old_get_environ
+            # put into local and global cache
+            app_context._cached_environ = env
+            models.MemcacheManager.set(
+                _key, env, namespace=app_context.get_namespace_name())
         finally:
             models.MemcacheManager.end_readonly()
 
-        return copy.deepcopy(env)
+        return cls._run_env_post_copy_hooks(app_context, env)
+
 
     @classmethod
     def _load_environ(cls, app_context):
@@ -2957,8 +3012,32 @@ class Course(object):
         return [unit for unit in self.get_units() if unit_type == unit.type]
 
     def get_track_matching_student(self, student):
-        return models.LabelDAO.apply_course_track_labels_to_student_labels(
-            self, student, self.get_units())
+        """Copy of units and lessons as modified for a particular student.
+
+        Be particularly careful to only use these items in read-only contexts
+        (i.e., student-facing views, not admin dashboards).  This function
+        returns a view that is customized based on the identity of the current
+        user, so you should *not* save these objects back to the course, or
+        you run the risk of overwriting the base course view with the view
+        appropriate to a specific student.
+
+        Args:
+          student: The current student.  May be a transient student or None.
+        Returns:
+          A list of all course units and all course lessons.  Callers should
+          respect the availability settings applied to these.
+        """
+
+        units = [copy.deepcopy(unit) for unit in self.get_units()]
+        lessons = [copy.deepcopy(lesson)
+                   for lesson in self.get_lessons_for_all_units()]
+        models.LabelDAO.apply_course_track_labels_to_student_labels(
+            self, student, units)
+        models.LabelDAO.apply_course_track_labels_to_student_labels(
+            self, student, lessons)
+        common_utils.run_hooks(self.COURSE_ELEMENT_STUDENT_VIEW_HOOKS,
+                               self, student, units, lessons)
+        return units, lessons
 
     def get_unit_track_labels(self, unit):
         all_track_ids = models.LabelDAO.get_set_of_ids_of_type(

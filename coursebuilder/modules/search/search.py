@@ -315,9 +315,8 @@ class SearchHandler(utils.BaseHandler):
             return response
 
         filtered_results = []
-        available_unit_ids = set(
-            str(unit.unit_id) for unit in
-            self.get_course().get_track_matching_student(student))
+        units, lessons = self.get_course().get_track_matching_student(student)
+        available_unit_ids = set(str(unit.unit_id) for unit in units)
         for result in response['results']:
             if not result.unit_id or str(result.unit_id) in available_unit_ids:
                 filtered_results.append(result)

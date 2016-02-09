@@ -129,10 +129,11 @@ class DataRemovalTests(DataRemovalTestBase):
 
             actions.unregister(self, course=self.COURSE)
 
-            # Expect to see register, unregister events on queue.
+            # Expect to see unregister event on queue -- register event handled
+            # as part of actions.register.
             task_count = self.execute_all_deferred_tasks(
                 models.StudentLifecycleObserver.QUEUE_NAME)
-            self.assertEquals(2, task_count)
+            self.assertEquals(1, task_count)
 
             # Running deletion cycle should have no effect.  Verify that.
             self._complete_removal()
@@ -151,9 +152,6 @@ class DataRemovalTests(DataRemovalTestBase):
     def test_immediate_removal_policy(self):
         user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
-        task_count = self.execute_all_deferred_tasks(
-            models.StudentLifecycleObserver.QUEUE_NAME)
-        self.assertEquals(1, task_count)  # registration.
         user_id = None
 
         with common_utils.Namespace(self.NAMESPACE):

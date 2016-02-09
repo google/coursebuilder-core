@@ -805,7 +805,7 @@ class CourseHandler(ApplicationHandler):
         return self.course
 
     def get_track_matching_student(self, student):
-        """Gets units whose labels match those on the student."""
+        """Gets units and lessons whose labels match those on the student."""
         return self.get_course().get_track_matching_student(student)
 
     def get_progress_tracker(self):

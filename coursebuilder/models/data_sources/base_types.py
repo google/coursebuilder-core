@@ -100,6 +100,85 @@ class _SynchronousQuery(_DataSource):
             'fill_values method.')
 
 
+class _AbstractFilter(object):
+    """Describes a filterable field in a REST data source."""
+
+    KIND_ENUM = 'enum'
+    KIND_RANGE = 'range'
+
+    @classmethod
+    def get_title(cls):
+        """Human-friendly English display title for this filter."""
+        raise NotImplementedError()
+
+    @classmethod
+    def get_kind(cls):
+        """Tell UI generator what kind of filter we implement.
+
+        Returns one of the KIND_ defintions.
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def get_schema(cls):
+        """Extend provided schema with additional filterable fields.
+
+        These additional fields are added so that sanity checks on filtered
+        fields bing part of the schema for the entity class for the data
+        source.
+
+        Implementations should construct a schema_fields.FieldRegistry object,
+        and return: my_registry.get_json_schema_dict['properties'] for
+        commonality with the schemas returned by data source implementations.
+        """
+        raise NotImplementedError()
+
+
+class _EnumFilterChoice(object):
+
+    def __init__(self, label, value, selected=False):
+        """Constructor.
+
+        Args:
+          label: Displayed name for enum selection.
+          value: A filter expression.  See PaginatedDataSource.
+          selected: True/False - pre-select this option when building HTML
+              forms?
+        """
+        self.label = label
+        self.value = value
+        self.selected = selected
+
+
+class _AbstractEnumFilter(_AbstractFilter):
+
+    @classmethod
+    def get_kind(cls):
+        return _AbstractFilter.KIND_ENUM
+
+    @classmethod
+    def get_choices(cls):
+        """Return a list of EnumFilterChoice instances."""
+        raise NotImplementedError()
+
+
+class _AbstractRangeFilter(_AbstractFilter):
+
+    @classmethod
+    def get_kind(cls):
+        return _AbstractFilter.KIND_RANGE
+
+    @classmethod
+    def get_min_value(cls):
+        """Return min value (inclusive) that the filterable item may take."""
+        raise NotImplementedError()
+
+    @classmethod
+    def get_max_value(cls):
+        """Return max value (exclusive) that the filterable item may take."""
+        raise NotImplementedError()
+
+
 class _AbstractRestDataSource(_DataSource):
     """Provide paginated data supplied to clients via a REST API.
 
@@ -141,6 +220,22 @@ class _AbstractRestDataSource(_DataSource):
             'Classes derived from _AbstractRestDataSource must provide a '
             'title string for display on web pages.  This is used in the '
             'context of controls to select a particular page.')
+
+    @classmethod
+    def get_filters(cls):
+        """Return list of filters for this type.
+
+        These should correspond to access patterns that permit filtering
+        on the declared fields, and which are stable (returning the same
+        results on repeated queries).  E.g., for data sources pulling from
+        DB tables, these would correspond to indexed fields.  Note that it
+        is not required that all indexed fields be declared here, but
+        rather only those that should be publicly available.
+
+        Implementing classes should return an iterable of AbstractFilter
+        classes.
+        """
+        return ()
 
     @classmethod
     def exportable(cls):
