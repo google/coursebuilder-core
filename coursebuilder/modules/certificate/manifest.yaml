@@ -1,6 +1,6 @@
 tests:
   functional:
-    - modules.certificate.certificate_tests.CertificateCriteriaTestCase = 6
+    - modules.certificate.certificate_tests.CertificateCriteriaTestCase = 8
     - modules.certificate.certificate_tests.CertificateHandlerTestCase = 5
   unit:
     - modules.certificate.certificate_unit_tests.JavaScriptTests = 1

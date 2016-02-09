@@ -165,7 +165,7 @@ def _get_score_by_id(score_list, assessment_id):
     return None
 
 
-def _prepare_custom_criterion(custom, student, course):
+def _prepare_custom_criterion(custom, student, course, explanations):
     assert hasattr(custom_criteria, custom), ((
         'custom criterion %s is not implemented '
         'as a function in custom_criteria.py.') % custom)
@@ -174,7 +174,8 @@ def _prepare_custom_criterion(custom, student, course):
         'in the registration_table in custom_criteria.py.') % custom)
 
     def _check_custom_criterion():
-        if not getattr(custom_criteria, custom)(student, course):
+        criterion = getattr(custom_criteria, custom)
+        if not criterion(student, course, explanations=explanations):
             return False
         return True
 
@@ -210,13 +211,15 @@ def _prepare_assessment_criterion(score_list, criterion):
     return _check_assessment_criterion
 
 
-def student_is_qualified(student, course):
+def student_is_qualified(student, course, explanations=None):
     """Determines whether the student has met criteria for a certificate.
 
     Args:
         student: models.models.Student. The student entity to test.
         course: modesl.courses.Course. The course which the student is
             enrolled in.
+        explanations: list. Holder for a list of explanatory strings. Typically
+            this will hold explanation of which criteria remain to be be met.
 
     Returns:
         True if the student is qualified, False otherwise.
@@ -236,7 +239,8 @@ def student_is_qualified(student, course):
             'assessment_id and custom_criteria cannot be both empty.')
         if custom is not '':
             criteria_functions.append(
-                _prepare_custom_criterion(custom, student, course))
+                _prepare_custom_criterion(
+                    custom, student, course, explanations))
         elif assessment_id is not '':
             criteria_functions.append(
                 _prepare_assessment_criterion(score_list, criterion))
@@ -255,7 +259,8 @@ def get_certificate_table_entry(handler, student, course):
     # I18N: Title of section on page showing certificates for course completion.
     title = handler.gettext('Certificate')
 
-    if student_is_qualified(student, course):
+    explanations = []
+    if student_is_qualified(student, course, explanations=explanations):
         nl = safe_dom.NodeList()
         nl.append(
             safe_dom.A(
@@ -274,12 +279,19 @@ def get_certificate_table_entry(handler, student, course):
         )
         return (title, nl)
     else:
-        return (
-            title,
-            # I18N: Text indicating student has not yet completed a course.
-            handler.gettext(
-                'You have not yet met the course requirements for a '
-                'certificate of completion.'))
+        nl = safe_dom.NodeList()
+        nl.append(
+            safe_dom.Text(
+                # I18N: Text indicating student has not yet completed a course.
+                handler.gettext(
+                    'You have not yet met the course requirements for a '
+                    'certificate of completion.')))
+        if explanations:
+            ul = safe_dom.Element('ul', className='certificate-explanations')
+            for expl in explanations:
+                ul.append(safe_dom.Element('li').add_text(expl))
+            nl.append(ul)
+        return (title, nl)
 
 
 def get_criteria_editor_schema(course):

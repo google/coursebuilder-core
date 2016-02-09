@@ -34,7 +34,7 @@ from models import transforms
 registration_table = ['example_custom_criterion', 'power_searching_criteria']
 
 
-def example_custom_criterion(unused_student, unused_course):
+def example_custom_criterion(unused_student, unused_course, explanations=None):
     """Example of what a custom criterion function should look like.
 
     Adapt or insert new functions with the same signature for custom criteria.
@@ -49,6 +49,8 @@ def example_custom_criterion(unused_student, unused_course):
         unused_course: modesl.courses.Course. The course which the student is
             enrolled in. Test on this to implement course-specific criteria for
             earning a certificate.
+        explanations: list. Holder for a list of explanatory strings. Typically
+            this will hold explanation of which criteria remain to be be met.
 
     Returns:
         Boolean value indicating whether the student satisfies the criterion.
@@ -56,7 +58,7 @@ def example_custom_criterion(unused_student, unused_course):
     return True
 
 
-def power_searching_criteria(student, unused_course):
+def power_searching_criteria(student, unused_course, explanations=None):
     """Criteria for Power Searching with Google."""
     scores = transforms.loads(student.scores or '{}')
     final_assessment_score = scores.get('Fin', 0)

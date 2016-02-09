@@ -46,9 +46,10 @@ class CertificateHandlerTestCase(actions.TestBase):
 
         # Mock the module's student_is_qualified method
         self.is_qualified = True
+        def student_is_qualified(student, course, explanations=None):
+            return self.is_qualified
         self.original_student_is_qualified = certificate.student_is_qualified
-        certificate.student_is_qualified = (
-            lambda student, course: self.is_qualified)
+        certificate.student_is_qualified = student_is_qualified
 
     def tearDown(self):
         certificate.student_is_qualified = self.original_student_is_qualified
@@ -131,7 +132,7 @@ class CertificateHandlerTestCase(actions.TestBase):
             mock_handler, student, course)
         self.assertEquals('Certificate', table_entry[0])
         self.assertIn(
-            'You have not yet met the course requirements', table_entry[1])
+            'You have not yet met the course requirements', str(table_entry[1]))
 
 
 class CertificateCriteriaTestCase(actions.TestBase):
@@ -326,19 +327,57 @@ class CertificateCriteriaTestCase(actions.TestBase):
         response = self.get('certificate')
         self.assertEquals(200, response.status_code)
 
+    def _register_custom_criterion(self, custom_criterion):
+        name = 'test_custom_criterion'
+        self.certificate_criteria.append({'custom_criteria': name})
+        setattr(custom_criteria, name, custom_criterion)
+        custom_criteria.registration_table.append(name)
+
     def test_custom_criteria(self):
-        def test_custom_criterion(unused_student, unused_course):
+        def test_custom_criterion(
+                unused_student, unused_course, explanations=None):
             return True
-
-        CRITERION = 'test_custom_criterion'
-        self.certificate_criteria.append(
-            {'custom_criteria': CRITERION})
-
-        setattr(custom_criteria, CRITERION, test_custom_criterion)
-        custom_criteria.registration_table.append(CRITERION)
+        self._register_custom_criterion(test_custom_criterion)
 
         response = self.get('certificate')
         self.assertEquals(200, response.status_code)
+
+    def test_custom_criteria_with_explanation(self):
+        def test_custom_criterion(
+                unused_student, unused_course, explanations=None):
+            explanations.append('Complete Assignment 1')
+            return False
+        self._register_custom_criterion(test_custom_criterion)
+
+        response = self.get('student/home')
+        soup = self.parse_html_string_to_soup(response.body)
+        row = soup.select('.gcb-student-data-table tr')[4]
+        title = row.select('th')[0].contents[0]
+        message = row.select('td')[0]
+        self.assertEquals('Certificate', title)
+        self.assertEquals(
+            'You have not yet met the course requirements for a certificate '
+            'of completion.', message.contents[0])
+        explanation_messages = message.contents[1].select('li')
+        self.assertEquals(1, len(explanation_messages))
+        self.assertEquals('Complete Assignment 1', explanation_messages[0].text)
+
+    def test_custom_criteria_with_no_explanation(self):
+        def test_custom_criterion(
+                unused_student, unused_course, explanations=None):
+            return False
+        self._register_custom_criterion(test_custom_criterion)
+
+        response = self.get('student/home')
+        soup = self.parse_html_string_to_soup(response.body)
+        row = soup.select('.gcb-student-data-table tr')[4]
+        title = row.select('th')[0].contents[0]
+        message = row.select('td')[0]
+        self.assertEquals('Certificate', title)
+        self.assertEquals(1, len(message.contents))
+        self.assertEquals(
+            'You have not yet met the course requirements for a certificate '
+            'of completion.', message.contents[0])
 
     def test_combination(self):
         # Add machine graded assessment
