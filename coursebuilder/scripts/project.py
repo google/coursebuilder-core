@@ -1371,8 +1371,8 @@ def _copy_files(source_dir_name, build_dir_name):
     """Copies local files and files referenced by external symlinks"""
     # Work-around for lack of 'nonlocal' keyword in this version of Python
     external_copy_tasks = [[]]
-    def ignore_external_symlinks(path, names):
-        """Returns names of external symlinks and aggregates their paths"""
+    def ignore_non_core_files(path, names):
+        """Picks files to not copy: Ignore external and downloaded content."""
         ignored_names = set([name for name in names if
             _is_external_symlink(os.path.join(path, name), source_dir_name)])
 
@@ -1380,12 +1380,18 @@ def _copy_files(source_dir_name, build_dir_name):
             _symlink_copy_task(
                 os.path.join(path, name), source_dir_name, build_dir_name)
             for name in ignored_names]
+
+        # Don't copy 'lib' directory at the top level; release tests want to
+        # set up for static and nonstatic serving, so leave creation of lib
+        # for test-run time, rather than copying setup from developer work.
+        if 'app.yaml' in names and 'lib' in names:
+            ignored_names.add('lib')
         return ignored_names
 
     log('Copying local files...')
     shutil.copytree(
         source_dir_name, build_dir_name, symlinks=True,
-        ignore=ignore_external_symlinks)
+        ignore=ignore_non_core_files)
 
     log('Copying external files...')
     _do_copy_tasks(external_copy_tasks[0])
