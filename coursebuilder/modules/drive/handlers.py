@@ -17,6 +17,7 @@
 __author__ = 'Nick Retallack (nretallack@google.com)'
 
 import json
+import logging
 
 from common import utils as common_utils
 from controllers import utils
@@ -54,6 +55,16 @@ class AbstractDriveDashboardHandler(dashboard_handler.AbstractDashboardHandler):
     def before_method(self, method, path):
         super(AbstractDriveDashboardHandler, self).before_method(method, path)
         self.setup_drive()
+
+    def handle_error(self, error):
+        if isinstance(error, errors.TimeoutError):
+            logging.error('Google Drive Timed Out')
+            self.response.set_status(504)
+            self.render_other('drive-timeout.html')
+        else:
+            logging.error('Google Drive Error: %s', error)
+            self.response.set_status(502)
+            self.render_other('drive-failed.html')
 
 
 class DriveListHandler(AbstractDriveDashboardHandler):
@@ -118,24 +129,25 @@ class DriveSyncHandler(AbstractDriveDashboardHandler):
         if dto is None:
             self.abort(400)
 
+        # Redirect browsers regardless of errors, return empty responses with
+        # status codes to XHRs.
+        is_xhr = 'text/html' not in self.request.headers.get('Accept', '')
+
         try:
             self.drive_manager.download_file(dto)
-        except errors.TimeoutError:
-            self.response.set_status(504)
-            self.render_other('drive-timeout.html')
-            return
-        except errors.Error:
-            self.response.set_status(400)
-            self.render_other('drive-misconfigured.html')
-            return
+        except errors.Error as error:
+            if is_xhr:
+                status = 504 if isinstance(error, errors.TimeoutError) else 502
+                self.response.set_status(status)
+                self.response.write('')
+                return
 
-        # Redirects browsers, returns nothing to XHRs
-        if 'text/html' in self.request.headers.get('Accept', ''):
-            self.redirect(self.app_context.canonicalize_url(
-                '/' + DriveListHandler.URL))
-        else:
+        if is_xhr:
             self.response.set_status(204)
             self.response.write('')
+        else:
+            self.redirect(self.app_context.canonicalize_url(
+                '/' + DriveListHandler.URL))
 
 
 class DriveSyncJobHandler(AbstractDriveDashboardHandler):
@@ -184,13 +196,8 @@ class DriveAddListHandler(AbstractDriveDashboardHandler):
 
         try:
             data = self.drive_manager.list_file_meta()
-        except errors.TimeoutError:
-            self.response.set_status(504)
-            self.render_other('drive-timeout.html')
-            return
-        except errors.Error:
-            self.response.set_status(400)
-            self.render_other('drive-misconfigured.html')
+        except errors.Error as error:
+            self.handle_error(error)
             return
 
         new_items = [item
@@ -212,13 +219,8 @@ class DriveAddListHandler(AbstractDriveDashboardHandler):
 
         try:
             data = self.drive_manager.get_file_meta(key)
-        except errors.TimeoutError:
-            self.response.set_status(504)
-            self.render_other('drive-timeout.html')
-            return
-        except errors.Error:
-            self.response.set_status(400)
-            self.render_other('drive-misconfigured.html')
+        except errors.Error as error:
+            self.handle_error(error)
             return
 
         if data.type not in drive_api_client.KNOWN_MIME_TYPES.values():
@@ -232,6 +234,13 @@ class DriveAddListHandler(AbstractDriveDashboardHandler):
             'version': '1.0',
         })
         drive_models.DriveSyncDAO.save(dto)
+
+        # Attempt to sync now.  If it fails, that's ok.  The error will be
+        # visible in the list view.
+        try:
+            self.drive_manager.download_file(dto)
+        except errors.Error as error:
+            logging.error('Google Drive Error: %s', error)
 
         self.redirect(self.app_context.canonicalize_url(
             '/{}?key={}'.format(DriveItemHandler.URL, key)))
@@ -293,7 +302,7 @@ class DriveContentHandler(utils.CourseHandler):
 
         # check availability
         item = drive_models.DriveSyncDAO.load(key)
-        if not self.check_availability(item.availability):
+        if item is None or not self.check_availability(item.availability):
             self.abort(404)
 
         # find the synced content

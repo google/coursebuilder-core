@@ -1,6 +1,6 @@
 tests:
   functional:
-    - modules.drive.tests.functional.DriveTests = 12
+    - modules.drive.tests.functional.DriveTests = 24
   unit:
     - modules.drive.tests.unit.ApiClientTests = 2
 
@@ -24,7 +24,7 @@ files:
   - modules/drive/_static/style.css
   - modules/drive/templates/drive-add.html
   - modules/drive/templates/drive-list.html
-  - modules/drive/templates/drive-misconfigured.html
+  - modules/drive/templates/drive-failed.html
   - modules/drive/templates/drive-not-configured.html
   - modules/drive/templates/drive-timeout.html
   - modules/drive/tests/fixtures/sheet_data.json

@@ -99,6 +99,7 @@ class _DriveManager(object):
 
         except errors.Error as error:
             self._save_failure(dto.id, error)
+            raise error
 
     @db.transactional
     def _start_sync(self, file_id):

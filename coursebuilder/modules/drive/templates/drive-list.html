@@ -95,7 +95,7 @@ var JOB_STATUS_URL = {{ job_status_url|to_json }};
               {{ item.sync_interval_human }}
             </td>
 
-            <td>
+            <td data-status="{{ item.sync_status }}">
               <span
                   {% if item.sync_status == 'failed' %}
                     title="{{ item.last_error }}"

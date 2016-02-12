@@ -97,11 +97,14 @@ class _APIClientWrapper(object):
         https://developers.google.com/drive/web/manage-downloads
         """
         # pylint: disable=protected-access
-        response, content = self._drive_client._http.request(url)
-        if response.status == 200:
-            return content
-        else:
-            raise errors._HttpError(url, response, content)
+        try:
+            response, content = self._drive_client._http.request(url)
+            if response.status == 200:
+                return content
+            else:
+                raise errors._HttpError(url, response, content)
+        except urlfetch_errors.DeadlineExceededError as error:
+            raise errors.TimeoutError(error)
 
     def list_file_meta(self, max_results=100, page_token=None):
         """Returns a DriveItemList"""
@@ -132,6 +135,8 @@ class _APIClientWrapper(object):
             # pylint: disable=protected-access
             raise errors._WrappedError(error)
             # pylint: enable=protected-access
+        except urlfetch_errors.DeadlineExceededError as error:
+            raise errors.TimeoutError(error)
 
     def get_doc_as_html(self, file_id):
         """Returns the HTML export of a google doc."""

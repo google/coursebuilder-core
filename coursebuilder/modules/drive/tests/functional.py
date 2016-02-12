@@ -26,8 +26,17 @@ from models import models
 from models import transforms
 from modules.drive import drive_api_client_mock
 from modules.drive import drive_models
+from modules.drive import errors
 from modules.drive import handlers
 from tests.functional import actions
+
+
+def raise_error(*args, **kwargs):
+    raise errors.Error(Exception())
+
+
+def raise_timeout(*args, **kwargs):
+    raise errors.TimeoutError(Exception())
 
 
 class DriveTestBase(actions.TestBase):
@@ -108,8 +117,8 @@ class DriveTestBase(actions.TestBase):
         })
         drive_models.DriveSyncDAO.save(dto)
 
-    def get_page(self, url):
-        return self.parse_html_string_to_soup(self.get(url).body)
+    def get_page(self, url, **kwargs):
+        return self.parse_html_string_to_soup(self.get(url, **kwargs).body)
 
     # assertions
 
@@ -125,6 +134,53 @@ class DriveTestBase(actions.TestBase):
 
     def assertRestStatus(self, response, status):
         self.assertEqual(transforms.loads(response.body)['status'], status)
+
+    def assertIsFailurePage(self, response):
+        self.assertEqual(response.status_code, 502)
+        self.assertPresent(self.parse_html_string_to_soup(response.body)
+            .select('#drive-failed-page'))
+
+    def assertIsTimeoutPage(self, response):
+        self.assertEqual(response.status_code, 504)
+        self.assertIn('Timed Out', response.body)
+
+    # actions
+
+    def add_file(self, file_id):
+        return self.post('modules/drive/add', {
+            'xsrf_token_drive-add':
+                crypto.XsrfTokenManager.create_xsrf_token('drive-add'),
+            'key': file_id,
+        }, expect_errors=True)
+
+    def sync_file(self, file_id, browser=True):
+        headers = {}
+        if browser:
+            headers['Accept'] = 'text/html'
+
+        return self.post('modules/drive/sync', {
+            'xsrf_token_drive-sync':
+                crypto.XsrfTokenManager.create_xsrf_token('drive-sync'),
+            'key': file_id,
+        }, headers=headers, expect_errors=True)
+
+    def add_doc(self, file_id='1'):
+        return self.add_file(file_id)
+
+    def add_sheet(self, file_id='2'):
+        return self.add_file(file_id)
+
+    def sync_doc_xhr(self, file_id='5'):
+        return self.sync_file(file_id, browser=False)
+
+    def sync_doc_browser(self, file_id='5'):
+        return self.sync_file(file_id, browser=True)
+
+    def sync_sheet_xhr(self, file_id='3'):
+        return self.sync_file(file_id, browser=False)
+
+    def sync_sheet_browser(self, file_id='3'):
+        return self.sync_file(file_id, browser=True)
 
 
 class DriveTests(DriveTestBase):
@@ -174,6 +230,10 @@ class DriveTests(DriveTestBase):
         self.assertRestStatus(
             self.get('rest/modules/drive/item?key=2'), 404)
 
+        # content handler shouldn't either
+        self.assertEqual(self.get('modules/drive/item/content?key=2',
+            expect_errors=True).status_code, 404)
+
         # add it
         self.post('modules/drive/add', {
             'xsrf_token_drive-add':
@@ -191,6 +251,9 @@ class DriveTests(DriveTestBase):
 
         # rest handler should return success now
         self.assertRestStatus(self.get('rest/modules/drive/item?key=2'), 200)
+
+        # It should sync automatically, so the content handler should also work
+        self.assertRestStatus(self.get('modules/drive/item/content?key=2'), 200)
 
     def test_saving_a_schedule(self):
         # form page should be visitable
@@ -332,3 +395,112 @@ class DriveTests(DriveTestBase):
         with utils.Namespace(self.app_context.namespace):
             dto = drive_models.DriveSyncDAO.load('6')
             self.assertIsNotNone(dto.last_synced)
+
+    def test_api_sync_doc_xhr_failure(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_doc_as_html',
+            raise_error)
+
+        self.assertEquals(self.sync_doc_xhr().status_code, 502)
+
+    def test_api_sync_sheet_xhr_failure(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_sheet_data',
+            raise_error)
+
+        self.assertEquals(self.sync_sheet_xhr().status_code, 502)
+
+    def test_api_sync_sheet_xhr_timeout(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_sheet_data',
+            raise_timeout)
+
+        self.assertEquals(self.sync_sheet_xhr().status_code, 504)
+
+    def test_api_sync_sheet_browser_failure(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_sheet_data',
+            raise_error)
+
+        self.assertEquals(self.sync_sheet_browser().status_code, 302)
+        soup = self.get_page('modules/drive')
+        self.assertPresent(soup.select('[data-status=failed]'))
+
+    def test_api_sync_sheet_browser_timeout(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_sheet_data',
+            raise_timeout)
+
+        self.assertEquals(self.sync_sheet_browser().status_code, 302)
+        soup = self.get_page('modules/drive')
+        self.assertPresent(soup.select('[data-status=failed]'))
+
+    def test_api_sync_meta_browser_failure(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_file_meta',
+            raise_error)
+
+        self.assertEquals(self.sync_sheet_browser().status_code, 302)
+        soup = self.get_page('modules/drive')
+        self.assertPresent(soup.select('[data-status=failed]'))
+
+    def test_api_sync_meta_browser_timeout(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_file_meta',
+            raise_timeout)
+
+        self.assertEquals(self.sync_sheet_browser().status_code, 302)
+        soup = self.get_page('modules/drive')
+        self.assertPresent(soup.select('[data-status=failed]'))
+
+    def test_add_page_failure(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'list_file_meta',
+            raise_error)
+
+        self.assertIsFailurePage(
+            self.get('modules/drive/add', expect_errors=True))
+
+    def test_add_page_timeout(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'list_file_meta',
+            raise_timeout)
+
+        self.assertIsTimeoutPage(
+            self.get('modules/drive/add', expect_errors=True))
+
+    def test_add_meta_failure(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_file_meta',
+            raise_error)
+
+        self.assertIsFailurePage(self.add_sheet())
+
+    def test_add_meta_timeout(self):
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_file_meta',
+            raise_timeout)
+
+        self.assertIsTimeoutPage(self.add_sheet())
+
+    def test_add_download_timeout(self):
+        # NOTE: Download failures don't stop adds, but they do record a failure
+        # pylint: disable=protected-access
+        self.swap(
+            drive_api_client_mock._APIClientWrapperMock, 'get_sheet_data',
+            raise_timeout)
+
+        self.assertEquals(self.add_sheet().status_code, 302)
+        soup = self.get_page('modules/drive')
+        self.assertPresent(soup.select('[data-status=failed]'))
