@@ -1,6 +1,6 @@
 tests:
   functional:
-    - modules.upload.upload_tests.TextFileUploadHandlerTestCase = 8
+    - modules.upload.upload_tests.TextFileUploadHandlerTestCase = 9
     - modules.upload.upload_tests.TextFileUploadTagTestCase = 3
 
 files:

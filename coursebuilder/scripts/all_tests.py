@@ -92,7 +92,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_permissions.SimpleSchemaPermissionTests': 16,
     'tests.functional.model_student_work.KeyPropertyTest': 4,
     'tests.functional.model_student_work.ReviewTest': 3,
-    'tests.functional.model_student_work.SubmissionTest': 3,
+    'tests.functional.model_student_work.SubmissionTest': 4,
     'tests.functional.model_utils.QueryMapperTest': 4,
     'tests.functional.model_vfs.VfsLargeFileSupportTest': 6,
     'tests.functional.module_config_test.ManipulateAppYamlFileTest': 8,

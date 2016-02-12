@@ -151,18 +151,34 @@ class SubmissionTest(actions.ExportTestBase):
         self.unit_id = 'unit_id'
         self.reviewee = models.Student(key_name=self.reviewee_email)
         self.reviewee_key = self.reviewee.put()
+        self.instance_id = 'this-instance'
         self.submission = student_work.Submission(
             reviewee_key=self.reviewee_key, unit_id=self.unit_id)
         self.submission_key = self.submission.put()
+        self.submission_with_iid = student_work.Submission(
+            reviewee_key=self.reviewee_key, unit_id=self.unit_id,
+            instance_id=self.instance_id)
+        self.submission_with_iid_key = self.submission_with_iid.put()
 
     def test_constructor_sets_key_name(self):
         self.assertEqual(
             student_work.Submission.key_name(self.unit_id, self.reviewee_key),
             self.submission_key.name())
+        self.assertEqual(
+            student_work.Submission.key_name(
+                self.unit_id, self.reviewee_key, instance_id=self.instance_id),
+            self.submission_with_iid_key.name())
 
     def test_for_export_transforms_correctly(self):
         exported = self.submission.for_export(self.transform)
         self.assert_blacklisted_properties_removed(self.submission, exported)
+        self.assertEqual(
+            'transformed_' + self.reviewee_key.name(),
+            exported.reviewee_key.name())
+
+        exported = self.submission_with_iid.for_export(self.transform)
+        self.assert_blacklisted_properties_removed(
+            self.submission_with_iid, exported)
         self.assertEqual(
             'transformed_' + self.reviewee_key.name(),
             exported.reviewee_key.name())
@@ -175,3 +191,38 @@ class SubmissionTest(actions.ExportTestBase):
         self.assertEqual(
             'transformed_' + self.reviewee_email, safe_reviewee_key_name)
         self.assertEqual(self.unit_id, safe_unit_id)
+
+        safe_submission_key = student_work.Submission.safe_key(
+            self.submission_with_iid_key, self.transform)
+        _, safe_unit_id, instance_id, safe_reviewee_key_name = (
+            student_work.Submission._split_key(safe_submission_key.name()))
+        self.assertEqual(
+            'transformed_' + self.reviewee_email, safe_reviewee_key_name)
+        self.assertEqual(self.unit_id, safe_unit_id)
+        self.assertEqual(self.instance_id, instance_id)
+
+    def test_backward_compatibility(self):
+        # If a submission is saved without instance_id (legacy) and there is no
+        # submission saved with an instance_id, then fall back to the legacy
+        # record.
+        student_work.Submission.write(
+            self.unit_id, self.reviewee_key, 'legacy content')
+
+        submission = student_work.Submission.get(
+            self.unit_id, self.reviewee_key, instance_id='some_instance')
+        self.assertEqual(submission.contents, '\"legacy content\"')
+        contents = student_work.Submission.get_contents(
+            self.unit_id, self.reviewee_key, instance_id='some_instance')
+        self.assertEqual(contents, 'legacy content')
+
+        # Save data using the instance_id, and it will shadow the legacy data
+        student_work.Submission.write(
+            self.unit_id, self.reviewee_key, 'new content',
+            instance_id='some_instance')
+
+        submission = student_work.Submission.get(
+            self.unit_id, self.reviewee_key, instance_id='some_instance')
+        self.assertEqual(submission.contents, '\"new content\"')
+        contents = student_work.Submission.get_contents(
+            self.unit_id, self.reviewee_key, instance_id='some_instance')
+        self.assertEqual(contents, 'new content')

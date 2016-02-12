@@ -32,8 +32,6 @@ from models import models
 from models import student_work
 from modules.upload import messages
 
-from google.appengine.ext import db
-
 # String. Url fragment after the namespace we POST user payloads to.
 _POST_ACTION_SUFFIX = '/upload'
 # String. Course Builder root-relative path where resources for this module are.
@@ -65,6 +63,7 @@ class TextFileUploadHandler(utils.BaseHandler):
 
         success = False
         unit_id = self.request.get('unit_id')
+        instance_id = self.request.get('instance_id')
 
         contents = self.request.get('contents')
         if not contents:
@@ -73,7 +72,8 @@ class TextFileUploadHandler(utils.BaseHandler):
 
             try:
                 success = bool(student_work.Submission.write(
-                    unit_id, student.get_key(), contents))
+                    unit_id, student.get_key(), contents,
+                    instance_id=instance_id))
             # All write errors are treated equivalently.
             # pylint: disable=broad-except
             except Exception as e:
@@ -125,29 +125,33 @@ class TextFileUploadTag(tags.BaseTag):
         enabled = (
             not isinstance(student, models.TransientStudent)
             and hasattr(handler, 'unit_id'))
-        handler.template_value['enabled'] = enabled
+
+        template_value = {}
+        template_value['enabled'] = enabled
 
         template = jinja_utils.get_template(
             'templates/form.html', os.path.dirname(__file__))
 
         already_submitted = False
         if enabled:
+            instance_id = node.attrib.get('instanceid')
             already_submitted = bool(
-                db.get(student_work.Submission.get_key(
-                    handler.unit_id, student.get_key())))
-            handler.template_value['unit_id'] = handler.unit_id
+                student_work.Submission.get(
+                    handler.unit_id, student.get_key(),
+                    instance_id=instance_id))
+            template_value['unit_id'] = handler.unit_id
+            template_value['instance_id'] = instance_id
 
-        handler.template_value['action'] = self._get_action(
+        template_value['action'] = self._get_action(
             handler.app_context.get_slug())
-        handler.template_value['already_submitted'] = already_submitted
-        handler.template_value['display_length'] = node.attrib.get(
+        template_value['already_submitted'] = already_submitted
+        template_value['display_length'] = node.attrib.get(
             'display_length')
-        handler.template_value['form_xsrf_token'] = (
-            utils.XsrfTokenManager.create_xsrf_token(
-                _XSRF_TOKEN_NAME))
+        template_value['form_xsrf_token'] = (
+            utils.XsrfTokenManager.create_xsrf_token(_XSRF_TOKEN_NAME))
 
         return tags.html_string_to_element_tree(
-            jinja2.utils.Markup(template.render(handler.template_value))
+            jinja2.utils.Markup(template.render(template_value))
         )
 
 

@@ -5,6 +5,7 @@
             type='hidden'
             value='{{ form_xsrf_token }}'/>
         <input type='hidden' name='unit_id' value='{{ unit_id }}'/>
+        <input type='hidden' name='instance_id' value='{{ instance_id }}'/>
         <input
             {% if not enabled %}disabled='disabled'{% endif %}
             name='contents'

@@ -74,7 +74,8 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
             'form_xsrf_token': user_xsrf_token,
             'unit_id': self.unit_id,
         }
-        self.assertIsNone(self.get_submission(self.student.key(), self.user_id))
+        self.assertIsNone(self.get_submission(
+            self.student.get_key(), self.unit_id))
 
         response = self.testapp.post(
             upload._POST_ACTION_SUFFIX, params, self.headers)
@@ -139,7 +140,8 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
             'unit_id': self.unit_id,
         }
 
-        self.assertIsNone(self.get_submission(self.student.key(), self.user_id))
+        self.assertIsNone(self.get_submission(
+            self.student.get_key(), self.unit_id))
         response = self.testapp.post(
             upload._POST_ACTION_SUFFIX, params, self.headers)
         self.assertEqual(200, response.status_int)
@@ -151,6 +153,36 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         submissions = student_work.Submission.all().fetch(2)
         self.assertEqual(1, len(submissions))
         self.assertEqual(u'"%s"' % self.contents, submissions[0].contents)
+
+    def test_uploads_in_same_unit_with_distinct_instances_are_distinct(self):
+        self.configure_environ_for_current_user()
+        # Allow protected access for tests. pylint: disable=protected-access
+        user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
+            upload._XSRF_TOKEN_NAME)
+        params = {
+            'form_xsrf_token': user_xsrf_token,
+            'unit_id': self.unit_id
+        }
+
+        # Upload with one instance_id
+        params['contents'] = 'a'
+        params['instance_id'] = 'instance_a'
+        response = self.testapp.post(
+            upload._POST_ACTION_SUFFIX, params, self.headers)
+        self.assertEqual(200, response.status_int)
+
+        # Upload with a different instance_id (but same unit_id)
+        params['contents'] = 'b'
+        params['instance_id'] = 'instance_b'
+        response = self.testapp.post(
+            upload._POST_ACTION_SUFFIX, params, self.headers)
+        self.assertEqual(200, response.status_int)
+
+        self.assertEquals('a', student_work.Submission.get_contents(
+            self.unit_id, self.student.get_key(), instance_id='instance_a'))
+
+        self.assertEquals('b', student_work.Submission.get_contents(
+            self.unit_id, self.student.get_key(), instance_id='instance_b'))
 
     def test_unsavable_contents_returns_400(self):
         self.configure_environ_for_current_user()
@@ -227,7 +259,8 @@ class TextFileUploadTagTestCase(actions.TestBase):
         with common_utils.Namespace('ns_' + self._COURSE_NAME):
             student, _ = models.Student.get_first_by_email(self._STUDENT_EMAIL)
             student_work.Submission.write(
-                    assessment.unit_id, student.get_key(), 'contents')
+                    assessment.unit_id, student.get_key(), 'contents',
+                    instance_id='this-tag-id')
 
         response = self.get('assessment?name=%s' % assessment.unit_id)
         dom = self.parse_html_string(response.body)
