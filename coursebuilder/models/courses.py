@@ -3086,15 +3086,24 @@ class Course(object):
 
     def add_unit(self):
         """Adds new unit to a course."""
-        return self._model.add_unit('U', 'New Unit')
+        ret = self._model.add_unit('U', 'New Unit')
+        if self.get_course_availability() != COURSE_AVAILABILITY_PRIVATE:
+            ret.availability = AVAILABILITY_UNAVAILABLE
+        return ret
 
     def add_link(self):
         """Adds new link (other) to a course."""
-        return self._model.add_unit('O', 'New Link')
+        ret = self._model.add_unit('O', 'New Link')
+        if self.get_course_availability() != COURSE_AVAILABILITY_PRIVATE:
+            ret.availability = AVAILABILITY_UNAVAILABLE
+        return ret
 
     def add_assessment(self):
         """Adds new assessment to a course."""
-        return self._model.add_unit('A', 'New Assessment')
+        ret = self._model.add_unit('A', 'New Assessment')
+        if self.get_course_availability() != COURSE_AVAILABILITY_PRIVATE:
+            ret.availability = AVAILABILITY_UNAVAILABLE
+        return ret
 
     def add_lesson(self, unit):
         return self._model.add_lesson(unit, 'New Lesson')
@@ -3107,6 +3116,8 @@ class Course(object):
             verify.UNIT_TYPE_CUSTOM, 'New %s' % cu.name,
             custom_unit_type=unit_type)
         cu.add_unit(self, unit)
+        if self.get_course_availability() != COURSE_AVAILABILITY_PRIVATE:
+            unit.availability = AVAILABILITY_UNAVAILABLE
         return unit
 
     def update_unit(self, unit):

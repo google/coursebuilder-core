@@ -784,26 +784,35 @@ class AvailabilityTests(actions.TestBase):
         self.course = courses.Course(None, self.app_context)
         self.unit_one = self.course.add_unit()
         self.unit_one.title = 'Unit One'
+        self.unit_one.availability = courses.AVAILABILITY_COURSE
         self.link_one = self.course.add_link()
         self.link_one.title = 'Link One'
         self.link_one.href = 'http://www.foo.com'
+        self.link_one.availability = courses.AVAILABILITY_COURSE
         self.assessment_one = self.course.add_assessment()
         self.assessment_one.title = 'Assessment One'
+        self.assessment_one.availability = courses.AVAILABILITY_COURSE
 
         self.unit_two = self.course.add_unit()
         self.unit_two.title = 'Unit Two'
+        self.unit_two.availability = courses.AVAILABILITY_COURSE
         self.link_two = self.course.add_link()
         self.link_two.title = 'Link Two'
         self.link_two.href = 'http://www.bar.com'
+        self.link_two.availability = courses.AVAILABILITY_COURSE
         self.assessment_two = self.course.add_assessment()
         self.assessment_two.title = 'Assessment Two'
+        self.assessment_two.availability = courses.AVAILABILITY_COURSE
 
         self.unit_three = self.course.add_unit()
         self.unit_three.title = 'Unit Three'
+        self.unit_three.availability = courses.AVAILABILITY_COURSE
         self.link_three = self.course.add_link()
         self.link_three.title = 'Link Three'
+        self.link_three.availability = courses.AVAILABILITY_COURSE
         self.assessment_three = self.course.add_assessment()
         self.assessment_three.title = 'Assessment Three'
+        self.assessment_three.availability = courses.AVAILABILITY_COURSE
 
         self.lesson_one = self.course.add_lesson(self.unit_two)
         self.lesson_one.title = 'Lesson One'
@@ -814,6 +823,7 @@ class AvailabilityTests(actions.TestBase):
 
         self.pre_assessment = self.course.add_assessment()
         self.pre_assessment.title = 'Pre Assessment'
+        self.pre_assessment.availability = courses.AVAILABILITY_COURSE
         self.pre_assessment.workflow_yaml = (
             '{'
             '%s: %s, ' % (courses.GRADER_KEY, courses.HUMAN_GRADER) +
@@ -827,6 +837,7 @@ class AvailabilityTests(actions.TestBase):
 
         self.post_assessment = self.course.add_assessment()
         self.post_assessment.title = 'Post Assessment'
+        self.post_assessment.availability = courses.AVAILABILITY_COURSE
         self.mid_lesson = self.course.add_lesson(self.unit_three)
         self.mid_lesson.title = 'Mid Lesson'
         self.unit_three.pre_assessment = self.pre_assessment.unit_id
@@ -1954,6 +1965,31 @@ class AvailabilityTests(actions.TestBase):
         self.assertEquals('unit?unit=7&assessment=13',
                           get_last_location_href(response))
 
+    def test_default_unit_creation_availability(self):
+
+        self.course.set_course_availability(courses.COURSE_AVAILABILITY_PRIVATE)
+        self.assertEquals(
+            courses.AVAILABILITY_COURSE, self.course.add_unit().availability)
+        self.assertEquals(
+            courses.AVAILABILITY_COURSE, self.course.add_link().availability)
+        self.assertEquals(
+            courses.AVAILABILITY_COURSE,
+            self.course.add_assessment().availability)
+
+        for a in (courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
+                  courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL,
+                  courses.COURSE_AVAILABILITY_PUBLIC):
+            self.course.set_course_availability(a)
+            self.assertEquals(
+                courses.AVAILABILITY_UNAVAILABLE,
+                self.course.add_unit().availability)
+            self.assertEquals(
+                courses.AVAILABILITY_UNAVAILABLE,
+                self.course.add_link().availability)
+            self.assertEquals(
+                courses.AVAILABILITY_UNAVAILABLE,
+                self.course.add_assessment().availability)
+
 
 class CourseSettingsRESTHandlerTests(actions.TestBase):
     _ADMIN_EMAIL = 'admin@foo.com'
@@ -2025,4 +2061,3 @@ class CourseSettingsRESTHandlerTests(actions.TestBase):
         self._put_extra_locales('el', ['fr'])
         self.assertEquals(
             {'el', 'fr'}, self._get_locale_label_titles())
-

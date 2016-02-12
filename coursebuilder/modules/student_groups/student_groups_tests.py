@@ -773,6 +773,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         # Add a unit and a lesson.
         course = courses.Course(None, app_context=self.app_context)
         unit = course.add_unit()
+        unit.availability = courses.AVAILABILITY_COURSE
         lesson = course.add_lesson(unit)
         course.save()
 
@@ -882,6 +883,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         # Add a unit and a lesson.
         course = courses.Course(None, app_context=self.app_context)
         unit = course.add_unit()
+        unit.availability = courses.AVAILABILITY_COURSE
         lesson = course.add_lesson(unit)
         course.save()
 
@@ -983,8 +985,10 @@ class AvailabilityTests(StudentGroupsTestBase):
         super(AvailabilityTests, self).setUp()
         self.course = courses.Course(None, app_context=self.app_context)
         self.unit_one = self.course.add_unit()
+        self.unit_one.availability = courses.AVAILABILITY_COURSE
         self.lesson_one = self.course.add_lesson(self.unit_one)
         self.unit_two = self.course.add_unit()
+        self.unit_two.availability = courses.AVAILABILITY_COURSE
         self.lesson_two = self.course.add_lesson(self.unit_two)
         self.course.save()
 
