@@ -183,19 +183,43 @@ class EditorPageObject(PageObject):
             'is_draft')).select_by_visible_text(status)
         return self
 
+    def _wait_until_button_enabled(self, clickable):
+        def button_enabled(driver):
+            return ('inputEx-Button-disabled' not in
+                    clickable.get_attribute('class'))
+        self.wait().until(button_enabled)
+
+    def wait_until_button_enabled(self, link_text):
+        button = self.find_element_by_link_text(link_text)
+        self._wait_until_button_enabled(button)
+        return self
+
     def click_save(self, link_text='Save', status_message='Saved',
                    post_wait=False):
-        clickable = self.find_element_by_link_text(link_text)
-        clickable.click()
+        save_button = self.find_element_by_link_text(link_text)
+        self._wait_until_button_enabled(save_button)
+        save_button.click()
         self.expect_status_message_to_be(status_message)
         if post_wait:
-            self.wait_for_page_load_after(clickable.click)
+            self.wait_for_page_load_after(save_button.click)
         else:
-            clickable.click()
+            save_button.click()
         return self
+
+    def click_delete(self):
+        delete_button = self.find_element_by_link_text('Delete')
+        self._wait_until_button_enabled(delete_button)
+        delete_button.click()
+        return self
+
+    def confirm_delete(self):
+        self.wait().until(ec.alert_is_present())
+        self._tester.driver.switch_to_alert().accept()
+        return AssetsPage(self._tester)
 
     def _close_and_return_to(self, continue_page):
         close_button = self.find_element_by_link_text('Close')
+        self._wait_until_button_enabled(close_button)
         try:  # Add course editor auto-closes on "Add Course".
             close_button.click()
         except exceptions.StaleElementReferenceException:
@@ -1066,10 +1090,6 @@ class LabelEditorPage(EditorPageObject):
                                  description_el.get_attribute('value'))
         return self
 
-    def click_delete(self):
-        self.find_element_by_link_text('Delete').click()
-        return self
-
     def confirm_delete(self):
         self.switch_to_alert().accept()
         return AssetsPage(self._tester)
@@ -1080,15 +1100,7 @@ class LabelEditorPage(EditorPageObject):
 
 class ImageEditorPage(EditorPageObject):
     """Page object for the dashboard's view/delete image page."""
-
-    def click_delete(self):
-        self.find_element_by_link_text('Delete').click()
-        return self
-
-    def confirm_delete(self):
-        self.wait().until(ec.alert_is_present())
-        self._tester.driver.switch_to_alert().accept()
-        return AssetsPage(self._tester)
+    pass
 
 
 class Import(DashboardEditor):

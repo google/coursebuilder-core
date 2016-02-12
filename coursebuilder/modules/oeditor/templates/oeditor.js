@@ -384,6 +384,7 @@ function startValueLoad(env) {
   if (!isFramed()) {
     // Kick of early asynchronous loading of the editor content while the rest
     // of the JS is initializing.
+    disableAllControlButtons(env.form);
     env.get_url_promise = $.ajax({
       type: 'GET',
       url: env.get_url,
@@ -1054,10 +1055,12 @@ TopLevelEditorControls.prototype = {
     cb_global.form.on('updated', function(event) {
       tooltipifyHelpText();
     });
+    enableAllControlButtons(this._env.form);
   },
 
   _onPopulateFormFailure: function () {
     cbShowMsg("Server did not respond. Please reload the page to try again.");
+    enableAllControlButtons(this._env.form);
   }
 };
 

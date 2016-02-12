@@ -68,6 +68,8 @@ class AvailabilityTests(integration.TestBase):
             True
         ).select_student_group(
             'Student Group: My New Group'
+        ).wait_until_button_enabled(
+            'Save'
         ).set_whitelisted_students(
             ['group_student@foo.com'],
             'members'
@@ -75,6 +77,8 @@ class AvailabilityTests(integration.TestBase):
             status_message='Saved'
         ).select_student_group(
             'Course'
+        ).wait_until_button_enabled(
+            'Save'
         ).set_whitelisted_students(
             ['course_student@foo.com'],
             'whitelist'
@@ -93,6 +97,8 @@ class AvailabilityTests(integration.TestBase):
             'whitelist'
         ).select_student_group(
             'Student Group: My New Group'
+        ).wait_until_button_enabled(
+            'Save'
         ).verify_whitelisted_students(
             'group_student@foo.com',
             'members'

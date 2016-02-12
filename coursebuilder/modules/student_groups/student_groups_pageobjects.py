@@ -71,6 +71,12 @@ class CourseAvailabilityPage(pageobjects.EditorPageObject):
 
     def verify_whitelisted_students(self, expected_contents,
                                     field_name='whitelist'):
+        def textarea_not_blank(driver):
+            textarea = self.find_element_by_css_selector(
+                'textarea[name="%s"]' % field_name)
+            return textarea.get_attribute('value')
+
+        self.wait().until(textarea_not_blank)
         textarea = self.find_element_by_css_selector(
             'textarea[name="%s"]' % field_name)
         self._tester.assertEquals(expected_contents,

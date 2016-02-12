@@ -56,7 +56,6 @@ $(function() {
     // that particular group.  (Don't want to have to load all groups up
     // front when this form loads)
     $(picker.el).on('change', function(event){
-      console.log("See change", event);
       cb_global.get_url = cb_global.original_get_url + event.target.value;
       startValueLoad(cb_global);
       setVisibility(event.target.value);
