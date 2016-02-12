@@ -210,6 +210,7 @@ class IsTranslatableRestHandlerTests(actions.TestBase):
 
 
 class TranslationContentsTests(actions.TestBase):
+    MAX_ENTRIES_PER_FILE = 100
 
     def test_file_selection_all_in_one(self):
         contents = i18n_dashboard.TranslationContents(
@@ -221,12 +222,12 @@ class TranslationContentsTests(actions.TestBase):
         resource_key_lesson_2 = i18n_dashboard.ResourceBundleKey(
             resources_display.ResourceLesson.TYPE, '345', 'de')
 
-        file_question = contents.get_file(resource_key_question)
-        file_lesson_1 = contents.get_file(resource_key_lesson_1)
-        file_lesson_2 = contents.get_file(resource_key_lesson_2)
+        messge_question = contents.get_message(resource_key_question, 'z')
+        messge_lesson_1 = contents.get_message(resource_key_lesson_1, 'z')
+        messge_lesson_2 = contents.get_message(resource_key_lesson_2, 'z')
 
-        self.assertEqual(file_question, file_lesson_1)
-        self.assertEqual(file_question, file_lesson_2)
+        self.assertEqual(messge_question, messge_lesson_1)
+        self.assertEqual(messge_question, messge_lesson_2)
 
     def test_file_selection_separate_files(self):
         contents = i18n_dashboard.TranslationContents(
@@ -238,24 +239,20 @@ class TranslationContentsTests(actions.TestBase):
         resource_key_lesson_2 = i18n_dashboard.ResourceBundleKey(
             resources_display.ResourceLesson.TYPE, '345', 'de')
 
-        file_question = contents.get_file(resource_key_question)
-        file_lesson_1 = contents.get_file(resource_key_lesson_1)
-        file_lesson_2 = contents.get_file(resource_key_lesson_2)
+        messge_question = contents.get_message(resource_key_question, 'z')
+        messge_lesson_1 = contents.get_message(resource_key_lesson_1, 'z')
+        messge_lesson_2 = contents.get_message(resource_key_lesson_2, 'z')
 
-        self.assertNotEqual(file_question, file_lesson_1)
-        self.assertNotEqual(file_question, file_lesson_2)
-        self.assertNotEqual(file_lesson_1, file_lesson_2)
-
-        self.assertNotEqual(file_question.file_name, file_lesson_1.file_name)
-        self.assertNotEqual(file_question.file_name, file_lesson_2.file_name)
-        self.assertNotEqual(file_lesson_1.file_name, file_lesson_2.file_name)
+        self.assertNotEqual(messge_question, messge_lesson_1)
+        self.assertNotEqual(messge_question, messge_lesson_2)
+        self.assertNotEqual(messge_lesson_1, messge_lesson_2)
 
     def _verify_encoding(self, original):
         encoded = (
-            i18n_dashboard.TranslationMessage.encode_angle_brackets(
+            i18n_dashboard.TranslationMessage._encode_angle_brackets(
                 original))
         decoded = (
-            i18n_dashboard.TranslationMessage.decode_angle_brackets(
+            i18n_dashboard.TranslationMessage._decode_angle_brackets(
                 encoded))
         self.assertEquals(original, decoded)
         if any([c in original for c in '[]<>\\']):
@@ -290,6 +287,61 @@ class TranslationContentsTests(actions.TestBase):
         self._verify_encoding('<<<not necessarily> balanced <>><<angles<')
         self._verify_encoding('mixed <b>[brackets] and </b>braces')
         self._verify_encoding('[[<\\<[]<><[<\\[>]\\\\[>>>\\>>>>>>>\\')
+
+    def _add_entries_to_file(self, translation_contents):
+        resource_bundle_keys = (
+            i18n_dashboard.ResourceBundleKey('unit', 1, 'de'),
+            i18n_dashboard.ResourceBundleKey('unit', 2, 'de'))
+        for resource_bundle_key in resource_bundle_keys:
+            for message_key in xrange(self.MAX_ENTRIES_PER_FILE + 1):
+                translation_contents.get_message(
+                    resource_bundle_key, 'foo_%4.4d' % message_key)
+
+    def _get_file_data(self, translation_contents):
+        return sorted([(f.file_name, f._get_num_translations())
+                       for f in translation_contents.iterfiles()])
+
+    def test_max_entries_per_file_not_separated_by_type(self):
+        translation_contents = i18n_dashboard.TranslationContents(
+            separate_files_by_type=False,
+            max_entries_per_file=self.MAX_ENTRIES_PER_FILE)
+        self._add_entries_to_file(translation_contents)
+        self.assertEquals(
+            [('messages_001.po', self.MAX_ENTRIES_PER_FILE),
+             ('messages_002.po', 1)],
+            self._get_file_data(translation_contents))
+
+    def test_max_entries_per_file_separated_by_type(self):
+        translation_contents = i18n_dashboard.TranslationContents(
+            separate_files_by_type=True,
+            max_entries_per_file=self.MAX_ENTRIES_PER_FILE)
+        self._add_entries_to_file(translation_contents)
+        self.assertEquals(
+            [('unit_1_001.po', self.MAX_ENTRIES_PER_FILE),
+             ('unit_1_002.po', 1),
+             ('unit_2_001.po', self.MAX_ENTRIES_PER_FILE),
+             ('unit_2_002.po', 1)],
+            self._get_file_data(translation_contents))
+
+    def test_no_max_entries_per_file_not_separated_by_type(self):
+        translation_contents = i18n_dashboard.TranslationContents(
+            separate_files_by_type=False,
+            max_entries_per_file=None)
+        self._add_entries_to_file(translation_contents)
+        self.assertEquals(
+            # Note: Not 202 files, but 101, because of same msg. keys!
+            [('messages.po', self.MAX_ENTRIES_PER_FILE + 1)],
+            self._get_file_data(translation_contents))
+
+    def test_no_max_entries_per_file_separated_by_type(self):
+        translation_contents = i18n_dashboard.TranslationContents(
+            separate_files_by_type=True,
+            max_entries_per_file=None)
+        self._add_entries_to_file(translation_contents)
+        self.assertEquals(
+            [('unit_1.po', self.MAX_ENTRIES_PER_FILE + 1),
+             ('unit_2.po', self.MAX_ENTRIES_PER_FILE + 1)],
+            self._get_file_data(translation_contents))
 
 
 class I18nDashboardHandlerTests(actions.TestBase):

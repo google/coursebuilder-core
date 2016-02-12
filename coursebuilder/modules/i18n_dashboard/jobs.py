@@ -213,6 +213,11 @@ class DownloadTranslations(_BaseJob):
             'export items for which the base-locale content is newer.  '
             'If --locales is not given, all locales are considered.  '
             'When using --export=all, you need not set --locales.')
+        self.parser.add_argument(
+            '--max_entries_per_file', type=int, default=None,
+            help='Set maximum number of entries per translation file.  '
+            'This is useful if your tranlation bureau has a maximum size '
+            'limit on input files.')
 
     def main(self):
         super(DownloadTranslations, self)._apply_parsed_args()
@@ -238,10 +243,12 @@ class DownloadTranslations(_BaseJob):
         if self.args.locale_agnostic:
             exporter = OverriddenLocaleTranslationContents(
                 separate_files_by_type=self.args.separate_files_by_type,
+                max_entries_per_file=self.args.max_entries_per_file,
                 locale_to_use=AGNOSTIC_EXPORT_LOCALE)
         else:
             exporter = i18n_dashboard.TranslationContents(
-                self.args.separate_files_by_type)
+                separate_files_by_type=self.args.separate_files_by_type,
+                max_entries_per_file=self.args.max_entries_per_file)
 
         cfg = self._build_translation_config(self.args, app_context)
         i18n_dashboard.TranslationDownloadRestHandler.build_translations(
@@ -368,14 +375,21 @@ class UploadTranslations(_BaseJob):
 class OverriddenLocaleTranslationContents(i18n_dashboard.TranslationContents):
 
     def __init__(self, separate_files_by_type=False,
+                 max_entries_per_file=None,
                  locale_to_use=AGNOSTIC_EXPORT_LOCALE):
         super(OverriddenLocaleTranslationContents, self).__init__(
-            separate_files_by_type)
+            separate_files_by_type=separate_files_by_type,
+            max_entries_per_file=max_entries_per_file)
         self._locale_to_use = locale_to_use
 
-    def get_file(self, resource_bundle_key):
+    def get_message(self, resource_bundle_key, message_key):
         resource_key = resource_bundle_key.resource_key
-        file_name = self._choose_file_name(resource_key)
+        resource_bundle_key = i18n_dashboard.ResourceBundleKey(
+            resource_key.type, resource_key.key, self._locale_to_use)
+        return super(OverriddenLocaleTranslationContents, self).get_message(
+            resource_bundle_key, message_key)
+
+    def _get_file(self, resource_bundle_key, file_name):
         file_key = (self._locale_to_use, file_name)
         if file_key not in self._files:
             self._files[file_key] = OverriddenLocaleTranslationFile(
@@ -390,7 +404,7 @@ class OverriddenLocaleTranslationFile(i18n_dashboard.TranslationFile):
             locale, file_name)
         self._locale_to_use = locale
 
-    def get_message(self, key):
+    def _get_message(self, key):
         if key not in self._translations:
             self._translations[key] = OverriddenLocaleTranslationMessage(
                 self._locale_to_use)
@@ -411,7 +425,8 @@ class OverriddenLocaleTranslationMessage(i18n_dashboard.TranslationMessage):
             fixed_location_bundle_key, loc_name, loc_type)
 
     def add_translation(self, translation):
-        # Location-agnostic exports never send existing translations.
+        # Location-agnostic exports never send existing translations, since
+        # their purpose is to combine work from multiple languages.
         if self._locale_to_use == AGNOSTIC_EXPORT_LOCALE:
             translation = ''
         super(OverriddenLocaleTranslationMessage, self).add_translation(

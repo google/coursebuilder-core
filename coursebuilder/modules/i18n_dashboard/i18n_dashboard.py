@@ -111,9 +111,9 @@ class ResourceBundleKey(object):
     """Manages a key for a resource bundle."""
 
     def __init__(self, type_str, key, locale):
-        self._locale = locale
         self._type = type_str
         self._key = key
+        self._locale = locale
 
     def __str__(self):
         return '%s:%s:%s' % (self._type, self._key, self._locale)
@@ -499,13 +499,13 @@ class TranslationContents(object):
     # multiple, smaller files makes better sense than putting all translation
     # items into one big file.
     #
-    # The underlying Babel libraries will automagically merge any phrases
-    # whose original text is identical.  This is not ideal, in that if there
-    # is a short phrase that might be translated differently depending on
-    # context, we need to either: a) group together enough text into a single
-    # translatable item so that the translation is unambiguous, or b) separate
-    # items into different files so that otherwise-ambiguous items are
-    # separated, but adjacent to surrounding context items such that
+    # The underlying Babel library will automagically merge any phrases whose
+    # text in the base language is identical.  This is not ideal, in that if
+    # there is a short phrase that might be translated differently depending
+    # on context, we need to either: a) group together enough text into a
+    # single translatable item so that the translation is unambiguous, or b)
+    # separate items into different files so that otherwise-ambiguous items
+    # are separated, but adjacent to surrounding context items such that
     # translators get clues about how to deal with short phrases.
     #
     # We have an existing case where an external translation bureau cannot
@@ -518,16 +518,84 @@ class TranslationContents(object):
     #
     SINGLE_FILE_NAME = 'messages.po'
 
-    def __init__(self, separate_files_by_type=False):
+    def __init__(self, separate_files_by_type=False, max_entries_per_file=None):
+        """Constructor.
+
+        Args:
+          separate_files_by_type: Only ever set to True when exporting; this
+              is not meaningful/sensible when reading an existing .po file.
+              When set to True, a different file name will be selected
+              depending on the type of object.  E.g., all course settings will
+              be sent to one .po file, all questions to another, and so on.
+              For things that may have fairly large contents (Units, Lessons,
+              Assessments) a separate .po file is created for each individual
+              element.
+
+              NOTE: Setting this argument may add redundant elements for the
+              same phrase if it appears in multiple different places.  When
+              generating a single .po file, all chunks with the same text in
+              the base language are merged.  When writing to separate files,
+              this still happens, but merges only happen within individual
+              files.  This is a benefit for preserving elements in natural
+              reading order, but does mean some duplication of content, and
+              thus (possibly) duplication of translation effort.
+
+          max_entries_per_file: Only ever set to a positive integer when
+              exporting; this is not meaningful/sensible when reading an
+              existing .po file.  When set to a positive integer, files will
+              contain at most this many translation chunks.  This acts in
+              combination with the separate_files_by_type flag; if both are
+              set, then indvidual sub-files will be split.  This is useful if
+              the translation bureau has an upper limit on file size or number
+              of translations per file.
+
+        """
         # _files contains a mapping from a 2-tuple of (locale, file_name) ->
         # TranslationFile.
         self._files = {}
         self._separate_files_by_type = separate_files_by_type
+        self._max_entries_per_file = max_entries_per_file
 
-    def get_file(self, resource_bundle_key):
+    def get_message(self, resource_bundle_key, message_key):
+        """Hide the separate .po files from clients that don't need to care.
+
+        Implicitly creates internal TranslationFile and TranslationMessage
+        instances as necessary.
+
+        Args:
+          resource_bundle_key: Key for course component being translated.
+          message_key: String in base language to be translated.
+        Returns:
+          TranslationMessage corresponding to keys.
+        """
+
+        file_name = self._choose_file_name(resource_bundle_key)
+        if self._max_entries_per_file:
+            base_name, extension = file_name.rsplit('.', 1)
+            part_num = 0
+            while True:
+                part_num += 1
+                possible_file_name = base_name + '_%3.3d.%s' % (
+                    part_num, extension)
+                file_key = (resource_bundle_key.locale, possible_file_name)
+
+                # pylint: disable=protected-access
+                if (file_key in self._files and
+                    self._files[file_key]._has_message(message_key)):
+                    return self._files[file_key]._get_message(message_key)
+
+                if (file_key not in self._files or
+                    self._files[file_key]._get_num_translations() <
+                    self._max_entries_per_file):
+
+                    file_name = possible_file_name
+                    break
+        # pylint: disable=protected-access
+        return self._get_file(
+            resource_bundle_key, file_name)._get_message(message_key)
+
+    def _get_file(self, resource_bundle_key, file_name):
         locale = resource_bundle_key.locale
-        resource_key = resource_bundle_key.resource_key
-        file_name = self._choose_file_name(resource_key)
         file_key = (locale, file_name)
         if file_key not in self._files:
             self._files[file_key] = TranslationFile(locale, file_name)
@@ -539,7 +607,8 @@ class TranslationContents(object):
     def get_locales(self):
         return set([f.locale for f in self._files.itervalues()])
 
-    def _choose_file_name(self, resource_key):
+    def _choose_file_name(self, resource_bundle_key):
+        resource_key = resource_bundle_key.resource_key
         if not self._separate_files_by_type:
             file_name = self.SINGLE_FILE_NAME
         else:
@@ -556,6 +625,7 @@ class TranslationContents(object):
         return all([f.is_empty() for f in self._files.itervalues()])
 
     def write_zip_file(self, app_context, out_stream):
+
         """Write .zip output corresponding to this instance's contents.
 
         Args:
@@ -569,8 +639,9 @@ class TranslationContents(object):
             localedata.load(app_context.default_locale)
         zf = zipfile.ZipFile(out_stream, 'w', allowZip64=True)
         try:
+            # pylint: disable=protected-access
             for translation_file in self._files.itervalues():
-                cat = translation_file.build_babel_catalog(app_context)
+                cat = translation_file._build_babel_catalog(app_context)
                 filename = os.path.join(
                     'locale', translation_file.locale, 'LC_MESSAGES',
                     translation_file.file_name)
@@ -584,12 +655,14 @@ class TranslationContents(object):
             zf.close()
 
     def encode_angle_to_square_brackets(self):
+        # pylint: disable=protected-access
         for translation_file in self._files.itervalues():
-            translation_file.encode_angle_to_square_brackets()
+            translation_file._encode_angle_to_square_brackets()
 
     def decode_square_to_angle_brackets(self):
+        # pylint: disable=protected-access
         for translation_file in self._files.itervalues():
-            translation_file.decode_square_to_angle_brackets()
+            translation_file._decode_square_to_angle_brackets()
 
 
 class TranslationFile(object):
@@ -603,10 +676,16 @@ class TranslationFile(object):
         # fragment in course base language.
         self._translations = collections.OrderedDict()
 
-    def get_message(self, key):
+    def _has_message(self, key):
+        return key in self._translations
+
+    def _get_message(self, key):
         if key not in self._translations:
             self._translations[key] = TranslationMessage()
         return self._translations[key]
+
+    def _get_num_translations(self):
+        return len(self._translations)
 
     def itermessages(self):
         return self._translations.iteritems()
@@ -622,7 +701,7 @@ class TranslationFile(object):
     def is_empty(self):
         return not bool(self._translations)
 
-    def build_babel_catalog(self, app_context):
+    def _build_babel_catalog(self, app_context):
         """Generate a Babel Catalog instance corresponding to file's contents.
 
         Args:
@@ -660,20 +739,22 @@ class TranslationFile(object):
                 previous_id=message_entry.previous_id)
         return cat
 
-    def encode_angle_to_square_brackets(self):
+    def _encode_angle_to_square_brackets(self):
         for message, message_entry in list(self.itermessages()):
             if message in self._translations:
                 del self._translations[message]
-            encoded = TranslationMessage.encode_angle_brackets(message)
-            message_entry.encode_angle_to_square_brackets()
+            # pylint: disable=protected-access
+            encoded = TranslationMessage._encode_angle_brackets(message)
+            message_entry._encode_angle_to_square_brackets()
             self._translations[encoded] = message_entry
 
-    def decode_square_to_angle_brackets(self):
+    def _decode_square_to_angle_brackets(self):
         for message, message_entry in list(self.itermessages()):
             if message in self._translations:
                 del self._translations[message]
-            decoded = TranslationMessage.decode_angle_brackets(message)
-            message_entry.decode_square_to_angle_brackets()
+            # pylint: disable=protected-access
+            decoded = TranslationMessage._decode_angle_brackets(message)
+            message_entry._decode_square_to_angle_brackets()
             self._translations[decoded] = message_entry
 
 
@@ -751,25 +832,25 @@ class TranslationMessage(object):
     def previous_id(self):
         return self._previous_id
 
-    def encode_angle_to_square_brackets(self):
+    def _encode_angle_to_square_brackets(self):
         for translation in list(self._translations):
             self._translations.remove(translation)
-            self._translations.add(self.encode_angle_brackets(translation))
+            self._translations.add(self._encode_angle_brackets(translation))
 
-    def decode_square_to_angle_brackets(self):
+    def _decode_square_to_angle_brackets(self):
         for translation in list(self._translations):
             self._translations.remove(translation)
-            self._translations.add(self.decode_angle_brackets(translation))
+            self._translations.add(self._decode_angle_brackets(translation))
 
     @classmethod
-    def encode_angle_brackets(cls, content):
+    def _encode_angle_brackets(cls, content):
         content = re.sub(r'([\[\]\\])', r'\\\1', content)
         content = content.replace('<', '[')
         content = content.replace('>', ']')
         return content
 
     @classmethod
-    def decode_angle_brackets(cls, content):
+    def _decode_angle_brackets(cls, content):
         # This looks perhaps a bit over-done in comparison to regexes, but
         # in truth, regexes were tried and abandoned.  (A regex will need to
         # recognize a pattern:
@@ -1165,7 +1246,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
                     continue
 
                 # Set source string and location.
-                message_entry = exporter.get_file(key).get_message(message)
+                message_entry = exporter.get_message(key, message)
                 message_entry.add_location(key, section_name, section_type)
 
                 # Describe the location where the item is found.
@@ -1394,8 +1475,8 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                             locale, message_locale))
 
                 message_id = message.id
-                message_element = importer.get_file(
-                    resource_bundle_key).get_message(message_id)
+                message_element = importer.get_message(
+                    resource_bundle_key, message_id)
                 message_element.add_translation(message.string)
                 message_element.add_location(resource_bundle_key,
                                              loc_name, loc_type)
@@ -1449,8 +1530,6 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                     i18n_progress_dtos.append(i18n_progress_dto)
                     progress_by_key[i18n_progress_dto.id] = i18n_progress_dto
 
-                message_file = importer.get_file(key)
-
                 _, sections = (
                     TranslationConsoleRestHandler.build_sections_for_key(
                         key, course, resource_bundle_dto, transformer))
@@ -1460,7 +1539,8 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                         if not isinstance(source_value, basestring):
                             source_value = unicode(source_value)  # convert num
 
-                        message_element = message_file.get_message(source_value)
+                        message_element = importer.get_message(key,
+                                                               source_value)
                         if (not message_element or
                             not key_str in message_element.locations):
 
@@ -1491,6 +1571,10 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
         I18nProgressDAO.save_all(i18n_progress_dtos)
 
         if warn_not_used:
+            # Here, we are intentionally using the API on the importer that
+            # knows about specific files and their names.  This is because we
+            # want to issue a warning noting which specific file was
+            # problematic.
             for message_file in importer.iterfiles():
                 for message, message_element in message_file.itermessages():
                     if message_element.translations:

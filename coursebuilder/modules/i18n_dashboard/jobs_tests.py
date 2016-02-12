@@ -391,6 +391,47 @@ class RoundTripTest(_JobTestBase):
             ]
         self.assertEquals(expected, actual)
 
+    def test_max_entries(self):
+        app_context = self._import_course()
+        course = courses.Course(None, app_context=app_context)
+        unit = course.add_unit()
+        lesson = course.add_lesson(unit)
+        lesson.objectives = 'some text'
+        course.save()
+
+        self.run_translate_job()
+        self.run_download_job('--job_args=%s --max_entries_per_file=6' %
+                              self.zipfile_name)
+        paths = self.extract_zipfile()
+        actual = sorted([os.path.basename(path) for path in paths])
+        expected = [
+            'messages_001.po',
+            'messages_002.po',
+            ]
+        self.assertEquals(expected, actual)
+
+    def test_max_entries_and_separate_files(self):
+        app_context = self._import_course()
+        course = courses.Course(None, app_context=app_context)
+        unit = course.add_unit()
+        lesson = course.add_lesson(unit)
+        lesson.objectives = 'some text'
+        course.save()
+
+        self.run_translate_job()
+        self.run_download_job(
+            '--job_args=%s --separate_files_by_type --max_entries_per_file=2' %
+            self.zipfile_name)
+        paths = self.extract_zipfile()
+        actual = sorted([os.path.basename(path) for path in paths])
+        expected = [
+            'course_settings_001.po',
+            'course_settings_002.po',
+            'html_hook_001.po',
+            'lesson_2_001.po',
+            'unit_1_001.po']
+        self.assertEquals(expected, actual)
+
     def test_square_brackets(self):
         app_context = self._import_course()
         course = courses.Course(None, app_context=app_context)
