@@ -1276,7 +1276,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             path_prefix = url[0]
             handler_class = url[1]
             if path_prefix in urls_map and (
-                    handler_class != urls_map[path_prefix]):
+                    handler_class != urls_map[path_prefix] and
+                    not issubclass(handler_class, utils.RebindableMixin)):
                 raise Exception(
                     'Path prefix %s defined by %s is being redefined by %s' % (
                         path_prefix, urls_map[path_prefix], handler_class))

@@ -285,6 +285,23 @@ class WSGIRoutingTest(actions.TestBase):
                 ('/a', _Handler_A),
                 ('/a', _Handler_B)])
 
+    def test_routes_can_be_explicitly_rebound(self):
+        route = '/route4rebinding'
+
+        class _Handler_A(utils.ApplicationHandler):
+            pass
+
+        # Include required mixin to label the handler as rebindable
+        class _Handler_B(utils.ApplicationHandler, utils.RebindableMixin):
+            pass
+
+        sites.ApplicationRequestHandler.bind([
+            (route, _Handler_A),
+            (route, _Handler_B)])
+
+        self.assertEquals(
+            _Handler_B, sites.ApplicationRequestHandler.urls_map[route])
+
     def test_inactive_handler_is_skipped(self):
         response = self.testapp.get('/a', expect_errors=True)
         self.assertEqual(200, response.status_code)
@@ -422,25 +439,39 @@ class ExtensionSwitcherTests(actions.TestBase):
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace('ns_%s' % self._COURSE_NAME)
 
+    def tearDown(self):
+        courses.Course.ENVIRON_TEST_OVERRIDES = {}
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        if '/' + self._URI in sites.ApplicationRequestHandler.urls_map:
+            del sites.ApplicationRequestHandler.urls_map['/' + self._URI]
+        namespace_manager.set_namespace(self.old_namespace)
+        super(ExtensionSwitcherTests, self).tearDown()
+
+    def _bind(self):
         switcher = utils.ApplicationHandlerSwitcher(self._KEY)
         sites.ApplicationRequestHandler.urls_map['/' + self._URI] = (
             switcher.switch(self._Handler_1, self._Handler_2))
 
-    def tearDown(self):
-        courses.Course.ENVIRON_TEST_OVERRIDES = {}
-        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
-        del sites.ApplicationRequestHandler.urls_map['/' + self._URI]
-        namespace_manager.set_namespace(self.old_namespace)
-        super(ExtensionSwitcherTests, self).tearDown()
-
     def test_extension_enabled(self):
+        self._bind()
         courses.Course.ENVIRON_TEST_OVERRIDES = {'course': {self._KEY: False}}
         self.assertEquals('handler 1', self.get(self._URI).body)
 
     def test_extension_disabled(self):
+        self._bind()
         courses.Course.ENVIRON_TEST_OVERRIDES = {'course': {self._KEY: True}}
         self.assertEquals('handler 2', self.get(self._URI).body)
 
+    def test_extension_can_be_rebound(self):
+        switcher = utils.ApplicationHandlerSwitcher(self._KEY)
+        switching_handler = switcher.switch(self._Handler_1, self._Handler_2)
+
+        sites.ApplicationRequestHandler.bind([
+            ('/' + self._URI, self._Handler_1),
+            ('/' + self._URI, switching_handler)])
+        self.assertEquals(
+            switching_handler,
+            sites.ApplicationRequestHandler.urls_map['/' + self._URI])
 
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""

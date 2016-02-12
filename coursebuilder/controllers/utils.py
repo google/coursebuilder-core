@@ -19,7 +19,6 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 import collections
 import datetime
 import HTMLParser
-import functools
 import logging
 import os
 import re
@@ -111,6 +110,11 @@ EMAIL_PATTERN = re.compile(r'^(?P<name>[^@]+)@(?P<domain>.+)$')
 
 class RESTHandlerMixin(object):
     """A mixin class to mark any handler as REST handler."""
+    pass
+
+
+class RebindableMixin(object):
+    """A mixin class to mark handlers which may rebind to existing bindings."""
     pass
 
 
@@ -695,9 +699,14 @@ class ApplicationHandlerSwitcher(object):
         self._switch_on_course_schema_key = switch_on_course_schema_key
 
     def switch(self, orig_handler_factory, new_handler_factory):
-        return functools.partial(
-            _ExtensionSwitcher, self._switch_on_course_schema_key,
-            orig_handler_factory, new_handler_factory)
+        switch_on_course_schema_key = self._switch_on_course_schema_key
+        class _ExtensionSwitcherInClosure(_ExtensionSwitcher, RebindableMixin):
+            def __init__(self, *args, **kwargs):
+                # pylint: disable=bad-super-call
+                super(_ExtensionSwitcherInClosure, self).__init__(
+                    switch_on_course_schema_key,
+                    orig_handler_factory, new_handler_factory, *args, **kwargs)
+        return _ExtensionSwitcherInClosure
 
 
 class CourseHandler(ApplicationHandler):
