@@ -122,6 +122,7 @@ from webob import exc
 import appengine_config
 from common import caching
 from common import users
+from common import user_routes
 from common import utils as common_utils
 from models import messages
 from models import models
@@ -1074,11 +1075,11 @@ def _courses_config_validator(rules_text, errors, expect_failures=True):
 
 def validate_new_course_entry_attributes(name, title, admin_email, errors):
     """Validates new course attributes."""
-    if not name or len(name) < 3:
+    if not name or len(name) < 2:
         errors.append(
             'The URL component must be at least three characters long.')
 
-    if not re.match('[_a-z0-9]+$', name):
+    if not re.match('[_a-z0-9-]+$', name):
         errors.append(
             'The URL component should contain only '
             'lowercase letters, numbers, or underscores.')
@@ -1087,7 +1088,7 @@ def validate_new_course_entry_attributes(name, title, admin_email, errors):
         errors.append(
             'The URL component cannot be longer than 99 characters.')
 
-    if not title or len(title) < 3:
+    if not title or len(title) < 2:
         errors.append('The title is too short.')
 
     if not admin_email or '@' not in admin_email:
@@ -1371,7 +1372,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             return handler
 
         # Handle all dynamic handlers here.
-        handler_factory = self._get_handler_factory_for_path(path)
+        # pylint: disable=protected-access
+        handler_factory = (
+            user_routes._get_handler_for_path(context, path) or
+            self._get_handler_factory_for_path(path))
+        # pylint: enable=protected-access
         if handler_factory:
             handler = handler_factory()
             DYNAMIC_HANDLER_COUNT.inc()

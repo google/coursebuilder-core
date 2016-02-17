@@ -82,6 +82,7 @@ common/safe_dom.py
 common/schema_fields.py
 common/schema_transforms.py
 common/tags.py
+common/user_routes.py
 common/users.py
 common/utils.py
 common/xcontent.py
@@ -195,6 +196,7 @@ tests/functional/actions.py
 tests/functional/admin_settings.py
 tests/functional/assets_rest.py
 tests/functional/common_crypto.py
+tests/functional/common_user_routes.py
 tests/functional/common_users.py
 tests/functional/controllers_utils.py
 tests/functional/controllers_utils/templates/test_template.html

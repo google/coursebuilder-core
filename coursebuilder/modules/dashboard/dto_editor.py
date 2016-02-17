@@ -118,6 +118,10 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
     #     callback(question)
     PRE_DELETE_HOOKS = ()
 
+    # Enable other modules to validate incoming data and report errors.
+    #     callback(python_dict, key, version, errors)
+    VALIDATE_HOOKS = ()
+
     EXTRA_JS_FILES = ()
     SCHEMA_VERSIONS = ['1.0']
 
@@ -241,10 +245,13 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
             else:
                 python_dict = self.transform_after_editor_hook(python_dict)
                 self.validate(python_dict, key, version, errors)
+                common_utils.run_hooks(
+                    self.VALIDATE_HOOKS, python_dict, key, version, errors)
         except (TypeError, ValueError) as err:
             errors.append(str(err))
         if errors:
-            self.validation_error('\n'.join(errors), key=key)
+            self.validation_error('\n'.join(
+                error.replace('\n', ' ') for error in errors), key=key)
             return
 
         item = self.get_and_populate_dto(key, python_dict)
