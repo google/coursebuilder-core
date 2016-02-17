@@ -1463,7 +1463,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         if cls._needs_error_handler(request, response, status_code):
             error_handler = cls.GLOBAL_ERROR_HANDLER
             if not error_handler:
-                error_handler = cls._default_error_hander
+                error_handler = cls._default_error_handler
             error_handler(request, response, status_code)
 
     @classmethod
@@ -1473,11 +1473,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         if cls._needs_error_handler(request, response, status_code):
             error_handler = cls.NAMESPACED_ERROR_HANDLER
             if not error_handler:
-                error_handler = cls._default_namespaced_error_hander
+                error_handler = cls._default_namespaced_error_handler
             error_handler(app_context, request, response, status_code)
 
     @classmethod
-    def _default_error_hander(cls, request, response, status_code):
+    def _default_error_handler(cls, request, response, status_code):
         """Render default global error page."""
         response.status_code = status_code
         if status_code < 500:
@@ -1490,7 +1490,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             response.out.write(msg)
 
     @classmethod
-    def _default_namespaced_error_hander(
+    def _default_namespaced_error_handler(
         cls, app_context, request, response, status_code):
         """Render default namespaced error page."""
         response.status_code = status_code
@@ -1512,8 +1512,35 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         self.error(404)
         self.finalize_response(self.request, self.response, 404)
 
+    def _no_handler(self, path):
+        app_context = get_course_for_current_request()
+        if not app_context:
+            self._error_404(path)
+            return
+        if not Roles.any_whitelists_apply_to_context(app_context):
+            self._error_404(path)
+            return
+
+        # At this point, the requested path maps to a valid course, and the
+        # course (or site) is subject to a whitelist, and we do not have a
+        # user currently in session.  That user may be on the whitelist, so we
+        # owe them a redirect to the login page.
+        #
+        # For non-logged in users, or loged-in users not on the whitelist,
+        # we redirect them to the logout URL, which logs them out and redirects
+        # to the original course URL, which redirects back to the login URL.
+        # The net effect is that users are continually sent back to the login
+        # screen.  This has the nice benefit of allowing humans with multiple
+        # accounts to try different ones.
+        user = users.get_current_user()
+        if user:
+            location = users.create_logout_url(self.request.uri)
+        else:
+            location = users.create_login_url(self.request.uri)
+        super(ApplicationRequestHandler, self).redirect(location)
+
     def get(self, path):
-        self.invoke_http_verb('GET', path, self._error_404)
+        self.invoke_http_verb('GET', path, self._no_handler)
 
     def post(self, path):
         self.invoke_http_verb('POST', path, self._error_404)

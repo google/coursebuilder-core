@@ -95,6 +95,12 @@ class Roles(object):
             return True
 
     @classmethod
+    def any_whitelists_apply_to_context(cls, app_context):
+        global_whitelist = GCB_WHITELISTED_USERS.value.strip()
+        course_whitelist = app_context.whitelist.strip()
+        return bool(global_whitelist or course_whitelist)
+
+    @classmethod
     def _user_email_in(cls, user, text):
         email_list = [email.lower() for email in utils.text_to_list(
             text, utils.BACKWARD_COMPATIBLE_SPLITTER)]

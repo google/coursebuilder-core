@@ -90,18 +90,28 @@ class WhitelistTest(actions.TestBase):
         response = self.get('/whitelist_test/course')
         self.assertEquals(200, response.status_int)
 
-    def _expect_invisible(self):
+    def _expect_invisible(self, logged_in):
         response = self.get('/explorer')
         self.assertNotIn('Whitelist Test', response.body)
         response = self.get('/whitelist_test/course', expect_errors=True)
-        self.assertEquals(404, response.status_int)
+        self.assertEquals(302, response.status_int)
+        if logged_in:
+            self.assertEquals(
+                'https://www.google.com/accounts/Logout'
+                '?continue=http%3A//localhost/whitelist_test/course',
+                response.location)
+        else:
+            self.assertEquals(
+                'https://www.google.com/accounts/Login'
+                '?continue=http%3A//localhost/whitelist_test/course',
+                response.location)
 
     def test_no_whitelist_not_logged_in(self):
         self._expect_visible()
 
     def test_course_whitelist_not_logged_in(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
-        self._expect_invisible()
+        self._expect_invisible(logged_in=False)
 
     def test_course_whitelist_as_admin(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
@@ -111,7 +121,7 @@ class WhitelistTest(actions.TestBase):
     def test_course_whitelist_as_nonstudent(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
         actions.login(NONSTUDENT_EMAIL)
-        self._expect_invisible()
+        self._expect_invisible(logged_in=True)
 
     def test_course_whitelist_as_student(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
@@ -121,7 +131,7 @@ class WhitelistTest(actions.TestBase):
     def test_global_whitelist_not_logged_in(self):
         config.Registry.test_overrides[
             roles.GCB_WHITELISTED_USERS.name] = STUDENT_WHITELIST
-        self._expect_invisible()
+        self._expect_invisible(logged_in=False)
 
     def test_global_whitelist_as_admin(self):
         config.Registry.test_overrides[
@@ -133,7 +143,7 @@ class WhitelistTest(actions.TestBase):
         config.Registry.test_overrides[
             roles.GCB_WHITELISTED_USERS.name] = STUDENT_WHITELIST
         actions.login(NONSTUDENT_EMAIL)
-        self._expect_invisible()
+        self._expect_invisible(logged_in=True)
 
     def test_global_whitelist_as_student(self):
         config.Registry.test_overrides[
