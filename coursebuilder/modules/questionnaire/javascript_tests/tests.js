@@ -87,14 +87,39 @@ describe("questionnaire library", function () {
     }, "questionnaire");
   });
 
+  function expectDisabled(form, isDisabled) {
+    form.find('input,select,textarea').each(function() {
+      expect($(this).prop("disabled")).toBe(isDisabled);
+    });
+  }
+
   it("can disable the form", function() {
     setFormData(this.payload.form_data || {}, this.key);
-    this.form.find('input,select,textarea').each(function() {
-      expect($(this).prop("disabled")).toBe(false);
-    });
+    expectDisabled(this.form, false);
     disableForm(this.button, this.key);
-    this.form.find('input,select,textarea').each(function() {
-      expect($(this).prop("disabled")).toBe(true);
+    expectDisabled(this.form, true);
+  });
+
+  it("can require single submission", function() {
+    var payloadJson = readFixtures(
+        "modules/questionnaire/javascript_tests/form_data.json");
+    var data = ")]}'" + JSON.stringify({
+      status: 200,
+      payload: payloadJson
     });
+
+    // Empty form, multiple submissions allowed, expect enabled
+    onAjaxGetFormData("[]", this.key, this.button, false);
+    expectDisabled(this.form, false);
+    // Populated form, multiple submissions allowed, expect enabled
+    onAjaxGetFormData(data, this.key, this.button, false);
+    expectDisabled(this.form, false);
+
+    // Empty form, multiple submissions disllowed, expect enabled
+    onAjaxGetFormData("[]", this.key, this.button, true);
+    expectDisabled(this.form, false);
+    // Populated form, multiple submissions disallowed, expect disabled
+    onAjaxGetFormData(data, this.key, this.button, true);
+    expectDisabled(this.form, true);
   });
 });

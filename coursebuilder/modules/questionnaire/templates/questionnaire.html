@@ -6,7 +6,20 @@
       data-form-id="{{ form_id }}"
       data-xsrf-token="{{ xsrf_token }}"
       data-disabled="{% if disabled %}true{% else %}false{% endif %}"
-      data-registered="{% if registered %}true{% else %}false{% endif %}">
+      {% if single_submission %}
+        data-single-submission="true"
+        data-single-submission-message="{{
+          gettext("Only one submission of this form is allowed.") }}"
+      {% else %}
+        data-single-submission="false"
+      {% endif %}
+      {% if registered %}
+        data-registered="true"
+      {% else %}
+        data-registered="false"
+        data-registered-message="{{
+          gettext("Only registered students can submit answers.") }}"
+      {% endif %}>
     {% if button_label %}
       {{ button_label }}
     {% else %}

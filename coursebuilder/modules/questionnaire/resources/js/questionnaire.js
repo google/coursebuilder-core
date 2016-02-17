@@ -35,23 +35,28 @@ function onAjaxPostFormData(data, button) {
   }
 }
 
-function ajaxGetFormData(xsrfToken, key) {
+function ajaxGetFormData(xsrfToken, key, button, singleSubmission) {
   $.ajax({
     type: "GET",
     url: "rest/modules/questionnaire",
     data: {"xsrf_token": xsrfToken, "key": key},
     dataType: "text",
     success: function(data) {
-      onAjaxGetFormData(data, key);
+      onAjaxGetFormData(data, key, button, singleSubmission);
     }
   });
 }
 
-function onAjaxGetFormData(data, key) {
+function onAjaxGetFormData(data, key, button, singleSubmission) {
   var data = parseJson(data);
   if (data.status == 200) {
     var payload = JSON.parse(data.payload || "{}");
-    setFormData(payload.form_data || {}, key);
+    var form_data = payload.form_data || [];
+    setFormData(form_data, key);
+    if (form_data.length && singleSubmission) {
+      disableForm(button, key);
+      cbShowMsg(button.data('single-submission-message'));
+    }
   }
   else {
     cbShowMsg(data.message);
@@ -104,13 +109,14 @@ function init() {
     var xsrfToken = button.data("xsrf-token");
     var key = button.data("form-id");
     var disabled = button.data("disabled");
+    var singleSubmission = button.data("single-submission");
     var registered = button.data("registered");
 
     if (! registered) {
-      cbShowMsg("Only registered students can submit answers.");
+      cbShowMsg(button.data("registered-message"));
       disableForm(button, key);
     } else {
-      ajaxGetFormData(xsrfToken, key);
+      ajaxGetFormData(xsrfToken, key, button, singleSubmission);
       if (disabled) {
         disableForm(button, key);
       } else {

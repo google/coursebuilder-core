@@ -81,6 +81,7 @@ class QuestionnaireTag(tags.ContextAwareTag):
         form_id = node.attrib.get('form-id')
         button_label = node.attrib.get('button-label')
         disabled = (node.attrib.get('disabled') == 'true')
+        single_submission = (node.attrib.get('single-submission') == 'true')
         post_message = node.text
 
         user = context.handler.get_user()
@@ -93,6 +94,7 @@ class QuestionnaireTag(tags.ContextAwareTag):
             'form_id': form_id,
             'button_label': button_label,
             'disabled': disabled,
+            'single_submission': single_submission,
             'registered': registered,
             'post_message': post_message,
         }
@@ -119,6 +121,11 @@ class QuestionnaireTag(tags.ContextAwareTag):
                 description=services.help_urls.make_learn_more_message(
                     messages.RTE_QUESTIONNAIRE_DISABLE_FIELDS,
                     'questionnaire:questionnaire:disabled')))
+        reg.add_property(
+            schema_fields.SchemaField(
+                'single-submission', 'Single Submission', 'boolean',
+                optional=True,
+                description=messages.RTE_QUESTIONNAIRE_SINGLE_SUBMISSION))
         reg.add_property(
             schema_fields.SchemaField(
                 'post-message', 'Submission Text', 'text', optional=True,

@@ -28,6 +28,10 @@ RTE_QUESTIONNAIRE_FORM_ID = """
 This is the unique ID for this form.
 """
 
+RTE_QUESTIONNAIRE_SINGLE_SUBMISSION = """
+If checked, students may only submit their answers once.
+"""
+
 RTE_QUESTIONNAIRE_SUBMISSION_TEXT = """
 This text is displayed to the student after they submit their responses.
 """
