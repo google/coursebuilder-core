@@ -1077,7 +1077,7 @@ def validate_new_course_entry_attributes(name, title, admin_email, errors):
     """Validates new course attributes."""
     if not name or len(name) < 2:
         errors.append(
-            'The URL component must be at least three characters long.')
+            'The URL component must be at least two characters long.')
 
     if not re.match('[_a-z0-9-]+$', name):
         errors.append(

@@ -18,8 +18,8 @@ __author__ = [
     'nretallack@google.com (Nick Retallack)',
 ]
 
-import os.path
 import logging
+import re
 
 from models import courses
 
@@ -36,17 +36,21 @@ class URLError(Exception):
     pass
 
 
-class URLReservedError(Exception):
+class URLReservedError(URLError):
     pass
 
 
-class URLTakenError(Exception):
+class URLTakenError(URLError):
     def __init__(self, url, entry):
         super(URLTakenError, self).__init__()
         self.url = url
         self.handler_id = entry[HANDLER_ID_KEY]
         self.title = USER_ROUTABLE_HANDLERS[self.handler_id][HANDLER_TITLE_KEY]
         self.extra = entry[EXTRA_KEY]
+
+
+class URLInvalidError(URLError):
+    pass
 
 
 class UserCourseRouteManager(object):
@@ -63,12 +67,9 @@ class UserCourseRouteManager(object):
         _save_settings(settings)
 
     def add(self, url, handler_id, extra=None):
-        assert handler_id in USER_ROUTABLE_HANDLERS
-
+        """Add a route to the map.  Does not save automatically."""
         url = normalize_path(url)
-
-        if self.is_reserved_url(url):
-            raise URLReservedError
+        self._check_add_parameters(url, handler_id)
 
         if url in self.routes:
             raise URLTakenError(url, self.routes[url])
@@ -78,6 +79,14 @@ class UserCourseRouteManager(object):
             EXTRA_KEY: extra,
         }
 
+    def _check_add_parameters(self, url, handler_id):
+        """Check for errors that wouldn't change based on the state."""
+        assert handler_id in USER_ROUTABLE_HANDLERS
+        validate_path(url)
+
+        if self.is_reserved_url(url):
+            raise URLReservedError
+
     def is_reserved_url(self, url):
         from controllers import sites
         return url != '/' and url in sites.ApplicationRequestHandler.urls_map
@@ -86,11 +95,18 @@ class UserCourseRouteManager(object):
         del self.routes[normalize_path(url)]
 
 
+_PATH_REGEX = re.compile('^[/a-zA-Z0-9._-]*$')
+
+
+def validate_path(path):
+    if not _PATH_REGEX.match(path):
+        raise URLInvalidError
+
+
 def normalize_path(path):
     """Put a URL path into the format used by the data structure."""
-    path = os.path.normpath(path)
 
-    if path in ['', '/']:
+    if path in ('', '/'):
         return '/'
 
     path = path.rstrip('/')

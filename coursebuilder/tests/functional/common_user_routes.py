@@ -177,3 +177,30 @@ class TestUserRoutes(actions.TestBase):
                     .from_current_appcontext())
                 router.add('this/', 'other_handler')
                 router.save()
+
+    def test_normalize_path(self):
+        pairs = (
+            ('', '/'),
+            ('/', '/'),
+            ('foo', '/foo'),
+            ('foo/', '/foo'),
+            ('/foo/', '/foo'),
+            ('/foo/bar/baz', '/foo/bar/baz'),
+            ('/foo/../bar', '/foo/../bar'),
+            ('/foo/./bar/', '/foo/./bar'),
+        )
+
+        for before, after in pairs:
+            self.assertEqual(user_routes.normalize_path(before), after)
+
+    def test_validate_path(self):
+        # This path should be valid.
+        user_routes.validate_path('/foo-bar/Baz.qux')
+
+        # Fragment identifiers should never be valid
+        with self.assertRaises(user_routes.URLInvalidError):
+            user_routes.validate_path('/foo#bar')
+
+        # Querystrings are not allowed either
+        with self.assertRaises(user_routes.URLInvalidError):
+            user_routes.validate_path('/foo?bar')

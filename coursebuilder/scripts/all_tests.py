@@ -60,7 +60,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.common_users.AppEnginePassthroughUsersServiceTest': 10,
     'tests.functional.common_users.AuthInterceptorAndRequestHooksTest': 2,
     'tests.functional.common_users.PublicExceptionsAndClassesIdentityTests': 2,
-    'tests.functional.common_user_routes.TestUserRoutes': 7,
+    'tests.functional.common_user_routes.TestUserRoutes': 9,
     'tests.functional.controllers_utils.LocalizedGlobalHandlersTest': 4,
     'tests.functional.i18n.I18NCourseSettingsTests': 7,
     'tests.functional.i18n.I18NMultipleChoiceQuestionTests': 6,
