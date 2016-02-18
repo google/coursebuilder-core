@@ -54,6 +54,7 @@ class DriveTestBase(actions.TestBase):
             'PRE_LOAD_HOOKS',
             'PRE_SAVE_HOOKS',
             'PRE_DELETE_HOOKS',
+            'VALIDATE_HOOKS',
         )),
     )
 
