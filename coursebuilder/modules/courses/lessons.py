@@ -222,10 +222,11 @@ class UnitHandler(utils.BaseHandler):
             raise Exception('Lesson title provider already set by a module')
         cls._LESSON_TITLE_PROVIDER = lesson_title_provider
 
-    def _default_lesson_title_provider(
-            self, app_context, unused_unit, lesson, unused_student):
+    def _default_lesson_title_provider(self, app_context, unit, lesson,
+                                       unused_student):
         return safe_dom.Template(
             self.get_template('lesson_title.html'),
+            unit=unit,
             lesson=lesson,
             can_see_drafts=custom_modules.can_see_drafts(app_context),
             is_course_admin=roles.Roles.is_course_admin(app_context),
@@ -259,12 +260,12 @@ class UnitHandler(utils.BaseHandler):
             # available, redirect to the course overview page.
             active_elements = student_view.get_active_elements()
             if not active_elements:
-                self.redirect('/')
+                self.redirect('/course')
                 return
             unit = active_elements[0].course_element
             if (not unit.show_contents_on_one_page and
                 len(active_elements) < len(selected_ids)):
-                self.redirect('/')
+                self.redirect('/course')
                 return
             lesson = assessment = None
             if len(active_elements) > 1:
@@ -335,6 +336,8 @@ class UnitHandler(utils.BaseHandler):
         return jinja_utils.get_gcb_tags_filter(self)(text)
 
     def _show_all_contents(self, student, unit, student_view):
+        is_admin = roles.Roles.is_course_admin(self.app_context)
+
         course = self.get_course()
         self.init_template_values(self.app_context.get_environ())
 
@@ -344,11 +347,15 @@ class UnitHandler(utils.BaseHandler):
             display_content.append(self._apply_gcb_tags(unit.unit_header))
 
         if unit.pre_assessment:
-            display_content.append(self.get_assessment_display_content(
-                student, unit, course.find_unit_by_id(unit.pre_assessment),
-                student_view, {}))
+            pre_assessment = course.find_unit_by_id(unit.pre_assessment)
+            if course.is_unit_available(pre_assessment) or is_admin:
+                display_content.append(self.get_assessment_display_content(
+                    student, unit, course.find_unit_by_id(unit.pre_assessment),
+                    student_view, {}))
 
         for lesson in course.get_lessons(unit.unit_id):
+            if not course.is_lesson_available(unit, lesson) and not is_admin:
+                continue
             self.lesson_id = lesson.lesson_id
             self.lesson_is_scored = lesson.scored
             template_values = copy.copy(self.template_value)
@@ -360,9 +367,11 @@ class UnitHandler(utils.BaseHandler):
             del self.lesson_is_scored
 
         if unit.post_assessment:
-            display_content.append(self.get_assessment_display_content(
-                student, unit, course.find_unit_by_id(unit.post_assessment),
-                student_view, {}))
+            post_assessment = course.find_unit_by_id(unit.pre_assessment)
+            if course.is_unit_available(post_assessment) or is_admin:
+                display_content.append(self.get_assessment_display_content(
+                    student, unit, course.find_unit_by_id(unit.post_assessment),
+                    student_view, {}))
 
         if unit.unit_footer:
             display_content.append(self._apply_gcb_tags(unit.unit_footer))
@@ -550,7 +559,7 @@ class UnitHandler(utils.BaseHandler):
         title = None
         if self._LESSON_TITLE_PROVIDER:
             title = self._LESSON_TITLE_PROVIDER(
-                self.app_context, lesson, student)
+                self.app_context, unit, lesson, student)
         if title is None:
             title = self._default_lesson_title_provider(
                 self.app_context, unit, lesson, student)
@@ -559,6 +568,7 @@ class UnitHandler(utils.BaseHandler):
     def set_lesson_content(self, student, unit, lesson, student_view,
                            template_values):
         template_values['page_type'] = UNIT_PAGE_TYPE
+        template_values['unit'] = unit
         template_values['lesson'] = lesson
         template_values['lesson_id'] = lesson.lesson_id
         outline_element = student_view.find_element(

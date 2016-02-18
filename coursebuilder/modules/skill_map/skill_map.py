@@ -1876,7 +1876,7 @@ def not_in_this_lesson(handler, lesson, student, skills):
         if lesson.lesson_id not in [x.id for x in skill.lessons]]
 
 
-def lesson_title_provider(handler, app_context, lesson, student):
+def lesson_title_provider(handler, app_context, unit, lesson, student):
     if not isinstance(lesson, courses.Lesson13):
         return None
 

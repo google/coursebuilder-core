@@ -1,6 +1,6 @@
 tests:
   functional:
-    - modules.courses.courses_tests.AvailabilityTests = 29
+    - modules.courses.courses_tests.AvailabilityTests = 35
     - modules.courses.courses_tests.BackgroundImportTests = 7
     - modules.courses.courses_tests.CourseAccessPermissionsTests = 7
     - modules.courses.courses_tests.CourseSettingsRESTHandlerTests = 1

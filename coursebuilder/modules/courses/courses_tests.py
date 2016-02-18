@@ -1990,6 +1990,165 @@ class AvailabilityTests(actions.TestBase):
                 courses.AVAILABILITY_UNAVAILABLE,
                 self.course.add_assessment().availability)
 
+    def _hide_immaterial_items(self):
+        self.unit_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.link_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.assessment_three.availability = courses.AVAILABILITY_UNAVAILABLE
+
+    def test_all_on_one_page_syllabus(self):
+        self._hide_immaterial_items()
+        self.unit_two.show_contents_on_one_page = True
+        self.course.save()
+        actions.login(self.USER_EMAIL)
+
+        expected = [Element('Unit 2 - Unit Two', 'unit?unit=4', None, contents=[
+            Element('2.1 Lesson One', 'unit?unit=4#lesson_title_10', None, []),
+            Element('2.2 Lesson Two', 'unit?unit=4#lesson_title_11', None, []),
+            Element('2.3 Lesson Three', 'unit?unit=4#lesson_title_12', None, [])
+        ])]
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('course')
+        self.assertEquals(expected, self._parse_leftnav(response))
+
+    def test_all_on_one_page_leftnav(self):
+        self._hide_immaterial_items()
+        self.unit_two.show_contents_on_one_page = True
+        self.course.save()
+        actions.login(self.USER_EMAIL)
+
+        expected = [
+            Element('2.1 Lesson One', 'unit?unit=4#lesson_title_10', None, []),
+            Element('2.2 Lesson Two', 'unit?unit=4#lesson_title_11', None, []),
+            Element('2.3 Lesson Three', 'unit?unit=4#lesson_title_12', None, [])
+        ]
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('unit?unit=4')
+        self.assertEquals(expected, self._parse_leftnav(response))
+
+        soup = self.parse_html_string_to_soup(response.body)
+        self.assertIsNotNone(soup.select_one('#lesson_title_10'))
+        self.assertIsNotNone(soup.select_one('#lesson_title_11'))
+        self.assertIsNotNone(soup.select_one('#lesson_title_12'))
+
+    def test_all_on_one_page_link_specifying_lesson_succeeds(self):
+        self._hide_immaterial_items()
+        self.unit_two.show_contents_on_one_page = True
+        self.course.save()
+        actions.login(self.USER_EMAIL)
+
+        expected = [
+            Element('2.1 Lesson One', 'unit?unit=4#lesson_title_10', None, []),
+            Element('2.2 Lesson Two', 'unit?unit=4#lesson_title_11', None, []),
+            Element('2.3 Lesson Three', 'unit?unit=4#lesson_title_12', None, [])
+        ]
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('unit?unit=4&lesson=12')
+        self.assertEquals(expected, self._parse_leftnav(response))
+
+        soup = self.parse_html_string_to_soup(response.body)
+        self.assertIsNotNone(soup.select_one('#lesson_title_10'))
+        self.assertIsNotNone(soup.select_one('#lesson_title_11'))
+        self.assertIsNotNone(soup.select_one('#lesson_title_12'))
+
+    def test_all_on_one_page_some_lessons_unavailable(self):
+        self._hide_immaterial_items()
+        self.lesson_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.lesson_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_two.show_contents_on_one_page = True
+        self.course.save()
+        actions.login(self.USER_EMAIL)
+
+        expected = [
+            Element('2.2 Lesson Two', 'unit?unit=4#lesson_title_11', None, []),
+        ]
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('unit?unit=4')
+        actual = self._parse_leftnav(response)
+        self.assertEquals(expected, actual)
+
+        soup = self.parse_html_string_to_soup(response.body)
+        self.assertIsNone(soup.select_one('#lesson_title_10'))
+        self.assertIsNotNone(soup.select_one('#lesson_title_11'))
+        self.assertIsNone(soup.select_one('#lesson_title_12'))
+
+    def test_all_on_one_page_all_lessons_unavailable(self):
+        self._hide_immaterial_items()
+        self.lesson_one.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.lesson_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.lesson_three.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_two.show_contents_on_one_page = True
+        self.course.save()
+        actions.login(self.USER_EMAIL)
+
+        # Verify link to Unit just redirects to course when no lessons avail.
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('unit?unit=4')
+        self.assertEquals(response.status_int, 302)
+        self.assertEquals(response.location,
+                          'http://localhost/availability_tests/course')
+
+        # Verify link to specific lesson just redirects to course when
+        # no lessons avail.
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('unit?unit=4&leson=11')
+        self.assertEquals(response.status_int, 302)
+        self.assertEquals(response.location,
+                          'http://localhost/availability_tests/course')
+
+        # Verify syllabus shows no sub-lessons and unit is not linkable
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('course')
+        expected = [Element('Unit 2 - Unit Two', None, None, contents=[])]
+        actual = self._parse_leftnav(response)
+        self.assertEquals(expected, actual)
+
+    def test_all_on_one_page_lessons_available_but_unit_unavailable(self):
+        self._hide_immaterial_items()
+        self.lesson_one.availability = courses.AVAILABILITY_AVAILABLE
+        self.lesson_two.availability = courses.AVAILABILITY_AVAILABLE
+        self.lesson_three.availability = courses.AVAILABILITY_AVAILABLE
+        self.unit_two.availability = courses.AVAILABILITY_UNAVAILABLE
+        self.unit_two.show_contents_on_one_page = True
+        self.course.save()
+        actions.login(self.USER_EMAIL)
+
+        # Verify link to Unit just redirects to course when no lessons avail.
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('unit?unit=4')
+        self.assertEquals(response.status_int, 302)
+        self.assertEquals(response.location,
+                          'http://localhost/availability_tests/course')
+
+        # Verify link to specific lesson just redirects to course when
+        # no lessons avail.
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('unit?unit=4&leson=11')
+        self.assertEquals(response.status_int, 302)
+        self.assertEquals(response.location,
+                          'http://localhost/availability_tests/course')
+
+        # Verify syllabus shows no sub-lessons and unit is not linkable
+        with actions.OverriddenEnvironment({'course': {
+                'show_lessons_in_syllabus': True}}):
+            response = self.get('course')
+        expected = []
+        actual = self._parse_leftnav(response)
+        self.assertEquals(expected, actual)
+
 
 class CourseSettingsRESTHandlerTests(actions.TestBase):
     _ADMIN_EMAIL = 'admin@foo.com'

@@ -1096,7 +1096,7 @@ class InfrastructureTest(actions.TestBase):
                 'reg_form': {
                     'can_register': True},
                 }):
-            private_tag = 'id="lesson-title-private"'
+            private_tag = 'id="lesson-title-private-%s"'
 
             # Confirm private units are suppressed for user out of session
             response = self.get('course')
@@ -1123,7 +1123,8 @@ class InfrastructureTest(actions.TestBase):
             response = self.get('unit?unit=%s' % unit_2.unit_id)
             assert_equals(response.status_int, 200)
             assert_contains('Lesson 2.2', response.body)
-            assert_does_not_contain(private_tag, response.body)
+            assert_does_not_contain(
+                private_tag % lesson_2_2.lesson_id, response.body)
 
             # Accessing a unit directly specifying an unavailable lesson
             # redirects to /.
@@ -1139,7 +1140,8 @@ class InfrastructureTest(actions.TestBase):
             assert_contains('Lesson 2.2', response.body)
             assert_does_not_contain(
                 'This lesson is not available.', response.body)
-            assert_does_not_contain(private_tag, response.body)
+            assert_does_not_contain(
+                private_tag % lesson_2_2.lesson_id, response.body)
 
             # Accessing a public unit with no available content results
             # in redirect to main course page.
@@ -1151,7 +1153,8 @@ class InfrastructureTest(actions.TestBase):
             assert_contains('Lesson 4.1', response.body)
             assert_does_not_contain(
                 'This lesson is not available.', response.body)
-            assert_does_not_contain(private_tag, response.body)
+            assert_does_not_contain(
+                private_tag % lesson_4_1.lesson_id, response.body)
 
             # Accessing a public unit with no content (not unavailable,
             # but just no lessons in it at all) => redirct to /
@@ -1177,7 +1180,8 @@ class InfrastructureTest(actions.TestBase):
             assert_contains('Lesson 2.1', response.body)
             assert_does_not_contain(
                 'This lesson is not available.', response.body)
-            assert_contains(private_tag, response.body)
+            assert_contains(
+                private_tag % lesson_2_1.lesson_id, response.body)
 
             response = self.get('unit?unit=%s&lesson=%s' % (
                 unit_2.unit_id, lesson_2_2.lesson_id))
@@ -1185,21 +1189,24 @@ class InfrastructureTest(actions.TestBase):
             assert_contains('Lesson 2.2', response.body)
             assert_does_not_contain(
                 'This lesson is not available.', response.body)
-            assert_does_not_contain(private_tag, response.body)
+            assert_does_not_contain(
+                private_tag % lesson_2_2.lesson_id, response.body)
 
             response = self.get('unit?unit=%s' % unit_3.unit_id)
             assert_equals(response.status_int, 200)
             assert_contains('Lesson 3.1', response.body)
             assert_does_not_contain(
                 'This lesson is not available.', response.body)
-            assert_contains(private_tag, response.body)
+            assert_contains(
+                private_tag % lesson_3_1.lesson_id, response.body)
 
             response = self.get('unit?unit=%s' % unit_4.unit_id)
             assert_equals(response.status_int, 200)
             assert_contains('Lesson 4.1', response.body)
             assert_does_not_contain(
                 'This lesson is not available.', response.body)
-            assert_does_not_contain(private_tag, response.body)
+            assert_does_not_contain(
+                private_tag % lesson_4_1.lesson_id, response.body)
 
             response = self.get('unit?unit=%s' % unit_5.unit_id)
             assert_equals(response.status_int, 200)

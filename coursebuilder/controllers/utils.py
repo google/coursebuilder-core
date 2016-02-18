@@ -951,8 +951,7 @@ class CourseHandler(ApplicationHandler):
             'display_short_unit_title': (
                 lambda unit: resources_display.display_short_unit_title(
                     unit, self.app_context)),
-            'is_lesson_available': (
-                lambda lesson: course.is_lesson_available(None, lesson)),
+            'is_lesson_available': course.is_lesson_available,
             })
 
         return template_environ.get_template(template_file)

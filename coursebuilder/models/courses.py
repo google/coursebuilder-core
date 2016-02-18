@@ -3036,7 +3036,7 @@ class Course(object):
         models.LabelDAO.apply_course_track_labels_to_student_labels(
             self, student, lessons)
         common_utils.run_hooks(self.COURSE_ELEMENT_STUDENT_VIEW_HOOKS,
-                               self, student, units, lessons)
+                               self, units, lessons)
         return units, lessons
 
     def get_unit_track_labels(self, unit):
@@ -3703,7 +3703,14 @@ course:
         self.save_settings(settings)
 
     def is_unit_available(self, unit):
+        unit = copy.deepcopy(unit)
+        common_utils.run_hooks(self.COURSE_ELEMENT_STUDENT_VIEW_HOOKS,
+                               self, [unit], [])
         return self._model.is_unit_available(unit)
 
     def is_lesson_available(self, unit, lesson):
+        unit = copy.deepcopy(unit)
+        lesson = copy.deepcopy(lesson)
+        common_utils.run_hooks(self.COURSE_ELEMENT_STUDENT_VIEW_HOOKS,
+                               self, [unit], [lesson])
         return self._model.is_lesson_available(unit, lesson)

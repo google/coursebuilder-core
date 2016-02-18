@@ -1242,7 +1242,7 @@ class StudentSkillViewWidgetTests(BaseSkillMapTests):
         dom = self.parse_html_string(response.body)
         self.assertEqual(
             'Test Lesson',
-            dom.find('.//h1[@class="gcb-lesson-title"]').text.strip())
+            dom.find('.//h1[@class="gcb-lesson-title"]/span').text.strip())
         return dom.find('.//div[@class="skill-panel"]')
 
     def test_skills_widget_supressed_by_course_settings(self):

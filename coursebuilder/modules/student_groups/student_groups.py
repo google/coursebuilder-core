@@ -1114,7 +1114,7 @@ def modify_course_environment(app_context, env):
     env['reg_form']['whitelist'] = users.get_current_user().email()
 
 
-def modify_unit_and_lesson_attributes(course, student, units, lessons):
+def modify_unit_and_lesson_attributes(course, units, lessons):
     """Callback from Course to modify a student's view of units, lessons."""
 
     student_group = StudentGroupMembership.get_student_group_for_current_user(

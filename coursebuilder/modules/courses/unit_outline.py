@@ -194,6 +194,15 @@ class StudentCourseView(object):
                     return True
         return False
 
+    @classmethod
+    def _elements_on_one_page(cls, element):
+        return (element and
+                hasattr(element, 'course_element') and
+                hasattr(element.course_element,
+                        'show_contents_on_one_page') and
+                element.course_element.show_contents_on_one_page)
+
+
     def _identify_active_items(self, selected_ids):
         """Find best match to desired hierarchy of course items."""
         selected_ids = selected_ids or []
@@ -214,19 +223,25 @@ class StudentCourseView(object):
                 # links from when the unit wasn't on-one-page as well as an
                 # edge case for showing the confirmation page when submitting
                 # pre/post assessments in all-on-one-page units.
-                if (not hasattr(element, 'course_element') or
-                    not hasattr(element.course_element,
-                                'show_contents_on_one_page') or
-                    not element.course_element.show_contents_on_one_page):
-
+                if not self._elements_on_one_page(element):
                     del self._active_elements[:]
                     return
+
+            # If a containing layer shows all elements on one page, it's not
+            # sensible to believe any one of the sub-components on the page
+            # is specially selected, so don't mark anything below here as
+            # active, even if the incoming request wants to select sub-
+            # components below here.
+            if self._elements_on_one_page(element):
+                break
 
         # 'element' is now pointing at the last valid thing found (possibly
         # the entire course).  Walk down the hierarchy, selecting the first
         # user-visible item within each sub-list.  This selects the correct
         # sub-element when a URL is underspecified.
         while True:
+            if self._elements_on_one_page(element):
+                break
             for sub_element in element.contents:
                 if sub_element.link:
                     element = sub_element
@@ -317,51 +332,50 @@ class StudentCourseView(object):
             element.progress = self._tracker.get_unit_status(self._progress,
                                                              unit.unit_id)
 
-        if not unit.show_contents_on_one_page:
-            if unit.pre_assessment:
-                assessment = self._course.find_unit_by_id(unit.pre_assessment)
-                assessment_displayability = self._determine_displayability(
-                    assessment)
-                if assessment_displayability.is_name_visible:
-                    element.contents.extend(
-                        self._build_elements_for_assessment(
-                            assessment, assessment_displayability, unit))
-            for lesson in lessons:
-                if str(lesson.unit_id) != str(unit.unit_id):
-                    continue
-                lesson_displayability = self._determine_displayability(lesson)
-                if lesson_displayability.is_name_visible:
-                    element.contents.extend(
-                        self._build_elements_for_lesson(
-                            unit, lesson, lesson_displayability))
-                if lesson_displayability.is_content_available:
-                    self._accessible_lessons[str(unit.unit_id)].append(lesson)
-            if unit.post_assessment:
-                assessment = self._course.find_unit_by_id(unit.post_assessment)
-                assessment_displayability = self._determine_displayability(
-                    assessment)
-                if assessment_displayability.is_name_visible:
-                    element.contents.extend(
-                        self._build_elements_for_assessment(
-                            assessment, assessment_displayability, unit))
+        if unit.pre_assessment:
+            assessment = self._course.find_unit_by_id(unit.pre_assessment)
+            assessment_displayability = self._determine_displayability(
+                assessment)
+            if assessment_displayability.is_name_visible:
+                element.contents.extend(
+                    self._build_elements_for_assessment(
+                        assessment, assessment_displayability, unit))
+        for lesson in lessons:
+            if str(lesson.unit_id) != str(unit.unit_id):
+                continue
+            lesson_displayability = self._determine_displayability(lesson)
+            if lesson_displayability.is_name_visible:
+                element.contents.extend(
+                    self._build_elements_for_lesson(
+                        unit, lesson, lesson_displayability))
+            if lesson_displayability.is_content_available:
+                self._accessible_lessons[str(unit.unit_id)].append(lesson)
+        if unit.post_assessment:
+            assessment = self._course.find_unit_by_id(unit.post_assessment)
+            assessment_displayability = self._determine_displayability(
+                assessment)
+            if assessment_displayability.is_name_visible:
+                element.contents.extend(
+                    self._build_elements_for_assessment(
+                        assessment, assessment_displayability, unit))
 
-            # Stitch together previous/next links of sibling items, but only
-            # those which have links - private items don't get linked up.
-            prev_element = None
-            for sub_element in element.contents:
-                if sub_element.link:
-                    if prev_element:
-                        prev_element.next_link = sub_element.link
-                        sub_element.prev_link = prev_element.link
-                    prev_element = sub_element
+        # Stitch together previous/next links of sibling items, but only
+        # those which have links - private items don't get linked up.
+        prev_element = None
+        for sub_element in element.contents:
+            if sub_element.link:
+                if prev_element:
+                    prev_element.next_link = sub_element.link
+                    sub_element.prev_link = prev_element.link
+                prev_element = sub_element
 
-            # If no sub-item within the unit is linkable, then don't bother
-            # allowing the unit itself to be linkable, unless the user is
-            # the admin, in which case do allow availability so that linking
-            # to the item from the course overview does not unexpectedly
-            # bounce the user out to the course syllabus page.
-            if prev_element is None and not self._can_see_drafts:
-                element.link = None
+        # If no sub-item within the unit is linkable, then don't bother
+        # allowing the unit itself to be linkable, unless the user is
+        # the admin, in which case do allow availability so that linking
+        # to the item from the course overview does not unexpectedly
+        # bounce the user out to the course syllabus page.
+        if prev_element is None and not self._can_see_drafts:
+            element.link = None
         return [element]
 
     def _build_elements_for_link(self, unit, displayability):
@@ -464,7 +478,11 @@ class StudentCourseView(object):
         return [element]
 
     def _build_elements_for_lesson(self, unit, lesson, displayability):
-        link = 'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id)
+        if unit.show_contents_on_one_page:
+            link = 'unit?unit=%s#lesson_title_%s' % (
+                unit.unit_id, lesson.lesson_id)
+        else:
+            link = 'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id)
         element = self._build_element_common(lesson, displayability, link, unit)
         element.kind = 'lesson'
         if self._is_progress_recorded:

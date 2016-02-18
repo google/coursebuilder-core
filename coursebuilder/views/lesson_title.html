@@ -1,7 +1,7 @@
 <h1 class="gcb-lesson-title">
-  {{ lesson.title }}
-  {% if not is_lesson_available(lesson) and can_see_drafts %}
-    <span id="lesson-title-private">
+  <span id="lesson_title_{{ lesson.lesson_id }}">{{ lesson.title }}</span>
+  {% if not is_lesson_available(unit, lesson) and can_see_drafts %}
+    <span id="lesson-title-private-{{ lesson.lesson_id }}">
       (Private)
     </span>
   {% endif %}

@@ -1020,10 +1020,10 @@ class AvailabilityTests(StudentGroupsTestBase):
         self.assertEquals(response.status_int, 200)
         response = self.get(self.LESSON_ONE_URL)
         self.assertEquals(response.status_int, 302)
-        self.assertEquals(response.location, self.COURSE_URL)
+        self.assertEquals(response.location, self.SYLLABUS_URL)
         response = self.get(self.LESSON_TWO_URL)
         self.assertEquals(response.status_int, 302)
-        self.assertEquals(response.location, self.COURSE_URL)
+        self.assertEquals(response.location, self.SYLLABUS_URL)
 
         # Register, should now be able to access.
         actions.register(self, 'John Smith')
@@ -1052,7 +1052,7 @@ class AvailabilityTests(StudentGroupsTestBase):
         self.assertEquals(response.status_int, 200)
         response = self.get(self.LESSON_TWO_URL)
         self.assertEquals(response.status_int, 302)
-        self.assertEquals(response.location, self.COURSE_URL)
+        self.assertEquals(response.location, self.SYLLABUS_URL)
 
     def test_group_member_versus_nonmember(self):
         # Most-commonly expected use case.  Here, we're just verifying that
