@@ -1356,6 +1356,11 @@ def register_module():
             _add_student_group_to_map_result,
             _add_student_group_to_kwargs)
 
+        # Add our types to the set of DB tables for download/upload of course.
+        courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.add(StudentGroupEntity)
+        courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.add(
+            StudentGroupMembership)
+
     custom_module = custom_modules.Module(
         MODULE_NAME, 'Define and manage groups of students.',
         global_routes=[

@@ -5095,6 +5095,8 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
                              'LabelEntity.json',
                              'RoleEntity.json',
                              'ResourceBundleEntity.json',
+                             'StudentGroupMembership.json',
+                             'StudentGroupEntity.json',
                              '_SkillEntity.json'])
         expected_models = set(archive.listdir('models')) - course_models
         self.assertEqual(set(['QuestionEntity.json']), expected_models)
