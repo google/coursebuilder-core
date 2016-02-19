@@ -296,11 +296,28 @@ class StudentGroupMembership(models.BaseEntity):
         return ret
 
     @classmethod
-    @db.transactional(xg=True)
-    def _user_added_callback(cls, student_key):
-        """Separate, internal function providing transactionality for update."""
+    def user_added_callback(cls, student, profile):
+        """Move group membership definitive answer to Student on registration.
 
-        student = models.Student.get_by_key_name(student_key)
+        Called back *within transaction* from StudentProfileDAO when a student
+        is being added.  Adds up to one additional group leader to the
+        cross-group transaction.
+
+        Since we treat the Student object as definitive for
+        group membership when a Student object exists for a user, we need to
+        move the group membership transactionally with the creation of the
+        Student object.
+
+        Ideally, we'd prefer to register with StudentLifecycleObserver, but
+        that entails a non-zero delay (a few seconds typically, but there
+        are no hard guarantees).  During that time, the user won't be seen
+        with the correct group membership, which may lead to 404s if the
+        course is private to non-group students.
+
+        Args:
+          student: models.models.Student instance.  Guaranteed non-None.
+          profile: models.models.PersonalProfile instance.  Guaranteed non-None.
+        """
         binding = cls.get_by_key_name(student.email)
         if binding:
             group_id = binding.group_id
@@ -308,34 +325,17 @@ class StudentGroupMembership(models.BaseEntity):
         else:
             group_id = None
 
-        # Mark the student as being in the group, or having been
-        # determined to not be in any group.  As soon as there is a valid
-        # Student record, that record is then definitive, and
-        # StudentGroupMembership is advisory.  Therefore, this function is
-        # marked as being transactional.
+        # Mark the student as being in the group, or having been determined to
+        # not be in any group.  As soon as there is a valid Student record,
+        # that record is then definitive, and StudentGroupMembership is
+        # advisory.
         student.group_id = group_id
+
+        # Technically unnecessary; the _add_new_student_for_current_user_in_txn
+        # will also call student.put(), but belt-and-suspenders against future
+        # maintenance changes.  Also, not terribly expensive; happens only
+        # once per student.
         student.put()
-
-    @classmethod
-    def user_added_callback(cls, user_id, timestamp):
-        """Calback notifying us when a user registers as a student."""
-
-        student = models.Student.get_by_user_id(user_id)
-        if not student or student.is_transient:
-            # Vanishingly improbable, but possible: User has registered, but
-            # is not yet indexed, and this queue notification happens in a
-            # different instance.  Raise exception so queue will retry.
-            raise ValueError(
-                'Expected student %s to be registered when receiving '
-                'callback about student addition from the lifecycle queue.' %
-                user_id)
-
-        # For backward compatibility with 1.8 and previously, pick up student
-        # key in a separate DB round trip.  Post 1.8, Student is keyed by
-        # user ID, but 1.8 and earlier by email.  We can only do queries by
-        # key within @db.transactional, so fetch the key ahead of time.
-        student_key = student.key().name()
-        cls._user_added_callback(student_key)
 
     @classmethod
     def get_student_group_for_current_user(cls, app_context):
@@ -1313,13 +1313,11 @@ def register_module():
         student_aggregate.StudentAggregateComponentRegistry.register_component(
             AddToStudentAggregate)
 
-        # Register a callback with models.models.StudentLifecycleObserver
-        # to let us know when a student registers.  This allows us to convert
-        # an item previously stored by email to also use the user's ID
-        models.StudentLifecycleObserver.EVENT_CALLBACKS[
-            models.StudentLifecycleObserver.EVENT_ADD][
-                MODULE_NAME_AS_IDENTIFIER] = (
-                StudentGroupMembership.user_added_callback)
+        # Register a callback with models.models.StudentProfileDAO to let us
+        # know when a student registers.  This allows us to move the
+        # Definitive Truth about group membership to the Student record.
+        models.StudentProfileDAO.STUDENT_CREATION_HOOKS.append(
+            StudentGroupMembership.user_added_callback)
 
         # Register a callback with Course so that when anyone asks for the
         # student-facing list of units and lessons we can modify them as

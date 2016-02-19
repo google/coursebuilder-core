@@ -864,6 +864,11 @@ class StudentProfileDAO(object):
 
     TARGET_NAMESPACE = appengine_config.DEFAULT_NAMESPACE_NAME
 
+    # Only for use from modules with fields in Student or PersonalProfile.
+    # (As of 2016-02-19, this is only student_groups).  Other modules should
+    # register with StudentLifecycleObserver.
+    STUDENT_CREATION_HOOKS = []
+
     @classmethod
     def _memcache_key(cls, key):
         """Makes a memcache key from primary key."""
@@ -1079,11 +1084,12 @@ class StudentProfileDAO(object):
         # update student
         student.email = email
         student.additional_fields = additional_fields
+        common_utils.run_hooks(cls.STUDENT_CREATION_HOOKS, student, profile)
 
         # put both
         cls._put_profile(profile)
-        student.put()
 
+        student.put()
         StudentLifecycleObserver.enqueue(
             StudentLifecycleObserver.EVENT_ADD, user_id)
         return student

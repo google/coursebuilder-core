@@ -577,6 +577,30 @@ class UserIdentityTests(StudentGroupsTestBase):
             self.assertEquals(self.STUDENT_EMAIL, student.email)
             self.assertIsNone(student.group_id)
 
+    def test_in_group_user_signup_to_otherwise_private_course(self):
+        actions.login(self.ADMIN_EMAIL)
+        self._put_course_availability(courses.COURSE_AVAILABILITY_PRIVATE, [])
+        response = self._put_group(None, 'My New Group', 'this is my group')
+        group_id = transforms.loads(response['payload'])['key']
+        self._put_availability(
+            group_id, [self.STUDENT_EMAIL],
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        actions.login(self.STUDENT_EMAIL)
+        response = self.get('register')
+        register_form = actions.get_form_by_action(response, 'register')
+        register_form.set('form01', 'John Smith')
+        response = self.submit(register_form, response)
+        self.assertEquals(302, response.status_int)
+        self.assertEquals('http://localhost/student_groups_test/course'
+                          '#registration_confirmation', response.location)
+        response = self.get(response.location)
+
+        # Here, if user group membership does not move transactionally with
+        # Student creation, we'd expect a 404.  (b/27206132)
+        self.assertEquals(200, response.status_int)
+        self.assertIn('Thank you for registering for the course', response.body)
+
 
 class AvailabilityLifecycleTests(StudentGroupsTestBase):
 

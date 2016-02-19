@@ -114,6 +114,8 @@ class DataRemovalTests(DataRemovalTestBase):
 
             user = actions.login(self.STUDENT_EMAIL)
             actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
+            self.execute_all_deferred_tasks(
+                models.StudentLifecycleObserver.QUEUE_NAME)
 
             with common_utils.Namespace(self.NAMESPACE):
                 # After registration, we should have a student object, and no
@@ -152,6 +154,8 @@ class DataRemovalTests(DataRemovalTestBase):
     def test_immediate_removal_policy(self):
         user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
         user_id = None
 
         with common_utils.Namespace(self.NAMESPACE):

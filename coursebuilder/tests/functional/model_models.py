@@ -879,6 +879,8 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
         user_id = None
 
         actions.register(self, self.STUDENT_EMAIL)
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
         self.assertIsNotNone(self._user_id)
         user_id = self._user_id
         self.assertEquals(1, self._num_add_calls)

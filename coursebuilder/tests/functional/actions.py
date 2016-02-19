@@ -577,7 +577,6 @@ def register(browser, name, course=None):
     assert_equals(response.status_int, 302)
     assert_contains(
         'course#registration_confirmation', response.headers['location'])
-    browser.execute_all_deferred_tasks('user-lifecycle')
     check_profile(browser, name, course)
     return response
 

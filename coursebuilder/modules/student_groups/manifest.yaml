@@ -7,7 +7,7 @@ tests:
     - modules.student_groups.student_groups_tests.GroupLifecycleTests = 14
     - modules.student_groups.student_groups_tests.I18nTests = 3
     - modules.student_groups.student_groups_tests.OverrideTests = 5
-    - modules.student_groups.student_groups_tests.UserIdentityTests = 8
+    - modules.student_groups.student_groups_tests.UserIdentityTests = 9
     - modules.student_groups.student_groups_tests.UserIdLookupLifecycleTests = 3
   integration:
     - modules.student_groups.student_groups_integration_tests.AvailabilityTests = 1
