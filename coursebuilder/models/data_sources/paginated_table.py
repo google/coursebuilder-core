@@ -242,6 +242,10 @@ class _DbTableContext(base_types._AbstractContextManager):
               orderings: List of strings of form <field>.{asc|desc}
               cursors: List of opaque AppEngine DB cursor strings, one per page
               pii_secret: Session-specific encryption key for PII data.
+              send_uncensored_pii_data: Whether we want to send un-censored
+                PII data (if any) when pumping this object.  Unless you have
+                a separate, concrete, intentional UI gesture or command-line
+                flag from the user, this should never be set.
             """
             self.version = version
             self.chunk_size = chunk_size
@@ -254,7 +258,7 @@ class _DbTableContext(base_types._AbstractContextManager):
             # requests from the Data Pump, where the administrator has checked
             # a checkbox, un-blacklisted data is available.  Note that setting
             # this flag will also almost certainly change the reported schema.
-            self.send_uncensored_pii_data = False
+            self.send_uncensored_pii_data = send_uncensored_pii_data
 
     @classmethod
     def build_from_web_request(cls, params, default_chunk_size):

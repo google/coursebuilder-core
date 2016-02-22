@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,13 +19,22 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+import os
+import datetime
 import types
+import urllib
 
+from common import crypto
+from common import schema_transforms
+from controllers import sites
+from models import data_sources
 from models import models
 from models import student_work
+from models import transforms
 from modules.review import domain
 from modules.review import peer
 from modules.review import review as review_module
+from modules.upload import upload
 from tests.functional import actions
 from google.appengine.ext import db
 
@@ -1353,3 +1363,96 @@ class ManagerTest(actions.TestBase):
         self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step2.state)
         self.assertEqual(step2.review_key, updated_review.key())
         self.assertEqual('contents2', updated_review.contents)
+
+
+class SubmissionDataSourceTest(actions.TestBase):
+
+    ADMIN_EMAIL = 'admin@foo.com'
+    COURSE_NAME = 'test_course'
+    NAMESPACE = 'ns_%s' % COURSE_NAME
+    STUDENT_EMAIL = 'student@foo.com'
+
+    def setUp(self):
+        super(SubmissionDataSourceTest, self).setUp()
+
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Test Course')
+        self.base = '/' + self.COURSE_NAME
+
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, 'John Smith')
+        self.student_user_id = os.environ['USER_ID']
+
+        actions.login(self.ADMIN_EMAIL)
+
+    def tearDown(self):
+        sites.reset_courses()
+        super(SubmissionDataSourceTest, self).tearDown()
+
+    def _post_submission(self, unit_id, contents):
+        actions.login(self.STUDENT_EMAIL)
+        response = self.post(
+            upload._POST_ACTION_SUFFIX.lstrip('/'),
+            {'unit_id': unit_id,
+             'contents': contents,
+             'form_xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                 upload._XSRF_TOKEN_NAME),
+             },
+            # webtest mangles UTF-8 parameter conversion w/o this present.
+            content_type='application/x-www-form-urlencoded;charset=utf8')
+        self.assertEquals(response.status_int, 200)
+        actions.login(self.ADMIN_EMAIL)
+
+    def _get_data(self, source_context=None):
+        params = {
+            'chunk_size':
+                review_module.SubmissionDataSource.get_default_chunk_size()
+        }
+        if source_context:
+            params['source_context'] = source_context
+        response = self.get('rest/data/submissions/items?%s' %
+                            urllib.urlencode(params))
+        content = transforms.loads(response.body)
+        return content['data']
+
+    def test_no_content(self):
+        data = self._get_data()
+        self.assertEquals([], data)
+
+    def test_non_pii_request(self):
+        self._post_submission('123', 'the content')
+        data = self._get_data()
+        self.assertEquals(1, len(data))
+        datum = data[0]
+        self.assertEquals(datum['user_id'], 'None')
+        self.assertEquals(datum['contents'], 'the content')
+        self.assertEquals(datum['unit_id'], '123')
+        updated_on = datetime.datetime.strptime(
+            datum['updated_on'], schema_transforms.ISO_8601_DATETIME_FORMAT)
+        diff = (datetime.datetime.utcnow() - updated_on).total_seconds()
+        self.assertLess(diff, 5)
+
+    def test_pii_request(self):
+        self._post_submission(456, u'音読み')
+
+        # Extra hoop-jumping to get a request context parameter blessed which
+        # allows non-PII-suppressed results.
+        params = {'data_source_token': 'fake token'}
+        source_context = data_sources.DbTableContext.build_blank_default(
+            params, review_module.SubmissionDataSource.get_default_chunk_size())
+        source_context.send_uncensored_pii_data = True
+        handler_class = data_sources._generate_rest_handler(
+            review_module.SubmissionDataSource)
+        handler_instance = handler_class()
+        context_param = handler_instance._encode_context(source_context)
+        data = self._get_data(context_param)
+
+        self.assertEquals(1, len(data))
+        datum = data[0]
+        self.assertEquals(datum['user_id'], self.student_user_id)
+        self.assertEquals(datum['contents'], u'音読み')
+        self.assertEquals(datum['unit_id'], '456')
+        updated_on = datetime.datetime.strptime(
+            datum['updated_on'], schema_transforms.ISO_8601_DATETIME_FORMAT)
+        diff = (datetime.datetime.utcnow() - updated_on).total_seconds()
+        self.assertLess(diff, 5)

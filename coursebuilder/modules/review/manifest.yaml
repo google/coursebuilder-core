@@ -6,6 +6,7 @@ tests:
     - modules.review.peer_tests.ReviewStepTest = 3
     - modules.review.peer_tests.ReviewSummaryTest = 5
     - modules.review.review_tests.ManagerTest = 55
+    - modules.review.review_tests.SubmissionDataSourceTest = 3
     - modules.review.stats_tests.PeerReviewAnalyticsTest = 1
 
 files:

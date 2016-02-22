@@ -21,11 +21,15 @@ __author__ = [
 import datetime
 import random
 
+from common import schema_fields
 from models import counters
 from models import custom_modules
 from models import data_removal
+from models import data_sources
 from models import entities
+from models import entity_transforms
 from models import student_work
+from models import transforms
 from models import utils
 import models.review
 from modules.dashboard import dashboard
@@ -1058,6 +1062,61 @@ class Manager(object):
         return updated_step_key
 
 
+class SubmissionDataSource(data_sources.AbstractDbTableRestDataSource):
+
+    @classmethod
+    def get_name(cls):
+        return 'submissions'
+
+    @classmethod
+    def get_title(cls):
+        return 'Submissions'
+
+    @classmethod
+    def get_context_class(cls):
+        return data_sources.DbTableContext
+
+    @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
+    def get_schema(cls, app_context, log, source_context):
+        clazz = cls.get_entity_class()
+        registry = entity_transforms.get_schema_for_entity(clazz)
+
+        # User ID is not directly available in the submission; it's encoded
+        # in a Key, which needs to be unpacked.
+        registry.add_property(schema_fields.SchemaField(
+            'user_id', 'User ID', 'string'))
+        ret = registry.get_json_schema_dict()['properties']
+        del ret['reviewee_key']
+        return ret
+
+    @classmethod
+    def get_entity_class(cls):
+        return student_work.Submission
+
+    @classmethod
+    def _postprocess_rows(cls, app_context, source_context, schema,
+                          log, page_number, submissions):
+        ret = super(SubmissionDataSource, cls)._postprocess_rows(
+            app_context, source_context, schema, log, page_number, submissions)
+        for item in ret:
+            # Submission's write() method does a transforms.dumps() on
+            # the inbound contents, so undo that.
+            item['contents'] = transforms.loads(item['contents'])
+
+            # Convert reviewee_key to user ID.
+            item['user_id'] = db.Key(encoded=item['reviewee_key']).name()
+            del item['reviewee_key']
+
+            # Suppress item key.  It contains PII (the student ID) among other
+            # things, and it's not useful for joins since it's an amalgamation.
+            del item['key']
+        return ret
+
+
 custom_module = None
 
 
@@ -1091,6 +1150,8 @@ def register_module():
             peer.ReviewSummary.delete_by_reviewee_id)
         data_removal.Registry.register_indexed_by_user_id_remover(
             peer.ReviewStep.delete_by_reviewee_id)
+        data_sources.Registry.register(SubmissionDataSource)
+
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
