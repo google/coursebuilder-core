@@ -1143,25 +1143,16 @@ class AvailabilityTests(actions.TestBase):
         with actions.OverriddenEnvironment({'course': {
                 'can_record_student_events': False}}):
 
-            # Not-even-logged-in users see titles of everything, but since
-            # no sub-items within units are public, we don't get links to them.
+            # Not-even-logged-in users see titles of everything.
+            # Still get links to units even if they have no content.
             actions.logout()
-            expected = [
-                Element('Unit 1 - Unit One', None, None, []),
-                Element('Link One', 'http://www.foo.com', None, []),
-                Element('Assessment One', 'assessment?name=3', None, []),
-                Element('Unit 2 - Unit Two', None, None, []),
-                Element('Link Two', 'http://www.bar.com', None, []),
-                Element('Assessment Two', 'assessment?name=6', None, []),
-                Element('Unit 3 - Unit Three', None, None, []),
-                Element('Link Three', None, None, []),
-                Element('Assessment Three', 'assessment?name=9', None, []),
-            ]
-            self.assertEquals(expected, self._parse_leftnav(self.get('course')))
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
 
-            # Non-students see links to all content.
+            # Non-students see links to all content, but still no progress.
             actions.login(self.USER_EMAIL, is_admin=False)
-            self.assertEquals(expected, self._parse_leftnav(self.get('course')))
+            self.assertEquals(self.TOP_LEVEL_WITH_LINKS_NO_PROGRESS,
+                              self._parse_leftnav(self.get('course')))
 
             # Students see syllabus with links.
             actions.register(self, self.USER_EMAIL)
@@ -2089,28 +2080,26 @@ class AvailabilityTests(actions.TestBase):
         self.course.save()
         actions.login(self.USER_EMAIL)
 
-        # Verify link to Unit just redirects to course when no lessons avail.
+        # Verify link to Unit still works when none of its lessons are available
         with actions.OverriddenEnvironment({'course': {
                 'show_lessons_in_syllabus': True}}):
             response = self.get('unit?unit=4')
-        self.assertEquals(response.status_int, 302)
-        self.assertEquals(response.location,
-                          'http://localhost/availability_tests/course')
+
+        self.assertEquals(response.status_int, 200)
 
         # Verify link to specific lesson just redirects to course when
-        # no lessons avail.
+        # lesson not available
         with actions.OverriddenEnvironment({'course': {
                 'show_lessons_in_syllabus': True}}):
-            response = self.get('unit?unit=4&leson=11')
-        self.assertEquals(response.status_int, 302)
-        self.assertEquals(response.location,
-                          'http://localhost/availability_tests/course')
+            response = self.get('unit?unit=4&lesson=11')
+        self.assertEquals(response.status_int, 200)
 
-        # Verify syllabus shows no sub-lessons and unit is not linkable
+        # Verify syllabus shows no sub-lessons but unit is still linkable
         with actions.OverriddenEnvironment({'course': {
                 'show_lessons_in_syllabus': True}}):
             response = self.get('course')
-        expected = [Element('Unit 2 - Unit Two', None, None, contents=[])]
+        expected = [
+            Element('Unit 2 - Unit Two', 'unit?unit=4', None, contents=[])]
         actual = self._parse_leftnav(response)
         self.assertEquals(expected, actual)
 

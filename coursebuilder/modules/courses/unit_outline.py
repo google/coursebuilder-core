@@ -369,13 +369,6 @@ class StudentCourseView(object):
                     sub_element.prev_link = prev_element.link
                 prev_element = sub_element
 
-        # If no sub-item within the unit is linkable, then don't bother
-        # allowing the unit itself to be linkable, unless the user is
-        # the admin, in which case do allow availability so that linking
-        # to the item from the course overview does not unexpectedly
-        # bounce the user out to the course syllabus page.
-        if prev_element is None and not self._can_see_drafts:
-            element.link = None
         return [element]
 
     def _build_elements_for_link(self, unit, displayability):

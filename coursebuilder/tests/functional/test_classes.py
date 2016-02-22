@@ -1144,9 +1144,14 @@ class InfrastructureTest(actions.TestBase):
                 private_tag % lesson_2_2.lesson_id, response.body)
 
             # Accessing a public unit with no available content results
-            # in redirect to main course page.
+            # in access to the unit.  Course creator is presumed to be
+            # competent to notice and address this, as well as foresee
+            # possible consequences of making all lessons in a unit
+            # unavailable to student groups.  Unavailable lesson should
+            # not be mentioned.
             response = self.get('unit?unit=%s' % unit_3.unit_id)
-            assert_equals(response.status_int, 302)
+            assert_equals(response.status_int, 200)
+            self.assertNotIn(lesson_3_1.title, response.body)
 
             response = self.get('unit?unit=%s' % unit_4.unit_id)
             assert_equals(response.status_int, 200)
@@ -1157,9 +1162,9 @@ class InfrastructureTest(actions.TestBase):
                 private_tag % lesson_4_1.lesson_id, response.body)
 
             # Accessing a public unit with no content (not unavailable,
-            # but just no lessons in it at all) => redirct to /
+            # but just no lessons in it at all) is still available.
             response = self.get('unit?unit=%s' % unit_5.unit_id)
-            assert_equals(response.status_int, 302)
+            assert_equals(response.status_int, 200)
 
             actions.logout()
 
