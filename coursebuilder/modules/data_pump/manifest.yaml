@@ -4,7 +4,7 @@ tests:
     - modules.data_pump.data_pump_tests.PiiTests = 7
     - modules.data_pump.data_pump_tests.SchemaConversionTests = 1
     - modules.data_pump.data_pump_tests.StudentSchemaValidationTests = 2
-    - modules.data_pump.data_pump_tests.UserInteractionTests = 4
+    - modules.data_pump.data_pump_tests.UserInteractionTests = 5
 
 files:
   - modules/data_pump/__init__.py

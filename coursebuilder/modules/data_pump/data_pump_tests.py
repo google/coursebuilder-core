@@ -58,8 +58,7 @@ class TrivialDataSource(data_sources.AbstractRestDataSource):
         return True
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_log,
-                   data_source_context):
+    def get_schema(cls, unused_app_context, unused_log, data_source_context):
         reg = schema_fields.FieldRegistry('Trivial')
         reg.add_property(schema_fields.SchemaField(
             'thing', 'Thing', 'integer',
@@ -129,6 +128,72 @@ class TrivialDataSourceContext(data_sources.AbstractContextManager):
     @classmethod
     def _build_secret(cls, params):
         return None
+
+
+class ComplexDataSource(data_sources.AbstractRestDataSource):
+
+    @classmethod
+    def get_name(cls):
+        return 'complex_data_source'
+
+    @classmethod
+    def get_title(cls):
+        return 'Complex Data Source'
+
+    @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
+    def get_schema(cls, unused_app_context, unused_log, data_source_context):
+        ret = schema_fields.FieldRegistry('Complex')
+
+        # Directly contained scalars.
+        ret.add_property(schema_fields.SchemaField(
+            'an_int', 'An Integer', 'integer', description='integer desc'))
+        ret.add_property(schema_fields.SchemaField(
+            'a_string', 'A String', 'string', description='string desc'))
+
+        # Array of complex type
+        array_subtype = schema_fields.FieldRegistry('Array Subtype')
+        array_subtype.add_property(schema_fields.SchemaField(
+            'sub_int', 'Sub Integer', 'integer', description='sub int desc'))
+        array_subtype.add_property(schema_fields.SchemaField(
+            'sub_str', 'Sub String', 'string', description='sub str desc'))
+        ret.add_property(schema_fields.FieldArray(
+            'sub_array', 'Sub Array', description='sub arr desc',
+            item_type=array_subtype))
+
+        # Array of scalar type.
+        ret.add_property(schema_fields.FieldArray(
+            'scalar_array', 'Scalar Array', description='scalar arr desc',
+            item_type=schema_fields.SchemaField(
+                'arr_int', 'Array Integer', 'integer', description='arr int')))
+
+        # Sub object.  Contains scalars and an array of scalar.
+        sub_obj_type = schema_fields.FieldRegistry('Sub-Object')
+        sub_obj_type.add_property(schema_fields.SchemaField(
+            'sub_date', 'Sub Date', 'datetime', description='sub date desc'))
+        sub_obj_type.add_property(schema_fields.SchemaField(
+            'sub_bool', 'Sub Boolean', 'bool', description='sub bool desc'))
+        sub_obj_type.add_property(schema_fields.FieldArray(
+            'sub_obj_array', 'Sub Obj Array', description='subobj array desc',
+            item_type=schema_fields.SchemaField(
+                'arr_text', 'Array Text', 'text', description='arr text desc')))
+        ret.add_sub_registry('sub_registry', registry=sub_obj_type)
+        return ret.get_json_schema_dict()['properties']
+
+    @classmethod
+    def get_default_chunk_size(cls):
+        return 0
+
+    @classmethod
+    def get_context_class(cls):
+        return TrivialDataSourceContext
+
+    @classmethod
+    def fetch_values(cls, app_context, source_context, schema, log, page):
+        return []
 
 
 class StudentSchemaValidationTests(actions.TestBase):
@@ -1371,3 +1436,29 @@ class UserInteractionTests(InteractionTests):
             'Do not encrypt PII data for this upload '
             'Uploaded data never expires (default expiration is 1 s)',
             self._get_status_text())
+
+    def test_schema_rendering(self):
+        del data_sources.Registry._data_source_classes[:]
+        data_sources.Registry.register(ComplexDataSource)
+
+        response = self.get(self.URL)
+        soup = self.parse_html_string_to_soup(response.body)
+        rows = soup.select('.schema-column > table > tr')
+        schema_text = []
+        for row in rows:
+            schema_text.append([td.text for td in row.select('td')])
+        expected = [
+            ['an_int', 'integer', 'integer desc'],
+            ['a_string', 'string', 'string desc'],
+            ['sub_array', 'array', 'sub arr desc'],
+              ['sub_int', 'integer', 'sub int desc'],
+              ['sub_str', 'string', 'sub str desc'],
+            ['scalar_array', 'array', 'scalar arr desc'],
+              [u'', u'integer', u'arr int'],
+            ['sub_registry', 'object', ''],
+              ['sub_date', 'datetime', 'sub date desc'],
+              ['sub_bool', 'bool', 'sub bool desc'],
+              ['sub_obj_array', 'array', 'subobj array desc'],
+                ['', 'text', 'arr text desc'],
+        ]
+        self.assertEquals(expected, schema_text)

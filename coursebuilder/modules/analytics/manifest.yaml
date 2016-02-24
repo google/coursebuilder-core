@@ -5,6 +5,7 @@ tests:
     - modules.analytics.analytics_tests.ClusteringTabTests = 7
     - modules.analytics.analytics_tests.GradebookCsvTests = 6
     - modules.analytics.analytics_tests.StudentAggregateTest = 6
+    - modules.analytics.analytics_tests.StudentAggregateSchemaRegistryTests = 3
     - modules.analytics.analytics_tests.StudentVectorGeneratorProgressTests = 2
     - modules.analytics.analytics_tests.StudentVectorGeneratorTests  = 12
     - modules.analytics.analytics_tests.TestClusterStatisticsDataSource = 2

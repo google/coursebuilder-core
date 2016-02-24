@@ -42,9 +42,13 @@ availability.
 STUDENT_GROUP_ID_DESCRIPTION = """
 Numeric ID of the group to which the student belongs, or null if the student
 has not been assigned to any group.  This can be used directly for
-grouping/aggregating data by group.  If the name of the group or other
-group-level data is needed, this field can be used to join to the student
-groups data source.
+grouping/aggregating data.
+"""
+
+STUDENT_GROUP_NAME_DESCRIPTION = """
+Name of the group to which the student has been assigned, or null.  Note that
+since student groups can be given the same name, you should not rely on this
+field for aggregation, unless you are sure that no groups share a name.
 """
 
 AVAILABILITY_DEFAULT_AVAILABILITY_DESCRIPTION = """

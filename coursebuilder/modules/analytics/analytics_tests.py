@@ -17,6 +17,8 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import appengine_config
+import collections
+import copy
 import datetime
 import json
 import os
@@ -25,6 +27,7 @@ import tempfile
 import urllib
 import zlib
 
+from common import schema_fields
 from common import users
 from common import utils as common_utils
 from models import courses
@@ -293,6 +296,126 @@ class StudentAggregateTest(AbstractModulesAnalyticsTest):
         expected = self.load_expected_data('youtube_events', 'youtube.json')
         # No sorting - items should be presented in order by time, video, etc.
         self.assertEqual(expected, actual['youtube'])
+
+
+class StudentAggregateSchemaRegistryTests(actions.TestBase):
+
+    def setUp(self):
+        reg = student_aggregate.StudentAggregateComponentRegistry
+
+        self._save_components = copy.copy(reg._components)
+        del reg._components[:]
+
+        self._save_components_by_name = copy.copy(reg._components_by_name)
+        reg._components_by_name.clear()
+
+        self._save_components_by_schema = copy.copy(reg._components_by_schema)
+        reg._components_by_schema.clear()
+
+        self._save_components_for_event_source = copy.copy(
+            reg._components_for_event_source)
+        reg._components_for_event_source.clear()
+
+        fake_context_class = collections.namedtuple(
+            'FakeContext', ['send_uncensored_pii_data'])
+        self.fake_context = fake_context_class(False)
+        super(StudentAggregateSchemaRegistryTests, self).setUp()
+
+    def tearDown(self):
+        reg = student_aggregate.StudentAggregateComponentRegistry
+        del reg._components[:]
+        reg._components.extend(self._save_components)
+
+        reg._components_by_name.clear()
+        reg._components_by_name.update(self._save_components_by_name)
+
+        reg._components_by_schema.clear()
+        reg._components_by_schema.update(self._save_components_by_schema)
+
+        reg._components_for_event_source.clear()
+        reg._components_for_event_source.update(
+            self._save_components_for_event_source)
+
+        super(StudentAggregateSchemaRegistryTests, self).tearDown()
+
+    def _build_aggregator(self, name, schema):
+
+        # Build class under a closure where name, schema are configurable.
+        class Aggregator(student_aggregate.AbstractStudentAggregationComponent):
+
+            @classmethod
+            def get_name(cls):
+                return name
+
+            @classmethod
+            def get_event_sources_wanted(cls):
+                return []
+
+            @classmethod
+            def build_static_params(cls, unused_app_context):
+                return None
+
+            @classmethod
+            def process_event(cls, event, static_params):
+                return None
+
+            @classmethod
+            def produce_aggregate(cls, course, student, unused_static_params,
+                                  unused_event_items):
+                return None
+
+            @classmethod
+            def get_schema(cls):
+                return schema
+
+        return Aggregator
+
+    def _build_base_expected_schema(self):
+        ret = schema_fields.FieldRegistry('student_aggregation')
+        ret.add_property(schema_fields.SchemaField(
+            'user_id', 'User ID', 'string',
+            description='Obfuscated version of user ID.  Usable to join '
+            'to other tables also keyed on obfuscated user ID.'))
+        return ret
+
+    def test_register_schema_with_scalar_type(self):
+        reg = student_aggregate.StudentAggregateComponentRegistry
+        schema = schema_fields.SchemaField(
+            'an_int', 'An Integer', 'integer', description='integer desc')
+        reg.register_component(self._build_aggregator('single_scalar', schema))
+        expected = self._build_base_expected_schema()
+        expected.add_property(schema)
+        self.assertEquals(expected.get_json_schema_dict()['properties'],
+                          reg.get_schema(None, None, self.fake_context))
+
+    def test_register_schema_with_array_of_scalar_type(self):
+        reg = student_aggregate.StudentAggregateComponentRegistry
+        schema = schema_fields.FieldArray(
+            'scalar_array', 'Scalar Array', description='scalar arr desc',
+            item_type=schema_fields.SchemaField(
+                'an_int', 'An Integer', 'integer', description='integer desc'))
+        reg.register_component(self._build_aggregator('int_array', schema))
+        expected = self._build_base_expected_schema()
+        expected.add_property(schema)
+        self.assertEquals(expected.get_json_schema_dict()['properties'],
+                          reg.get_schema(None, None, self.fake_context))
+
+    def test_register_schema_with_object_containg_scalar_and_array(self):
+        reg = student_aggregate.StudentAggregateComponentRegistry
+        schema = schema_fields.FieldRegistry(
+            'An Object', description='an object')
+        schema.add_property(schema_fields.SchemaField(
+            'an_int', 'An Integer', 'integer', description='integer desc'))
+        schema.add_property(schema_fields.FieldArray(
+            'scalar_array', 'Scalar Array', description='scalar arr desc',
+            item_type=schema_fields.SchemaField(
+                'an_int', 'An Integer', 'integer', description='integer desc')))
+        reg.register_component(self._build_aggregator('obj', schema))
+        expected = self._build_base_expected_schema()
+        expected.add_sub_registry('an_object', 'An Object', 'an object',
+                                  registry=schema)
+        self.assertEquals(expected.get_json_schema_dict()['properties'],
+                          reg.get_schema(None, None, self.fake_context))
 
 
 class ClusteringTabTests(actions.TestBase):

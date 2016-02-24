@@ -1189,7 +1189,7 @@ class AddToStudentAggregate(
         # having to have an extra table and join statements.
         schema.add_property(schema_fields.SchemaField(
             cls.NAME_FIELD, 'Student Group Name', 'string',
-            optional=True))
+            description=messages.STUDENT_GROUP_NAME_DESCRIPTION, optional=True))
         return schema
 
 

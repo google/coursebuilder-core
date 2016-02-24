@@ -58,7 +58,13 @@ div.warning {
       <td>{{ schema[field].description }}</td>
     </tr>
     {% if schema[field].type == 'array' %}
-      {{ schema_rows(schema[field]['items']['properties'], depth + 1) }}
+      {% if schema[field]['items']['type'] == 'object' %}
+        {{ schema_rows(schema[field]['items']['properties'], depth + 1) }}
+      {% else %}
+        {{ schema_rows({'': schema[field]['items']}, depth + 1) }}
+      {% endif %}
+    {% elif schema[field].type == 'object' %}
+      {{ schema_rows(schema[field]['properties'], depth + 1) }}
     {% endif %}
   {% endfor %}
 {%- endmacro %}
