@@ -1015,8 +1015,10 @@ class BaseHandler(CourseHandler):
             self.template_value['email_no_domain_name'] = (
                 email[:email.find('@')] if '@' in email else email)
             self.template_value['email'] = email
-            self.template_value['logoutUrl'] = (
-                users.create_logout_url(self.request.uri))
+            url = urlparse.urlparse(self.request.uri)
+            base_uri = urlparse.urlunsplit(
+                [url.scheme, url.netloc, self.app_context.get_slug(), '', ''])
+            self.template_value['logoutUrl'] = users.create_logout_url(base_uri)
             self.template_value['transient_student'] = False
 
             # configure page events

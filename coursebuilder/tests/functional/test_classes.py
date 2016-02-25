@@ -2736,6 +2736,26 @@ class StudentAspectTest(actions.TestBase):
             actions.logout()
             actions.Permissions.assert_logged_out(self)
 
+    def test_logout_link(self):
+        email = 'test_login_logout@example.com'
+        actions.login(email)
+        response = self.get('course')
+
+        # Move to a page whose path is not the syllabus page.
+        response = self.click(response, 'Unit 5 - Checking your facts')
+        self.assertTrue(response.request.path_qs.endswith('/unit?unit=5'))
+
+        # Verify that logout link specifies the course base as the continue
+        # parameter.
+        soup = self.parse_html_string_to_soup(response.body)
+        links = soup.select('a')
+        logout = [l for l in links if l.text.strip() == 'Logout'][0]
+        href = logout.get('href')
+        expected = '?continue=http%3A//localhost/'
+        if self.base:
+            expected += self.base.lstrip('/')
+        self.assertTrue(href.endswith(expected))
+
     def assert_locale_settings(self):
         # Locale picker shown. Chooser shows only available locales.
         course_page = self.parse_html_string(self.get('course').body)
