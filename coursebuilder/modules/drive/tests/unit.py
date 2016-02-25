@@ -25,6 +25,7 @@ import appengine_config
 
 from tests import suite
 from modules.drive import drive_api_client
+from modules.drive import drive_settings
 from modules.drive import errors
 
 
@@ -75,21 +76,21 @@ class ApiClientTests(suite.TestBase):
     def test_bad_secrets(self):
         with self.assertRaises(errors.Misconfigured):
             # empty strings
-            drive_api_client.validate_secrets({
+            drive_settings.validate_secrets({
                 'client_email': '',
                 'private_key': '',
             })
 
         with self.assertRaises(errors.Misconfigured):
             # good email but bad key
-            drive_api_client.validate_secrets({
+            drive_settings.validate_secrets({
                 'client_email': 'example@example.com',
                 'private_key': 'example',
             })
 
         with self.assertRaises(errors.Misconfigured):
             # bad email but good key
-            drive_api_client.validate_secrets({
+            drive_settings.validate_secrets({
                 'client_email': 'example',
                 'private_key': self.FAKE_KEY,
             })

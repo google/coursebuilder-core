@@ -94,6 +94,8 @@ _CONFIG_KEY_PART_GOOGLE = 'google'
 _CONFIG_KEY_PART_API_KEY = 'api_key'
 # The config key part under which the client id is stored.
 _CONFIG_KEY_PART_CLIENT_ID = 'client_id'
+# The config key part under which the client secret is stored.
+_CONFIG_KEY_PART_CLIENT_SECRET = 'client_secret'
 # The key in course.yaml under which the Google API key lives.
 CONFIG_KEY_GOOGLE_API_KEY = '%s:%s:%s' % (
     _CONFIG_KEY_PART_COURSE, _CONFIG_KEY_PART_GOOGLE, _CONFIG_KEY_PART_API_KEY)
@@ -101,7 +103,9 @@ CONFIG_KEY_GOOGLE_API_KEY = '%s:%s:%s' % (
 CONFIG_KEY_GOOGLE_CLIENT_ID = '%s:%s:%s' % (
     _CONFIG_KEY_PART_COURSE, _CONFIG_KEY_PART_GOOGLE,
     _CONFIG_KEY_PART_CLIENT_ID)
-
+CONFIG_KEY_GOOGLE_CLIENT_SECRET = '%s:%s:%s' % (
+    _CONFIG_KEY_PART_COURSE, _CONFIG_KEY_PART_GOOGLE,
+    _CONFIG_KEY_PART_CLIENT_SECRET)
 
 def deep_dict_merge(*args):
     """Merges default and real value dictionaries recursively."""
@@ -2638,6 +2642,13 @@ class Course(object):
                 description=services.help_urls.make_learn_more_message(
                     messages.COURSE_GOOGLE_CLIENT_ID_DESCRIPTION,
                     CONFIG_KEY_GOOGLE_CLIENT_ID),
+                i18n=False, optional=True))
+            opts.add_property(schema_fields.SchemaField(
+                CONFIG_KEY_GOOGLE_CLIENT_SECRET, 'Google Client Secret',
+                'string',
+                description=services.help_urls.make_learn_more_message(
+                    messages.COURSE_GOOGLE_CLIENT_SECRET_DESCRIPTION,
+                    CONFIG_KEY_GOOGLE_CLIENT_SECRET),
                 i18n=False, optional=True))
         return opts
 

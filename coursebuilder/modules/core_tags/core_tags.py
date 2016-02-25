@@ -103,6 +103,11 @@ class _Runtime(object):
         ).get(
             client_id, '')
 
+    def get_client_secret(self):
+        course, google, client_id = courses.CONFIG_KEY_GOOGLE_CLIENT_ID.split(
+            ':')
+        return self._environ.get(course, {}).get(google, {}).get(client_id, '')
+
     def get_slug(self):
         return self._app_context.get_slug()
 

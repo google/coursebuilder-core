@@ -31,6 +31,7 @@ from modules.drive import dashboard_handler
 from modules.drive import drive_api_client
 from modules.drive import drive_api_manager
 from modules.drive import drive_models
+from modules.drive import drive_settings
 from modules.drive import errors
 from modules.drive import jobs
 
@@ -66,13 +67,35 @@ class AbstractDriveDashboardHandler(dashboard_handler.AbstractDashboardHandler):
             self.response.set_status(502)
             self.render_other('drive-failed.html')
 
+    def create_sync_schedule(self, key, data):
+        dto = drive_models.DriveSyncDAO.DTO(key, {
+            'title': data.title,
+            'type': data.type,
+            'sync_interval': drive_models.SYNC_INTERVAL_MANUAL,
+            'availability': courses.AVAILABILITY_COURSE,
+            'version': '1.0',
+        })
+        drive_models.DriveSyncDAO.save(dto)
+
+        # Attempt to sync now.  If it fails, that's ok.  The error will be
+        # visible in the list view.
+        try:
+            self.drive_manager.download_file(dto)
+        except errors.Error as error:
+            logging.error('Google Drive Error: %s', error)
+
+        return dto
+
 
 class DriveListHandler(AbstractDriveDashboardHandler):
     PAGE_TITLE = 'Drive'
     URL = 'modules/drive'
     TEMPLATE = 'drive-list.html'
     ACTION = 'drive-list'
-    EXTRA_JS_URLS = ['/modules/drive/_static/script.js']
+    EXTRA_JS_URLS = [
+        '/modules/drive/_static/script.js',
+        'https://apis.google.com/js/client:platform.js?onload=onGoogleApiLoaded'
+    ]
     EXTRA_CSS_URLS = ['/modules/drive/_static/style.css']
 
     # hooks
@@ -85,6 +108,14 @@ class DriveListHandler(AbstractDriveDashboardHandler):
 
         self.render_this(
             items=items,
+            automatic_sharing_is_available=
+                drive_settings.automatic_sharing_is_available(self.app_context),
+            google_api_key=drive_settings.get_google_api_key(self.app_context),
+            google_client_id=
+                drive_settings.get_google_client_id(self.app_context),
+            add_rest_xsrf_token=
+                self.create_xsrf_token(DriveAddRESTHandler.ACTION),
+            add_rest_url=DriveAddRESTHandler.URL,
 
             # pylint: disable=protected-access
             job_status_url=self.app_context.canonicalize_url(
@@ -206,7 +237,8 @@ class DriveAddListHandler(AbstractDriveDashboardHandler):
 
         self.render_this(
             items=new_items,
-            service_account_email=self.drive_manager.client_email,
+            service_account_email=
+                drive_settings.get_client_email(self.app_context),
 
             add_url=self.URL,
             add_action=self.ACTION,
@@ -226,24 +258,69 @@ class DriveAddListHandler(AbstractDriveDashboardHandler):
         if data.type not in drive_api_client.KNOWN_MIME_TYPES.values():
             self.abort(404)
 
-        dto = drive_models.DriveSyncDAO.DTO(key, {
-            'title': data.title,
-            'type': data.type,
-            'sync_interval': drive_models.SYNC_INTERVAL_MANUAL,
-            'availability': courses.AVAILABILITY_COURSE,
-            'version': '1.0',
-        })
-        drive_models.DriveSyncDAO.save(dto)
-
-        # Attempt to sync now.  If it fails, that's ok.  The error will be
-        # visible in the list view.
-        try:
-            self.drive_manager.download_file(dto)
-        except errors.Error as error:
-            logging.error('Google Drive Error: %s', error)
+        self.create_sync_schedule(key, data)
 
         self.redirect(self.app_context.canonicalize_url(
             '/{}?key={}'.format(DriveItemHandler.URL, key)))
+
+
+class DriveAddRESTHandler(AbstractDriveDashboardHandler):
+    URL = 'rest/modules/drive/add'
+    ACTION = 'drive-add-rest'
+
+    def post(self):
+        super(DriveAddRESTHandler, self).post()
+        code = self.request.get('code')
+        file_id = self.request.get('file_id')
+
+        # attempt to share
+        try:
+            # pylint: disable=protected-access
+            current_user_drive_manager = (
+                drive_api_manager._DriveManager.from_code(
+                    self.app_context, code))
+            # pylint: enable=protected-access
+            current_user_drive_manager.share_file(
+                file_id, drive_settings.get_client_email(self.app_context))
+
+        except errors.Error as error:
+            if isinstance(error, errors.SharingPermissionError):
+                message = 'You do not have permission to share this file.'
+            else:
+                message = (
+                    'An unknown error occurred when sharing this file.  Check '
+                    'your Drive or Google API configuration or try again.')
+
+            transforms.send_json_response(
+                self, 502, 'error', payload_dict={
+                    'status': 'error',
+                    'message': message,
+            })
+            return
+
+        try:
+            data = self.drive_manager.get_file_meta(file_id)
+        except errors.Error as error:
+            transforms.send_json_response(
+                self, 502, 'error', payload_dict={
+                    'status': 'error',
+                    'message':
+                        'File shared, but Drive API failed to fetch metadata.  '
+                        'Please try again or check your Drive configuration.',
+            })
+            return
+
+        # Generally this should create a new record, but if one already exists
+        # that's ok.  Just don't want to clobber it.
+        dto = drive_models.DriveSyncDAO.load(file_id)
+        if dto is None:
+            self.create_sync_schedule(file_id, data)
+
+        transforms.send_json_response(
+            self, 200, 'ok', payload_dict={
+                'status': 'success',
+                'message': 'Shared.',
+        })
 
 
 class DriveItemHandler(
@@ -330,6 +407,7 @@ global_routes = utils.map_handler_urls([
 namespaced_routes = utils.map_handler_urls([
     DriveListHandler,
     DriveAddListHandler,
+    DriveAddRESTHandler,
     DriveSyncHandler,
     DriveItemHandler,
     DriveItemRESTHandler,

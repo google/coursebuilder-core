@@ -287,6 +287,10 @@ COURSE_GOOGLE_CLIENT_ID_DESCRIPTION = """
 The Google Client ID is required to enable certain functionality.
 """
 
+COURSE_GOOGLE_CLIENT_SECRET_DESCRIPTION = """
+The Google Client Secret is required to enable certain functionality.
+"""
+
 UNIT_HEADER_DESCRIPTION = """
 This content appears at the top of the unit page.
 """

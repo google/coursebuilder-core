@@ -23,7 +23,11 @@ class Error(Exception):
     pass
 
 
-class NotConfigured(Error):
+class ConfigurationError(Error):
+    pass
+
+
+class NotConfigured(ConfigurationError):
     pass
 
 
@@ -37,11 +41,15 @@ class _WrappedError(Error):
             self._original.__class__.__name__, str(self._original))
 
 
+class SharingPermissionError(_WrappedError):
+    pass
+
+
 class TimeoutError(_WrappedError):
     pass
 
 
-class Misconfigured(_WrappedError):
+class Misconfigured(_WrappedError, ConfigurationError):
     pass
 
 

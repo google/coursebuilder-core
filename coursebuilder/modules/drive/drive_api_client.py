@@ -56,38 +56,31 @@ class _APIClientWrapper(object):
     but it will not perform OAuth until it has to do a web request.
     """
 
-    def __init__(self, secrets, scope=_ALL_SCOPES):
-        validate_secrets(secrets)
-        self._secrets = secrets
-        self._scope = scope
-        self._drive_client_instance = None
+    def __init__(self, drive_client):
+        self._drive_client = drive_client
         urlfetch.set_default_fetch_deadline(_URLFETCH_DEADLINE_SECONDS)
 
-    @property
-    def client_email(self):
-        """Email address of the service account.
+    @classmethod
+    def from_client_secrets_and_code(
+            cls, code, client_id, client_secret, scope=_DRIVE_SCOPE):
+        credentials = oauth2client.client.credentials_from_code(
+            client_id, client_secret, scope, code)
+        http_auth = credentials.authorize(httplib2.Http())
+        api = discovery.build('drive', 'v2', http=http_auth)
+        return cls(api)
 
-        You may need to share resources with this email in order to access them.
-        """
-        return self._secrets['client_email']
-
-    def _make_drive_client(self):
+    @classmethod
+    def from_service_account_secrets(cls, email, key, scope=_ALL_SCOPES):
         try:
             credentials = oauth2client.client.SignedJwtAssertionCredentials(
-                self._secrets['client_email'], self._secrets['private_key'],
-                self._scope)
+                email, key, scope)
             http_auth = credentials.authorize(httplib2.Http())
-            return discovery.build('drive', 'v2', http=http_auth)
+            api = discovery.build('drive', 'v2', http=http_auth)
         except Exception as error:
             # pylint: disable=protected-access
             raise errors._WrappedError(error)
             # pylint: enable=protected-access
-
-    @property
-    def _drive_client(self):
-        if self._drive_client_instance is None:
-            self._drive_client_instance = self._make_drive_client()
-        return self._drive_client_instance
+        return cls(api)
 
     def _http_request(self, url):
         """Perform an arbitrary HTTP request using the Python API client.
@@ -105,6 +98,27 @@ class _APIClientWrapper(object):
                 raise errors._HttpError(url, response, content)
         except urlfetch_errors.DeadlineExceededError as error:
             raise errors.TimeoutError(error)
+
+    def share_file(self, file_id, email):
+        """Share a file to an email address"""
+        # pylint: disable=protected-access
+
+        body = {
+            "name": "cb-reader",
+            "kind": "drive#permission",
+            "value": email,
+            "type": "user",
+            "role": "reader",
+        }
+
+        try:
+            self._drive_client.permissions().insert(fileId=file_id, body=body
+                ).execute()
+        except apiclient_errors.Error as error:
+            if is_sharing_permission_error(error):
+                raise errors.SharingPermissionError(error)
+            else:
+                raise errors._WrappedError(error)
 
     def list_file_meta(self, max_results=100, page_token=None):
         """Returns a DriveItemList"""
@@ -286,15 +300,11 @@ class DriveItemList(object):
             next_page_token=data.get('nextPageToken'))
 
 
-def validate_secrets(secrets):
+def is_sharing_permission_error(error):
     try:
-        assert isinstance(secrets, dict)
-        client_email = secrets.get('client_email')
-        assert isinstance(client_email, basestring)
-        assert '@' in client_email
-        private_key = secrets.get('private_key')
-        assert isinstance(private_key, basestring)
-        assert private_key.startswith('-----BEGIN PRIVATE KEY-----\n')
-        assert private_key.endswith('\n-----END PRIVATE KEY-----\n')
-    except AssertionError as error:
-        raise errors.Misconfigured(error)
+        return (
+            isinstance(error, apiclient_errors.HttpError) and
+            'permission' in json.loads(error.content)['error']['message']
+            .lower())
+    except (KeyError, ValueError):
+        return False

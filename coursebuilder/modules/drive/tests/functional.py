@@ -397,6 +397,61 @@ class DriveTests(DriveTestBase):
             dto = drive_models.DriveSyncDAO.load('6')
             self.assertIsNotNone(dto.last_synced)
 
+    def test_automatic_share(self):
+        # ensure the sharable file isn't on these pages yet
+        self.assertNotPresent(self.get_page('modules/drive').select('#file-7'))
+        self.assertNotPresent(self.get_page('modules/drive/add').select(
+            '#file-7'))
+
+        # share the file
+        self.assertRestStatus(self.post(
+            'rest/modules/drive/add', {
+                'code': 'example-code',
+                'file_id': '7',
+            }, headers={
+                'CSRF-Token':
+                    crypto.XsrfTokenManager.create_xsrf_token('drive-add-rest'),
+            }), 200)
+
+        # ensure the sharable file shows on the list page now
+        self.assertPresent(self.get_page('modules/drive').select('#file-7'))
+        self.assertNotPresent(self.get_page('modules/drive/add').select(
+            '#file-7'))
+
+    def test_sharing_permission_error(self):
+        self.assertRestStatus(self.post(
+            'rest/modules/drive/add', {
+                'code': 'example-code',
+                'file_id':
+                    drive_api_client_mock._APIClientWrapperMock
+                    .SHARE_PERMISSION_ERROR_FILE_ID,
+            }, headers={
+                'CSRF-Token':
+                    crypto.XsrfTokenManager.create_xsrf_token('drive-add-rest'),
+            }), 502)
+
+    def test_sharing_other_error(self):
+        self.assertRestStatus(self.post(
+            'rest/modules/drive/add', {
+                'code': 'example-code',
+                'file_id':
+                    drive_api_client_mock._APIClientWrapperMock.ERROR_FILE_ID,
+            }, headers={
+                'CSRF-Token':
+                    crypto.XsrfTokenManager.create_xsrf_token('drive-add-rest'),
+            }), 502)
+
+    def test_sharing_metadata_error(self):
+        self.assertRestStatus(self.post(
+            'rest/modules/drive/add', {
+                'code': 'example-code',
+                'file_id':
+                    drive_api_client_mock._APIClientWrapperMock.ERROR_FILE_ID,
+            }, headers={
+                'CSRF-Token':
+                    crypto.XsrfTokenManager.create_xsrf_token('drive-add-rest'),
+            }), 502)
+
     def test_api_sync_doc_xhr_failure(self):
         # pylint: disable=protected-access
         self.swap(

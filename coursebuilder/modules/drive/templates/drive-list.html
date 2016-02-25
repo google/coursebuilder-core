@@ -1,5 +1,10 @@
 <script>
 var JOB_STATUS_URL = {{ job_status_url|to_json }};
+var DRIVE_ITEM_URL = {{ item_url|to_json }};
+var GOOGLE_CLIENT_ID = {{ google_client_id|to_json }};
+var GOOGLE_API_KEY = {{ google_api_key|to_json }};
+var ADD_REST_XSRF_TOKEN = {{ add_rest_xsrf_token|to_json }};
+var ADD_REST_URL = {{ add_rest_url|to_json }};
 </script>
 
 <div class="butterbar-alike">
@@ -25,6 +30,9 @@ var JOB_STATUS_URL = {{ job_status_url|to_json }};
 
 <div class="gcb-button-toolbar">
   <a class="gcb-button" href="{{ add_url }}">Add Items</a>
+  {% if automatic_sharing_is_available %}
+    <a class="gcb-button" id="picker-button">Pick</a>
+  {% endif %}
 </div>
 
 <form action="{{ sync_url }}" method="post">

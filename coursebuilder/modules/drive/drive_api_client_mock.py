@@ -39,15 +39,26 @@ class _APIClientWrapperMock(object):
             '6', drive_api_client.SHEET_TYPE, '6 Synced Sheet', 1)
     ]
 
-    client_email = 'service-account@example.com'
+    SHARABLE_FILE = drive_api_client.DriveItem(
+        '7', drive_api_client.DOC_TYPE, '7 Sharable Doc', 1)
+
+    ERROR_FILE_ID = 'error'
+    SHARE_PERMISSION_ERROR_FILE_ID = 'share-permission-error'
+    SHARE_UNKNOWN_ERROR_FILE_ID = 'share-error'
 
     def list_file_meta(self):
         return drive_api_client.DriveItemList(self.MOCK_FILES)
 
     def get_file_meta(self, file_id):
+        if file_id == self.ERROR_FILE_ID:
+            raise errors.Error
+
         for item in self.MOCK_FILES:
             if item.key == file_id:
                 return item
+
+        raise errors.Error
+
 
     def get_sheet_data(self, file_id):
         meta = self.get_file_meta(file_id)
@@ -74,3 +85,11 @@ class _APIClientWrapperMock(object):
             raise errors.Error()
 
         return '<p>Some HTML</p>'
+
+    def share_file(self, file_id, email):
+        if self.SHARABLE_FILE not in self.MOCK_FILES:
+            self.MOCK_FILES = self.MOCK_FILES.append(self.SHARABLE_FILE)
+        elif file_id == self.SHARE_PERMISSION_ERROR_FILE_ID:
+            raise errors.SharingPermissionError(errors.Error)
+        elif file_id == self.SHARE_UNKNOWN_ERROR_FILE_ID:
+            raise errors.Error

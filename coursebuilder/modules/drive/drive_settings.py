@@ -20,19 +20,35 @@ __author__ = [
 
 import json
 
+import appengine_config
+
 from common import schema_fields
+from models import courses
 from models import services
 from modules.courses import settings
 from modules.drive import errors
 from modules.drive import messages
 from modules.drive import constants
-from modules.drive import drive_api_client
+
+
+def validate_secrets(secrets):
+    try:
+        assert isinstance(secrets, dict)
+        client_email = secrets.get('client_email')
+        assert isinstance(client_email, basestring)
+        assert '@' in client_email
+        private_key = secrets.get('private_key')
+        assert isinstance(private_key, basestring)
+        assert private_key.startswith('-----BEGIN PRIVATE KEY-----\n')
+        assert private_key.endswith('\n-----END PRIVATE KEY-----\n')
+    except AssertionError as error:
+        raise errors.Misconfigured(error)
 
 
 def validate_secrets_text(text, validation_errors):
     if text:
         try:
-            drive_api_client.validate_secrets(json.loads(text))
+            validate_secrets(json.loads(text))
         except (ValueError, TypeError):
             validation_errors.append(
                 messages.SERVICE_ACCOUNT_JSON_PARSE_FAILURE)
@@ -60,8 +76,48 @@ def make_drive_settings_section():
 
 def get_secrets(app_context):
     try:
-        return json.loads(app_context.get_environ().get(
-            constants.MODULE_NAME, {}).get(
-            constants.SERVICE_ACCOUNT_JSON_FIELD_NAME))
+        secrets = json.loads(app_context.get_environ()[constants.MODULE_NAME][
+            constants.SERVICE_ACCOUNT_JSON_FIELD_NAME])
+        validate_secrets(secrets)
+        return secrets
     except (KeyError, ValueError, TypeError):
         raise errors.NotConfigured
+
+
+def get_client_email(app_context):
+    # Can raise errors.NotConfigured
+    if appengine_config.gcb_test_mode():
+        return 'service-account@example.com'
+    return get_secrets(app_context)['client_email']
+
+
+def get_setting_value(app_context, constant):
+    obj = app_context.get_environ()
+    try:
+        for segment in constant.split(':'):
+            obj = obj[segment]
+        return obj
+    except KeyError:
+        return None
+
+
+def get_google_client_secret(app_context):
+    return get_setting_value(
+        app_context, courses.CONFIG_KEY_GOOGLE_CLIENT_SECRET)
+
+
+def get_google_client_id(app_context):
+    return get_setting_value(
+        app_context, courses.CONFIG_KEY_GOOGLE_CLIENT_ID)
+
+
+def get_google_api_key(app_context):
+    return get_setting_value(
+        app_context, courses.CONFIG_KEY_GOOGLE_API_KEY)
+
+
+def automatic_sharing_is_available(app_context):
+    return (
+        get_google_client_secret(app_context) and
+        get_google_client_id(app_context) and
+        get_google_api_key(app_context))
