@@ -247,6 +247,7 @@ class TestBase(suite.AppEngineTestBase):
 
         memcache.flush_all()
         sites.ApplicationContext.clear_per_process_cache()
+        courses.Course.clear_current()
 
         self.auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
         sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = (
