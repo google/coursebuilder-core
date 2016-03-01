@@ -8,8 +8,11 @@
       data-disabled="{% if disabled %}true{% else %}false{% endif %}"
       {% if single_submission %}
         data-single-submission="true"
-        data-single-submission-message="{{
-          gettext("Only one submission of this form is allowed.") }}"
+        {# I18N: This message appears on a page where a student could
+           submit answers to a questionnaire.  Students may only submit
+           the questionnaire once.  This message appears when viewing
+           the page after the first subission. #}
+        data-single-submission-message="{{ gettext("Only one submission of this form is allowed.") }}"
       {% else %}
         data-single-submission="false"
       {% endif %}
@@ -17,6 +20,10 @@
         data-registered="true"
       {% else %}
         data-registered="false"
+        {# I18N: This message appears on a page where a student could
+           submit answers to a questionnaire.  The user viewing the
+           page is not a registered student, and gets a message
+           indicating the situation. #}
         data-registered-message="{{
           gettext("Only registered students can submit answers.") }}"
       {% endif %}>
@@ -33,4 +40,3 @@
   </div>
   {% endif %}
 </div>
-

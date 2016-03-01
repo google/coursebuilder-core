@@ -116,15 +116,24 @@ class ShowCertificatePdfHandler(utils.BaseHandler):
         text.setTextOrigin(0.5 * inch, 4.5 * inch)
         text.setFont('Helvetica', 40)
         text.setFillColorRGB(75.0 / 255, 162.0 / 255, 65.0 / 255)
+        # I18N: Message fragment on a certificate of course completion.
+        # Title line indicating what this page is.
         text.textLine(self.gettext('Certificate of Completion'))
 
         text.setTextOrigin(0.5 * inch, 4.0 * inch)
         text.setFillColorRGB(0.4, 0.4, 0.4)
         text.setFont('Helvetica', 20)
+        # I18N: Message fragment on a certificate of course completion.
+        # On a separate line, preceding the name of the student.  Indicates
+        # that the certificate is being presented to someone.
         text.textLine(self.gettext('Presented to'))
 
         text.setTextOrigin(0.5 * inch, 2.3 * inch)
+        # I18N: Message fragment on a certificate of course completion.
+        # Indicates that the student has successfully completed something.
         text.textLine(self.gettext('for successfully completing the'))
+        # I18N: Message fragment on a certificate of course completion.
+        # Gives the name of the course, followed by the word "course".
         text.textLine(self.gettext('%(course)s course') % {'course': course})
 
         c.drawText(text)
