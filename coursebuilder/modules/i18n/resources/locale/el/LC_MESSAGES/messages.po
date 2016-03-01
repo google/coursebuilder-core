@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-23 07:52-0800\n"
+"POT-Creation-Date: 2016-02-29 10:03-0800\n"
 "PO-Revision-Date: 2015-11-23 07:52-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: el <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgstr ""
 #. will be replaced with a number indicating the unit's
 #. sequence I18N: number within the course, and the %(title)
 #. with the unit's title.
-#: experimental/coursebuilder/models/resources_display.py:1179
+#: experimental/coursebuilder/models/resources_display.py:1196
 #, python-format
 msgid "Unit %(index)s - %(title)s"
 msgstr "Ενότητα %(index)s - %(title)s"
@@ -31,7 +31,7 @@ msgstr "Ενότητα %(index)s - %(title)s"
 #. Message displayed as title for unit within a course.  The
 #. "%s" will be replaced with the index number of the unit within
 #. the course.  E.g., "Unit 1", "Unit 2" and so on.
-#: experimental/coursebuilder/models/resources_display.py:1199
+#: experimental/coursebuilder/models/resources_display.py:1217
 #, python-format
 msgid "Unit %s"
 msgstr "Ενότητα %s"
@@ -318,7 +318,7 @@ msgstr ""
 #. Displayed in the course contents page. Indicates a page to
 #. which students can go to review other students' assignments.
 #: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
-#: experimental/coursebuilder/modules/courses/unit_outline.py:424
+#: experimental/coursebuilder/modules/courses/unit_outline.py:433
 msgid "Review peer assignments"
 msgstr "Αξιολόγηση αναθέσεων εργασίας συναδέλφων"
 
@@ -330,50 +330,59 @@ msgstr "Αξιολόγηση αναθέσεων εργασίας συναδέλ�
 msgid "Back to Course page"
 msgstr "Επιστροφή στη σελίδα της Σειράς μαθημάτων"
 
+#. Message fragment on a certificate of course completion.
+#. Title line indicating what this page is.
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:118
+#: experimental/coursebuilder/modules/certificate/certificate.py:121
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "Πιστοποιητικό ολοκλήρωσης παρακολούθησης"
 
+#. Message fragment on a certificate of course completion.
+#. On a separate line, preceding the name of the student.  Indicates
+#. that the certificate is being presented to someone.
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:123
+#: experimental/coursebuilder/modules/certificate/certificate.py:129
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "Απονέμεται σε"
 
+#. Message fragment on a certificate of course completion.
+#. Indicates that the student has successfully completed something.
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:126
+#: experimental/coursebuilder/modules/certificate/certificate.py:134
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "για την επιτυχή ολοκλήρωση της παρακολούθησης"
 
+#. Message fragment on a certificate of course completion.
+#. Gives the name of the course, followed by the word "course".
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:127
+#: experimental/coursebuilder/modules/certificate/certificate.py:137
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "του μαθήματος %(course)s"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:255
+#: experimental/coursebuilder/modules/certificate/certificate.py:269
 msgid "Certificate"
 msgstr "Πιστοποιητικό"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:264
+#: experimental/coursebuilder/modules/certificate/certificate.py:279
 msgid "Click for certificate"
 msgstr "Κάντε κλικ για το πιστοποιητικό"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:272
+#: experimental/coursebuilder/modules/certificate/certificate.py:287
 msgid "Download PDF"
 msgstr "Λήψη PDF"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:279
+#: experimental/coursebuilder/modules/certificate/certificate.py:295
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -484,7 +493,7 @@ msgstr "Αλλαγή ονόματος"
 #. course soon after un-enrolling.  It takes up to several
 #. hours to remove their data, and they are prevented from
 #. re-enrolling during that time to prevent problems.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:272
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:273
 msgid ""
 "You cannot re-register for this course at the current time, because "
 "deletion of your previous data is still in progress.  Please try again in"
@@ -498,14 +507,14 @@ msgstr ""
 #. to delete their personal data.  This link only appears for users
 #. who are currently enrolled in the course or who were enrolled
 #. but still have personal data present in the course.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:426
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:427
 msgid "Delete My Data"
 msgstr "Διαγραφή των δεδομένων μου"
 
 #. Shown when a student is unenrolling from a
 #. course.  Gives the student the option to have all
 #. their data permanently removed.
-#: experimental/coursebuilder/modules/data_removal/data_removal.py:445
+#: experimental/coursebuilder/modules/data_removal/data_removal.py:446
 msgid "Delete all associated data"
 msgstr "Διαγραφή όλων των συσχετισμένων δεδομένων"
 
@@ -785,19 +794,34 @@ msgstr "Θέμα:"
 
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
-#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:186
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:198
 #: experimental/coursebuilder/modules/rating/rating.py:96
 msgid "Access denied."
 msgstr "Δεν επιτρέπεται η πρόσβαση."
 
 #. Message to acknowledge successful submission of the
 #. questionnaire
-#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:190
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:202
 msgid "Response submitted."
 msgstr "Η απάντηση υποβλήθηκε."
 
+#. This message appears on a page where a student could            submit
+#. answers to a questionnaire.  Students may only submit            the
+#. questionnaire once.  This message appears when viewing            the page
+#. after the first subission.
+#: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:15
+msgid "Only one submission of this form is allowed."
+msgstr ""
+
+#. This message appears on a page where a student could            submit
+#. answers to a questionnaire.  The user viewing the            page is not a
+#. registered student, and gets a message            indicating the situation.
+#: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:28
+msgid "Only registered students can submit answers."
+msgstr ""
+
 #. Button label to submit the responses to a questionnaire.
-#: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
+#: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:34
 msgid "Submit answers"
 msgstr "Υποβολή απαντήσεων"
 
@@ -898,7 +922,7 @@ msgid "No results for \"%(query)s\""
 msgstr "Δεν υπάρχουν αποτελέσματα για \"%(query)s\""
 
 #. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.py:80
+#: experimental/coursebuilder/modules/search/search.py:81
 msgid "Search is currently unavailable."
 msgstr "Προς το παρόν η αναζήτηση δεν είναι διαθέσιμη."
 
@@ -1021,7 +1045,7 @@ msgstr "Εκ νέου εγγραφή"
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
-#: experimental/coursebuilder/modules/upload/templates/form.html:17
+#: experimental/coursebuilder/modules/upload/templates/form.html:18
 msgid "You have already submitted; submit again to replace your previous entry."
 msgstr ""
 "Έχετε υποβάλει ήδη το στοιχείο σας. Υποβάλετε ξανά το στοιχείο για να "
@@ -1029,7 +1053,7 @@ msgstr ""
 
 #. Warning shown to the user telling them that the file they select for upload
 #. should be at most 1MB in size
-#: experimental/coursebuilder/modules/upload/templates/form.html:22
+#: experimental/coursebuilder/modules/upload/templates/form.html:23
 msgid "Maximum file size is 1MB."
 msgstr "Το μέγιστο μέγεθος αρχείου είναι 1 MB."
 
@@ -1629,5 +1653,4 @@ msgstr "Επόμενη σελίδα"
 #: experimental/coursebuilder/views/unit.html:142
 msgid "End"
 msgstr "Λήξη"
-
 
