@@ -23,12 +23,10 @@ __author__ = [
 
 import json
 
-import appengine_config
 from google.appengine.ext import db
 
 from models import models
 from modules.drive import drive_api_client
-from modules.drive import drive_api_client_mock
 from modules.drive import drive_models
 from modules.drive import drive_settings
 from modules.drive import errors
@@ -40,35 +38,26 @@ class _DriveManager(object):
 
     @classmethod
     def from_app_context(cls, app_context):
+        # raises errors.NotConfigured
         # pylint: disable=protected-access
-        # for integration tests which can't use swap
-        if appengine_config.gcb_test_mode():
-            client = drive_api_client_mock._APIClientWrapperMock()
-
-        else:
-            # raises errors.NotConfigured
-            secrets = drive_settings.get_secrets(app_context)
-            client = (
-                drive_api_client._APIClientWrapper
-                .from_service_account_secrets(
-                    secrets['client_email'], secrets['private_key']))
+        secrets = drive_settings.get_secrets(app_context)
+        client = (
+            drive_api_client._APIClientWrapper
+            .from_service_account_secrets(
+                secrets['client_email'], secrets['private_key']))
 
         return cls(client)
 
     @classmethod
     def from_code(cls, app_context, code):
         # pylint: disable=protected-access
-        if appengine_config.gcb_test_mode():
-            client = drive_api_client_mock._APIClientWrapperMock()
+        client_id = drive_settings.get_google_client_id(app_context)
+        client_secret = drive_settings.get_google_client_secret(app_context)
+        if not client_id and client_secret:
+            raise errors.NotConfigured
 
-        else:
-            client_id = drive_settings.get_google_client_id(app_context)
-            client_secret = drive_settings.get_google_client_secret(app_context)
-            if not client_id and client_secret:
-                raise errors.NotConfigured
-
-            client = drive_api_client._APIClientWrapper.\
-                from_client_secrets_and_code(code, client_id, client_secret)
+        client = drive_api_client._APIClientWrapper.\
+            from_client_secrets_and_code(code, client_id, client_secret)
 
         return cls(client)
 

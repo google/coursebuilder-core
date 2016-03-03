@@ -7,32 +7,8 @@ var ADD_REST_XSRF_TOKEN = {{ add_rest_xsrf_token|to_json }};
 var ADD_REST_URL = {{ add_rest_url|to_json }};
 </script>
 
-<div class="butterbar-alike">
-  <form action="{{ job_url }}" method="POST">
-    <input
-      type="hidden"
-      name="xsrf_token_{{ job_xsrf_action }}"
-      value="{{ job_xsrf_token }}" />
-
-    <span class="running-state">
-      Job Status: Running.
-      <button class="gcb-button gcb-icon-button" name="action" value="cancel">
-        <i class="icon material-icons">cancel</i>
-        cancel
-      </button>
-    </span>
-
-    <span class="idle-state">
-      Job Status: Idle.
-    </span>
-  </form>
-</div>
-
 <div class="gcb-button-toolbar">
-  <a class="gcb-button" href="{{ add_url }}">Add Items</a>
-  {% if automatic_sharing_is_available %}
-    <a class="gcb-button" id="picker-button">Pick</a>
-  {% endif %}
+  <a class="gcb-button" id="picker-button">Add</a>
 </div>
 
 <form action="{{ sync_url }}" method="post">
@@ -40,7 +16,7 @@ var ADD_REST_URL = {{ add_rest_url|to_json }};
     type="hidden"
     name="xsrf_token_{{ sync_xsrf_action }}"
     value="{{ sync_xsrf_token }}" />
-  <div class="gcb-list gcb-list--autostripe">
+  <div class="gcb-list gcb-list--autostripe" id="drive-list">
     <table>
       <thead>
         <tr>
@@ -135,3 +111,24 @@ var ADD_REST_URL = {{ add_rest_url|to_json }};
     {% endif %}
   </div>
 </form>
+
+<p>
+  <form action="{{ job_url }}" method="POST">
+    <input
+      type="hidden"
+      name="xsrf_token_{{ job_xsrf_action }}"
+      value="{{ job_xsrf_token }}" />
+
+    <span class="running-state">
+      Job Status: Running.
+      <button class="gcb-button gcb-icon-button" name="action" value="cancel">
+        <i class="icon material-icons">cancel</i>
+        cancel
+      </button>
+    </span>
+
+    <span class="idle-state">
+      Job Status: Idle.
+    </span>
+  </form>
+</p>

@@ -1,14 +1,15 @@
 tests:
   functional:
-    - modules.drive.tests.functional.DriveTests = 28
+    - modules.drive.tests.functional.DriveTests = 25
   unit:
     - modules.drive.tests.unit.ApiClientTests = 2
+  integration:
+    - modules.drive.tests.integration.DriveIntegrationTests = 1
 
 files:
   - modules/drive/constants.py
   - modules/drive/cron.py
   - modules/drive/dashboard_handler.py
-  - modules/drive/drive_api_client_mock.py
   - modules/drive/drive_api_client.py
   - modules/drive/drive_api_manager.py
   - modules/drive/drive_models.py
@@ -22,7 +23,6 @@ files:
   - modules/drive/messages.py
   - modules/drive/_static/script.js
   - modules/drive/_static/style.css
-  - modules/drive/templates/drive-add.html
   - modules/drive/templates/drive-list.html
   - modules/drive/templates/drive-failed.html
   - modules/drive/templates/drive-not-configured.html
@@ -32,5 +32,7 @@ files:
   - modules/drive/tests/fixtures/worksheet1.json
   - modules/drive/tests/fixtures/worksheet2.json
   - modules/drive/tests/functional.py
+  - modules/drive/tests/integration.py
   - modules/drive/tests/__init__.py
   - modules/drive/tests/unit.py
+  - modules/drive/tests/mocks.py

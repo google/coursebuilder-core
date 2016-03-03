@@ -25,7 +25,6 @@ import pickle
 import re
 import sys
 import threading
-import config
 import custom_units
 
 import messages
@@ -80,11 +79,6 @@ ALLOWED_MATCHERS_NAMES = {review.PEER_MATCHER: messages.PEER_MATCHER_NAME}
 # timezone. All such strings are assumed to refer to UTC datetimes.
 # Example: '2013-03-21 13:00'
 ISO_8601_DATE_FORMAT = '%Y-%m-%d %H:%M'
-
-# Whether or not individual courses are allowed to use Google APIs.
-COURSES_CAN_USE_GOOGLE_APIS = config.ConfigProperty(
-    'gcb_courses_can_use_google_apis', bool, messages.SITE_SETTINGS_GOOGLE_APIS,
-    default_value=False, label='Google APIs')
 
 # The config key part under which course info lives.
 _CONFIG_KEY_PART_COURSE = 'course'
@@ -2630,26 +2624,25 @@ class Course(object):
                 'course:google_tag_manager_id')))
 
         # Course-level Google API configuration settings.
-        if COURSES_CAN_USE_GOOGLE_APIS.value:
-            opts.add_property(schema_fields.SchemaField(
-                CONFIG_KEY_GOOGLE_API_KEY, 'Google API Key', 'string',
-                description=services.help_urls.make_learn_more_message(
-                    messages.COURSE_GOOGLE_API_KEY_DESCRIPTION,
-                    CONFIG_KEY_GOOGLE_API_KEY),
-                i18n=False, optional=True))
-            opts.add_property(schema_fields.SchemaField(
-                CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client ID', 'string',
-                description=services.help_urls.make_learn_more_message(
-                    messages.COURSE_GOOGLE_CLIENT_ID_DESCRIPTION,
-                    CONFIG_KEY_GOOGLE_CLIENT_ID),
-                i18n=False, optional=True))
-            opts.add_property(schema_fields.SchemaField(
-                CONFIG_KEY_GOOGLE_CLIENT_SECRET, 'Google Client Secret',
-                'string',
-                description=services.help_urls.make_learn_more_message(
-                    messages.COURSE_GOOGLE_CLIENT_SECRET_DESCRIPTION,
-                    CONFIG_KEY_GOOGLE_CLIENT_SECRET),
-                i18n=False, optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            CONFIG_KEY_GOOGLE_API_KEY, 'Google API Key', 'string',
+            description=services.help_urls.make_learn_more_message(
+                messages.COURSE_GOOGLE_API_KEY_DESCRIPTION,
+                CONFIG_KEY_GOOGLE_API_KEY),
+            i18n=False, optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client ID', 'string',
+            description=services.help_urls.make_learn_more_message(
+                messages.COURSE_GOOGLE_CLIENT_ID_DESCRIPTION,
+                CONFIG_KEY_GOOGLE_CLIENT_ID),
+            i18n=False, optional=True))
+        opts.add_property(schema_fields.SchemaField(
+            CONFIG_KEY_GOOGLE_CLIENT_SECRET, 'Google Client Secret',
+            'string',
+            description=services.help_urls.make_learn_more_message(
+                messages.COURSE_GOOGLE_CLIENT_SECRET_DESCRIPTION,
+                CONFIG_KEY_GOOGLE_CLIENT_SECRET),
+            i18n=False, optional=True))
         return opts
 
     @classmethod

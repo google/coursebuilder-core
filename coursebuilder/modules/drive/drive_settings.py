@@ -20,8 +20,6 @@ __author__ = [
 
 import json
 
-import appengine_config
-
 from common import schema_fields
 from models import courses
 from models import services
@@ -86,8 +84,6 @@ def get_secrets(app_context):
 
 def get_client_email(app_context):
     # Can raise errors.NotConfigured
-    if appengine_config.gcb_test_mode():
-        return 'service-account@example.com'
     return get_secrets(app_context)['client_email']
 
 

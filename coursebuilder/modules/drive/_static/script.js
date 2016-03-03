@@ -99,32 +99,36 @@
           cbShowMsg('Failed to authenticate.');
           return;
         }
+        shareItem(file_id, code);
+      }
+    );
+  }
 
-        cbShowMsg('Sharing the file with your service account...');
-        $.ajax({
-          method: 'POST',
-          url: ADD_REST_URL,
-          data: {
-            code: code,
-            file_id: file_id
-          },
-          headers: {
-            'CSRF-Token': ADD_REST_XSRF_TOKEN,
-          },
-          dataType: 'text',
-          success: function(text) {
-            var payload = JSON.parse(gcb.parseJsonResponse(text).payload);
-            if (payload.status == 'success') {
-              window.location = DRIVE_ITEM_URL + '?key=' + file_id;
-            } else {
-              cbShowMsg(payload.message);
-            }
-          },
-          error: function() {
-            cbShowMsg('Unknown server error.');
-          }
+  // Public for testing purposes
+  window.shareDriveItem = function(file_id, code) {
+    cbShowMsg('Sharing the file with your service account...');
+    $.ajax({
+      method: 'POST',
+      url: ADD_REST_URL,
+      data: {
+        code: code,
+        file_id: file_id
+      },
+      headers: {
+        'CSRF-Token': ADD_REST_XSRF_TOKEN,
+      },
+      dataType: 'text',
+      success: function(text) {
+        var payload = JSON.parse(gcb.parseJsonResponse(text).payload);
+        if (payload.status == 'success') {
+          window.location = DRIVE_ITEM_URL + '?key=' + file_id;
+        } else {
+          cbShowMsg(payload.message);
         }
-      );
+      },
+      error: function() {
+        cbShowMsg('Unknown server error.');
+      }
     });
   }
 

@@ -80,14 +80,8 @@ class _Runtime(object):
     def can_edit(self):
         return roles.Roles.is_course_admin(self._app_context)
 
-    def courses_can_use_google_apis(self):
-        return courses.COURSES_CAN_USE_GOOGLE_APIS.value
-
     def configured(self):
-        return (
-            self.courses_can_use_google_apis() and
-            bool(self.get_api_key()) and
-            bool(self.get_client_id()))
+        return bool(self.get_api_key()) and bool(self.get_client_id())
 
     def get_api_key(self):
         course, google, api_key = courses.CONFIG_KEY_GOOGLE_API_KEY.split(':')
@@ -206,12 +200,11 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
     @classmethod
     def _oeditor_extra_script_tags_urls(cls):
         script_urls = []
-        if courses.COURSES_CAN_USE_GOOGLE_APIS.value:
-            # Order matters here because scripts are inserted in the order they
-            # are found in this list, and later ones may refer to symbols from
-            # earlier ones.
-            script_urls.append(_SCRIPT_MANAGER_SCRIPT)
-            script_urls.append(_PARENT_FRAME_SCRIPT)
+        # Order matters here because scripts are inserted in the order they
+        # are found in this list, and later ones may refer to symbols from
+        # earlier ones.
+        script_urls.append(_SCRIPT_MANAGER_SCRIPT)
+        script_urls.append(_PARENT_FRAME_SCRIPT)
         return script_urls
 
     def get_icon_url(self):
@@ -317,10 +310,6 @@ class GoogleDriveRESTHandler(utils.BaseRESTHandler):
         return crypto.XsrfTokenManager.create_xsrf_token(cls._XSRF_TOKEN_NAME)
 
     def put(self):
-        if not courses.COURSES_CAN_USE_GOOGLE_APIS.value:
-            self.error(404)
-            return
-
         request = transforms.loads(self.request.get('request', ''))
 
         if not self.assert_xsrf_token_or_fail(
@@ -364,10 +353,6 @@ class GoogleDriveRESTHandler(utils.BaseRESTHandler):
 class GoogleDriveTagRenderer(utils.BaseHandler):
 
     def get(self):
-        if not courses.COURSES_CAN_USE_GOOGLE_APIS.value:
-            self.error(404)
-            return
-
         resource_id = self.request.get('resource_id')
         type_id = self.request.get('type_id')
 

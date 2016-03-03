@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 from modules.drive import drive_api_client
+from modules.drive import drive_api_manager
 from modules.drive import errors
 
 
@@ -42,17 +43,10 @@ class _APIClientWrapperMock(object):
     SHARABLE_FILE = drive_api_client.DriveItem(
         '7', drive_api_client.DOC_TYPE, '7 Sharable Doc', 1)
 
-    ERROR_FILE_ID = 'error'
-    SHARE_PERMISSION_ERROR_FILE_ID = 'share-permission-error'
-    SHARE_UNKNOWN_ERROR_FILE_ID = 'share-error'
-
     def list_file_meta(self):
         return drive_api_client.DriveItemList(self.MOCK_FILES)
 
     def get_file_meta(self, file_id):
-        if file_id == self.ERROR_FILE_ID:
-            raise errors.Error
-
         for item in self.MOCK_FILES:
             if item.key == file_id:
                 return item
@@ -89,7 +83,72 @@ class _APIClientWrapperMock(object):
     def share_file(self, file_id, email):
         if self.SHARABLE_FILE not in self.MOCK_FILES:
             self.MOCK_FILES = self.MOCK_FILES.append(self.SHARABLE_FILE)
-        elif file_id == self.SHARE_PERMISSION_ERROR_FILE_ID:
-            raise errors.SharingPermissionError(errors.Error)
-        elif file_id == self.SHARE_UNKNOWN_ERROR_FILE_ID:
-            raise errors.Error
+
+    @classmethod
+    def create(cls, *args, **kwargs):
+        return cls()
+
+    from_service_account_secrets = from_client_secrets_and_code = create
+
+
+
+def raise_error(*args, **kwargs):
+    raise errors.Error(Exception())
+
+
+def raise_timeout(*args, **kwargs):
+    raise errors.TimeoutError(Exception())
+
+
+def raise_sharing_permission_error(*args, **kwargs):
+    raise errors.SharingPermissionError(errors.Error)
+
+
+def manager_from_mock(cls, *args, **kwargs):
+    return cls(_APIClientWrapperMock())
+
+
+def setup_drive(self):
+    self.drive_manager = manager_from_mock(drive_api_manager._DriveManager)
+
+
+def get_secrets(*args):
+    return {
+        'client_email': 'service-account@example.com',
+        'private_key': TESTING_KEY,
+    }
+
+
+def install_integration_mocks():
+    drive_api_client._APIClientWrapper = _APIClientWrapperMock
+
+
+# This key is not a real credential for anything.
+TESTING_KEY = """-----BEGIN PRIVATE KEY-----
+MIIEowIBAAKCAQEA5J9Lc+Hny6pBkl4bkWaz4piOzYvNHTemydKohWROPiJtuzO4
+AbQ+b+C2sQXImiPeUJ2+uwrCxegrBokwhYqQvVCRNf4kxRdOWgDnA40qfJiUBh+9
+FNogY6q6xTPk8W9gxYLsba6/A9AIi//8UDG4Ggr0wjGJrOoyabq4fmJQOSx1utq1
+omDD040NMjI/VGqo3Wo0dxeBhK6j2uXGagFNcQsRbEtE5nT5sZSNJ7RD3vrYzUPq
+ygXGfHCtr440nowqiRTkNkbWnoM4d2et/MH5Gvhf10I1DEdfSdbLPodc0WqhLdLp
+utVXpTYJKjUqOk+QTuSFxnrjH4ZDwbhsomx3DwIDAQABAoIBAAyqorSN7JjFGxLv
+8dkRdp/0Ud0jhL68qZn++OVDFG6u26OGjwhRIzBxo82VA3M+z39p7fpQ80+huFiJ
+W03ayoAiqZjzNrhQvT+RUztII/V5QqJAOeqg1zCOcgChCmsx/4uR4GWHS//7E64m
+BaWvy4Jt3vevZPBWnWpsNPKTodw49pAeslb1Bh64Ot0tJyumcOPpjP/IaLwVa0WV
+VMpd7TeAgG3/y6zbag/ar3ePY574AmNcsNgtgF68Cd2CbQy2e+nNCHJUXKh9PsvY
+7Jyr2AEPnQsiQTKrrLaZbKDZjaTRYykWaPMgicj1jfIHQXEuhZ4usmRsI+Xbud9a
+1RYlXQECgYEA9+YN2R4H4KfNo7kf743bQoFEQ/VedDpwXTsYHa+mC+1x3HONya+a
+7AWSpUKA/Rl6z6Wk2+Qf6RHbKOkaz+jO5ALvE2XQTkNDzCYxNOcChR1nxt69jdns
+VKqHaaX/6zAXEUHcbFYdn+4jbZxUINc1WB7Qo2Z+3rF0wfvc5vAYGoECgYEA7Bf4
+5Nxhjc8CobTbk3kslezcnx8hJlrNBXp216JnsafbfElPcpEXL6LKC0VgvR9ZKbOQ
+8V269bk82lQSn1wFSVL3MfF47j7FXE5pjlXNyczxrJa1RwjWd4gaxOqnRuDrN8Id
+H5XTFFKCkx+GsBklcZlRZMyF5olPN4bG+Xc3KY8CgYEA2d1wnDk9WR6Apvwi6gj1
+AuzSjxtNCL73U6iE2Eovl1n18HYJzZAsinOXXvAkpsvG2ElOqwZBWTedMcY0Dzce
+5NsDPDwFp1KMehWytzizSUP/mZLWap10izBX0+zVDuBz1XHZg8jnPlAvCL0UXsxk
+kG58lK6Wn6a742Qzzy6BMIECgYAYS385TdRcG2lR6qKN0nJcGzu4xCNNJxrh7XA9
+UGELTxKu/3xFddjE9iOEdWc3DvrF58yKifKrRpyUewJPk9CXcwotAYRIP/1fOlJy
+azH6CjT0Za3R2X74XfEjQmJkUNDjs/37Ohe2h6cYLK5XgL7xqa1Oih1dU9PrCtt+
+4F200QKBgCS6THFlSSrQfk24HDG7Qd+Ka6Ju9+lIG9x3X4voa7JJKc72Fo626l15
+GDd7+xDI1Z3o5rzrsN8XpUaNHwfILKkcg2cCzjA4iTywc4N7CA7yrcyw6l5tkAQd
+9DwacpIhxkbKvMISCfv5Ysa7kP/32Pd6d8G5OVWxIbdmuHOuEcc+
+-----END PRIVATE KEY-----
+"""

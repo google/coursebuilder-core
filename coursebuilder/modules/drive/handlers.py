@@ -28,12 +28,12 @@ from modules.dashboard import dto_editor
 from modules.drive import constants
 from modules.drive import cron
 from modules.drive import dashboard_handler
-from modules.drive import drive_api_client
 from modules.drive import drive_api_manager
 from modules.drive import drive_models
 from modules.drive import drive_settings
 from modules.drive import errors
 from modules.drive import jobs
+from modules.drive import messages
 
 
 def _sorted_drive_items(items):
@@ -45,6 +45,9 @@ class AbstractDriveDashboardHandler(dashboard_handler.AbstractDashboardHandler):
 
     def setup_drive(self):
         try:
+            if not drive_settings.automatic_sharing_is_available(
+                self.app_context):
+                raise errors.NotConfigured
             # pylint: disable=protected-access
             self.drive_manager = (
                 drive_api_manager._DriveManager.from_app_context(
@@ -138,7 +141,6 @@ class DriveListHandler(AbstractDriveDashboardHandler):
 
             # urls
             this_url=self.URL,
-            add_url=DriveAddListHandler.URL,
             item_url=DriveItemHandler.URL,
             content_url=DriveContentHandler.URL,
             sheets_to_site_url=(
@@ -211,59 +213,6 @@ class DriveNotConfiguredHandler(dashboard_handler.AbstractDashboardHandler):
         self.render_this()
 
 
-class DriveAddListHandler(AbstractDriveDashboardHandler):
-    PAGE_TITLE = 'Add from Drive'
-    URL = 'modules/drive/add'
-    TEMPLATE = 'drive-add.html'
-    ACTION = 'drive-add'
-    IN_ACTION = DriveListHandler.ACTION
-    EXTRA_CSS_URLS = ['/modules/drive/_static/style.css']
-
-    def get(self):
-        super(DriveAddListHandler, self).get()
-
-        existing_item_keys = set(item.key
-            for item in drive_models.DriveSyncDAO.get_all())
-
-        try:
-            data = self.drive_manager.list_file_meta()
-        except errors.Error as error:
-            self.handle_error(error)
-            return
-
-        new_items = [item
-            for item in data.items
-            if item.key not in existing_item_keys]
-
-        self.render_this(
-            items=new_items,
-            service_account_email=
-                drive_settings.get_client_email(self.app_context),
-
-            add_url=self.URL,
-            add_action=self.ACTION,
-            add_xsrf_token=self.create_xsrf_token(self.ACTION),
-        )
-
-    def post(self):
-        super(DriveAddListHandler, self).post()
-        key = self.request.get('key')
-
-        try:
-            data = self.drive_manager.get_file_meta(key)
-        except errors.Error as error:
-            self.handle_error(error)
-            return
-
-        if data.type not in drive_api_client.KNOWN_MIME_TYPES.values():
-            self.abort(404)
-
-        self.create_sync_schedule(key, data)
-
-        self.redirect(self.app_context.canonicalize_url(
-            '/{}?key={}'.format(DriveItemHandler.URL, key)))
-
-
 class DriveAddRESTHandler(AbstractDriveDashboardHandler):
     URL = 'rest/modules/drive/add'
     ACTION = 'drive-add-rest'
@@ -272,6 +221,13 @@ class DriveAddRESTHandler(AbstractDriveDashboardHandler):
         super(DriveAddRESTHandler, self).post()
         code = self.request.get('code')
         file_id = self.request.get('file_id')
+        if not code and file_id:
+            transforms.send_json_response(
+                self, 400, 'error', payload_dict={
+                    'status': 'error',
+                    'message': 'code and file_id are required.',
+            })
+            return
 
         # attempt to share
         try:
@@ -284,15 +240,17 @@ class DriveAddRESTHandler(AbstractDriveDashboardHandler):
                 file_id, drive_settings.get_client_email(self.app_context))
 
         except errors.Error as error:
+            status = 502
             if isinstance(error, errors.SharingPermissionError):
-                message = 'You do not have permission to share this file.'
+                message = messages.SHARE_PERMISSION_ERROR
+            elif isinstance(error, errors.TimeoutError):
+                message = messages.TIMEOUT_ERROR
+                status = 504
             else:
-                message = (
-                    'An unknown error occurred when sharing this file.  Check '
-                    'your Drive or Google API configuration or try again.')
+                message = messages.SHARE_UNKNOWN_ERROR
 
             transforms.send_json_response(
-                self, 502, 'error', payload_dict={
+                self, status, 'error', payload_dict={
                     'status': 'error',
                     'message': message,
             })
@@ -301,12 +259,16 @@ class DriveAddRESTHandler(AbstractDriveDashboardHandler):
         try:
             data = self.drive_manager.get_file_meta(file_id)
         except errors.Error as error:
+            if isinstance(error, errors.TimeoutError):
+                message = messages.TIMEOUT_ERROR
+                status = 504
+            else:
+                message = messages.SHARE_META_ERROR
+                status = 502
             transforms.send_json_response(
-                self, 502, 'error', payload_dict={
+                self, status, 'error', payload_dict={
                     'status': 'error',
-                    'message':
-                        'File shared, but Drive API failed to fetch metadata.  '
-                        'Please try again or check your Drive configuration.',
+                    'message': messages.SHARE_META_ERROR,
             })
             return
 
@@ -406,7 +368,6 @@ global_routes = utils.map_handler_urls([
 
 namespaced_routes = utils.map_handler_urls([
     DriveListHandler,
-    DriveAddListHandler,
     DriveAddRESTHandler,
     DriveSyncHandler,
     DriveItemHandler,

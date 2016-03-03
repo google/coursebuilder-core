@@ -1,8 +1,8 @@
 tests:
   functional:
-    - modules.core_tags.core_tags_tests.GoogleDriveRESTHandlerTest = 8
-    - modules.core_tags.core_tags_tests.GoogleDriveTagRendererTest = 8
-    - modules.core_tags.core_tags_tests.RuntimeTest = 13
+    - modules.core_tags.core_tags_tests.GoogleDriveRESTHandlerTest = 7
+    - modules.core_tags.core_tags_tests.GoogleDriveTagRendererTest = 7
+    - modules.core_tags.core_tags_tests.RuntimeTest = 10
     - modules.core_tags.core_tags_tests.TagsInclude = 8
     - modules.core_tags.core_tags_tests.TagsMarkdown = 1
   unit:

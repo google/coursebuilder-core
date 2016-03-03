@@ -16,10 +16,18 @@
 
 __author__ = 'Nick Retallack (nretallack@google.com)'
 
+import appengine_config
 from models import custom_modules
 from modules.drive import constants
 from modules.drive import drive_settings
 from modules.drive import handlers
+
+# integration test mocks
+if appengine_config.gcb_test_mode():
+    from modules.drive.tests import mocks
+    mocks.install_integration_mocks()
+
+custom_module = None
 
 
 def register_module():
@@ -36,6 +44,3 @@ def register_module():
         handlers.global_routes, handlers.namespaced_routes)
 
     return custom_module
-
-
-custom_module = None

@@ -49,14 +49,6 @@ class GoogleDriveTestBase(actions.TestBase):
         config.Registry.test_overrides = {}
         super(GoogleDriveTestBase, self).tearDown()
 
-    def disable_courses_can_use_google_apis(self):
-        config.Registry.test_overrides[
-            courses.COURSES_CAN_USE_GOOGLE_APIS.name] = False
-
-    def enable_courses_can_use_google_apis(self):
-        config.Registry.test_overrides[
-            courses.COURSES_CAN_USE_GOOGLE_APIS.name] = True
-
     def get_env(self, api_key=None, client_id=None):
         # Treat as module-protected. pylint: disable=protected-access
         result = {
@@ -108,47 +100,23 @@ class RuntimeTest(GoogleDriveTestBase):
 
         self.assertTrue(runtime.can_edit())
 
-    def test_configured_false_when_courses_cannot_use_google_apis(self):
-        with actions.OverriddenEnvironment(self.get_env(
-                api_key=self.api_key, client_id=self.client_id)):
-            # Treat as module-protected. pylint: disable=protected-access
-            self.assertFalse(core_tags._Runtime(self.app_context).configured())
-
     def test_configured_false_when_api_key_empty(self):
-        self.enable_courses_can_use_google_apis()
-
         with actions.OverriddenEnvironment(self.get_env(
                 client_id=self.client_id)):
             # Treat as module-protected. pylint: disable=protected-access
             self.assertFalse(core_tags._Runtime(self.app_context).configured())
 
     def test_configured_false_when_client_id_empty(self):
-        self.enable_courses_can_use_google_apis()
-
         with actions.OverriddenEnvironment(self.get_env(
                 api_key=self.api_key)):
             # Treat as module-protected. pylint: disable=protected-access
             self.assertFalse(core_tags._Runtime(self.app_context).configured())
 
     def test_configured_true_when_enabled_and_api_key_and_client_id_set(self):
-        self.enable_courses_can_use_google_apis()
-
         with actions.OverriddenEnvironment(self.get_env(
                 api_key=self.api_key, client_id=self.client_id)):
             # Treat as module-protected. pylint: disable=protected-access
             self.assertTrue(core_tags._Runtime(self.app_context).configured())
-
-    def test_courses_cannot_use_google_apis_by_default(self):
-        # Treat as module-protected. pylint: disable=protected-access
-        self.assertFalse(
-            core_tags._Runtime(self.app_context).courses_can_use_google_apis())
-
-    def test_courses_can_use_google_apis_with_override(self):
-        self.enable_courses_can_use_google_apis()
-
-        # Treat as module-protected. pylint: disable=protected-access
-        self.assertTrue(
-            core_tags._Runtime(self.app_context).courses_can_use_google_apis())
 
     def test_get_api_key_returns_empty_string_when_not_set(self):
         # Treat as module-protected. pylint: disable=protected-access
@@ -186,8 +154,6 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
         self.xsrf_token = core_tags.GoogleDriveRESTHandler.get_xsrf_token()
         self.uid = models.ContentChunkDAO.make_uid(
             self.type_id, self.document_id)
-
-        self.enable_courses_can_use_google_apis()
 
     def assert_response(self, code, body_needle, response):
         from_json = transforms.loads(response.body)
@@ -312,20 +278,6 @@ class GoogleDriveRESTHandlerTest(GoogleDriveTestBase):
 
         self.assert_403_response(response)
 
-    def test_get_returns_404_if_courses_cannot_use_google_apis(self):
-        self.disable_courses_can_use_google_apis()
-        params = self._make_params({
-            'contents': self.contents,
-            'document_id': self.document_id,
-            'type_id': self.type_id,
-            'xsrf_token': self.xsrf_token,
-        })
-        # Treat as module-protected. pylint: disable=protected-access
-        response = self.testapp.put(
-            core_tags._GOOGLE_DRIVE_TAG_PATH, expect_errors=True, params=params)
-
-        self.assertEqual(404, response.status_code)
-
     def test_put_returns_500_if_save_throws(self):
 
         def throw(
@@ -365,8 +317,6 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
             self.type_id, self.resource_id)
         models.ContentChunkDAO.save(dto)
         self.dto = models.ContentChunkDAO.get_by_uid(self.uid)
-
-        self.enable_courses_can_use_google_apis()
 
     def assert_response(self, code, body_needle, response):
         self.assertEqual(code, response.status_code)
@@ -436,18 +386,6 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
         })
 
         self.assert_404_response(response)
-
-    def test_get_returns_404_if_courses_cannot_use_google_apis(self):
-        self.disable_courses_can_use_google_apis()
-        # Treat as module-protected. pylint: disable=protected-access
-        response = self.testapp.get(
-            core_tags._GOOGLE_DRIVE_TAG_RENDERER_PATH, expect_errors=True,
-            params={
-                'type_id': 'other_' + self.type_id,
-                'resource_id': 'other_' + self.resource_id,
-        })
-
-        self.assertEqual(404, response.status_code)
 
     def test_get_tag_renderer_url_for_course_at_root(self):
         # Treat as module-protected. pylint: disable=protected-access

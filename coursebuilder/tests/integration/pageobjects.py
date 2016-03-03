@@ -259,6 +259,14 @@ class EditorPageObject(PageObject):
             checkbox.click()
         return self
 
+    def set_text_field_by_name(self, name, value):
+        field = self.find_element_by_css_selector('[name="{}"]'.format(name))
+        action_chains.ActionChains(self._tester.driver).move_to_element(
+            field).perform()
+        field.clear()
+        field.send_keys(value)
+        return self
+
     def set_text_field_by_title(self, title, value):
         label = self._find_setting_by_title(title)
         field = label.find_element_by_xpath(
@@ -821,7 +829,7 @@ class AssessmentConfirmationPage(RootPage):
         return LessonPage(self._tester)
 
 
-class SettingsPage(EditorPageObject):
+class SettingsPage(EditorPageObject, DashboardPage):
     """Page object for the dashboard's course settings tab."""
 
     def __init__(self, tester):

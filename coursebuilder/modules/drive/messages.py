@@ -40,3 +40,21 @@ AVAILABILITY_DESCRIPTION = """
 Synced items default to the availability of the course, but may also be
 restricted to admins (Private) or open to the public (Public).
 """
+
+SHARE_PERMISSION_ERROR = """
+You do not have permission to share this file.
+"""
+
+SHARE_UNKNOWN_ERROR = """
+An unknown error occurred when sharing this file.  Check your Drive or Google
+API configuration or try again.
+"""
+
+SHARE_META_ERROR = """
+File shared, but Drive API failed to fetch metadata.  Please try again or check
+your Drive configuration.
+"""
+
+TIMEOUT_ERROR = """
+Google Drive timed out.  Please try again.
+"""
