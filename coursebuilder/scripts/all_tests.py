@@ -122,6 +122,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.EtlMainTestCase': 46,
     'tests.functional.test_classes.EtlTranslationRoundTripTest': 1,
     'tests.functional.test_classes.ExtensionSwitcherTests': 3,
+    'tests.functional.test_classes.InaccessiblePageHandlingTest': 7,
     'tests.functional.test_classes.InfrastructureTest': 21,
     'tests.functional.test_classes.I18NTest': 2,
     'tests.functional.test_classes.LegacyEMailAsKeyNameTest': 48,

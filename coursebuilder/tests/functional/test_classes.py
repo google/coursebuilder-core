@@ -53,6 +53,7 @@ from models import entities
 from models import entity_transforms
 from models import jobs
 from models import models
+from models import roles
 from models import student_work
 from models import transforms
 from models import vfs
@@ -171,6 +172,7 @@ class WSGIRoutingTest(actions.TestBase):
                 course_explorer.student.IndexPageHandler,
                 models.StudentLifecycleObserver,
                 search.search.AssetsHandler,
+                sites.ClearCookiesHandler,
                 tags.ResourcesHandler,
             ], ignore_modules=[
                 'mapreduce.lib', 'mapreduce.handlers', 'mapreduce.main',
@@ -399,10 +401,8 @@ class WSGIRoutingTest(actions.TestBase):
         for path in ['/d', '/e']:
             response = self.testapp.get('/foo%s' % path, expect_errors=True)
             self.assertEqual(404, response.status_code)
-            self.assertEqual(
-                'Unable to access requested page in the course /foo. '
-                'HTTP status code: 404.', response.body)
-
+            self.assertIn('This resource does not exist, or cannot be accessed '
+                          'by the current user.', response.body)
             response = self.testapp.post('/foo%s' % path, expect_errors=True)
             self.assertEqual(500, response.status_code)
             self.assertEqual(
@@ -3089,6 +3089,145 @@ class StudentUnifiedProfileTest(StudentAspectTest):
     def tearDown(self):
         config.Registry.test_overrides = {}
         super(StudentUnifiedProfileTest, self).tearDown()
+
+
+class InaccessiblePageHandlingTest(actions.TestBase):
+
+    COURSE_NAME = 'test_course'
+    ADMIN_EMAIL = 'admin@foo.com'
+    NAMESPACE = 'ns_%s' % COURSE_NAME
+    BASE = '/%s' % COURSE_NAME
+    WHITELISTED_USER = 'whitelisted@foo.com'
+    UNKNOWN_USER = 'unknown@foo.com'
+
+    def setUp(self):
+        super(InaccessiblePageHandlingTest, self).setUp()
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Test Course')
+        self.course = courses.Course(None, app_context=self.app_context)
+        self.base = self.BASE
+
+    def tearDown(self):
+        sites.reset_courses()
+        super(InaccessiblePageHandlingTest, self).tearDown()
+
+    def test_no_access_to_unknown_path_in_course(self):
+        response = self.get('no/such/path/in/course', expect_errors=True)
+        self.assertEquals(404, response.status_int)
+        self.assertIn(
+            'This resource does not exist, or access to it requires '
+            'that you be logged in.', response.body)
+
+    def test_no_access_to_unknown_path_matching_no_course(self):
+        with actions.OverriddenConfig(sites.GCB_COURSES_CONFIG.name,
+                                      'course:/test_course::ns_test_course'):
+            response = self.get('/no/such/path', expect_errors=True)
+            self.assertEquals(404, response.status_int)
+            self.assertEquals(
+                'Unable to access requested page. HTTP status code: 404.',
+                response.body)
+
+    def test_not_logged_in_and_no_access_to_course_and_no_whitelist(self):
+        self.course.set_course_availability(courses.COURSE_AVAILABILITY_PRIVATE)
+        response = self.get('course', expect_errors=True)
+        self.assertEquals(404, response.status_int)
+        self.assertIn(
+            'This resource does not exist, or access to it requires '
+            'that you be logged in.', response.body)
+
+    def test_logged_in_but_no_access_to_course_for_students(self):
+        self.course.set_course_availability(courses.COURSE_AVAILABILITY_PRIVATE)
+
+        actions.login(self.UNKNOWN_USER)
+        response = self.get('course', expect_errors=True)
+        self.assertEquals(404, response.status_int)
+        self.assertIn(
+            'You are currently logged in as %s' % self.UNKNOWN_USER,
+            response.body)
+
+        # Just because you're on the whitelist doesn't make the course public.
+        with actions.OverriddenEnvironment(
+            {'reg_form': {'whitelist': self.WHITELISTED_USER}}):
+
+            actions.login(self.WHITELISTED_USER)
+            response = self.get('course', expect_errors=True)
+            self.assertEquals(404, response.status_int)
+            self.assertIn(
+                'You are currently logged in as %s' % self.WHITELISTED_USER,
+                response.body)
+
+    def test_not_logged_in_but_course_has_whitelist(self):
+        with actions.OverriddenEnvironment(
+            {'reg_form': {'whitelist': self.WHITELISTED_USER}}):
+
+            response = self.get('course', expect_errors=True)
+
+            # If user is logged out, still 404.
+            self.assertEquals(404, response.status_int)
+
+            actions.login(self.WHITELISTED_USER)
+            response = self.get('course')
+            self.assertEquals(200, response.status_int)
+
+    def test_logged_in_as_wrong_user_but_course_has_whitelist(self):
+        with actions.OverriddenEnvironment(
+            {'reg_form': {'whitelist': self.WHITELISTED_USER}}):
+
+            actions.login(self.UNKNOWN_USER)
+            response = self.get('course', expect_errors=True)
+
+            # Expect nice message on 404 page giving re-login link.
+            self.assertEquals(404, response.status_int)
+            self.assertIn(
+                'You are currently logged in as %s' % self.UNKNOWN_USER,
+                response.body)
+            dom = self.parse_html_string(response.body)
+            link = dom.find('.//a')
+            self.assertEquals(
+                '/clear_cookies?continue=https%3A%2F%2Fwww.google.com'
+                '%2Faccounts%2FLogin%3Fcontinue%3Dhttp%253A%2F%2Flocalhost'
+                '%2Ftest_course%2Fcourse', link.get('href'))
+            response = self.click(response, 'Log in as another user')
+
+            self.assertEquals(302, response.status_int)
+            self.assertEquals(
+                'https://www.google.com/accounts/Login'
+                '?continue=http%3A//localhost/test_course/course',
+                response.location)
+
+            actions.login(self.WHITELISTED_USER)
+            response = self.get('course')
+            self.assertEquals(200, response.status_int)
+
+    def test_logged_in_as_wrong_user_but_site_has_whitelist(self):
+        with actions.OverriddenConfig(
+            roles.GCB_WHITELISTED_USERS.name, self.WHITELISTED_USER):
+
+            actions.login(self.UNKNOWN_USER)
+            response = self.get('course', expect_errors=True)
+
+            # Expect nice message on 404 page giving re-login link.
+            self.assertEquals(404, response.status_int)
+            self.assertIn(
+                'You are currently logged in as %s' % self.UNKNOWN_USER,
+                response.body)
+            dom = self.parse_html_string(response.body)
+            link = dom.find('.//a')
+            self.assertEquals(
+                '/clear_cookies?continue=https%3A%2F%2Fwww.google.com'
+                '%2Faccounts%2FLogin%3Fcontinue%3Dhttp%253A%2F%2Flocalhost'
+                '%2Ftest_course%2Fcourse', link.get('href'))
+            response = self.click(response, 'Log in as another user')
+
+            self.assertEquals(302, response.status_int)
+            self.assertEquals(
+                'https://www.google.com/accounts/Login'
+                '?continue=http%3A//localhost/test_course/course',
+                response.location)
+
+            actions.login(self.WHITELISTED_USER)
+            response = self.get('course')
+            self.assertEquals(200, response.status_int)
 
 
 class StaticHandlerTest(actions.TestBase):

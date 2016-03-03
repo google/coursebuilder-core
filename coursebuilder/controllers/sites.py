@@ -111,6 +111,7 @@ import posixpath
 import re
 import threading
 import traceback
+import urllib
 import urlparse
 import zipfile
 
@@ -120,10 +121,12 @@ from webapp2_extras import i18n
 from webob import exc
 
 import appengine_config
+
 from common import caching
 from common import users
 from common import user_routes
 from common import utils as common_utils
+from models import courses
 from models import messages
 from models import models
 from models import custom_modules
@@ -221,6 +224,8 @@ _NAMESPACE_MAX_LENGTH = 100
 # name of the response header used to transmit handler class name
 GCB_HANDLER_CLASS_HEADER_NAME = 'gcb-handler-class'
 
+TEMPLATES_DIR = os.path.join(
+    appengine_config.BUNDLE_ROOT, 'controllers', 'templates')
 
 class BaseZipHandler(zipserve.ZipHandler, utils.StarRouteHandlerMixin):
     """Base class for zip handlers."""
@@ -1485,7 +1490,10 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     def _default_error_handler(cls, request, response, status_code):
         """Render default global error page."""
         response.status_code = status_code
-        if status_code < 500:
+
+        if status_code == 404:
+            cls._404_handler(request, response)
+        elif status_code < 500:
             response.out.write(
                 'Unable to access requested page. '
                 'HTTP status code: %s.' % status_code)
@@ -1499,7 +1507,9 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         cls, app_context, request, response, status_code):
         """Render default namespaced error page."""
         response.status_code = status_code
-        if status_code < 500:
+        if status_code == 404:
+            cls._404_handler(request, response)
+        elif status_code < 500:
             response.out.write(
                 'Unable to access requested page in the course %s. '
                 'HTTP status code: '
@@ -1512,40 +1522,69 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             logging.error(msg)
             response.out.write(msg)
 
+    @classmethod
+    def _404_handler(cls, request, response):
+        # See if our current path corresponds to a course.  If not, then
+        # just 404; the requested item does not correspond to any known
+        # content, and helping the user log in is not going to change
+        # anything.
+        must_clear_path_info = False
+        app_context = None
+        try:
+            if not has_path_info():
+                must_clear_path_info = True
+                set_path_info(request.path)
+            app_context = get_course_for_current_request()
+        finally:
+            if must_clear_path_info:
+                unset_path_info()
+        if not app_context:
+            response.status_int = 404
+            response.text = (u'Unable to access requested page. '
+                             'HTTP status code: 404.')
+            return
+
+        # Give the person seeing this page a little information and present
+        # them with the option to log in as another user.  This needs to be
+        # I18N'd, but does not necessarily need to be super-nice looking, so
+        # we skip the templating layer (so as to skip a lot of copy/paste to
+        # support just this one odd use case)
+        user = users.get_current_user()
+        login_url = users.create_login_url(request.uri)
+        add_session_url = ('https://accounts.google.com/AddSession?' +
+                           urllib.urlencode({'continue': login_url}))
+        clear_url = ClearCookiesHandler.URL + '?' + urllib.urlencode(
+            {ClearCookiesHandler.CONTINUE_ARG:
+             add_session_url if appengine_config.PRODUCTION_MODE else login_url}
+        )
+        template_values = {
+            'user': users.get_current_user(),
+            'clear_url': clear_url,
+            'course_title': app_context.get_title(),
+            'course_slug': app_context.get_slug(),
+        }
+
+        course = courses.Course.get(app_context)
+        courses.Course.set_current(course)
+        models.MemcacheManager.begin_readonly()
+        try:
+            template_environ = app_context.get_template_environ(
+                app_context.get_current_locale(), [TEMPLATES_DIR])
+            template = template_environ.get_template('404.html')
+            text = template.render(template_values, autoescape=True)
+        finally:
+            models.MemcacheManager.end_readonly()
+            courses.Course.clear_current()
+        response.status_int = 404
+        response.text = text
+
     def _error_404(self, path):
         """Fail with 404."""
         self.error(404)
         self.finalize_response(self.request, self.response, 404)
 
-    def _no_handler(self, path):
-        app_context = get_course_for_current_request()
-        if not app_context:
-            self._error_404(path)
-            return
-        if not Roles.any_whitelists_apply_to_context(app_context):
-            self._error_404(path)
-            return
-
-        # At this point, the requested path maps to a valid course, and the
-        # course (or site) is subject to a whitelist, and we do not have a
-        # user currently in session.  That user may be on the whitelist, so we
-        # owe them a redirect to the login page.
-        #
-        # For non-logged in users, or loged-in users not on the whitelist,
-        # we redirect them to the logout URL, which logs them out and redirects
-        # to the original course URL, which redirects back to the login URL.
-        # The net effect is that users are continually sent back to the login
-        # screen.  This has the nice benefit of allowing humans with multiple
-        # accounts to try different ones.
-        user = users.get_current_user()
-        if user:
-            location = users.create_logout_url(self.request.uri)
-        else:
-            location = users.create_login_url(self.request.uri)
-        super(ApplicationRequestHandler, self).redirect(location)
-
     def get(self, path):
-        self.invoke_http_verb('GET', path, self._no_handler)
+        self.invoke_http_verb('GET', path, self._error_404)
 
     def post(self, path):
         self.invoke_http_verb('POST', path, self._error_404)
@@ -1619,6 +1658,41 @@ class WSGIRouter(webapp2.Router):
         return response
 
 
+class ClearCookiesHandler(webapp2.RequestHandler):
+    """This handler allows logout for a single identity.
+
+    When a user is multiply logged in, and wants to use a different identity
+    in the current window, we need to get the user to the login page.
+    However, if we don't clear their cookies, sending the browser to the login
+    page is a no-op - that page sees valid cookies, and thinks we don't need
+    to log the user in again, so doesn't enter the login flow.  Thus, here we
+    clobber cookies.  Since the set of cookies for identity is not trustably
+    always going to be the same, we just clear all.
+
+    The alternative implementation would be to forward the user's session
+    through the logout URL, but that has pretty significant consequences: All
+    currently logged-in identities are then logged out.  This only forces
+    logout for the identity that App Engine sees as current in that session.
+    """
+
+    URL = '/clear_cookies'
+    CONTINUE_ARG = 'continue'
+
+    def get(self):
+        for cookie in self.request.cookies:
+            self.response.delete_cookie(cookie)
+        location = str(self.request.get(self.CONTINUE_ARG))
+        if not location:
+            self.error(400)
+        self.redirect(location)
+
+
+def get_global_handlers():
+    return [
+        (ClearCookiesHandler.URL, ClearCookiesHandler),
+        ]
+
+
 def assert_mapped(src, dest):
     try:
         set_path_info(src)
@@ -1680,8 +1754,8 @@ def test_unprefix():
 
 def test_rule_validations():
     """Test rules validator."""
-    courses = get_all_courses(rules_text='course:/:/')
-    assert 1 == len(courses)
+    _courses = get_all_courses(rules_text='course:/:/')
+    assert 1 == len(_courses)
 
     # Check comments.
     setup_courses('course:/a:/nsa, course:/b:/nsb')
@@ -1786,71 +1860,72 @@ def test_url_to_rule_mapping():
 
 def build_index_for_rules_text(rules_text):
     Registry.test_overrides[GCB_COURSES_CONFIG.name] = rules_text
-    courses = get_all_courses()
+    _courses = get_all_courses()
     index = get_course_index()
-    return courses, index
+    return _courses, index
 
 
 def test_get_course_for_path_impl():
     # pylint: disable=protected-access
-    courses, index = build_index_for_rules_text('course:/::ns_x')
-    expected = {None: courses[0]}
+    _courses, index = build_index_for_rules_text('course:/::ns_x')
+    expected = {None: _courses[0]}
     assert expected == index._slug_parts2app_context
     for path in ['', '/course', '/a/b']:
-        assert courses[0] == get_course_for_path(path)
+        assert _courses[0] == get_course_for_path(path)
 
-    courses, index = build_index_for_rules_text('course:/a::ns_x')
-    expected = {'a': {None: courses[0]}}
+    _courses, index = build_index_for_rules_text('course:/a::ns_x')
+    expected = {'a': {None: _courses[0]}}
     assert expected == index._slug_parts2app_context
     for path in ['/a', '/a/course', '/a/b/c']:
-        assert courses[0] == get_course_for_path(path)
+        assert _courses[0] == get_course_for_path(path)
     for path in ['', '/', '/course']:
         assert not get_course_for_path(path)
 
-    courses, index = build_index_for_rules_text(
+    _courses, index = build_index_for_rules_text(
         'course:/a::ns_x\ncourse:/b::ns_y')
-    expected = {'a': {None: courses[0]}, 'b': {None: courses[1]}}
+    expected = {'a': {None: _courses[0]}, 'b': {None: _courses[1]}}
     assert expected == index._slug_parts2app_context
     for path in ['/a', '/a/course', '/a/b/c']:
-        assert courses[0] == get_course_for_path(path)
+        assert _courses[0] == get_course_for_path(path)
     for path in ['/b', '/b/course', '/b/a/c']:
-        assert courses[1] == get_course_for_path(path)
+        assert _courses[1] == get_course_for_path(path)
     for path in ['', '/', '/course']:
         assert not get_course_for_path(path)
 
-    courses, index = build_index_for_rules_text('course:/a/b::ns_x')
-    expected = {'a': {'b': {None: courses[0]}}}
+    _courses, index = build_index_for_rules_text('course:/a/b::ns_x')
+    expected = {'a': {'b': {None: _courses[0]}}}
     assert expected == index._slug_parts2app_context
     for path in ['/a/b', '/a/b/course', '/a/b/c']:
-        assert courses[0] == get_course_for_path(path)
+        assert _courses[0] == get_course_for_path(path)
     for path in ['', '/a', '/a/course', '/a/c']:
         assert not get_course_for_path(path)
 
-    courses, index = build_index_for_rules_text(
+    _courses, index = build_index_for_rules_text(
         'course:/a/c::ns_x\ncourse:/b/d::ns_y')
-    expected = {'a': {'c': {None: courses[0]}}, 'b': {'d': {None: courses[1]}}}
+    expected = {'a': {'c': {None: _courses[0]}},
+                'b': {'d': {None: _courses[1]}}}
     assert expected == index._slug_parts2app_context
     for path in ['/a/c', '/a/c/course', '/a/c/d']:
-        assert courses[0] == get_course_for_path(path)
+        assert _courses[0] == get_course_for_path(path)
     for path in ['/b/d', '/b/d/course', '/b/d/c']:
-        assert courses[1] == get_course_for_path(path)
+        assert _courses[1] == get_course_for_path(path)
     for path in ['', '/', '/course', '/a', '/b']:
         assert not get_course_for_path(path)
 
     try:
-        courses, index = build_index_for_rules_text(
+        _courses, index = build_index_for_rules_text(
             'course:/a::ns_x\ncourse:/a/b::ns_y')
     except Exception as e:  # pylint: disable=broad-except
         assert 'reorder course entries' in e.message
 
-    courses, index = build_index_for_rules_text(
+    _courses, index = build_index_for_rules_text(
         'course:/a/b::ns_x\ncourse:/a::ns_y')
-    expected = {'a': {'b': {None: courses[0]}, None: courses[1]}}
+    expected = {'a': {'b': {None: _courses[0]}, None: _courses[1]}}
     assert expected == index._slug_parts2app_context
     for path in ['/a/b', '/a/b/c', '/a/b/c/course', '/a/b/c/d']:
-        assert courses[0] == get_course_for_path(path)
+        assert _courses[0] == get_course_for_path(path)
     for path in ['/a', '/a/c', '/a/course', '/a/c/d']:
-        assert courses[1] == get_course_for_path(path)
+        assert _courses[1] == get_course_for_path(path)
     for path in ['/', '/course', '/b']:
         assert not get_course_for_path(path)
     # pylint: enable=protected-access

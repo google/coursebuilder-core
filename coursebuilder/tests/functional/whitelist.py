@@ -94,17 +94,7 @@ class WhitelistTest(actions.TestBase):
         response = self.get('/explorer')
         self.assertNotIn('Whitelist Test', response.body)
         response = self.get('/whitelist_test/course', expect_errors=True)
-        self.assertEquals(302, response.status_int)
-        if logged_in:
-            self.assertEquals(
-                'https://www.google.com/accounts/Logout'
-                '?continue=http%3A//localhost/whitelist_test/course',
-                response.location)
-        else:
-            self.assertEquals(
-                'https://www.google.com/accounts/Login'
-                '?continue=http%3A//localhost/whitelist_test/course',
-                response.location)
+        self.assertEquals(404, response.status_int)
 
     def test_no_whitelist_not_logged_in(self):
         self._expect_visible()

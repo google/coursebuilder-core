@@ -277,6 +277,7 @@ tools/etl/remote.py
 tools/etl/testing.py
 tools/export.py
 tools/verify.py
+views/404.html
 views/activity.html
 views/announcements.html
 views/bare.html

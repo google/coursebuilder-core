@@ -40,7 +40,8 @@ appengine_config.import_and_enable_modules()
 # Core "module" is always present and registered.
 custom_modules.register_core_module(
     analytics.get_global_handlers() +
-    models.get_global_handlers(),
+    models.get_global_handlers() +
+    sites.get_global_handlers(),
     analytics.get_namespaced_handlers() +
     data_sources.get_namespaced_handlers() +
     utils.get_namespaced_handlers())

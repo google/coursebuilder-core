@@ -1,0 +1,47 @@
+{% if not user %}
+  <p>
+    {# I18N: Message on page indicating that a resource is not available.
+       The current user is not logged in with a Google identity, which
+       is very likely the reason the resource is not available to this
+       person. #}
+    {{ gettext("This resource does not exist, or access to it requires "
+               "that you be logged in.") }}
+  </p>
+{% else %}
+  <p>
+    {# I18N: Message on page indicating that a resource is not available.
+       Either the requested item really does not exist, or the currently
+       logged-in user does not have access to the requested item.  It may
+       be that logging in as a different user would grant access. #}
+    {{ gettext("This resource does not exist, or cannot be accessed "
+               "by the current user.  You are currently logged in as "
+               "{email}.").format(email=user.email()) }}
+  </p>
+{% endif %}
+<p>
+  <a href="{{ clear_url }}">
+    {% if user %}
+      {# I18N: Text for a link on a page indicating that some desired
+      resource was not available.  Suggest that the user should log in
+      in the hopes that that will grant additional access to the item. #}
+      {{ gettext("Log in as another user") }}
+    {% else %}
+      {# I18N: Text for a link on a page indicating that some desired
+         resource was not available.  Following the link will log out the
+         current user for this site only (by unsetting cookies), and then
+         forward them to a page where they may log in with a different
+         identity. #}
+      {{ gettext("Log in") }}
+    {% endif %}
+  </a>
+</p>
+<p>
+  <a href="{{ course_slug }}">
+    {# I18N: Text for a link on a page indicating that some desired
+       resource was not available.  Following the link will go to the
+       base page in the course.  It may be the that the current user has
+       access to that pgage. #}
+    {{ gettext("Go to the home page for {course_title}").format(
+           course_title=course_title) }}
+  </a>
+</p>
