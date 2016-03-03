@@ -252,7 +252,7 @@ class DriveAddRESTHandler(AbstractDriveDashboardHandler):
             transforms.send_json_response(
                 self, status, 'error', payload_dict={
                     'status': 'error',
-                    'message': message,
+                    'message': message.replace('\n', ' '),
             })
             return
 
@@ -268,7 +268,7 @@ class DriveAddRESTHandler(AbstractDriveDashboardHandler):
             transforms.send_json_response(
                 self, status, 'error', payload_dict={
                     'status': 'error',
-                    'message': messages.SHARE_META_ERROR,
+                    'message': message.replace('\n', ' '),
             })
             return
 

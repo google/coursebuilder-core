@@ -99,7 +99,7 @@
           cbShowMsg('Failed to authenticate.');
           return;
         }
-        shareItem(file_id, code);
+        shareDriveItem(file_id, code);
       }
     );
   }
