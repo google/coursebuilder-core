@@ -108,10 +108,7 @@ class _TopicRegistry(object):
 
         parts = version.split('.')
         assert len(parts) == 3
-
-        if parts[-1] == '0':
-            parts.pop()
-
+        parts.pop()
         return '.'.join(parts)
 
     @classmethod

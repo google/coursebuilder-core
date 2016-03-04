@@ -100,7 +100,7 @@ class ServicesHelpUrlsTest(TestBase):
         self._set_topics([('topic_id', 'suffix')])
 
         self.assertEquals(
-            '%s/%s/%s' % (help_urls._BASE_URL, '1.2.3', 'suffix'),
+            '%s/%s/%s' % (help_urls._BASE_URL, '1.2', 'suffix'),
             services.help_urls.get('topic_id'))
 
     def test_get_for_suffix_starting_with_slash(self):
@@ -108,7 +108,7 @@ class ServicesHelpUrlsTest(TestBase):
         self._set_topics([('topic_id', '/suffix')])
 
         self.assertEquals(
-            '%s/%s/%s' % (help_urls._BASE_URL, '1.2.3', 'suffix'),
+            '%s/%s/%s' % (help_urls._BASE_URL, '1.2', 'suffix'),
             services.help_urls.get('topic_id'))
 
     def test_get_version_infix_discards_trailing_zero(self):
@@ -119,12 +119,12 @@ class ServicesHelpUrlsTest(TestBase):
             '%s/%s/%s' % (help_urls._BASE_URL, '1.0', 'suffix'),
             services.help_urls.get('topic_id'))
 
-    def test_get_version_infix_retains_trailing_nonzero(self):
+    def test_get_version_infix_discards_trivial_version(self):
         os.environ['GCB_PRODUCT_VERSION'] = '1.2.3'
         self._set_topics([('topic_id', 'suffix')])
 
         self.assertEquals(
-            '%s/%s/%s' % (help_urls._BASE_URL, '1.2.3', 'suffix'),
+            '%s/%s/%s' % (help_urls._BASE_URL, '1.2', 'suffix'),
             services.help_urls.get('topic_id'))
 
     def test_make_learn_more_message_returns_node_list(self):
