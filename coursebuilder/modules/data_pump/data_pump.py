@@ -158,7 +158,7 @@ class DataPumpJob(jobs.DurableJobBase):
         deferred.defer(self.main, sequence_num)
         return sequence_num
 
-    def _mark_job_canceled(self, job, message, duration):
+    def _mark_job_canceled(self, job, message):
         """Override default behavior of setting job.output to error string."""
 
         if job.output:
@@ -241,7 +241,7 @@ class DataPumpJob(jobs.DurableJobBase):
             data_source_context)
 
         # Set job object state variables.
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         job.output = transforms.dumps({
             'job_context': job_context,
             'data_source_context': data_source_context_dict,
@@ -259,12 +259,10 @@ class DataPumpJob(jobs.DurableJobBase):
             xg_on = db.create_transaction_options(xg=True)
             db.run_in_transaction_options(
                 xg_on, jobs.DurableJobEntity._update, self._job_name,
-                sequence_num, job.status_code, job.output,
-                job.execution_time_sec)
+                sequence_num, job.status_code, job.output)
         else:
             jobs.DurableJobEntity._update(self._job_name, sequence_num,
-                                          job.status_code, job.output,
-                                          job.execution_time_sec)
+                                          job.status_code, job.output)
 
     @classmethod
     def _parse_pii_encryption_token(cls, token):
@@ -277,7 +275,7 @@ class DataPumpJob(jobs.DurableJobBase):
     def _is_pii_encryption_token_valid(cls, token):
         try:
             _, valid_until_date = cls._parse_pii_encryption_token(token)
-            return valid_until_date > datetime.datetime.now()
+            return valid_until_date > datetime.datetime.utcnow()
         except ValueError:
             return False
 
@@ -288,7 +286,7 @@ class DataPumpJob(jobs.DurableJobBase):
         table_lifetime_seconds = common_utils.parse_timedelta_string(
             timedelta_string).total_seconds()
         unix_epoch = datetime.datetime(year=1970, month=1, day=1)
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         table_lifetime_timedelta = datetime.timedelta(
             seconds=table_lifetime_seconds)
         valid_until_timestamp = int(
@@ -634,7 +632,7 @@ class DataPumpJob(jobs.DurableJobBase):
 
     def _note_retryable_failure(self, message, job_context):
         """Log a timestamped message into the job context object."""
-        timestamp = datetime.datetime.now().strftime(
+        timestamp = datetime.datetime.utcnow().strftime(
             utils.HUMAN_READABLE_DATETIME_FORMAT)
         job_context[CONSECUTIVE_FAILURES].append(timestamp + ' ' + message)
 
@@ -992,7 +990,7 @@ class DataPumpJob(jobs.DurableJobBase):
             if job.has_finished:
                 duration = job.execution_time_sec
             else:
-                duration = int((datetime.datetime.now() -
+                duration = int((datetime.datetime.utcnow() -
                                 job.updated_on) .total_seconds())
             ret['duration'] = datetime.timedelta(days=0, seconds=duration)
             ret['last_updated'] = job.updated_on.strftime(

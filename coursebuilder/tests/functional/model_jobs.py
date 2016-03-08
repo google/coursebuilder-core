@@ -18,6 +18,8 @@ __author__ = [
     'mgainer@google.com (Mike Gainer)',
 ]
 
+import time
+
 from common.utils import Namespace
 from models import jobs
 from models import transforms
@@ -27,9 +29,7 @@ from google.appengine.ext import db
 
 TEST_NAMESPACE = 'test'
 TEST_DATA = {'bunny_names': ['flopsy', 'mopsy', 'cottontail']}
-TEST_DURATION = 123
 TEST_BAD_DATA = {'wolf_actions': ['huff', 'puff', 'blow your house down']}
-TEST_BAD_DURATION = 4
 
 
 class MockAppContext(object):
@@ -49,25 +49,27 @@ class TestJob(jobs.DurableJobBase):
     def force_start_job(self, sequence_num):
         with Namespace(self._namespace):
             db.run_in_transaction(
-                jobs.DurableJobEntity._start_job, self._job_name,
-                sequence_num)
+                jobs.DurableJobEntity._start_job, self._job_name, sequence_num)
 
-    def force_complete_job(self, sequence_num, data, duration):
+    def force_complete_job(self, sequence_num, data):
         data = transforms.dumps(data)
         with Namespace(self._namespace):
             db.run_in_transaction(
                 jobs.DurableJobEntity._complete_job, self._job_name,
-                sequence_num, data, duration)
+                sequence_num, data)
 
-    def force_fail_job(self, sequence_num, data, duration):
+    def force_fail_job(self, sequence_num, data):
         data = transforms.dumps(data)
         with Namespace(self._namespace):
             db.run_in_transaction(
                 jobs.DurableJobEntity._fail_job, self._job_name,
-                sequence_num, data, duration)
+                sequence_num, data)
 
     def get_output(self):
         return transforms.loads(self.load().output)
+
+    def get_duration(self):
+        return self.load().execution_time_sec
 
 
 class JobOperationsTest(actions.TestBase):
@@ -120,12 +122,12 @@ class JobOperationsTest(actions.TestBase):
         sequence_num = self.test_job.submit()
         self.test_job.force_start_job(sequence_num)
         self.assertIsNone(self.test_job.load().output)
-        func(sequence_num, TEST_DATA, TEST_DURATION)
+        time.sleep(2)
+        func(sequence_num, TEST_DATA)
         self.assertFalse(self.test_job.is_active())
         self.assertEquals(expected_status, self.test_job.load().status_code)
         self.assertEquals(TEST_DATA, self.test_job.get_output())
-        self.assertEquals(TEST_DURATION,
-                          self.test_job.load().execution_time_sec)
+        self.assertGreaterEqual(2, self.test_job.get_duration())
 
     def test_submit_does_not_restart_running_job(self):
         sequence_num = self.test_job.submit()
@@ -161,8 +163,7 @@ class JobOperationsTest(actions.TestBase):
     def test_cancel_does_not_kill_completed_job(self):
         sequence_num = self.test_job.submit()
         self.test_job.force_start_job(sequence_num)
-        self.test_job.force_complete_job(sequence_num, TEST_DATA,
-                                         TEST_DURATION)
+        self.test_job.force_complete_job(sequence_num, TEST_DATA)
         self.assertFalse(self.test_job.is_active())
         self.test_job.cancel()
         self.assertEquals(jobs.STATUS_CODE_COMPLETED,
@@ -184,11 +185,10 @@ class JobOperationsTest(actions.TestBase):
         self.assertEquals(jobs.STATUS_CODE_FAILED,
                           self.test_job.load().status_code)
 
-        func(sequence_num, TEST_DATA, TEST_DURATION)
+        func(sequence_num, TEST_DATA)
         self.assertEquals(expected_status, self.test_job.load().status_code)
         self.assertEquals(TEST_DATA, self.test_job.get_output())
-        self.assertEquals(TEST_DURATION,
-                          self.test_job.load().execution_time_sec)
+
 
     # --------------------------------------------------------------------
     # Results from older runs are ignored, even if a seemingly-hung job
@@ -208,12 +208,9 @@ class JobOperationsTest(actions.TestBase):
         sequence_num_2 = self.test_job.submit()
         self.assertEquals(sequence_num_2, sequence_num + 1)
         self.test_job.force_start_job(sequence_num_2)
-        self.test_job.force_complete_job(sequence_num_2, TEST_DATA,
-                                         TEST_DURATION)
+        self.test_job.force_complete_job(sequence_num_2, TEST_DATA)
 
         # Now try to complete the (long-running) first try.
         # Results from previous run should not overwrite more-recent.
-        func(sequence_num, TEST_BAD_DATA, TEST_BAD_DURATION)
+        func(sequence_num, TEST_BAD_DATA)
         self.assertEquals(TEST_DATA, self.test_job.get_output())
-        self.assertEquals(TEST_DURATION,
-                          self.test_job.load().execution_time_sec)

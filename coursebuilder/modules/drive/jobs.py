@@ -41,7 +41,7 @@ class DriveSyncJob(jobs.DurableJobBase):
         # pylint: disable=protected-access
         db.run_in_transaction(
             jobs.DurableJobEntity._complete_job, self._job_name,
-            sequence_num, '', 0)
+            sequence_num, '')
         # pylint: enable=protected-access
 
     def main(self, sequence_num):
