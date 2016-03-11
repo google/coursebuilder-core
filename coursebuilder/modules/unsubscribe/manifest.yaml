@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.unsubscribe.unsubscribe
+
 tests:
   functional:
     - modules.unsubscribe.unsubscribe_tests.GetUnsubscribeUrlTests = 1

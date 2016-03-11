@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.notifications.notifications
+
 tests:
   functional:
     - modules.notifications.notifications_tests.CronTest = 9

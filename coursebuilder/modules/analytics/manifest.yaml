@@ -1,3 +1,7 @@
+registration:
+  main_module: modules.analytics.analytics
+  enabled: True
+
 tests:
   functional:
     - modules.analytics.analytics_tests.ClusterRESTHandlerTest = 29

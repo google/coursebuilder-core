@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.upload.upload
+
 tests:
   functional:
     - modules.upload.upload_tests.TextFileUploadHandlerTestCase = 9

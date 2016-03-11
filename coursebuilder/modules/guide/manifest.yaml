@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.guide.guide
+
 tests:
   functional:
     - modules.guide.guide_tests.GuideTests = 5

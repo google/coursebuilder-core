@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.data_pump.data_pump
+
 tests:
   functional:
     - modules.data_pump.data_pump_tests.BigQueryInteractionTests = 36

@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.admin.admin
+
 tests:
   functional:
     - modules.admin.admin_tests.AdminDashboardTabTests = 6

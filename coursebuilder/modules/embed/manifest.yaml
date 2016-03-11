@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.embed.embed
+
 tests:
   functional:
     - modules.embed.embed_tests.DemoHandlerTest = 2

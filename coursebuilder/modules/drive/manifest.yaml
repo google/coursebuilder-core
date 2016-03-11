@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.drive.drive
+
 tests:
   functional:
     - modules.drive.tests.functional.DriveTests = 25

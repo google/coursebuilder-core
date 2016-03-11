@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.manual_progress.manual_progress
+
 tests:
   functional:
     - modules.manual_progress.manual_progress_tests.ManualProgressTest = 24

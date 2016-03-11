@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.math.math
+
 tests:
   functional:
     - modules.math.math_tests.MathTagTests = 3

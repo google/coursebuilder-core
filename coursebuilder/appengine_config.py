@@ -22,6 +22,8 @@ import logging
 import os
 import sys
 
+from common import manifests
+
 # configure Appstats
 appstats_MAX_STACK = 20
 
@@ -160,29 +162,44 @@ def webapp_add_wsgi_middleware(app):
 
 def _import_and_enable_modules(env_var, reraise=False):
     for module_name in os.environ.get(env_var, '').split():
-        option = 'enabled'
+        enabled = True
         if module_name.count('='):
             module_name, option = module_name.split('=', 1)
-        try:
-            operation = 'importing'
-            module = importlib.import_module(module_name)
-            operation = 'registering'
-            custom_module = module.register_module()
-            if option is 'enabled':
-                operation = 'enabling'
-                custom_module.enable()
-        except Exception, ex:  # pylint: disable=broad-except
-            logging.exception('Problem %s module "%s"', operation, module_name)
-            if reraise:
-                raise ex
+            enabled = (option.lower() == 'enabled')
+        _import_module_by_name(module_name, enabled, reraise=reraise)
+
+
+def _import_module_by_name(module_name, enabled, reraise=False):
+    try:
+        operation = 'importing'
+        module = importlib.import_module(module_name)
+        operation = 'registering'
+        custom_module = module.register_module()
+        if enabled:
+            operation = 'enabling'
+            custom_module.enable()
+    except Exception, ex:  # pylint: disable=broad-except
+        logging.exception('Problem %s module "%s"', operation, module_name)
+        if reraise:
+            raise ex
+
+
+def _import_and_enable_modules_by_manifest():
+    modules = manifests.ModulesRepo(BUNDLE_ROOT)
+    for module_name, manifest in sorted(modules.module_to_manifest.iteritems()):
+        registration = manifest.get_registration()
+        if registration.main_module:
+            _import_module_by_name(
+                registration.main_module, registration.enabled)
 
 
 def import_and_enable_modules():
     global MODULE_REGISTRATION_IN_PROGRESS  # pylint: disable=global-statement
     MODULE_REGISTRATION_IN_PROGRESS = True
-    _import_and_enable_modules('GCB_REGISTERED_MODULES')
+    _import_and_enable_modules('GCB_PRELOADED_MODULES')
     _import_and_enable_modules('GCB_REGISTERED_MODULES_CUSTOM')
     _import_and_enable_modules('GCB_THIRD_PARTY_MODULES')
+    _import_and_enable_modules_by_manifest()
     MODULE_REGISTRATION_IN_PROGRESS = False
 
 

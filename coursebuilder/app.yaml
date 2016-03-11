@@ -16,49 +16,12 @@ env_variables:
   GCB_APPSTATS_ENABLED: false
   GCB_TEST_MODE: false
 
-  GCB_REGISTERED_MODULES:
-    # Used by other modules during schema construction -- must come first.
+  # Some core modules are used by other modules at registration time. We
+  # register them first in the order declared here. Adding items to this list
+  # is discouraged; new modules should avoid these dependencies.
+  GCB_PRELOADED_MODULES:
     modules.help_urls.help_urls
-    modules.core_ui.core_ui
     modules.dashboard.dashboard
-    modules.activity_tag.activity_tag
-    modules.admin.admin
-    modules.announcements.announcements
-    modules.assessments.assessments
-    modules.assessment_tags.questions
-    modules.balancer.balancer
-    modules.code_tags.code_tags
-    modules.core_tags.core_tags
-    modules.course_explorer.course_explorer
-    modules.courses.courses
-    modules.analytics.analytics
-    modules.certificate.certificate
-    modules.data_pump.data_pump
-    modules.data_removal.data_removal
-    modules.drive.drive
-    modules.embed.embed
-    modules.extra_tabs.extra_tabs
-    modules.guide.guide
-    modules.i18n_dashboard.i18n_dashboard
-    modules.invitation.invitation
-    modules.manual_progress.manual_progress
-    modules.mapreduce.mapreduce_module
-    modules.math.math
-    modules.notifications.notifications
-    modules.oeditor.oeditor
-    modules.questionnaire.questionnaire
-    modules.rating.rating
-    modules.review.review
-    modules.search.search
-    modules.skill_map.skill_map
-    modules.student_groups.student_groups
-    modules.unsubscribe.unsubscribe
-    modules.upload.upload
-    modules.usage_reporting.usage_reporting
-    modules.webserv.webserv
-    modules.gitkit.gitkit=disabled
-    modules.oauth2.oauth2=disabled
-
 
 includes:
 - custom.yaml

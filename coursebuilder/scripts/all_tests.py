@@ -57,6 +57,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.common_crypto.PiiObfuscationHmac': 2,
     'tests.functional.common_crypto.GenCryptoKeyFromHmac': 2,
     'tests.functional.common_crypto.GetExternalUserIdTests': 4,
+    'tests.functional.common_manifest.ModuleManifestTests': 7,
     'tests.functional.common_users.AppEnginePassthroughUsersServiceTest': 10,
     'tests.functional.common_users.AuthInterceptorAndRequestHooksTest': 2,
     'tests.functional.common_users.PublicExceptionsAndClassesIdentityTests': 2,

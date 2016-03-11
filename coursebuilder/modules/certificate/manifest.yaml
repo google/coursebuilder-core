@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.certificate.certificate
+
 tests:
   functional:
     - modules.certificate.certificate_tests.CertificateCriteriaTestCase = 8

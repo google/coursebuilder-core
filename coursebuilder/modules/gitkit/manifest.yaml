@@ -1,3 +1,7 @@
+registration:
+  main_module: modules.gitkit.gitkit
+  enabled: False
+
 tests:
   functional:
     - modules.gitkit.gitkit_tests.AccountChooserCustomizationHandlersTest = 2

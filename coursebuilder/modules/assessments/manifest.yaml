@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.assessments.assessments
+
 tests:
   functional:
     - modules.assessments.assessments_tests.EmbeddedAssessmentTests = 4

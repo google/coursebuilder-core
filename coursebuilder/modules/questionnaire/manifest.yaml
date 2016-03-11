@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.questionnaire.questionnaire
+
 tests:
   functional:
     - modules.questionnaire.questionnaire_tests.QuestionnaireDataSourceTests = 2

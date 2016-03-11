@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.course_explorer.course_explorer
+
 tests:
   unit:
     - modules.course_explorer.course_explorer_tests.CourseExplorerDisabledTest = 3

@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.core_tags.core_tags
+
 tests:
   functional:
     - modules.core_tags.core_tags_tests.GoogleDriveRESTHandlerTest = 7

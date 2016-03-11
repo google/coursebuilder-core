@@ -103,6 +103,10 @@ class Registry(object):
     def sub_registries(self):
         return self._sub_registries
 
+    @property
+    def properties(self):
+        return self._properties
+
     def add_property(self, schema_field):
         """Add a Property to this Registry."""
         self._properties.append(schema_field)

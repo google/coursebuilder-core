@@ -64,10 +64,12 @@ import urllib2
 import yaml
 import zipfile
 
+
 # defer some imports
+all_tests = None
+manifests = None
 schema_fields = None
 schema_transforms = None
-all_tests = None
 
 
 INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
@@ -484,101 +486,10 @@ class DeveloperWorkflowTester(object):
         log('Testing developer test workflow')
 
         self.tests = TestsRepo(None)
-
-        self.test_module_manifest_is_parsed()
-        self.test_module_can_not_declare_tests_for_another_module()
-        self.test_module_manifest_is_validated_1()
-        self.test_module_manifest_is_validated_2()
-        self.test_manifest_must_include_manifest_yaml()
         self.test_class_name_expansion()
         self.test_developer_test_workflow_with_test_sh()
         self.test_developer_test_workflow_with_project_py()
         self.test_developer_test_workflow_with_module_manifest()
-
-    def test_module_manifest_is_parsed(self):
-        manifest_data = '''
-            tests:
-                unit:
-                    - modules.sample.foo = 5
-                functional:
-                    - modules.sample.baz = 6
-                integration:
-                    - modules.sample.bar = 7
-            files:
-                - foo
-                - bar
-                - baz
-                - manifest.yaml
-            '''
-        manifest = ModuleManifest('sample', manifest_data=manifest_data)
-
-        assert manifest.data['tests']['unit'][0] == 'modules.sample.foo = 5'
-        assert manifest.data[
-            'tests']['functional'][0] == 'modules.sample.baz = 6'
-        assert manifest.data[
-            'tests']['integration'][0] == 'modules.sample.bar = 7'
-        assert manifest.data['files'] == ['foo', 'bar', 'baz', 'manifest.yaml']
-
-        integration, non_integration = manifest.get_tests()
-        assert 1 == len(integration)
-        assert 2 == len(non_integration)
-
-    def test_module_manifest_is_validated_1(self):
-        manifest_data = '''
-            tests:
-                unknown:
-                    - foo = 7
-            files:
-                - manifest.yaml
-            '''
-        try:
-            ModuleManifest('sample', manifest_data=manifest_data)
-        except:  # pylint: disable=bare-except
-            return
-        raise Exception('Expected to fail')
-
-    def test_module_manifest_is_validated_2(self):
-        manifest_data = '''
-            tests:
-                unit:
-                    - foo : bar
-            files:
-                - manifest.yaml
-            '''
-        try:
-            ModuleManifest('sample', manifest_data=manifest_data)
-        except:  # pylint: disable=bare-except
-            return
-        raise Exception('Expected to fail')
-
-    def test_module_can_not_declare_tests_for_another_module(self):
-        manifest_data = '''
-            tests:
-                unit:
-                    - modules.module_name_a.tests.tests.Main = 25
-            files:
-                - manifest.yaml
-            '''
-        ModuleManifest(
-            'module_name_a', manifest_data=manifest_data).get_tests()
-        try:
-            ModuleManifest(
-                'module_name_b', manifest_data=manifest_data).get_tests()
-        except:  # pylint: disable=bare-except
-            return
-        raise Exception('Expected to fail')
-
-    def test_manifest_must_include_manifest_yaml(self):
-        manifest_data = '''
-            files:
-                - foo
-        '''
-        try:
-            ModuleManifest('module_name', manifest_data=manifest_data)
-        except:  # pylint: disable=bare-except
-            return
-        raise Exception('Expected to fail')
-
 
     def test_class_name_expansion(self):
         """Developer can test all methods of one class."""
@@ -637,134 +548,6 @@ class DeveloperWorkflowTester(object):
             'python', cmd, '--test', 'modules.math.math_tests'])
         self.assert_contains(
             'modules.math.math_tests.MathTagTests', out)
-
-
-class ModuleManifest(object):
-    """Provides parsing and access to modules/*/manifest.yaml."""
-
-    def __init__(self, module_name, manifest_fn=None, manifest_data=None):
-        self.name = module_name
-        self.files = None
-        self.tests = None
-        self.unit = None
-        self.functional = None
-        self.integration = None
-        self.data = self._parse(manifest_fn, manifest_data)
-
-    def get_schema(self):
-        self.files = schema_fields.FieldArray(
-            'files', 'Module files',
-            item_type=schema_fields.SchemaField(
-                'filename', 'Filename', 'string'))
-
-        self.unit = schema_fields.FieldArray(
-            'unit', 'Unit test classes',
-            item_type=schema_fields.SchemaField(
-                'entry', 'module.module.ClassName = test_count', 'string'))
-
-        self.functional = schema_fields.FieldArray(
-          'functional', 'Functional test classes',
-          item_type=schema_fields.SchemaField(
-              'entry', 'module.module.ClassName = test_count', 'string'))
-
-        self.integration = schema_fields.FieldArray(
-            'integration', 'Integration test classes',
-            item_type=schema_fields.SchemaField(
-                'entry', 'module.module.ClassName = test_count', 'string'))
-
-        tests = schema_fields.FieldRegistry('tests_registry')
-        tests.add_property(self.unit)
-        tests.add_property(self.functional)
-        tests.add_property(self.integration)
-
-        manifest = schema_fields.FieldRegistry('manifest')
-        manifest.add_property(self.files)
-        self.tests = manifest.add_sub_registry(
-            'tests',
-            title='Unit, functional and integration tests', registry=tests)
-
-        return manifest
-
-    def _parse(self, manifest_fn=None, manifest_data=None):
-        if not (manifest_fn or manifest_data):
-            raise Exception('Either manifest_fn or manifest_data is required.')
-        if manifest_data:
-            data = yaml.load(manifest_data)
-        else:
-            data = yaml.load(open(manifest_fn))
-
-        complaints = schema_transforms.validate_object_matches_json_schema(
-            data, self.get_schema().get_json_schema_dict())
-        if complaints:
-            raise Exception('Failed to parse manifest file %s: %s' % (
-                manifest_fn, complaints))
-        if 'manifest.yaml' not in [os.path.basename(f) for f in data['files']]:
-            raise Exception('Manifest must name itself in the "files" section.')
-        return data
-
-    def _test_line_to_dict(self, line):
-        parts = line.split('=')
-        if not len(parts) == 2:
-            raise Exception(
-                'Expected module.package.ClassName = test_count, '
-                'found "%s"' % line)
-        if not parts[0].strip().startswith('modules.%s' % self.name):
-            raise Exception(
-                'Test name "%s" must start with the '
-                'module name "%s"' % (parts[0].strip(), self.name))
-        return {parts[0].strip(): int(parts[1].strip())}
-
-    def get_tests(self):
-        integration_tests = {}
-        non_integration_tests = {}
-        tests = self.data.get(self.tests.name)
-        if tests:
-            for test_type in [
-                    self.unit.name,
-                    self.functional.name]:
-                tests_for_type = tests.get(test_type)
-                if tests_for_type:
-                    for test in tests_for_type:
-                        non_integration_tests.update(
-                            self._test_line_to_dict(test))
-            integration = tests.get(self.integration.name)
-            if integration:
-                for test in integration:
-                    integration_tests.update(
-                        self._test_line_to_dict(test))
-        return integration_tests, non_integration_tests
-
-
-class ModulesRepo(object):
-    """Provides access to all extension modules and their metadata."""
-
-    def __init__(self, config):
-        self.config = config
-        self.modules_dir = os.path.join(self.config.build_dir, 'modules')
-        self.modules = self._get_modules()
-        self.module_to_manifest = self._get_manifests()
-        log(
-            'Found %s modules with %s manifests' % (
-                len(self.modules), len(self.module_to_manifest.keys())))
-
-    def _get_modules(self):
-        modules = []
-        for (dirpath, dirnames, _) in os.walk(self.modules_dir):
-            for dirname in dirnames:
-                modules.append(dirname)
-            del dirnames[:]
-        modules.sort()
-        return modules
-
-    def _get_manifests(self):
-        modules_to_manifest = {}
-        for module in self.modules:
-            manifest_fn = os.path.join(
-                self.modules_dir, module, 'manifest.yaml')
-            if os.path.isfile(manifest_fn):
-                modules_to_manifest[module] = ModuleManifest(
-                    module, manifest_fn=manifest_fn)
-        return modules_to_manifest
 
 
 class FilesRepo(object):
@@ -939,7 +722,11 @@ class ReleaseConfiguration(object):
     def __init__(self, parsed_args, _build_dir):
         self.parsed_args = parsed_args
         self.build_dir = os.path.abspath(_build_dir)
-        self.modules = ModulesRepo(self)
+        self.modules = manifests.ModulesRepo(_build_dir)
+        log(
+            'Found %s modules with %s manifests' % (
+                len(self.modules.modules),
+                len(self.modules.module_to_manifest.keys())))
         self.files = FilesRepo(self)
         self.tests = TestsRepo(self)
 
@@ -1437,9 +1224,10 @@ def _test_developer_workflow(config):
 
 
 def _set_up_imports():
+    global all_tests
+    global manifests
     global schema_fields
     global schema_transforms
-    global all_tests
 
     # when this runs, the environment is not yet setup; as a minimum,
     # we need access to our own code; provide it here
@@ -1449,9 +1237,10 @@ def _set_up_imports():
     # module including Google App Engine SDK, but we can safely access our own
     # code, IF AND ONLY IF, it does not have any dependencies
     # pylint: disable=redefined-outer-name
+    from scripts import all_tests
+    from common import manifests
     from common import schema_fields
     from common import schema_transforms
-    from scripts import all_tests
 
 
 def _do_a_release(source_dir, target_dir, release_label):

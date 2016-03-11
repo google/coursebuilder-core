@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.announcements.announcements
+
 files:
   - modules/announcements/__init__.py
   - modules/announcements/announcements.py

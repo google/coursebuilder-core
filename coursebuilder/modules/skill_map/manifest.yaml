@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.skill_map.skill_map
+
 tests:
   functional:
     - modules.skill_map.skill_map_tests.CompetencyMeasureTests = 4

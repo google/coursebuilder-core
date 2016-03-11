@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.invitation.invitation
+
 tests:
   functional:
     - modules.invitation.invitation_tests.InvitationHandlerTests = 16

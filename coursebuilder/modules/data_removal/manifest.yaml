@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.data_removal.data_removal
+
 tests:
   functional:
     - modules.data_removal.data_removal_tests.DataRemovalTests = 8

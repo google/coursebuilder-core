@@ -74,6 +74,7 @@ common/catch_and_log.py
 common/crypto.py
 common/jinja_utils.py
 common/locales.py
+common/manifests.py
 common/menus.py
 common/messages.py
 common/resource.py
@@ -195,6 +196,7 @@ tests/functional/actions.py
 tests/functional/admin_settings.py
 tests/functional/assets_rest.py
 tests/functional/common_crypto.py
+tests/functional/common_manifest.py
 tests/functional/common_user_routes.py
 tests/functional/common_users.py
 tests/functional/controllers_utils.py

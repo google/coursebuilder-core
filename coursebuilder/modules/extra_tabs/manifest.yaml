@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.extra_tabs.extra_tabs
+
 tests:
   functional:
     - modules.extra_tabs.extra_tabs_tests.ExtraTabsTests = 7

@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.usage_reporting.usage_reporting
+
 tests:
   functional:
     - modules.usage_reporting.usage_reporting_tests.ConsentBannerTests = 4

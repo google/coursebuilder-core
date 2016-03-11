@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.student_groups.student_groups
+
 tests:
   functional:
     - modules.student_groups.student_groups_tests.AggregateEventTests = 1

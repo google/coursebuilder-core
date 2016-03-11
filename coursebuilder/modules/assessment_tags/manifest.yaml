@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.assessment_tags.questions
+
 tests:
   functional:
     - modules.assessment_tags.assessment_tags_tests.MultipleChoiceTagTests = 1

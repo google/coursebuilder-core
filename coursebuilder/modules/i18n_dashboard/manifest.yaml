@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.i18n_dashboard.i18n_dashboard
+
 tests:
   functional:
     - modules.i18n_dashboard.i18n_dashboard_tests.CourseContentTranslationTests = 15

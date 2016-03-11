@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.rating.rating
+
 tests:
   functional:
     - modules.rating.rating_tests.ExtraContentProvideTests = 4

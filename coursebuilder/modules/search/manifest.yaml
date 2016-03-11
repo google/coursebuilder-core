@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.search.search
+
 tests:
   functional:
     - modules.search.search_tests.SearchTest = 12

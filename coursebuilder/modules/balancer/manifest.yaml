@@ -1,3 +1,6 @@
+registration:
+  main_module: modules.balancer.balancer
+
 tests:
   functional:
     - modules.balancer.balancer_tests.ExternalTaskTest = 3
