@@ -1844,7 +1844,7 @@ class TestClusterStatisticsDataSource(actions.TestBase):
 class GradebookCsvTests(actions.TestBase):
     """Plain vanilla test; does use ETL'd test content."""
 
-    COURSE_NAME = 'gradebook_csv'
+    COURSE_NAME = u'gradebook_csv'
     NAMESPACE = 'ns_%s' % COURSE_NAME
     ADMIN_EMAIL = 'admin@foo.com'
     STUDENT_EMAIL = 'student@foo.com'
@@ -1871,7 +1871,8 @@ class GradebookCsvTests(actions.TestBase):
             data='{"description": "g", "question": "aa"}').put().id()
 
         self.app_context = actions.simple_add_course(
-            self.COURSE_NAME, self.ADMIN_EMAIL, 'Gradebook CSV Course')
+            self.COURSE_NAME, self.ADMIN_EMAIL,
+            'Gradebook \xe6\xbc\xa2 CSV Course')
         course = courses.Course(None, app_context=self.app_context)
         self.unit_one = course.add_unit()  # No lessons
         self.unit_one.title = 'Unit One'

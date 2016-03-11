@@ -827,6 +827,8 @@ class CsvDownloadHandler(utils.BaseHandler):
         output = _generate_csv(self.app_context, mode)
         filename = '%s_%s.csv' % (self.app_context.get_title(), mode)
         safe_filename = re.sub(r'[\"\']', '_', filename.lower())
+        if isinstance(safe_filename, unicode):
+            safe_filename = safe_filename.encode('utf-8')
         self.response.headers.add('Content-Type', 'text/csv')
         # http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.5.1
         self.response.headers.add(
