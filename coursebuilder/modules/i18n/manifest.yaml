@@ -54,8 +54,8 @@ files:
   - modules/i18n/resources/locale/is/LC_MESSAGES/messages.po
   - modules/i18n/resources/locale/it/LC_MESSAGES/messages.mo
   - modules/i18n/resources/locale/it/LC_MESSAGES/messages.po
-  - modules/i18n/resources/locale/iw/LC_MESSAGES/messages.mo
-  - modules/i18n/resources/locale/iw/LC_MESSAGES/messages.po
+  - modules/i18n/resources/locale/he/LC_MESSAGES/messages.mo
+  - modules/i18n/resources/locale/he/LC_MESSAGES/messages.po
   - modules/i18n/resources/locale/ja/LC_MESSAGES/messages.mo
   - modules/i18n/resources/locale/ja/LC_MESSAGES/messages.po
   - modules/i18n/resources/locale/kn/LC_MESSAGES/messages.mo

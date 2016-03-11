@@ -1,15 +1,15 @@
 # Amharic translations for PROJECT.
-# Copyright (C) 2015 ORGANIZATION
+# Copyright (C) 2016 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2015.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2016.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-02-29 10:03-0800\n"
-"PO-Revision-Date: 2015-11-23 07:52-0800\n"
+"POT-Creation-Date: 2016-03-11 12:36-0800\n"
+"PO-Revision-Date: 2016-03-07 16:20-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: am <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -769,14 +769,14 @@ msgstr "ምላሽ ገቢ ተደርጓል።"
 #. after the first subission.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:15
 msgid "Only one submission of this form is allowed."
-msgstr ""
+msgstr "የዚህ ቅጽ አንድ ማስገባት ብቻ ይፈቀዳል።"
 
 #. This message appears on a page where a student could            submit
 #. answers to a questionnaire.  The user viewing the            page is not a
 #. registered student, and gets a message            indicating the situation.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:28
 msgid "Only registered students can submit answers."
-msgstr ""
+msgstr "የተመዘገቡ ተማሪዎች ብቻ መልሶችን ማስገባት ይችላሉ።"
 
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:34
@@ -1029,6 +1029,48 @@ msgid ""
 "Go back and try again. If the problem persists, contact your "
 "administrator."
 msgstr "ይመለሱና እንደገና ይሞክሩ። ችግሩ ከቀጠለ አስተዳዳሪዎን ያነጋግሩ።"
+
+#. Message on page indicating that a resource is not available.        The
+#. current user is not logged in with a Google identity, which        is very
+#. likely the reason the resource is not available to this        person.
+#: experimental/coursebuilder/views/404.html:7
+msgid ""
+"This resource does not exist, or access to it requires that you be logged"
+" in."
+msgstr ""
+
+#. Message on page indicating that a resource is not available.        Either
+#. the requested item really does not exist, or the currently        logged-in
+#. user does not have access to the requested item.  It may        be that
+#. logging in as a different user would grant access.
+#: experimental/coursebuilder/views/404.html:16
+msgid ""
+"This resource does not exist, or cannot be accessed by the current user."
+"  You are currently logged in as {email}."
+msgstr ""
+
+#. Text for a link on a page indicating that some desired       resource was
+#. not available.  Suggest that the user should log in       in the hopes that
+#. that will grant additional access to the item.
+#: experimental/coursebuilder/views/404.html:27
+msgid "Log in as another user"
+msgstr ""
+
+#. Text for a link on a page indicating that some desired          resource was
+#. not available.  Following the link will log out the          current user
+#. for this site only (by unsetting cookies), and then          forward them to
+#. a page where they may log in with a different          identity.
+#: experimental/coursebuilder/views/404.html:34
+msgid "Log in"
+msgstr ""
+
+#. Text for a link on a page indicating that some desired        resource was
+#. not available.  Following the link will go to the        base page in the
+#. course.  It may be the that the current user has        access to that
+#. pgage.
+#: experimental/coursebuilder/views/404.html:44
+msgid "Go to the home page for {course_title}"
+msgstr ""
 
 #. Title of the webpage.
 #. Navbar tab.

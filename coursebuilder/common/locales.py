@@ -56,7 +56,7 @@ LOCALES_DISPLAY_NAMES = {
     'id': u'Bahasa Indonesia (id)',
     'is': u'íslenska (is)',
     'it': u'italiano (it)',
-    'iw': u'עברית (iw)',  # Former ISO-639 code for Hebrew; should now be he
+    'he': u'עברית (he)',
     'ja': u'日本語 (ja)',
     'kn': u'ಕನ್ನಡ (kn)',
     'ko': u'한국어 (ko)',
