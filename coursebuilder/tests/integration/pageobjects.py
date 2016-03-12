@@ -267,28 +267,45 @@ class EditorPageObject(PageObject):
         field.send_keys(value)
         return self
 
-    def set_text_field_by_title(self, title, value):
+    def _find_text_field_by_title(self, title):
         label = self._find_setting_by_title(title)
         field = label.find_element_by_xpath(
             '../..'
             '/div[@class="inputEx-Field"]'
             '/div[@class="inputEx-StringField-wrapper"]'
             '/input[@type="text"]')
+        return field
+
+    def set_text_field_by_title(self, title, value):
+        field = self._find_text_field_by_title(title)
         field.clear()
         field.send_keys(value)
         return self
 
-    def set_textarea_field_by_title(self, title, value):
+    def verify_text_field_by_title(self, title, value):
+        field = self._find_text_field_by_title(title)
+        self._tester.assertEquals(value, field.get_attribute('value'))
+        return self
+
+    def _find_textearea_field_by_title(self, title):
         label = self._find_setting_by_title(title)
         field = label.find_element_by_xpath(
             '../..'
             '/div[@class="inputEx-Field"]'
             '/div[@class="inputEx-StringField-wrapper"]'
             '/textarea')
+        return field
+
+    def set_textarea_field_by_title(self, title, value):
+        field = self._find_textearea_field_by_title(title)
         field.clear()
         field.send_keys(value)
         return self
 
+    def verify_textarea_field_by_title(self, title, value):
+        field = self._find_textearea_field_by_title(title)
+        self._tester.assertEquals(value, field.get_attribute('value'))
+        return self
 
 class DashboardEditor(EditorPageObject):
     """A base class for the editors accessed from the Dashboard."""

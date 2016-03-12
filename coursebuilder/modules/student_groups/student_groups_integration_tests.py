@@ -61,6 +61,15 @@ class AvailabilityTests(integration.TestBase):
             'There are many like it, but this one is mine.'
         ).click_save(
         ).click_close(
+        ).click_edit_group(
+            'My New Group'
+        ).verify_text_field_by_title(
+            'Group Name',
+            'My New Group'
+        ).verify_textarea_field_by_title(
+            'Group Description',
+            'There are many like it, but this one is mine.'
+        ).click_close(
         ).click_leftnav_item_by_link_text(
             'publish', 'Availability',
             student_groups_pageobjects.CourseAvailabilityPage

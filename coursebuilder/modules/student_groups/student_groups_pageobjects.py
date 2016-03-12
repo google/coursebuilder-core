@@ -30,6 +30,11 @@ class StudentGroupsListPage(pageobjects.DashboardPage):
         self.find_element_by_id('edit_student_group').click()
         return StudentGroupEditorPage(self._tester)
 
+    def click_edit_group(self, group_name):
+        link = self.find_element_by_link_text(group_name)
+        self.wait_for_page_load_after(link.click)
+        return StudentGroupEditorPage(self._tester)
+
     def delete_group(self, group_name):
         delete_control = self.find_element_by_id('delete-' + group_name)
         def delete_and_accept_alert():

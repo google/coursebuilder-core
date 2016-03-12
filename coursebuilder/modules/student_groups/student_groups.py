@@ -553,6 +553,7 @@ class StudentGroupListHandler(object):
         student_groups_for_template = [
             {
                 'name': student_group.name,
+                'id': student_group.id,
                 'description': student_group.description,
                 'delete_url': StudentGroupRestHandler.build_delete_url(
                     handler, student_group.id),
@@ -1267,7 +1268,7 @@ def register_module():
         core and other modules.
         """
         model_caching.CacheFactory.build(
-            MODULE_NAME_AS_IDENTIFIER, MODULE_NAME,
+            MODULE_NAME_AS_IDENTIFIER, MODULE_NAME + " Caching",
             messages.ENABLE_GROUP_CACHING,
             max_size_bytes=(
                 StudentGroupAvailabilityRestHandler.MAX_NUM_MEMBERS * 1024 * 4),
