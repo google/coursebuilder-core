@@ -9,7 +9,7 @@ tests:
     - modules.notifications.notifications_tests.NotificationTest = 8
     - modules.notifications.notifications_tests.PayloadTest = 6
     - modules.notifications.notifications_tests.SerializedPropertyTest = 2
-    - modules.notifications.notifications_tests.StatsTest = 2
+    - modules.notifications.notifications_tests.StatsTest = 6
 
 files:
   - modules/notifications/__init__.py

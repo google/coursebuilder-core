@@ -18,8 +18,10 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+import ast
 import datetime
 
+from common import schema_fields
 from models import analytics
 from models import data_sources
 from models import jobs
@@ -27,75 +29,11 @@ from modules.dashboard import dashboard
 from modules.notifications import notifications
 
 
-_SERIALIZED_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
-
-
-class _Result(object):
-
-    # Treating as module-protected. pylint: disable=protected-access
-
-    def __init__(self, now):
-        self.now = now
-        self.last_day = _Bin('day', self.now - datetime.timedelta(days=1))
-        self.last_hour = _Bin('hour', self.now - datetime.timedelta(hours=1))
-        self.last_week = _Bin('week', self.now - datetime.timedelta(days=7))
-        self.bins = [self.last_hour, self.last_day, self.last_week]
-        self._totals = {'all': 0}
-        self._totals.update(
-            {state: 0 for state in notifications.Status.STATES})
-
-    def add(self, state, dt):
-        # Datastore values may no longer be found in code; silently
-        # discard if so.
-        if state in notifications.Status.STATES:
-            self._totals['all'] += 1
-            self._totals[state] += 1
-            for selected in self.bins:
-                if dt > selected.cutoff:
-                    selected.add(state)
-
-    def failed(self):
-        return self._totals[notifications.Status.FAILED]
-
-    def pending(self):
-        return self._totals[notifications.Status.PENDING]
-
-    def succeeded(self):
-        return self._totals[notifications.Status.SUCCEEDED]
-
-    def total(self):
-        return self._totals['all']
-
-
-class _Bin(object):
-
-    def __init__(self, name, cutoff):
-        # Treating as module-protected. pylint: disable=protected-access
-        self._data = {state: 0 for state in notifications.Status.STATES}
-        self.cutoff = cutoff
-        self.name = name
-
-    def add(self, state):
-        self._data[state] += 1
-
-    def failed(self):
-        return self._data[notifications.Status.FAILED]
-
-    def pending(self):
-        return self._data[notifications.Status.PENDING]
-
-    def succeeded(self):
-        return self._data[notifications.Status.SUCCEEDED]
-
-    def total(self):
-        return sum(self._data.values())
-
-
-class CountsGenerator(jobs.MapReduceJob):
+class NotificationCountsGenerator(jobs.AbstractCountingMapReduceJob):
 
     @staticmethod
     def get_description():
-        return 'notification'
+        return 'notifications'
 
     def entity_class(self):
         return notifications.Notification
@@ -105,32 +43,57 @@ class CountsGenerator(jobs.MapReduceJob):
         yield (
             notifications.Status.from_notification(notification).state,
             # Treating as module-protected. pylint: disable=protected-access
-            notification._enqueue_date
-            )
-
-    @staticmethod
-    def reduce(key, values):
-        yield key, values
+            notification._enqueue_date.date().toordinal()
+            ), 1
 
 
-class NotificationsDataSource(data_sources.SynchronousQuery):
+class NotificationsDataSource(
+    data_sources.AbstractSmallRestDataSource,
+    data_sources.SynchronousQuery):
 
-    @staticmethod
-    def fill_values(app_context, template_values, job):
-        now = datetime.datetime.utcnow()
-        result = _Result(now)
+    @classmethod
+    def get_name(cls):
+        return 'notifications'
 
-        for state_name, create_dates in jobs.MapReduceJob.get_results(job):
-            for create_date in create_dates:
-                result.add(
-                    state_name, datetime.datetime.strptime(
-                        create_date, _SERIALIZED_DATETIME_FORMAT))
-
-        template_values.update({'result': result})
+    @classmethod
+    def get_title(cls):
+        return 'Notifications'
 
     @staticmethod
     def required_generators():
-        return [CountsGenerator]
+        return [NotificationCountsGenerator]
+
+    @classmethod
+    def get_schema(cls, app_context, log, source_context):
+        ret = schema_fields.FieldRegistry('notifications')
+        ret.add_property(schema_fields.SchemaField(
+            'timestamp_millis', 'Millisceonds Since Epoch', 'integer'))
+        ret.add_property(schema_fields.SchemaField(
+            'status', 'Status', 'string'))
+        ret.add_property(schema_fields.SchemaField(
+            'count', 'Count', 'integer'))
+        return ret.get_json_schema_dict()['properties']
+
+    @classmethod
+    def fetch_values(cls, app_context, source_context, schema, log, page_number,
+                     job):
+        epoch = datetime.date(year=1970, month=1, day=1)
+        ret = []
+        for key, count in jobs.MapReduceJob.get_results(job):
+            status, date_ordinal = ast.literal_eval(key)
+            date = datetime.date.fromordinal(date_ordinal)
+            timestamp_millis = int((date - epoch).total_seconds()) * 1000
+            ret.append({
+                'timestamp_millis': timestamp_millis,
+                'status': status,
+                'count': count,
+            })
+        return ret, page_number
+
+    @staticmethod
+    def fill_values(app_context, template_values, job):
+        template_values['any_notifications'] = bool(
+            jobs.MapReduceJob.get_results(job))
 
 
 def register_analytic():

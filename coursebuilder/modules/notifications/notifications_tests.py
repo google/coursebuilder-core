@@ -19,11 +19,15 @@ __author__ = [
 ]
 
 import datetime
-import itertools
+import random
 import types
 
+from common import utils as common_utils
+from controllers import sites
 from models import config
 from models import counters
+from models import transforms
+from models.data_sources import paginated_table
 from modules.notifications import cron
 from modules.notifications import notifications
 from modules.notifications import stats
@@ -1248,51 +1252,166 @@ class PayloadTest(ModelTestSpec, ModelTestBase):
 
 class StatsTest(actions.TestBase):
 
+    COURSE = 'test_course'
+    NAMESPACE = 'ns_%s' % COURSE
+    ADMIN_EMAIL = 'admin@foo.com'
+    EPOCH = datetime.datetime.utcfromtimestamp(0).date()
+
     def setUp(self):
-        self.now = datetime.datetime.utcnow()
-        self.result = stats._Result(self.now)
         super(StatsTest, self).setUp()
+        self.app_context = actions.simple_add_course(
+            self.COURSE, self.ADMIN_EMAIL, 'Test Course')
+        self.base = '/%s' % self.COURSE
+        actions.login(self.ADMIN_EMAIL)
 
-    def test_result_bins_and_counts_correctly(self):
-        within_hour = self.now - datetime.timedelta(minutes=59)
-        on_hour = self.now - datetime.timedelta(hours=1)
-        within_day = self.now - datetime.timedelta(hours=23)
-        on_day = self.now - datetime.timedelta(days=1)
-        within_week = self.now - datetime.timedelta(days=6)
-        on_week = self.now - datetime.timedelta(days=7)
+    def tearDown(self):
+        sites.reset_courses()
+        super(StatsTest, self).tearDown()
 
-        all_state_and_date_permutations = [x for x in itertools.product(
-            notifications.Status.STATES,
-            [self.now, within_hour, on_hour, within_day, on_day, within_week,
-             on_week]
-            )]
+    def _get_items(self):
+        data_source_token = paginated_table._DbTableContext._build_secret(
+            {'data_source_token': 'xyzzy'})
+        response = self.post('rest/data/notifications/items',
+                             {'page_number': 0,
+                              'chunk_size': 0,
+                              'data_source_token': data_source_token})
+        self.assertEquals(response.status_int, 200)
+        result = transforms.loads(response.body)
+        return result.get('data')
 
-        for status, dt in all_state_and_date_permutations:
-            self.result.add(status, dt)
+    def _get_dashboard_page(self):
+        response = self.get('dashboard?action=analytics_notifications')
+        self.assertEquals(response.status_int, 200)
+        return response
 
-        self.assertEqual(21, self.result.total())
-        self.assertEqual(7, self.result.failed())
-        self.assertEqual(7, self.result.pending())
-        self.assertEqual(7, self.result.succeeded())
+    def _run_job(self):
+        stats.NotificationCountsGenerator(self.app_context).submit()
+        self.execute_all_deferred_tasks()
 
-        self.assertEqual(6, self.result.last_hour.total())
-        self.assertEqual(2, self.result.last_hour.failed())
-        self.assertEqual(2, self.result.last_hour.pending())
-        self.assertEqual(2, self.result.last_hour.succeeded())
+    def test_job_never_run(self):
+        self.assertIsNone(self._get_items())
+        body = self._get_dashboard_page().body
+        self.assertIn(
+            'Statistics for notifications have not been calculated yet', body)
+        self.assertNotIn('No notifications have been sent', body)
 
-        self.assertEqual(12, self.result.last_day.total())
-        self.assertEqual(4, self.result.last_day.failed())
-        self.assertEqual(4, self.result.last_day.pending())
-        self.assertEqual(4, self.result.last_day.succeeded())
+    def test_no_notifications(self):
+        self._run_job()
+        self.assertEquals([], self._get_items())
 
-        self.assertEqual(18, self.result.last_week.total())
-        self.assertEqual(6, self.result.last_week.failed())
-        self.assertEqual(6, self.result.last_week.pending())
-        self.assertEqual(6, self.result.last_week.succeeded())
+        body = self._get_dashboard_page().body
+        self.assertNotIn(
+            'Statistics for notifications have not been calculated yet', body)
+        self.assertIn('No notifications have been sent', body)
 
-    def test_result_does_not_count_bad_state(self):
-        bad_state = 'bad'
-        self.result.add(bad_state, self.now)
+    def test_one_pending_notification(self):
+        now = datetime.datetime.utcnow()
+        with common_utils.Namespace(self.NAMESPACE):
+            notifications.Notification(
+                sender='admin@bar.com',
+                subject='whatever',
+                to='user%d@foo.com',
+                intent='foozle',
+                _retention_policy=notifications.RetainAuditTrail.NAME,
+                enqueue_date=now,
+                ).put()
+        self._run_job()
+        expected = [{
+            'timestamp_millis':
+                int((now.date() - self.EPOCH).total_seconds()) * 1000,
+            'status': notifications.Status.PENDING,
+            'count': 1,
+        }]
+        self.assertEquals(expected, self._get_items())
 
-        self.assertNotIn(bad_state, notifications.Status.STATES)
-        self.assertEqual(0, self.result.total())
+        body = self._get_dashboard_page().body
+        self.assertNotIn(
+            'Statistics for notifications have not been calculated yet', body)
+        self.assertNotIn('No notifications have been sent', body)
+
+    def test_one_succeeded_notification(self):
+        now = datetime.datetime.utcnow()
+        with common_utils.Namespace(self.NAMESPACE):
+            notifications.Notification(
+                sender='admin@bar.com',
+                subject='whatever',
+                to='user%d@foo.com',
+                intent='foozle',
+                _retention_policy=notifications.RetainAuditTrail.NAME,
+                enqueue_date=now,
+                _done_date=now,
+                ).put()
+        self._run_job()
+        expected = [{
+            'timestamp_millis':
+                int((now.date() - self.EPOCH).total_seconds()) * 1000,
+            'status': notifications.Status.SUCCEEDED,
+            'count': 1,
+        }]
+        self.assertEquals(expected, self._get_items())
+
+    def test_one_failed_notification(self):
+        now = datetime.datetime.utcnow()
+        with common_utils.Namespace(self.NAMESPACE):
+            notifications.Notification(
+                sender='admin@bar.com',
+                subject='whatever',
+                to='user%d@foo.com',
+                intent='foozle',
+                _retention_policy=notifications.RetainAuditTrail.NAME,
+                enqueue_date=now,
+                _fail_date=now,
+                ).put()
+        self._run_job()
+        expected = [{
+            'timestamp_millis':
+                int((now.date() - self.EPOCH).total_seconds()) * 1000,
+            'status': notifications.Status.FAILED,
+            'count': 1,
+        }]
+        self.assertEquals(expected, self._get_items())
+
+    def test_many_notifications(self):
+        now = datetime.datetime.utcnow().date()
+        num_items = 1000
+
+        # Add a lot of notifications.
+        with common_utils.Namespace(self.NAMESPACE):
+            for x in xrange(num_items):
+                day = random.randrange(28) + 1
+                month = random.randrange(12) + 1
+                if month > now.month:
+                    year = now.year - 1
+                elif month == now.month and day >= now.day:
+                    year = now.year - 1
+                else:
+                    year = now.year
+                fail_date = None
+                done_date = None
+                if random.randrange(100) < day:
+                    fail_date = datetime.datetime.utcnow()
+                elif random.randrange(100) < day:
+                    pass
+                else:
+                    done_date = datetime.datetime.utcnow()
+                notifications.Notification(
+                    sender='admin@bar.com',
+                    subject='whatever',
+                    to='user%d@foo.com' % x,
+                    intent='foozle',
+                    _retention_policy=notifications.RetainAuditTrail.NAME,
+                    enqueue_date=datetime.datetime(
+                        year=year, month=month, day=day),
+                    _done_date=done_date,
+                    _fail_date=fail_date,
+                    ).put()
+
+        self._run_job()
+        items = self._get_items()
+
+        # Expect some overlap, but still many distinct items.  Here, we're
+        # looking to ensure that we get some duplicate items binned together.
+        self.assertGreater(len(items), num_items / 10)
+        self.assertLess(len(items), num_items)
+        self.assertEquals(num_items, sum([i['count'] for i in items]))
+        self.assertGreater(len([i for i in items if i['count'] > 1]), 10)
