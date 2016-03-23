@@ -122,6 +122,20 @@ def get_unit_and_lesson_id_from_url(handler, url):
 class CourseHandler(utils.BaseHandler):
     """Handler for generating course page."""
 
+    # A list of callback functions which modules can use to add extra content
+    # panels at the bottom of the page. Each function should return a string
+    # or a SafeDom node, or return None to indicate it does not want to add
+    # any content.
+    #
+    # Arguments are:
+    # - The current application context
+    # - The current course
+    # - The StudentCourseView governing this student's view of what course
+    #   content is accessible.
+    # - The current student.  Note that this may be a TransientStudent, but
+    #   will not be None.
+    EXTRA_CONTENT = []
+
     @classmethod
     def get_child_routes(cls):
         """Add child handlers for REST."""
@@ -202,13 +216,31 @@ class CourseHandler(utils.BaseHandler):
         self.template_value['show_lessons_in_syllabus'] = (
             settings['course'].get('show_lessons_in_syllabus', False))
 
+        self.template_value['extra_content'] = []
+        for extra_content_hook in self.EXTRA_CONTENT:
+            extra_content = extra_content_hook(
+                self.app_context, course, student_view, student)
+            if extra_content is not None:
+                self.template_value['extra_content'].append(extra_content)
+
 
 class UnitHandler(utils.BaseHandler):
     """Handler for generating unit page."""
 
     # A list of callback functions which modules can use to add extra content
-    # panels at the bottom of the page. Each function receives the app_context
-    # as its single arg, and should return a string or None.
+    # panels at the bottom of the page. Each function should return a string
+    # or None.  Arguments are:
+    # - The current application context
+    # - The current course
+    # - The current unit (in the broad sense - this may be a unit or assessment
+    #   or custom unit)
+    # - The current lesson (or None, if no lessons or current unit displays
+    #   all lessons on one page)
+    # - The current assessment, if in a unit that has a pre- or post-
+    #   assessment.
+    # - The StudentCourseView governing this student's view of what course
+    #   content is accessible.
+    # - The current student.  Note that this may be a TransientStudent.
     EXTRA_CONTENT = []
 
     # The lesson title provider should be a function which receives the
@@ -305,10 +337,13 @@ class UnitHandler(utils.BaseHandler):
                 self._show_single_element(student, unit, lesson, assessment,
                                           student_view)
 
+            self.template_value['extra_content'] = []
             for extra_content_hook in self.EXTRA_CONTENT:
-                extra_content = extra_content_hook(self.app_context)
+                extra_content = extra_content_hook(
+                    self.app_context, course, unit, lesson, assessment,
+                    student_view, student)
                 if extra_content is not None:
-                    self.template_value['display_content'].append(extra_content)
+                    self.template_value['extra_content'].append(extra_content)
 
             self._set_gcb_html_element_class()
         finally:
@@ -992,7 +1027,6 @@ class EventsRESTHandler(utils.BaseRESTHandler):
 
     def process_event(self, user, source, payload_json):
         """Processes an event after it has been recorded in the event stream."""
-
         student = models.Student.get_enrolled_student_by_user(user)
         if not student:
             return

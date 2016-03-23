@@ -65,9 +65,9 @@ Note: Activities defined in the "Activity" area are deprecated, please use the
 converted during "Import Course".
 """
 
-LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = """
-If checked, the manual progress REST API permits users to manually mark a
-unit or lesson as complete, overriding the automatic progress tracking.
+LESSON_REQUIRE_MANUAL_COMPLETION_DESCRIPTION = """
+If checked, students must click a completion button for this lesson to
+be marked as completed.  Does not apply to lessons with questions.
 """
 
 LESSON_AVAILABILITY_DESCRIPTION = """
@@ -243,9 +243,9 @@ If checked, all assessments, lessons, and activties in this unit are shown on
 one page. Otherwise, each is shown on its own page.
 """
 
-UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION = """
-If checked, the manual progress REST API permits users to manually mark a
-unit or lesson as complete, overriding the automatic progress tracking.
+UNIT_ALLOW_MANUAL_COMPLETION_DESCRIPTION = """
+If checked, students will be able to click a completion button to mark the
+unit as completed.
 """
 
 UNIT_HIDE_ASSESSMENT_NAV = """

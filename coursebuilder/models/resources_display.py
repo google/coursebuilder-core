@@ -860,9 +860,9 @@ class ResourceUnit(ResourceUnitBase):
             description=messages.UNIT_SHOW_ON_ONE_PAGE_DESCRIPTION,
             optional=True))
         schema.add_property(schema_fields.SchemaField(
-            'manual_progress', 'Allow Progress Override', 'boolean',
+            'manual_progress', 'Allow Manual Completion', 'boolean',
             description=services.help_urls.make_learn_more_message(
-                messages.UNIT_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION,
+                messages.UNIT_ALLOW_MANUAL_COMPLETION_DESCRIPTION,
                 'course:%s:manual_progress' % ResourceUnitBase.UNIT_TYPE),
             optional=True))
         schema.add_property(schema_fields.SchemaField(
@@ -1128,9 +1128,9 @@ class ResourceLesson(resource.AbstractResourceHandler):
             extra_schema_dict_values={
                 'className': 'inputEx-Field activityHolder'}))
         lesson.add_property(schema_fields.SchemaField(
-            'manual_progress', 'Allow Progress Override', 'boolean',
+            'manual_progress', 'Require Manual Completion', 'boolean',
             description=services.help_urls.make_learn_more_message(
-                messages.LESSON_ALLOW_PROGRESS_OVERRIDE_DESCRIPTION,
+                messages.LESSON_REQUIRE_MANUAL_COMPLETION_DESCRIPTION,
                 'course:lesson:manual_progress'),
             optional=True))
         return lesson

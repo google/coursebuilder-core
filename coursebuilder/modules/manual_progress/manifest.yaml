@@ -4,9 +4,17 @@ registration:
 tests:
   functional:
     - modules.manual_progress.manual_progress_tests.ManualProgressTest = 24
+  integration:
+    - modules.manual_progress.manual_progress_integration_tests.ManualProgressTest = 1
 
 files:
   - modules/manual_progress/__init__.py
   - modules/manual_progress/manifest.yaml
   - modules/manual_progress/manual_progress.py
+  - modules/manual_progress/manual_progress_integration_tests.py
+  - modules/manual_progress/manual_progress_pageobjects.py
   - modules/manual_progress/manual_progress_tests.py
+  - modules/manual_progress/resources/css/manual_progress.css
+  - modules/manual_progress/resources/js/manual_progress.js
+  - modules/manual_progress/templates/manual_progress.html
+

@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="/modules/manual_progress/resources/css/manual_progress.css">
+
+{% if lesson %}
+  <div class='manual-progress manual-progress-lesson'
+       data-xsrf-token="{{ lesson.xsrf_token }}"
+       data-key="{{ lesson.key }}"
+       data-url="{{ lesson.url }}"
+       >
+    <button id="manual-progress-complete-lesson">
+      {# I18N: Text for a button allowing user to manually mark themselves
+         as having completed a lesson in an educational course. #}
+      {{ gettext('I have completed this lesson.') }}
+    </button>
+  </div>
+{% endif %}
+
+{% if unit %}
+  <div class='manual-progress manual-progress-unit'
+       data-xsrf-token="{{ unit.xsrf_token }}"
+       data-key="{{ unit.key }}"
+       data-url="{{ unit.url }}"
+       >
+    <button id="manual-progress-complete-unit">
+      {# I18N: Text for a button allowing user to manually mark themselves
+         as having completed a unit in an educational course. #}
+      {{ gettext('I have completed this unit.') }}
+    </button>
+  </div>
+
+{% endif %}
+
+{% if course %}
+  <div class='manual-progress manual-progress-course'
+       data-xsrf-token="{{ course.xsrf_token }}"
+       data-key="{{ course.key }}"
+       data-url="{{ course.url }}"
+       >
+    <button id="manual-progress-complete-course">
+      {# I18N: Text for a button allowing user to manually mark themselves
+         as having completed an educational course. #}
+      {{ gettext('I have completed this course.') }}
+    </button>
+  </div>
+{% endif %}
+
+<script src="/modules/manual_progress/resources/js/manual_progress.js"></script>

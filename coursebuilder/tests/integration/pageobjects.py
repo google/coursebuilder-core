@@ -347,7 +347,7 @@ class RootPage(PageObject):
         return WelcomePage(self._tester)
 
     def click_login(self):
-        self.find_element_by_link_text('Login').click()
+        self.click_link('Login', wait_for_page_load_after=False)
         return LoginPage(self._tester)
 
     def click_logout(self):
@@ -356,16 +356,24 @@ class RootPage(PageObject):
         return self
 
     def click_dashboard(self):
-        self.find_element_by_link_text('Dashboard').click()
+        self.click_link('Dashboard')
         return DashboardPage(self._tester)
 
     def click_announcements(self):
-        self.find_element_by_link_text('Announcements').click()
+        self.click_link('Announcements')
         return AnnouncementsPage(self._tester)
 
     def click_register(self):
-        self.find_element_by_link_text('Register').click()
-        return RegisterPage(self._tester)
+        self.click_link('Register')
+        return RegisterPage(self._tester, self.__class__)
+
+    def click_link(self, link_text, wait_for_page_load_after=True):
+        link = self.find_element_by_link_text(link_text)
+        if wait_for_page_load_after:
+            self.wait_for_page_load_after(link.click)
+        else:
+            link.click()
+        return self
 
 
 class WelcomePage(PageObject):
@@ -381,6 +389,10 @@ class WelcomePage(PageObject):
 class RegisterPage(PageObject):
     """Page object to model the registration page."""
 
+    def __init__(self, tester, continue_page=RootPage):
+        super(RegisterPage, self).__init__(tester)
+        self._continue_page = continue_page
+
     def enroll(self, name):
         enroll = self.find_element_by_name('form01')
         enroll.send_keys(name)
@@ -394,8 +406,9 @@ class RegisterPage(PageObject):
         return self
 
     def click_course(self):
-        self.find_element_by_link_text('Course').click()
-        return RootPage(self._tester)
+        link = self.find_element_by_link_text('Course')
+        self.wait_for_page_load_after(link.click)
+        return self._continue_page(self._tester)
 
 
 class AnnouncementsPage(PageObject):
@@ -552,9 +565,10 @@ class DashboardPage(PageObject):
         self.find_element_by_css_selector('#add_link > button').click()
         return AddLink(self._tester)
 
-    def click_add_lesson(self):
-        self.find_element_by_css_selector(
-            'div.course-outline li.add-lesson button').click()
+    def click_add_lesson(self, unit_index=0):
+        buttons = self.find_elements_by_css_selector(
+            'div.course-outline li.add-lesson button')
+        self.wait_for_page_load_after(buttons[unit_index].click)
         return AddLesson(self._tester)
 
     def click_edit_lesson(self, link_text):
@@ -1316,6 +1330,27 @@ class CourseContentElement(DashboardEditor):
             self.instanceid_list_snapshot, self._get_instanceid_list())
         return self
 
+    def _set_checkbox(self, label_text, setting):
+        labels = self._tester.driver.find_elements_by_tag_name('label')
+        the_label = None
+        for label in labels:
+            if label.text == label_text:
+                the_label = label
+                break
+        label_div = the_label.find_element_by_xpath('..')
+        checkbox_div = label_div.find_element_by_xpath('..')
+        checkbox = checkbox_div.find_element_by_css_selector(
+            'input[type="checkbox"]')
+        if checkbox.is_selected() != setting:
+            checkbox.click()
+        return self
+
+    def set_manual_progress_unit(self, setting):
+        return self._set_checkbox('Allow Manual Completion', setting)
+
+    def set_manual_progress_lesson(self, setting):
+        return self._set_checkbox('Require Manual Completion', setting)
+
 
 class AddUnit(CourseContentElement):
     """Page object to model the dashboard's add unit editor."""
@@ -1341,19 +1376,7 @@ class AddUnit(CourseContentElement):
         return self
 
     def set_contents_on_one_page(self, setting):
-        labels = self._tester.driver.find_elements_by_tag_name('label')
-        one_page_label = None
-        for label in labels:
-            if label.text == 'Show on One Page':
-                one_page_label = label
-                break
-        label_div = one_page_label.find_element_by_xpath('..')
-        checkbox_div = label_div.find_element_by_xpath('..')
-        checkbox = checkbox_div.find_element_by_css_selector(
-            'input[type="checkbox"]')
-        if checkbox.is_selected() != setting:
-            checkbox.click()
-        return self
+        return self._set_checkbox('Show on One Page', setting)
 
 
 class AddAssessment(CourseContentElement):

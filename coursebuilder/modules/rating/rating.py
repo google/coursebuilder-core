@@ -260,16 +260,12 @@ def _rating__is_enabled_in_course_settings(app_context):
     return env .get('unit', {}).get('ratings_module', {}).get('enabled')
 
 
-def extra_content(app_context):
+def extra_content(app_context, course, unit, lesson, assessment,
+                  student_view, student):
     if not _rating__is_enabled_in_course_settings(app_context):
         return None
-
-    user = users.get_current_user()
-    if user is None or (
-        models.Student.get_enrolled_student_by_user(user) is None
-    ):
+    if not student or student.is_transient:
         return None
-
     template_data = {
         'xsrf_token': utils.XsrfTokenManager.create_xsrf_token(XSRF_TOKEN_NAME)
     }

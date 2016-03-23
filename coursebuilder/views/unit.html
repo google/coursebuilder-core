@@ -118,6 +118,11 @@
           {{ item }}
         </div><!-- /gcb-aside -->
       {% endfor %}
+      {% for item in extra_content %}
+        <div class="gcb-aside gcb-button-box">
+          {{ item }}
+        </div><!-- /gcb-aside -->
+      {% endfor %}
 
       <div id="gcb-nav-button-box" class="gcb-button-box">
         {% if unit.show_contents_on_one_page or
