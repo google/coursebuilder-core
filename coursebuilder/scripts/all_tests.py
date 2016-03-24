@@ -79,6 +79,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_entities.ExportEntityTestCase': 2,
     'tests.functional.model_entities.EntityTransformsTest': 4,
     'tests.functional.model_jobs.JobOperationsTest': 15,
+    'tests.functional.model_jobs.MapReduceMethodTypeTests': 2,
     'tests.functional.model_models.BaseJsonDaoTestCase': 1,
     'tests.functional.model_models.ContentChunkTestCase': 16,
     'tests.functional.model_models.EventEntityTestCase': 1,

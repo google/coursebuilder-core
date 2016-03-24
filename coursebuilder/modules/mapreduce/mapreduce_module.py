@@ -18,11 +18,13 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import datetime
 import logging
+import types
 import urllib
 
 import cloudstorage
 from mapreduce import main as mapreduce_main
 from mapreduce import parameters as mapreduce_parameters
+from mapreduce import util as mapreduce_util
 from pipeline import models as pipeline_models
 from pipeline import pipeline
 
@@ -263,6 +265,39 @@ class CronMapreduceCleanupHandler(utils.BaseHandler):
         return num_cleaned
 
 
+def handler_for_name(fq_name):
+    """Resolves and instantiates handler by fully qualified name.
+
+    NOTE: This is a clone of a function in the map/reduce module which has
+    also been taught that map and reduce functions may be marked with
+    @classmethod, as opposed to only member functions of default-constructable
+    classes or @staticmethod.  It is applied as a monkey-patch to fix the base
+    library.
+
+    First resolves the name using for_name call. Then if it resolves to a
+    class, instantiates a class, if it resolves to a method - instantiates the
+    class and binds method to the instance.
+
+    Args:
+      fq_name: fully qualified name of something to find.
+
+    Returns:
+      handler instance which is ready to be called.
+
+    """
+    resolved_name = mapreduce_util.for_name(fq_name)
+    if isinstance(resolved_name, (type, types.ClassType)):
+        # create new instance if this is type
+        return resolved_name()
+    elif (isinstance(resolved_name, types.MethodType) and
+          resolved_name.im_self is None):
+        # bind the method
+        return getattr(resolved_name.im_class(), resolved_name.__name__)
+    else:
+        # Already bound -- classmethod or staticmethod.
+        return resolved_name
+
+
 def register_module():
     """Registers this module in the registry."""
 
@@ -270,53 +305,60 @@ def register_module():
         ('/cron/mapreduce/cleanup', CronMapreduceCleanupHandler),
     ]
 
-    for path, handler_class in mapreduce_main.create_handlers_map():
-        # The mapreduce and pipeline libraries are pretty casual about
-        # mixing up their UI support in with their functional paths.
-        # Here, we separate things and give them different prefixes
-        # so that the only-admin-access patterns we define in app.yaml
-        # can be reasonably clean.
-        if path.startswith('.*/pipeline'):
-            if 'pipeline/rpc/' in path or path == '.*/pipeline(/.+)':
-                path = path.replace('.*/pipeline', '/mapreduce/ui/pipeline')
+    def notify_module_enabled():
+        for path, handler_class in mapreduce_main.create_handlers_map():
+            # The mapreduce and pipeline libraries are pretty casual about
+            # mixing up their UI support in with their functional paths.
+            # Here, we separate things and give them different prefixes
+            # so that the only-admin-access patterns we define in app.yaml
+            # can be reasonably clean.
+            if path.startswith('.*/pipeline'):
+                if 'pipeline/rpc/' in path or path == '.*/pipeline(/.+)':
+                    path = path.replace('.*/pipeline', '/mapreduce/ui/pipeline')
+                else:
+                    path = path.replace('.*/pipeline',
+                                        '/mapreduce/worker/pipeline')
             else:
-                path = path.replace('.*/pipeline', '/mapreduce/worker/pipeline')
-        else:
-            if '_callback' in path:
-                path = path.replace('.*', '/mapreduce/worker', 1)
-            elif '/list_configs' in path:
-                # This needs mapreduce.yaml, which we don't distribute.  Not
-                # having this prevents part of the mapreduce UI front page
-                # from loading, but we don't care, because we don't want
-                # people using the M/R front page to relaunch jobs anyhow.
-                continue
+                if '_callback' in path:
+                    path = path.replace('.*', '/mapreduce/worker', 1)
+                elif '/list_configs' in path:
+                    # This needs mapreduce.yaml, which we don't distribute.  Not
+                    # having this prevents part of the mapreduce UI front page
+                    # from loading, but we don't care, because we don't want
+                    # people using the M/R front page to relaunch jobs anyhow.
+                    continue
+                else:
+                    path = path.replace('.*', '/mapreduce/ui', 1)
+
+            # The UI needs to be guarded by a config so that casual users aren't
+            # exposed to the internals, but advanced users can
+            # investigate issues.
+            if '/ui/' in path or path.endswith('/ui'):
+                if (hasattr(handler_class, 'dispatch') and
+                    not hasattr(handler_class, 'real_dispatch')):
+                    handler_class.real_dispatch = handler_class.dispatch
+                    handler_class.dispatch = ui_access_wrapper
+                global_handlers.append((path, handler_class))
+
+            # Wrap worker handlers with check that request really is coming
+            # from task queue.
             else:
-                path = path.replace('.*', '/mapreduce/ui', 1)
+                if (hasattr(handler_class, 'dispatch') and
+                    not hasattr(handler_class, 'real_dispatch')):
+                    handler_class.real_dispatch = handler_class.dispatch
+                    handler_class.dispatch = authorization_wrapper
+                global_handlers.append((path, handler_class))
 
-        # The UI needs to be guarded by a config so that casual users aren't
-        # exposed to the internals, but advanced users can investigate issues.
-        if '/ui/' in path or path.endswith('/ui'):
-            if (hasattr(handler_class, 'dispatch') and
-                not hasattr(handler_class, 'real_dispatch')):
-                handler_class.real_dispatch = handler_class.dispatch
-                handler_class.dispatch = ui_access_wrapper
-            global_handlers.append((path, handler_class))
+        # Tell map/reduce internals that this is now the base path to use.
+        mapreduce_parameters.config.BASE_PATH = '/mapreduce/worker'
 
-        # Wrap worker handlers with check that request really is coming
-        # from task queue.
-        else:
-            if (hasattr(handler_class, 'dispatch') and
-                not hasattr(handler_class, 'real_dispatch')):
-                handler_class.real_dispatch = handler_class.dispatch
-                handler_class.dispatch = authorization_wrapper
-            global_handlers.append((path, handler_class))
-
-    # Tell map/reduce internals that this is now the base path to use.
-    mapreduce_parameters.config.BASE_PATH = '/mapreduce/worker'
+        # Monkey-patch handler_for_name in mapreduce; the implementation does
+        # not correctly handle map, reduce methods marked as @classmethod.
+        mapreduce_util.handler_for_name = handler_for_name
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         MODULE_NAME,
         'Provides support for analysis jobs based on map/reduce',
-        global_handlers, [])
+        global_handlers, [], notify_module_enabled=notify_module_enabled)
     return custom_module

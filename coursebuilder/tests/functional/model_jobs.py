@@ -21,7 +21,9 @@ __author__ = [
 import time
 
 from common.utils import Namespace
+from controllers import sites
 from models import jobs
+from models import models
 from models import transforms
 from tests.functional import actions
 
@@ -214,3 +216,92 @@ class JobOperationsTest(actions.TestBase):
         # Results from previous run should not overwrite more-recent.
         func(sequence_num, TEST_BAD_DATA)
         self.assertEquals(TEST_DATA, self.test_job.get_output())
+
+
+class CountStudentsWithClassMethods(jobs.MapReduceJob):
+
+    @classmethod
+    def entity_class(cls):
+        return models.Student
+
+    @classmethod
+    def map(cls, student):
+        yield ('total', 1)
+
+    @classmethod
+    def reduce(cls, key, values):
+        yield sum([int(value) for value in values])
+
+    @classmethod
+    def combine(cls, key, values, prev_values):
+        total = sum([int(value) for value in values])
+        if prev_values is not None:
+            total += sum([int(value) for value in prev_values])
+        yield total
+
+    @classmethod
+    def complete(cls, kwargs, results):
+        results[0] += 1
+
+
+class CountStudentsWithStaticMethods(jobs.MapReduceJob):
+
+    @staticmethod
+    def entity_class():
+        return models.Student
+
+    @staticmethod
+    def map(student):
+        yield ('total', 1)
+
+    @staticmethod
+    def reduce(key, values):
+        yield sum([int(value) for value in values])
+
+    @staticmethod
+    def combine(key, values, prev_values):
+        total = sum([int(value) for value in values])
+        if prev_values is not None:
+            total += sum([int(value) for value in prev_values])
+        yield total
+
+    @staticmethod
+    def complete(kwargs, results):
+        results[0] += 1
+
+
+class MapReduceMethodTypeTests(actions.TestBase):
+
+    COURSE_NAME = 'mr_test'
+    NAMESPACE = 'ns_%s' % COURSE_NAME
+    ADMIN_EMAIL = 'admin@foo.com'
+
+    def setUp(self):
+        super(MapReduceMethodTypeTests, self).setUp()
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Test Course')
+        self.base = '/%s' % self.COURSE_NAME
+
+        actions.login('student_one@foo.com')
+        actions.register(self, 'Student One')
+        actions.login('student_two@foo.com')
+        actions.register(self, 'Student Two')
+        actions.login('student_three@foo.com')
+        actions.register(self, 'Student Three')
+
+    def tearDown(self):
+        sites.reset_courses()
+        super(MapReduceMethodTypeTests, self).tearDown()
+
+    def _test_count_with_job(self, job_class):
+        job_class(self.app_context).submit()
+        self.execute_all_deferred_tasks()
+        job = job_class(self.app_context).load()
+        results = job_class.get_results(job)
+        self.assertEquals([4], results)
+
+    def test_count_with_classmethod(self):
+        self._test_count_with_job(CountStudentsWithClassMethods)
+
+    def test_count_with_staticmethod(self):
+        self._test_count_with_job(CountStudentsWithStaticMethods)

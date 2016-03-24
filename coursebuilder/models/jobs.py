@@ -18,6 +18,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import ast
 import datetime
+import inspect
 import logging
 import time
 import traceback
@@ -392,31 +393,53 @@ class MapReduceJob(DurableJobBase):
         content = transforms.loads(job.output)
         return content[MapReduceJob._OUTPUT_KEY_ERROR]
 
-    def entity_class(self):
+    @classmethod
+    def entity_class(cls):
         """Return a reference to the class for the DB/NDB type to map over."""
         raise NotImplementedError('Classes derived from MapReduceJob must '
                                   'implement entity_class()')
 
-    @staticmethod
-    def map(item):
-        """Implements the map function.  Must be declared @staticmethod.
+    @classmethod
+    def map(cls, item):
+        """Implements the map function.
+
+        This function may <em>yield</em> as many times as appropriate
+        (including zero) to return key/value 2-tuples.  E.g., for calculating
+        student scores from a packed block of course events, this function
+        would take as input the packed block.  It would iterate over the
+        events, 'yield'-ing for those events that respresent items counting
+        towards the grade.  E.g., yield (event.student, event.data['score'])
+
+        Note that there is no need to make the keys homgenous.  For example,
+        if you are doing a map/reduce over EventEntity, you may emit keys for
+        the student, unit, and/or question from the same call to map().  If
+        you do this, your reduce() needs to be able to tell what item key is
+        referring to.  Some keys contain enough information internally to
+        disambiguate, and some will need a prefix or suffix to allow
+        disambiguation.
+
+        Do not use dicts as keys; since keys are internally converted to
+        strings by the map/reduce framework, two dicts that should compare
+        equal may not if their stringified version has members in different
+        orders.
+
+        This method may be declared as @staticmethod or @classmethod.  Using
+        @classmethod is preferred, as it allows easier abstraction and
+        inheritance for job classes.  (Declaring as a normal member method is
+        not allowed, since the DurableJobBase constructor requires an
+        argument, and the map/reduce internals don't know how to construct
+        the requisite app_context instance.)
 
         Args:
           item: The parameter passed to this function is a single element of the
-          type given by entity_class().  This function may <em>yield</em> as
-          many times as appropriate (including zero) to return key/value
-          2-tuples.  E.g., for calculating student scores from a packed block of
-          course events, this function would take as input the packed block.  It
-          would iterate over the events, 'yield'-ing for those events that
-          respresent items counting towards the grade.  E.g., yield
-          (event.student, event.data['score'])
+          type given by entity_class().
         """
         raise NotImplementedError('Classes derived from MapReduceJob must '
                                   'implement map as a @staticmethod.')
 
-    @staticmethod
-    def reduce(key, values):
-        """Implements the reduce function.  Must be declared @staticmethod.
+    @classmethod
+    def reduce(cls, key, values):
+        """Implements the reduce function.
 
         This function should <em>yield</em> whatever it likes; the recommended
         thing to do is emit entities.  All emitted outputs from all
@@ -425,6 +448,13 @@ class MapReduceJob(DurableJobBase):
         need humongous, instead persist out your humongous stuff and return
         a reference (and deal with doing the dereference to load content
         in the FooHandler class in analytics.py)
+
+        This method may be declared as @staticmethod or @classmethod.  Using
+        @classmethod is preferred, as it allows easier abstraction and
+        inheritance for job classes.  (Declaring as a normal member method is
+        not allowed, since the DurableJobBase constructor requires an
+        argument, and the map/reduce internals don't know how to construct
+        the requisite app_context instance.)
 
         Args:
           key: A key value as emitted from the map() function, above.
@@ -438,8 +468,8 @@ class MapReduceJob(DurableJobBase):
         raise NotImplementedError('Classes derived from MapReduceJob must '
                                   'implement map as a @staticmethod.')
 
-    @staticmethod
-    def combine(unused_key, values, previously_combined_values):
+    @classmethod
+    def combine(cls, unused_key, values, previously_combined_values):
         """Optional.  Performs reduce task on mappers to minimize shuffling.
 
         After the map() function, each job-host has a chunk of yield()-ed
@@ -463,13 +493,20 @@ class MapReduceJob(DurableJobBase):
         value, not a key/value pair.
 
         See the example below in AbstractCountingMapReduceJob.
+
+        This method may be declared as @staticmethod or @classmethod.  Using
+        @classmethod is preferred, as it allows easier abstraction and
+        inheritance for job classes.  (Declaring as a normal member method is
+        not allowed, since the DurableJobBase constructor requires an
+        argument, and the map/reduce internals don't know how to construct
+        the requisite app_context instance.)
         """
         raise NotImplementedError('Classes derived from MapReduceJob may '
                                   'optionally implement combine() as a static '
                                   'method.')
 
-    @staticmethod
-    def complete(kwargs, results):
+    @classmethod
+    def complete(cls, kwargs, results):
         """Optional.  Called exactly once on successful job completion.
 
         When a job has completed successfully, this function is called.
@@ -489,8 +526,15 @@ class MapReduceJob(DurableJobBase):
         complete() time.  This is because the same thread may be used for
         multiple job completions, and there's a race between setting the
         global context and this function.
+
+        This method may be declared as @staticmethod or @classmethod.  Using
+        @classmethod is preferred, as it allows easier abstraction and
+        inheritance for job classes.  (Declaring as a normal member method is
+        not allowed, since the DurableJobBase constructor requires an
+        argument, and the map/reduce internals don't know how to construct
+        the requisite app_context instance.)
         """
-        raise NotImplementedError()
+        pass
 
     def build_additional_mapper_params(self, unused_app_context):
         """Build a dict of additional parameters to make available to mappers.
@@ -584,13 +628,14 @@ class MapReduceJob(DurableJobBase):
             'mapper_params': self.mapper_params,
             'reducer_params': reducer_params,
         }
-        if (getattr(self.__class__, 'combine') !=
-            getattr(MapReduceJob, 'combine')):
+
+        if (inspect.getsource(self.combine) !=
+            inspect.getsource(MapReduceJob.combine)):
             kwargs['combiner_spec'] = '%s.%s.combine' % (
                 self.__class__.__module__, self.__class__.__name__)
         complete_fn = None
-        if (getattr(self.__class__, 'complete') !=
-            getattr(MapReduceJob, 'complete')):
+        if (inspect.getsource(self.combine) !=
+            inspect.getsource(MapReduceJob.combine)):
             complete_fn = '%s.%s.complete' % (
                 self.__class__.__module__, self.__class__.__name__)
         mr_pipeline = MapReduceJobPipeline(self._job_name, sequence_num,
@@ -640,28 +685,32 @@ class AbstractCountingMapReduceJob(MapReduceJob):
     name, we only need to write:
 
     class NameCounter(jobs.AbstractCountingMapReduceJob):
-        @staticmethod
-        def get_description():
+
+        @classmethod
+        def get_description(cls):
             return "count names"
-        def entity_class():
+
+        @classmethod
+        def entity_class(cls):
             return models.Student
-        @staticmethod
-        def map(student):
+
+        @classmethod
+        def map(cls, student):
             return (student.name.split()[0], 1)
 
     The output of this job will be an array of 2-tuples consisting of
     the name and the total number of students with that same first name.
     """
 
-    @staticmethod
-    def combine(unused_key, values, previously_combined_outputs=None):
+    @classmethod
+    def combine(cls, unused_key, values, previously_combined_outputs=None):
         total = sum([int(value) for value in values])
         if previously_combined_outputs is not None:
             total += sum([int(value) for value in previously_combined_outputs])
         yield total
 
-    @staticmethod
-    def reduce(key, values):
+    @classmethod
+    def reduce(cls, key, values):
         total = sum(int(value) for value in values)
         yield (key, total)
 
