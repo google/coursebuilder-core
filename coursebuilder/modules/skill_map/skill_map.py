@@ -178,7 +178,7 @@ def _translate_skill(skills_generator):
     i18n_dashboard.translate_dto_list(course, skills, key_list)
 
 
-class _SkillDao(models.LastModfiedJsonDao):
+class _SkillDao(models.LastModifiedJsonDao):
     DTO = Skill
     ENTITY = _SkillEntity
     ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeId

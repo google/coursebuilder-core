@@ -2024,7 +2024,7 @@ class BaseJsonDao(object):
         return cls.DTO(None, copy.deepcopy(dto.dict))
 
 
-class LastModfiedJsonDao(BaseJsonDao):
+class LastModifiedJsonDao(BaseJsonDao):
     """Base DAO that updates the last_modified field of entities on every save.
 
     DTOs managed by this DAO must have a settable field last_modified defined.
@@ -2033,13 +2033,13 @@ class LastModfiedJsonDao(BaseJsonDao):
     @classmethod
     def save(cls, dto):
         dto.last_modified = time.time()
-        return super(LastModfiedJsonDao, cls).save(dto)
+        return super(LastModifiedJsonDao, cls).save(dto)
 
     @classmethod
     def save_all(cls, dtos):
         for dto in dtos:
             dto.last_modified = time.time()
-        return super(LastModfiedJsonDao, cls).save_all(dtos)
+        return super(LastModifiedJsonDao, cls).save_all(dtos)
 
 
 class QuestionEntity(BaseEntity):
@@ -2081,7 +2081,7 @@ class QuestionDTO(object):
         self.dict['last_modified'] = value
 
 
-class QuestionDAO(LastModfiedJsonDao):
+class QuestionDAO(LastModifiedJsonDao):
     VERSION = '1.5'
     DTO = QuestionDTO
     ENTITY = QuestionEntity
@@ -2405,7 +2405,7 @@ class QuestionGroupDTO(object):
         self.dict['last_modified'] = value
 
 
-class QuestionGroupDAO(LastModfiedJsonDao):
+class QuestionGroupDAO(LastModifiedJsonDao):
     DTO = QuestionGroupDTO
     ENTITY = QuestionGroupEntity
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId

@@ -183,7 +183,7 @@ class CompetencyMeasureEntity(models.BaseEntity):
         return self.key().name().split(':')
 
 
-class CompetencyMeasureDao(models.LastModfiedJsonDao):
+class CompetencyMeasureDao(models.LastModifiedJsonDao):
     DTO = CompetencyMeasureDto
     ENTITY = CompetencyMeasureEntity
     ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeName
