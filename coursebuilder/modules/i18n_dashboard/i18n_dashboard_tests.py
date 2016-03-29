@@ -380,16 +380,11 @@ class I18nDashboardHandlerTests(actions.TestBase):
         soup = self.parse_html_string_to_soup(response.body)
         tables = soup.select('.i18n-progress-table')
 
+        expected_settings_rows = []
         expected_tables = [
             {
                 'title': 'Settings',
-                'rows': [
-                    'Assessments',
-                    'Forums',
-                    'Course',
-                    'Invitations',
-                    'Registration',
-                ],
+                'rows': expected_settings_rows,
             },
             {
                 'title': 'Create > Outline',
@@ -428,6 +423,12 @@ class I18nDashboardHandlerTests(actions.TestBase):
                 ],
             },
         ]
+
+        for rsrc, key in (i18n_dashboard.TranslatableResourceCourseSettings
+                            .get_resources_and_keys(self.course)):
+            resource_handler = resource.Registry.get(key.type)
+            title = resource_handler.get_resource_title(rsrc)
+            expected_settings_rows.append(title)
 
         for table, expected_table in zip(tables, expected_tables):
             self.assertEquals(table.select(
@@ -2530,7 +2531,9 @@ class TranslationImportExportTests(actions.TestBase):
             'Did not find translation for "Lesson Title" at lesson:4', messages)
 
     def test_upload_ui_with_blank_translation(self):
-        resource_count = 19
+        resource_key_map = (i18n_dashboard.TranslatableResourceRegistry.
+                            get_resources_and_keys(self.course))
+        resource_count = len(resource_key_map)
 
         # Do export to force creation of progress, bundle entities
         self._do_download({'locales': [{'locale': 'de', 'checked': True}],

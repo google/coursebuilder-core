@@ -19,13 +19,13 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
-import os
 import datetime
 import types
 import urllib
 
 from common import crypto
 from common import schema_transforms
+from common import utils as common_utils
 from controllers import sites
 from models import data_sources
 from models import models
@@ -1381,7 +1381,9 @@ class SubmissionDataSourceTest(actions.TestBase):
 
         actions.login(self.STUDENT_EMAIL)
         actions.register(self, 'John Smith')
-        self.student_user_id = os.environ['USER_ID']
+        with common_utils.Namespace(self.NAMESPACE):
+            student, _ = models.Student.get_first_by_email(self.STUDENT_EMAIL)
+            self.student_user_id = student.user_id
 
         actions.login(self.ADMIN_EMAIL)
 

@@ -6,3 +6,11 @@ queue:
     min_backoff_seconds: 15
     max_doublings: 9
     max_backoff_seconds: 7200
+- name: gaia-register-user
+  target: 1.gaia
+  rate: 5/s
+  retry_parameters:
+    # No task_retry_limit, no task_age_limit, so indefinite retries.
+    min_backoff_seconds: 15
+    max_doublings: 9
+    max_backoff_seconds: 7200

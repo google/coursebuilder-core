@@ -159,7 +159,8 @@ class ModulesRepo(object):
 
     def _get_modules(self):
         modules = []
-        for (dirpath, dirnames, _) in os.walk(self.modules_dir):
+        for (dirpath, dirnames, _) in os.walk(self.modules_dir,
+                                              followlinks=True):
             for dirname in dirnames:
                 modules.append(dirname)
             del dirnames[:]

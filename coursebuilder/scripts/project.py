@@ -733,7 +733,7 @@ class ReleaseConfiguration(object):
 
 def walk_folder_tree(home_dir, skip_rel_dirs=None):
     fileset = set()
-    for dir_, _, files in os.walk(home_dir):
+    for dir_, _, files in os.walk(home_dir, followlinks=True):
         reldir = os.path.relpath(dir_, home_dir)
         if skip_rel_dirs:
             skip = False
