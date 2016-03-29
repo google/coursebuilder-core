@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-11 12:36-0800\n"
-"PO-Revision-Date: 2016-03-07 16:20-0800\n"
+"POT-Creation-Date: 2016-03-28 08:18-0700\n"
+"PO-Revision-Date: 2016-03-28 08:18-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: gu <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -770,6 +770,24 @@ msgstr "નમૂનાની ઇમેઇલ"
 msgid "Subject:"
 msgstr "વિષય:"
 
+#. Text for a button allowing user to manually mark themselves          as
+#. having completed a lesson in an educational course.
+#: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:12
+msgid "I have completed this lesson."
+msgstr ""
+
+#. Text for a button allowing user to manually mark themselves          as
+#. having completed a unit in an educational course.
+#: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:26
+msgid "I have completed this unit."
+msgstr ""
+
+#. Text for a button allowing user to manually mark themselves          as
+#. having completed an educational course.
+#: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:41
+msgid "I have completed this course."
+msgstr ""
+
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/questionnaire/questionnaire.py:198
@@ -1068,6 +1086,8 @@ msgid ""
 "This resource does not exist, or access to it requires that you be logged"
 " in."
 msgstr ""
+"આ સંસાધન અસ્તિત્વમાં નથી અથવા તેને ઍક્સેસ કરવા માટે જરૂરી છે કે તમે લૉગ "
+"ઇન થયેલ રહો."
 
 #. Message on page indicating that a resource is not available.        Either
 #. the requested item really does not exist, or the currently        logged-in
@@ -1078,13 +1098,15 @@ msgid ""
 "This resource does not exist, or cannot be accessed by the current user."
 "  You are currently logged in as {email}."
 msgstr ""
+"આ સંસાધન અસ્તિત્વમાં નથી અથવા વર્તમાન વપરાશકર્તા દ્વારા ઍક્સેસ કરી શકતા "
+"નથી.  તમે હાલમાં {email} તરીકે લૉગ ઇન થયેલ છો."
 
 #. Text for a link on a page indicating that some desired       resource was
 #. not available.  Suggest that the user should log in       in the hopes that
 #. that will grant additional access to the item.
 #: experimental/coursebuilder/views/404.html:27
 msgid "Log in as another user"
-msgstr ""
+msgstr "અન્ય વપરાશકર્તા તરીકે લૉગ ઇન કરો"
 
 #. Text for a link on a page indicating that some desired          resource was
 #. not available.  Following the link will log out the          current user
@@ -1092,7 +1114,7 @@ msgstr ""
 #. a page where they may log in with a different          identity.
 #: experimental/coursebuilder/views/404.html:34
 msgid "Log in"
-msgstr ""
+msgstr "લૉગ ઇન કરો"
 
 #. Text for a link on a page indicating that some desired        resource was
 #. not available.  Following the link will go to the        base page in the
@@ -1100,7 +1122,7 @@ msgstr ""
 #. pgage.
 #: experimental/coursebuilder/views/404.html:44
 msgid "Go to the home page for {course_title}"
-msgstr ""
+msgstr "{course_title} માટે હોમ પેજ પર જાઓ"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1648,18 +1670,19 @@ msgid "This unit has no content."
 msgstr "આ યુનિટમાં કોઈ સામગ્રી નથી."
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:133
+#: experimental/coursebuilder/views/unit.html:138
 msgid "Previous Page"
 msgstr "પહેલાનું પૃષ્ઠ"
 
 #. Text on the navigation button at the end of a lesson page.
-#: experimental/coursebuilder/views/unit.html:139
+#: experimental/coursebuilder/views/unit.html:144
 msgid "Next Page"
 msgstr "આગલું પૃષ્ઠ"
 
 #. Text on the navigation button at the end of a lesson. It signals that the
 #. student has completed a unit (which is a series of lessons).
-#: experimental/coursebuilder/views/unit.html:142
+#: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "સમાપ્ત"
+
 
