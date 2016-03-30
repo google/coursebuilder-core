@@ -94,14 +94,11 @@ class _DriveManager(object):
 
         try:
             meta = self.client.get_file_meta(dto.id)
-            if meta.version != dto.version:
-                content = fetch_method(dto.id)
-                content_chunk = models.ContentChunkDAO.get_one_by_uid(
-                    models.ContentChunkDAO.make_uid(dto.type, dto.id))
-                content_chunk_id = content_chunk.id if content_chunk else None
-                self._save_content(meta, content, content_chunk_id)
-            else:
-                self._save_content_unchanged(meta)
+            content = fetch_method(dto.id)
+            content_chunk = models.ContentChunkDAO.get_one_by_uid(
+                models.ContentChunkDAO.make_uid(dto.type, dto.id))
+            content_chunk_id = content_chunk.id if content_chunk else None
+            self._save_content(meta, content, content_chunk_id)
 
         except errors.Error as error:
             self._save_failure(dto.id, error)
@@ -117,13 +114,6 @@ class _DriveManager(object):
     def _save_failure(self, file_id, error):
         dto = drive_models.DriveSyncDAO.load(file_id)
         dto.sync_failed(error)
-        drive_models.DriveSyncDAO.save(dto)
-
-    @db.transactional
-    def _save_content_unchanged(self, meta):
-        dto = drive_models.DriveSyncDAO.load(meta.file_id)
-        dto.dict['title'] = meta.title
-        dto.sync_succeeded()
         drive_models.DriveSyncDAO.save(dto)
 
     @db.transactional(xg=True)
