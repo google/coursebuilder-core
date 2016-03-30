@@ -33,7 +33,6 @@
   function onGoogleApiLoaded() {
     var authLoaded = $.Deferred();
     var pickerLoaded = $.Deferred();
-    var shareLoaded = $.Deferred();
     gapi.load('auth2', {'callback': function() {
       gapi.auth2.init({
         client_id: GOOGLE_CLIENT_ID,
@@ -46,11 +45,8 @@
     gapi.load('picker', {'callback': function() {
       pickerLoaded.resolve();
     }});
-    gapi.load('drive-share', {'callback': function() {
-      shareLoaded.resolve();
-    }});
 
-    $.when(authLoaded, pickerLoaded, shareLoaded).then(function() {
+    $.when(authLoaded, pickerLoaded).then(function() {
       apisLoaded.resolve();
     })
   }
