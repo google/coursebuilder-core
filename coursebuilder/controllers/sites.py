@@ -325,6 +325,13 @@ def unprefix(path, prefix):
     return path
 
 
+def can_handle_course_requests(context):
+    """Reject all, but authors requests, to an unpublished course."""
+    return ((context.now_available and Roles.is_user_whitelisted(context))
+            or Roles.is_course_admin(context)
+            or Roles.in_any_role(context))
+
+
 def _add_handler_to_headers(handler):
     if users.is_current_user_admin() or not appengine_config.PRODUCTION_MODE:
         handler.response.headers[
@@ -1325,10 +1332,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         return handler
 
     def can_handle_course_requests(self, context):
-        """Reject all, but authors requests, to an unpublished course."""
-        return ((context.now_available and Roles.is_user_whitelisted(context))
-                or Roles.is_course_admin(context)
-                or Roles.in_any_role(context))
+        return can_handle_course_requests(context)
 
     def is_star_route(self, handler):
         return isinstance(handler, utils.StarRouteHandlerMixin) or (

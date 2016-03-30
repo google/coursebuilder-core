@@ -104,7 +104,9 @@ class StudentCourseView(object):
     TODO: Eventually make results of this class available as a REST service.
     """
 
-    def __init__(self, course, student=None, selected_ids=None):
+    def __init__(
+            self, course, student=None, selected_ids=None,
+            list_lessons_with_visible_names=False):
         self._course = course
         self._reviews_processor = self._course.get_reviews_processor()
         self._app_context = self._course.app_context
@@ -112,6 +114,7 @@ class StudentCourseView(object):
         self._student_preferences = (
             models.StudentPreferencesDAO.load_or_default())
         self._settings = self._app_context.get_environ()
+        self._list_lessons_with_visible_names = list_lessons_with_visible_names
 
         # Find out course availability policy.  Mostly this is for
         # distinguishing whether we are in 'registration_required' versus
@@ -348,7 +351,10 @@ class StudentCourseView(object):
                 element.contents.extend(
                     self._build_elements_for_lesson(
                         unit, lesson, lesson_displayability))
-            if lesson_displayability.is_content_available:
+            if (lesson_displayability.is_content_available or (
+                    self._list_lessons_with_visible_names
+                    and lesson_displayability.is_name_visible)
+            ):
                 self._accessible_lessons[str(unit.unit_id)].append(lesson)
         if unit.post_assessment:
             assessment = self._course.find_unit_by_id(unit.post_assessment)

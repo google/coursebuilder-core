@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.css">
+    <style>
+      .code {
+        font-family: monospace;
+      }
+      .result {
+        font-family: monospace;
+        white-space: pre;
+      }
+      .error-message {
+        color: red;
+      }
+      .ng-cloak {
+        display: none;
+      }
+    </style>
+  </head>
+  <body ng-controller="QueryCtl" layout="column" class="ng-cloak">
+      <md-toolbar>
+        <h2>GraphQL Demo</h2>
+      </md-toolbar>
+
+      <md-content layout-padding>
+        <cb-login></cb-login>
+
+        <md-card>
+          <md-card-title>
+            <md-card-title-text>
+              <span class="md-headline">Query</span>
+            </md-card-title-text>
+          </md-card-title>
+          <md-card-content>
+            <p>
+              Enter GraphQL queries here:
+            </p>
+            <md-input-container layout="row">
+              <textarea ng-model="query" class="code" rows="7"></textarea>
+            </md-input-container>
+          </md-card-content>
+          <md-card-actions layout="row" layout-align="start center">
+            <md-button class="query-button md-raised md-primary" ng-click="doQuery()">
+              Query
+            </md-button>
+          </md-card-actions>
+        </md-card>
+
+        <md-card ng-show="data">
+          <md-card-title>
+            <md-card-title-text>
+              <span class="md-headline">Query Result</span>
+            </md-card-title-text>
+          </md-card-title>
+          <md-card-content class="result">{{data}}<md-card-content>
+        </md-card>
+
+        <md-card ng-show="errorList">
+          <md-card-title>
+            <md-card-title-text>
+              <span class="md-headline">Error</span>
+            </md-card-title-text>
+          </md-card-title>
+          <md-card-content class="errors">
+            <ul>
+              <li ng-repeat="errorMsg in errorList" class="error-message">
+                {{errorMsg}}
+              </li>
+            </ul>
+          <md-card-content>
+        </md-card>
+      </md-content>
+
+      <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+      <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-animate.min.js"></script>
+      <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-aria.min.js"></script>
+      <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-messages.min.js"></script>
+      <script src="//ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.js"></script>
+      <script src="query.js"></script>
+  </body>
+</html>

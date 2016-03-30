@@ -96,6 +96,9 @@ THIRD_PARTY_LIBS = [
     _Library('babel-0.9.6.zip'),
     _Library('decorator-3.4.0.zip', relative_path='src'),
     _Library('gaepytz-2011h.zip'),
+    _Library('graphene-0.7.3.zip'),
+    _Library('graphql-core-0.4.12.1.zip'),
+    _Library('graphql-relay-0.3.3.zip'),
     _Library('html5lib-0.95.zip'),
     _Library('identity-toolkit-python-client-0.1.6.zip'),
     _Library('markdown-2.5.zip', relative_path='Markdown-2.5'),
@@ -105,6 +108,7 @@ THIRD_PARTY_LIBS = [
     _Library('pyparsing-1.5.7.zip'),
     _Library('reportlab-3.1.8.zip'),
     _Library('simplejson-3.7.1.zip', relative_path='simplejson-3.7.1'),
+    _Library('six-1.10.0.zip'),
 
     # rdflib and deps
     _Library('isodate-0.5.5.zip', relative_path='src'),

@@ -291,6 +291,9 @@ DISTRIBUTED_LIBS="\
   GoogleAppEngineCloudStorageClient-1.9.15.0.zip \
   GoogleAppEnginePipeline-1.9.17.0.zip \
   Graphy-1.0.0.zip \
+  graphene-0.7.3.zip \
+  graphql-core-0.4.12.1.zip \
+  graphql-relay-0.3.3.zip \
   html5lib-0.95.zip \
   identity-toolkit-python-client-0.1.6.zip \
   inputex-3.1.0.zip \
@@ -307,6 +310,7 @@ DISTRIBUTED_LIBS="\
   rdflib-4.2.2-dev.zip \
   reportlab-3.1.8.zip \
   simplejson-3.7.1.zip \
+  six-1.10.0.zip \
   underscore-1.4.3.zip \
   yui_2in3-2.9.0.zip \
   yui_3.6.0.zip \

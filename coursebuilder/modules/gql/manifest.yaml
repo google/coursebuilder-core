@@ -1,0 +1,19 @@
+registration:
+  main_module: modules.gql.gql
+
+tests:
+  functional:
+    - modules.gql.gql_tests = 34
+  integration:
+    - modules.gql.gql_integration_tests = 3
+
+files:
+  - modules/gql/__init__.py
+  - modules/gql/gql.py
+  - modules/gql/gql_integration_tests.py
+  - modules/gql/gql_tests.py
+  - modules/gql/manifest.yaml
+  - modules/gql/_static/query/cbLogin.directive.html
+  - modules/gql/_static/query/index.html
+  - modules/gql/_static/query/query.js
+  - modules/gql/templates/content_with_tags.html

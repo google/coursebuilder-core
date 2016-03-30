@@ -1,0 +1,7 @@
+<div ng-if="user.loggedIn">
+  <span class="login-name">{{user.email}}</span> |
+  <a class="logout-link" ng-href="{{user.logoutUrl}}">Logout</a>
+</div>
+<div ng-if="! user.loggedIn">
+  <a class="login-link" ng-href="{{user.loginUrl}}">Login</a>
+</div>
