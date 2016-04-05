@@ -329,6 +329,24 @@ class Model(object):
 
 
 class CourseDeleteHandler(utils.BaseHandler):
+    """Handles course deletion requests.
+
+    Modules can register to be called back when deletion of a course has
+    completed (during the last iteration of delete_course(), once no more
+    entities associated with the course exist in the Datastore).  Callbacks
+    are registered like this:
+
+        config.CourseDeleteHandler.COURSE_DELETED_HOOKS[
+            'my_module'] = my_handler
+
+    Course deletion callbacks are called a single time, and in no particular
+    order, via common.utils.run_hooks().
+
+    Course deletion callbacks must accept a single parameter:
+        - the namespace_name (a string)
+    """
+
+    COURSE_DELETED_HOOKS = {}
 
     URI = '/course/delete'
     XSRF_ACTION = 'course_delete'
@@ -361,10 +379,15 @@ class CourseDeleteHandler(utils.BaseHandler):
         try:
             kind = metadata.Kind.all().get()
             if not kind:
+                # No entity types remain to be deleted from the Datastore for
+                # this course (i.e. namespace), so call (in no particular
+                # order) callbacks waiting to be informed of course deletion.
+                ns_name = namespace_manager.get_namespace()
+                common_utils.run_hooks(
+                    cls.COURSE_DELETED_HOOKS.itervalues(), ns_name)
                 logging.info(
                     'CourseDeleteHandler found no entity types to delete for '
-                    'namespace %s; deletion complete.',
-                    namespace_manager.get_namespace())
+                    'namespace %s; deletion complete.', ns_name)
                 return
 
             kind_name = kind.kind_name
