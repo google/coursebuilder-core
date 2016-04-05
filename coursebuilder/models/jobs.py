@@ -190,20 +190,22 @@ class DurableJob(DurableJobBase):
         return sequence_num
 
 
-class MapReduceJobPipeline(base_handler.PipelineBase):
+class MapReduceJobRunner(base_handler.PipelineBase):
 
-    def run(self, job_name, sequence_num, kwargs, namespace, complete_fn):
+    def run(self, job_name, sequence_num, namespace, complete_fn,
+            mapreduce_pipeline_args):
         with Namespace(namespace):
             db.run_in_transaction(
                 DurableJobEntity._start_job, job_name, sequence_num,
                 MapReduceJob.build_output(self.root_pipeline_id, []))
-        output = yield mapreduce_pipeline.MapreducePipeline(**kwargs)
+        output = yield mapreduce_pipeline.MapreducePipeline(
+            **mapreduce_pipeline_args)
         yield StoreMapReduceResults(job_name, sequence_num, namespace, output,
-                                    complete_fn, kwargs)
+                                    complete_fn, mapreduce_pipeline_args)
 
     def finalized(self):
-        job_name = self.args[0]
-        sequence_num = self.args[1]
+        job_name = self.kwargs['job_name']
+        sequence_num = self.kwargs['sequence_num']
         if not self.was_aborted:
             return
         job = DurableJobEntity._get_by_name(job_name)
@@ -276,7 +278,7 @@ class MapReduceJobPipeline(base_handler.PipelineBase):
 class StoreMapReduceResults(base_handler.PipelineBase):
 
     def run(self, job_name, sequence_num, namespace, output, complete_fn,
-            kwargs):
+            mapreduce_pipeline_args):
         results = []
         try:
             iterator = input_readers.GoogleCloudStorageInputReader(output, 0)
@@ -287,7 +289,7 @@ class StoreMapReduceResults(base_handler.PipelineBase):
                     # alternative to eval() to get the Python object back.
                     results.append(ast.literal_eval(item))
             if complete_fn:
-                util.for_name(complete_fn)(kwargs, results)
+                util.for_name(complete_fn)(mapreduce_pipeline_args, results)
             with Namespace(namespace):
                 db.run_in_transaction(
                     DurableJobEntity._complete_job, job_name, sequence_num,
@@ -330,7 +332,7 @@ class MapReduceJob(DurableJobBase):
     # is a map with the following keys:
     #
     # _OUTPUT_KEY_ROOT_PIPELINE_ID
-    # Holds a string representing the ID of the MapReduceJobPipeline
+    # Holds a string representing the ID of the MapReduceJobRunner
     # as known to the mapreduce/lib/pipeline internals.  This is used
     # to generate URLs pointing at the pipeline support UI for detailed
     # inspection of pipeline action.
@@ -590,6 +592,42 @@ class MapReduceJob(DurableJobBase):
         if self.is_active():
             return -1
         sequence_num = super(MapReduceJob, self).non_transactional_submit()
+        top_level_pipeline = self._create_toplevel_pipeline(sequence_num)
+        top_level_pipeline.start(base_path='/mapreduce/worker/pipeline')
+        return sequence_num
+
+    def _create_toplevel_pipeline(self, sequence_num):
+        """May be overridden by subtypes needing a different management job.
+
+        This probably looks overly-convoluted to the causal eye: Why do we
+        have to separately generate a kwargs dict, and then use that to
+        create the instance?  It turns out that the map/reduce framework
+        has necessarily created its own way to instantiate objects.  Rather
+        than calling .__init__(), the map/reduce framework calls .run(),
+        passing along whatever argumens were passed to __init__.  This is
+        done because map/reduce job initialization will often take place
+        on a different instance using copies of the args transported via
+        deferred queue.
+
+        This has a couple of consequences:
+        1. All map/reduce job "constructor" parameters must be serializable.
+        2. If one kind of M/R job wants to use another kind as a sub-task,
+           the master task must be provided with all the constructor args
+           for the sub-job as part of its own arguments set, so that the
+           sub-job can be correctly constructed later.
+
+        MapReduce jobs are not, themselves, serializable, so we wind up making
+        a dict of args containing dicts of sub-args for sub-jobs, recursively.
+        This is fairly awful from a comprehensibility standpoint, but it is at
+        least possible to keep mostly straight by picking good names.
+        """
+
+        job_runner_args = self._create_job_runner_args(sequence_num)
+        return MapReduceJobRunner(**job_runner_args)
+
+    def _create_mapreduce_pipeline_args(self, sequence_num):
+        """Creates args for the map/reduce pipeline defined by subclasses."""
+
         entity_class_type = self.entity_class()
         entity_class_name = '%s.%s' % (entity_class_type.__module__,
                                        entity_class_type.__name__)
@@ -633,16 +671,31 @@ class MapReduceJob(DurableJobBase):
             inspect.getsource(MapReduceJob.combine)):
             kwargs['combiner_spec'] = '%s.%s.combine' % (
                 self.__class__.__module__, self.__class__.__name__)
+        return kwargs
+
+    def _create_job_runner_args(self, sequence_num):
+        """Creates args for the master pipeline coordinating operations.
+
+        The map/reduce pipeline defined in subclasses is wrapped in another
+        pipeline that:
+        - runs the worker pipeline
+        - reads the output of the worker pipeline and concentrates the
+          items yielded from its reduce() step into the output portion
+          of this job's MapReduceEntity
+        """
         complete_fn = None
         if (inspect.getsource(self.combine) !=
             inspect.getsource(MapReduceJob.combine)):
             complete_fn = '%s.%s.complete' % (
                 self.__class__.__module__, self.__class__.__name__)
-        mr_pipeline = MapReduceJobPipeline(self._job_name, sequence_num,
-                                           kwargs, self._namespace, complete_fn)
-        mr_pipeline.max_attempts = 1
-        mr_pipeline.start(base_path='/mapreduce/worker/pipeline')
-        return sequence_num
+        return {
+            'job_name': self._job_name,
+            'sequence_num': sequence_num,
+            'namespace': self._namespace,
+            'complete_fn': complete_fn,
+            'mapreduce_pipeline_args': self._create_mapreduce_pipeline_args(
+                sequence_num)
+        }
 
     def _cancel_queued_work(self, job, message):
         root_pipeline_id = MapReduceJob.get_root_pipeline_id(job)
@@ -744,7 +797,7 @@ class DurableJobEntity(entities.BaseEntity):
                 'but job is already on run %d' % job.sequence_num)
             return
         now = datetime.datetime.utcnow()
-        if status_code in (STATUS_CODE_STARTED, STATUS_CODE_QUEUED):
+        if status_code == STATUS_CODE_QUEUED:
             job.execution_time_sec = 0
         else:
             job.execution_time_sec += long(

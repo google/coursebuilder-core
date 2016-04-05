@@ -7,6 +7,7 @@ tests:
     - modules.analytics.analytics_tests.ClusterRESTHandlerTest = 29
     - modules.analytics.analytics_tests.ClusteringGeneratorTests = 6
     - modules.analytics.analytics_tests.ClusteringTabTests = 7
+    - modules.analytics.analytics_tests.FilteredDataSourceTests = 11
     - modules.analytics.analytics_tests.GradebookCsvTests = 6
     - modules.analytics.analytics_tests.StudentAggregateTest = 6
     - modules.analytics.analytics_tests.StudentAggregateSchemaRegistryTests = 3
@@ -23,6 +24,7 @@ files:
   - modules/analytics/cluster_stats.html
   - modules/analytics/clustering.html
   - modules/analytics/clustering.py
+  - modules/analytics/filters.py
   - modules/analytics/gradebook.py
   - modules/analytics/location_aggregator.py
   - modules/analytics/manifest.yaml

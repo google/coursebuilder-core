@@ -112,6 +112,15 @@ class _AbstractFilter(object):
         raise NotImplementedError()
 
     @classmethod
+    def get_name(cls):
+        """JavaScript-friendly identifier.  Only lowercase and underscores.
+
+        Also used to match filters to field names when constructiong
+        AbstractFilteredEntity instances.
+        """
+        raise NotImplementedError()
+
+    @classmethod
     def get_kind(cls):
         """Tell UI generator what kind of filter we implement.
 
@@ -133,6 +142,24 @@ class _AbstractFilter(object):
         """
         raise NotImplementedError()
 
+    @classmethod
+    def get_keys_for_element(cls, element):
+        """Return a list of all filter-match values for this element.
+
+        If there are no matches, None, an empty list, or a list containing
+        None are all acceptable ways of expressing that.
+
+        Args:
+          element: The element passed in to the map() function of your map/
+              reduce job.
+
+        Return:
+          None, [None], [] imply no matching keys.
+          If there are matching keys, return an iterable of those.  You may
+          optionally include None on that list.
+        """
+        raise NotImplementedError()
+
 
 class _EnumFilterChoice(object):
 
@@ -141,13 +168,11 @@ class _EnumFilterChoice(object):
 
         Args:
           label: Displayed name for enum selection.
-          value: A filter expression.  See PaginatedDataSource.
-          selected: True/False - pre-select this option when building HTML
-              forms?
+          value: A filter expression.  See PaginatedDataSource.  E.g,
+              'student_group=1234'
         """
         self.label = label
         self.value = value
-        self.selected = selected
 
 
 class _AbstractEnumFilter(_AbstractFilter):

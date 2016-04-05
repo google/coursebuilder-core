@@ -173,13 +173,13 @@
                      class="gcb-rest-source-filter"
                      onchange="gcbRestSourcePageChange(
                                '{{rest_source.name}}', 0);">
+                    <option label="-- Not Filtered --"
+                            value="{{ filter.get_name() }}="
+                            selected="true">
                     {% for choice in choices %}
-                    <option label="{{ choice.label }}"
-                            value="{{ choice.value }}"
-                            {% if choice.selected %}
-                            selected="true"
-                            {% endif %}>
-                      {% endfor %}
+                      <option label="{{ choice.label }}"
+                              value="{{ choice.value }}">
+                    {% endfor %}
                   </select>
                 </form>
                 </div>

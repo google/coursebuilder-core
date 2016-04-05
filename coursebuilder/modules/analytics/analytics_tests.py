@@ -28,20 +28,27 @@ import urllib
 import zlib
 
 from common import schema_fields
+from common import user_routes
 from common import users
 from common import utils as common_utils
+from controllers import sites
 from models import courses
+from models import data_sources
 from models import jobs
 from models import models
 from models import transforms
+from models.data_sources import paginated_table
 from models.progress import UnitLessonCompletionTracker
 from modules.analytics import clustering
+from modules.analytics import filters
 from modules.analytics import gradebook
 from modules.analytics import student_aggregate
+from modules.student_groups import student_groups
 from tests.functional import actions
 from tools.etl import etl
 
 from google.appengine.api import namespace_manager
+from google.appengine.ext import db
 
 
 # Note to those extending this set of tests in the future:
@@ -87,6 +94,10 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
             self.COURSE_NAME, self.ADMIN_EMAIL, 'Analytics Test')
         self.course = courses.Course(None, app_context=self.app_context)
         self.maxDiff = None
+
+    def tearDown(self):
+        sites.reset_courses()
+        super(AbstractModulesAnalyticsTest, self).tearDown()
 
     def _get_data_path(self, path):
         return os.path.join(appengine_config.BUNDLE_ROOT, 'modules',
@@ -440,6 +451,7 @@ class ClusteringTabTests(actions.TestBase):
     def tearDown(self):
         # Clean up app_context.
         namespace_manager.set_namespace(self.old_namespace)
+        sites.reset_courses()
         super(ClusteringTabTests, self).tearDown()
 
     def test_non_admin_access(self):
@@ -554,6 +566,7 @@ class ClusterRESTHandlerTest(actions.TestBase):
         self._add_contents()
 
     def tearDown(self):
+        sites.reset_courses()
         namespace_manager.set_namespace(self.old_namespace)
         super(ClusterRESTHandlerTest, self).tearDown()
 
@@ -1206,6 +1219,7 @@ class StudentVectorGeneratorTests(actions.TestBase):
 
     def tearDown(self):
         # Clean up app_context.
+        sites.reset_courses()
         namespace_manager.set_namespace(self.old_namespace)
         super(StudentVectorGeneratorTests, self).tearDown()
 
@@ -1476,6 +1490,7 @@ class StudentVectorGeneratorProgressTests(actions.TestBase):
 
     def tearDown(self):
         # Clean up app_context.
+        sites.reset_courses()
         namespace_manager.set_namespace(self.old_namespace)
         super(StudentVectorGeneratorProgressTests, self).tearDown()
 
@@ -1566,6 +1581,7 @@ class ClusteringGeneratorTests(actions.TestBase):
 
     def tearDown(self):
         # Clean up app_context.
+        sites.reset_courses()
         namespace_manager.set_namespace(self.old_namespace)
         super(ClusteringGeneratorTests, self).tearDown()
 
@@ -1940,6 +1956,7 @@ class GradebookCsvTests(actions.TestBase):
 
     def tearDown(self):
         os.unlink(self.temp_file_name)
+        sites.reset_courses()
         namespace_manager.set_namespace(self.old_namespace)
         super(GradebookCsvTests, self).tearDown()
 
@@ -2174,3 +2191,665 @@ class GradebookCsvTests(actions.TestBase):
         response = self.get(gradebook_url)
         self.assertNotIn('Download Scores as CSV File', response.body)
         self.assertIn('For larger volumes of gradebook data', response.body)
+
+
+class FilteredAssessmentScoresEntity(filters.AbstractFilteredEntity):
+
+    FILTERS = [
+        filters.StudentTrackFilter,
+        student_groups.StudentGroupFilter,
+        ]
+
+    # Here, only need to list the fields on which we want to be able to index.
+    student_group = db.IntegerProperty(indexed=True)
+    student_track = db.IntegerProperty(indexed=True)
+
+    @classmethod
+    def get_filters(cls):
+        return cls.FILTERS
+
+
+class FilteredAssessmentScoresBaseGenerator(object):
+
+    @classmethod
+    def result_class(cls):
+        return FilteredAssessmentScoresEntity
+
+    @classmethod
+    def entity_class(cls):
+        return models.Student
+
+    @classmethod
+    def map(cls, student):
+        if not student.scores:
+            return
+        for assessment_id, score in transforms.loads(student.scores).items():
+            for key in cls._generate_keys(student, assessment_id):
+                yield key, score
+
+
+class FilteredAssessmentScoresAverageGenerator(
+    FilteredAssessmentScoresBaseGenerator,
+    filters.AbstractFilteredAveragingMapReduceJob):
+    pass
+
+
+class FilteredAssessmentScoresSummingGenerator(
+    FilteredAssessmentScoresBaseGenerator,
+    filters.AbstractFilteredSummingMapReduceJob):
+    pass
+
+
+class FilteredAssessmentScoresDataSource(
+    data_sources.AbstractDbTableRestDataSource):
+    # Overwritten by some tests to use total generator instead.
+    GENERATOR = FilteredAssessmentScoresAverageGenerator
+
+    @classmethod
+    def required_generators(cls):
+        return [cls.GENERATOR]
+
+    @classmethod
+    def get_entity_class(cls):
+        return FilteredAssessmentScoresEntity
+
+    @classmethod
+    def get_name(cls):
+        return 'filtered_assessment_scores'
+
+    @classmethod
+    def get_title(cls):
+        return 'Assessment Scores'
+
+    @classmethod
+    def get_default_chunk_size(cls):
+        return 0  # Meaning we don't require or support paginated access.
+
+    @classmethod
+    def get_filters(cls):
+        return FilteredAssessmentScoresEntity.get_filters()
+
+    @classmethod
+    def get_schema(cls, app_context, log, source_context):
+        reg = schema_fields.FieldRegistry('Assessment Scores')
+        reg.add_property(schema_fields.SchemaField(
+            'student_group', 'Student Group ID', 'integer',
+            description='ID of student group aggregated over, or None.'))
+        reg.add_property(schema_fields.SchemaField(
+            'student_track', 'Student Track ID', 'integer',
+            description='ID of studentt track aggregated over, or None.'))
+        reg.add_property(schema_fields.SchemaField(
+            'assessment_id', 'Assessment ID', 'string',
+            description='ID of the relevant assessment.'))
+        reg.add_property(schema_fields.SchemaField(
+            'score', 'Score', 'integer',
+            description='Percent correct for this assessment'))
+        return reg.get_json_schema_dict()['properties']
+
+    @classmethod
+    def _postprocess_rows(cls, app_context, source_context, schema, log,
+                          page_number, rows):
+        ret = []
+        for row in rows:
+            data = transforms.loads(row.data)
+
+            # Slight hack for testing: Since tests dynamically set whether we
+            # are making totals or averages, be prepared to fetch either one
+            # from the result.  In production code, one or the other would be
+            # chosen.
+            if 'average' in data:
+                score = data['average']
+            else:
+                score = data['sum']
+
+            ret.append({
+                'student_group': row.student_group,
+                'student_track': row.student_track,
+                'assessment_id': row.primary_id,
+                'score': int(score)
+            })
+
+        # Sorting not strictly required for display using crossfilter/dc, but
+        # it allows for simpler assserts in tests.
+        ret.sort(key=lambda row: (row['assessment_id'],
+                                  row['student_group'],
+                                  row['student_track']))
+        return ret
+
+
+class FilteredDataSourceTests(actions.TestBase):
+
+    COURSE_NAME = 'filtered_data_source_test_course'
+    NAMESPACE = 'ns_%s' % COURSE_NAME
+    ADMIN_EMAIL = 'admin@foo.com'
+    USER_HANDLER_ID = 'test_installed_handler'
+
+    def setUp(self):
+        super(FilteredDataSourceTests, self).setUp()
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Filtered Data Test Course')
+        self.base = '/' + self.COURSE_NAME
+
+        # Minor hack: Add REST URL to routing after module registration time,
+        # which is when actual data sources in production code get registered.
+        self.rest_url = '/rest/data/%s/items' % (
+            FilteredAssessmentScoresDataSource.get_name())
+        self.rest_handler = data_sources._generate_rest_handler(
+            FilteredAssessmentScoresDataSource)
+        user_routes.USER_ROUTABLE_HANDLERS[self.USER_HANDLER_ID] = {
+            user_routes.HANDLER_KEY: self.rest_handler,
+            user_routes.HANDLER_TITLE_KEY: 'Rest Handler For Testing'}
+
+    def tearDown(self):
+        sites.reset_courses()
+        del user_routes.USER_ROUTABLE_HANDLERS[self.USER_HANDLER_ID]
+        super(FilteredDataSourceTests, self).tearDown()
+
+    def _register_students(self, num_students):
+        ret = []
+        for n in xrange(num_students):
+            email = 'student%3.3d@foo.com' % n
+            actions.login(email)
+            actions.register(self, 'John Smith')
+            with common_utils.Namespace(self.NAMESPACE):
+                student, _ = models.Student.get_first_by_email(email)
+                student.scores = transforms.dumps({"1": n, "2": 100-n})
+                student.put()
+                ret.append(student)
+        return ret
+
+    def _run_generator(
+        self, generator_class=FilteredAssessmentScoresAverageGenerator):
+        with common_utils.Namespace(self.NAMESPACE):
+            FilteredAssessmentScoresDataSource.GENERATOR = generator_class
+            generator_class(self.app_context).submit()
+            self.execute_all_deferred_tasks()
+
+    def _get_results(self, _filters=None):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        data_source_token = paginated_table._DbTableContext._build_secret(
+            {'data_source_token': 'xyzzy'})
+        request = [('page_number', 0),
+                   ('chunk_size', 0),
+                   ('data_source_token', data_source_token)]
+        if _filters:
+            if isinstance(_filters, basestring):
+                request.append(('filters', _filters))
+            else:
+                request.extend([('filters', _filter) for _filter in _filters])
+
+        with actions.OverriddenEnvironment(
+            {user_routes.USER_ROUTES_KEY: {
+                self.rest_url: {user_routes.HANDLER_ID_KEY:
+                                self.USER_HANDLER_ID}}}):
+            response = self.post(
+                'rest/data/%s/items' % (
+                    FilteredAssessmentScoresDataSource.get_name()),
+                request)
+        self.assertEquals(response.status_int, 200)
+        result = transforms.loads(response.body)
+        for item in result['log']:
+            if item['level'] == 'critical':
+                any_probems = True
+                self.fail(item['message'])
+        return result.get('data')
+
+    def _add_track(self, title, description):
+        with common_utils.Namespace(self.NAMESPACE):
+            return models.LabelDAO.save(models.LabelDTO(
+                None, {'title': title,
+                       'descripton': description,
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+
+    def _add_group(self, name, description):
+        group = student_groups.StudentGroupDAO.create_new({
+            'name': name,
+            'description': description,
+            })
+        return group.id
+
+    def _set_track_for_student(self, track_id, student):
+        if track_id:
+            track_id = str(track_id)
+        else:
+            track_id = ''
+        with common_utils.Namespace(self.NAMESPACE):
+            models.StudentProfileDAO.update(
+                student.user_id, student.email, labels=track_id)
+            student.labels = track_id
+
+    def _set_group_for_student(self, group_id, student):
+        with common_utils.Namespace(self.NAMESPACE):
+            student.group_id = group_id
+            student.put()
+
+    def test_get_results_when_generator_never_run(self):
+        # Just looking for no explosions.  Note that when the generator has
+        # never run, the data comes back as None, to distinguish that case.
+        self.assertEquals(None, self._get_results())
+
+    def test_get_results_when_generator_run_but_no_students(self):
+        # Expect no explosions when no output records found.
+        self._run_generator()
+        self.assertEquals([], self._get_results())
+
+    def test_get_results_when_generator_run_with_students_but_no_scores(self):
+        # Expect no explosions when there are students with no scores.
+        students = self._register_students(num_students=1)
+        with common_utils.Namespace(self.NAMESPACE):
+            students[0].scores = None
+            students[0].put()
+        self._run_generator()
+        self.assertEquals([], self._get_results())
+
+    def test_one_student_no_group_no_track(self):
+        self._register_students(num_students=1)
+        self._run_generator()
+        expected = [
+            {'assessment_id': '1',
+             'student_track': None,
+             'student_group': None,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_track': None,
+             'student_group': None,
+             'score': 100},
+        ]
+
+        self.assertEquals(expected, self._get_results())
+        self.assertEquals(expected,
+                          self._get_results(_filters=['student_track=',
+                                                      'student_group=']))
+        self.assertEquals([], self._get_results(_filters='student_group=1'))
+        self.assertEquals([], self._get_results(_filters='student_track=1'))
+        self.assertEquals([], self._get_results(_filters=['student_track=1',
+                                                          'student_group=1']))
+
+    def test_one_student_matching_student_group_filter(self):
+        group_id = self._add_group('Section One', '8AM Mondays.  Whee!')
+        students = self._register_students(num_students=1)
+        self._set_group_for_student(group_id, students[0])
+        self._run_generator()
+
+        # Because we don't want to have to fetch an unknown number of result
+        # rows and aggregatge during the REST GET, we instead aggregate at
+        # map/reduce time, but this means writing separate result rows for all
+        # combinations of filterable values, None included.  This means that
+        # if we specify no filters, we'll get the full combinatoric explosion.
+        # The actual analytics pages _do_ specify that they explicitly want
+        # the rows where non-selected filter columns are set to None, so they
+        # don't see the extra rows -- just the ones they need.
+        expected_no_filters = [
+            {'assessment_id': '1',
+             'student_track': None,
+             'student_group': None,
+             'score': 0},
+            {'assessment_id': '1',
+             'student_track': None,
+             'student_group': 1,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_track': None,
+             'student_group': None,
+             'score': 100},
+            {'assessment_id': '2',
+             'student_track': None,
+             'student_group': 1,
+             'score': 100},
+        ]
+        self.assertEquals(expected_no_filters, self._get_results())
+
+        expected_with_group = [
+            {'assessment_id': '1',
+             'student_track': None,
+             'student_group': 1,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_track': None,
+             'student_group': 1,
+             'score': 100},
+        ]
+        self.assertEquals(expected_with_group, self._get_results(
+            _filters=['student_track=',
+                      'student_group=%d' % group_id]))
+        self.assertEquals(expected_with_group, self._get_results(
+            _filters='student_group=%d' % group_id))
+        self.assertEquals([], self._get_results(
+            _filters='student_track=2'))
+        self.assertEquals([], self._get_results(
+            _filters=['student_track=2',
+                      'student_group=%d' % group_id]))
+
+
+    def test_one_student_matching_tracks_filter(self):
+        track_id = self._add_track('Herpetology', 'Lizards and stuff.')
+        students = self._register_students(num_students=1)
+        self._set_track_for_student(track_id, students[0])
+        self._run_generator()
+
+        # Because we don't want to have to fetch an unknown number of result
+        # rows and aggregatge during the REST GET, we instead aggregate at
+        # map/reduce time, but this means writing separate result rows for all
+        # combinations of filterable values, None included.  This means that
+        # if we specify no filters, we'll get the full combinatoric explosion.
+        # The actual analytics pages _do_ specify that they explicitly want
+        # the rows where non-selected filter columns are set to None, so they
+        # don't see the extra rows -- just the ones they need.
+        expected_no_filters = [
+            {'assessment_id': '1',
+             'student_track': None,
+             'student_group': None,
+             'score': 0},
+            {'assessment_id': '1',
+             'student_track': 1,
+             'student_group': None,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_track': None,
+             'student_group': None,
+             'score': 100},
+            {'assessment_id': '2',
+             'student_track': 1,
+             'student_group': None,
+             'score': 100},
+        ]
+        self.assertEquals(expected_no_filters, self._get_results())
+
+        expected_with_track = [
+            {'assessment_id': '1',
+             'student_track': 1,
+             'student_group': None,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_track': 1,
+             'student_group': None,
+             'score': 100},
+        ]
+        self.assertEquals(expected_with_track, self._get_results(
+            _filters=['student_track=%d' % track_id,
+                      'student_group=']))
+        self.assertEquals([], self._get_results(
+            _filters='student_group=2'))
+        self.assertEquals(expected_with_track, self._get_results(
+            _filters='student_track=%d' % track_id))
+        self.assertEquals([], self._get_results(
+            _filters=['student_track=%d' % track_id,
+                      'student_group=2']))
+
+    def test_one_student_matching_both_filters(self):
+        group_id = self._add_group('Section One', '8AM Mondays.  Whee!')
+        track_id = self._add_track('Herpetology', 'Lizards and stuff.')
+        students = self._register_students(num_students=1)
+        self._set_group_for_student(group_id, students[0])
+        self._set_track_for_student(track_id, students[0])
+        self._run_generator()
+
+        # Because we don't want to have to fetch an unknown number of result
+        # rows and aggregatge during the REST GET, we instead aggregate at
+        # map/reduce time, but this means writing separate result rows for all
+        # combinations of filterable values, None included.  This means that
+        # if we specify no filters, we'll get the full combinatoric explosion.
+        # The actual analytics pages _do_ specify that they explicitly want
+        # the rows where non-selected filter columns are set to None, so they
+        # don't see the extra rows -- just the ones they need.
+        expected_no_filters = [
+            {'assessment_id': '1',
+             'student_group': None,
+             'student_track': None,
+             'score': 0},
+            {'assessment_id': '1',
+             'student_group': None,
+             'student_track': 2,
+             'score': 0},
+            {'assessment_id': '1',
+             'student_group': 1,
+             'student_track': None,
+             'score': 0},
+            {'assessment_id': '1',
+             'student_group': 1,
+             'student_track': 2,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_group': None,
+             'student_track': None,
+             'score': 100},
+            {'assessment_id': '2',
+             'student_group': None,
+             'student_track': 2,
+             'score': 100},
+            {'assessment_id': '2',
+             'student_group': 1,
+             'student_track': None,
+             'score': 100},
+            {'assessment_id': '2',
+             'student_group': 1,
+             'student_track': 2,
+             'score': 100},
+        ]
+        self.assertEquals(expected_no_filters, self._get_results())
+
+        expected_with_track = [
+            {'assessment_id': '1',
+             'student_group': None,
+             'student_track': 2,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_group': None,
+             'student_track': 2,
+             'score': 100},
+        ]
+        self.assertEquals(expected_with_track, self._get_results(
+            _filters=['student_track=%d' % track_id,
+                      'student_group=']))
+
+        expected_with_group = [
+            {'assessment_id': '1',
+             'student_group': 1,
+             'student_track': None,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_group': 1,
+             'student_track': None,
+             'score': 100},
+        ]
+        self.assertEquals(expected_with_group, self._get_results(
+            _filters=['student_track=',
+                      'student_group=%d' % group_id]))
+
+        expected_with_both = [
+            {'assessment_id': '1',
+             'student_group': 1,
+             'student_track': 2,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_group': 1,
+             'student_track': 2,
+             'score': 100},
+        ]
+        self.assertEquals(expected_with_both, self._get_results(
+            _filters=['student_track=%d' % track_id,
+                      'student_group=%d' % group_id]))
+
+    def test_averaging_generator(self):
+        FilteredAssessmentScoresDataSource.GENERATOR = (
+            FilteredAssessmentScoresAverageGenerator)
+        self._register_students(num_students=10)
+        self._run_generator()
+        expected = [
+            {'assessment_id': '1',
+             'student_track': None,
+             'student_group': None,
+             'score': 4},
+            {'assessment_id': '2',
+             'student_track': None,
+             'student_group': None,
+             'score': 95},
+        ]
+        self.assertEquals(expected, self._get_results())
+
+    def test_summing_generator(self):
+        FilteredAssessmentScoresDataSource.GENERATOR = (
+            FilteredAssessmentScoresSummingGenerator)
+        self._register_students(num_students=5)
+        self._run_generator(FilteredAssessmentScoresSummingGenerator)
+        expected = [
+            {'assessment_id': '1',
+             'student_track': None,
+             'student_group': None,
+             'score': 10},
+            {'assessment_id': '2',
+             'student_track': None,
+             'student_group': None,
+             'score': 490},
+        ]
+        self.assertEquals(expected, self._get_results())
+
+    def test_pre_clean_is_run(self):
+        group_id = self._add_group('Section One', '8AM Mondays.  Whee!')
+        track_id = self._add_track('Herpetology', 'Lizards and stuff.')
+        students = self._register_students(num_students=1)
+        self._set_group_for_student(group_id, students[0])
+        self._set_track_for_student(track_id, students[0])
+        self._run_generator()
+        self.assertEquals(8, len(self._get_results()))
+
+        # Here, we have 8 items in the results table.  We need to get those
+        # cleared when the generator is next run so that old items that are
+        # not overwritten are not still hanging around to be found if someone
+        # sets the filters to see them.  Verify that clearing the student
+        # track and group generates fewer rows.
+
+        self._set_group_for_student(None, students[0])
+        self._set_track_for_student(None, students[0])
+        self._run_generator()
+        expected = [
+            {'assessment_id': '1',
+             'student_track': None,
+             'student_group': None,
+             'score': 0},
+            {'assessment_id': '2',
+             'student_track': None,
+             'student_group': None,
+             'score': 100},
+        ]
+        self.maxDiff = None
+        self.assertEquals(expected, self._get_results())
+
+    def test_many_students_multiple_filter_matches_on_all_axes(self):
+        FilteredAssessmentScoresDataSource.GENERATOR = (
+            FilteredAssessmentScoresSummingGenerator)
+        NUM_STUDENTS = 25
+        group_one_id = self._add_group('Section One', '8AM Mondays.  Whee!')
+        group_two_id = self._add_group('Section Two', '8PM Fridays.  Whee!')
+        track_one_id = self._add_track('Herpetology', 'Lizards and stuff.')
+        track_two_id = self._add_track('Anaesthesiology', 'Ether! <blam!>.')
+        students = self._register_students(num_students=100)
+        for i in xrange(NUM_STUDENTS):
+            if i % 4 == 0:
+                pass
+            elif i % 4 == 1:
+                self._set_track_for_student(track_one_id, students[i])
+            elif i % 4 == 2:
+                self._set_track_for_student(track_two_id, students[i])
+            else:
+                self._set_track_for_student(
+                    '%s %s' % (track_one_id, track_two_id), students[i])
+
+            if i % 3 == 0:
+                pass
+            elif i % 3 == 1:
+                self._set_group_for_student(group_one_id, students[i])
+            elif i % 3 == 2:
+                self._set_track_for_student(group_two_id, students[i])
+
+        self._run_generator(FilteredAssessmentScoresSummingGenerator)
+        self.maxDiff = None
+
+        expected = [
+            {u'assessment_id': u'1',
+             u'score': 4950,
+             u'student_group': None,
+             u'student_track': None},
+            {u'assessment_id': u'1',
+             u'score': 88,
+             u'student_group': None,
+             u'student_track': 3},
+            {u'assessment_id': u'1',
+             u'score': 100,
+             u'student_group': None,
+             u'student_track': 4},
+            {u'assessment_id': u'1',
+             u'score': 92,
+             u'student_group': 1,
+             u'student_track': None},
+            {u'assessment_id': u'1',
+             u'score': 40,
+             u'student_group': 1,
+             u'student_track': 3},
+            {u'assessment_id': u'1',
+             u'score': 58,
+             u'student_group': 1,
+             u'student_track': 4},
+            {u'assessment_id': u'2',
+             u'score': 5050,
+             u'student_group': None,
+             u'student_track': None},
+            {u'assessment_id': u'2',
+             u'score': 712,
+             u'student_group': None,
+             u'student_track': 3},
+            {u'assessment_id': u'2',
+             u'score': 700,
+             u'student_group': None,
+             u'student_track': 4},
+            {u'assessment_id': u'2',
+             u'score': 708,
+             u'student_group': 1,
+             u'student_track': None},
+            {u'assessment_id': u'2',
+             u'score': 360,
+             u'student_group': 1,
+             u'student_track': 3},
+            {u'assessment_id': u'2',
+             u'score': 342,
+             u'student_group': 1,
+             u'student_track': 4}]
+        self.assertEquals(expected, self._get_results())
+
+        # And spot-check a couple of filters.
+        self.assertEquals(
+            [{u'assessment_id': u'1',
+              u'score': 58,
+              u'student_group': 1,
+              u'student_track': 4},
+             {u'assessment_id': u'2',
+              u'score': 342,
+              u'student_group': 1,
+              u'student_track': 4}],
+            self._get_results(_filters=['student_track=4', 'student_group=1']))
+
+        self.assertEquals(
+            [{u'assessment_id': u'1',
+              u'score': 40,
+              u'student_group': 1,
+              u'student_track': 3},
+             {u'assessment_id': u'2',
+              u'score': 360,
+              u'student_group': 1,
+              u'student_track': 3}],
+            self._get_results(_filters=['student_track=3', 'student_group=1']))
+
+        self.assertEquals(
+            [],
+            self._get_results(_filters=['student_track=5', 'student_group=1']))
+
+        self.assertEquals(
+            [{u'assessment_id': u'1',
+              u'score': 4950,
+              u'student_group': None,
+              u'student_track': None},
+             {u'assessment_id': u'2',
+              u'score': 5050,
+              u'student_group': None,
+              u'student_track': None}],
+            self._get_results(_filters=['student_track=', 'student_group=']))

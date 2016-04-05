@@ -89,7 +89,8 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
                 if not rows:
                     page_number = sought_page_number - 1
                     log.warning('Fewer pages available than requested.  '
-                                'Stopping at last page %d' % page_number)
+                                'Stopping at last page, which is %d' %
+                                max(page_number, 0))
                     query = cls._build_query(source_context, schema,
                                              page_number, log)
                     rows = cls._fetch_page(source_context, query,
@@ -142,9 +143,12 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
                     'calls for field "%s" ' % name +
                     'which is not in the schema for '
                     'type "%s"' % cls.get_entity_class().__name__)
-            converted_value = transforms.json_to_dict(
-                {name: value},
-                {'properties': {name: schema[name]}})[name]
+            if value == '':
+                converted_value = None
+            else:
+                converted_value = transforms.json_to_dict(
+                    {name: value},
+                    {'properties': {name: schema[name]}})[name]
             query.filter('%s %s' % (name, op), converted_value)
 
     @classmethod
@@ -168,6 +172,9 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
         limit = None
         if (str(page_number + 1)) not in source_context.cursors:
             limit = source_context.chunk_size
+            if not limit:
+                limit = (base_types._AbstractRestDataSource.
+                         RECOMMENDED_MAX_DATA_ITEMS)
             log.info('fetch page %d using limit %d' % (page_number, limit))
         results = query.fetch(limit=limit, read_policy=db.EVENTUAL_CONSISTENCY)
         if (str(page_number + 1)) not in source_context.cursors:

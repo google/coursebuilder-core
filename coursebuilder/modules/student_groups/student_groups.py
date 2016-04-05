@@ -1036,6 +1036,10 @@ class StudentGroupFilter(data_sources.AbstractEnumFilter):
         return 'Student Group'
 
     @classmethod
+    def get_name(cls):
+        return 'student_group'
+
+    @classmethod
     def get_schema(cls):
         """Add schema entry matching field this filters on."""
         reg = schema_fields.FieldRegistry('student_group')
@@ -1048,19 +1052,20 @@ class StudentGroupFilter(data_sources.AbstractEnumFilter):
     def get_choices(cls):
         student_groups = StudentGroupDAO.get_all()
         student_groups.sort(lambda sg: sg.name)
-        if not student_groups:
-            return []  # Suppress filter from appearing
-
-        ret = []
-        ret.append(data_sources.EnumFilterChoice(
-            'All Students', '', selected=True))
-        ret.append(data_sources.EnumFilterChoice(
-            'Students Not In Groups', 'student_group_id='))
-        for student_group in student_groups:
-            ret.append(data_sources.EnumFilterChoice(
+        return [
+            data_sources.EnumFilterChoice(
                 'Students in Group: ' + student_group.name,
-                'student_group_id=%s' % student_group.id))
-        return ret
+                'student_group_id=%s' % student_group.id)
+            for student_group in student_groups]
+
+    @classmethod
+    def get_keys_for_element(cls, element):
+        if isinstance(element, models.EventEntity):
+            payload = transforms.loads(element.data)
+            return [payload.get(STUDENT_GROUP_ID_TAG)]
+        elif isinstance(element, models.Student):
+            return [element.group_id]
+        return [None]
 
 
 def _add_student_group_to_profile(handler, app_context, student):

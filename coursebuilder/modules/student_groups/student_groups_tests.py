@@ -1672,7 +1672,7 @@ class GradebookTests(StudentGroupsTestBase):
 
         actions.login(self.ADMIN_EMAIL)
         self.assertEqual(1, len(self._get_gradebook_data()))
-        self.assertEqual(1, len(self._get_gradebook_data('student_group_id=')))
+        self.assertEqual(0, len(self._get_gradebook_data('student_group_id=')))
         self.assertEqual(0, len(self._get_gradebook_data('student_group_id=3')))
 
     def test_filtering_with_groups(self):
@@ -1695,8 +1695,8 @@ class GradebookTests(StudentGroupsTestBase):
         self.assertEqual(2, len(self._get_gradebook_data()))
 
         data = self._get_gradebook_data('student_group_id=')
-        self.assertEquals(1, len(data))
-        self.assertEquals(self.NON_GROUP_STUDENT_EMAIL, data[0]['user_email'])
+        self.assertEquals(0, len(data))
+        #self.assertEquals(self.NON_GROUP_STUDENT_EMAIL, data[0]['user_email'])
 
         data = self._get_gradebook_data('student_group_id=%s' % group_id)
         self.assertEquals(1, len(data))
