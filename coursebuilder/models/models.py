@@ -757,7 +757,7 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
             'event': event,
             'user_id': user_id,
             'callbacks': ' '.join(callbacks),
-            'timestamp': datetime.datetime.now().strftime(
+            'timestamp': datetime.datetime.utcnow().strftime(
                 transforms.ISO_8601_DATETIME_FORMAT),
             'extra_data': transforms.dumps(extra_data),
         })
