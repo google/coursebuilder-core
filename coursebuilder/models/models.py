@@ -693,8 +693,7 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
 
     Event notification callbacks must take two or three parameters:
     - the user_id (a string)
-    - the timestamp when the event originally occured, as a string formatted
-      using transforms.ISO_8601_DATETIME_FORMAT.
+    - the datetime.datetime UTC timestamp when the event originally occurred.
     - If-and-only-if the the enqueue callback was registered and returned a
       non-None value, this argument is passed.  If this value is mutable, any
       changes made by the event callback will be retained in any future
