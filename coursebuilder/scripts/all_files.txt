@@ -84,6 +84,7 @@ common/schema_transforms.py
 common/tags.py
 common/user_routes.py
 common/users.py
+common/utc.py
 common/utils.py
 common/xcontent.py
 common/yaml_files.py
@@ -248,6 +249,7 @@ tests/unit/common_resource.py
 tests/unit/common_safe_dom.py
 tests/unit/common_schema_fields.py
 tests/unit/common_tags.py
+tests/unit/common_utc.py
 tests/unit/common_utils.py
 tests/unit/etl_mapreduce.py
 tests/unit/etl_remote.py
