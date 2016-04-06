@@ -21,7 +21,6 @@ import datetime
 import time
 import unittest
 
-import appengine_config
 from common import schema_transforms
 from common import utc
 
@@ -140,52 +139,53 @@ class UtcUnitTests(unittest.TestCase):
             time.strftime(self.ISO_8601_STRUCT_TIME_FORMAT, self.month_st))
 
     def test_leap_second(self):
-      """Points out that Python does not know when the leap seconds are.
+        """Points out that Python does not know when the leap seconds are.
 
-      This matters because, for example, StudentLifecycleObserver handlers are
-      supplied the timestamp as a string in a form that includes explicit
-      seconds:  '%Y-%m-%dT%H:%M:%S.%fZ'
-      http://google3/experimental/coursebuilder/models/models.py?q=ISO_8601
+        This matters because, for example, StudentLifecycleObserver handlers
+        are supplied a datetime.datetime, which includes explicit seconds,
+        like what is obtained from the ISO_8601_DATETIME_FORMAT string
+        ('%Y-%m-%dT%H:%M:%S.%fZ').
 
-      The (harmless?) outcome is that events occurring during the leap second
-      (23:59:60) will be added to the next day tallies.
-      """
-      # 30 Jun 2015 23:59:60 is the most recent leap second, as of this test.
-      # time.strptime() is used here, instead of datetime.datetime.strptime(),
-      # because the latter function does not understand leap seconds at all,
-      # instead complaining with:
-      #   ValueError: second must be in 0..59
-      leap_st = time.strptime(
-          "2015-06-30T23:59:60.0Z", schema_transforms.ISO_8601_DATETIME_FORMAT)
-      self.assertEquals(leap_st.tm_year, 2015)
-      self.assertEquals(leap_st.tm_mon, 6)
-      self.assertEquals(leap_st.tm_mday, 30)
-      self.assertEquals(leap_st.tm_hour, 23)
-      self.assertEquals(leap_st.tm_min, 59)
-      self.assertEquals(leap_st.tm_sec, 60) # Not 59, but 60 for a leap second.
-      leap_epoch = long(calendar.timegm(leap_st))
+        The (harmless?) outcome is that events occurring during the leap
+        second (23:59:60) will be added to the next day tallies.
+        """
+        # 30 Jun 2015 23:59:60 is the most recent leap second, as of this
+        # test. time.strptime() is used here, instead of
+        # datetime.datetime.strptime(), because the latter function does
+        # not understand leap seconds at all, instead complaining with:
+        #   ValueError: second must be in 0..59
+        leap_st = time.strptime("2015-06-30T23:59:60.0Z",
+                                schema_transforms.ISO_8601_DATETIME_FORMAT)
+        self.assertEquals(leap_st.tm_year, 2015)
+        self.assertEquals(leap_st.tm_mon, 6)
+        self.assertEquals(leap_st.tm_mday, 30)
+        self.assertEquals(leap_st.tm_hour, 23)
+        self.assertEquals(leap_st.tm_min, 59)
+        self.assertEquals(leap_st.tm_sec, 60) # Not 59, but leap second as 60.
+        leap_epoch = long(calendar.timegm(leap_st))
 
-      # 30 Jun 2015 23:59:59 is the last "normal" second in 2015-06-30, just
-      # prior to the leap second.
-      last_dt = datetime.datetime.strptime(
-          "2015-06-30T23:59:59.0Z", schema_transforms.ISO_8601_DATETIME_FORMAT)
-      last_st = last_dt.utctimetuple()
-      self.assertEquals(last_st.tm_year, 2015)
-      self.assertEquals(last_st.tm_mon, 6)
-      self.assertEquals(last_st.tm_mday, 30)
-      self.assertEquals(last_st.tm_hour, 23)
-      self.assertEquals(last_st.tm_min, 59)
-      self.assertEquals(last_st.tm_sec, 59)
-      last_epoch = long(calendar.timegm(last_st))
+        # 30 Jun 2015 23:59:59 is the last "normal" second in 2015-06-30,
+        # just prior to the leap second.
+        last_dt = datetime.datetime.strptime(
+            "2015-06-30T23:59:59.0Z",
+            schema_transforms.ISO_8601_DATETIME_FORMAT)
+        last_st = last_dt.utctimetuple()
+        self.assertEquals(last_st.tm_year, 2015)
+        self.assertEquals(last_st.tm_mon, 6)
+        self.assertEquals(last_st.tm_mday, 30)
+        self.assertEquals(last_st.tm_hour, 23)
+        self.assertEquals(last_st.tm_min, 59)
+        self.assertEquals(last_st.tm_sec, 59)
+        last_epoch = long(calendar.timegm(last_st))
 
-      # According to Posix, "Unix time" (seconds since the 1970-01-01 epoch
-      # also known as a "Posix timestamp") should repeat itself for one second
-      # during a leap second, but the following confirms this not to be the
-      # case. It should not be necessary to add the `+ 1`.
-      self.assertEquals(leap_epoch, last_epoch + 1)
+        # According to Posix, "Unix time" (seconds since the 1970-01-01 epoch
+        # also known as a "Posix timestamp") should repeat itself for one
+        # second during a leap second, but the following confirms this not to
+        # be the case. It should not be necessary to add the `+ 1`.
+        self.assertEquals(leap_epoch, last_epoch + 1)
 
-      # The tangible effect of this is that events occurring during the
-      # actual leap second end up in the tallies for the next day.
-      day_sec = 24 * 60 * 60
-      self.assertEquals(utc.day_start(leap_epoch),
-                        utc.day_start(last_epoch) + day_sec)
+        # The tangible effect of this is that events occurring during the
+        # actual leap second end up in the tallies for the next day.
+        day_sec = 24 * 60 * 60
+        self.assertEquals(utc.day_start(leap_epoch),
+                          utc.day_start(last_epoch) + day_sec)

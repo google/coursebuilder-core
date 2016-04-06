@@ -26,7 +26,7 @@ from common import schema_transforms
 def datetime_to_timestamp(utc_dt):
     """Returns UTC datetime as a POSIX timestamp (seconds since epoch).
 
-    Argss:
+    Args:
         utc_dt: a datetime.datetime object storing a UTC date and time.
     Returns:
         The UTC date and time as whole seconds since epoch. Leap seconds
@@ -55,7 +55,7 @@ def text_to_timestamp(text, fmt=schema_transforms.ISO_8601_DATETIME_FORMAT):
         text: string containing UTC date and time in the specified format.
         fmt: a datetime strftime format string; defaults to
             schema_transforms.ISO_8601_DATETIME_FORMAT.
-      """
+    """
     utc_dt = datetime.datetime.strptime(text, fmt)
     return datetime_to_timestamp(utc_dt)
 
@@ -79,7 +79,7 @@ def to_timestamp(seconds=None, dt=None, st=None, text=None,
 
     In order of precedence, the first of these values is used to return a UTC
     time in whole seconds since epoch:
-      seconds, dt, st, text
+        seconds, dt, st, text
     If none of these is supplied, now_as_timestamp() is called to obtain the
     current time.
 
