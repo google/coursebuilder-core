@@ -7,6 +7,7 @@ tests:
 
 files:
   - modules/webserv/__init__.py
+  - modules/webserv/_static/book-icon-md.png
   - modules/webserv/document_roots/sample/favicon.ico
   - modules/webserv/document_roots/sample/index.html
   - modules/webserv/document_roots/sample/index.md

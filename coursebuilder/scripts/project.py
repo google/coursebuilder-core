@@ -129,6 +129,15 @@ BUILD_DIR = None
 
 TEST_CLASS_NAME_ANY = '*'
 
+# When cleaning unknown files from test arena, WARN IN BIG LETTERS if
+# any file with one of these suffixes is found.  (This pretty much amounts
+# to ignoring .pyc and files with no suffixes, but that's probably right)
+VALID_FILE_SUFFIXES = ('cfg', 'css', 'csv', 'html', 'ico', 'js', 'json',
+                       'md', 'mo', 'neo4j', 'png', 'po', 'py', 'pylintrc',
+                       'rc', 'sh', 'sql', 'txt', 'xml', 'yaml', 'zip')
+IGNORE_PREFIXES = ('lib/', 'internal/', './PRESUBMIT.py', './static.yaml',
+                   'tests/internal')
+
 def build_dir():
     """Convenience function to access BUILD_DIR."""
     return BUILD_DIR
@@ -909,13 +918,25 @@ def _enforce_file_count(config):
 
         # delete extras
         remove_count = 0
+        remove_valid_looking_count = 0
         for afile in all_files:
             if afile not in known_files:
+                suffix = afile.rsplit('.', 1)[-1]
+                if (suffix in VALID_FILE_SUFFIXES and
+                    not any([afile.startswith(p) for p in IGNORE_PREFIXES])):
+
+                    log('Warning: Found a file that looks valid, but is not '
+                        'listed in any manifest nor scripts/all_files.txt.  '
+                        'This is probably a problem: %s' % afile)
+                    remove_valid_looking_count += 1
                 fn = os.path.join(config.build_dir, afile)
                 os.remove(fn)
                 remove_count += 1
         if remove_count:
             log('WARNING: removed %s unlisted files' % remove_count)
+        if remove_valid_looking_count:
+            raise ValueError('Please add names of valid-looking files to '
+                             'manifests, or remove the spurious files.')
 
         # list files again; check no extras
         all_files = walk_folder_tree(

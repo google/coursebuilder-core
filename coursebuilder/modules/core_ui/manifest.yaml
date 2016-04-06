@@ -13,6 +13,7 @@ files:
   - modules/core_ui/_static/lightbox/lightbox.css
   - modules/core_ui/_static/lightbox/lightbox.js
   - modules/core_ui/_static/list/list.css
+  - modules/core_ui/_static/toggle-button/toggle-button.css
   - modules/core_ui/core_ui.py
   - modules/core_ui/core_ui_unit_tests.py
   - modules/core_ui/javascript_tests/fixture.html
