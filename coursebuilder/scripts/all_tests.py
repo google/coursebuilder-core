@@ -170,6 +170,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.common_safe_dom.ScriptElementTests': 3,
     'tests.unit.common_safe_dom.EntityTests': 11,
     'tests.unit.common_tags.CustomTagTests': 13,
+    'tests.unit.common_utc.UtcUnitTests': 4,
     'tests.unit.common_utils.CommonUnitTests': 11,
     'tests.unit.common_utils.ParseTimedeltaTests': 8,
     'tests.unit.common_utils.ValidateTimedeltaTests': 6,
