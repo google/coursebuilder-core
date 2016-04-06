@@ -18,6 +18,8 @@ __author__ = [
     'John Cox (johncox@google.com)',
 ]
 
+import os
+
 import SimpleHTTPServer
 import SocketServer
 import socket
@@ -249,6 +251,8 @@ class EnsureSessionTest(integration.TestBase):
     PORT = 3123
 
     def setUp(self):
+        self._original_directory = os.getcwd()
+        os.chdir(os.environ['COURSEBUILDER_HOME'])
         super(EnsureSessionTest, self).setUp()
 
         class TestServer(SocketServer.TCPServer):
@@ -277,6 +281,7 @@ class EnsureSessionTest(integration.TestBase):
     def tearDown(self):
         self._server.shutdown()
         self._server.server_close()
+        os.chdir(self._original_directory)
         super(EnsureSessionTest, self).tearDown()
 
     def test_ensure_session_with_button(self):
