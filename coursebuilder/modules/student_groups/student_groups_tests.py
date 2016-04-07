@@ -1660,8 +1660,8 @@ class GradebookTests(StudentGroupsTestBase):
         # Here, just looking to see that we don't get exceptions.
         actions.login(self.ADMIN_EMAIL)
         self.assertIsNone(self._get_gradebook_data())
-        self.assertIsNone(self._get_gradebook_data('student_group_id='))
-        self.assertIsNone(self._get_gradebook_data('student_group_id=1234'))
+        self.assertIsNone(self._get_gradebook_data('student_group='))
+        self.assertIsNone(self._get_gradebook_data('student_group=1234'))
 
     def test_filtering_with_no_groups_created(self):
         actions.login(self.STUDENT_EMAIL)
@@ -1672,8 +1672,8 @@ class GradebookTests(StudentGroupsTestBase):
 
         actions.login(self.ADMIN_EMAIL)
         self.assertEqual(1, len(self._get_gradebook_data()))
-        self.assertEqual(0, len(self._get_gradebook_data('student_group_id=')))
-        self.assertEqual(0, len(self._get_gradebook_data('student_group_id=3')))
+        self.assertEqual(1, len(self._get_gradebook_data('student_group=')))
+        self.assertEqual(0, len(self._get_gradebook_data('student_group=3')))
 
     def test_filtering_with_groups(self):
         actions.login(self.ADMIN_EMAIL)
@@ -1692,17 +1692,17 @@ class GradebookTests(StudentGroupsTestBase):
         actions.login(self.ADMIN_EMAIL)
         gradebook.RawAnswersGenerator(self.app_context).submit()
         self.execute_all_deferred_tasks()
-        self.assertEqual(2, len(self._get_gradebook_data()))
+        self.assertEqual(3, len(self._get_gradebook_data()))
 
-        data = self._get_gradebook_data('student_group_id=')
-        self.assertEquals(0, len(data))
-        #self.assertEquals(self.NON_GROUP_STUDENT_EMAIL, data[0]['user_email'])
+        data = self._get_gradebook_data('student_group=')
+        self.assertEquals(2, len(data))
+        self.assertEquals(self.NON_GROUP_STUDENT_EMAIL, data[0]['user_email'])
 
-        data = self._get_gradebook_data('student_group_id=%s' % group_id)
+        data = self._get_gradebook_data('student_group=%s' % group_id)
         self.assertEquals(1, len(data))
         self.assertEquals(self.IN_GROUP_STUDENT_EMAIL, data[0]['user_email'])
 
-        data = self._get_gradebook_data('student_group_id=foozle')
+        data = self._get_gradebook_data('student_group=999')
         self.assertEquals(0, len(data))
 
     def test_user_changing_groups(self):
@@ -1734,11 +1734,9 @@ class GradebookTests(StudentGroupsTestBase):
         actions.login(self.ADMIN_EMAIL)
         gradebook.RawAnswersGenerator(self.app_context).submit()
         self.execute_all_deferred_tasks()
-        self.assertEqual(3, len(self._get_gradebook_data()))
+        self.assertEqual(5, len(self._get_gradebook_data()))
+        self.assertEquals(3, len(self._get_gradebook_data('student_group=')))
 
-        data = self._get_gradebook_data('student_group_id=')
-        self.assertEquals(0, len(data))
-
-        data = self._get_gradebook_data('student_group_id=%s' % group_id)
-        self.assertEquals(3, len(data))
+        data = self._get_gradebook_data('student_group=%s' % group_id)
+        self.assertEquals(1, len(data))
         self.assertEquals(self.IN_GROUP_STUDENT_EMAIL, data[0]['user_email'])

@@ -72,6 +72,12 @@ class AbstractFilteredEntity(entities.BaseEntity):
         """
         raise NotImplementedError()
 
+    @classmethod
+    def delete_by_primary_id(cls, primary_id):
+        entity = cls.all().filter('primary_id=', primary_id).get()
+        if entity:
+            entity.delete()
+
 
 class PreCleanMapReduceJobPipeline(base_handler.PipelineBase):
     """Map/Reduce pipeline that pre-cleans results from prior run of job.
@@ -175,7 +181,7 @@ class AbstractFilteredMapReduceJob(jobs.MapReduceJob):
             # we want to be able to filter by for processor use cost.
             # reduce() will aggregate and store these for each combination.
             #
-            for key in self._generate_keys(element, primary_id):
+            for key in cls._generate_keys(element, primary_id):
                 yield key, result
 
         Args:

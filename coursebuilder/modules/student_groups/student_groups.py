@@ -46,7 +46,6 @@ from models import models
 from models import roles
 from models import services
 from models import transforms
-from modules.analytics import gradebook
 from modules.analytics import student_aggregate
 from modules.courses import availability
 from modules.dashboard import dashboard
@@ -1009,25 +1008,6 @@ def _add_student_group_to_event(source, user, data):
         data[STUDENT_GROUP_ID_TAG] = student_group.id
 
 
-def _add_student_group_to_map_result(event):
-    """Callback for Gradebook analytic: Add student group ID to map result."""
-    payload = transforms.loads(event.data)
-    ret = {
-        'ts': (event.recorded_on - EPOCH).total_seconds(),
-        'id': payload.get(STUDENT_GROUP_ID_TAG, ''),
-        }
-    return ret
-
-
-def _add_student_group_to_kwargs(kwargs, event_data_items):
-    """Callback for Gradebook analytic: Add student group to reduced output."""
-    if not event_data_items:
-        return
-    event_data_items.sort(key=lambda data_item: data_item['ts'])
-    if event_data_items[-1]['id'] is not None:
-        kwargs['student_group_id'] = str(event_data_items[-1]['id'])
-
-
 class StudentGroupFilter(data_sources.AbstractEnumFilter):
     """Makes select form values for choosing student group from data sources."""
 
@@ -1044,7 +1024,7 @@ class StudentGroupFilter(data_sources.AbstractEnumFilter):
         """Add schema entry matching field this filters on."""
         reg = schema_fields.FieldRegistry('student_group')
         reg.add_property(schema_fields.SchemaField(
-            'student_group_id', 'Student Group ID', 'string',
+            'student_group', 'Student Group ID', 'integer',
             optional=True, i18n=False))
         return reg.get_json_schema_dict()['properties']
 
@@ -1055,7 +1035,7 @@ class StudentGroupFilter(data_sources.AbstractEnumFilter):
         return [
             data_sources.EnumFilterChoice(
                 'Students in Group: ' + student_group.name,
-                'student_group_id=%s' % student_group.id)
+                'student_group=%s' % student_group.id)
             for student_group in student_groups]
 
     @classmethod
@@ -1349,18 +1329,6 @@ def register_module():
         # student's group - if any.
         utils.StudentProfileHandler.EXTRA_PROFILE_SECTION_PROVIDERS.append(
             _add_student_group_to_profile)
-
-        # Register with gradebook to add student group as a filterable
-        # item.
-        gradebook.RawAnswersDataSource.FILTERS.append(StudentGroupFilter)
-
-        # Register with generator feeding gradebook to add some handling to
-        # the map and reduce steps so we can generate our filter-able data
-        # column in the generator's output.
-        gradebook.RawAnswersGenerator.register_hook(
-            MODULE_NAME,
-            _add_student_group_to_map_result,
-            _add_student_group_to_kwargs)
 
         # Add our types to the set of DB tables for download/upload of course.
         courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.add(StudentGroupEntity)

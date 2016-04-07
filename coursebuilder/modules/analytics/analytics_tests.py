@@ -2029,7 +2029,7 @@ class GradebookCsvTests(actions.TestBase):
             None, None, a1, s1, w1, True]]
         user = users.get_current_user()
         gradebook.QuestionAnswersEntity(
-            key_name=user.user_id(), data=transforms.dumps(answers)).put()
+            primary_id=user.user_id(), data=transforms.dumps(answers)).put()
 
         expected_scores = self.expected_score_headers + ','.join(
             [str(x) for x in
@@ -2068,7 +2068,7 @@ class GradebookCsvTests(actions.TestBase):
              None, None, 'eight', 8, 8, True]]
         user = users.get_current_user()
         gradebook.QuestionAnswersEntity(
-            key_name=user.user_id(), data=transforms.dumps(answers)).put()
+            primary_id=user.user_id(), data=transforms.dumps(answers)).put()
 
         actions.login(self.STUDENT_EMAIL)
         actions.register(self, 'Jane Smith', self.COURSE_NAME)
@@ -2091,7 +2091,7 @@ class GradebookCsvTests(actions.TestBase):
              None, None, 'eighteen', 18, 18, True]]
         user = users.get_current_user()
         gradebook.QuestionAnswersEntity(
-            key_name=user.user_id(), data=transforms.dumps(answers)).put()
+            primary_id=user.user_id(), data=transforms.dumps(answers)).put()
 
         expected_scores = self.expected_score_headers
         expected_scores += ','.join(
@@ -2150,7 +2150,7 @@ class GradebookCsvTests(actions.TestBase):
                 assessment.unit_id, None, 0, q_id,
                 None, None, 'to comma, or not to comma', 0, 1, True]]
             gradebook.QuestionAnswersEntity(
-                key_name=user.user_id(), data=transforms.dumps(answers)).put()
+                primary_id=user.user_id(), data=transforms.dumps(answers)).put()
 
             self._verify(
                 'Email,"This, That, These, and Those"\r\nadmin@foo.com,1.0\r\n',

@@ -229,7 +229,7 @@ def register_module():
         data_removal.Registry.register_indexed_by_user_id_remover(
             student_aggregate.StudentAggregateEntity.delete_by_key)
         data_removal.Registry.register_indexed_by_user_id_remover(
-            gradebook.QuestionAnswersEntity.delete_by_key)
+            gradebook.QuestionAnswersEntity.delete_by_primary_id)
 
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             courses.Course.SCHEMA_SECTION_COURSE] += course_settings_fields

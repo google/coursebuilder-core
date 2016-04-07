@@ -20,6 +20,7 @@ import ast
 import collections
 import csv
 import datetime
+import itertools
 import re
 import StringIO
 
@@ -32,13 +33,14 @@ from common import tags
 from controllers import utils
 from models import courses
 from models import data_sources
-from models import entities
 from models import event_transforms
 from models import jobs
 from models import models
 from models import roles
 from models import transforms
+from modules.analytics import filters
 from modules.analytics import student_answers
+from modules.student_groups import student_groups
 from tools import verify
 from tools.etl import etl_lib
 
@@ -51,34 +53,25 @@ _MODE_SCORES = 'scores'
 _MODE_QUESTIONS = 'questions'
 _MODES = [_MODE_SCORES, _MODE_QUESTIONS]
 
-class QuestionAnswersEntity(entities.BaseEntity):
+class QuestionAnswersEntity(filters.AbstractFilteredEntity):
     """Student answers to individual questions."""
 
-    data = db.TextProperty(indexed=False)
+    # For filtering based on student group ID.
+    student_group = db.IntegerProperty(indexed=True)
 
-    # For filtering based on, surprise, student group ID.  Note that this is
-    # technically not-OK, in that what we'd like to do is do hooks and register
-    # an extra field from the student_groups module.  However, the App Engine
-    # DB internals conspire to make this the least-bad alternative.  Note that
-    # this field _is_ filled in via hooks/callbacks.
-    student_group_id = db.StringProperty(indexed=True)
+    @classmethod
+    def get_filters(cls):
+        return [student_groups.StudentGroupFilter]
 
     @classmethod
     def safe_key(cls, db_key, transform_fn):
         return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
 
 
-class RawAnswersGenerator(jobs.MapReduceJob):
+class RawAnswersGenerator(filters.AbstractFilteredMapReduceJob):
     """Extract answers from all event types into QuestionAnswersEntity table."""
 
     TOTAL_STUDENTS = 'total_students'
-    _MAP_HOOKS = {}
-    _REDUCE_HOOKS = {}
-
-    @classmethod
-    def register_hook(cls, name, map_hook, reduce_hook):
-        cls._MAP_HOOKS[name] = map_hook
-        cls._REDUCE_HOOKS[name] = reduce_hook
 
     @staticmethod
     def get_description():
@@ -87,6 +80,10 @@ class RawAnswersGenerator(jobs.MapReduceJob):
     @staticmethod
     def entity_class():
         return models.EventEntity
+
+    @staticmethod
+    def result_class():
+        return QuestionAnswersEntity
 
     def build_additional_mapper_params(self, app_context):
         return {
@@ -102,8 +99,8 @@ class RawAnswersGenerator(jobs.MapReduceJob):
                 event_transforms.get_unscored_lesson_ids(app_context),
             }
 
-    @staticmethod
-    def map(event):
+    @classmethod
+    def map(cls, event):
         """Extract question responses from all event types providing them."""
 
         if event.source not in (
@@ -149,39 +146,27 @@ class RawAnswersGenerator(jobs.MapReduceJob):
             answers = event_transforms.unpack_check_answers(
                 content, questions_info, valid_question_ids, assessment_weights,
                 group_to_questions, timestamp)
-        map_result = {
-            'answers': [list(answer) for answer in answers]
-            }
-        for name, hook in RawAnswersGenerator._MAP_HOOKS.iteritems():
-            map_result[name] = hook(event)
-        yield (event.user_id, map_result)
+
         yield (RawAnswersGenerator.TOTAL_STUDENTS, event.user_id)
 
-    @staticmethod
-    def reduce(key, map_provided_values):
+        # Each answer is a namedtuple; convert to a list for pack/unpack
+        # journey through the map/reduce shuffle stage.
+        result = [list(answer) for answer in answers]
+        for key in cls._generate_keys(event, event.user_id):
+            yield (key, result)
+
+    @classmethod
+    def reduce(cls, keys, answers_lists):
         """Stores values to DB, and emits one aggregate: Count of students."""
 
-        if key == RawAnswersGenerator.TOTAL_STUDENTS:
-            student_ids = set(map_provided_values)
-            yield (key, len(student_ids))
+        if keys == RawAnswersGenerator.TOTAL_STUDENTS:
+            student_ids = set(answers_lists)
+            yield (keys, len(student_ids))
             return
 
-        answers = []
-        hook_argslists = collections.defaultdict(list)
-
-        kwargs = {}
-        for data in map_provided_values:
-            params = ast.literal_eval(data)
-            answers.extend(params['answers'])
-            for hook_name in RawAnswersGenerator._REDUCE_HOOKS:
-                hook_argslists[hook_name].append(params[hook_name])
-
-        for name, hook in RawAnswersGenerator._REDUCE_HOOKS.iteritems():
-            hook(kwargs, hook_argslists[name])
-
-        data = transforms.dumps(answers)
-        qae = QuestionAnswersEntity(key_name=key, data=data, **kwargs)
-        qae.put()
+        answers = itertools.chain(*[ast.literal_eval(l) for l in answers_lists])
+        data = transforms.dumps(list(answers))
+        cls._write_entity(keys, data)
 
 
 StudentPlaceholder = collections.namedtuple(
@@ -193,7 +178,6 @@ class RawAnswersDataSource(data_sources.SynchronousQuery,
     """Make raw answers from QuestionAnswersEntity available via REST."""
 
     MAX_INTERACTIVE_DOWNLOAD_SIZE = 100
-    FILTERS = []  # Modules adding fiterable fields can add items here.
 
     @staticmethod
     def required_generators():
@@ -243,7 +227,7 @@ class RawAnswersDataSource(data_sources.SynchronousQuery,
 
     @classmethod
     def get_filters(cls):
-        return cls.FILTERS
+        return QuestionAnswersEntity.get_filters()
 
     @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log,
@@ -311,7 +295,7 @@ class RawAnswersDataSource(data_sources.SynchronousQuery,
         # Fill in responses with actual student name, not just ID.
         ids = []
         for entity in rows:
-            ids.append(entity.key().id_or_name())
+            ids.append(entity.primary_id)
 
         # Chunkify student lookups; 'in' has max of 30
         students = []
