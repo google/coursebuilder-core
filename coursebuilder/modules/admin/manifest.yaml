@@ -4,6 +4,8 @@ registration:
 tests:
   functional:
     - modules.admin.admin_tests.AdminDashboardTabTests = 6
+    - modules.admin.enrollments_tests.EnrollmentsTests = 4
+    - modules.admin.enrollments_tests.EventHandlersTests = 1
 
 files:
   - modules/admin/__init__.py
@@ -13,6 +15,8 @@ files:
   - modules/admin/admin.py
   - modules/admin/admin_tests.py
   - modules/admin/config.py
+  - modules/admin/enrollments.py
+  - modules/admin/enrollments_tests.py
   - modules/admin/manifest.yaml
   - modules/admin/templates/courses.html
   - modules/admin/templates/welcome.html

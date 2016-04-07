@@ -48,6 +48,7 @@ def struct_time_to_timestamp(utc_st):
          utc_st.tm_hour, utc_st.tm_min, no_leap_second,
          utc_st.tm_wday, utc_st.tm_yday, utc_st.tm_isdst))
 
+
 def text_to_timestamp(text, fmt=schema_transforms.ISO_8601_DATETIME_FORMAT):
     """Returns UTC time string as a POSIX timestamp (seconds since epoch).
 
