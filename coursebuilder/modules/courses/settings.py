@@ -23,6 +23,7 @@ import os
 import urllib
 
 from common import crypto
+from common import menus
 from common import safe_dom
 from common import schema_fields
 from controllers import utils as controllers_utils
@@ -151,6 +152,9 @@ class CourseSettingsHandler(object):
             sub_group_name = 'default'
 
         action_name = 'settings_%s' % name
+
+        if placement is None:
+            placement = menus.MenuItem.DEFAULT_PLACEMENT
 
         if name in cls.GROUP_SETTINGS_LISTS:
             cls.GROUP_SETTINGS_LISTS[name].extend(settings)

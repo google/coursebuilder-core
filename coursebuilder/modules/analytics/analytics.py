@@ -25,6 +25,7 @@ from models import data_sources
 from models import data_removal
 from models import services
 from modules.analytics import answers_aggregator
+from modules.analytics import click_link_aggregator
 from modules.analytics import clustering
 from modules.analytics import gradebook
 from modules.analytics import location_aggregator
@@ -190,6 +191,8 @@ def register_module():
             page_event_aggregator.PageEventAggregator)
         student_aggregate.StudentAggregateComponentRegistry.register_component(
             youtube_event_aggregator.YouTubeEventAggregator)
+        student_aggregate.StudentAggregateComponentRegistry.register_component(
+            click_link_aggregator.ClickLinkAggregator)
 
         data_sources.Registry.register(
             student_aggregate.StudentAggregateComponentRegistry)

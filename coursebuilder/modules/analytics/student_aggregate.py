@@ -17,6 +17,7 @@
 __author__ = ['Michael Gainer (mgainer@google.com)']
 
 import collections
+import datetime
 import logging
 import zlib
 
@@ -34,6 +35,9 @@ from models import transforms
 
 from google.appengine.api import datastore_types
 from google.appengine.ext import db
+
+UNIX_EPOCH = datetime.datetime(year=1970, month=1, day=1)
+
 
 class AbstractStudentAggregationComponent(object):
     """Allows modules to contribute to map/reduce on EventEntity by Student.
@@ -140,6 +144,10 @@ class AbstractStudentAggregationComponent(object):
         schema in the aggregate data source.
         """
         raise NotImplementedError()
+
+    @classmethod
+    def _fix_timestamp(cls, timestamp):
+        return int((timestamp - UNIX_EPOCH).total_seconds())
 
 
 class StudentAggregateEntity(entities.BaseEntity):

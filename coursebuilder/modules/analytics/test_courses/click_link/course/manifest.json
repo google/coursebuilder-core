@@ -1,0 +1,50 @@
+{
+  "entities": [
+    {
+      "is_draft": null, 
+      "path": "files/course.yaml"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "files/data/course.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/I18nProgressEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/LabelEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/QuestionEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/QuestionGroupEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/ResourceBundleEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/RoleEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/StudentGroupEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/StudentGroupMembership.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/_SkillEntity.json"
+    }
+  ], 
+  "raw": "course:/clicklinktest::ns_clicklinktest", 
+  "version": "1.3"
+}

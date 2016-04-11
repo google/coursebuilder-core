@@ -1,0 +1,39 @@
+_reserved: {context_path: /clicklinktest, namespace: ns_clicklinktest}
+base: {nav_header: Search Education, privacy_terms_url: '', show_gplus_button: true}
+course:
+  admin_user_emails: '[test@example.com]'
+  auto_index: false
+  blurb: ''
+  browsable: false
+  can_record_student_events: true
+  can_student_change_locale: true
+  extra_tabs: []
+  google: {api_key: '', client_id: '', client_secret: ''}
+  google_analytics_id: ''
+  google_tag_manager_id: ''
+  instructor_details: ''
+  locale: en_US
+  main_image: {alt_text: '', url: ''}
+  now_available: true
+  title: clicklinktest
+  usage_reporting_id: ''
+data_removal: {removal_policy: immediate_removal}
+html_hooks:
+  base: {after_body_tag_begins: <!-- base.after_body_tag_begins -->, after_main_content_ends: <!--
+      base.after_main_content_ends -->, after_navbar_begins: <!-- base.after_navbar_begins
+      -->, after_top_content_ends: <!-- base.after_top_content_ends -->, before_body_tag_ends: <!--
+      base.before_body_tag_ends -->, before_head_tag_ends: <!-- base.before_head_tag_ends
+      -->, before_navbar_ends: <!-- base.before_navbar_ends --> <!-- Here we enable
+      the search module. --> <script src="/modules/search/assets/search.js"></script>
+      <link rel="stylesheet" type="text/css" href="/modules/search/assets/search.css"
+      /> <li class="gcb-pull-right"> <form class="gcb-search-form" action="search"
+      method="get"> <input class="gcb-search-box" name="query" type="text" aria-label="Enter
+      a search term"> <input value="Search" class="gcb-button gcb-search-button" type="submit">
+      </form> </li>}
+institution:
+  logo: {alt_text: '', url: assets/img/your_logo_here.png}
+  name: ''
+  url: ''
+preview: {}
+reg_form: {additional_registration_fields: '', can_register: true, whitelist: ''}
+unit: {}

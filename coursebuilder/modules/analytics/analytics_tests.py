@@ -59,20 +59,21 @@ from google.appengine.ext import db
 # - Download test data via:
 #
 #   echo "a@b.c" | \
-#   ./scripts/etl.sh download course /test_course localhost \
-#   --archive_path=tests/functional/modules_analytics/TEST_NAME_HERE/course \
+#   ./scripts/etl.sh download course /test_course localhost --port 8081 \
+#   --archive_path=modules/analytics/test_courses/TEST_NAME_HERE/course \
 #   --internal --archive_type=directory --force_overwrite --no_static_files
 #
 #   echo "a@b.c" | \
-#   ./scripts/etl.sh download datastore /test_course localhost \
-#   --archive_path=tests/functional/modules_analytics/TEST_NAME_HERE/datastore \
+#   ./scripts/etl.sh download datastore /test_course localhost --port 8081 \
+#   --archive_path=modules/analytics/test_courses/TEST_NAME_HERE/datastore \
 #   --internal --archive_type=directory --force_overwrite --no_static_files
 #
 # - Run the following script to dump out the actual values from the
-#   map/reduce analytic run.
+#   map/reduce analytic run.  You will have to add this as a test in
+#   manifest.yaml in order to run it.
 #
-#   ./scripts/test.sh \
-#   tests.functional.modules_analytics.NotReallyTest.test_dump_results
+#   ./scripts/project.py --test \
+#   modules.analytics.analytics_tests.NotReallyTest.test_dump_results
 #
 # - Verify that the JSON result is as-expected.  This is also a good time to
 #   edit the dumped events to change fields to manufacture test conditions
@@ -130,7 +131,8 @@ class AbstractModulesAnalyticsTest(actions.TestBase):
             'directory', '--disable_remote', '--force_overwrite', '--log_level',
             'WARNING', '--exclude_types',
             ','.join([
-                'Submission', 'FileDataEntity', 'FileMetadataEntity'])]))
+                'Submission', 'FileDataEntity', 'FileMetadataEntity',
+                'ImmediateRemovalState', 'ContentChunkEntity'])]))
 
     def get_aggregated_data_by_email(self, email):
         # email and user_id must match the values listed in Student.json file
@@ -307,6 +309,15 @@ class StudentAggregateTest(AbstractModulesAnalyticsTest):
         expected = self.load_expected_data('youtube_events', 'youtube.json')
         # No sorting - items should be presented in order by time, video, etc.
         self.assertEqual(expected, actual['youtube'])
+
+    def test_click_link_events(self):
+        data_set_name = 'click_link'
+        self.load_course(data_set_name)
+        self.load_datastore(data_set_name)
+        self.run_aggregator_job()
+        self.assertEqual(
+            self.get_aggregated_data_by_email('foo@bar.com'),
+            self.load_expected_data(data_set_name, 'expected.json'))
 
 
 class StudentAggregateSchemaRegistryTests(actions.TestBase):

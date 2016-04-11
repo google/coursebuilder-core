@@ -9,7 +9,7 @@ tests:
     - modules.analytics.analytics_tests.ClusteringTabTests = 7
     - modules.analytics.analytics_tests.FilteredDataSourceTests = 11
     - modules.analytics.analytics_tests.GradebookCsvTests = 6
-    - modules.analytics.analytics_tests.StudentAggregateTest = 6
+    - modules.analytics.analytics_tests.StudentAggregateTest = 7
     - modules.analytics.analytics_tests.StudentAggregateSchemaRegistryTests = 3
     - modules.analytics.analytics_tests.StudentVectorGeneratorProgressTests = 2
     - modules.analytics.analytics_tests.StudentVectorGeneratorTests  = 12
@@ -19,6 +19,7 @@ files:
   - modules/analytics/__init__.py
   - modules/analytics/analytics.py
   - modules/analytics/analytics_tests.py
+  - modules/analytics/click_link_aggregator.py
   - modules/analytics/answers_aggregator.py
   - modules/analytics/cluster_rest.js
   - modules/analytics/cluster_stats.html
@@ -46,20 +47,35 @@ files:
   - modules/analytics/test_courses/bad_references/course/models/RoleEntity.json
   - modules/analytics/test_courses/bad_references/datastore/manifest.json
   - modules/analytics/test_courses/bad_references/datastore/models/EventEntity.json
-  - modules/analytics/test_courses/bad_references/datastore/models/FileDataEntity.json
-  - modules/analytics/test_courses/bad_references/datastore/models/FileMetadataEntity.json
   - modules/analytics/test_courses/bad_references/datastore/models/QuestionEntity.json
   - modules/analytics/test_courses/bad_references/datastore/models/QuestionGroupEntity.json
   - modules/analytics/test_courses/bad_references/datastore/models/Student.json
   - modules/analytics/test_courses/bad_references/datastore/models/StudentAnswersEntity.json
   - modules/analytics/test_courses/bad_references/datastore/models/StudentPreferencesEntity.json
   - modules/analytics/test_courses/bad_references/datastore/models/StudentPropertyEntity.json
-  - modules/analytics/test_courses/bad_references/datastore/models/Submission.json
   - modules/analytics/test_courses/bad_references/expected/assessments.json
+  - modules/analytics/test_courses/click_link/course/files/course.yaml
+  - modules/analytics/test_courses/click_link/course/files/data/course.json
+  - modules/analytics/test_courses/click_link/course/manifest.json
+  - modules/analytics/test_courses/click_link/course/models/I18nProgressEntity.json
+  - modules/analytics/test_courses/click_link/course/models/LabelEntity.json
+  - modules/analytics/test_courses/click_link/course/models/QuestionEntity.json
+  - modules/analytics/test_courses/click_link/course/models/QuestionGroupEntity.json
+  - modules/analytics/test_courses/click_link/course/models/ResourceBundleEntity.json
+  - modules/analytics/test_courses/click_link/course/models/RoleEntity.json
+  - modules/analytics/test_courses/click_link/course/models/_SkillEntity.json
+  - modules/analytics/test_courses/click_link/course/models/StudentGroupEntity.json
+  - modules/analytics/test_courses/click_link/course/models/StudentGroupMembership.json
+  - modules/analytics/test_courses/click_link/datastore/manifest.json
+  - modules/analytics/test_courses/click_link/datastore/models/EditorPrefsEntity.json
+  - modules/analytics/test_courses/click_link/datastore/models/EventEntity.json
+  - modules/analytics/test_courses/click_link/datastore/models/StudentEnrollmentEventEntity.json
+  - modules/analytics/test_courses/click_link/datastore/models/Student.json
+  - modules/analytics/test_courses/click_link/datastore/models/StudentPreferencesEntity.json
+  - modules/analytics/test_courses/click_link/datastore/models/StudentPropertyEntity.json
+  - modules/analytics/test_courses/click_link/expected/expected.json
   - modules/analytics/test_courses/location_locale/datastore/manifest.json
   - modules/analytics/test_courses/location_locale/datastore/models/EventEntity.json
-  - modules/analytics/test_courses/location_locale/datastore/models/FileDataEntity.json
-  - modules/analytics/test_courses/location_locale/datastore/models/FileMetadataEntity.json
   - modules/analytics/test_courses/location_locale/datastore/models/Student.json
   - modules/analytics/test_courses/location_locale/datastore/models/StudentPreferencesEntity.json
   - modules/analytics/test_courses/location_locale/datastore/models/StudentPropertyEntity.json
@@ -68,38 +84,29 @@ files:
   - modules/analytics/test_courses/location_locale/expected/user_agent_frequencies.json
   - modules/analytics/test_courses/multiple/datastore/manifest.json
   - modules/analytics/test_courses/multiple/datastore/models/EventEntity.json
-  - modules/analytics/test_courses/multiple/datastore/models/FileDataEntity.json
-  - modules/analytics/test_courses/multiple/datastore/models/FileMetadataEntity.json
   - modules/analytics/test_courses/multiple/datastore/models/QuestionEntity.json
   - modules/analytics/test_courses/multiple/datastore/models/QuestionGroupEntity.json
   - modules/analytics/test_courses/multiple/datastore/models/Student.json
   - modules/analytics/test_courses/multiple/datastore/models/StudentAnswersEntity.json
   - modules/analytics/test_courses/multiple/datastore/models/StudentPreferencesEntity.json
   - modules/analytics/test_courses/multiple/datastore/models/StudentPropertyEntity.json
-  - modules/analytics/test_courses/multiple/datastore/models/Submission.json
   - modules/analytics/test_courses/multiple/expected/assessments.json
   - modules/analytics/test_courses/page_views/datastore/manifest.json
   - modules/analytics/test_courses/page_views/datastore/models/EventEntity.json
-  - modules/analytics/test_courses/page_views/datastore/models/FileDataEntity.json
-  - modules/analytics/test_courses/page_views/datastore/models/FileMetadataEntity.json
   - modules/analytics/test_courses/page_views/datastore/models/QuestionEntity.json
   - modules/analytics/test_courses/page_views/datastore/models/Student.json
   - modules/analytics/test_courses/page_views/datastore/models/StudentAnswersEntity.json
   - modules/analytics/test_courses/page_views/datastore/models/StudentPreferencesEntity.json
   - modules/analytics/test_courses/page_views/datastore/models/StudentPropertyEntity.json
-  - modules/analytics/test_courses/page_views/datastore/models/Submission.json
   - modules/analytics/test_courses/page_views/expected/page_views.json
   - modules/analytics/test_courses/scoring/datastore/manifest.json
   - modules/analytics/test_courses/scoring/datastore/models/EventEntity.json
-  - modules/analytics/test_courses/scoring/datastore/models/FileDataEntity.json
-  - modules/analytics/test_courses/scoring/datastore/models/FileMetadataEntity.json
   - modules/analytics/test_courses/scoring/datastore/models/QuestionEntity.json
   - modules/analytics/test_courses/scoring/datastore/models/QuestionGroupEntity.json
   - modules/analytics/test_courses/scoring/datastore/models/Student.json
   - modules/analytics/test_courses/scoring/datastore/models/StudentAnswersEntity.json
   - modules/analytics/test_courses/scoring/datastore/models/StudentPreferencesEntity.json
   - modules/analytics/test_courses/scoring/datastore/models/StudentPropertyEntity.json
-  - modules/analytics/test_courses/scoring/datastore/models/Submission.json
   - modules/analytics/test_courses/scoring/expected/assessments.json
   - modules/analytics/test_courses/simple_questions/course/files/course.yaml
   - modules/analytics/test_courses/simple_questions/course/files/data/course.json
@@ -112,8 +119,6 @@ files:
   - modules/analytics/test_courses/simple_questions/course/models/RoleEntity.json
   - modules/analytics/test_courses/youtube_events/datastore/manifest.json
   - modules/analytics/test_courses/youtube_events/datastore/models/EventEntity.json
-  - modules/analytics/test_courses/youtube_events/datastore/models/FileDataEntity.json
-  - modules/analytics/test_courses/youtube_events/datastore/models/FileMetadataEntity.json
   - modules/analytics/test_courses/youtube_events/datastore/models/QuestionEntity.json
   - modules/analytics/test_courses/youtube_events/datastore/models/QuestionGroupEntity.json
   - modules/analytics/test_courses/youtube_events/datastore/models/Student.json

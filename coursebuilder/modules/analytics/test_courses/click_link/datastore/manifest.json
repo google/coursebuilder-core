@@ -1,0 +1,42 @@
+{
+  "entities": [
+    {
+      "is_draft": false, 
+      "path": "models/EditorPrefsEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/EventEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/FileDataEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/FileMetadataEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/ImmediateRemovalState.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/Student.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/StudentEnrollmentEventEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/StudentPreferencesEntity.json"
+    }, 
+    {
+      "is_draft": false, 
+      "path": "models/StudentPropertyEntity.json"
+    }
+  ], 
+  "raw": "course:/clicklinktest::ns_clicklinktest", 
+  "version": "1.3"
+}

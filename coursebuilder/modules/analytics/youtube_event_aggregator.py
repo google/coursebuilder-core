@@ -16,13 +16,9 @@
 
 __author__ = ['Michael Gainer (mgainer@google.com)']
 
-import datetime
-
 from common import schema_fields
 from models import transforms
 from modules.analytics import student_aggregate
-
-UNIX_EPOCH = datetime.datetime(year=1970, month=1, day=1)
 
 # This is YouTube's mapping from their 'data' field in YT events to meaning.
 ACTION_ID_TO_NAME = {
@@ -56,8 +52,7 @@ class YouTubeEventAggregator(
         video_id = data['video_id']
         position = data['position']
         action = data['data']
-        timestamp = timestamp = int(
-            (event.recorded_on - UNIX_EPOCH).total_seconds())
+        timestamp = cls._fix_timestamp(event.recorded_on)
         return (video_id, position, action, timestamp)
 
     @classmethod

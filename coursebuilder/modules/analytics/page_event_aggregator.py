@@ -17,7 +17,6 @@
 __author__ = ['Michael Gainer (mgainer@google.com)']
 
 import collections
-import datetime
 import urlparse
 
 from common import schema_fields
@@ -25,9 +24,6 @@ from models import courses
 from models import transforms
 from modules.analytics import student_aggregate
 from tools import verify
-
-
-UNIX_EPOCH = datetime.datetime(year=1970, month=1, day=1)
 
 
 class AbstractPageEventMatcher(object):
@@ -195,7 +191,7 @@ class PageEventAggregator(
 
     @classmethod
     def get_event_sources_wanted(cls):
-        return ['enter-page', 'exit-page', 'tag-youtube-event']
+        return ['enter-page', 'exit-page', 'tag-youtube-event', 'click-link']
 
     @classmethod
     def build_static_params(cls, app_context):
@@ -223,8 +219,7 @@ class PageEventAggregator(
             value = matcher.match(matcher_params, query_params)
             if value:
                 name, item_id = value
-                timestamp = int(
-                    (event.recorded_on - UNIX_EPOCH).total_seconds())
+                timestamp = cls._fix_timestamp(event.recorded_on)
                 ret.append([name, item_id, timestamp, event.source])
         return ret
 
