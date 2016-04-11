@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-28 08:18-0700\n"
-"PO-Revision-Date: 2016-03-28 08:18-0700\n"
+"POT-Creation-Date: 2016-04-11 08:00-0700\n"
+"PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: et <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -303,7 +303,7 @@ msgstr "Hinnake kaasõpilaste ülesandeid, klõpsates alloleval nupul."
 #. Displayed in the course contents page. Indicates a page to
 #. which students can go to review other students' assignments.
 #: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
-#: experimental/coursebuilder/modules/courses/unit_outline.py:433
+#: experimental/coursebuilder/modules/courses/unit_outline.py:439
 msgid "Review peer assignments"
 msgstr "Kaasõpilaste ülesannete hindamine"
 
@@ -768,19 +768,19 @@ msgstr "Teema:"
 #. having completed a lesson in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:12
 msgid "I have completed this lesson."
-msgstr ""
+msgstr "Olen selle õppetunni läbinud."
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed a unit in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:26
 msgid "I have completed this unit."
-msgstr ""
+msgstr "Olen selle üksuse läbinud."
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:41
 msgid "I have completed this course."
-msgstr ""
+msgstr "Olen selle kursuse läbinud."
 
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user

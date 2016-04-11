@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-28 08:18-0700\n"
-"PO-Revision-Date: 2016-03-28 08:18-0700\n"
+"POT-Creation-Date: 2016-04-11 08:00-0700\n"
+"PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: cs <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -306,7 +306,7 @@ msgstr "Kliknutím na níže uvedené tlačítko zkontrolujte úlohy svých spol
 #. Displayed in the course contents page. Indicates a page to
 #. which students can go to review other students' assignments.
 #: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
-#: experimental/coursebuilder/modules/courses/unit_outline.py:433
+#: experimental/coursebuilder/modules/courses/unit_outline.py:439
 msgid "Review peer assignments"
 msgstr "Zkontrolovat úlohy spolužáků"
 
@@ -770,19 +770,19 @@ msgstr "Předmět:"
 #. having completed a lesson in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:12
 msgid "I have completed this lesson."
-msgstr ""
+msgstr "Lekce je dokončena"
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed a unit in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:26
 msgid "I have completed this unit."
-msgstr ""
+msgstr "Jednotka je dokončena"
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:41
 msgid "I have completed this course."
-msgstr ""
+msgstr "Kurz je dokončen"
 
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
@@ -1090,7 +1090,7 @@ msgid ""
 "This resource does not exist, or cannot be accessed by the current user."
 "  You are currently logged in as {email}."
 msgstr ""
-"Tento zdroje neexistuje nebo k němu aktuální uživatel nemá přístup. Jste "
+"Tento zdroj neexistuje nebo k němu aktuální uživatel nemá přístup. Jste "
 "přihlášeni jako {email}."
 
 #. Text for a link on a page indicating that some desired       resource was

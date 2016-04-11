@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-28 08:18-0700\n"
-"PO-Revision-Date: 2016-03-28 08:18-0700\n"
+"POT-Creation-Date: 2016-04-11 08:00-0700\n"
+"PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: es <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -307,7 +307,7 @@ msgstr ""
 #. Displayed in the course contents page. Indicates a page to
 #. which students can go to review other students' assignments.
 #: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
-#: experimental/coursebuilder/modules/courses/unit_outline.py:433
+#: experimental/coursebuilder/modules/courses/unit_outline.py:439
 msgid "Review peer assignments"
 msgstr "Revisar tareas de los compañeros"
 
@@ -775,19 +775,19 @@ msgstr "Asunto:"
 #. having completed a lesson in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:12
 msgid "I have completed this lesson."
-msgstr ""
+msgstr "He completado esta lección."
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed a unit in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:26
 msgid "I have completed this unit."
-msgstr ""
+msgstr "He completado esta unidad."
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:41
 msgid "I have completed this course."
-msgstr ""
+msgstr "He completado este curso."
 
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
@@ -1086,7 +1086,7 @@ msgstr ""
 msgid ""
 "This resource does not exist, or access to it requires that you be logged"
 " in."
-msgstr "Este recurso no existe, o debes haber iniciado sesión para acceder a él."
+msgstr "Este recurso no existe o debes haber iniciado sesión para acceder a él."
 
 #. Message on page indicating that a resource is not available.        Either
 #. the requested item really does not exist, or the currently        logged-in
@@ -1097,7 +1097,7 @@ msgid ""
 "This resource does not exist, or cannot be accessed by the current user."
 "  You are currently logged in as {email}."
 msgstr ""
-"Este recurso no existe, o el usuario actual no puede acceder a él. Has "
+"Este recurso no existe o el usuario actual no puede acceder a él. Has "
 "iniciado sesión como {email}."
 
 #. Text for a link on a page indicating that some desired       resource was

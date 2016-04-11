@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-28 08:18-0700\n"
-"PO-Revision-Date: 2016-03-28 08:18-0700\n"
+"POT-Creation-Date: 2016-04-11 08:00-0700\n"
+"PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fa <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -301,7 +301,7 @@ msgstr "با کلیک کردن روی دکمه زیر، تکالیف همکلا�
 #. Displayed in the course contents page. Indicates a page to
 #. which students can go to review other students' assignments.
 #: experimental/coursebuilder/modules/assessments/templates/reviewed_assessment_confirmation.html:39
-#: experimental/coursebuilder/modules/courses/unit_outline.py:433
+#: experimental/coursebuilder/modules/courses/unit_outline.py:439
 msgid "Review peer assignments"
 msgstr "بازبینی تکالیف همکلاسی‌ها"
 
@@ -764,19 +764,19 @@ msgstr "موضوع:"
 #. having completed a lesson in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:12
 msgid "I have completed this lesson."
-msgstr ""
+msgstr "این درس را به پایان رسانده‌ام."
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed a unit in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:26
 msgid "I have completed this unit."
-msgstr ""
+msgstr "این واحد را به پایان رسانده‌ام."
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:41
 msgid "I have completed this course."
-msgstr ""
+msgstr "این دوره را به پایان رسانده‌ام."
 
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
