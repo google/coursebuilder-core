@@ -137,6 +137,10 @@ VALID_FILE_SUFFIXES = ('cfg', 'css', 'csv', 'html', 'ico', 'js', 'json',
                        'rc', 'sh', 'sql', 'txt', 'xml', 'yaml', 'zip')
 IGNORE_PREFIXES = ('lib/', 'internal/', './PRESUBMIT.py', './static.yaml',
                    'tests/internal')
+IGNORE_REGEXES = [
+    re.compile(r'^\./coursebuilder_\d{8,8}_\d{6,6}.zip$'),
+    re.compile(r'^\./log_\d{8,8}_\d{6,6}.txt$'),
+]
 
 def build_dir():
     """Convenience function to access BUILD_DIR."""
@@ -923,7 +927,8 @@ def _enforce_file_count(config):
             if afile not in known_files:
                 suffix = afile.rsplit('.', 1)[-1]
                 if (suffix in VALID_FILE_SUFFIXES and
-                    not any([afile.startswith(p) for p in IGNORE_PREFIXES])):
+                    not any([afile.startswith(p) for p in IGNORE_PREFIXES]) and
+                    not any([regex.match(afile) for regex in IGNORE_REGEXES])):
 
                     log('Warning: Found a file that looks valid, but is not '
                         'listed in any manifest nor scripts/all_files.txt.  '
