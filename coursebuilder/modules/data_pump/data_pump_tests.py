@@ -22,7 +22,6 @@ import time
 import apiclient
 from common import catch_and_log
 from common import schema_fields
-from common import users
 from common import utils as common_utils
 from models import courses
 from models import data_sources
@@ -454,28 +453,28 @@ class PiiTests(actions.TestBase):
         self.assertTrue(data_pump.DataPumpJob._is_pii_encryption_token_valid(
             new_token))
 
-    def _test_student_pii_data(self, send_uncensored_pii_data):
-        actions.login(USER_EMAIL)
-        user = users.get_current_user()
-        actions.register(self, USER_EMAIL, COURSE_NAME)
-        actions.logout()
-        actions.login(ADMIN_EMAIL)
-
-        job = data_pump.DataPumpJob(self.app_context,
-                                    rest_providers.StudentsDataSource.__name__)
-        data_source_context = job._build_data_source_context()
-        data_source_context.pii_secret = job._get_pii_secret(self.app_context)
-        data_source_context.send_uncensored_pii_data = send_uncensored_pii_data
-        data, is_last_page = job._fetch_page_data(self.app_context,
-                                                  data_source_context, 0)
+    def _get_student_data(self, send_uncensored_pii_data):
+        with common_utils.Namespace('ns_' + COURSE_NAME):
+            job = data_pump.DataPumpJob(
+                self.app_context, rest_providers.StudentsDataSource.__name__)
+            data_source_context = job._build_data_source_context()
+            data_source_context.pii_secret = job._get_pii_secret(
+                self.app_context)
+            data_source_context.send_uncensored_pii_data = (
+                send_uncensored_pii_data)
+            data, is_last_page = job._fetch_page_data(self.app_context,
+                                                      data_source_context, 0)
         self.assertTrue(is_last_page)
         self.assertEqual(len(data), 1)
-        return data[0], user
+        return data[0]
 
     def test_student_pii_data_obscured(self):
-        student_record, user = self._test_student_pii_data(
-            send_uncensored_pii_data=False)
+        user = actions.login(USER_EMAIL)
+        actions.register(self, USER_EMAIL, COURSE_NAME)
+        actions.logout()
 
+        actions.login(ADMIN_EMAIL)
+        student_record = self._get_student_data(send_uncensored_pii_data=False)
         with common_utils.Namespace('ns_' + COURSE_NAME):
             student = models.Student.get_by_user(user)
             self.assertIsNotNone(student.user_id)
@@ -486,8 +485,12 @@ class PiiTests(actions.TestBase):
             self.assertNotIn('additional_fields', student_record)
 
     def test_student_pii_data_sent_when_commanded(self):
-        student_record, user = self._test_student_pii_data(
-            send_uncensored_pii_data=True)
+        user = actions.login(USER_EMAIL)
+        actions.register(self, USER_EMAIL, COURSE_NAME)
+        actions.logout()
+
+        actions.login(ADMIN_EMAIL)
+        student_record = self._get_student_data(send_uncensored_pii_data=True)
         with common_utils.Namespace('ns_' + COURSE_NAME):
             student = models.Student.get_by_user(user)
             self.assertIsNotNone(student.user_id)
@@ -499,6 +502,63 @@ class PiiTests(actions.TestBase):
               'user@foo.com',
               common_utils.find(lambda x: x['name'] == 'form01',
                                 student_record['additional_fields'])['value'])
+
+    def _setup_for_additional_fields(self):
+        user_name = 'John Smith, from back East'
+        user_phone = '1.212.555.1212'
+        user_ssn = '123-45-6789'
+
+        environ = {
+            'reg_form': {
+                'additional_registration_fields': (
+                    '\'<!-- reg_form.additional_registration_fields -->'
+                    '<input name="form02" type="text">'
+                    '<input name="form03" type="text">')
+            }
+        }
+        with actions.OverriddenEnvironment(environ):
+            user = actions.login(USER_EMAIL)
+            self.base = '/' + COURSE_NAME
+            actions.register_with_additional_fields(
+                self, user_name, user_phone, user_ssn)
+
+        # Additional fields propagate and list of add'l fields is updated in DB.
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
+        return user
+
+    def test_additional_fields_as_columns(self):
+        user = self._setup_for_additional_fields()
+        actions.login(ADMIN_EMAIL)
+        student_record = self._get_student_data(send_uncensored_pii_data=True)
+        self.assertEquals(
+            student_record['registration_fields']['form01'],
+            'John Smith, from back East')
+        self.assertEquals(
+            student_record['registration_fields']['form02'], '1.212.555.1212')
+        self.assertEquals(
+            student_record['registration_fields']['form03'], '123-45-6789')
+
+    def test_additional_fields_mismatch_known_fields(self):
+        user = self._setup_for_additional_fields()
+        with common_utils.Namespace('ns_' + COURSE_NAME):
+            student = models.Student.get_by_user(user)
+            student.additional_fields = transforms.dumps(
+                [['form02', '1.212.555.1212'],
+                 ['unknown_field', 'unknown_value']])
+            student.put()
+
+        actions.login(ADMIN_EMAIL)
+        student_record = self._get_student_data(send_uncensored_pii_data=True)
+        self.assertFalse(
+            'form01' in student_record['registration_fields'])
+        self.assertEquals(
+            student_record['registration_fields']['form02'], '1.212.555.1212')
+        self.assertFalse(
+            'form03' in student_record['registration_fields'])
+        self.assertFalse(
+            'unknown_field' in student_record['registration_fields'])
+
 
 class MockResponse(object):
 

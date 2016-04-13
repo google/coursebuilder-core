@@ -23,6 +23,7 @@ from models import courses
 from models import custom_modules
 from models import data_sources
 from models import data_removal
+from models import models
 from models import services
 from modules.analytics import answers_aggregator
 from modules.analytics import click_link_aggregator
@@ -236,6 +237,10 @@ def register_module():
 
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             courses.Course.SCHEMA_SECTION_COURSE] += course_settings_fields
+
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD][ANALYTICS] = (
+                rest_providers.AdditionalFieldNamesDAO.user_added_callback)
 
         register_tabs()
         add_actions()

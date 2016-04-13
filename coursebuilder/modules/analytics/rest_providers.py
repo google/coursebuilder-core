@@ -16,6 +16,8 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import logging
+
 from common import schema_fields
 from common import utils
 from models import courses
@@ -25,6 +27,8 @@ from models import jobs
 from models import models
 from models import transforms
 from tools import verify
+
+from google.appengine.ext import db
 
 
 class AssessmentsDataSource(data_sources.AbstractSmallRestDataSource):
@@ -366,6 +370,71 @@ class LabelsDataSource(data_sources.AbstractSmallRestDataSource):
         return ret, 0
 
 
+class AdditionalFieldNamesEntity(models.BaseEntity):
+    SINGLETON_KEY_NAME = 'singleton'
+
+    data = db.TextProperty()
+
+
+class AdditionalFieldNamesDTO(object):
+    ADDITIONAL_FIELD_NAMES = 'additional_field_names'
+
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
+        self._additional_field_names = set(
+            transforms.loads(self.dict.get(self.ADDITIONAL_FIELD_NAMES, '{}')))
+
+    @property
+    def additional_field_names(self):
+        return frozenset(self._additional_field_names)
+
+    @additional_field_names.setter
+    def additional_field_names(self, names_set):
+        # Maintain in-memory representation in parallel w/ persisted dict.
+        self._additional_field_names = names_set
+        self.dict[self.ADDITIONAL_FIELD_NAMES] = transforms.dumps(
+            list(self._additional_field_names))
+
+
+class AdditionalFieldNamesDAO(models.BaseJsonDao):
+    DTO = AdditionalFieldNamesDTO
+    ENTITY = AdditionalFieldNamesEntity
+    ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeName
+
+    @classmethod
+    def get_or_default(cls):
+        ret = cls.load(AdditionalFieldNamesEntity.SINGLETON_KEY_NAME)
+        if not ret:
+            ret = AdditionalFieldNamesDTO(
+                AdditionalFieldNamesEntity.SINGLETON_KEY_NAME, {})
+        return ret
+
+    @classmethod
+    def get_field_names(cls):
+        return cls.get_or_default().additional_field_names
+
+    @classmethod
+    def update_additional_field_names(cls, additional_field_names):
+        dto = cls.get_or_default()
+        dto.additional_field_names |= set(additional_field_names)
+        cls.save(dto)
+
+    @classmethod
+    def user_added_callback(cls, user_id, timestamp):
+        student = models.Student.get_by_user_id(user_id)
+        if not student:
+            logging.warning(
+                'Could not load student for user ID %s.  Either ' % user_id +
+                'student added and removed themselves very very '
+                'quickly, or something is badly wrong.')
+            return
+        additional_field_names = [
+            key_value_2_tuple[0] for key_value_2_tuple in
+            transforms.loads(student.additional_fields or '{}')]
+        cls.update_additional_field_names(additional_field_names)
+
+
 class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
 
     @classmethod
@@ -443,9 +512,10 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
           ).get_json_schema_dict()
 
         # If a course owner has allowed some or all portions of
-        # 'additional_fields', convert from a flat string into an array
-        # of name/value pairs
+        # 'additional_fields'...
         if 'additional_fields' in ret:
+
+            # Send additional fields as a list of key/value pairs
             additional_field = schema_fields.FieldRegistry('additional_field')
             additional_field.add_property(schema_fields.SchemaField(
                 'name', 'Name', 'string',
@@ -461,6 +531,20 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
                 'necessarily unique.  E.g., a group of checkboxes for '
                 '"select all reasons you are taking this course" may well '
                 'all have the same name.').get_json_schema_dict()
+
+            # And as separate fields named by the name of the field.  Values
+            # always go as strings, since we don't have a good way to specify
+            # the schema for these items.
+            field_names = AdditionalFieldNamesDAO.get_field_names()
+            if field_names:
+                registration_fields = schema_fields.FieldRegistry(
+                    'registration_fields')
+                for field_name in field_names:
+                    registration_fields.add_property(schema_fields.SchemaField(
+                        field_name, field_name.replace('_', ' ').title(),
+                        'string', optional=True))
+                ret['registration_fields'] = (
+                    registration_fields.get_json_schema_dict())
         return ret
 
     @classmethod
@@ -488,6 +572,13 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
                 additional_fields = transforms.loads(item['additional_fields'])
                 item['additional_fields'] = [
                     {'name': l[0], 'value': l[1]} for l in additional_fields]
+                known_names = AdditionalFieldNamesDAO.get_field_names()
+                if known_names:
+                    reg_fields = dict(additional_fields)
+                    for unknown_name in set(reg_fields.keys()) - known_names:
+                        del reg_fields[unknown_name]
+                    if reg_fields:
+                        item['registration_fields'] = reg_fields
 
         # Here, run through the Student entities to pick up the email address.
         # Since the email is not stored as an actual property in the entity, but

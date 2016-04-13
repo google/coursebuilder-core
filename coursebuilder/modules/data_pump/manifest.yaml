@@ -4,7 +4,7 @@ registration:
 tests:
   functional:
     - modules.data_pump.data_pump_tests.BigQueryInteractionTests = 36
-    - modules.data_pump.data_pump_tests.PiiTests = 7
+    - modules.data_pump.data_pump_tests.PiiTests = 9
     - modules.data_pump.data_pump_tests.SchemaConversionTests = 1
     - modules.data_pump.data_pump_tests.StudentSchemaValidationTests = 2
     - modules.data_pump.data_pump_tests.UserInteractionTests = 5
