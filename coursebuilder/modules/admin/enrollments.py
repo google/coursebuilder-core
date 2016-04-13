@@ -61,12 +61,16 @@ import appengine_config
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 
+from common import schema_fields
 from common import utc
 from common import utils
+from models import analytics
+from models import data_sources
 from models import entities
 from models import models
 from models import transforms
 from modules.admin import config
+from modules.dashboard import dashboard
 
 
 class EnrollmentsEntity(entities.BaseEntity):
@@ -440,6 +444,61 @@ def _count_drop(unused_id, utc_date_time):
     EnrollmentsDroppedDAO.inc(namespace_name, utc_date_time)
 
 
+class EnrollmentsDataSource(data_sources.AbstractSmallRestDataSource,
+                            data_sources.SynchronousQuery):
+    """Merge adds/drops data to single source for display libraries."""
+
+    @classmethod
+    def get_name(cls):
+        return 'enrollments'
+
+    @classmethod
+    def get_title(cls):
+        return 'Enrollments'
+
+    @staticmethod
+    def required_generators():
+        return []
+
+    @classmethod
+    def get_schema(cls, app_context, log, source_context):
+        ret = schema_fields.FieldRegistry('enrollments')
+        ret.add_property(schema_fields.SchemaField(
+            'timestamp_millis', 'Milliseconds Since Epoch', 'integer'))
+        ret.add_property(schema_fields.SchemaField(
+            'add', 'Add', 'integer',
+            description='Number of students added in this time range'))
+        ret.add_property(schema_fields.SchemaField(
+            'drop', 'Drop', 'integer',
+            description='Number of students dropped in this time range'))
+        return ret.get_json_schema_dict()['properties']
+
+    @classmethod
+    def fetch_values(cls, app_context, source_ctx, schema, log, page_number):
+        # Get values as REST to permit simple integration to graph libraries.
+        add_counts = EnrollmentsAddedDAO.load_or_default(
+            app_context.get_namespace_name()).binned
+        drop_counts = EnrollmentsDroppedDAO.load_or_default(
+            app_context.get_namespace_name()).binned
+        bin_timestamps = set(add_counts.keys()) | set(drop_counts.keys())
+        return [
+            {'timestamp_millis': bin_timestamp * 1000,
+             'add': add_counts.get(bin_timestamp, 0),
+             'drop': drop_counts.get(bin_timestamp, 0)}
+            for bin_timestamp in bin_timestamps], 0
+
+    @classmethod
+    def fill_values(cls, app_context, template_values):
+        # Provide a boolean for do-we-have-any-data-at-all at static
+        # page-paint time; DC graphs look awful when empty; simpler to
+        # suppress than try to make nice.
+
+        dto = EnrollmentsAddedDAO.load_or_default(
+            app_context.get_namespace_name())
+        template_values['enrollment_data_available'] = not dto.is_empty
+
+
+
 MODULE_NAME = 'site_admin_enrollments'
 
 
@@ -461,3 +520,13 @@ def register_callbacks():
     # Delete the corresponding enrollments counters when a course is deleted.
     config.CourseDeleteHandler.COURSE_DELETED_HOOKS[
         MODULE_NAME] = delete_counters
+
+    # Register analytic to show nice zoomable graph of enroll/unenroll rates.
+    data_sources.Registry.register(EnrollmentsDataSource)
+    visualization = analytics.Visualization(
+        'enrollments', 'Enrollments', 'templates/enrollments.html',
+        data_source_classes=[EnrollmentsDataSource])
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'analytics', 'enrollments', 'Enrollments',
+        action='analytics_enrollments',
+        contents=analytics.TabRenderer([visualization]))

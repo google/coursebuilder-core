@@ -27,6 +27,8 @@ from common import utc
 from common import utils
 from controllers import sites
 from models import models
+from models import transforms
+from models.data_sources import paginated_table
 from modules.admin import enrollments
 from tests.functional import actions
 
@@ -284,7 +286,6 @@ class EventHandlersTests(actions.TestBase):
 
     def setUp(self):
         super(EventHandlersTests, self).setUp()
-        enrollments.register_callbacks()
         actions.simple_add_course(
             self.COURSE, self.ADMIN_EMAIL, 'Enrollments Events')
 
@@ -393,3 +394,99 @@ class EventHandlersTests(actions.TestBase):
             self.assertFalse(dropped_dto.is_empty)
             self.assertEquals(enrollments.EnrollmentsDroppedDAO.get(
                 self.NAMESPACE, start_dt), 1)
+
+
+class GraphTests(actions.TestBase):
+
+    COURSE = 'test_course'
+    NAMESPACE = 'ns_%s' % COURSE
+    ADMIN_EMAIL = 'admin@foo.com'
+
+    def setUp(self):
+        super(GraphTests, self).setUp()
+        self.app_context = actions.simple_add_course(
+            self.COURSE, self.ADMIN_EMAIL, 'Test Course')
+        self.base = '/%s' % self.COURSE
+        actions.login(self.ADMIN_EMAIL)
+
+    def tearDown(self):
+        sites.reset_courses()
+        super(GraphTests, self).tearDown()
+
+    def _get_items(self):
+        data_source_token = paginated_table._DbTableContext._build_secret(
+            {'data_source_token': 'xyzzy'})
+        response = self.post('rest/data/enrollments/items',
+                             {'page_number': 0,
+                              'chunk_size': 0,
+                              'data_source_token': data_source_token})
+        self.assertEquals(response.status_int, 200)
+        result = transforms.loads(response.body)
+        return result.get('data')
+
+    def _get_dashboard_page(self):
+        response = self.get('dashboard?action=analytics_enrollments')
+        self.assertEquals(response.status_int, 200)
+        return response
+
+    def test_no_enrollments(self):
+        self.assertEquals([], self._get_items())
+
+        body = self._get_dashboard_page().body
+        self.assertIn('No student enrollment data.', body)
+
+    def test_one_add(self):
+        now = utc.now_as_timestamp()
+        now_dt = utc.timestamp_to_datetime(now)
+        enrollments.EnrollmentsAddedDAO.inc(self.NAMESPACE, now_dt)
+        expected = [{
+            'timestamp_millis': utc.day_start(now) * 1000,
+            'add': 1,
+            'drop': 0,
+        }]
+        self.assertEquals(expected, self._get_items())
+
+        body = self._get_dashboard_page().body
+        self.assertNotIn('No student enrollment data.', body)
+
+    def test_only_drops(self):
+        now_dt = utc.timestamp_to_datetime(utc.now_as_timestamp())
+        enrollments.EnrollmentsDroppedDAO.inc(self.NAMESPACE, now_dt)
+
+        body = self._get_dashboard_page().body
+        self.assertIn('No student enrollment data.', body)
+
+    def test_one_add_and_one_drop(self):
+        now = utc.now_as_timestamp()
+        now_dt = utc.timestamp_to_datetime(now)
+        enrollments.EnrollmentsAddedDAO.inc(self.NAMESPACE, now_dt)
+        enrollments.EnrollmentsDroppedDAO.inc(self.NAMESPACE, now_dt)
+        expected = [{
+            'timestamp_millis': utc.day_start(now) * 1000,
+            'add': 1,
+            'drop': 1,
+        }]
+        self.assertEquals(expected, self._get_items())
+
+        body = self._get_dashboard_page().body
+        self.assertNotIn('No student enrollment data.', body)
+
+    def test_many(self):
+        now = utc.now_as_timestamp()
+        num_items = 1000
+
+        # Add a lot of enrollments, drops.
+        for x in xrange(num_items):
+            when = utc.timestamp_to_datetime(
+                now - random.randrange(365 * 24 * 60 * 60))
+            if x % 10:
+                enrollments.EnrollmentsAddedDAO.inc(self.NAMESPACE, when)
+            else:
+                enrollments.EnrollmentsDroppedDAO.inc(self.NAMESPACE, when)
+        items = self._get_items()
+
+        # Expect some overlap, but still many distinct items.  Here, we're
+        # looking to ensure that we get some duplicate items binned together.
+        self.assertGreater(len(items), num_items / 10)
+        self.assertLess(len(items), num_items)
+        self.assertEquals(num_items, sum([i['add'] + i['drop'] for i in items]))

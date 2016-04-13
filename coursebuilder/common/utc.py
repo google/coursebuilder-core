@@ -40,6 +40,17 @@ def datetime_to_timestamp(utc_dt):
     return calendar.timegm(utc_dt.utctimetuple())
 
 
+def timestamp_to_datetime(utc_timestamp):
+    """Returns UTC datetime corresponding to POSIX timestamp (secs since epoch).
+
+    Args:
+        utc_timestamp: Seconds since Jan 1, 1970 UTC.
+    Returns:
+        A datetime instance with tzinfo set to None.
+    """
+    return datetime.datetime.utcfromtimestamp(utc_timestamp)
+
+
 def struct_time_to_timestamp(utc_st):
     """Returns UTC struct_time as a POSIX timestamp (seconds since epoch)."""
     no_leap_second = min(59, utc_st.tm_sec)

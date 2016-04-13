@@ -43,6 +43,7 @@ from models import entities
 from models import roles
 from models.config import ConfigProperty
 import modules.admin.config
+from modules.admin import enrollments
 from modules.admin.config import ConfigPropertyEditor
 from modules.admin.config import CourseDeleteHandler
 from modules.dashboard import dashboard
@@ -1053,7 +1054,7 @@ class GlobalAdminHandler(
 def notify_module_enabled():
     # The same menu is shared between its subclasses
     BaseAdminHandler.install_menu()
-
+    enrollments.register_callbacks()
 
 custom_module = None
 

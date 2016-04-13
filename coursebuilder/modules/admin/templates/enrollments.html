@@ -1,0 +1,14 @@
+{% if enrollment_data_available %}
+  <div id="enrollments-chart" class="dc-chart nofloat"></div>
+  <div id="time-scale-chart" class="dc-chart nofloat"></div>
+  <script src="/modules/admin/_static/js/enrollments.js"></script>
+{% else %}
+  No student enrollment data.
+{% endif %}
+
+<!-- Override float:left, which causes page footer to be overlaid on graphs. -->
+<style scoped>
+.nofloat {
+  float: inherit !important;
+}
+</style>
