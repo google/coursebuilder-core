@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.data_removal.data_removal_tests.DataRemovalTests = 8
+    - modules.data_removal.data_removal_tests.DataRemovalTests = 9
     - modules.data_removal.data_removal_tests.UserInteractionTests = 16
 
 files:

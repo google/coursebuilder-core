@@ -785,7 +785,12 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
                              timestamp_str)
             self.response.set_status(200)
             return
-        extra_data = transforms.loads(self.request.get('extra_data'))
+
+        extra_data = self.request.get('extra_data')
+        if extra_data:
+            extra_data = transforms.loads(extra_data)
+        else:
+            extra_data = {}
 
         callbacks = self.request.get('callbacks')
         if not callbacks:
@@ -1168,6 +1173,12 @@ class StudentProfileDAO(object):
 
     @classmethod
     def unregister_user(cls, user_id, unused_timestamp):
+        student = Student.get_by_user_id(user_id)
+        if not student:
+            logging.info(
+                'Unregister commanded for user %s, but user already gone.',
+                user_id)
+            return
         cls.update(user_id, None, is_enrolled=False)
 
     @classmethod

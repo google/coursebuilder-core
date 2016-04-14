@@ -21,6 +21,8 @@ __author__ = [
 import datetime
 import logging
 
+import appengine_config
+
 from common import users
 from common import utils as common_utils
 from models import config
@@ -1052,3 +1054,60 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
             models.StudentLifecycleObserver.EVENT_ADD]['with_extra'])
         del (models.StudentLifecycleObserver.ENQUEUE_CALLBACKS[
             models.StudentLifecycleObserver.EVENT_ADD]['with_extra'])
+
+    def test_extra_data_is_optional(self):
+        response = self.post(
+            models.StudentLifecycleObserver.URL,
+            {'user_id': '123',
+             'event': 'add',
+             'timestamp': '2015-05-14T10:02:09.758704Z',
+             'callbacks': self.COURSE},
+            headers={'X-AppEngine-QueueName':
+                     models.StudentLifecycleObserver.QUEUE_NAME})
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals('', self.get_log())
+
+    def test_unenroll_commanded_only_unenrolls_student(self):
+        user = actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+
+        # Verify user is really there.
+        with common_utils.Namespace(self.NAMESPACE):
+            self.assertIsNotNone(models.Student.get_by_user_id(user.user_id()))
+
+            response = self.post(
+                models.StudentLifecycleObserver.URL,
+                {'user_id': user.user_id(),
+                 'event':
+                     models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED,
+                 'timestamp': '2015-05-14T10:02:09.758704Z',
+                 'callbacks': appengine_config.CORE_MODULE_NAME},
+                headers={'X-AppEngine-QueueName':
+                         models.StudentLifecycleObserver.QUEUE_NAME})
+            self.assertEquals(response.status_int, 200)
+            self.assertEquals('', self.get_log())
+
+            # User should still be there, but now marked unenrolled.
+            student = models.Student.get_by_user_id(user.user_id())
+            self.assertFalse(student.is_enrolled)
+
+            self.execute_all_deferred_tasks(
+                models.StudentLifecycleObserver.QUEUE_NAME)
+
+            # User should not have had data removed.
+            self.assertIsNotNone(models.Student.get_by_user_id(user.user_id()))
+
+    def test_unenroll_commanded_for_deleted_student_fails_safe(self):
+        self._logger.setLevel(logging.INFO)
+        response = self.post(
+            models.StudentLifecycleObserver.URL,
+            {'user_id': '123',
+             'event':
+                     models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED,
+             'timestamp': '2015-05-14T10:02:09.758704Z',
+             'callbacks': appengine_config.CORE_MODULE_NAME},
+            headers={'X-AppEngine-QueueName':
+                     models.StudentLifecycleObserver.QUEUE_NAME})
+        self.assertEquals(response.status_int, 200)
+        self.assertLogContains(
+            'INFO: Unregister commanded for user 123, but user already gone.')

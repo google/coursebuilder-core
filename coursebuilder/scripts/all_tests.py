@@ -87,7 +87,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_models.PersonalProfileTestCase': 1,
     'tests.functional.model_models.QuestionDAOTestCase': 3,
     'tests.functional.model_models.StudentAnswersEntityTestCase': 1,
-    'tests.functional.model_models.StudentLifecycleObserverTestCase': 13,
+    'tests.functional.model_models.StudentLifecycleObserverTestCase': 16,
     'tests.functional.model_models.StudentProfileDAOTestCase': 6,
     'tests.functional.model_models.StudentPropertyEntityTestCase': 1,
     'tests.functional.model_models.StudentTestCase': 11,

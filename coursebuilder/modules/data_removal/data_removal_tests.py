@@ -16,6 +16,8 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import appengine_config
+
 from common import utils as common_utils
 from common import users
 from models import data_removal as models_data_removal
@@ -292,7 +294,6 @@ class DataRemovalTests(DataRemovalTestBase):
                 user_id)
             self.assertIsNone(a)
 
-
     def test_multiple_students(self):
         # Register two students
         user = actions.login(self.STUDENT_EMAIL)
@@ -483,6 +484,41 @@ class DataRemovalTests(DataRemovalTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             l = list(unsubscribe.SubscriptionStateEntity.all().run())
             self.assertEquals(0, len(l))
+
+    def test_unenroll_commanded_with_delete_requested(self):
+        user = actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
+
+        # Verify user is really there.
+        with common_utils.Namespace(self.NAMESPACE):
+            self.assertIsNotNone(models.Student.get_by_user_id(user.user_id()))
+
+            # Mark user for data deletion upon unenroll
+            removal_models.ImmediateRemovalState.set_deletion_pending(
+                user.user_id())
+
+            response = self.post(
+                models.StudentLifecycleObserver.URL,
+                {'user_id': user.user_id(),
+                 'event':
+                     models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED,
+                 'timestamp': '2015-05-14T10:02:09.758704Z',
+                 'callbacks': appengine_config.CORE_MODULE_NAME},
+                headers={'X-AppEngine-QueueName':
+                         models.StudentLifecycleObserver.QUEUE_NAME})
+            self.assertEquals(response.status_int, 200)
+            self.assertEquals('', self.get_log())
+
+            # User should still be there, but now marked unenrolled.
+            student = models.Student.get_by_user_id(user.user_id())
+            self.assertFalse(student.is_enrolled)
+
+            # Running lifecycle queue should cause data removal to delete user.
+            self.execute_all_deferred_tasks(
+                models.StudentLifecycleObserver.QUEUE_NAME)
+
+            # User should now be gone.
+            self.assertIsNone(models.Student.get_by_user_id(user.user_id()))
 
 
 class UserInteractionTests(DataRemovalTestBase):
