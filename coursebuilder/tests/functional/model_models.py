@@ -33,6 +33,7 @@ from models import transforms
 from modules.notifications import notifications
 from tests.functional import actions
 
+from google.appengine.api import taskqueue
 from google.appengine.ext import db
 
 
@@ -1068,34 +1069,42 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
         self.assertEquals('', self.get_log())
 
     def test_unenroll_commanded_only_unenrolls_student(self):
+        # Register user with profile enabled, so as to trigger call to
+        # sites.get_course_for_current_request() when profile is updated
+        # from lifecycle queue callback handler.
         user = actions.login(self.STUDENT_EMAIL)
-        actions.register(self, self.STUDENT_EMAIL)
+        with actions.OverriddenConfig(models.CAN_SHARE_STUDENT_PROFILE.name,
+                                      True):
+            actions.register(self, self.STUDENT_EMAIL)
 
         # Verify user is really there.
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNotNone(models.Student.get_by_user_id(user.user_id()))
 
-            response = self.post(
-                models.StudentLifecycleObserver.URL,
-                {'user_id': user.user_id(),
-                 'event':
-                     models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED,
-                 'timestamp': '2015-05-14T10:02:09.758704Z',
-                 'callbacks': appengine_config.CORE_MODULE_NAME},
-                headers={'X-AppEngine-QueueName':
-                         models.StudentLifecycleObserver.QUEUE_NAME})
-            self.assertEquals(response.status_int, 200)
-            self.assertEquals('', self.get_log())
+            # Add taskqueue task so that queue callback happens w/o 'self.base'
+            # being added to the URL and implicitly getting the course context
+            # set.
+            task = taskqueue.Task(
+                params={
+                    'event':
+                    models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED,
+                    'user_id': user.user_id(),
+                    'timestamp': '2015-05-14T10:02:09.758704Z',
+                    'callbacks': appengine_config.CORE_MODULE_NAME
+                },
+                target=taskqueue.DEFAULT_APP_VERSION)
+            task.add('user-lifecycle')
 
-            # User should still be there, but now marked unenrolled.
+            # Taskqueue add should not have updated student.
             student = models.Student.get_by_user_id(user.user_id())
-            self.assertFalse(student.is_enrolled)
+            self.assertTrue(student.is_enrolled)
 
             self.execute_all_deferred_tasks(
                 models.StudentLifecycleObserver.QUEUE_NAME)
 
-            # User should not have had data removed.
-            self.assertIsNotNone(models.Student.get_by_user_id(user.user_id()))
+            # User should still be there, but now marked unenrolled.
+            student = models.Student.get_by_user_id(user.user_id())
+            self.assertFalse(student.is_enrolled)
 
     def test_unenroll_commanded_for_deleted_student_fails_safe(self):
         self._logger.setLevel(logging.INFO)

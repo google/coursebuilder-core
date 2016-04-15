@@ -799,33 +799,57 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
             return
         callbacks = callbacks.split(' ')
 
-        remaining_callbacks = []
-        for callback in callbacks:
-            if callback not in self.EVENT_CALLBACKS[event]:
-                logging.error(
-                    'Student lifecycle event enqueued with callback named '
-                    '"%s", but no such callback is currently registered.',
-                    callback)
-                continue
-            try:
-                logging.info(
-                    '-- Student lifecycle callback %s for event %s starting --',
-                    callback, event)
-                callback_extra_data = extra_data.get(callback)
-                if callback_extra_data is None:
-                    self.EVENT_CALLBACKS[event][callback](user_id, timestamp)
-                else:
-                    self.EVENT_CALLBACKS[event][callback](user_id, timestamp,
-                                                          callback_extra_data)
-                logging.info(
-                    '-- Student lifecycle callback %s for event %s success --',
-                    callback, event)
-            except Exception, ex:  # pylint: disable=broad-except
-                logging.error(
-                    '-- Student lifecycle callback %s for %s fails: %s --',
-                    callback, event, str(ex))
-                common_utils.log_exception_origin()
-                remaining_callbacks.append(callback)
+        # Configure path in threadlocal cache in sites; callbacks may
+        # be dynamically determining their current context by calling
+        # sites.get_app_context_for_current_request(), which relies on
+        # sites.PATH_INFO_THREAD_LOCAL.path.
+        current_namespace = namespace_manager.get_namespace()
+        logging.info(
+            '-- Dequeue in namespace "%s" handling event %s for user %s --',
+            current_namespace, event, user_id)
+        from controllers import sites
+        app_context = sites.get_course_index().get_app_context_for_namespace(
+            current_namespace)
+        path = app_context.get_slug()
+        if hasattr(sites.PATH_INFO_THREAD_LOCAL, 'path'):
+            has_path_info = True
+            save_path_info = sites.PATH_INFO_THREAD_LOCAL.path
+        else:
+            has_path_info = False
+        sites.PATH_INFO_THREAD_LOCAL.path = path
+
+        try:
+            remaining_callbacks = []
+            for callback in callbacks:
+                if callback not in self.EVENT_CALLBACKS[event]:
+                    logging.error(
+                        'Student lifecycle event enqueued with callback named '
+                        '"%s", but no such callback is currently registered.',
+                        callback)
+                    continue
+                try:
+                    logging.info('-- Student lifecycle callback %s starting --',
+                                 callback)
+                    callback_extra_data = extra_data.get(callback)
+                    if callback_extra_data is None:
+                        self.EVENT_CALLBACKS[event][callback](
+                            user_id, timestamp)
+                    else:
+                        self.EVENT_CALLBACKS[event][callback](
+                            user_id, timestamp, callback_extra_data)
+                    logging.info('-- Student lifecycle callback %s success --',
+                                 callback)
+                except Exception, ex:  # pylint: disable=broad-except
+                    logging.error(
+                        '-- Student lifecycle callback %s fails: %s --',
+                        callback, str(ex))
+                    common_utils.log_exception_origin()
+                    remaining_callbacks.append(callback)
+        finally:
+            if has_path_info:
+                sites.PATH_INFO_THREAD_LOCAL.path = save_path_info
+            else:
+                del sites.PATH_INFO_THREAD_LOCAL.path
 
         if remaining_callbacks == callbacks:
             # If we have made _no_ progress, emit error and get queue backoff.
