@@ -728,7 +728,7 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
     }
 
     @classmethod
-    def enqueue(cls, event, user_id):
+    def enqueue(cls, event, user_id, transactional=True):
         if event not in cls.EVENT_CALLBACKS:
             raise ValueError('Event "%s" not in allowed list: %s' % (
                 event, ' '.join(cls.EVENT_CALLBACKS)))
@@ -741,7 +741,7 @@ class StudentLifecycleObserver(webapp2.RequestHandler):
             extra_data[name] = callback(user_id)
         cls._internal_enqueue(
             event, user_id, cls.EVENT_CALLBACKS[event].keys(), extra_data,
-            transactional=True)
+            transactional=transactional)
 
     @classmethod
     def _internal_enqueue(cls, event, user_id, callbacks, extra_data,

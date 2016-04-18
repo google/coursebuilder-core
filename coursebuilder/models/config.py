@@ -299,6 +299,7 @@ class Registry(object):
     update_index = 0
     threadlocal = threading.local()
     REENTRY_ATTR_NAME = 'busy'
+    UNREGISTERED_PROPERTY_LOGGING_LEVEL = logging.WARNING
 
     @classmethod
     def get_overrides(cls, force_update=False):
@@ -365,7 +366,7 @@ class Registry(object):
             if appengine_config.MODULE_REGISTRATION_IN_PROGRESS:
                 log_level = logging.INFO
             else:
-                log_level = logging.WARNING
+                log_level = cls.UNREGISTERED_PROPERTY_LOGGING_LEVEL
             logging.log(log_level, 'Property is not registered (skipped): %s',
                         name)
             return
