@@ -781,8 +781,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
                              key=lambda course: course.get_title().lower()):
             slug = course.get_slug()
             name = course.get_title()
+            ns_name = course.get_namespace_name()
             if course.fs.is_read_write():
-                location = 'namespace: %s' % course.get_namespace_name()
+                location = 'namespace: %s' % ns_name
             else:
                 location = 'disk: %s' % sites.abspath(
                     course.get_home_folder(), '/')
@@ -791,12 +792,13 @@ class BaseAdminHandler(ConfigPropertyEditor):
             else:
                 link = '%s/dashboard' % slug
 
-            is_selected_course = (course.get_namespace_name() == this_namespace)
+            is_selected_course = (ns_name == this_namespace)
 
             all_courses.append({
                 'link': link,
                 'name': name,
                 'slug': slug,
+                'namespace_name': ns_name,
                 'is_selected_course': is_selected_course,
                 'now_available': course.now_available
                 })

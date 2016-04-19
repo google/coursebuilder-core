@@ -38,9 +38,8 @@ class AvailabilityTests(integration.TestBase):
         # are no student groups added.
         self.load_dashboard(
             name
-        ).click_leftnav_item_by_link_text(
-            'publish', 'Availability',
-            student_groups_pageobjects.CourseAvailabilityPage
+        ).click_availability(
+            cls=student_groups_pageobjects.CourseAvailabilityPage
         ).verify_student_group_selector_presence(
             False
         )
@@ -70,9 +69,8 @@ class AvailabilityTests(integration.TestBase):
             'Group Description',
             'There are many like it, but this one is mine.'
         ).click_close(
-        ).click_leftnav_item_by_link_text(
-            'publish', 'Availability',
-            student_groups_pageobjects.CourseAvailabilityPage
+        ).click_availability(
+            cls=student_groups_pageobjects.CourseAvailabilityPage
         ).verify_student_group_selector_presence(
             True
         ).select_student_group(
@@ -98,9 +96,8 @@ class AvailabilityTests(integration.TestBase):
         # contents are still there upon reload.
         self.load_dashboard(
             name
-        ).click_leftnav_item_by_link_text(
-            'publish', 'Availability',
-            student_groups_pageobjects.CourseAvailabilityPage
+        ).click_availability(
+            cls=student_groups_pageobjects.CourseAvailabilityPage
         ).verify_whitelisted_students(
             'course_student@foo.com',
             'whitelist'

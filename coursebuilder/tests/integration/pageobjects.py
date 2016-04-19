@@ -307,6 +307,15 @@ class EditorPageObject(PageObject):
         self._tester.assertEquals(value, field.get_attribute('value'))
         return self
 
+
+class CourseAvailabilityPage(EditorPageObject):
+
+    def set_course_availability(self, availability):
+        select.Select(self.find_element_by_name('course_availability')
+                      ).select_by_visible_text(availability)
+        return self
+
+
 class DashboardEditor(EditorPageObject):
     """A base class for the editors accessed from the Dashboard."""
 
@@ -529,6 +538,13 @@ class DashboardPage(PageObject):
             self.find_element_by_id('gcb-butterbar-message').text)
         return self
 
+    def verify_availability(self, name, expected_text):
+        avail_div_selector = '#availability_ns_{}'.format(name)
+        avail_div = self.find_element_by_css_selector(avail_div_selector)
+        self._tester.assertEquals(
+            expected_text, avail_div.text.strip())
+        return self
+
     def find_menu_group(self, name):
         return self.find_element_by_css_selector('#menu-group__{}'.format(name))
 
@@ -594,6 +610,11 @@ class DashboardPage(PageObject):
         self.ensure_menu_group_is_open('settings')
         self.find_element_by_link_text('Course').click()
         return SettingsPage(self._tester)
+
+    def click_availability(self, cls=CourseAvailabilityPage):
+        self.ensure_menu_group_is_open('publish')
+        self.find_element_by_link_text('Availability').click()
+        return cls(self._tester)
 
     def verify_course_outline_contains_unit(self, unit_title):
         self.find_element_by_link_text(unit_title)

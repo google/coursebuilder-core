@@ -60,12 +60,7 @@ class StudentGroupEditorPage(pageobjects.EditorPageObject):
         return self._close_and_return_to(StudentGroupsListPage)
 
 
-class CourseAvailabilityPage(pageobjects.EditorPageObject):
-
-    def set_course_availability(self, availability):
-        select.Select(self.find_element_by_name('course_availability')
-                      ).select_by_visible_text(availability)
-        return self
+class CourseAvailabilityPage(pageobjects.CourseAvailabilityPage):
 
     def set_whitelisted_students(self, emails, field_name='whitelist'):
         textarea = self.find_element_by_css_selector(

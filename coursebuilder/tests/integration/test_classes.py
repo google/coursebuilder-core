@@ -103,6 +103,83 @@ class AdminTests(integration.TestBase):
     def test_create_new_course(self):
         self.create_new_course()
 
+    def test_make_new_course_public(self):
+        name, _ = self.create_new_course()
+        self.load_dashboard(
+            name
+        ).click_admin(
+        ).verify_availability(
+            name, 'Private'
+        )
+
+        self.load_dashboard(
+            name
+        ).click_course(
+        ).click_register(
+        ).enroll(
+            'Test Admin'
+        ).click_course()
+
+        # Log out course creator admin and register a second admin.
+        login_user, login_domain = self.LOGIN.split('@', 1)
+        email2 = login_user + '2@' + login_domain
+        self.load_root_page(
+        ).click_logout(
+        ).click_login(
+        ).login(
+            email2, admin=True
+        )
+
+        self.load_dashboard(
+            name
+        ).click_course(
+        ).click_register(
+        ).enroll(
+            'Test2 Admin'
+        ).click_course()
+
+        self.load_dashboard(
+            name
+        ).click_availability(
+        ).set_course_availability(
+            'Public'
+        ).click_save()
+
+        self.load_dashboard(
+            name
+        ).click_admin(
+        ).verify_availability(
+            name, 'Public'
+        )
+
+        # Log out 2nd admin and register a third admin.
+        email3 = login_user + '3@' + login_domain
+        self.load_root_page(
+        ).click_logout(
+        ).click_login(
+        ).login(
+            email3, admin=True
+        )
+
+        self.load_dashboard(
+            name
+        ).click_course(
+        #
+        # Test hangs here and then times out, because Public course is missing
+        # the [Register] button for this third user (even though the user is
+        # an Admin and has never enrolled in the Test Course).
+        #
+        # TODO(tlarsen): Once the underlying issue has been fixed, uncomment
+        #   this test code and confirm that the behavior now correct in this
+        #   integration test.
+        #
+        # ).click_register(
+        # ).enroll(
+        #     'Test3 Admin'
+        # ).click_course(
+        # )
+        )
+
     def test_add_unit(self):
         name = self.create_new_course()[0]
 
