@@ -62,27 +62,6 @@ class StudentGroupEditorPage(pageobjects.EditorPageObject):
 
 class CourseAvailabilityPage(pageobjects.CourseAvailabilityPage):
 
-    def set_whitelisted_students(self, emails, field_name='whitelist'):
-        textarea = self.find_element_by_css_selector(
-            'textarea[name="%s"]' % field_name)
-        textarea.clear()
-        textarea.send_keys('\n'.join(emails))
-        return self
-
-    def verify_whitelisted_students(self, expected_contents,
-                                    field_name='whitelist'):
-        def textarea_not_blank(driver):
-            textarea = self.find_element_by_css_selector(
-                'textarea[name="%s"]' % field_name)
-            return textarea.get_attribute('value')
-
-        self.wait().until(textarea_not_blank)
-        textarea = self.find_element_by_css_selector(
-            'textarea[name="%s"]' % field_name)
-        self._tester.assertEquals(expected_contents,
-                                  textarea.get_attribute('value'))
-        return self
-
     def verify_student_group_selector_presence(self, expect_present):
         # Force wait until page loaded by looking for an element that
         # should always be there.

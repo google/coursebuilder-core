@@ -315,6 +315,27 @@ class CourseAvailabilityPage(EditorPageObject):
                       ).select_by_visible_text(availability)
         return self
 
+    def set_whitelisted_students(self, emails, field_name='whitelist'):
+        textarea = self.find_element_by_css_selector(
+            'textarea[name="%s"]' % field_name)
+        textarea.clear()
+        textarea.send_keys('\n'.join(emails))
+        return self
+
+    def verify_whitelisted_students(self, expected_contents,
+                                    field_name='whitelist'):
+        def textarea_not_blank(driver):
+            textarea = self.find_element_by_css_selector(
+                'textarea[name="%s"]' % field_name)
+            return textarea.get_attribute('value')
+
+        self.wait().until(textarea_not_blank)
+        textarea = self.find_element_by_css_selector(
+            'textarea[name="%s"]' % field_name)
+        self._tester.assertEquals(expected_contents,
+                                  textarea.get_attribute('value'))
+        return self
+
 
 class DashboardEditor(EditorPageObject):
     """A base class for the editors accessed from the Dashboard."""
@@ -326,25 +347,27 @@ class DashboardEditor(EditorPageObject):
 class RootPage(PageObject):
     """Page object to model the interactions with the root page."""
 
+    BASE_URL_SUFFIX = '/'
+
     def _add_default_course_if_needed(self, base_url):
         """Setup default read-only course if not yet setup."""
 
         # check default course is deployed
-        self.get(base_url + '/')
+        self.load(base_url)
         if 'Power Searching with Google' in self._tester.driver.page_source:
             return
 
         # deploy it
         LoginPage(self._tester).login('test@example.com', admin=True)
-        self.get(base_url + '/modules/admin?action=settings')
+        self.load(base_url, suffix='/modules/admin?action=settings')
         AdminSettingsPage(self._tester).click_override(
             'gcb_courses_config'
         ).set_status('Active').click_save()
-        self.get(base_url + '/modules/admin?action=courses')
+        self.load(base_url, suffix='/modules/admin?action=courses')
         self.find_element_by_link_text('Logout').click()
 
-    def load(self, base_url):
-        self.get(base_url + '/')
+    def load(self, base_url, suffix=BASE_URL_SUFFIX):
+        self.get(base_url + suffix)
         return self
 
     def load_welcome_page(self, base_url):
@@ -352,7 +375,7 @@ class RootPage(PageObject):
         ).login(
             'test@example.com', admin=True
         )
-        self.get(base_url + '/admin/welcome')
+        self.load(base_url, suffix='/admin/welcome')
         return WelcomePage(self._tester)
 
     def click_login(self):
@@ -374,7 +397,7 @@ class RootPage(PageObject):
 
     def click_register(self):
         self.click_link('Register')
-        return RegisterPage(self._tester, self.__class__)
+        return RegisterPage(self._tester, continue_page=self.__class__)
 
     def click_link(self, link_text, wait_for_page_load_after=True):
         link = self.find_element_by_link_text(link_text)
@@ -531,6 +554,7 @@ class DashboardPage(PageObject):
     def verify_selected_group(self, group_name):
         group = self.find_element_by_id('menu-group__edit')
         self._tester.assertIn('gcb-active-group', group.get_attribute('class'))
+        return self
 
     def verify_not_publicly_available(self):
         self._tester.assertEquals(

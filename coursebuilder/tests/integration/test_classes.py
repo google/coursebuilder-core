@@ -105,6 +105,8 @@ class AdminTests(integration.TestBase):
 
     def test_make_new_course_public(self):
         name, _ = self.create_new_course()
+
+        # Newly-created course should have 'Private' availability.
         self.load_dashboard(
             name
         ).click_admin(
@@ -112,6 +114,8 @@ class AdminTests(integration.TestBase):
             name, 'Private'
         )
 
+        # No whitelist membership needed for admins when availablity is still
+        # 'Private'.
         self.load_dashboard(
             name
         ).click_course(
@@ -120,16 +124,49 @@ class AdminTests(integration.TestBase):
             'Test Admin'
         ).click_course()
 
-        # Log out course creator admin and register a second admin.
+        # Form additional user email addresses from self.LOGIN.
         login_user, login_domain = self.LOGIN.split('@', 1)
         email2 = login_user + '2@' + login_domain
+        email3 = login_user + '3@' + login_domain
+        whitelisted_students = [email2, email3]
+
+        # 'Private' will not let non-admins register. 'Public' causes the
+        # [Register] button to not be displayed for anyone, even the course
+        # creator. Fix both of those by requiring registration, which allows
+        # non-admins to register.
+        self.load_dashboard(
+            name
+        ).click_availability(
+        ).set_course_availability(
+            'Registration Required'
+        ).set_whitelisted_students(
+            whitelisted_students
+        ).click_save()
+
+        # Double-check that whitelisted students were indeed saved.
+        self.load_dashboard(
+            name
+        ).click_availability(
+        ).verify_whitelisted_students(
+            '\n'.join(whitelisted_students)
+        )
+
+        # Confirm that Courses page no longer indicates newly-created test
+        # course as being 'Private'.
+        self.load_dashboard(
+            name
+        ).click_admin(
+        ).verify_availability(
+            name, 'Public'  # 'Registration Required' shown as 'Public' here.
+        )
+
+        # Log out course creator admin and register a second admin.
         self.load_root_page(
         ).click_logout(
         ).click_login(
         ).login(
             email2, admin=True
         )
-
         self.load_dashboard(
             name
         ).click_course(
@@ -138,47 +175,20 @@ class AdminTests(integration.TestBase):
             'Test2 Admin'
         ).click_course()
 
-        self.load_dashboard(
-            name
-        ).click_availability(
-        ).set_course_availability(
-            'Public'
-        ).click_save()
-
-        self.load_dashboard(
-            name
-        ).click_admin(
-        ).verify_availability(
-            name, 'Public'
-        )
-
-        # Log out 2nd admin and register a third admin.
-        email3 = login_user + '3@' + login_domain
+        # Log out 2nd admin and register a non-admin student.
         self.load_root_page(
         ).click_logout(
         ).click_login(
         ).login(
-            email3, admin=True
+            email3, admin=False
         )
-
-        self.load_dashboard(
+        # Cannot call load_dashboard() if user is not an admin.
+        self.load_course(
             name
-        ).click_course(
-        #
-        # Test hangs here and then times out, because Public course is missing
-        # the [Register] button for this third user (even though the user is
-        # an Admin and has never enrolled in the Test Course).
-        #
-        # TODO(tlarsen): Once the underlying issue has been fixed, uncomment
-        #   this test code and confirm that the behavior now correct in this
-        #   integration test.
-        #
-        # ).click_register(
-        # ).enroll(
-        #     'Test3 Admin'
-        # ).click_course(
-        # )
-        )
+        ).click_register(
+        ).enroll(
+            'Test3 Student'
+        ).click_course()
 
     def test_add_unit(self):
         name = self.create_new_course()[0]

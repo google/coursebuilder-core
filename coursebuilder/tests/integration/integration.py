@@ -72,16 +72,18 @@ class TestBase(suite.TestBase):
         self.driver.quit()
         super(TestBase, self).tearDown()
 
-    def load_root_page(self):
-        ret = pageobjects.RootPage(self).load(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL)
+    def load_root_page(self, suffix=pageobjects.RootPage.BASE_URL_SUFFIX):
+        base_url = suite.TestBase.INTEGRATION_SERVER_BASE_URL
+        ret = pageobjects.RootPage(self).load(base_url, suffix=suffix)
         tries = 10
         while tries and 'This webpage is not avail' in self.driver.page_source:
             tries -= 1
             time.sleep(1)
-            ret = pageobjects.RootPage(self).load(
-                suite.TestBase.INTEGRATION_SERVER_BASE_URL)
+            ret = pageobjects.RootPage(self).load(base_url, suffix=suffix)
         return ret
+
+    def load_course(self, name):
+        return self.load_root_page(suffix='/' + name)
 
     def load_dashboard(self, name):
         return pageobjects.DashboardPage(self).load(
