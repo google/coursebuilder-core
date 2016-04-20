@@ -24,6 +24,7 @@
         <th>Title</th>
         <th>URL Component</th>
         <th>Availability</th>
+        <th>Registered Students</th>
         <th class="gcb-list__cell--icon"></th>
       </tr>
     </thead>
@@ -47,6 +48,17 @@
           {% else %}
             Private
           {% endif %}
+        </td>
+        <td>
+          <div>
+            <div id="enrolled_{{ course.namespace_name }}">
+              {{ course.total_enrolled }}
+            </div>
+            <div class="mdl-tooltip gcb-form-tooltip"
+                 id="activity_{{ course.namespace_name }}"
+                 for="enrolled_{{ course.namespace_name }}"
+                 >{{ course.most_recent_enroll }}</div>
+          </div>
         </td>
         <td>
           {% if course.namespace != '' %}

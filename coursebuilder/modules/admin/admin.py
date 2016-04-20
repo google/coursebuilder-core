@@ -31,6 +31,7 @@ from common import jinja_utils
 from common import safe_dom
 from common import tags
 from common import users
+from common import utc
 from common import utils as common_utils
 from controllers import sites
 from controllers.utils import ApplicationHandler
@@ -189,6 +190,12 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
     # The URL used in relative addresses of this handler
     LINK_URL = 'admin'
+
+    # Used on Courses page for uninitialized 'Registered Students' values.
+    NONE_ENROLLED = u'\u2014'  # em dash
+
+    # Human-readable ISO 8601 date format (compared to schema_transforms.py).
+    ISO_8601_UTC_HUMAN_FMT = '%Y-%m-%d %H:%M:%S UTC'
 
     default_action = 'courses'
     get_actions = ['courses', 'config_edit', 'settings', 'deployment',
@@ -793,6 +800,18 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 link = '%s/dashboard' % slug
 
             is_selected_course = (ns_name == this_namespace)
+            dto = enrollments.TotalEnrollmentDAO.load_or_default(ns_name)
+            last_modified = dto.last_modified
+            if last_modified:
+                total_enrolled = dto.get()
+                fmt = 'Most recent activity at %s for %s.' % (
+                    self.ISO_8601_UTC_HUMAN_FMT, name)
+                most_recent_enroll = utc.to_text(
+                    seconds=last_modified, fmt=fmt)
+            else:
+                total_enrolled = self.NONE_ENROLLED
+                most_recent_enroll = (
+                    '(registration activity not yet available for %s)' % name)
 
             all_courses.append({
                 'link': link,
@@ -800,7 +819,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 'slug': slug,
                 'namespace_name': ns_name,
                 'is_selected_course': is_selected_course,
-                'now_available': course.now_available
+                'now_available': course.now_available,
+                'total_enrolled': total_enrolled,
+                'most_recent_enroll': most_recent_enroll
                 })
 
         delete_course_xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
@@ -814,7 +835,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
                     'add_course_link': '%s?action=add_course' % self.LINK_URL,
                     'delete_course_link': CourseDeleteHandler.URI,
                     'delete_course_xsrf_token': delete_course_xsrf_token,
-                    'add_course_xsrf_token':add_course_xsrf_token,
+                    'add_course_xsrf_token': add_course_xsrf_token,
                     'courses': all_courses,
                     'email': users.get_current_user().email(),
                 },
@@ -1057,6 +1078,7 @@ def notify_module_enabled():
     # The same menu is shared between its subclasses
     BaseAdminHandler.install_menu()
     enrollments.register_callbacks()
+
 
 custom_module = None
 

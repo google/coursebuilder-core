@@ -103,17 +103,22 @@ class AdminTests(integration.TestBase):
     def test_create_new_course(self):
         self.create_new_course()
 
-    def test_make_new_course_public(self):
-        name, _ = self.create_new_course()
+    def test_registered_students_updated(self):
+        name, title = self.create_new_course()
 
         # Newly-created course should have 'Private' availability.
+        # "Registered Students" count starts as em dash to indicate
+        # "no count", and tooltip contents are different.
         self.load_dashboard(
             name
         ).click_admin(
         ).verify_availability(
             name, 'Private'
+        ).verify_no_enrollments(
+            name, title
         )
 
+        # Register existing admin user as a student; confirm count is now "1".
         # No whitelist membership needed for admins when availablity is still
         # 'Private'.
         self.load_dashboard(
@@ -122,7 +127,12 @@ class AdminTests(integration.TestBase):
         ).click_register(
         ).enroll(
             'Test Admin'
-        ).click_course()
+        ).click_course(
+        ).click_dashboard(
+        ).click_admin(
+        ).verify_total_enrollments(
+            name, title, 1
+        )
 
         # Form additional user email addresses from self.LOGIN.
         login_user, login_domain = self.LOGIN.split('@', 1)
@@ -160,7 +170,8 @@ class AdminTests(integration.TestBase):
             name, 'Public'  # 'Registration Required' shown as 'Public' here.
         )
 
-        # Log out course creator admin and register a second admin.
+        # Register 2nd admin user as a student; confirm count is now "2".
+        # Log out course creator admin and log in as a second admin.
         self.load_root_page(
         ).click_logout(
         ).click_login(
@@ -173,9 +184,15 @@ class AdminTests(integration.TestBase):
         ).click_register(
         ).enroll(
             'Test2 Admin'
-        ).click_course()
+        ).click_course(
+        ).click_dashboard(
+        ).click_admin(
+        ).verify_total_enrollments(
+            name, title, 2
+        )
 
-        # Log out 2nd admin and register a non-admin student.
+        # Register non-admin user as a student; confirm count is now "3".
+        # Log out 2nd admin and log in as a non-admin student.
         self.load_root_page(
         ).click_logout(
         ).click_login(
@@ -189,6 +206,27 @@ class AdminTests(integration.TestBase):
         ).enroll(
             'Test3 Student'
         ).click_course()
+
+        # Log out and log in as course creator to check enrollment totals.
+        self.load_root_page(
+        ).click_logout(
+        ).click_login(
+        ).login(
+            self.LOGIN, admin=True
+        )
+
+        self.load_dashboard(
+            name
+        ).click_admin(
+        ).verify_total_enrollments(
+            name, title, 3
+        )
+
+        # TODO(tlarsen): Implement a DeleteMyDataPage and:
+        #   1) Unenroll all students, one by one.
+        #   2) Confirm count decrements to 0, not an em dash, and tooltip
+        #      still indicates "Most recent activity at...", and not
+        #      "(registration activity not yet available...".
 
     def test_add_unit(self):
         name = self.create_new_course()[0]

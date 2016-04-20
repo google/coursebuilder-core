@@ -32,6 +32,8 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support import select
 from selenium.webdriver.support import wait
 
+from modules.admin import admin as admin_module
+
 
 DEFAULT_TIMEOUT = 20
 
@@ -568,6 +570,31 @@ class DashboardPage(PageObject):
         self._tester.assertEquals(
             expected_text, avail_div.text.strip())
         return self
+
+    def _match_enrolled_count_and_tooltip(self, name, count, tooltip):
+        count_div_selector = '#enrolled_ns_{}'.format(name)
+        count_div = self.find_element_by_css_selector(count_div_selector)
+        self._tester.assertEquals(count, count_div.text.strip())
+        action_chains.ActionChains(self._tester.driver).move_to_element(
+            count_div).perform()
+        tooltip_div_selector = '#activity_ns_{}'.format(name)
+        tooltip_div = self.find_element_by_css_selector(tooltip_div_selector)
+        self._tester.assertRegexpMatches(tooltip_div.text.strip(), tooltip)
+        return self
+
+    def verify_no_enrollments(self, name, title):
+        text = admin_module.BaseAdminHandler.NONE_ENROLLED
+        regexp = re.escape(
+            '(registration activity not yet available for %s)' % title)
+        return self._match_enrolled_count_and_tooltip(name, text, regexp)
+
+    DATETIME_REGEXP = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}"
+
+    def verify_total_enrollments(self, name, title, count):
+        text = "%d" % count
+        regexp = ('Most recent activity at %s UTC for %s' %
+                  (self.DATETIME_REGEXP, re.escape(title + '.')))
+        return self._match_enrolled_count_and_tooltip(name, text, regexp)
 
     def find_menu_group(self, name):
         return self.find_element_by_css_selector('#menu-group__{}'.format(name))

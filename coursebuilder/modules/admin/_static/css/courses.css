@@ -86,3 +86,14 @@
   font-weight: 300;
   margin: 5px 0 0 0;
 }
+
+/*
+ * Material Design Light tooltip, for "Most recent registration at...".
+ *
+ * (from modules/oeditor/_static/css/oeditor.css)
+ */
+.mdl-tooltip.gcb-form-tooltip {
+  text-align: left;
+  max-width: 400px;
+  margin-left: -110px !important;
+}
