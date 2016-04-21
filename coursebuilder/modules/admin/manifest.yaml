@@ -7,6 +7,8 @@ tests:
     - modules.admin.enrollments_tests.EnrollmentsTests = 4
     - modules.admin.enrollments_tests.EventHandlersTests = 1
     - modules.admin.enrollments_tests.GraphTests = 5
+  integration:
+    - modules.admin.admin_integration_tests.CourseAdministrationTests = 1
 
 files:
   - modules/admin/__init__.py
@@ -15,6 +17,8 @@ files:
   - modules/admin/_static/js/courses.js
   - modules/admin/_static/js/enrollments.js
   - modules/admin/admin.py
+  - modules/admin/admin_integration_tests.py
+  - modules/admin/admin_pageobjects.py
   - modules/admin/admin_tests.py
   - modules/admin/config.py
   - modules/admin/enrollments.py

@@ -21,6 +21,9 @@
   <table>
     <thead>
       <tr>
+        <th class="gcb-list-select-course">
+          <input type="checkbox" id="all_courses_select">
+        </th>
         <th>Title</th>
         <th>URL Component</th>
         <th>Availability</th>
@@ -31,6 +34,12 @@
     <tbody>
       {% for course in courses %}
       <tr>
+        <td class="gcb-list-select-course">
+          <input
+             type="checkbox"
+             class="gcb-course-checkbox"
+             id="select_{{ course.namespace_name }}">
+        </td>
         <td>
           <a href="{{ course.link }}">
             {{ course.name }}

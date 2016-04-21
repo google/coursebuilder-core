@@ -1,3 +1,12 @@
+// JavaScript event-notification callbacks run asynchronously behind the
+// scenes.  Integration tests that verify this page need to wait for the
+// callbacks to complete before checking whether the callbacks have completed,
+// or else we have a race condition and a flaky test.  This variable is
+// incremented by background operations upon completion so that tests can
+// block until the relevant callbacks have finished.
+//
+var gcbAdminOperationCount = 0;
+
 $(function() {
 
   var AddCoursePanel = function(title, xsrfToken, email, templateCourse) {
@@ -106,9 +115,48 @@ $(function() {
     new AddCoursePanel('Add Sample Course...', xsrfToken, email, 'sample')
         .open();
   }
+
+  function selectAll() {
+    // This gets called _after_ checkbox is checked, so 'indeterminate' has
+    // been cleared.  Thus we have to look at the rest of the course
+    // checkboxes to determine what we should do.  If any is unchecked, we
+    // check all; if all are checked, we uncheck all.
+
+    var newState = false;
+    $('.gcb-course-checkbox').each(function(_, checkbox){
+      newState |= !checkbox.checked;
+    });
+    $('.gcb-course-checkbox').prop('checked', newState);
+    $('#all_courses_select').prop('checked', newState);
+    gcbAdminOperationCount++;
+  }
+
+  function selectCourse() {
+    // Having clicked the selection checkbox for a single course, set the state
+    // of the all-courses selection checkbox accordingly.  All-on -> on;
+    // all-off -> off; mixed -> indeterminate.
+
+    var anyChecked = false;
+    var anyUnchecked = false;
+    $('.gcb-course-checkbox').each(function(_, checkbox){
+      anyChecked |= checkbox.checked;
+      anyUnchecked |= !checkbox.checked;
+    });
+    if (anyChecked && anyUnchecked) {
+      $('#all_courses_select').prop('indeterminate', true);
+    } else {
+      $('#all_courses_select')
+          .prop('indeterminate', false)
+          .prop('checked', anyChecked);
+    }
+    gcbAdminOperationCount++;
+  }
+
   function bind() {
     $('#add_course').click(addCourse);
     $('#add_sample_course').click(addSampleCourse);
+    $('#all_courses_select').click(selectAll);
+    $('.gcb-course-checkbox').click(selectCourse);
 
     // Forms have no submit control unless this JS runs successfully to
     // add the are-you-sure safety check.
