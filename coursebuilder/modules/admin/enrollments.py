@@ -166,7 +166,8 @@ class BinnedEnrollmentsDTO(EnrollmentsDTO):
         """
         return self.properties.setdefault(self.BINNED_PROPERTY, {})
 
-    def _bin(self, timestamp):
+    @classmethod
+    def bin(cls, timestamp):
         """Converts POSIX timestamp to daily counter bin in self.binned dict.
 
         Args:
@@ -191,9 +192,9 @@ class BinnedEnrollmentsDTO(EnrollmentsDTO):
             timestamp: UTC time, as a POSIX timestamp (seconds since epoch).
         Returns:
             The counter value of the daily bin, or 0 if the corresponding
-            self._bin() does not exist in the self.binned dict.
+            self.bin() does not exist in the self.binned dict.
         """
-        return self._get_bin(self._bin(timestamp))
+        return self._get_bin(self.bin(timestamp))
 
     def _set_bin(self, bin_key, count):
         self.binned[bin_key] = count
@@ -206,7 +207,7 @@ class BinnedEnrollmentsDTO(EnrollmentsDTO):
             timestamp: UTC time, as a POSIX timestamp (seconds since epoch).
             count: the new integer value of the selected binned counter
         """
-        self._set_bin(self._bin(timestamp), count)
+        self._set_bin(self.bin(timestamp), count)
 
     def inc(self, timestamp, offset=1):
         """Increments the count of events for a day (selected via a UTC time).
@@ -219,7 +220,7 @@ class BinnedEnrollmentsDTO(EnrollmentsDTO):
             bin -OR- if the selected bin does not exist, count resulting from
             creating a new bin initialized to 0 and incremented by offset.
         """
-        bin_key = self._bin(timestamp)
+        bin_key = self.bin(timestamp)
         self._set_bin(bin_key, self._get_bin(bin_key) + offset)
         self.properties[self.LAST_MODIFIED_PROPERTY] = utc.now_as_timestamp()
 
@@ -496,7 +497,6 @@ class EnrollmentsDataSource(data_sources.AbstractSmallRestDataSource,
         dto = EnrollmentsAddedDAO.load_or_default(
             app_context.get_namespace_name())
         template_values['enrollment_data_available'] = not dto.is_empty
-
 
 
 MODULE_NAME = 'site_admin_enrollments'

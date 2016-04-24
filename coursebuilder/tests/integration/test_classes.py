@@ -226,7 +226,7 @@ class AdminTests(integration.TestBase):
         #   1) Unenroll all students, one by one.
         #   2) Confirm count decrements to 0, not an em dash, and tooltip
         #      still indicates "Most recent activity at...", and not
-        #      "(registration activity not yet available...".
+        #      "(registration activity...is being computed)".
 
     def test_add_unit(self):
         name = self.create_new_course()[0]

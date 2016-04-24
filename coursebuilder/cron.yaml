@@ -11,6 +11,9 @@ cron:
 - description: clean up resources from map/reduce jobs.
   url: /cron/mapreduce/cleanup
   schedule: every day 03:45
+- description: Run job to update total enrollment counters.
+  url: /cron/site_admin_enrollments/total
+  schedule: every sunday 01:00
 - description: Run job to report count of courses and students to CourseBuilder.
   url: /cron/usage_reporting/report_usage
   schedule: every sunday 05:00

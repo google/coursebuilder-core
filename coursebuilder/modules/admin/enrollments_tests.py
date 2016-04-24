@@ -30,6 +30,7 @@ from models import models
 from models import transforms
 from models.data_sources import paginated_table
 from modules.admin import enrollments
+from modules.admin import enrollments_mapreduce
 from tests.functional import actions
 
 
@@ -396,11 +397,181 @@ class EventHandlersTests(actions.TestBase):
                 self.NAMESPACE, start_dt), 1)
 
 
+class MapReduceTests(actions.TestBase):
+
+    COURSE = 'enrollments_map_reduce'
+    NAMESPACE = 'ns_' + COURSE
+    ADMIN1_EMAIL = 'admin1@example.com'
+    STUDENT2_EMAIL = 'student2@example.com'
+    STUDENT3_EMAIL = 'student3@example.com'
+    STUDENT4_EMAIL = 'student4@example.com'
+    LOG_LEVEL = logging.DEBUG
+
+    @staticmethod
+    def _count_add(unused_id, unused_utc_date_time):
+        pass
+
+    @staticmethod
+    def _count_drop(unused_id, unused_utc_date_time):
+        pass
+
+    def setUp(self):
+        super(MapReduceTests, self).setUp()
+
+        # Replace enrollments counters callbacks with ones that do *not*
+        # increment or decrement the 'total' enrollment counters.
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD][
+                enrollments.MODULE_NAME] = MapReduceTests._count_add
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_REENROLL][
+                enrollments.MODULE_NAME] = MapReduceTests._count_add
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_UNENROLL][
+                enrollments.MODULE_NAME] = MapReduceTests._count_drop
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED][
+                enrollments.MODULE_NAME] = MapReduceTests._count_drop
+
+        self.app_ctxt = actions.simple_add_course(
+            self.COURSE, self.ADMIN1_EMAIL, 'Enrollments MapReduce')
+
+    def tearDown(self):
+        sites.reset_courses()
+
+        # Restore enrollments counters callbacks to originals.
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_ADD][
+                enrollments.MODULE_NAME] = enrollments._count_add
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_REENROLL][
+                enrollments.MODULE_NAME] = enrollments._count_add
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_UNENROLL][
+                enrollments.MODULE_NAME] = enrollments._count_drop
+        models.StudentLifecycleObserver.EVENT_CALLBACKS[
+            models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED][
+                enrollments.MODULE_NAME] = enrollments._count_drop
+
+    def test_total_enrollment_map_reduce_job(self):
+        with utils.Namespace(self.NAMESPACE):
+            start = utc.day_start(utc.now_as_timestamp())
+            start_dt = datetime.datetime.utcfromtimestamp(start)
+
+            # Both 'total' and 'adds' counters should start out at zero.
+            self.assertEquals(enrollments.TotalEnrollmentDAO.get(
+                self.NAMESPACE), 0)
+            empty_total = enrollments.TotalEnrollmentDAO.load_or_default(
+                self.NAMESPACE)
+            self.assertTrue(empty_total.is_empty)
+
+            self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
+                self.NAMESPACE, start_dt), 0)
+            empty_adds = enrollments.EnrollmentsAddedDAO.load_or_default(
+                self.NAMESPACE)
+            self.assertTrue(empty_adds.is_empty)
+
+            admin1 = actions.login(self.ADMIN1_EMAIL)
+            actions.register(self, self.ADMIN1_EMAIL, course=self.COURSE)
+
+            # Manipulate the enrolled_on time of the first student (the
+            # course creator admin) to be last month.
+            student1 = models.Student.get_by_user(admin1)
+            last_month_dt = start_dt - datetime.timedelta(days=30)
+            student1.enrolled_on = last_month_dt
+            student1.put()
+
+            user2 = actions.login(self.STUDENT2_EMAIL)
+            actions.register(self, self.STUDENT2_EMAIL, course=self.COURSE)
+
+            # Manipulate the enrolled_on time of the second student to be
+            # last week.
+            student2 = models.Student.get_by_user(user2)
+            last_week_dt = start_dt - datetime.timedelta(days=7)
+            student2.enrolled_on = last_week_dt
+            student2.put()
+
+            user3 = actions.login(self.STUDENT3_EMAIL)
+            actions.register(self, self.STUDENT3_EMAIL, course=self.COURSE)
+
+            # Manipulate the enrolled_on time of the third student to be
+            # yesterday.
+            student3 = models.Student.get_by_user(user3)
+            yesterday_dt = start_dt - datetime.timedelta(days=1)
+            student3.enrolled_on = yesterday_dt
+            student3.put()
+
+            # Unregister and re-enroll today, which does not affect the original
+            # (manipulated above) enrolled_on value.
+            actions.unregister(self, course=self.COURSE)
+            models.StudentProfileDAO.update(
+                user3.user_id(), self.STUDENT3_EMAIL, is_enrolled=True)
+
+            # Leave the fourth student enrollment as happening today.
+            student4 = actions.login(self.STUDENT4_EMAIL)
+            actions.register(self, self.STUDENT4_EMAIL, course=self.COURSE)
+
+        self.execute_all_deferred_tasks(
+            models.StudentLifecycleObserver.QUEUE_NAME)
+
+        # Both 'total' and 'adds' counters should still be zero, because
+        # student lifecycle event handlers for modules.admin.enrollments have
+        # been disabled by MapReduceTests.setUp().
+        self.assertEquals(enrollments.TotalEnrollmentDAO.get(
+            self.NAMESPACE), 0)
+        after_queue_total = enrollments.TotalEnrollmentDAO.load_or_default(
+            self.NAMESPACE)
+        self.assertTrue(after_queue_total.is_empty)
+
+        self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
+            self.NAMESPACE, start_dt), 0)
+        after_queue_adds = enrollments.EnrollmentsAddedDAO.load_or_default(
+            self.NAMESPACE)
+        self.assertTrue(after_queue_adds.is_empty)
+
+        enrollments_mapreduce.SetCourseEnrollments(self.app_ctxt).submit()
+        self.execute_all_deferred_tasks()
+
+        self.assertEquals(enrollments.TotalEnrollmentDAO.get(
+            self.NAMESPACE), 4)  # ADMIN1, STUDENT2, STUDENT3, STUDENT4
+        after_mr_dto = enrollments.TotalEnrollmentDAO.load_or_default(
+            self.NAMESPACE)
+        self.assertFalse(after_mr_dto.is_empty)
+
+        # The 'adds' DTO will not be empty, because some of the enrollments
+        # occurred on days other than "today".
+        after_mr_adds = enrollments.EnrollmentsAddedDAO.load_or_default(
+            self.NAMESPACE)
+        self.assertFalse(after_mr_adds.is_empty)
+
+        self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
+            self.NAMESPACE, last_month_dt), 1)  # ADMIN1
+
+        self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
+            self.NAMESPACE, last_week_dt), 1)  # STUDENT2
+
+        # The third student registered yesterday, but then unregistered and
+        # re-enrolled today. Those subsequent activities do not affect the
+        # original enrolled_on value.
+        self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
+            self.NAMESPACE, yesterday_dt), 1)  # STUDENT3
+
+        # Even after the SetCourseEnrollments MapReduce runs, the "today"
+        # 'adds' counter for the course will still be empty, because any
+        # registration events inside the `with` block that above happened
+        # today are not updated, to avoid race conditions with real time
+        # updates that would be occurring in production (where the student
+        # lifecycle handlers have not been disabled by test code as in
+        # this test).
+        self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
+            self.NAMESPACE, start_dt), 0)  # STUDENT4
+
+
 class GraphTests(actions.TestBase):
 
     COURSE = 'test_course'
     NAMESPACE = 'ns_%s' % COURSE
-    ADMIN_EMAIL = 'admin@foo.com'
+    ADMIN_EMAIL = 'admin@example.com'
 
     def setUp(self):
         super(GraphTests, self).setUp()

@@ -585,7 +585,7 @@ class DashboardPage(PageObject):
     def verify_no_enrollments(self, name, title):
         text = admin_module.BaseAdminHandler.NONE_ENROLLED
         regexp = re.escape(
-            '(registration activity not yet available for %s)' % title)
+            '(registration activity for %s is being computed)' % title)
         return self._match_enrolled_count_and_tooltip(name, text, regexp)
 
     DATETIME_REGEXP = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}"

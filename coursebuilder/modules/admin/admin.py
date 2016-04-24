@@ -45,6 +45,7 @@ from models import roles
 from models.config import ConfigProperty
 import modules.admin.config
 from modules.admin import enrollments
+from modules.admin import enrollments_mapreduce
 from modules.admin.config import ConfigPropertyEditor
 from modules.admin.config import CourseDeleteHandler
 from modules.dashboard import dashboard
@@ -811,7 +812,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
             else:
                 total_enrolled = self.NONE_ENROLLED
                 most_recent_enroll = (
-                    '(registration activity not yet available for %s)' % name)
+                    '(registration activity for %s is being computed)' % name)
+                enrollments_mapreduce.SetCourseEnrollments(course).submit()
 
             all_courses.append({
                 'link': link,
@@ -1088,6 +1090,8 @@ def register_module():
 
     global_handlers = [
         (GlobalAdminHandler.URL, GlobalAdminHandler),
+        (enrollments_mapreduce.StartEnrollmentsJobs.URL,
+         enrollments_mapreduce.StartEnrollmentsJobs),
         ('/admin/welcome', WelcomeHandler),
         ('/rest/config/item', (
             modules.admin.config.ConfigPropertyItemRESTHandler)),
