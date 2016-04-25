@@ -50,34 +50,36 @@ from modules.admin import enrollments
 class SetCourseEnrollments(jobs.MapReduceJob):
     """MapReduce job to set student 'total' and 'adds' counts for a course."""
 
-    @staticmethod
-    def get_description():
+    @classmethod
+    def get_description(cls):
         return "Update the 'total' and 'adds' counters for a course."
 
-    def entity_class(self):
+    @classmethod
+    def entity_class(cls):
         return models.Student
 
-    @staticmethod
-    def map(student):
+    @classmethod
+    def map(cls, student):
         yield (enrollments.TotalEnrollmentEntity.COUNTING, 1)
         bin_seconds_since_epoch = enrollments.BinnedEnrollmentsDTO.bin(
             utc.datetime_to_timestamp(student.enrolled_on))
         yield (bin_seconds_since_epoch, 1)
 
-    @staticmethod
-    def combine(unused_key, values, previously_combined_outputs=None):
+    @classmethod
+    def combine(cls, unused_key, values, previously_combined_outputs=None):
         total = sum([int(value) for value in values])
         if previously_combined_outputs is not None:
             total += sum([int(value) for value in previously_combined_outputs])
         yield total
 
-    @staticmethod
-    def reduce(key, values):
+    @classmethod
+    def reduce(cls, key, values):
         total = sum(int(value) for value in values)
         ns_name = namespace_manager.get_namespace()
 
         if key == enrollments.TotalEnrollmentEntity.COUNTING:
             enrollments.TotalEnrollmentDAO.set(ns_name, total)
+            yield key, total
         else:
             # key is actually a daily 'adds' counter bin seconds since epoch.
             bin_seconds_since_epoch = long(key)
@@ -87,6 +89,17 @@ class SetCourseEnrollments(jobs.MapReduceJob):
             if bin_seconds_since_epoch != today:
                 date_time = utc.timestamp_to_datetime(bin_seconds_since_epoch)
                 enrollments.EnrollmentsAddedDAO.set(ns_name, date_time, total)
+
+    @classmethod
+    def complete(cls, kwargs, results):
+        if not results:
+            ns_name = namespace_manager.get_namespace()
+            # Re-check that value actually is zero; there is a race between
+            # this M/R job running and student registration on the user
+            # lifecycle queue, so don't overwrite to zero unless it really
+            # is zero _now_.
+            if enrollments.TotalEnrollmentDAO.get(ns_name) == 0:
+                enrollments.TotalEnrollmentDAO.set(ns_name, 0)
 
 
 class StartEnrollmentsJobs(utils.AbstractAllCoursesCronHandler):

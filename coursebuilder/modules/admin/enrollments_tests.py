@@ -29,6 +29,7 @@ from controllers import sites
 from models import models
 from models import transforms
 from models.data_sources import paginated_table
+from modules.admin import admin
 from modules.admin import enrollments
 from modules.admin import enrollments_mapreduce
 from tests.functional import actions
@@ -565,6 +566,33 @@ class MapReduceTests(actions.TestBase):
         # this test).
         self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
             self.NAMESPACE, start_dt), 0)  # STUDENT4
+
+    def test_no_enrollments_initiates_mapreduce_job_but_only_once(self):
+        admin1 = actions.login(self.ADMIN1_EMAIL, is_admin=True)
+
+        # Load courses page, which has side-effect of starting M/R job to
+        # count students in course.
+        response = self.get('/admin?action=courses')
+        dom = self.parse_html_string_to_soup(response.body)
+        enrollment_div = dom.select('#enrolled_')[0]
+        self.assertEquals(admin.BaseAdminHandler.NONE_ENROLLED,
+                          enrollment_div.text.strip())
+
+        # Verify that M/R job runs and produces a row.
+        self.assertIsNone(enrollments.TotalEnrollmentEntity.all().get())
+        self.execute_all_deferred_tasks()
+        self.assertIsNotNone(enrollments.TotalEnrollmentEntity.all().get())
+
+        # Load the courses page again, now getting 0 for number of students.
+        response = self.get('/admin?action=courses')
+        dom = self.parse_html_string_to_soup(response.body)
+        enrollment_div = dom.select('#enrolled_')[0]
+        self.assertEquals('0', enrollment_div.text.strip())
+
+        # Important: Verify that re-load of courses page did _not_ kick off
+        # another map/reduce job.
+        tasks = self.taskq.GetTasks('default')
+        self.assertEquals(0, len(tasks))
 
 
 class GraphTests(actions.TestBase):
