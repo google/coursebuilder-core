@@ -211,8 +211,16 @@ class GraphQLTreeTests(BaseGqlTests):
         super(GraphQLTreeTests, self).tearDown()
 
     def set_course_availability(self, availability):
+        settings = courses.COURSE_AVAILABILITY_POLICIES[availability]
         courses.Course.ENVIRON_TEST_OVERRIDES = {
-            'course': courses.COURSE_AVAILABILITY_POLICIES[availability]}
+            'course': {
+                'now_available': settings['now_available'],
+                'browsable': settings['browsable'],
+            },
+            'reg_form': {
+                'can_register': settings['can_register']
+            }
+        }
 
 
 class TopLevelQueryTests(GraphQLTreeTests):

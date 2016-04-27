@@ -30,6 +30,7 @@ class AdminDashboardTabTests(actions.TestBase):
 
     ADMIN_EMAIL = 'adin@foo.com'
     COURSE_NAME = 'admin_tab_test_course'
+    NAMESPACE = 'ns_' + COURSE_NAME
 
     def setUp(self):
         super(AdminDashboardTabTests, self).setUp()
@@ -144,3 +145,20 @@ class AdminDashboardTabTests(actions.TestBase):
         titles = dom.select('.mdl-layout-title')
         title_texts = [re.sub(r'\s+', ' ', t.text).strip() for t in titles]
         self.assertIn('Publish > Availability', title_texts)
+
+    def test_availability_title(self):
+        def get_availability_text():
+            response = self.get('/modules/admin')
+            dom = self.parse_html_string_to_soup(response.body)
+            td = dom.select('#availability_ns_' + self.COURSE_NAME)[0]
+            link = td.select('a')[0]
+            return re.sub(r'\s+', ' ', link.text).strip()
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        for policy, settings in courses.COURSE_AVAILABILITY_POLICIES.items():
+            # Fetch the instance of the app_context from the per-process
+            # cache so that that's the instance that clears its internal
+            # cache of settings when we modify the course availability.
+            app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+            courses.Course.get(app_context).set_course_availability(policy)
+            self.assertEqual(settings['title'], get_availability_text())

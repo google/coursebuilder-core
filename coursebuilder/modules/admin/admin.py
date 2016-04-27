@@ -785,22 +785,28 @@ class BaseAdminHandler(ConfigPropertyEditor):
             this_namespace = None  # GlobalAdminHandler
 
         all_courses = []
-        for course in sorted(sites.get_all_courses(),
-                             key=lambda course: course.get_title().lower()):
-            slug = course.get_slug()
-            name = course.get_title()
-            ns_name = course.get_namespace_name()
-            if course.fs.is_read_write():
+        for app_context in sorted(
+            sites.get_all_courses(),
+            key=lambda app_context: app_context.get_title().lower()):
+
+            slug = app_context.get_slug()
+            name = app_context.get_title()
+            ns_name = app_context.get_namespace_name()
+            if app_context.fs.is_read_write():
                 location = 'namespace: %s' % ns_name
             else:
                 location = 'disk: %s' % sites.abspath(
-                    course.get_home_folder(), '/')
+                    app_context.get_home_folder(), '/')
             if slug == '/':
                 link = '/dashboard'
             else:
                 link = '%s/dashboard' % slug
 
             is_selected_course = (ns_name == this_namespace)
+            availability = courses.Course.get_course_availability_from_context(
+                app_context)
+            availability_title = courses.COURSE_AVAILABILITY_POLICIES[
+                availability]['title']
             dto = enrollments.TotalEnrollmentDAO.load_or_default(ns_name)
             last_modified = dto.last_modified
             if last_modified:
@@ -813,7 +819,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 total_enrolled = self.NONE_ENROLLED
                 most_recent_enroll = (
                     '(registration activity for %s is being computed)' % name)
-                enrollments_mapreduce.SetCourseEnrollments(course).submit()
+                enrollments_mapreduce.SetCourseEnrollments(app_context).submit()
 
             all_courses.append({
                 'link': link,
@@ -821,7 +827,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 'slug': slug,
                 'namespace_name': ns_name,
                 'is_selected_course': is_selected_course,
-                'now_available': course.now_available,
+                'availability': availability_title,
                 'total_enrolled': total_enrolled,
                 'most_recent_enroll': most_recent_enroll
                 })

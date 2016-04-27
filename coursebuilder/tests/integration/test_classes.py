@@ -167,7 +167,7 @@ class AdminTests(integration.TestBase):
             name
         ).click_admin(
         ).verify_availability(
-            name, 'Public'  # 'Registration Required' shown as 'Public' here.
+            name, 'Registration Required'
         )
 
         # Register 2nd admin user as a student; confirm count is now "2".

@@ -242,21 +242,25 @@ COURSE_AVAILABILITY_REGISTRATION_OPTIONAL = 'registration_optional'
 COURSE_AVAILABILITY_PUBLIC = 'public'
 COURSE_AVAILABILITY_POLICIES = collections.OrderedDict([
     (COURSE_AVAILABILITY_PRIVATE, {
+        'title': 'Private',
         'now_available': False,
         'browsable': False,
         'can_register': False,
         }),
     (COURSE_AVAILABILITY_REGISTRATION_REQUIRED, {
+        'title': 'Registration Required',
         'now_available': True,
         'browsable': False,
         'can_register': True,
         }),
     (COURSE_AVAILABILITY_REGISTRATION_OPTIONAL, {
+        'title': 'Registration Optional',
         'now_available': True,
         'browsable': True,
         'can_register': True,
     }),
     (COURSE_AVAILABILITY_PUBLIC, {
+        'title': 'Public - No Registration',
         'now_available': True,
         'browsable': True,
         'can_register': False,
@@ -3540,18 +3544,26 @@ course:
         return True
 
     def get_course_availability(self):
+        return self.get_course_availability_from_context(self.app_context)
+
+    @classmethod
+    def get_course_availability_from_context(cls, app_context):
         """Get derived course availability policy based on other settings.
 
         Note that this method is class-static, so as to avoid having to
-        instantiate a Course object in contexts where we don't have one
-        as a formal parameter, but we do have an application context.
+        instantiate a Course object (and thereby affect course caching) in
+        contexts where we either don't have a Course as a formal parameter,
+        but we do have an application context, or especially in contexts where
+        we are iterating over all courses and don't want to fill the cache
+        with junk.
 
         Returns:
           A string indicating the availability policy; one of the keys from
           COURSE_AVAILABILITY_POLICIES, or None if no policy matches the
           current course state.
+
         """
-        settings = self.app_context.get_environ()
+        settings = app_context.get_environ()
         now_available = settings['course'].get('now_available', False)
         browsable = settings['course'].get('browsable', False)
         can_register = settings['reg_form'].get('can_register', True)
