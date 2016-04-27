@@ -205,9 +205,9 @@ def ensure_port_available(port_number, quiet=False):
                 started servers before running tests.
 
                 Kill running server from command line via:
-                lsof -i tcp:8081 -Fp | tr -d p | xargs kill -9
+                lsof -i tcp:%d -Fp | tr -d p | xargs kill -9
                 ==========================================================''',
-                port_number)
+                port_number, port_number)
         raise ex
     s.close()
 
