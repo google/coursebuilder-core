@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.admin.admin_tests.AdminDashboardTabTests = 6
+    - modules.admin.admin_tests.AdminDashboardTabTests = 7
     - modules.admin.enrollments_tests.EnrollmentsTests = 4
     - modules.admin.enrollments_tests.EventHandlersTests = 1
     - modules.admin.enrollments_tests.MapReduceTests = 1

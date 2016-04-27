@@ -16,6 +16,8 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import re
+
 from controllers import sites
 from models import config
 from models import courses
@@ -127,3 +129,18 @@ class AdminDashboardTabTests(actions.TestBase):
         response = self.get('admin?action=settings')
         self.assertNotIn(setting.label, response.body)
         delete_setting(setting)
+
+    def test_availability_link_on_page(self):
+        # Find availability link on admin page for our course.
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        response = self.get('/modules/admin')
+        dom = self.parse_html_string_to_soup(response.body)
+        td = dom.select('#availability_ns_' + self.COURSE_NAME)[0]
+        link = td.select('a')[0]
+
+        # Follow the link; verify that we're on the per-course availability page
+        response = self.get(link.get('href'))
+        dom = self.parse_html_string_to_soup(response.body)
+        titles = dom.select('.mdl-layout-title')
+        title_texts = [re.sub(r'\s+', ' ', t.text).strip() for t in titles]
+        self.assertIn('Publish > Availability', title_texts)

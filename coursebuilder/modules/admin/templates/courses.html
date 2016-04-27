@@ -52,11 +52,13 @@
           </a>
         </td>
         <td id="availability_{{ course.namespace_name }}">
-          {% if course.now_available %}
-            Public
-          {% else %}
-            Private
-          {% endif %}
+          <a href="{{ course.slug }}/dashboard?action=availability">
+            {% if course.now_available %}
+              Public
+            {% else %}
+              Private
+            {% endif %}
+          </a>
         </td>
         <td>
           <div>
