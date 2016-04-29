@@ -1031,7 +1031,7 @@ class StudentGroupFilter(data_sources.AbstractEnumFilter):
     @classmethod
     def get_choices(cls):
         student_groups = StudentGroupDAO.get_all()
-        student_groups.sort(lambda sg: sg.name)
+        student_groups.sort(key=lambda sg: sg.name)
         return [
             data_sources.EnumFilterChoice(
                 'Students in Group: ' + student_group.name,
