@@ -552,7 +552,7 @@ function init() {
   setUpDraftStatus();
   setUpCloneQuestion();
   setUpLocalTimes();
-  setUpModalWindow();
+  setUpModalWindow();  // Deprecated; prefer modules/core_ui Lightbox.
   setUpQuestionPreview();
   setUpQuestionGroupPreview();
   setUpAddToGroup();
