@@ -13,6 +13,13 @@
      role="button">
     Add Sample Course...
   </a>
+  <a id="edit_multi_course_availability"
+     class="gcb-button multi-course-actions"
+     data-xsrf-token="{{ edit_course_availability_xsrf_token }}"
+     data-options="{{ course_availability_options }}"
+     role="button">
+    Set Course Availability...
+  </a>
 </div>
 <div style="clear: both; padding-top: 2px;">
 </div>
@@ -38,7 +45,11 @@
           <input
              type="checkbox"
              class="gcb-course-checkbox"
-             id="select_{{ course.namespace_name }}">
+             id="select_{{ course.namespace_name }}"
+             data-course-namespace="{{ course.namespace_name }}"
+             data-course-slug="{{ course.slug }}"
+             data-course-title="{{ course.name }}"
+             >
         </td>
         <td>
           <a href="{{ course.link }}">
@@ -51,8 +62,9 @@
             <i class="material-icons gcb-list__icon gcb-list__icon--rowhover">open_in_new</i>
           </a>
         </td>
-        <td id="availability_{{ course.namespace_name }}">
-          <a href="{{ course.slug }}/dashboard?action=availability">
+        <td>
+          <a id="availability_{{ course.namespace_name }}"
+             href="{{ course.slug }}/dashboard?action=availability">
             {{ course.availability }}
           </a>
         </td>

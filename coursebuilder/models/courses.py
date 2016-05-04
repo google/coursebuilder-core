@@ -3544,10 +3544,10 @@ course:
         return True
 
     def get_course_availability(self):
-        return self.get_course_availability_from_context(self.app_context)
+        return self.get_course_availability_from_app_context(self.app_context)
 
     @classmethod
-    def get_course_availability_from_context(cls, app_context):
+    def get_course_availability_from_app_context(cls, app_context):
         """Get derived course availability policy based on other settings.
 
         Note that this method is class-static, so as to avoid having to

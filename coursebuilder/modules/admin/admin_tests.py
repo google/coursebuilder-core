@@ -136,8 +136,7 @@ class AdminDashboardTabTests(actions.TestBase):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         response = self.get('/modules/admin')
         dom = self.parse_html_string_to_soup(response.body)
-        td = dom.select('#availability_ns_' + self.COURSE_NAME)[0]
-        link = td.select('a')[0]
+        link = dom.select('#availability_ns_' + self.COURSE_NAME)[0]
 
         # Follow the link; verify that we're on the per-course availability page
         response = self.get(link.get('href'))
@@ -150,8 +149,7 @@ class AdminDashboardTabTests(actions.TestBase):
         def get_availability_text():
             response = self.get('/modules/admin')
             dom = self.parse_html_string_to_soup(response.body)
-            td = dom.select('#availability_ns_' + self.COURSE_NAME)[0]
-            link = td.select('a')[0]
+            link = dom.select('#availability_ns_' + self.COURSE_NAME)[0]
             return re.sub(r'\s+', ' ', link.text).strip()
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)

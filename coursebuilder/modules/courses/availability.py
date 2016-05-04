@@ -65,8 +65,8 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'registered and unregistered students.',
             i18n=False, optional=True,
             select_data=[
-                (p, p.replace('_', ' ').title())
-                for p in courses.COURSE_AVAILABILITY_POLICIES]))
+                (k, v['title'])
+                for k, v in courses.COURSE_AVAILABILITY_POLICIES.iteritems()]))
         element_settings = schema_fields.FieldRegistry(
             'Element Settings', 'Availability settings for course elements',
             extra_schema_dict_values={'className': 'content-element'})
@@ -182,16 +182,20 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         """Expose as function for convenience in wrapping this hander."""
 
         request = transforms.loads(handler.request.get('request'))
+        response_payload = {
+            'key': handler.app_context.get_namespace_name()
+        }
 
         # Check access permissions.  Not coming through dashboard, so must
         # do these for ourselves.
         if not handler.assert_xsrf_token_or_fail(request, handler.ACTION,
-                                              {'key':'a'}):
+                                                 response_payload):
             return
         if not roles.Roles.is_user_allowed(
             handler.app_context, custom_module,
             constants.MODIFY_AVAILABILITY_PERMISSION):
-            transforms.send_json_response(handler, 401, 'Access denied.')
+            transforms.send_json_response(handler, 401, 'Access denied.',
+                                          payload_dict=response_payload)
             return
 
         course = handler.get_course()
@@ -224,7 +228,8 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
                     element.shown_when_unavailable = (
                         item['shown_when_unavailable'])
         course.save()
-        transforms.send_json_response(handler, 200, 'Saved.')
+        transforms.send_json_response(
+            handler, 200, 'Saved.', payload_dict=response_payload)
 
 
 def get_namespaced_handlers():

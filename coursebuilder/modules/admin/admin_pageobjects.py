@@ -18,6 +18,9 @@ __author__ = [
     'Mike Gainer (mgainer@google.com)'
 ]
 
+from selenium.common import exceptions
+from selenium.webdriver.support import select
+
 from tests.integration import pageobjects
 
 
@@ -80,4 +83,57 @@ class CourseListPage(pageobjects.DashboardPage):
 
     def load(self, base_url):
         self.get(base_url + '/modules/admin')
+        return self
+
+    def verify_availability(self, namespace, expected):
+        td = self.find_element_by_id('availability_' + namespace)
+        self._tester.assertEqual(expected, td.text.strip())
+        return self
+
+    def click_edit_availability(self):
+        self.find_element_by_id('edit_multi_course_availability').click()
+        return MultiEditModalDialog(self._tester)
+
+class MultiEditModalDialog(pageobjects.DashboardPage):
+
+    def __init__(self, tester):
+        super(MultiEditModalDialog, self).__init__(tester)
+        # Wait for main div of modal dialog to be visible.
+        self._dialog = self.find_element_by_id('multi-course-edit-panel')
+
+    def _dialog_not_visible(self, unused_driver):
+        try:
+            return not self._dialog.is_displayed()
+        except exceptions.StaleElementReferenceException:
+            return True
+
+    def click_cancel(self):
+        self.find_element_by_id('multi-course-cancel').click()
+        self.wait().until(self._dialog_not_visible)
+        return CourseListPage(self._tester)
+
+    def click_save(self):
+        self.find_element_by_id('multi-course-save').click()
+        spinner = self.find_element_by_id('multi-course-spinner')
+        def spinner_not_visible(driver):
+            try:
+                return not spinner.is_displayed()
+            except exceptions.StaleElementReferenceException:
+                return True
+        self.wait().until(spinner_not_visible)
+        return self
+
+    def set_availability(self, value):
+        select_elt = self.find_element_by_id('multi-course-select-availability')
+        select.Select(select_elt).select_by_visible_text(value)
+        return self
+
+    def assert_status(self, namespace, text):
+        td = self.find_element_by_id('course_status_' + namespace)
+        self._tester.assertEqual(text, td.text.strip())
+        return self
+
+    def set_availability_xsrf_token(self, new_value):
+        self._tester.driver.execute_script(
+            'gcb_multi_edit_dialog._xsrfToken = "%s";' % new_value)
         return self

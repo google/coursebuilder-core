@@ -824,8 +824,8 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             select_data=[
                 (cls._AVAILABILITY_NO_OVERRIDE,
                  cls._AVAILABILITY_NO_OVERRIDE_TITLE)] + [
-                (p, p.replace('_', ' ').title())
-                for p in courses.COURSE_AVAILABILITY_POLICIES],
+                (k, v['title'])
+                for k, v in courses.COURSE_AVAILABILITY_POLICIES.iteritems()],
             extra_schema_dict_values={
                 'wrapperClassName': ['gcb-group-course-availability '
                                      'inputEx-fieldWrapper']}))

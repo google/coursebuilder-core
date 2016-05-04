@@ -42,12 +42,14 @@ from models import courses
 from models import custom_modules
 from models import entities
 from models import roles
+from models import transforms
 from models.config import ConfigProperty
 import modules.admin.config
 from modules.admin import enrollments
 from modules.admin import enrollments_mapreduce
 from modules.admin.config import ConfigPropertyEditor
 from modules.admin.config import CourseDeleteHandler
+from modules.courses import availability
 from modules.dashboard import dashboard
 from modules.dashboard import utils as dashboard_utils
 from common import menus
@@ -803,10 +805,11 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 link = '%s/dashboard' % slug
 
             is_selected_course = (ns_name == this_namespace)
-            availability = courses.Course.get_course_availability_from_context(
-                app_context)
+            course_availability = (
+                courses.Course.get_course_availability_from_app_context(
+                    app_context))
             availability_title = courses.COURSE_AVAILABILITY_POLICIES[
-                availability]['title']
+                course_availability]['title']
             dto = enrollments.TotalEnrollmentDAO.load_or_default(ns_name)
             last_modified = dto.last_modified
             if last_modified:
@@ -836,6 +839,13 @@ class BaseAdminHandler(ConfigPropertyEditor):
             CourseDeleteHandler.XSRF_ACTION)
         add_course_xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
                 modules.admin.config.CoursesItemRESTHandler.XSRF_ACTION)
+        edit_course_availability_xsrf_token = (
+            crypto.XsrfTokenManager.create_xsrf_token(
+                availability.AvailabilityRESTHandler.ACTION))
+        course_availability_options = transforms.dumps(
+            [{'value': k, 'title': v['title']}
+             for k, v in courses.COURSE_AVAILABILITY_POLICIES.iteritems()])
+
         template_values = {
             'page_title': self.format_title('Courses'),
             'main_content': self.render_template_to_html(
@@ -844,6 +854,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
                     'delete_course_link': CourseDeleteHandler.URI,
                     'delete_course_xsrf_token': delete_course_xsrf_token,
                     'add_course_xsrf_token': add_course_xsrf_token,
+                    'edit_course_availability_xsrf_token':
+                        edit_course_availability_xsrf_token,
+                    'course_availability_options': course_availability_options,
                     'courses': all_courses,
                     'email': users.get_current_user().email(),
                 },

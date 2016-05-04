@@ -116,6 +116,14 @@ $(function() {
         .open();
   }
 
+  function setMultiCourseActionAvailability(isAvailable) {
+    if (isAvailable) {
+      $('.multi-course-actions').removeClass('inactive');
+    } else {
+      $('.multi-course-actions').addClass('inactive');
+    }
+  }
+
   function selectAll() {
     // This gets called _after_ checkbox is checked, so 'indeterminate' has
     // been cleared.  Thus we have to look at the rest of the course
@@ -128,6 +136,7 @@ $(function() {
     });
     $('.gcb-course-checkbox').prop('checked', newState);
     $('#all_courses_select').prop('checked', newState);
+    setMultiCourseActionAvailability(newState);
     gcbAdminOperationCount++;
   }
 
@@ -149,13 +158,184 @@ $(function() {
           .prop('indeterminate', false)
           .prop('checked', anyChecked);
     }
+    setMultiCourseActionAvailability(anyChecked);
     gcbAdminOperationCount++;
+  }
+
+  var EditMultiCourseAvailabilityPanel = function(xsrfToken, courses, options) {
+    this._xsrfToken = xsrfToken;
+    this._courses = courses;
+    this._documentBody = $(document.body);
+    this._lightbox = new window.gcb.Lightbox();
+    this._numSuccessResponses = 0;
+    this._numFailureResponses = 0;
+    this._form = $(
+        '<div class="add-course-panel" id="multi-course-edit-panel">' +
+        '  <h2 class="title">Set Course Availability</h2>' +
+        '  <div class="form-row">' +
+        '    <label>Availability</label>' +
+        '    <select id="multi-course-select-availability" ' +
+        '            name="availability"></select> ' +
+        '  </div>' +
+        '  <div class="edit-multi-course-list">' +
+        '    <table>' +
+        '      <thead>' +
+        '        <tr id="multi_edit_header_row">' +
+        '          <th>Course Name</th>' +
+        '          <th>Status</th>' +
+        '        </tr>' +
+        '      </thead>' +
+        '      <tbody id="course_list">' +
+        '      </tbody>' +
+        '    </table>' +
+        '  </div>' +
+        '  <div class="controls">' +
+        '    <button id="multi-course-save" ' +
+        '            class="gcb-button save-button">Save</button>' +
+        '    <button id="multi-course-cancel" ' +
+        '            class="gcb-button cancel-button">Cancel</button>' +
+        '  </div>' +
+        '  <div id="multi-course-spinner" class="spinner hidden">' +
+        '    <div class="background"></div>' +
+        '    <span class="icon spinner md md-settings md-spin"></span>' +
+        '  </div>' +
+        '</div>');
+    var availabilitySelect = this._form.find(
+        '#multi-course-select-availability');
+    this._availabilitySelect = availabilitySelect;
+    $(options).each(function(index, opt) {
+      availabilitySelect.append(
+          $('<option value=' + opt.value + '>' + opt.title + '</option>'));
+    });
+    var courseList = this._form.find('#course_list');
+    $(courses).each(function(index, course) {
+      courseList.append(
+          $('<tr><td>' + course.title + '</td>' +
+            '<td id="course_status_' + course.namespace + '"> - </td></tr>'));
+    });
+    this._form.find('#multi-course-save').click(this._save.bind(this));
+    this._form.find('#multi-course-cancel').click(this._close.bind(this));
+    this._spinner = this._form.find('.spinner');
+  };
+  EditMultiCourseAvailabilityPanel.prototype.open = function() {
+    this._lightbox
+      .bindTo(this._documentBody)
+      .setContent(this._form)
+      .show();
+  };
+  EditMultiCourseAvailabilityPanel.prototype._save = function() {
+    this._showSpinner();
+    var availability = this._availabilitySelect.val();
+    var errorHandler = this._saveError.bind(this);
+    var successHandler = this._saveSuccess.bind(this);
+    var completeHandler = this._saveComplete.bind(this);
+    var xsrfToken = this._xsrfToken;
+    var payload = JSON.stringify({
+      course_availability: availability
+    });
+    this._numSuccessResponses = 0;
+    this._numFailureResponses = 0;
+
+    $(this._courses).each(function(index, course){
+      var statusField = $('#course_status_' + course.namespace);
+      statusField.text(' - ');
+
+      var request = {
+        key: course.namespace,
+        xsrf_token: xsrfToken,
+        payload: payload,
+      };
+      var url = '/' + course.slug + '/rest/availability';
+      url = url.replace('//', '/');
+
+      $.ajax(url, {
+        method: 'PUT',
+        data: {request: JSON.stringify(request)},
+        dataType: 'text',
+        error: errorHandler,
+        success: successHandler,
+        complete: completeHandler
+      });
+    });
+  };
+  EditMultiCourseAvailabilityPanel.prototype._showSpinner = function() {
+    this._spinner.removeClass('hidden');
+  };
+  EditMultiCourseAvailabilityPanel.prototype._hideSpinner = function() {
+    this._spinner.addClass('hidden');
+  };
+  EditMultiCourseAvailabilityPanel.prototype._close = function() {
+    this._lightbox.close();
+  };
+  EditMultiCourseAvailabilityPanel.prototype._saveError = function() {
+    cbShowMsg('Something went wrong. Please try again.');
+    this._spinner.addClass('hidden')
+  };
+  EditMultiCourseAvailabilityPanel.prototype._saveSuccess = function(data) {
+    var data = window.gcb.parseJsonResponse(data);
+    var payload = window.gcb.parseJsonResponse(data.payload);
+    var courseNamespace = payload.key;
+    var availabilityField = $('#availability_' + courseNamespace);
+    var statusField = $('#course_status_' + courseNamespace);
+    var availability = this._availabilitySelect[0].selectedOptions[0].text
+
+    var message;
+    if (data.status != 200) {
+      message = data.message || 'Unknown error.';
+      this._numFailureResponses++;
+    } else {
+      availabilityField.text(availability)
+      message = 'Saved.';
+      this._numSuccessResponses++;
+    }
+    statusField.text(message);
+    statusField.get(0).scrollIntoView();
+  };
+
+  EditMultiCourseAvailabilityPanel.prototype._saveComplete = function() {
+    var numResponses = this._numSuccessResponses + this._numFailureResponses;
+    if (numResponses >= this._courses.length) {
+      var availability = this._availabilitySelect.val().replace('_', ' ');
+      var message = ('Set availability to ' + availability +
+          ' for ' + this._numSuccessResponses + ' course');
+      if (this._numSuccessResponses != 1) {
+        message += 's';
+      }
+      if (this._numFailureResponses > 0) {
+        message += ' and had ' + this._numFailureResponses + ' error';
+        if (this._numFailureResponses != 1) {
+          message += 's';
+        }
+      }
+      message += '.';
+      $('#multi_edit_header_row').get(0).scrollIntoView();
+      cbShowMsgAutoHide(message);
+      this._hideSpinner();
+    }
+  };
+
+  function editMultiCourseAvailability() {
+    var xsrfToken = $('#edit_multi_course_availability').data('xsrfToken');
+    var courses = $('.gcb-course-checkbox:checked').map(
+        function(index, item){
+          return {
+            namespace: $(item).data('course-namespace'),
+            title: $(item).data('course-title'),
+            slug: $(item).data('course-slug')
+          };
+        });
+    var options = $('#edit_multi_course_availability').data('options');
+    // Var name intentionally in global namespace as hook for tests to modify.
+    gcb_multi_edit_dialog = new EditMultiCourseAvailabilityPanel(
+        xsrfToken, courses, options);
+    gcb_multi_edit_dialog.open();
   }
 
   function bind() {
     $('#add_course').click(addCourse);
     $('#add_sample_course').click(addSampleCourse);
     $('#all_courses_select').click(selectAll);
+    $('#edit_multi_course_availability').click(editMultiCourseAvailability);
     $('.gcb-course-checkbox').click(selectCourse);
 
     // Forms have no submit control unless this JS runs successfully to
@@ -172,6 +352,12 @@ $(function() {
   }
   function init() {
     bind();
+
+    var anyChecked = false;
+    $('.gcb-course-checkbox').each(function(_, checkbox){
+      anyChecked |= checkbox.checked;
+    });
+    setMultiCourseActionAvailability(anyChecked);
   }
 
   init();
