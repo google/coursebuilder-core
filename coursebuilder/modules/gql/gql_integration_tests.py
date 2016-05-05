@@ -83,7 +83,11 @@ class QueryApp(pageobjects.PageObject):
         return self
 
     def click_login(self):
-        self.find_element_by_link_text('Login').click()
+        link = self.find_element_by_link_text('Login')
+        def href_exists(_):
+            return bool(link.get_attribute('href'))
+        self.wait().until(href_exists)
+        link.click()
         return pageobjects.LoginPage(self._tester, continue_page=QueryApp)
 
     def click_logout(self):
