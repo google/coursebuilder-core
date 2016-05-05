@@ -208,8 +208,12 @@
       <div class="gcb-aux clearfix">
         <p class="gcb-course-image">
           <a href="./">
+            {% if course_info.institution.logo.url %}
             <img src="{{course_info.institution.logo.url}}"
                  alt="{{course_info.institution.logo.alt_text or ''}}">
+            {% else %}
+              &nbsp;
+            {% endif %}
           </a>
         </p>
         <p class="gcb-title-header">

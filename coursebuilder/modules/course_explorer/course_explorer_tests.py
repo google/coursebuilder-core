@@ -1,3 +1,4 @@
+# coding=utf8
 # Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +18,15 @@
 __author__ = 'rahulsingal@google.com (Rahul Singal)'
 
 
+import base64
+from common import crypto
 from controllers import sites
 from models import config
 from models import courses
 from models import transforms
 from models.models import PersonalProfile
 from modules.course_explorer import course_explorer
+from modules.course_explorer import settings
 from tests.functional import actions
 
 
@@ -220,3 +224,103 @@ class CourseExplorerDisabledTest(actions.TestBase):
         for not_accessible in not_accessibles:
             response = self.get(not_accessible, expect_errors=True)
             self.assertEquals(response.status_int, 404)
+
+
+class CourseExplorerSettingsTest(actions.TestBase):
+    ADMIN_EMAIL = 'test@example.com'
+    COURSE_NAME = 'course'
+
+    def setUp(self):
+        super(CourseExplorerSettingsTest, self).setUp()
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Drive Course')
+        self.base = '/{}'.format(self.COURSE_NAME)
+
+    def post_settings(self, payload, upload_files=None):
+        response = self.post('rest/explorer-settings', {
+            'request': transforms.dumps({
+                'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                    'explorer-settings-rest'),
+                'payload': transforms.dumps(payload),
+            })
+        }, upload_files=upload_files)
+        self.assertEqual(response.status_code, 200)
+        return response
+
+    def test_visit_page(self):
+        self.assertEqual(self.get('explorer-settings').status_code, 200)
+        self.assertEqual(
+            transforms.loads(self.get('rest/explorer-settings').body)['status'],
+            200)
+
+    def test_without_icon(self):
+        self.post_settings({
+            'title': 'The Title',
+            'logo': '',
+            'logo_alt_text': 'alt',
+            'institution_name': u'🐱Institution',
+            'institution_url': 'http://example.com',
+        })
+
+        self.assertEqual(
+            transforms.loads(settings.COURSE_EXPLORER_SETTINGS.value), {
+            'title': 'The Title',
+            'logo_alt_text': 'alt',
+            'institution_name': u'🐱Institution',
+            'institution_url': 'http://example.com',
+        })
+
+    def test_with_icon(self):
+        contents = 'File Contents!'
+        encoded_contents = base64.b64encode(contents)
+
+        self.post_settings({
+            'title': 'The Title',
+            'logo': 'icon.png',
+            'logo_alt_text': 'alt',
+            'institution_name': u'🐱Institution',
+            'institution_url': 'http://example.com',
+        }, upload_files=[('logo', 'icon.png', contents)])
+
+        self.assertEqual(
+            transforms.loads(settings.COURSE_EXPLORER_SETTINGS.value), {
+            'title': 'The Title',
+            'logo_alt_text': 'alt',
+            'institution_name': u'🐱Institution',
+            'institution_url': 'http://example.com',
+            'logo_bytes_base64': encoded_contents,
+            'logo_mime_type': 'image/png',
+        })
+
+    def test_dont_lose_existing_icon(self):
+        entity = config.ConfigPropertyEntity(
+            key_name=settings.COURSE_EXPLORER_SETTINGS.name)
+        entity.value = transforms.dumps({
+            'title': 'The Title',
+            'logo_alt_text': 'alt',
+            'institution_name': u'🐱Institution',
+            'institution_url': 'http://example.com',
+            'logo_bytes_base64': 'logo-contents',
+            'logo_mime_type': 'image/png',
+        })
+        entity.is_draft = False
+        entity.put()
+
+        self.post_settings({
+            'title': 'Another Title',
+            'logo': '',
+            'logo_alt_text': 'alt',
+            'institution_name': u'New 🐱Institution',
+            'institution_url': 'http://example.com',
+        })
+
+        self.assertEqual(
+            transforms.loads(settings.COURSE_EXPLORER_SETTINGS.value), {
+            'title': 'Another Title',
+            'logo_alt_text': 'alt',
+            'institution_name': u'New 🐱Institution',
+            'institution_url': 'http://example.com',
+            'logo_bytes_base64': 'logo-contents',
+            'logo_mime_type': 'image/png',
+        })

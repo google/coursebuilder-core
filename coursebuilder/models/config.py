@@ -58,7 +58,8 @@ class ConfigProperty(object):
     def __init__(
         self, name, value_type, doc_string,
         default_value=None, multiline=False, validator=None,
-        after_change=None, label=None, deprecated=False):
+        after_change=None, label=None, deprecated=False,
+        show_in_site_settings=True):
         """Create a new global config property.
 
         These properties are persisted as ConfigPropertyEntity in the default
@@ -104,6 +105,7 @@ class ConfigProperty(object):
         self._default_value = value_type(default_value)
         self._after_change = after_change
         self._deprecated = deprecated
+        self._show_in_site_settings = show_in_site_settings
 
         errors = []
         if self._validator and self._default_value:
@@ -200,6 +202,11 @@ class ConfigProperty(object):
     @property
     def deprecated(self):
         return self._deprecated
+
+    @property
+    def show_in_site_settings(self):
+        return self._show_in_site_settings and not self._deprecated
+
 
 class ValidateLength(object):
 

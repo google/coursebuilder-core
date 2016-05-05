@@ -688,7 +688,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
         for name in sorted(registered.keys()):
             count += 1
             item = registered[name]
-            if item.deprecated:
+            if not item.show_in_site_settings:
                 continue
 
             has_environ_value, unused_environ_value = item.get_environ_value()

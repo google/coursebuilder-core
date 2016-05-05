@@ -23,6 +23,7 @@ from models.config import ConfigProperty
 from models.models import StudentProfileDAO
 from modules.course_explorer import messages
 from modules.course_explorer import student
+from modules.course_explorer import settings
 
 
 GCB_ENABLE_COURSE_EXPLORER_PAGE = ConfigProperty(
@@ -57,6 +58,7 @@ def register_module():
 
     # set the page initializer
     utils.PageInitializerService.set(ExplorerPageInitializer)
+    settings.register()
 
     # setup routes
     explorer_routes = [
@@ -69,7 +71,7 @@ def register_module():
     custom_module = custom_modules.Module(
         'Course Explorer',
         'A set of pages for delivering an online course.',
-        explorer_routes, [])
+        explorer_routes, settings.namespaced_routes)
     return custom_module
 
 

@@ -27,11 +27,11 @@ from common import jinja_utils
 from common import users
 from controllers import sites
 from controllers import utils
-from models import courses as models_courses
 from models import models
 from models import roles
 from models import transforms
 import course_explorer
+from modules.course_explorer import settings
 
 # We want to use views file in both /views and /modules/course_explorer/views.
 TEMPLATE_DIRS = [
@@ -120,10 +120,40 @@ class BaseStudentHandler(webapp2.RequestHandler):
 
     def initialize_page_and_get_user(self):
         """Add basic fields to template and return user."""
-        self.template_values['course_info'] = (
-            models_courses.COURSE_TEMPLATE_DICT)
-        self.template_values['course_info']['course'] = {
-            'locale': self.get_locale_for_user()}
+
+        try:
+            data = transforms.loads(settings.COURSE_EXPLORER_SETTINGS.value)
+        except ValueError:
+            data = {}
+
+        logo_url = None
+        if data:
+            if 'logo_bytes_base64' in data and 'logo_mime_type' in data:
+                logo_url = 'data:{};base64,{}'.format(
+                    data['logo_mime_type'], data['logo_bytes_base64'])
+        else:
+            data = {}
+
+        self.template_values['course_info'] = {
+            'institution': {
+                'name': data.get('institution_name'),
+                'url': data.get('institution_url'),
+                'logo': {
+                    'url': logo_url,
+                    'alt_text': data.get('logo_alt_text', ''),
+                },
+            },
+            'base': {
+                'privacy_terms_url': data.get('privacy_terms_url'),
+                'nav_header': data.get('title'),
+            },
+            'course': {
+                'locale': self.get_locale_for_user(),
+                'can_student_change_locale': False,
+                'can_record_student_events': False,
+            }
+        }
+        self.template_values['extra_content'] = data.get('content', '')
         self.template_values['page_locale'] = 'en'
         user = users.get_current_user()
         if not user:

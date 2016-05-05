@@ -5,6 +5,7 @@ tests:
   unit:
     - modules.course_explorer.course_explorer_tests.CourseExplorerDisabledTest = 1
     - modules.course_explorer.course_explorer_tests.CourseExplorerTest = 9
+    - modules.course_explorer.course_explorer_tests.CourseExplorerSettingsTest = 4
 
 files:
   - modules/course_explorer/__init__.py
@@ -12,6 +13,8 @@ files:
   - modules/course_explorer/course_explorer_tests.py
   - modules/course_explorer/manifest.yaml
   - modules/course_explorer/messages.py
+  - modules/course_explorer/constants.py
+  - modules/course_explorer/settings.py
   - modules/course_explorer/student.py
   - modules/course_explorer/views/base_explorer.html
   - modules/course_explorer/views/base_student.html

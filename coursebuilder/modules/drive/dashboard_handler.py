@@ -119,9 +119,10 @@ class AbstractDashboardHandler(dashboard.DashboardHandler):
             self.redirect(self.app_context.get_slug(), abort=True)
 
     @classmethod
-    def add_to_menu(cls, group, item, title):
+    def add_to_menu(cls, group, item, title, **kwargs):
         cls.add_sub_nav_mapping(
             group, item, title,
             action=cls.ACTION,
             href=cls.URL,
+            **kwargs
         )
