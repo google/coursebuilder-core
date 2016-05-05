@@ -1073,9 +1073,7 @@ class StudentLifecycleObserverTestCase(actions.TestBase):
         # sites.get_course_for_current_request() when profile is updated
         # from lifecycle queue callback handler.
         user = actions.login(self.STUDENT_EMAIL)
-        with actions.OverriddenConfig(models.CAN_SHARE_STUDENT_PROFILE.name,
-                                      True):
-            actions.register(self, self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
 
         # Verify user is really there.
         with common_utils.Namespace(self.NAMESPACE):

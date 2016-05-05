@@ -494,12 +494,6 @@ datastore. Specify an integer value between 1 and %s, inclusive. To completely
 disable reloading properties set the value to 0 in the app.yaml file.
 """
 
-SITE_SETTINGS_SHARE_STUDENT_PROFILE = """
-If "True", the student's profile information is shared among all the different
-courses for which she registered. This setting is only relevant if you have
-multiple courses on this instance.
-"""
-
 SITE_SETTINGS_SITE_ADMIN_EMAILS = """
 This list of email addresses represents the super-administrators for the whole
 site. Super-admin users have the highest level of access to your Google App

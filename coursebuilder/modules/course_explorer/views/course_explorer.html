@@ -16,9 +16,9 @@
                 {{ gettext('View score') }}
               </a>
             {% elif course.course.is_registered %}
-              <a href="{{course.course.course_preview_url}}" class="gcb-button gcb-explorer-button">
+              <a href="{{course.course.course_progress_url}}" class="gcb-button gcb-explorer-button">
                 {# I18N: Text for a button on the 'list of courses' page that takes students to the page for that course. #}
-                {{ gettext('Go to course') }}
+                {{ gettext('Progress') }}
               </a>
             {% elif course.course.can_register %}
               <a href="{{course.course.slug}}/register" class="gcb-button gcb-explorer-button">
@@ -32,19 +32,5 @@
         </li>
       {% endfor %}
     </ul>
-
-    <p class="gcb-product-headers">
-      {% if not courses %}
-        {# I18N: Shown to the student on the page that shows his/her list of courses, when he/she is not enrolled in courses. #}
-        {{ gettext('You are not currently enrolled in any courses.') }}
-      {% endif %}
-
-      {% if can_enroll_more_courses %}
-        <a href='/'>
-          {# I18N: Shown to the student on the page that shows his/her list of courses, when he/she wants to view all courses. #}
-          {{ gettext('View course list.') }}
-        </a>
-      {% endif %}
-    </p>
   </div>
 {% endblock %}

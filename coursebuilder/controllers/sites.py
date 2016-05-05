@@ -1072,6 +1072,13 @@ def get_all_courses(rules_text=None):
     return course_index.get_all_courses()
 
 
+def get_visible_courses(rules_text=None):
+    """Returns all courses that are visible to the current user."""
+    return [
+        course for course in get_all_courses(rules_text)
+        if can_handle_course_requests(course)]
+
+
 def _courses_config_validator(rules_text, errors, expect_failures=True):
     """Validates a textual definition of courses entries."""
     try:

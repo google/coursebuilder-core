@@ -31,49 +31,40 @@
         {% include 'student_data_table.html' %}
         {% include 'track_selection.html' %}
 
-        {% if can_edit_name %}
-          <form action='student/editstudent' method='post'>
-            <input type="hidden" name="xsrf_token" value="{{ student_edit_xsrf_token|escape }}">
-            <h2 class="gcb-section-division">
-              <label for="name">
-              {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
-              {{ gettext('New Name') }}
-            </label></h2>
-            <fieldset style="border: none;">
-              <p>
-                {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
-                <input name="name" id="name" type="text" size="40" aria-label="{{ gettext('New Name') }}">
-                <input type="hidden" name="email" value="{{ student.key().name() }}">
-              </p>
-            </fieldset>
-
-            <p>
-              <button class="gcb-button" type="submit">
-                {# I18N: Text for a button that allows the student to save changes to his/her name for the certificate. #}
-                {{ gettext('Change Name') }}
-              </button>
-            </p>
-          </form>
-
+        <form action='student/editstudent' method='post'>
+          <input type="hidden" name="xsrf_token" value="{{ student_edit_xsrf_token|escape }}">
           <h2 class="gcb-section-division">
-            {# I18N: Shown on the student profile page. #}
-            {{ gettext('To leave the course permanently, click on Unenroll') }}
-          </h2>
+            <label for="name">
+            {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
+            {{ gettext('New Name') }}
+          </label></h2>
+          <fieldset style="border: none;">
+            <p>
+              {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
+              <input name="name" id="name" type="text" size="40" aria-label="{{ gettext('New Name') }}">
+              <input type="hidden" name="email" value="{{ student.key().name() }}">
+            </p>
+          </fieldset>
 
           <p>
-            <a role="button" href="student/unenroll" class="gcb-button">
-              {# I18N: Button that allows the student to unenroll from a course. #}
-              {{ gettext('Unenroll') }}
-            </a>
+            <button class="gcb-button" type="submit">
+              {# I18N: Text for a button that allows the student to save changes to his/her name for the certificate. #}
+              {{ gettext('Change Name') }}
+            </button>
           </p>
-        {% else %}
-          <p>
-            <a href="/explorer/profile">
-              {# I18N: Text shown on progress page of course to redirect student to profile page. #}
-              {{ gettext('Manage course registration from your profile') }}
-            </a>
-          </p>
-        {% endif %}
+        </form>
+
+        <h2 class="gcb-section-division">
+          {# I18N: Shown on the student profile page. #}
+          {{ gettext('To leave the course permanently, click on Unenroll') }}
+        </h2>
+
+        <p>
+          <a role="button" href="student/unenroll" class="gcb-button">
+            {# I18N: Button that allows the student to unenroll from a course. #}
+            {{ gettext('Unenroll') }}
+          </a>
+        </p>
 
       {% else %}
         {# I18N: Shown when the student profile cannot be found in the database. #}

@@ -1355,23 +1355,17 @@ class StudentProfileHandler(BaseHandler):
                 'labels': list(course.get_unit_track_labels(unit)),
                 })
 
-        name = student.name
-        profile = student.profile
-        if profile:
-            name = profile.nick_name
         student_labels = student.get_labels_of_type(
             models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
         self.template_value['navbar'] = {'progress': True}
         self.template_value['student'] = student
-        self.template_value['student_name'] = name
+        self.template_value['student_name'] = student.name
         self.template_value['date_enrolled'] = student.enrolled_on.strftime(
             HUMAN_READABLE_DATE_FORMAT)
         self.template_value['score_list'] = course.get_all_scores(student)
         self.template_value['overall_score'] = course.get_overall_score(student)
         self.template_value['student_edit_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('student-edit'))
-        self.template_value['can_edit_name'] = (
-            not models.CAN_SHARE_STUDENT_PROFILE.value)
         self.template_value['track_labels'] = track_labels
         self.template_value['student_labels'] = student_labels
         self.template_value['units'] = units

@@ -135,7 +135,6 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.StaticHandlerTest': 3,
     'tests.functional.test_classes.StudentAspectTest': 20,
     'tests.functional.test_classes.StudentKeyNameTest': 8,
-    'tests.functional.test_classes.StudentUnifiedProfileTest': 20,
     'tests.functional.test_classes.TransformsEntitySchema': 1,
     'tests.functional.test_classes.TransformsJsonFileTestCase': 3,
     'tests.functional.test_classes.VirtualFileSystemTest': 48,

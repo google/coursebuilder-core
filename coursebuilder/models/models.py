@@ -379,13 +379,9 @@ def get_counter_global_value(name):
 counters.get_counter_global_value = get_counter_global_value
 counters.incr_counter_global_value = incr_counter_global_value
 
-
-# Whether to record tag events in a database.
-CAN_SHARE_STUDENT_PROFILE = config.ConfigProperty(
-    'gcb_can_share_student_profile', bool,
-    messages.SITE_SETTINGS_SHARE_STUDENT_PROFILE, default_value=False,
-    label='Share Student Profile')
-
+DEPRECATED_CAN_SHARE_STUDENT_PROFILE = config.ConfigProperty(
+    'gcb_can_share_student_profile', bool, '', default_value=False,
+    deprecated=True)
 
 class CollisionError(Exception):
     """Exception raised to show that a collision in a namespace has occurred."""
@@ -625,7 +621,6 @@ class PersonalProfile(BaseEntity):
     legal_name = db.StringProperty(indexed=False)
     nick_name = db.StringProperty(indexed=False)
     date_of_birth = db.DateProperty(indexed=False)
-    enrollment_info = db.TextProperty()
     course_info = db.TextProperty()
 
     _PROPERTY_EXPORT_BLACKLIST = [email, legal_name, nick_name, date_of_birth]
@@ -643,7 +638,6 @@ class PersonalProfileDTO(object):
     """DTO for PersonalProfile."""
 
     def __init__(self, personal_profile=None):
-        self.enrollment_info = '{}'
         self.course_info = '{}'
         if personal_profile:
             self.user_id = personal_profile.user_id
@@ -651,7 +645,6 @@ class PersonalProfileDTO(object):
             self.legal_name = personal_profile.legal_name
             self.nick_name = personal_profile.nick_name
             self.date_of_birth = personal_profile.date_of_birth
-            self.enrollment_info = personal_profile.enrollment_info
             self.course_info = personal_profile.course_info
 
 
@@ -931,17 +924,13 @@ class StudentProfileDAO(object):
                 cls._memcache_key(user_id), namespace=cls.TARGET_NAMESPACE)
 
     @classmethod
-    def _add_new_profile(cls, user_id, email):
+    def add_new_profile(cls, user_id, email):
         """Adds new profile for a user_id and returns Entity object."""
-        if not CAN_SHARE_STUDENT_PROFILE.value:
-            return None
-
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(cls.TARGET_NAMESPACE)
             profile = PersonalProfile(key_name=user_id)
             profile.email = email
-            profile.enrollment_info = '{}'
             profile.put()
             return profile
         finally:
@@ -966,33 +955,24 @@ class StudentProfileDAO(object):
         if date_of_birth is not None:
             profile.date_of_birth = date_of_birth
 
-        if not (is_enrolled is None and final_grade is None and
-                course_info is None):
+        # TODO(nretallack): Remove this block and re-calculate this dynamically
+        if final_grade is not None or course_info is not None:
 
             # Defer to avoid circular import.
             from controllers import sites
             course = sites.get_course_for_current_request()
             course_namespace = course.get_namespace_name()
 
-            if is_enrolled is not None:
-                enrollment_dict = transforms.loads(profile.enrollment_info)
-                enrollment_dict[course_namespace] = is_enrolled
-                profile.enrollment_info = transforms.dumps(enrollment_dict)
-
-            if final_grade is not None or course_info is not None:
-                course_info_dict = {}
-                if profile.course_info:
-                    course_info_dict = transforms.loads(profile.course_info)
-                if course_namespace in course_info_dict.keys():
-                    info = course_info_dict[course_namespace]
-                else:
-                    info = {}
-                if final_grade:
-                    info['final_grade'] = final_grade
-                if course_info:
-                    info['info'] = course_info
-                course_info_dict[course_namespace] = info
-                profile.course_info = transforms.dumps(course_info_dict)
+            course_info_dict = {}
+            if profile.course_info:
+                course_info_dict = transforms.loads(profile.course_info)
+            info = course_info_dict.get(course_namespace, {})
+            if final_grade:
+                info['final_grade'] = final_grade
+            if course_info:
+                info['info'] = course_info
+            course_info_dict[course_namespace] = info
+            profile.course_info = transforms.dumps(course_info_dict)
 
     @classmethod
     def _update_course_profile_attributes(
@@ -1051,10 +1031,6 @@ class StudentProfileDAO(object):
         return cls.get_profile_by_user_id(user.user_id())
 
     @classmethod
-    def add_new_profile(cls, user_id, email):
-        return cls._add_new_profile(user_id, email)
-
-    @classmethod
     def add_new_student_for_current_user(
         cls, nick_name, additional_fields, handler, labels=None):
         user = users.get_current_user()
@@ -1095,7 +1071,7 @@ class StudentProfileDAO(object):
         # create profile if does not exist
         profile = cls._get_profile_by_user_id(user_id)
         if not profile:
-            profile = cls._add_new_profile(user_id, email)
+            profile = cls.add_new_profile(user_id, email)
 
         # create new student or re-enroll existing
         if key_name:

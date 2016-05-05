@@ -70,15 +70,18 @@
             <a href="{{ href }}">{{ link }}</a>
           </li>
         {% endfor %}
-        {% if show_course_explorer_tab and logoutUrl %}
-          <li class="gcb-pull-right">
-            {# I18N: Navbar tab. #}
-            <a href="/explorer/courses">{{ gettext('My Courses') }}</a>
-          </li>
-          {% if has_global_profile %}
+        {% if show_course_explorer_tab %}
+          {% if logoutUrl %}
             <li class="gcb-pull-right">
-              {# I18N: Navbar tab. #}
-              <a href="/explorer/profile">{{ gettext('Profile') }}</a>
+              {# I18N: Text for title of navigation bar tab to reach list of
+                 courses the current user is enrolled in or whitelisted for. #}
+              <a href="/">{{ gettext('My Courses') }}</a>
+            </li>
+          {% else %}
+            <li class="gcb-pull-right">
+              {# I18N: Text for title of navigation bar tab to reach list of all
+                 available courses when user is logged out. #}
+              <a href="/explorer">{{ gettext('Explore Courses') }}</a>
             </li>
           {% endif %}
         {% endif %}

@@ -365,8 +365,16 @@ class RootPage(PageObject):
         AdminSettingsPage(self._tester).click_override(
             'gcb_courses_config'
         ).set_status('Active').click_save()
-        self.load(base_url, suffix='/modules/admin?action=courses')
-        self.find_element_by_link_text('Logout').click()
+
+        # Registration acts different depending on whether any nickname is known
+        # globally for a user.  Since sereval tests attempt to register the
+        # admin user in a course, they will see different behavior depending on
+        # which test ran first.  Therefore, we register for one course with that
+        # user now, to get them a global profile nickname.
+        self.load(base_url, suffix='/course')
+        self.click_register(
+        ).enroll('Admin Test'
+        ).find_element_by_link_text('Logout').click()
 
     def load(self, base_url, suffix=BASE_URL_SUFFIX):
         self.get(base_url + suffix)
@@ -397,8 +405,12 @@ class RootPage(PageObject):
         self.click_link('Announcements')
         return AnnouncementsPage(self._tester)
 
+    def click_register_expecting_no_survey(self):
+        self.find_element_by_id('register-button').click()
+        return self
+
     def click_register(self):
-        self.click_link('Register')
+        self.find_element_by_id('register-button').click()
         return RegisterPage(self._tester, continue_page=self.__class__)
 
     def click_link(self, link_text, wait_for_page_load_after=True):

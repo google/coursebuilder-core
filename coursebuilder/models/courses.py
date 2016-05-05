@@ -3178,8 +3178,7 @@ class Course(object):
 
     def update_final_grades(self, student):
         """Updates the final grades of the student."""
-        if (models.CAN_SHARE_STUDENT_PROFILE.value and
-            self.is_course_complete(student)):
+        if self.is_course_complete(student):
             overall_score = self.get_overall_score(student)
             models.StudentProfileDAO.update(
                 student.user_id, student.email, final_grade=overall_score)

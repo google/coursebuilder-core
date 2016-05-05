@@ -124,10 +124,7 @@ class AdminTests(integration.TestBase):
         self.load_dashboard(
             name
         ).click_course(
-        ).click_register(
-        ).enroll(
-            'Test Admin'
-        ).click_course(
+        ).click_register_expecting_no_survey(
         ).click_dashboard(
         ).click_admin(
         ).verify_total_enrollments(
@@ -612,10 +609,7 @@ class QuestionsTest(integration.TestBase):
         page = self.load_dashboard(
             name
         ).click_course(
-        ).click_register(
-        ).enroll(
-            'John Smith'
-        ).click_course(
+        ).click_register_expecting_no_survey(
         ).click_dashboard(
 
         #---------------------------------------------- Question

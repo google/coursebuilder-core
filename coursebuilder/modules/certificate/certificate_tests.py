@@ -68,13 +68,15 @@ class CertificateHandlerTestCase(actions.TestBase):
             'http://localhost/course', response.headers['Location'])
 
         # If the student is enrolled, expect certificate
-        models.Student.add_new_student_for_current_user('Test User', None, self)
+        models.Student.add_new_student_for_current_user(
+            'Test User', None, self)
         response = self.get('/certificate')
         self.assertEquals(200, response.status_code)
 
     def test_student_must_be_qualified(self):
         actions.login('test@example.com')
-        models.Student.add_new_student_for_current_user('Test User', None, self)
+        models.Student.add_new_student_for_current_user(
+            'Test User', None, self)
 
         # If student is not qualified, expect redirect to home page
         self.is_qualified = False
@@ -89,7 +91,8 @@ class CertificateHandlerTestCase(actions.TestBase):
 
     def test_certificate_should_have_student_nickname(self):
         actions.login('test@example.com')
-        models.Student.add_new_student_for_current_user('Jane Doe', None, self)
+        models.Student.add_new_student_for_current_user(
+            'Jane Doe', None, self)
 
         response = self.get('/certificate')
         self.assertEquals(200, response.status_code)
@@ -97,7 +100,8 @@ class CertificateHandlerTestCase(actions.TestBase):
 
     def test_download_pdf(self):
         actions.login('test@example.com')
-        models.Student.add_new_student_for_current_user('Test User', None, self)
+        models.Student.add_new_student_for_current_user(
+            'Test User', None, self)
 
         response = self.get('/certificate.pdf')
         self.assertEqual('application/pdf', response.headers['Content-Type'])
@@ -108,7 +112,8 @@ class CertificateHandlerTestCase(actions.TestBase):
 
     def test_certificate_table_entry(self):
         user = actions.login('test@example.com')
-        models.Student.add_new_student_for_current_user('Test User', None, self)
+        models.Student.add_new_student_for_current_user(
+            'Test User', None, self)
         student = models.Student.get_by_user(user)
 
         all_courses = sites.get_all_courses()

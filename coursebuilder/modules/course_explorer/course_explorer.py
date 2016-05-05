@@ -63,8 +63,7 @@ def register_module():
         ('/', student.IndexPageHandler),
         ('/explorer', student.AllCoursesHandler),
         (r'/explorer/assets/(.*)', student.AssetsHandler),
-        ('/explorer/courses', student.RegisteredCoursesHandler),
-        ('/explorer/profile', student.ProfileHandler)]
+    ]
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

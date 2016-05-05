@@ -26,18 +26,13 @@
           {# I18N: Navbar tab. #}
           <a href="/explorer">{{ gettext('Explore Courses') }}</a>
         </li>
-        {% if logoutUrl %}
+        {% if logoutUrl and has_enrolled_courses %}
           <li {% if navbar.mycourses %}class='active'{% endif %}>
             {# I18N: Navbar tab. #}
-            <a href="/explorer/courses">{{ gettext('My Courses') }}</a>
+            <a href="/">{{ gettext('My Courses') }}</a>
           </li>
-          {% if has_global_profile %}
-            <li {% if navbar.profile %}class='active'{% endif %}>
-              {# I18N: Navbar tab. #}
-              <a href="/explorer/profile">{{ gettext('Profile') }}</a>
-            </li>
-          {% endif %}
         {% endif %}
+
         {% if is_super_admin %}
           <li class="gcb-pull-right">
             <a href="/modules/admin">Dashboard</a>

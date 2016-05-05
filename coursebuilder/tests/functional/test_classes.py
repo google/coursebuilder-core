@@ -3078,19 +3078,6 @@ class StudentAspectTest(actions.TestBase):
         assert_contains('Mon, 01 Jan 1990', response.headers['Expires'])
 
 
-class StudentUnifiedProfileTest(StudentAspectTest):
-    """Tests student actions having unified profile enabled."""
-
-    def setUp(self):
-        super(StudentUnifiedProfileTest, self).setUp()
-        config.Registry.test_overrides[
-            models.CAN_SHARE_STUDENT_PROFILE] = True
-
-    def tearDown(self):
-        config.Registry.test_overrides = {}
-        super(StudentUnifiedProfileTest, self).tearDown()
-
-
 class InaccessiblePageHandlingTest(actions.TestBase):
 
     COURSE_NAME = 'test_course'

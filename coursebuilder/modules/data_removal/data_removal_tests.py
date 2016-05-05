@@ -338,13 +338,11 @@ class DataRemovalTests(DataRemovalTestBase):
             COURSE_TWO, self.ADMIN_EMAIL, 'Data Removal Test Two')
         user = actions.login(self.STUDENT_EMAIL)
 
-        with actions.OverriddenConfig(models.CAN_SHARE_STUDENT_PROFILE.name,
-                                      True):
-            actions.register(self, user.email(), course=self.COURSE)
-            actions.register(self, user.email(), course=COURSE_TWO)
-            # Slight cheat: Rather than enabling gitkit module, just call
-            # the method that will insert the EmailMapping row.
-            gitkit.EmailUpdatePolicy.apply(user)
+        actions.register(self, user.email(), course=self.COURSE)
+        actions.register(self, user.email(), course=COURSE_TWO)
+        # Slight cheat: Rather than enabling gitkit module, just call
+        # the method that will insert the EmailMapping row.
+        gitkit.EmailUpdatePolicy.apply(user)
 
         # Global profile object(s) should now exist.
         profile = models.StudentProfileDAO.get_profile_by_user_id(

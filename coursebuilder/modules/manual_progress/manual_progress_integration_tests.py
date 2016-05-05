@@ -87,10 +87,7 @@ class ManualProgressTest(integration.TestBase):
 
         # Now register; manual completion items for unit, lesson should
         # now be present.
-        ).click_register(
-        ).enroll(
-            'John Smith'
-        ).click_course(
+        ).click_register_expecting_no_survey(
         ).verify_no_manual_completion_unit(
         ).verify_no_manual_completion_lesson(
         ).click_link(

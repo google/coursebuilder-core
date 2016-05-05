@@ -18,9 +18,9 @@ __author__ = 'Rahul Singal (rahulsingal@google.com)'
 
 import mimetypes
 import os
-
-import course_explorer
 import webapp2
+
+from google.appengine.ext import db
 
 import appengine_config
 from common import jinja_utils
@@ -31,6 +31,7 @@ from models import courses as models_courses
 from models import models
 from models import roles
 from models import transforms
+import course_explorer
 
 # We want to use views file in both /views and /modules/course_explorer/views.
 TEMPLATE_DIRS = [
@@ -45,76 +46,41 @@ STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID = 'rename-student-global'
 _STRING_PROPERTY_MAX_BYTES = 500
 
 
-class IndexPageHandler(webapp2.RequestHandler, utils.QueryableRouteMixin):
-    """Handles routing of root URL '/'."""
-
-    @classmethod
-    def can_handle_route_method_path_now(cls, route, method, path):
-        return course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value
-
-    def get(self):
-        if not course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
-            self.error(404)
-            return
-        self.redirect('/explorer')
-
-
 class BaseStudentHandler(webapp2.RequestHandler):
     """Base Handler for a student's courses."""
 
     def __init__(self, *args, **kwargs):
         super(BaseStudentHandler, self).__init__(*args, **kwargs)
         self.template_values = {}
-        self.initialize_student_state()
+        self.enrolled_namespaces = []
+        self.courses_progress_dict = {}
+
+        utils.PageInitializerService.get().initialize(self.template_values)
+        user = users.get_current_user()
+        if not user:
+            return
+
+        self.enrolled_namespaces = self.get_enrolled_namespaces()
+        self.template_values['has_enrolled_courses'] = bool(
+            self.enrolled_namespaces)
+
+        profile = models.StudentProfileDAO.get_profile_by_user_id(
+            user.user_id())
+        if profile and profile.course_info:
+            self.courses_progress_dict = transforms.loads(profile.course_info)
 
     def get_locale_for_user(self):
         """Chooses locale for a user."""
         return 'en_US'  # TODO(psimakov): choose proper locale from profile
 
-    def initialize_student_state(self):
-        """Initialize course information related to student."""
-        utils.PageInitializerService.get().initialize(self.template_values)
-        self.enrolled_courses_dict = {}
-        self.courses_progress_dict = {}
-        user = users.get_current_user()
-        if not user:
-            return
-
-        profile = models.StudentProfileDAO.get_profile_by_user_id(
-            user.user_id())
-        if not profile:
-            return
-
-        self.template_values['register_xsrf_token'] = (
-            utils.XsrfTokenManager.create_xsrf_token('register-post'))
-
-        self.enrolled_courses_dict = transforms.loads(profile.enrollment_info)
-        if self.enrolled_courses_dict:
-            self.template_values['has_enrolled_courses'] = True
-
-        if profile.course_info:
-            self.courses_progress_dict = transforms.loads(profile.course_info)
-
-    def get_public_courses(self):
-        """Get all the public courses."""
-        public_courses = []
-        for course in sites.get_all_courses():
-            if ((course.now_available and roles.Roles.is_user_whitelisted(
-                    course)) or roles.Roles.is_course_admin(course)):
-                public_courses.append(course)
-        return public_courses
-
     def is_enrolled(self, course):
         """Returns true if student is enrolled else false."""
-        return bool(
-            self.enrolled_courses_dict.get(course.get_namespace_name()))
+        return course.get_namespace_name() in self.enrolled_namespaces
 
     def is_completed(self, course):
         """Returns true if student has completed course else false."""
         info = self.courses_progress_dict.get(course.get_namespace_name())
-        if info and 'final_grade' in info:
-            return True
-        return False
+        return info and 'final_grade' in info
 
     def can_register(self, course):
         return course.get_environ()['reg_form']['can_register']
@@ -129,18 +95,28 @@ class BaseStudentHandler(webapp2.RequestHandler):
             slug = ''
         info['course']['slug'] = slug
         info['course']['course_preview_url'] = course_preview_url
+        info['course']['course_progress_url'] = (
+            course_preview_url + '/student/home')
         info['course']['is_registered'] = self.is_enrolled(course)
         info['course']['is_completed'] = self.is_completed(course)
         info['course']['can_register'] = self.can_register(course)
         return info
 
-    def get_enrolled_courses(self, courses):
-        """Returns list of courses registered by student."""
-        enrolled_courses = []
-        for course in courses:
-            if self.is_enrolled(course):
-                enrolled_courses.append(self.get_course_info(course))
-        return enrolled_courses
+    def get_enrolled_namespaces(self):
+        user_id = users.get_current_user().user_id()
+        return [
+            student.key().namespace() for student in db.get([
+                db.Key.from_path(
+                    'Student', user_id, namespace=course.get_namespace_name())
+                for course in sites.get_all_courses()])
+            if student and student.is_enrolled]
+
+    def get_enrolled_courses(self):
+        """Returns a list of courses that the student is enrolled in."""
+        return [
+            self.get_course_info(course)
+            for course in sites.get_visible_courses()
+            if course.get_namespace_name() in self.enrolled_namespaces]
 
     def initialize_page_and_get_user(self):
         """Add basic fields to template and return user."""
@@ -159,12 +135,6 @@ class BaseStudentHandler(webapp2.RequestHandler):
             self.template_values['logoutUrl'] = users.create_logout_url('/')
         return user
 
-    def is_valid_xsrf_token(self, action):
-        """Asserts the current request has proper XSRF token or fails."""
-        token = self.request.get('xsrf_token')
-        return token and utils.XsrfTokenManager.is_xsrf_token_valid(
-            token, action)
-
 
 class NullHtmlHooks(object):
     """Provide a non-null callback object for pages asking for hooks.
@@ -177,62 +147,6 @@ class NullHtmlHooks(object):
         return ''
 
 
-class ProfileHandler(BaseStudentHandler):
-    """Global profile handler for a student."""
-
-    def _storable_in_string_property(self, value):
-        # db.StringProperty can hold 500B. len(1_unicode_char) == 1,
-        # so len() is not a good proxy for unicode string size. Instead,
-        # cast to utf-8-encoded str first.
-        return len(value.encode('utf-8')) <= _STRING_PROPERTY_MAX_BYTES
-
-    def get(self):
-        """Handles GET requests."""
-        if not course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
-            self.error(404)
-            return
-
-        user = self.initialize_page_and_get_user()
-        if not user:
-            self.redirect('/explorer')
-            return
-
-        courses = self.get_public_courses()
-        self.template_values['student'] = (
-            models.StudentProfileDAO.get_profile_by_user_id(user.user_id()))
-        self.template_values['navbar'] = {'profile': True}
-        self.template_values['courses'] = self.get_enrolled_courses(courses)
-        self.template_values['student_edit_xsrf_token'] = (
-            utils.XsrfTokenManager.create_xsrf_token(
-                STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID))
-        self.template_values['html_hooks'] = NullHtmlHooks()
-        self.template_values['student_preferences'] = {}
-
-        template = jinja_utils.get_template(
-            'profile.html', TEMPLATE_DIRS)
-        self.response.write(template.render(self.template_values))
-
-    def post(self):
-        """Handles post requests."""
-        if not self.is_valid_xsrf_token(STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID):
-            self.error(403)
-            return
-
-        user = self.initialize_page_and_get_user()
-        if not user:
-            self.redirect('/explorer')
-            return
-
-        new_name = self.request.get('name')
-        if not (new_name and self._storable_in_string_property(new_name)):
-            self.error(400)
-            return
-
-        models.StudentProfileDAO.update(
-            user.user_id(), None, nick_name=new_name, profile_only=True)
-        self.redirect('/explorer/profile')
-
-
 class AllCoursesHandler(BaseStudentHandler):
     """Handles list of courses that can be viewed by a student."""
 
@@ -243,20 +157,22 @@ class AllCoursesHandler(BaseStudentHandler):
             return
 
         self.initialize_page_and_get_user()
-        courses = self.get_public_courses()
-
-        self.template_values['courses'] = (
-            [self.get_course_info(course) for course in courses])
+        self.template_values['courses'] = [
+            self.get_course_info(course)
+            for course in sites.get_visible_courses()]
         self.template_values['navbar'] = {'course_explorer': True}
         self.template_values['html_hooks'] = NullHtmlHooks()
-        self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
             'course_explorer.html', TEMPLATE_DIRS)
         self.response.write(template.render(self.template_values))
 
 
-class RegisteredCoursesHandler(BaseStudentHandler):
+class IndexPageHandler(BaseStudentHandler, utils.QueryableRouteMixin):
     """Handles registered courses view for a student."""
+
+    @classmethod
+    def can_handle_route_method_path_now(cls, route, method, path):
+        return course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value
 
     def get(self):
         """Handles GET request."""
@@ -266,15 +182,13 @@ class RegisteredCoursesHandler(BaseStudentHandler):
             return
 
         self.initialize_page_and_get_user()
-        courses = self.get_public_courses()
-        enrolled_courses = self.get_enrolled_courses(courses)
+        if not self.enrolled_namespaces:
+            self.redirect('/explorer')
+            return
 
-        self.template_values['courses'] = enrolled_courses
+        self.template_values['courses'] = self.get_enrolled_courses()
         self.template_values['navbar'] = {'mycourses': True}
-        self.template_values['can_enroll_more_courses'] = (
-            len(courses) - len(enrolled_courses) > 0)
         self.template_values['html_hooks'] = NullHtmlHooks()
-        self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
             'course_explorer.html', TEMPLATE_DIRS)
         self.response.write(template.render(self.template_values))
