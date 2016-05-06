@@ -548,6 +548,32 @@ class LoginPage(PageObject):
         return self._continue_page(self._tester)
 
 
+class CoursesListPage(PageObject):
+    """Page object to model course creation from the Courses list page."""
+
+    def load(self, base_url):
+        self.get(base_url + '/modules/admin')
+        return self
+
+    def click_add_course(self):
+        self.find_element_by_id('add_course').click()
+        return AddCourseEditorPopup(self._tester)
+
+    def click_add_sample_course(self):
+        self.find_element_by_id('add_sample_course').click()
+        return AddCourseEditorPopup(self._tester)
+
+    def has_course(self, slug):
+        """Determines whether a given course exists."""
+        self.find_element_by_id('add_course') # wait until page is visible
+        try:
+            self.find_element_by_css_selector(
+                '#gcb-main-content [href="/{}"]'.format(slug), pre_wait=False)
+            return True
+        except exceptions.NoSuchElementException:
+            return False
+
+
 class DashboardPage(PageObject):
     """Page object to model the interactions with the dashboard landing page."""
 
@@ -623,6 +649,10 @@ class DashboardPage(PageObject):
     def click_admin(self):
         self.find_element_by_link_text('Courses').click()
         return self
+
+    def click_courses(self, next_page=CoursesListPage):
+        self.find_element_by_link_text('Courses').click()
+        return next_page(self._tester)
 
     def click_import(self):
         self.find_element_by_css_selector('#import_course').click()
@@ -721,28 +751,6 @@ class DashboardPage(PageObject):
         clickable = self.find_element_by_link_text('Translations')
         self.wait_for_page_load_after(clickable.click)
         return self
-
-    def click_add_course(self):
-        # assuming you're already looking at the Courses page
-        self.find_element_by_id('add_course').click()
-        return AddCourseEditorPopup(self._tester)
-
-    def click_add_sample_course(self):
-        # assuming you're already looking at the Courses page
-        self.find_element_by_id('add_sample_course').click()
-        return AddCourseEditorPopup(self._tester)
-
-    def has_course(self, slug):
-        """Determines whether a given course exists.
-
-        Assumes you're already looking at the Courses page."""
-        self.find_element_by_id('add_course') # wait until page is visible
-        try:
-            self.find_element_by_css_selector(
-                '#gcb-main-content [href="/{}"]'.format(slug), pre_wait=False)
-            return True
-        except exceptions.NoSuchElementException:
-            return False
 
     def click_site_settings(self):
         self.ensure_menu_group_is_open('settings')
@@ -1587,7 +1595,7 @@ class AddCourseEditorPopup(EditorPageObject):
         return self
 
     def click_close(self):
-        return self._close_and_return_to(DashboardPage)
+        return self._close_and_return_to(CoursesListPage)
 
 
 class AnalyticsPage(PageObject):

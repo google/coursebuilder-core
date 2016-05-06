@@ -89,6 +89,9 @@ class TestBase(suite.TestBase):
         return pageobjects.DashboardPage(self).load(
             suite.TestBase.INTEGRATION_SERVER_BASE_URL, name)
 
+    def load_courses_list(self, cls=pageobjects.CoursesListPage):
+        return cls(self).load(suite.TestBase.INTEGRATION_SERVER_BASE_URL)
+
     def load_appengine_admin(self, course_name):
         return pageobjects.AppengineAdminPage(
             self, suite.TestBase.ADMIN_SERVER_BASE_URL, course_name)
@@ -107,7 +110,7 @@ class TestBase(suite.TestBase):
         ).login(
             self.LOGIN, admin=True
         ).click_dashboard(
-        ).click_admin()
+        ).click_courses()
 
         if not page.has_course(name):
             page.click_add_sample_course(
@@ -131,7 +134,11 @@ class TestBase(suite.TestBase):
         uid = self.get_uid()
         name = 'ns_%s' % uid
         title = 'Test Course (%s)' % uid
+        self.create_course(title, name, login=login)
+        return (name, title)
 
+    def create_course(self, title, name, login=True):
+        """Create a new course from title and name, using the admin tools."""
         page = self.load_root_page()
 
         if login:
@@ -140,14 +147,11 @@ class TestBase(suite.TestBase):
                 self.LOGIN, admin=True
             )
 
-        page.click_dashboard(
-        ).click_admin(
+        self.load_courses_list(
         ).click_add_course(
         ).set_fields(
-            name=name, title=title, email='a@bb.com'
+            name=name, title=title, email='admin@example.com'
         ).click_ok()
-
-        return (name, title)
 
     def set_admin_setting(self, setting_name, state):
         """Configure a property on Admin setting page."""

@@ -22,25 +22,48 @@ from selenium.common import exceptions
 
 from models import courses
 from modules.admin import admin_pageobjects
-from tests import suite
 from tests.integration import integration
 
-class CourseAdministrationTests(integration.TestBase):
 
-    def _load_course_list(self, ):
-        return admin_pageobjects.CourseListPage(self).load(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL)
+class _CoursesListTestBase(integration.TestBase):
+
+    def load_courses_list(self, cls=admin_pageobjects.CoursesListPage):
+        return super(_CoursesListTestBase, self).load_courses_list(cls=cls)
+
+    def setUp(self):
+        super(_CoursesListTestBase, self).setUp()
+        self.load_root_page().click_login().login(self.LOGIN, admin=True)
+
+    def whitelist(self, course_name, avail, emails):
+        if avail == 'Private':
+            return  # Assume newly-created course is already 'Private'.
+
+        avail_page = self.load_dashboard(
+            course_name
+        ).click_availability(
+        ).set_course_availability(
+            avail
+        )
+
+        if avail == 'Public - No Registration':
+            self.assertEqual(0, len(emails))
+        else:
+            avail_page.set_whitelisted_students(emails)
+
+        avail_page.click_save()
+
+
+class CourseAdministrationTests(_CoursesListTestBase):
 
     def test_course_selection_checkboxes(self):
         """Verify select-all and course-select checkboxes affect one other."""
 
-        self.load_root_page().click_login().login(self.LOGIN, admin=True)
         # ----------------------------------------------------------------
         # Verify operation with multiple courses.
         course_namespace_one = ''  # Power Searching course w/ blank namespace.
         course_name_two = self.create_new_course(login=False)[0]
         course_namespace_two = 'ns_' + course_name_two
-        course_list = self._load_course_list()
+        course_list = self.load_courses_list()
 
         # On page load, all selections off.
         course_list.verify_all_courses_checkbox_checked(False)
@@ -97,20 +120,12 @@ class CourseAdministrationTests(integration.TestBase):
         course_list.verify_course_checkbox_checked(course_namespace_two, True)
 
 
-class CourseMultiEditTests(integration.TestBase):
-
-    def _load_course_list(self, ):
-        return admin_pageobjects.CourseListPage(self).load(
-            suite.TestBase.INTEGRATION_SERVER_BASE_URL)
-
-    def setUp(self):
-        super(CourseMultiEditTests, self).setUp()
-        self.load_root_page().click_login().login(self.LOGIN, admin=True)
+class CourseMultiEditTests(_CoursesListTestBase):
 
     def test_multi_edit_cancel(self):
         course_name = self.create_new_course(login=False)[0]
         course_namespace = 'ns_' + course_name
-        course_list = self._load_course_list()
+        course_list = self.load_courses_list()
         course_list.toggle_course_checkbox(course_namespace)
         multi_edit = course_list.click_edit_availability()
 
@@ -123,7 +138,7 @@ class CourseMultiEditTests(integration.TestBase):
     def test_multi_edit_single_course(self):
         course_name = self.create_new_course(login=False)[0]
         course_namespace = 'ns_' + course_name
-        course_list = self._load_course_list()
+        course_list = self.load_courses_list()
 
         course_list.toggle_course_checkbox(course_namespace)
         multi_edit = course_list.click_edit_availability()
@@ -146,7 +161,7 @@ class CourseMultiEditTests(integration.TestBase):
 
 
         # Refresh page and verify that course is still public.
-        course_list = self._load_course_list()
+        course_list = self.load_courses_list()
         course_list.verify_availability(
             course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_PUBLIC]['title'])
@@ -158,7 +173,7 @@ class CourseMultiEditTests(integration.TestBase):
             course_namespaces.append(
                 'ns_' + self.create_new_course(login=False)[0])
 
-        course_list = self._load_course_list()
+        course_list = self.load_courses_list()
         for course_namespace in course_namespaces:
             course_list.toggle_course_checkbox(course_namespace)
 

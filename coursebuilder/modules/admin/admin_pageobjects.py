@@ -24,7 +24,7 @@ from selenium.webdriver.support import select
 from tests.integration import pageobjects
 
 
-class CourseListPage(pageobjects.DashboardPage):
+class CoursesListPage(pageobjects.CoursesListPage):
     _SELECT_ALL_COURSES_CHECKBOX_ID = 'all_courses_select'
 
     def _click_checkbox_and_wait_for_effects_to_propagate(self, checkbox):
@@ -94,7 +94,7 @@ class CourseListPage(pageobjects.DashboardPage):
         self.find_element_by_id('edit_multi_course_availability').click()
         return MultiEditModalDialog(self._tester)
 
-class MultiEditModalDialog(pageobjects.DashboardPage):
+class MultiEditModalDialog(pageobjects.CoursesListPage):
 
     def __init__(self, tester):
         super(MultiEditModalDialog, self).__init__(tester)
@@ -110,7 +110,7 @@ class MultiEditModalDialog(pageobjects.DashboardPage):
     def click_cancel(self):
         self.find_element_by_id('multi-course-cancel').click()
         self.wait().until(self._dialog_not_visible)
-        return CourseListPage(self._tester)
+        return CoursesListPage(self._tester)
 
     def click_save(self):
         self.find_element_by_id('multi-course-save').click()
