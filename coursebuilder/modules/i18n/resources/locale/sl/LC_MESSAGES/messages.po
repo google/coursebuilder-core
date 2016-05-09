@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-04-11 08:00-0700\n"
+"POT-Creation-Date: 2016-05-09 08:30-0700\n"
 "PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sl <LL@li.org>\n"
@@ -373,103 +373,41 @@ msgid ""
 msgstr "Zahtev za pridobitev certifikata o opravljenem tečaju še niste izpolnili."
 
 #. Navbar tab.
+#. Text for title of navigation bar tab to reach list of all
+#. available courses when user is logged out.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
+#: experimental/coursebuilder/views/base_course.html:84
 msgid "Explore Courses"
 msgstr "Raziskovanje tečajev"
 
 #. Navbar tab.
+#. Text for title of navigation bar tab to reach list of
+#. courses the current user is enrolled in or whitelisted for.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
-#: experimental/coursebuilder/views/base_course.html:76
+#: experimental/coursebuilder/views/base_course.html:78
 msgid "My Courses"
 msgstr "Moji tečaji"
 
-#. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:37
-#: experimental/coursebuilder/views/base_course.html:81
-msgid "Profile"
-msgstr "Profil"
-
 #. Text for a button on the 'list of courses' page that takes students to a
 #. page where they can view score.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:16
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:49
+#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:17
 msgid "View score"
 msgstr "Ogled ocene"
 
 #. Text for a button on the 'list of courses' page that takes students to the
 #. page for that course.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:21
-msgid "Go to course"
-msgstr "Pojdi v tečaj"
-
-#. Registration button on the main course page.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:26
-#: experimental/coursebuilder/views/registration_module.html:7
-#: experimental/coursebuilder/views/registration_module.html:15
-msgid "Register"
-msgstr "Registracija"
-
-#. Shown to the student on the page that shows his/her list of courses, when
-#. he/she is not enrolled in courses.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:39
-msgid "You are not currently enrolled in any courses."
-msgstr "Trenutno niste vpisani v noben tečaj."
-
-#. Shown to the student on the page that shows his/her list of courses, when
-#. he/she wants to view all courses.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:45
-msgid "View course list."
-msgstr "Ogled seznama tečajev."
-
-#. Title of the student profile page. Followed by a student's name.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:5
-msgid "Student Profile for"
-msgstr "Profil študenta za osebo"
-
-#. Table header for the student's name.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:16
-#: experimental/coursebuilder/views/student_data_table.html:21
-msgid "Name"
-msgstr "Ime"
-
-#. Table header for the student's email address. This is a noun.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:21
-#: experimental/coursebuilder/views/student_data_table.html:15
-msgid "Email"
-msgstr "E-poštni naslov"
-
-#. Heading on the profile page shown above table of registered courses.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:29
-msgid "Enrolled Courses"
-msgstr "Tečaji, v katere ste vpisani"
-
-#. Text for representing student progress in a course.
 #. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
+#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:22
 #: experimental/coursebuilder/views/base_course.html:53
 msgid "Progress"
 msgstr "Spremljanje napredka"
 
-#. Text on the student profile page which on clicking will take you to unenroll
-#. course page.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:54
-msgid "Withdraw"
-msgstr "Izpis"
-
-#. Label for the input field that allows the student to change the name on
-#. his/her certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:67
-#: experimental/coursebuilder/views/student_profile.html:40
-#: experimental/coursebuilder/views/student_profile.html:45
-msgid "New Name"
-msgstr "Novo ime"
-
-#. Text for a button that allows the student to save changes to his/her name
-#. for the certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:78
-#: experimental/coursebuilder/views/student_profile.html:53
-msgid "Change Name"
-msgstr "Spremeni ime"
+#. Registration button on the main course page.
+#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:27
+#: experimental/coursebuilder/views/registration_module.html:7
+#: experimental/coursebuilder/views/registration_module.html:15
+msgid "Register"
+msgstr "Registracija"
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -1202,28 +1140,28 @@ msgstr " Po oddaji je ne bo več mogoče urediti ali izbrisati. "
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:230
+#: experimental/coursebuilder/views/base.html:234
 msgid "Not registered"
 msgstr "Ni registriran(-a)"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:236
+#: experimental/coursebuilder/views/base.html:240
 msgid "Logout"
 msgstr "Odjava"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:242
+#: experimental/coursebuilder/views/base.html:246
 msgid "Login"
 msgstr "Prijava"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:283
+#: experimental/coursebuilder/views/base.html:287
 msgid "Privacy & Terms"
 msgstr "Zasebnost in pogoji"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:290
+#: experimental/coursebuilder/views/base.html:294
 msgid "Language:"
 msgstr "Jezik:"
 
@@ -1523,6 +1461,16 @@ msgstr "Žal trenutno ni novih oddanih nalog, ki bi jih lahko pregledali."
 msgid "Date enrolled"
 msgstr "Datum vpisa"
 
+#. Table header for the student's email address. This is a noun.
+#: experimental/coursebuilder/views/student_data_table.html:15
+msgid "Email"
+msgstr "E-poštni naslov"
+
+#. Table header for the student's name.
+#: experimental/coursebuilder/views/student_data_table.html:21
+msgid "Name"
+msgstr "Ime"
+
 #. Table header for the student's assessment scores.
 #: experimental/coursebuilder/views/student_data_table.html:28
 msgid "Assessment scores"
@@ -1544,23 +1492,31 @@ msgstr "Skupna ocena za tečaj"
 msgid "Student Progress"
 msgstr "Napredek tečajnika"
 
+#. Label for the input field that allows the student to change the name on
+#. his/her certificate.
+#: experimental/coursebuilder/views/student_profile.html:39
+#: experimental/coursebuilder/views/student_profile.html:44
+msgid "New Name"
+msgstr "Novo ime"
+
+#. Text for a button that allows the student to save changes to his/her name
+#. for the certificate.
+#: experimental/coursebuilder/views/student_profile.html:52
+msgid "Change Name"
+msgstr "Spremeni ime"
+
 #. Shown on the student profile page.
-#: experimental/coursebuilder/views/student_profile.html:60
+#: experimental/coursebuilder/views/student_profile.html:59
 msgid "To leave the course permanently, click on Unenroll"
 msgstr "Če želite trajno zapustiti tečaj, kliknite »Izpis«."
 
 #. Button that allows the student to unenroll from a course.
-#: experimental/coursebuilder/views/student_profile.html:66
+#: experimental/coursebuilder/views/student_profile.html:65
 msgid "Unenroll"
 msgstr "Izpis"
 
-#. Text shown on progress page of course to redirect student to profile page.
-#: experimental/coursebuilder/views/student_profile.html:73
-msgid "Manage course registration from your profile"
-msgstr "Urejajte prijave v tečaj v svojem profilu"
-
 #. Shown when the student profile cannot be found in the database.
-#: experimental/coursebuilder/views/student_profile.html:80
+#: experimental/coursebuilder/views/student_profile.html:71
 msgid "Student profile not found ..."
 msgstr "Profila študenta ni bilo mogoče najti ..."
 
@@ -1663,5 +1619,12 @@ msgstr "Naslednja stran"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Konec"
+
+
+
+
+
+
+
 
 

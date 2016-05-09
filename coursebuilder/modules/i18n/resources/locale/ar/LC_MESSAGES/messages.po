@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-04-11 08:00-0700\n"
+"POT-Creation-Date: 2016-05-09 08:30-0700\n"
 "PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ar <LL@li.org>\n"
@@ -373,103 +373,41 @@ msgid ""
 msgstr "إنك لم تستوفي متطلبات الدورة بعد حتى تحصل على شهادة الإتمام."
 
 #. Navbar tab.
+#. Text for title of navigation bar tab to reach list of all
+#. available courses when user is logged out.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
+#: experimental/coursebuilder/views/base_course.html:84
 msgid "Explore Courses"
 msgstr "استكشاف الدورات التدريبية"
 
 #. Navbar tab.
+#. Text for title of navigation bar tab to reach list of
+#. courses the current user is enrolled in or whitelisted for.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
-#: experimental/coursebuilder/views/base_course.html:76
+#: experimental/coursebuilder/views/base_course.html:78
 msgid "My Courses"
 msgstr "الدورات التدريبية"
 
-#. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:37
-#: experimental/coursebuilder/views/base_course.html:81
-msgid "Profile"
-msgstr "الملف الشخصي"
-
 #. Text for a button on the 'list of courses' page that takes students to a
 #. page where they can view score.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:16
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:49
+#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:17
 msgid "View score"
 msgstr "عرض النتيجة"
 
 #. Text for a button on the 'list of courses' page that takes students to the
 #. page for that course.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:21
-msgid "Go to course"
-msgstr "الانتقال إلى الدورة التدريبية"
-
-#. Registration button on the main course page.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:26
-#: experimental/coursebuilder/views/registration_module.html:7
-#: experimental/coursebuilder/views/registration_module.html:15
-msgid "Register"
-msgstr "تسجيل"
-
-#. Shown to the student on the page that shows his/her list of courses, when
-#. he/she is not enrolled in courses.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:39
-msgid "You are not currently enrolled in any courses."
-msgstr "أنت غير مسجل حاليًا في أية دورة تدريبية."
-
-#. Shown to the student on the page that shows his/her list of courses, when
-#. he/she wants to view all courses.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:45
-msgid "View course list."
-msgstr "عرض قائمة الدورات التدريبية."
-
-#. Title of the student profile page. Followed by a student's name.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:5
-msgid "Student Profile for"
-msgstr "الملف الشخصي للطالب"
-
-#. Table header for the student's name.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:16
-#: experimental/coursebuilder/views/student_data_table.html:21
-msgid "Name"
-msgstr "الاسم"
-
-#. Table header for the student's email address. This is a noun.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:21
-#: experimental/coursebuilder/views/student_data_table.html:15
-msgid "Email"
-msgstr "البريد الإلكتروني"
-
-#. Heading on the profile page shown above table of registered courses.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:29
-msgid "Enrolled Courses"
-msgstr "الدورات التدريبية التي تم التسجيل بها"
-
-#. Text for representing student progress in a course.
 #. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
+#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:22
 #: experimental/coursebuilder/views/base_course.html:53
 msgid "Progress"
 msgstr "التقدم"
 
-#. Text on the student profile page which on clicking will take you to unenroll
-#. course page.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:54
-msgid "Withdraw"
-msgstr "الانسحاب"
-
-#. Label for the input field that allows the student to change the name on
-#. his/her certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:67
-#: experimental/coursebuilder/views/student_profile.html:40
-#: experimental/coursebuilder/views/student_profile.html:45
-msgid "New Name"
-msgstr "اسم جديد"
-
-#. Text for a button that allows the student to save changes to his/her name
-#. for the certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:78
-#: experimental/coursebuilder/views/student_profile.html:53
-msgid "Change Name"
-msgstr "تغيير الاسم"
+#. Registration button on the main course page.
+#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:27
+#: experimental/coursebuilder/views/registration_module.html:7
+#: experimental/coursebuilder/views/registration_module.html:15
+msgid "Register"
+msgstr "تسجيل"
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -1200,28 +1138,28 @@ msgstr " بعد التأكيد لن تتمكن من إجراء تعديل على
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:230
+#: experimental/coursebuilder/views/base.html:234
 msgid "Not registered"
 msgstr "غير مسجل"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:236
+#: experimental/coursebuilder/views/base.html:240
 msgid "Logout"
 msgstr "خروج"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:242
+#: experimental/coursebuilder/views/base.html:246
 msgid "Login"
 msgstr "تسجيل الدخول"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:283
+#: experimental/coursebuilder/views/base.html:287
 msgid "Privacy & Terms"
 msgstr "الخصوصية والبنود"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:290
+#: experimental/coursebuilder/views/base.html:294
 msgid "Language:"
 msgstr "اللغة:"
 
@@ -1519,6 +1457,16 @@ msgstr "عذرًا، ليست هناك إرسالات جديدة متوفرة ل
 msgid "Date enrolled"
 msgstr "تاريخ التسجيل"
 
+#. Table header for the student's email address. This is a noun.
+#: experimental/coursebuilder/views/student_data_table.html:15
+msgid "Email"
+msgstr "البريد الإلكتروني"
+
+#. Table header for the student's name.
+#: experimental/coursebuilder/views/student_data_table.html:21
+msgid "Name"
+msgstr "الاسم"
+
 #. Table header for the student's assessment scores.
 #: experimental/coursebuilder/views/student_data_table.html:28
 msgid "Assessment scores"
@@ -1540,23 +1488,31 @@ msgstr "النتيجة الإجمالية للدورة"
 msgid "Student Progress"
 msgstr "تقدم الطالب"
 
+#. Label for the input field that allows the student to change the name on
+#. his/her certificate.
+#: experimental/coursebuilder/views/student_profile.html:39
+#: experimental/coursebuilder/views/student_profile.html:44
+msgid "New Name"
+msgstr "اسم جديد"
+
+#. Text for a button that allows the student to save changes to his/her name
+#. for the certificate.
+#: experimental/coursebuilder/views/student_profile.html:52
+msgid "Change Name"
+msgstr "تغيير الاسم"
+
 #. Shown on the student profile page.
-#: experimental/coursebuilder/views/student_profile.html:60
+#: experimental/coursebuilder/views/student_profile.html:59
 msgid "To leave the course permanently, click on Unenroll"
 msgstr "لمغادرة الدورة نهائيًا، انقر على \"إلغاء التسجيل\""
 
 #. Button that allows the student to unenroll from a course.
-#: experimental/coursebuilder/views/student_profile.html:66
+#: experimental/coursebuilder/views/student_profile.html:65
 msgid "Unenroll"
 msgstr "إلغاء التسجيل"
 
-#. Text shown on progress page of course to redirect student to profile page.
-#: experimental/coursebuilder/views/student_profile.html:73
-msgid "Manage course registration from your profile"
-msgstr "إدارة تسجيل الدورة التدريبية من ملفك الشخصي"
-
 #. Shown when the student profile cannot be found in the database.
-#: experimental/coursebuilder/views/student_profile.html:80
+#: experimental/coursebuilder/views/student_profile.html:71
 msgid "Student profile not found ..."
 msgstr "لم يتم العثور على الملف الشخصي للطالب..."
 
@@ -1659,5 +1615,12 @@ msgstr "الصفحة التالية"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "النهاية"
+
+
+
+
+
+
+
 
 
