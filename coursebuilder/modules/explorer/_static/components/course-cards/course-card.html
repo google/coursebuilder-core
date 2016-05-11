@@ -75,6 +75,17 @@
         line-height: 1.2;
         font-weight: bold;
       }
+      .date-range, .duration-description {
+        font-size: 11px;
+      }
+      .date-range {
+        font-weight: bold;
+        line-height: 20px;
+      }
+      .duration-description {
+        font-style: italic;
+        line-height: normal;
+      }
 
     </style>
     <a href="[[_getUrl(course)]]">
@@ -100,7 +111,17 @@
           <iron-icon icon="date-range"></iron-icon>
           <div body style="display: flex">
             <div id="enrollment-info">
-              <div id="enrollment-status">[[_getEnrollmentStatus(course)]]</div>
+              <div id="enrollment-status">[[_getEnrollmentStatus(course.*)]]</div>
+              <template is="dom-if" if="[[_hasDates(course)]]">
+                <div class="date-range">[[_formatDate(course.startDate)]] -
+                [[_formatDate(course.endDate)]]</div>
+                <div class="duration-description">
+                [[_differenceInWeeks(course.startDate, course.endDate)]]
+                week course<template is="dom-if"
+                if="[[course.estimatedWorkload]]">,
+                [[course.estimatedWorkload]]</template>
+                </div>
+              </template>
             </div>
           </div>
         </course-info-item>
@@ -119,14 +140,43 @@
         return course.url;
       },
       _getEnrollmentStatus: function(course) {
+        var course = course.base;
         if (course.enrollment.enrolled) {
           return 'Registered';
         } else if (!course.openForRegistration) {
-          return 'Public';
+          return 'Completed';
+        } else if (course.startDate && course.endDate) {
+          var now = new Date();
+          if (now < new Date(course.startDate)) {
+            return 'Pre-registration';
+          } else if (now < new Date(course.endDate)) {
+            return 'In progress';
+          } else {
+            return 'Ended';
+          }
         } else {
-          return 'In progress';
+          return 'Available';
         }
       },
+      _formatDate: function(dateString) {
+        var date = new Date(dateString);
+        var monthNames = ["January", "February", "March", "April", "May",
+          "June", "July", "August", "September", "October", "November",
+          "December"];
+        var result = monthNames[date.getMonth()] + ' ' + date.getDate();
+        if (date.getFullYear() != new Date().getFullYear()) {
+          result += ', ' + date.getFullYear()
+        }
+        return result;
+      },
+      _hasDates: function(course) {
+        return course.startDate && course.endDate;
+      },
+      _differenceInWeeks: function(startDate, endDate) {
+        return Math.ceil(
+          (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+          1000 / 60 / 60 / 24 / 7)
+      }
     })
   </script>
 </dom-module>

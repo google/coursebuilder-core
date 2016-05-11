@@ -20,6 +20,7 @@ __author__ = [
 
 from models import custom_modules
 from modules.explorer import constants
+from modules.explorer import course_settings
 from modules.explorer import handlers
 from modules.explorer import graphql
 from modules.explorer import settings
@@ -29,6 +30,7 @@ from modules.explorer import hooks
 def register_module():
     graphql.register()
     settings.register()
+    course_settings.register()
     hooks.register()
 
     global custom_module  # pylint: disable=global-statement

@@ -76,10 +76,44 @@ class Site(graphene.ObjectType):
         return CourseExplorer(extra_content=self.data.get('extra_content'))
 
 
-def resolve_site(query_obj, args, info):
+def resolve_site(gql_root, args, info):
     return Site(transforms.loads(settings.COURSE_EXPLORER_SETTINGS.value))
+
+
+def resolve_start_date(gql_course, args, info):
+    # Dates should be returned in UTC ISO8601 Zulu format
+    # (eg "2016-05-01T07:00:00.000Z")
+    try:
+        return gql_course.course_settings['course']['start_date']
+    except KeyError:
+        return None
+
+
+def resolve_end_date(gql_course, args, info):
+    # Dates should be returned in UTC ISO8601 Zulu format
+    # (eg "2016-05-01T07:00:00.000Z")
+    try:
+        return gql_course.course_settings['course']['end_date']
+    except KeyError:
+        return None
+
+
+def resolve_estimated_workload(gql_course, args, info):
+    try:
+        return gql_course.course_settings['course']['estimated_workload']
+    except KeyError:
+        return None
 
 
 def register():
     gql.Query.add_to_class(
         'site', graphene.Field(Site, resolver=resolve_site))
+
+    # TODO(nretallack): When calendars is ready, write new resolvers.
+    gql.Course.add_to_class(
+        'start_date', graphene.String(resolver=resolve_start_date))
+    gql.Course.add_to_class(
+        'end_date', graphene.String(resolver=resolve_end_date))
+    gql.Course.add_to_class(
+        'estimated_workload', graphene.String(
+            resolver=resolve_estimated_workload))

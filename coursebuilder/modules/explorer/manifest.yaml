@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.explorer.explorer_tests = 7
+    - modules.explorer.explorer_tests = 8
 
 files:
   - modules/explorer/__init__.py
@@ -19,6 +19,7 @@ files:
   - modules/explorer/_static/components/utility/floating-sidebar.html
   - modules/explorer/_static/components/course-explorer.html
   - modules/explorer/constants.py
+  - modules/explorer/course_settings.py
   - modules/explorer/explorer.py
   - modules/explorer/explorer_tests.py
   - modules/explorer/graphql.py

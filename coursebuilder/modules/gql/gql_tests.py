@@ -402,30 +402,36 @@ class CourseTests(GraphQLTreeTests):
         response = self.get_response(
             '{__type (name: "Course") {'
             '    fields { name type { name kind ofType {name} }}}}')
-        expected_data = {
-            '__type': {'fields': [
-                {'name': 'id', 'type': {
-                    'kind': 'NON_NULL', 'name': None,
-                    'ofType': {'name': 'ID'}}},
-                {'name': 'title', 'type': {
-                    'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
-                {'name': 'allUnits', 'type': {
-                    'kind': 'OBJECT', 'name': 'UnitDefaultConnection',
-                    'ofType': None}},
-                {'name': 'unit', 'type': {
-                    'kind': 'OBJECT', 'name': 'Unit', 'ofType': None}},
-                {'name': 'enrollment', 'type': {
-                    'kind': 'OBJECT', 'name': 'Enrollment', 'ofType': None}},
-                {'name': 'abstract', 'type': {
-                    'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
-                {'name': 'instructorDetails', 'type': {
-                    'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
-                {'name': 'url', 'type': {
-                    'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
-                {'name': 'openForRegistration', 'type': {
-                    'kind': 'SCALAR', 'name': 'Boolean', 'ofType': None}},
-            ]}}
-        self.assertEquals(expected_data, response['data'])
+
+        expected_fields = [
+            {'name': 'id', 'type': {
+                'kind': 'NON_NULL', 'name': None,
+                'ofType': {'name': 'ID'}}},
+            {'name': 'title', 'type': {
+                'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
+            {'name': 'allUnits', 'type': {
+                'kind': 'OBJECT', 'name': 'UnitDefaultConnection',
+                'ofType': None}},
+            {'name': 'unit', 'type': {
+                'kind': 'OBJECT', 'name': 'Unit', 'ofType': None}},
+            {'name': 'enrollment', 'type': {
+                'kind': 'OBJECT', 'name': 'Enrollment', 'ofType': None}},
+            {'name': 'abstract', 'type': {
+                'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
+            {'name': 'instructorDetails', 'type': {
+                'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
+            {'name': 'url', 'type': {
+                'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
+            {'name': 'openForRegistration', 'type': {
+                'kind': 'SCALAR', 'name': 'Boolean', 'ofType': None}},
+        ]
+
+        for field in response['data']['__type']['fields']:
+            for expected_field in expected_fields:
+                if field == expected_field:
+                    expected_fields.remove(expected_field)
+
+        self.assertEquals(expected_fields, [])
 
     def test_node_access(self):
         response = self.get_response('{node(id: "%s") {id}}' % self.course_id)

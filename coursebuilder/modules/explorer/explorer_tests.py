@@ -28,12 +28,19 @@ from tests.functional import actions
 
 
 class GraphQLTests(gql_tests.BaseGqlTests):
+    COURSE_NAME = 'course'
+    ADMIN_EMAIL = 'admin@example.com'
 
     def setUp(self):
         super(GraphQLTests, self).setUp()
         config.Registry.test_overrides.update({
             gql.GQL_SERVICE_ENABLED.name: True,
         })
+
+        self.base = '/' + self.COURSE_NAME
+        self.course_id = gql_tests.get_course_id(self.base)
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Course')
 
     def tearDown(self):
         config.Registry.test_overrides = {}
@@ -85,6 +92,37 @@ class GraphQLTests(gql_tests.BaseGqlTests):
             }
         )
 
+    def test_course_fields(self):
+        app_context = actions.update_course_config_as_admin(
+            self.COURSE_NAME, self.ADMIN_EMAIL, {
+                'course': {
+                    'start_date': '2016-05-11T07:00:00.000Z',
+                    'end_date': '2016-10-11T07:00:00.000Z',
+                    'estimated_workload': '10hrs',
+                },
+            })
+
+        self.assertEqual(
+            self.get_response("""
+            {
+                course (id: "%s") {
+                    startDate,
+                    endDate,
+                    estimatedWorkload,
+                }
+            }
+            """ % self.course_id),
+            {
+                'errors': [],
+                'data': {
+                    'course': {
+                        'startDate': '2016-05-11T07:00:00.000Z',
+                        'endDate': '2016-10-11T07:00:00.000Z',
+                        'estimatedWorkload': '10hrs',
+                    }
+                }
+            })
+
 
 class CourseExplorerSettingsTest(actions.TestBase):
     ADMIN_EMAIL = 'test@example.com'
@@ -94,7 +132,7 @@ class CourseExplorerSettingsTest(actions.TestBase):
         super(CourseExplorerSettingsTest, self).setUp()
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         self.app_context = actions.simple_add_course(
-            self.COURSE_NAME, self.ADMIN_EMAIL, 'Drive Course')
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Course')
         self.base = '/{}'.format(self.COURSE_NAME)
 
     def post_settings(self, payload, upload_files=None):
