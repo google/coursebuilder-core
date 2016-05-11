@@ -630,7 +630,7 @@ def register_module():
     def on_module_enabled():
         roles.Roles.register_permissions(
             custom_module, DashboardHandler.permissions_callback)
-        ApplicationHandler.RIGHT_LINKS.append(
+        ApplicationHandler.AUTH_LINKS.append(
             DashboardHandler.generate_dashboard_link)
 
     global_routes = [

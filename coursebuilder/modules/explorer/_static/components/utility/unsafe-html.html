@@ -1,0 +1,19 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<dom-module id="unsafe-html">
+  <template></template>
+  <script>
+    Polymer({
+      is: 'unsafe-html',
+      properties: {
+        html: {
+          type: String,
+          observer: '_onHtmlChanged',
+        }
+      },
+      _onHtmlChanged: function(html) {
+        this.innerHTML = html;
+      }
+    })
+  </script>
+</dom-module>

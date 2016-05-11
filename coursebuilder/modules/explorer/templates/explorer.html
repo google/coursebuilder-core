@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <title>{{ institution_name }} Courses</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    html, body {
+      background: rgb(250, 250, 250);
+      height: 100%;
+      width: 100%;
+      padding: 0;
+      margin: 0;
+      font-family: 'Roboto', 'Noto', sans-serif;
+    }
+    a {
+      color: blue;
+      text-decoration: none;
+    }
+    </style>
+
+    <script src="/static/polymer-1.2.0/webcomponentsjs/webcomponents-lite.js"></script>
+    <link rel="import" href="/modules/explorer/_static/components/course-explorer.html">
+  </head>
+  <body>
+    <course-explorer></course-explorer>
+  </body>
+</html>

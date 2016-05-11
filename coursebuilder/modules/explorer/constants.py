@@ -1,4 +1,4 @@
-# Copyright 2015 Google Inc. All Rights Reserved.
+# Copyright 2016 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Constants for the Course Explorer."""
+"""Explorer module constants."""
 
-__author__ = 'Nick Retallack (nretallack@google.com)'
+__author__ = [
+    'nretallack@google.com (Nick Retallack)',
+]
 
-MODULE_NAME = 'course_explorer'
-MODULE_TITLE = 'Course Explorer'
+import os
+
+import appengine_config
+
+MODULE_NAME = 'explorer'
+MODULE_TITLE = 'Explorer'
+TEMPLATE_DIR = os.path.join(
+    appengine_config.BUNDLE_ROOT, 'modules', MODULE_NAME, 'templates')

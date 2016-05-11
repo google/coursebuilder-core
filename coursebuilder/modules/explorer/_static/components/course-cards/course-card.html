@@ -1,0 +1,132 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+<link rel="import" href="/static/polymer-1.2.0/iron-icons/iron-icons.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-material/paper-material.html">
+<link rel="import" href="/modules/explorer/_static/components/utility/unsafe-html.html">
+<link rel="import" href="/modules/explorer/_static/components/course-cards/course-info-item.html">
+
+<dom-module id="course-card">
+  <template>
+    <style is="custom-style">
+      :host {
+        width: 360px;
+        display: inline-block;
+        vertical-align: top;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      paper-material {
+        padding: 16px;
+        padding-bottom: 0;
+        background: white;
+        margin-right: 16px;
+        margin-bottom: 16px;
+      }
+
+      .avatar {
+        display: inline-block;
+        box-sizing: border-box;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--paper-amber-500);
+      }
+
+      .blue {
+        background-color: var(--paper-light-blue-300);
+      }
+
+      .info {
+        color: rgba(0, 0, 0, 0.54);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      #abstract {
+        min-height: 73px;
+      }
+
+      #course-title {
+        color: rgba(0, 0, 0, .87);
+        font-size: 16px;
+        line-height: 1.2;
+      }
+
+      #title-block {
+        min-height: 66px;
+      }
+
+      #instructor-details {
+        font-size: 11px;
+        line-height: 1.3;
+        font-weight: bold;
+        margin-top: 5px;
+        display: block;
+      }
+
+      #enrollment-info {
+        flex: 1;
+      }
+      #enrollment-status {
+        font-size: 12px;
+        line-height: 1.2;
+        font-weight: bold;
+      }
+
+    </style>
+    <a href="[[_getUrl(course)]]">
+      <paper-material elevation="1">
+        <course-info-item id="title-block">
+          <div icon class="avatar blue"></div>
+          <div body>
+            <div id="course-title">[[course.title]]</div>
+            <unsafe-html secondary
+              id="instructor-details"
+              html="[[course.instructorDetails]]"></unsafe-html>
+          </div>
+        </course-info-item>
+
+        <course-info-item class="info" id="abstract">
+          <template is="dom-if" if="[[course.abstract]]">
+            <iron-icon icon="info-outline"></iron-icon>
+            <unsafe-html html="[[course.abstract]]" body></unsafe-html>
+          </template>
+        </course-info-item>
+
+        <course-info-item class="info">
+          <iron-icon icon="date-range"></iron-icon>
+          <div body style="display: flex">
+            <div id="enrollment-info">
+              <div id="enrollment-status">[[_getEnrollmentStatus(course)]]</div>
+            </div>
+          </div>
+        </course-info-item>
+      </paper-material>
+    </paper-card></a>
+  </template>
+  <script>
+    Polymer({
+      is: 'course-card',
+      properties: {
+        course: {
+          type: Object,
+        }
+      },
+      _getUrl: function(course) {
+        return course.url;
+      },
+      _getEnrollmentStatus: function(course) {
+        if (course.enrollment.enrolled) {
+          return 'Registered';
+        } else if (!course.openForRegistration) {
+          return 'Public';
+        } else {
+          return 'In progress';
+        }
+      },
+    })
+  </script>
+</dom-module>

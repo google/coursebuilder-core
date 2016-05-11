@@ -715,27 +715,30 @@ class DashboardAccessTestCase(actions.TestBase):
         self.assertEquals(len(picker_options), 3)
         actions.logout()
 
-    def _get_right_nav_links(self):
-        return self.parse_html_string(
+    def _get_auth_nav_links(self):
+        return self.parse_html_string_to_soup(
             self.get('/%s/' % self.ACCESS_COURSE_NAME).body
-        ).findall(
-            './/div[@id="gcb-nav-x"]/div/ul/li[@class="gcb-pull-right"]')
+        ).select('.gcb-login-header a')
 
     def test_dashboard_link(self):
         # Not signed in => no dashboard or admin link visible
-        self.assertEquals(len(self._get_right_nav_links()), 0)
+        self.assertEquals(len(self._get_auth_nav_links()), 1)
         # Sign in user with dashboard permissions => dashboard link visible
         actions.login(self.USER_EMAIL, is_admin=False)
-        links = self._get_right_nav_links()
-        self.assertEquals(len(links), 1)
-        self.assertEquals(links[0].find('a').get('href'), 'dashboard')
-        self.assertEquals(links[0].find('a').text, 'Dashboard')
+        links = self._get_auth_nav_links()
+        self.assertEquals(len(links), 2)
+        self.assertEquals(links[0].get('href'), 'dashboard')
+        self.assertEquals(links[0].text, 'Dashboard')
         # Sign in course admin => dashboard link visible
         actions.login(self.ADMIN_EMAIL, is_admin=False)
-        links = self._get_right_nav_links()
-        self.assertEquals(len(links), 1)
-        self.assertEquals(links[0].find('a').get('href'), 'dashboard')
-        self.assertEquals(links[0].find('a').text, 'Dashboard')
+        links = self._get_auth_nav_links()
+        self.assertEquals(len(links), 2)
+        self.assertEquals(links[0].get('href'), 'dashboard')
+        self.assertEquals(links[0].text, 'Dashboard')
+        # Arbitrary users don't see the link
+        actions.login('unknown@email.com', is_admin=False)
+        self.assertEquals(len(self._get_auth_nav_links()), 1)
+
 
 
 class DashboardCustomNavTestCase(actions.TestBase):

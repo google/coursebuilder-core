@@ -1,0 +1,49 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-input/paper-input.html">
+<link rel="import" href="/modules/explorer/_static/components/filter-sidebar/course-status-selector.html">
+
+<dom-module id="filter-sidebar">
+  <template>
+    <style>
+      :host {
+        padding: 24px;
+        padding-top: 0;
+        display: block;
+      }
+      h2 {
+        font-size: 12px;
+        color: rgba(0, 0, 0, 0.87);
+        margin-top: 36px;
+        line-height: 1.2;
+        margin-bottom: 0;
+      }
+      paper-input {
+        --paper-input-container-underline: {
+          background: rgba(0, 0, 0, 0.12);
+        };
+      }
+      .unlabeled {
+        margin-bottom: 16px;
+      }
+    </style>
+
+    <h2>Search for keywords</h2>
+    <paper-input label="Filter courses" type="text" value="{{filterOptions.filter}}">
+      <iron-icon icon="search" prefix></iron-icon>
+    </paper-input>
+
+    <h2 class="unlabeled">Course status</h2>
+    <course-status-selector status="{{filterOptions.status}}"></course-status-selector>
+  </template>
+  <script>
+    Polymer({
+      is: 'filter-sidebar',
+      properties: {
+        filterOptions: {
+          type: Object,
+          notify: true,
+        }
+      }
+    })
+  </script>
+</dom-module>

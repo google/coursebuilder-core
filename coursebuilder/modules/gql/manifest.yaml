@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.gql.gql_tests = 34
+    - modules.gql.gql_tests = 36
   integration:
     - modules.gql.gql_integration_tests = 3
 

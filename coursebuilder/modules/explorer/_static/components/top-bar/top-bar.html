@@ -1,0 +1,75 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+<link rel="import" href="/static/polymer-1.2.0/iron-image/iron-image.html">
+
+<dom-module id="top-bar">
+  <template>
+    <style>
+      /* This top bar must match the existing top bar on all courses.
+      Some CSS is copied from main.css to facilitate this. */
+
+      :host {
+        display: flex;
+        align-items: center;
+        background: #f5f5f5;
+        background-image: -moz-linear-gradient(top,#fafafa,#f5f5f5);
+        background-image: -webkit-linear-gradient(top,#fafafa,#f5f5f5);
+        background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0,#fafafa),color-stop(1,#f5f5f5));
+        filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr=#fafafa,EndColorStr=#f5f5f5)";
+        background-image: linear-gradient(top,#fafafa,#f5f5f5);
+        border-bottom: 1px solid #ebebeb;
+        color: #777;
+        padding: 17px 15px 5px;
+        font-size: 15.6px;
+        font-family: arial, sans-serif;
+      }
+      #title {
+        flex: 1;
+        font-family: "open sans", arial, sans-serif;
+      }
+      #icon, #controls {
+        flex-basis: auto;
+      }
+      h1 {
+        margin: 0;
+        margin-left: 15px;
+        border-left: 1px solid rgb(186, 188, 192);
+        padding-left: 12px;
+        font-size: 27px;
+        font-weight: normal;
+        color: rgb(119, 119, 119);
+        line-height: 1.52;
+      }
+      a {
+        color: inherit;
+        text-decoration: underline;
+      }
+      #controls {
+        align-self: flex-start;
+        line-height:1.54;
+      }
+    </style>
+    <iron-image src="[[site.logo.url]]" alt="[[site.logo.altText]]" id="icon"></iron-image>
+    <h1 id="title">[[site.title]]</h1>
+    <div id="controls">
+      <template is="dom-if" if="[[currentUser.loggedIn]]">
+        [[currentUser.email]] |
+        <template is="dom-if" if="[[currentUser.canViewDashboard]]">
+          <a href="/modules/admin">Dashboard</a> |
+        </template>
+        <a href="[[currentUser.logoutUrl]]">Logout</a>
+      </template>
+      <template is="dom-if" if="[[!currentUser.loggedIn]]">
+        <a href="[[currentUser.loginUrl]]">Login</a>
+      </template>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'top-bar',
+      properties: {
+        currentUser: Object,
+        site: Object
+      }
+    })
+  </script>
+</dom-module>

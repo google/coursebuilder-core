@@ -62,7 +62,6 @@ import modules.admin.admin
 import modules.admin.config
 from modules.analytics import analytics
 from modules.announcements.announcements import AnnouncementEntity
-from modules import course_explorer
 from modules import search
 from modules.review import controllers_tests
 from modules.review import stats_tests
@@ -167,9 +166,6 @@ class WSGIRoutingTest(actions.TestBase):
         self._validate_handlers(
             main.global_routes,
             supported + [
-                course_explorer.student.AssetsHandler,
-                course_explorer.student.BaseStudentHandler,
-                course_explorer.student.IndexPageHandler,
                 models.StudentLifecycleObserver,
                 search.search.AssetsHandler,
                 sites.ClearCookiesHandler,

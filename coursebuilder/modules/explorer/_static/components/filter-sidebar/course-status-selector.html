@@ -1,0 +1,31 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-radio-group/paper-radio-group.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-radio-button/paper-radio-button.html">
+
+<dom-module id="course-status-selector">
+  <style>
+    paper-radio-button {
+      display: block;
+      margin-left: -12px;
+    }
+  </style>
+  <template>
+    <paper-radio-group selected="{{status}}">
+      <paper-radio-button name="all">All</paper-radio-button>
+      <paper-radio-button name="enrolled">Registered</paper-radio-button>
+      <paper-radio-button name="completed">Completed</paper-radio-button>
+    </paper-radio-group>
+  </template>
+  <script>
+    Polymer({
+      is: 'course-status-selector',
+      properties: {
+        status: {
+          type: String,
+          value: 'enrolled',
+          notify: true,
+        }
+      },
+    })
+  </script>
+</dom-module>

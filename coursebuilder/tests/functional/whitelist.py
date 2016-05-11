@@ -23,7 +23,8 @@ from controllers import sites
 from models import config
 from models import roles
 from models import transforms
-from modules.course_explorer import course_explorer
+from modules.explorer import settings as explorer_settings
+from modules.gql import gql_tests
 from tests.functional import actions
 
 COURSE_NAME = 'whitelist_test'
@@ -34,7 +35,7 @@ NONSTUDENT_EMAIL = 'student@bar.com'
 STUDENT_WHITELIST = '[%s]' % STUDENT_EMAIL
 
 
-class WhitelistTest(actions.TestBase):
+class WhitelistTest(gql_tests.GraphQLTreeTests, actions.TestBase):
 
     _course_added = False
     _whitelist = ''
@@ -60,7 +61,7 @@ class WhitelistTest(actions.TestBase):
         super(WhitelistTest, self).setUp()
 
         config.Registry.test_overrides[
-            course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.name] = True
+            explorer_settings.GCB_ENABLE_COURSE_EXPLORER_PAGE.name] = True
 
         actions.login(ADMIN_EMAIL, is_admin=True)
         payload_dict = {
@@ -84,15 +85,18 @@ class WhitelistTest(actions.TestBase):
         WhitelistTest._whitelist = ''
         config.Registry.test_overrides.clear()
 
+    def get_course_titles(self):
+        return [edge['node']['title'] for edge in
+        self.get_response('{allCourses{edges{node{title}}}}')['data'][
+            'allCourses']['edges']]
+
     def _expect_visible(self):
-        response = self.get('/explorer')
-        self.assertIn('Whitelist Test', response.body)
+        self.assertIn('Whitelist Test', self.get_course_titles())
         response = self.get('/whitelist_test/course')
         self.assertEquals(200, response.status_int)
 
     def _expect_invisible(self, logged_in):
-        response = self.get('/explorer')
-        self.assertNotIn('Whitelist Test', response.body)
+        self.assertNotIn('Whitelist Test', self.get_course_titles())
         response = self.get('/whitelist_test/course', expect_errors=True)
         self.assertEquals(404, response.status_int)
 

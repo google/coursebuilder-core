@@ -98,6 +98,7 @@ from models import courses
 from models import custom_modules
 from models import transforms
 from modules.courses import unit_outline
+from modules.dashboard import dashboard
 
 
 _TEMPLATES_DIR = os.path.join(
@@ -304,7 +305,8 @@ class Unit(CourseAwareObjectType, graphene.relay.Node):
 
 class Enrollment(graphene.ObjectType):
     email = graphene.String()
-    is_transient = graphene.Boolean()
+    is_transient = graphene.Boolean(deprecation_reason='Replaced by enrolled')
+    enrolled = graphene.Boolean()
 
     def __init__(self, student, **kwargs):
         super(Enrollment, self).__init__(**kwargs)
@@ -318,15 +320,19 @@ class Enrollment(graphene.ObjectType):
     def resolve_is_transient(self, args, info):
         return self._student.is_transient
 
+    def resolve_enrolled(self, args, info):
+        return not self._student.is_transient
 
-class User(graphene.ObjectType):
+
+class CurrentUser(graphene.ObjectType):
     email = graphene.String()
     logged_in = graphene.Boolean()
     login_url = graphene.Field(graphene.String(), dest_url=graphene.String())
     logout_url = graphene.Field(graphene.String(), dest_url=graphene.String())
+    can_view_dashboard = graphene.Boolean()
 
     def __init__(self, user, **kwargs):
-        super(User, self).__init__(**kwargs)
+        super(CurrentUser, self).__init__(**kwargs)
         self._user = user
 
     def resolve_email(self, args, info):
@@ -341,6 +347,9 @@ class User(graphene.ObjectType):
     def resolve_logout_url(self, args, info):
         return users.create_logout_url(dest_url=args['dest_url'])
 
+    def resolve_can_view_dashboard(self, args, info):
+        return dashboard.DashboardHandler.current_user_has_access(None)
+
 
 class Course(CourseAwareObjectType, graphene.relay.Node):
     title = graphene.String()
@@ -350,6 +359,14 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
     # object exposing fields for the student object; otherwise it represents a
     # transient student.
     enrollment = graphene.Field(Enrollment)
+    abstract = graphene.String()
+    instructor_details = graphene.String()
+    url = graphene.String()
+    open_for_registration = graphene.Boolean()
+
+    @property
+    def course_settings(self):
+        return courses.Course.get_environ(self.course.app_context)
 
     @classmethod
     def get_node(cls, node_id, info):
@@ -386,8 +403,7 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
         return all_courses
 
     def resolve_title(self, args, info):
-        return courses.Course.get_environ(
-            self.course.app_context)['course']['title']
+        return self.course_settings['course']['title']
 
     def resolve_all_units(self, args, info):
         return Unit.get_all_units(self.course, self.course_view)
@@ -403,13 +419,34 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
     def resolve_enrollment(self, args, info):
         return Enrollment(self.get_student(self.course))
 
+    def resolve_abstract(self, args, info):
+        try:
+            return self.course_settings['course']['blurb']
+        except KeyError:
+            return None
+
+    def resolve_instructor_details(self, args, info):
+        try:
+            return self.course_settings['course']['instructor_details']
+        except KeyError:
+            return None
+
+    def resolve_url(self, args, info):
+        return self.course.app_context.get_slug()
+
+    def resolve_open_for_registration(self, args, info):
+        try:
+            return bool(self.course_settings['reg_form']['can_register'])
+        except KeyError:
+            return False
+
 
 class Query(graphene.ObjectType):
     """'Query' represents the root node of the GraphQL tree."""
 
     course = graphene.Field(Course, id=graphene.String())
     all_courses = graphene.relay.ConnectionField(Course)
-    current_user = graphene.Field(User)
+    current_user = graphene.Field(CurrentUser)
     node = graphene.relay.NodeField()
 
     def resolve_course(self, args, info):
@@ -424,7 +461,7 @@ class Query(graphene.ObjectType):
         return Course.get_all_courses()
 
     def resolve_current_user(self, args, info):
-        return User(users.get_current_user())
+        return CurrentUser(users.get_current_user())
 
 
 class GraphQLRestHandler(utils.BaseRESTHandler):

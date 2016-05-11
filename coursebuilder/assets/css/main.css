@@ -127,11 +127,6 @@ th, td {
   /* This rule intentionally left blank. */
 }
 
-.gcb-aux {
-  margin: auto;
-  max-width: 978px;
-}
-
 #gcb-header, #gcb-footer {
   margin: 0 -15px;
 }
@@ -444,11 +439,6 @@ a.gcb-button-action, button.gcb-button-action {
 #gcb-nav-x li {
   margin: 0 15px 0 0;
   text-shadow: none;
-}
-
-.gcb-cols {
-  margin: 0 -1.53374233129%;
-  width: 103.067484663%;
 }
 
 .gcb-cols:after, #gcb-nav-x:after {

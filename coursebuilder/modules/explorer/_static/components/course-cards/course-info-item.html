@@ -1,0 +1,33 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<dom-module id="course-info-item">
+  <template>
+    <style is="custom-style">
+      :host {
+        display: flex;
+        padding-bottom: 16px;
+      }
+      #icon {
+        flex: 0 0 40px;
+        padding-right: 16px;
+        text-align: center;
+        color: ;
+      }
+      #body {
+        flex: 1;
+      }
+    </style>
+
+    <div id="icon">
+      <content select="[icon]"></content>
+    </div>
+    <div id="body">
+      <content select="[body]"></content>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'course-info-item',
+    })
+  </script>
+</dom-module>

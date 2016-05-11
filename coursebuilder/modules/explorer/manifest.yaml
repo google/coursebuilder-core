@@ -1,0 +1,30 @@
+registration:
+  main_module: modules.explorer.explorer
+
+tests:
+  functional:
+    - modules.explorer.explorer_tests = 7
+
+files:
+  - modules/explorer/__init__.py
+  - modules/explorer/_static/components/course-cards/course-info-item.html
+  - modules/explorer/_static/components/course-cards/course-card-group.html
+  - modules/explorer/_static/components/course-cards/course-card.html
+  - modules/explorer/_static/components/course-cards/course-card-grouper.html
+  - modules/explorer/_static/components/course-cards/course-cards.html
+  - modules/explorer/_static/components/filter-sidebar/filter-sidebar.html
+  - modules/explorer/_static/components/filter-sidebar/course-status-selector.html
+  - modules/explorer/_static/components/top-bar/top-bar.html
+  - modules/explorer/_static/components/utility/unsafe-html.html
+  - modules/explorer/_static/components/utility/floating-sidebar.html
+  - modules/explorer/_static/components/course-explorer.html
+  - modules/explorer/constants.py
+  - modules/explorer/explorer.py
+  - modules/explorer/explorer_tests.py
+  - modules/explorer/graphql.py
+  - modules/explorer/handlers.py
+  - modules/explorer/hooks.py
+  - modules/explorer/manifest.yaml
+  - modules/explorer/messages.py
+  - modules/explorer/templates/explorer.html
+  - modules/explorer/settings.py

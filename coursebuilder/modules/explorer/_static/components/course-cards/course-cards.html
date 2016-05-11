@@ -1,0 +1,52 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+<link rel="import" href="/modules/explorer/_static/components/course-cards/course-card.html">
+
+<dom-module id="course-cards">
+  <template>
+    <style>
+      :host {
+        display: block;
+
+        /* Prevent inline-block children from having space between them */
+        font-size: 0;
+        position: relative;
+      }
+      course-card {
+        width: var(--course-card-width, 360);
+      }
+    </style>
+
+    <div class="course-list">
+      <template id="list" is="dom-repeat" items="[[courses]]" as="course">
+        <course-card course="[[course.node]]" width="[[cardWidth]]"></course-card>
+      </template>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'course-cards',
+      properties: {
+        courses: Array,
+        minCardWidth: {
+          value: 360,
+          type: Number,
+        },
+        cardWidth: {
+          type: String,
+        }
+      },
+      setCardWidth: function() {
+        var cardsAcross = Math.floor(this.offsetWidth / this.minCardWidth);
+        this.customStyle['--course-card-width'] = 100.0 / cardsAcross + '%';
+        this.updateStyles();
+      },
+      attached: function() {
+        window.addEventListener('resize', this.setCardWidth.bind(this));
+        this.setCardWidth();
+      },
+      detached: function() {
+        window.removeEventListener('resize', this.setCardWidth.bind(this));
+      },
+    })
+  </script>
+</dom-module>

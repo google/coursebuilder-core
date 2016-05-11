@@ -1,0 +1,46 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<dom-module id="floating-sidebar">
+  <style>
+    :host {
+      --width: 224px;
+      flex: 0 0 var(--width);
+    }
+    #reference {
+      width: var(--width);
+      position: relative;
+    }
+    .fixed {
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    #content {
+      width: var(--width);
+    }
+  </style>
+  <template>
+    <div id="reference">
+      <div id="content">
+        <content></content>
+      </div>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'floating-sidebar',
+      attached: function() {
+        window.addEventListener('scroll', this.chooseOffset.bind(this));
+      },
+      detached: function() {
+        window.removeEventListener('scroll', this.chooseOffset.bind(this));
+      },
+      chooseOffset: function() {
+        // warning: this is accessing DOM properties inside a scroll handler.
+        // This could cause performance problems.
+        this.$.content.classList.toggle(
+          'fixed', this.$.reference.offsetTop < window.scrollY);
+      },
+    })
+  </script>
+</dom-module>

@@ -114,7 +114,7 @@ class GraphQLRestHandlerTests(BaseGqlTests):
 
     ENROLLMENT_QUERY = (
         '{allCourses (first: 1) { edges { node { enrollment {'
-        '  email isTransient }}}}}')
+        '  email enrolled }}}}}')
 
     USER_QUERY = '{currentUser { loggedIn email }}'
 
@@ -158,7 +158,7 @@ class GraphQLRestHandlerTests(BaseGqlTests):
         response = self.get_response(self.ENROLLMENT_QUERY)
         self.assertEquals(
             {'allCourses': {'edges': [{'node': {
-                'enrollment': {'isTransient': True, 'email': None}}}]}},
+                'enrollment': {'enrolled': False, 'email': None}}}]}},
             response['data'])
 
         actions.login(STUDENT_EMAIL, is_admin=False)
@@ -168,7 +168,7 @@ class GraphQLRestHandlerTests(BaseGqlTests):
         self.assertEquals(
             {'allCourses': {'edges': [{'node': {
                 'enrollment': {
-                    'isTransient': False, 'email': STUDENT_EMAIL}}}]}},
+                    'enrolled': True, 'email': STUDENT_EMAIL}}}]}},
             response['data'])
 
     def test_error_messages_are_returned_in_response(self):
@@ -229,17 +229,24 @@ class TopLevelQueryTests(GraphQLTreeTests):
         response = self.get_response(
             '{__type (name: "Query") {'
             '    fields { name type { name kind }}}}')
-        expected_data = {
-            '__type': {'fields': [
-                {'name': 'course', 'type': {
-                    'kind': 'OBJECT', 'name': 'Course'}},
-                {'name': 'allCourses', 'type': {
-                    'kind': 'OBJECT', 'name': 'CourseDefaultConnection'}},
-                {'name': 'currentUser', 'type': {
-                    'kind': 'OBJECT', 'name': 'User'}},
-                {'name': 'node', 'type': {
-                    'kind': 'INTERFACE', 'name': 'Node'}}]}}
-        self.assertEquals(expected_data, response['data'])
+
+        expected_fields = [
+            {'name': 'course', 'type': {
+                'kind': 'OBJECT', 'name': 'Course'}},
+            {'name': 'allCourses', 'type': {
+                'kind': 'OBJECT', 'name': 'CourseDefaultConnection'}},
+            {'name': 'currentUser', 'type': {
+                'kind': 'OBJECT', 'name': 'CurrentUser'}},
+            {'name': 'node', 'type': {
+                'kind': 'INTERFACE', 'name': 'Node'}},
+        ]
+
+        for field in response['data']['__type']['fields']:
+            for expected_field in expected_fields:
+                if field == expected_field:
+                    expected_fields.remove(expected_field)
+
+        self.assertEquals(expected_fields, [])
 
     def test_course_access_private(self):
         self.set_course_availability(courses.COURSE_AVAILABILITY_PRIVATE)
@@ -307,6 +314,66 @@ class TopLevelQueryTests(GraphQLTreeTests):
         reload(gql)
 
 
+class CourseSettingsTests(GraphQLTreeTests):
+    def setUp(self):
+        super(CourseSettingsTests, self).setUp()
+        self.base = '/' + COURSE_NAME
+        self.course_id = get_course_id(self.base)
+        app_context = actions.update_course_config_as_admin(
+            COURSE_NAME, ADMIN_EMAIL, {
+                'course': {
+                    'title': COURSE_NAME,
+                    'admin_user_emails': ADMIN_EMAIL,
+                    'now_available': True,
+                    'browsable': True,
+                    'blurb': '<p>Course Abstract</p>',
+                    'instructor_details': '<p>Instructor</p>',
+                },
+            })
+
+    def test_registration_required(self):
+        self.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        self.assertEquals(
+            self.get_response("""
+            {
+                course (id: "%s") {
+                    abstract,
+                    instructorDetails,
+                    url,
+                    openForRegistration
+                }
+            }""" % self.course_id
+            ), {
+                'data': {
+                    'course': {
+                        'abstract': '<p>Course Abstract</p>',
+                        'instructorDetails': '<p>Instructor</p>',
+                        'url': '/' + COURSE_NAME,
+                        'openForRegistration': True,
+                    },
+                },
+                'errors': [],
+            })
+
+    def test_registration_disabled(self):
+        self.set_course_availability(
+            courses.COURSE_AVAILABILITY_PUBLIC)
+
+        self.assertEquals(
+            self.get_response(
+                '{course (id: "%s") {openForRegistration}}' % self.course_id
+            ), {
+                'data': {
+                    'course': {
+                        'openForRegistration': False,
+                    },
+                },
+                'errors': [],
+            })
+
+
 class CourseTests(GraphQLTreeTests):
 
     def setUp(self):
@@ -348,7 +415,15 @@ class CourseTests(GraphQLTreeTests):
                 {'name': 'unit', 'type': {
                     'kind': 'OBJECT', 'name': 'Unit', 'ofType': None}},
                 {'name': 'enrollment', 'type': {
-                    'kind': 'OBJECT', 'name': 'Enrollment', 'ofType': None}}
+                    'kind': 'OBJECT', 'name': 'Enrollment', 'ofType': None}},
+                {'name': 'abstract', 'type': {
+                    'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
+                {'name': 'instructorDetails', 'type': {
+                    'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
+                {'name': 'url', 'type': {
+                    'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
+                {'name': 'openForRegistration', 'type': {
+                    'kind': 'SCALAR', 'name': 'Boolean', 'ofType': None}},
             ]}}
         self.assertEquals(expected_data, response['data'])
 
@@ -404,41 +479,43 @@ class CourseTests(GraphQLTreeTests):
         actions.logout()
 
         response = self.get_response(
-            '{course(id: "%s") {enrollment {email isTransient}}}' % (
+            '{course(id: "%s") {enrollment {email enrolled}}}' % (
                 self.course_id))
         enrollment = response['data']['course']['enrollment']
-        self.assertEquals({'isTransient': True, 'email': None}, enrollment)
+        self.assertEquals({'enrolled': False, 'email': None}, enrollment)
 
         actions.login(STUDENT_EMAIL)
 
         response = self.get_response(
-            '{course(id: "%s") {enrollment {email isTransient}}}' % (
+            '{course(id: "%s") {enrollment {email enrolled}}}' % (
                 self.course_id))
         enrollment = response['data']['course']['enrollment']
-        self.assertEquals({'isTransient': True, 'email': None}, enrollment)
+        self.assertEquals({'enrolled': False, 'email': None}, enrollment)
 
         actions.register(self, STUDENT_NAME)
 
         response = self.get_response(
-            '{course (id: "%s") { enrollment { email isTransient}}}' % (
+            '{course (id: "%s") { enrollment { email enrolled}}}' % (
                 self.course_id))
         enrollment = response['data']['course']['enrollment']
         self.assertEquals(
-            {'isTransient': False, 'email': STUDENT_EMAIL}, enrollment)
+            {'enrolled': True, 'email': STUDENT_EMAIL}, enrollment)
 
 
 class UserTests(GraphQLTreeTests):
 
     def test_user_fields(self):
         response = self.get_response(
-            '{__type (name: "User") { fields { name type { name } }}}')
+            '{__type (name: "CurrentUser") { fields { name type { name } }}}')
         expected_data = {
             '__type': {
                 'fields': [
                     {'type': {'name': 'String'}, 'name': 'email'},
                     {'type': {'name': 'Boolean'}, 'name': 'loggedIn'},
                     {'type': {'name': 'String'}, 'name': 'loginUrl'},
-                    {'type': {'name': 'String'}, 'name': 'logoutUrl'}]}}
+                    {'type': {'name': 'String'}, 'name': 'logoutUrl'},
+                    {'type': {'name': 'Boolean'}, 'name': 'canViewDashboard'},
+                ]}}
         self.assertEquals(expected_data, response['data'])
 
     def test_current_user(self):
@@ -479,7 +556,8 @@ class EnrollmentTests(GraphQLTreeTests):
             '__type': {
                 'fields': [
                     {'type': {'name': 'String'}, 'name': 'email'},
-                    {'type': {'name': 'Boolean'}, 'name': 'isTransient'}]}}
+                    {'type': {'name': 'Boolean'}, 'name': 'enrolled'},
+                ]}}
         self.assertEquals(expected_data, response['data'])
 
 

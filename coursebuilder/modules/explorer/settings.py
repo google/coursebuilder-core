@@ -28,12 +28,17 @@ from models import config
 from models import models
 from models import roles
 from models import transforms
-from models import messages
+from models import messages as models_messages
 from controllers import utils
-from modules.course_explorer import constants
+from modules.explorer import constants
+from modules.explorer import messages
 from modules.drive import dashboard_handler
 from modules.oeditor import oeditor
 
+GCB_ENABLE_COURSE_EXPLORER_PAGE = config.ConfigProperty(
+    'gcb_enable_course_explorer_page', bool,
+    messages.SITE_SETTINGS_COURSE_EXPLORER, default_value=False,
+    label='Course Explorer', multiline=False, validator=None)
 
 COURSE_EXPLORER_SETTINGS = config.ConfigProperty(
     'course_explorer_settings', str, '',
@@ -47,43 +52,43 @@ def schema_provider(unused_course):
 
     group.add_property(schema_fields.SchemaField(
         'title', 'Site Name', 'string',
-        description=messages.SITE_NAME_DESCRIPTION,
+        description=models_messages.SITE_NAME_DESCRIPTION,
         optional=True,
     ))
 
     group.add_property(schema_fields.SchemaField(
         'logo', 'Site Logo', 'file',
-        description=messages.SITE_LOGO_DESCRIPTION,
+        description=models_messages.SITE_LOGO_DESCRIPTION,
         optional=True,
     ))
     group.add_property(schema_fields.SchemaField(
         'logo_alt_text', 'Site Logo Description', 'string',
-        description=messages.SITE_LOGO_DESCRIPTION_DESCRIPTION,
+        description=models_messages.SITE_LOGO_DESCRIPTION_DESCRIPTION,
         optional=True,
     ))
 
     group.add_property(schema_fields.SchemaField(
-        'content', 'Content', 'html',
+        'extra_content', 'Extra Content', 'html',
+        optional=True,
         description=
             'HTML content that will be added to the course explorer page',
-        optional=True,
     ))
 
     group.add_property(schema_fields.SchemaField(
         'institution_name', 'Organization Name', 'string',
-        description=messages.ORGANIZATION_NAME_DESCRIPTION,
+        description=models_messages.ORGANIZATION_NAME_DESCRIPTION,
         optional=True,
     ))
     group.add_property(schema_fields.SchemaField(
         'institution_url', 'Organization URL', 'string',
-        description=messages.ORGANIZATION_URL_DESCRIPTION,
+        description=models_messages.ORGANIZATION_URL_DESCRIPTION,
         extra_schema_dict_values={'_type': 'url', 'showMsg': True},
         optional=True,
     ))
 
     group.add_property(schema_fields.SchemaField(
         'privacy_terms_url', 'Privacy & Terms URL', 'string',
-        description=messages.HOMEPAGE_PRIVACY_URL_DESCRIPTION,
+        description=models_messages.HOMEPAGE_PRIVACY_URL_DESCRIPTION,
         extra_schema_dict_values={'_type': 'url', 'showMsg': True},
         optional=True,
     ))

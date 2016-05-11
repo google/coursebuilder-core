@@ -560,8 +560,13 @@ class AbstractAllCoursesCronHandler(CronHandler):
 class ApplicationHandler(webapp2.RequestHandler):
     """A handler that is aware of the application context."""
 
+    # Lists of functions that produce lists of links to be displayed in
+    # student-facing templates.
+    # Type: [app_context => [(href, label)]]
     LEFT_LINKS = []
     RIGHT_LINKS = []
+    AUTH_LINKS = []
+
     EXTRA_GLOBAL_CSS_URLS = []
     EXTRA_GLOBAL_JS_URLS = []
 
@@ -893,6 +898,8 @@ class CourseHandler(ApplicationHandler):
         self.template_value['footer_items'] = []
         for func in self.FOOTER_ITEMS:
             self.template_value['footer_items'].extend(func(self))
+        self.template_value['auth_links'] = [
+            item for func in self.AUTH_LINKS for item in func(self.app_context)]
 
         if not prefs:
             prefs = models.StudentPreferencesDAO.load_or_default()

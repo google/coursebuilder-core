@@ -1,0 +1,52 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+<link rel="import" href="/modules/explorer/_static/components/course-cards/course-card-group.html">
+
+<dom-module id="course-card-grouper">
+  <template>
+    <course-card-group courses="[[openCourses]]">
+      <span title>
+        [[openCourses.length]]
+        course<template
+          is="dom-if" if="[[isntOne(openCourses.length)}]]">s</template>
+        open for registration
+      </span>
+    </course-card-group>
+
+    <course-card-group courses="[[otherCourses]]">
+      <span title>
+        [[otherCourses.length]] more
+        course<template
+          is="dom-if" if="[[isntOne(otherCourses.length)]]">s</template>
+        in the library
+      </span>
+    </course-card-group>
+  </template>
+  <script>
+    Polymer({
+      is: 'course-card-grouper',
+      properties: {
+        courses: {
+          type: Array,
+        }
+      },
+      observers: ['coursesObserver(courses.*)'],
+      coursesObserver: function(observed) {
+        var courses = observed.base;
+        var open = [];
+        var other = [];
+        courses.forEach(function(course) {
+          if (course.node.openForRegistration) {
+            open.push(course);
+          } else {
+            other.push(course);
+          }
+        });
+        this.openCourses = open;
+        this.otherCourses = other;
+      },
+      isntOne: function(value) {
+        return value != 1;
+      }
+    })
+  </script>
+</dom-module>
