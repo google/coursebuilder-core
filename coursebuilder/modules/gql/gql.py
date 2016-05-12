@@ -98,7 +98,6 @@ from models import courses
 from models import custom_modules
 from models import transforms
 from modules.courses import unit_outline
-from modules.dashboard import dashboard
 
 
 _TEMPLATES_DIR = os.path.join(
@@ -348,7 +347,8 @@ class CurrentUser(graphene.ObjectType):
         return users.create_logout_url(dest_url=args['dest_url'])
 
     def resolve_can_view_dashboard(self, args, info):
-        return dashboard.DashboardHandler.current_user_has_access(None)
+        # TODO(nretallack): Determine this more accurately.
+        return users.is_current_user_admin()
 
 
 class Course(CourseAwareObjectType, graphene.relay.Node):

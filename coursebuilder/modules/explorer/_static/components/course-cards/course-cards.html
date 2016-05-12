@@ -17,7 +17,7 @@
     </style>
 
     <div class="course-list">
-      <template id="list" is="dom-repeat" items="[[courses]]" as="course">
+      <template is="dom-repeat" items="[[courses]]" as="course" sort="_compareCourses">
         <course-card course="[[course.node]]" width="[[cardWidth]]"></course-card>
       </template>
     </div>
@@ -47,6 +47,15 @@
       detached: function() {
         window.removeEventListener('resize', this.setCardWidth.bind(this));
       },
+      _compareCourses: function(a, b) {
+        if (a.node.title > b.node.title) {
+          return 1;
+        } else if (a.node.title < b.node.title) {
+          return -1;
+        } else {
+          return 0;
+        }
+      }
     })
   </script>
 </dom-module>
