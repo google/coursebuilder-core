@@ -76,6 +76,10 @@ class Site(graphene.ObjectType):
         return CourseExplorer(extra_content=self.data.get('extra_content'))
 
 
+class CourseCategory(graphene.ObjectType):
+    name = graphene.String()
+
+
 def resolve_site(gql_root, args, info):
     return Site(transforms.loads(settings.COURSE_EXPLORER_SETTINGS.value))
 
@@ -105,6 +109,14 @@ def resolve_estimated_workload(gql_course, args, info):
         return None
 
 
+def resolve_category(gql_course, args, info):
+    try:
+        return CourseCategory(
+            name=gql_course.course_settings['course']['category_name'])
+    except KeyError:
+        return None
+
+
 def register():
     gql.Query.add_to_class(
         'site', graphene.Field(Site, resolver=resolve_site))
@@ -117,3 +129,5 @@ def register():
     gql.Course.add_to_class(
         'estimated_workload', graphene.String(
             resolver=resolve_estimated_workload))
+    gql.Course.add_to_class(
+        'category', graphene.Field(CourseCategory, resolver=resolve_category))

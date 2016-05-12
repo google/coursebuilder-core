@@ -26,4 +26,9 @@ def register():
                 description=messages.COURSE_ESTIMATED_WORKLOAD_DESCRIPTION,
                 optional=True, i18n=False,
             ),
+            lambda _: schema_fields.SchemaField(
+                'course:category_name', 'Category', 'string',
+                description=messages.COURSE_CATEGORY_DESCRIPTION,
+                optional=True, i18n=False,
+            ),
         ]

@@ -99,6 +99,7 @@ class GraphQLTests(gql_tests.BaseGqlTests):
                     'start_date': '2016-05-11T07:00:00.000Z',
                     'end_date': '2016-10-11T07:00:00.000Z',
                     'estimated_workload': '10hrs',
+                    'category_name': 'Biology',
                 },
             })
 
@@ -109,6 +110,7 @@ class GraphQLTests(gql_tests.BaseGqlTests):
                     startDate,
                     endDate,
                     estimatedWorkload,
+                    category {name},
                 }
             }
             """ % self.course_id),
@@ -119,6 +121,9 @@ class GraphQLTests(gql_tests.BaseGqlTests):
                         'startDate': '2016-05-11T07:00:00.000Z',
                         'endDate': '2016-10-11T07:00:00.000Z',
                         'estimatedWorkload': '10hrs',
+                        'category': {
+                            'name': 'Biology',
+                        },
                     }
                 }
             })

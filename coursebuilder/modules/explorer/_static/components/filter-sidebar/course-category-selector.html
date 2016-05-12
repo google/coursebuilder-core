@@ -1,0 +1,35 @@
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-radio-group/paper-radio-group.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-radio-button/paper-radio-button.html">
+
+<dom-module id="course-category-selector">
+  <style>
+    paper-radio-button {
+      display: block;
+      margin-left: -12px;
+    }
+  </style>
+  <template>
+    <paper-radio-group selected="{{value}}">
+      <paper-radio-button name="all">All</paper-radio-button>
+      <template is="dom-repeat" items="[[items]]" as="item">
+        <paper-radio-button name="[[item]]">[[item]]</paper-radio-button>
+      </template>,
+    </paper-radio-group>
+  </template>
+  <script>
+    Polymer({
+      is: 'course-category-selector',
+      properties: {
+        value: {
+          type: String,
+          value: 'all',
+          notify: true,
+        },
+        items: {
+          type: Array,
+        }
+      },
+    })
+  </script>
+</dom-module>

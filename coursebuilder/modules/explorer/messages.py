@@ -39,3 +39,7 @@ COURSE_ESTIMATED_WORKLOAD_DESCRIPTION = """
 Estimate the amount of work this course will take, e.g. "10hrs".  This is
 displayed in the course explorer.
 """
+
+COURSE_CATEGORY_DESCRIPTION = """
+Course subject area, shown in the Course Explorer.  For example, "Biology".
+"""

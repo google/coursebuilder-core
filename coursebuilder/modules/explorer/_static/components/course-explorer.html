@@ -47,6 +47,7 @@
       <floating-sidebar>
         <filter-sidebar
           filter-options="{{filterOptions}}"
+          categories="[[categories]]"
         ></filter-sidebar>
       </floating-sidebar>
 
@@ -71,12 +72,17 @@
           type: Object,
           value: {
             filter: '',
+            category: 'all',
           },
           notify: true,
         },
         data: {
           type: Object,
         },
+        categories: {
+          type: Array,
+          value: [],
+        }
       },
 
       _getParams: function() {
@@ -86,7 +92,7 @@
             'allCourses {edges {node {' +
             '  id, title, url, abstract, instructorDetails,' +
             '  enrollment {enrolled}, openForRegistration,' +
-            '  startDate, endDate, estimatedWorkload}}},' +
+            '  startDate, endDate, estimatedWorkload, category {name} }}},' +
             'currentUser {' +
             '  email, loggedIn, canViewDashboard, loginUrl (destUrl: "/"),' +
             '  logoutUrl (destUrl: "/")}' +
@@ -98,12 +104,25 @@
         this.data = event.detail.response.data;
         this.set(
           'filterOptions.status', this._enrolledInAny() ? 'enrolled' : 'all')
+        this.set('categories', this._getCategories().sort())
       },
 
       _enrolledInAny: function() {
         return this.data.allCourses.edges.some(function(course) {
           return course.node.enrollment.enrolled;
         })
+      },
+
+      _getCategories: function() {
+        var categories = []
+        this.data.allCourses.edges.forEach(function(edge) {
+          if (
+              edge.node.category &&
+              categories.indexOf(edge.node.category.name) == -1 ) {
+            categories.push(edge.node.category.name);
+          }
+        })
+        return categories;
       },
 
       _filter: function(courses, filterOptionsPath) {
@@ -123,6 +142,14 @@
           } else if (
               filterOptions.status == 'completed' &&
               course.node.openForRegistration) {
+            return false;
+          }
+
+          // Filter by category
+          if (
+              filterOptions.category != 'all' && (
+              !course.node.category ||
+              course.node.category.name != filterOptions.category)) {
             return false;
           }
 

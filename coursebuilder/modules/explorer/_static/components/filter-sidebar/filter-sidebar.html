@@ -1,6 +1,7 @@
 <link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
 <link rel="import" href="/static/polymer-1.2.0/paper-input/paper-input.html">
 <link rel="import" href="/modules/explorer/_static/components/filter-sidebar/course-status-selector.html">
+<link rel="import" href="/modules/explorer/_static/components/filter-sidebar/course-category-selector.html">
 
 <dom-module id="filter-sidebar">
   <template>
@@ -34,6 +35,14 @@
 
     <h2 class="unlabeled">Course status</h2>
     <course-status-selector status="{{filterOptions.status}}"></course-status-selector>
+
+    <template is="dom-if" if="[[categories.length]]">
+      <h2 class="unlabeled">Category</h2>
+      <course-category-selector
+        value="{{filterOptions.category}}"
+        items="[[categories]]"
+      ></course-category-selector>
+    </template>
   </template>
   <script>
     Polymer({
@@ -42,6 +51,9 @@
         filterOptions: {
           type: Object,
           notify: true,
+        },
+        categories: {
+          type: Array,
         }
       }
     })
