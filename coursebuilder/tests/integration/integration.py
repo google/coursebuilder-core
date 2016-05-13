@@ -19,6 +19,7 @@ __author__ = [
     'John Orr (jorr@google.com)',
 ]
 
+import collections
 import random
 import time
 
@@ -96,6 +97,15 @@ class TestBase(suite.TestBase):
         return pageobjects.AppengineAdminPage(
             self, suite.TestBase.ADMIN_SERVER_BASE_URL, course_name)
 
+    def login(self, email, admin=True, logout_first=False):
+        root_page = self.load_root_page()
+        if logout_first:
+            root_page.click_logout()
+        return root_page.click_login().login(email, admin=admin)
+
+    def logout(self):
+        return self.load_root_page().click_logout()
+
     def load_sample_course(self):
         # Be careful using this method. The sample class is a singleton and
         # tests which use it will not be isolated. This can lead to a number of
@@ -105,9 +115,7 @@ class TestBase(suite.TestBase):
         name = 'sample'
         title = 'Power Searching with Google'
 
-        page = self.load_root_page(
-        ).click_login(
-        ).login(
+        page = self.login(
             self.LOGIN, admin=True
         ).click_dashboard(
         ).click_courses()
@@ -139,13 +147,8 @@ class TestBase(suite.TestBase):
 
     def create_course(self, title, name, login=True):
         """Create a new course from title and name, using the admin tools."""
-        page = self.load_root_page()
-
         if login:
-            page.click_login(
-            ).login(
-                self.LOGIN, admin=True
-            )
+            self.login(self.LOGIN, admin=True)
 
         self.load_courses_list(
         ).click_add_course(
@@ -168,3 +171,67 @@ class TestBase(suite.TestBase):
             'Active'
         ).click_save(
         ).click_close()
+
+    def set_course_availability(self, course_name, avail):
+        return self.load_dashboard(
+            course_name
+        ).click_availability(
+        ).set_course_availability(
+            avail
+        )
+
+    def init_availability_and_whitelist(self, course_name, avail, emails):
+        if emails is None:
+            emails = []
+
+        avail_page = self.set_course_availability(course_name, avail)
+
+        if avail == 'Public - No Registration':
+            # 'Public' courses do not accept registrations, so expect that
+            # no list of student emails to whitelist was provided.
+            self.assertEqual(0, len(emails))
+        else:
+            avail_page.set_whitelisted_students(emails)
+
+        avail_page.click_save()
+
+    Person = collections.namedtuple('Person', 'email name admin')
+
+    def some_students(self, avail, how_many):
+        if avail == 'Public':
+            self.assertEquals(how_many, 0)
+            return  # Not possible to enroll in Public courses.
+
+        if avail == 'Private':
+            is_admin = [True]  # Generate only admins.
+        else:
+            # "Registration Required" or "Registration Optional".
+            # Generate more students than admins.
+            is_admin = [True, False, False]
+
+        for count in xrange(1, how_many+1):
+            admin = random.choice(is_admin)
+            if admin:
+                user = 'admin'
+                name = 'Admin'
+            else:
+                user = 'test'
+                name = 'Student'
+            email = '{}{}@example.com'.format(user, count)
+            name = 'Test{} {}'.format(count, name)
+            yield self.Person(email, name, admin)
+
+    def enroll_students(self, course_name, students):
+        """Enrolls a list of students (Person) in the course_name course.
+
+        Expects someone to already be logged in when called. Last Person to be
+        enrolled will remain logged in at end of call.
+        """
+        for student in students:
+            self.login(student.email, admin=student.admin, logout_first=True)
+            self.load_course(
+                course_name
+            ).click_register(
+            ).enroll(
+                student.name
+            )

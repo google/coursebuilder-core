@@ -46,9 +46,7 @@ class SampleCourseTests(integration.TestBase):
         login = 'test-%s@example.com' % uid
         title = 'Test announcement (%s)' % uid
 
-        self.load_root_page(
-        ).click_login(
-        ).login(login, admin=True)
+        self.login(login, admin=True)
 
         self.load_root_page(
         ).click_announcements(
@@ -70,9 +68,7 @@ class SampleCourseTests(integration.TestBase):
         login = 'test-%s@example.com' % uid
         email = 'new-admin-%s@foo.com' % uid
 
-        self.load_root_page(
-        ).click_login(
-        ).login(
+        self.login(
             login, admin=True
         ).click_dashboard(
         ).click_admin(
@@ -93,9 +89,7 @@ class AdminTests(integration.TestBase):
     LOGIN = 'test@example.com'
 
     def test_default_course_is_read_only(self):
-        self.load_root_page(
-        ).click_login(
-        ).login(
+        self.login(
             self.LOGIN, admin=True
         ).click_dashboard(
         ).verify_read_only_course()
@@ -141,14 +135,8 @@ class AdminTests(integration.TestBase):
         # [Register] button to not be displayed for anyone, even the course
         # creator. Fix both of those by requiring registration, which allows
         # non-admins to register.
-        self.load_dashboard(
-            name
-        ).click_availability(
-        ).set_course_availability(
-            'Registration Required'
-        ).set_whitelisted_students(
-            whitelisted_students
-        ).click_save()
+        self.init_availability_and_whitelist(
+            name, 'Registration Required', whitelisted_students)
 
         # Double-check that whitelisted students were indeed saved.
         self.load_dashboard(
@@ -169,12 +157,7 @@ class AdminTests(integration.TestBase):
 
         # Register 2nd admin user as a student; confirm count is now "2".
         # Log out course creator admin and log in as a second admin.
-        self.load_root_page(
-        ).click_logout(
-        ).click_login(
-        ).login(
-            email2, admin=True
-        )
+        self.login(email2, admin=True, logout_first=True)
         self.load_dashboard(
             name
         ).click_course(
@@ -190,12 +173,7 @@ class AdminTests(integration.TestBase):
 
         # Register non-admin user as a student; confirm count is now "3".
         # Log out 2nd admin and log in as a non-admin student.
-        self.load_root_page(
-        ).click_logout(
-        ).click_login(
-        ).login(
-            email3, admin=False
-        )
+        self.login(email3, admin=False, logout_first=True)
         # Cannot call load_dashboard() if user is not an admin.
         self.load_course(
             name
@@ -205,12 +183,7 @@ class AdminTests(integration.TestBase):
         ).click_course()
 
         # Log out and log in as course creator to check enrollment totals.
-        self.load_root_page(
-        ).click_logout(
-        ).click_login(
-        ).login(
-            self.LOGIN, admin=True
-        )
+        self.login(self.LOGIN, admin=True, logout_first=True)
 
         self.load_dashboard(
             name

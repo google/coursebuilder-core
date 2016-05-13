@@ -32,25 +32,7 @@ class _CoursesListTestBase(integration.TestBase):
 
     def setUp(self):
         super(_CoursesListTestBase, self).setUp()
-        self.load_root_page().click_login().login(self.LOGIN, admin=True)
-
-    def whitelist(self, course_name, avail, emails):
-        if avail == 'Private':
-            return  # Assume newly-created course is already 'Private'.
-
-        avail_page = self.load_dashboard(
-            course_name
-        ).click_availability(
-        ).set_course_availability(
-            avail
-        )
-
-        if avail == 'Public - No Registration':
-            self.assertEqual(0, len(emails))
-        else:
-            avail_page.set_whitelisted_students(emails)
-
-        avail_page.click_save()
+        self.login(self.LOGIN, admin=True)
 
 
 class CourseAdministrationTests(_CoursesListTestBase):
