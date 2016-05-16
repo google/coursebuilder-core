@@ -40,7 +40,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 # here we list all integration tests that require an integration server
 ALL_INTEGRATION_TEST_CLASSES = {
-    'tests.integration.test_classes.IntegrationTestBundle1': 16,
+    'tests.integration.test_classes.IntegrationTestBundle1': 15,
     'tests.integration.test_classes.VisualizationsTest': 5,
 }
 

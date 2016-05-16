@@ -193,3 +193,105 @@ class CourseMultiEditTests(_CoursesListTestBase):
         multi_edit.expect_status_message_to_be(
             'Set availability to private for 0 courses and had %d errors.' %
             NUM_COURSES)
+
+
+class CoursesEnrollmentsTests(_CoursesListTestBase):
+
+    def test_registered_students_updated(self):
+        course_name, title = self.create_new_course(login=False)
+        course_namespace = 'ns_' + course_name
+
+        # Newly-created course should have 'Private' availability.
+        # "Registered Students" count starts as em dash to indicate
+        # "no count", and tooltip contents are different.
+        self.load_courses_list(
+        ).verify_availability(
+            course_namespace, 'Private'
+        ).verify_no_enrollments(
+            course_namespace, title
+        )
+
+        # Form additional user email addresses from self.LOGIN.  Do not use
+        # self.LOGIN itself, as that email address enrolled in the sample
+        # course as "Admin Test". For whatever reason, this cause the
+        # enrollment form to be skipped. click_register_expecting_no_survey()
+        # would need to be used, but when that method is required, no
+        # enrollment event occurs at all. (Is this a bug?)
+        login_user, login_domain = self.LOGIN.split('@', 1)
+        email1 = login_user + '1@' + login_domain
+        email2 = login_user + '2@' + login_domain
+        email3 = login_user + '3@' + login_domain
+
+        # 'Private' will not let students enroll. 'Public' causes the
+        # [Register] button to not be displayed for anyone, even the course
+        # creator. Fix both of those by requiring registration, which allows
+        # non-admins to register.
+        whitelisted = [email1, email2, email3]
+        self.init_availability_and_whitelist(
+            course_name, 'Registration Required', whitelisted)
+
+        # Double-check that whitelisted students were indeed saved.
+        self.load_dashboard(
+            course_name
+        ).click_availability(
+        ).verify_whitelisted_students(
+            '\n'.join(whitelisted)
+        )
+
+        # Confirm that Courses page no longer indicates newly-created test
+        # course as being 'Private'.
+        self.load_courses_list(
+        ).verify_availability(
+            course_namespace, 'Registration Required'
+        )
+
+        # Register an admin user as a student; confirm count is now "1".
+        # Log out course creator admin and log in as this new admin.
+        self.login(email1, admin=True, logout_first=True)
+        self.load_course(
+            course_name
+        ).click_register(
+        ).enroll(
+            'Test1 Admin'
+        )
+        self.load_courses_list(
+        ).verify_total_enrollments(
+            course_namespace, title, 1
+        )
+
+        # Register another admin user as a student; confirm count is now "2".
+        # Log out course creator admin and log in as a second admin.
+        self.login(email2, admin=True, logout_first=True)
+        self.load_course(
+            course_name
+        ).click_register(
+        ).enroll(
+            'Test2 Admin'
+        )
+        self.load_courses_list(
+        ).verify_total_enrollments(
+            course_namespace, title, 2
+        )
+
+        # Register non-admin user as a student; confirm count is now "3".
+        # Log out 2nd admin and log in as a non-admin student.
+        self.login(email3, admin=False, logout_first=True)
+        self.load_course(
+            course_name
+        ).click_register(
+        ).enroll(
+            'Test3 Student'
+        ).click_course()
+
+        # Log out and log in as course creator to check enrollment totals.
+        self.login(self.LOGIN, admin=True, logout_first=True)
+        self.load_courses_list(
+        ).verify_total_enrollments(
+            course_namespace, title, 3
+        )
+
+        # TODO(tlarsen): Implement a DeleteMyDataPage and:
+        #   1) Unenroll all students, one by one.
+        #   2) Confirm count decrements to 0, not an em dash, and tooltip
+        #      still indicates "Most recent activity at...", and not
+        #      "(registration activity...is being computed)".

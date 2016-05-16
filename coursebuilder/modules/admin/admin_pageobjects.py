@@ -18,7 +18,11 @@ __author__ = [
     'Mike Gainer (mgainer@google.com)'
 ]
 
+import re
+
+from modules.admin import admin
 from selenium.common import exceptions
+from selenium.webdriver.common import action_chains
 from selenium.webdriver.support import select
 
 from tests.integration import pageobjects
@@ -81,18 +85,57 @@ class CoursesListPage(pageobjects.CoursesListPage):
         self._tester.assertEqual(expected_state, actual_state)
         return self
 
-    def load(self, base_url):
-        self.get(base_url + '/modules/admin')
+    def _match_enrolled_count_and_tooltip(self, namespace, count, tooltip):
+        count_div_selector = '#enrolled_{}'.format(namespace)
+        tooltip_selector = '#activity_{}'.format(namespace)
+
+        def count_div_equals_count(driver):
+            count_div = self.find_element_by_css_selector(count_div_selector)
+            match = (count == count_div.text.strip())
+            if not match:
+                self.load(None) # Just use last-seen base_url value.
+            return match
+
+        # Verification will fail by timeout if expected count never appears.
+        self.wait().until(count_div_equals_count)
+
+        def tooltip_match_pops_up(driver):
+            count_div = self.find_element_by_css_selector(count_div_selector)
+            action_chains.ActionChains(self._tester.driver).move_to_element(
+                count_div).perform()
+            tooltip_div = self.find_element_by_css_selector(tooltip_selector)
+            match = re.match(tooltip, tooltip_div.text.strip())
+            if not match:
+                self.load(None) # Just use last-seen base_url value.
+            return match
+
+        # Verification will fail by timeout if expected count never appears.
+        self.wait().until(tooltip_match_pops_up)
         return self
 
+    def verify_no_enrollments(self, namespace, title):
+        text = admin.BaseAdminHandler.NONE_ENROLLED
+        regexp = re.escape(
+            '(registration activity for %s is being computed)' % title)
+        return self._match_enrolled_count_and_tooltip(namespace, text, regexp)
+
+    DATETIME_REGEXP = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}"
+
+    def verify_total_enrollments(self, namespace, title, count):
+        text = "%d" % count
+        regexp = ('Most recent activity at %s UTC for %s' %
+                  (self.DATETIME_REGEXP, re.escape(title + '.')))
+        return self._match_enrolled_count_and_tooltip(namespace, text, regexp)
+
     def verify_availability(self, namespace, expected):
-        td = self.find_element_by_id('availability_' + namespace)
-        self._tester.assertEqual(expected, td.text.strip())
+        a_href = self.find_element_by_id('availability_' + namespace)
+        self._tester.assertEqual(expected, a_href.text.strip())
         return self
 
     def click_edit_availability(self):
         self.find_element_by_id('edit_multi_course_availability').click()
         return MultiEditModalDialog(self._tester)
+
 
 class MultiEditModalDialog(pageobjects.CoursesListPage):
 

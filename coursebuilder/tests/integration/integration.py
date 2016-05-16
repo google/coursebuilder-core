@@ -73,7 +73,7 @@ class TestBase(suite.TestBase):
         self.driver.quit()
         super(TestBase, self).tearDown()
 
-    def load_root_page(self, suffix=pageobjects.RootPage.BASE_URL_SUFFIX):
+    def load_root_page(self, suffix=pageobjects.PageObject.BASE_URL_SUFFIX):
         base_url = suite.TestBase.INTEGRATION_SERVER_BASE_URL
         ret = pageobjects.RootPage(self).load(base_url, suffix=suffix)
         tries = 10

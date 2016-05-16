@@ -32,8 +32,6 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support import select
 from selenium.webdriver.support import wait
 
-from modules.admin import admin as admin_module
-
 
 DEFAULT_TIMEOUT = 20
 
@@ -45,8 +43,11 @@ def get_parent_element(web_element):
 class PageObject(object):
     """Superclass to hold shared logic used by page objects."""
 
+    BASE_URL_SUFFIX = '/'
+
     def __init__(self, tester):
         self._tester = tester
+        self._last_base_url = None
 
     def get(self, url, can_retry=True):
         if can_retry:
@@ -62,6 +63,21 @@ class PageObject(object):
             return
         raise exceptions.TimeoutException(
             'Timeout waiting for %s page to load', url)
+
+    def load(self, base_url, suffix=BASE_URL_SUFFIX):
+        if base_url is None:
+            # Allow sub-classes to *explicitly* pass None to attempt to use
+            # the last-seen base_url value. This is used in methods that need
+            # to repeatedly reload the page (e.g. looking for a value to be
+            # updated on an non-dynamic page) but do not want to require the
+            # calling test to keep supplying that value.
+            base_url = self._last_base_url
+        else:
+            self._last_base_url = base_url
+        # If base_url is still None at this point, should base_url fall back to
+        # suite.TestBase.INTEGRATION_SERVER_BASE_URL as a default value?
+        self.get(base_url + suffix)
+        return self
 
     def wait(self, timeout=None):
         if timeout is None:
@@ -349,8 +365,6 @@ class DashboardEditor(EditorPageObject):
 class RootPage(PageObject):
     """Page object to model the interactions with the root page."""
 
-    BASE_URL_SUFFIX = '/'
-
     def _add_default_course_if_needed(self, base_url):
         """Setup default read-only course if not yet setup."""
 
@@ -375,10 +389,6 @@ class RootPage(PageObject):
         self.click_register(
         ).enroll('Admin Test'
         ).find_element_by_link_text('Logout').click()
-
-    def load(self, base_url, suffix=BASE_URL_SUFFIX):
-        self.get(base_url + suffix)
-        return self
 
     def load_welcome_page(self, base_url):
         self.click_login(
@@ -552,7 +562,7 @@ class CoursesListPage(PageObject):
     """Page object to model course creation from the Courses list page."""
 
     def load(self, base_url):
-        self.get(base_url + '/modules/admin')
+        super(CoursesListPage, self).load(base_url, suffix='/modules/admin')
         return self
 
     def click_add_course(self):
@@ -601,38 +611,6 @@ class DashboardPage(PageObject):
             'The course is not publicly available.',
             self.find_element_by_id('gcb-butterbar-message').text)
         return self
-
-    def verify_availability(self, name, expected_text):
-        avail_div_selector = '#availability_ns_{}'.format(name)
-        avail_div = self.find_element_by_css_selector(avail_div_selector)
-        self._tester.assertEquals(
-            expected_text, avail_div.text.strip())
-        return self
-
-    def _match_enrolled_count_and_tooltip(self, name, count, tooltip):
-        count_div_selector = '#enrolled_ns_{}'.format(name)
-        count_div = self.find_element_by_css_selector(count_div_selector)
-        self._tester.assertEquals(count, count_div.text.strip())
-        action_chains.ActionChains(self._tester.driver).move_to_element(
-            count_div).perform()
-        tooltip_div_selector = '#activity_ns_{}'.format(name)
-        tooltip_div = self.find_element_by_css_selector(tooltip_div_selector)
-        self._tester.assertRegexpMatches(tooltip_div.text.strip(), tooltip)
-        return self
-
-    def verify_no_enrollments(self, name, title):
-        text = admin_module.BaseAdminHandler.NONE_ENROLLED
-        regexp = re.escape(
-            '(registration activity for %s is being computed)' % title)
-        return self._match_enrolled_count_and_tooltip(name, text, regexp)
-
-    DATETIME_REGEXP = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}"
-
-    def verify_total_enrollments(self, name, title, count):
-        text = "%d" % count
-        regexp = ('Most recent activity at %s UTC for %s' %
-                  (self.DATETIME_REGEXP, re.escape(title + '.')))
-        return self._match_enrolled_count_and_tooltip(name, text, regexp)
 
     def find_menu_group(self, name):
         return self.find_element_by_css_selector('#menu-group__{}'.format(name))
