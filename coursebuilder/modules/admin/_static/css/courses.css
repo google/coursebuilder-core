@@ -114,3 +114,15 @@
   margin-top: 15px;
   margin-bottom: 15px;
 }
+
+/*
+ * Display the arrow_upward or arrow_downward indicators according to the
+ * Material Design spec for onclick and onhover events.
+ */
+i.gcb-sorted-icon {
+  vertical-align: middle;
+}
+
+i.gcb-sorted-hover {
+  color: rgba(0, 0, 0, 0.26);
+}

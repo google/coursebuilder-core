@@ -28,14 +28,27 @@
   <table>
     <thead>
       <tr>
-        <th class="gcb-list-select-course">
+        {# Checkbox and trash-can icon delete columns cannot be sorted by. #}
+        <th class="gcb-list-select-course gcb-not-sortable">
           <input type="checkbox" id="all_courses_select">
         </th>
-        <th>Title</th>
-        <th>URL Component</th>
-        <th>Availability</th>
-        <th>Registered Students</th>
-        <th class="gcb-list__cell--icon"></th>
+        <th id="title_column" class="gcb-sorted-none">
+          Title
+          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+        </th>
+        <th id="url_column" class="gcb-sorted-none">
+          URL Component
+          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+        </th>
+        <th id="availability_column" class="gcb-sorted-none">
+          Availability
+          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+        </th>
+        <th id="enrolled_column" class="gcb-sorted-none">
+          Registered Students
+          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+        </th>
+        <th class="gcb-list__cell--icon gcb-not-sortable"></th>
       </tr>
     </thead>
     <tbody>
@@ -51,26 +64,29 @@
              data-course-title="{{ course.name }}"
              >
         </td>
-        <td>
-          <a href="{{ course.link }}">
+        <td class="gcb-courses-title">
+          <a href="{{ course.link }}" class="gcb-text-to-sort-by">
             {{ course.name }}
           </a>
         </td>
-        <td>
-          <a href="{{ course.slug }}" target="_blank">
+        <td class="gcb-courses-url">
+          <a href="{{ course.slug }}" target="_blank"
+             class="gcb-text-to-sort-by">
             {{ course.slug }}
             <i class="material-icons gcb-list__icon gcb-list__icon--rowhover">open_in_new</i>
           </a>
         </td>
-        <td>
+        <td class="gcb-courses-availability">
           <a id="availability_{{ course.namespace_name }}"
+             class="gcb-text-to-sort-by"
              href="{{ course.slug }}/dashboard?action=availability">
             {{ course.availability }}
           </a>
         </td>
-        <td>
+        <td class="gcb-courses-enrolled">
           <div>
-            <div id="enrolled_{{ course.namespace_name }}">
+            <div id="enrolled_{{ course.namespace_name }}"
+                 class="gcb-text-to-sort-by">
               {{ course.total_enrolled }}
             </div>
             <div class="mdl-tooltip gcb-form-tooltip"
@@ -80,7 +96,7 @@
           </div>
         </td>
         <td>
-          {% if course.namespace != '' %}
+          {% if course.namespace_name != '' %}
             <form
                action="{{ course.slug }}{{ delete_course_link }}"
                method="POST"
@@ -99,16 +115,23 @@
         </td>
       </tr>
       {% endfor %}
-
-      {% if courses|length %}
-      <tr>
-        <td colspan="6" style="text-align: right">
-          Total: {{ courses|length }} item(s)
-        </td>
-      </tr>
-      {% endif %}
-
     </tbody>
+
+    {% if courses|length %}
+    <tfoot>
+      <tr>
+        <td></td>
+        <td>
+          {{ courses|length }} course(s)
+        </td>
+        <td colspan="2">&nbsp;</td>
+        <td>
+          {{ total_students }} student(s)
+        </td>
+        <td>&nbsp;</td>
+      </tr>
+    </tfoot>
+    {% endif %}
   </table>
 
   {% if not courses|length %}

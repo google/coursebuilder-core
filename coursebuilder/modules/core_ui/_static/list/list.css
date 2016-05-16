@@ -113,6 +113,16 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
   height: 40px;
 }
 
+/*** Footer Row ***/
+
+.gcb-list > table > tfoot > tr {
+  background-color: #f9f9f9;
+  text-align: left;
+  font-style: italic;
+  height: 30px;
+  border-bottom: solid 1px #e0e0e0;
+}
+
 /*** Row ***/
 
 .gcb-list__row,

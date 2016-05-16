@@ -136,6 +136,85 @@ class CoursesListPage(pageobjects.CoursesListPage):
         self.find_element_by_id('edit_multi_course_availability').click()
         return MultiEditModalDialog(self._tester)
 
+    def _col_hdr_id_sel(self, column):
+        sel = '#{}_column'.format(column)
+        return sel
+
+    def _sorted_class(self, sort_dir):
+        cls = 'gcb-sorted-{}'.format(sort_dir)
+        return cls
+
+    def _sorted_arrow(self, sort_dir):
+        if sort_dir == 'descending':
+            return 'downward'
+        if sort_dir == 'ascending':
+            return 'upward'
+        return ''
+
+    def _next_arrow(self, arrow):
+        if arrow == 'upward':
+            return 'downward'
+        return 'upward'
+
+    def _md_arrow(self, arrow):
+        if arrow:
+            arrow_text = 'arrow_{}'.format(arrow)
+        else:
+            arrow_text = ''
+        return arrow_text
+
+    def verify_sorted_arrow(self, column, sort_dir, arrow):
+        col_hdr_selector = self._col_hdr_id_sel(column)
+        col_hdr_th = self.find_element_by_css_selector(col_hdr_selector)
+        self._tester.assertIn(
+            self._sorted_class(sort_dir), col_hdr_th.get_attribute('class'))
+        icon_selector = col_hdr_selector + ' i.gcb-sorted-icon'
+        icon_i = self.find_element_by_css_selector(
+            icon_selector, pre_wait=False)
+        self._tester.assertEquals(self._md_arrow(arrow), icon_i.text.strip())
+        return self
+
+    def verify_no_sorted_arrow(self, column):
+        return self.verify_sorted_arrow(column, 'none', '')
+
+    def verify_hover_arrow(self, column, sort_dir, arrow):
+        col_hdr_selector = self._col_hdr_id_sel(column)
+        col_hdr_th = self.find_element_by_css_selector(col_hdr_selector)
+        self._tester.assertIn(
+            self._sorted_class(sort_dir), col_hdr_th.get_attribute('class'))
+        action_chains.ActionChains(self._tester.driver).move_to_element(
+            col_hdr_th).perform()
+        icon_selector = col_hdr_selector + ' i.gcb-sorted-icon'
+        icon_i = self.find_element_by_css_selector(icon_selector)
+        self._tester.assertIn(
+            'gcb-sorted-hover', icon_i.get_attribute('class'))
+        self._tester.assertEquals(self._md_arrow(arrow), icon_i.text.strip())
+        return self
+
+    def verify_sorted_by_arrows(self, column, sort_dir):
+        arrow = self._sorted_arrow(sort_dir)
+        self.verify_sorted_arrow(
+            column, sort_dir, arrow
+        )
+
+        # All other columns should indicate gcb-sorted-none and no arrow,
+        # then an upward arrow when hovered over ("next" for an unsorted
+        # column is always gcb-sorted-ascending, so upward gray arrow).
+        others = self.COLUMNS_SET.difference([column])
+        for other in others:
+            self.verify_no_sorted_arrow(
+                other
+            ).verify_hover_arrow(
+                other, 'none', 'upward'
+            )
+
+        # Hovering over sorted-by columns should toggle the existing arrow,
+        # but not the gcb-sorted class.
+        self.verify_hover_arrow(
+            column, sort_dir, self._next_arrow(arrow)
+        )
+        return self
+
 
 class MultiEditModalDialog(pageobjects.CoursesListPage):
 

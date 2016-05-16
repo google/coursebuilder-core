@@ -1802,7 +1802,7 @@ class AdminAspectTest(actions.TestBase):
         actions.login(email, is_admin=True)
         response = self.testapp.get('/modules/admin')
         assert_contains('Course Builder &gt; Admin &gt; Courses', response.body)
-        assert_contains('Total: 2 item(s)', response.body)
+        assert_contains('2 course(s)', response.body)
 
         # Check course dashboard URL's.
         assert_contains('<a href="/foo/dashboard"', response.body)

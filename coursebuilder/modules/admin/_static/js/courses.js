@@ -331,12 +331,223 @@ $(function() {
     gcb_multi_edit_dialog.open();
   }
 
+  var _sortBySequence = {
+    // The key is the element #id of the primary "clicked on" sortable table
+    // column header.
+    //
+    // The value is an ordered "sort-by sequence" list of those table column
+    // headers for each column by which to compare two table rows.
+    //
+    // If the two rows have equal cell values in the current column (beginning
+    // with the first one in the sort-by sequence list) being compared, the
+    // comparison continues with the cell values in those same two rows, but
+    // corresponding to the next column in the sort-by sequence list.
+    //
+    // The comparisons continue until either two cell values are non-equal,
+    // or the sort-by sequence list is exhausted, which *would* indicate that
+    // the two rows are identical. Two rows being identical should never
+    // actually happen in practice, because once the "URL Component" column
+    // values are compared, the comparison should complete. The URL component
+    // values are expected to be unique (and thus two rows can never share a
+    // value for that column.
+    'title_column': [
+      'title_column',
+      'url_column',
+      // A "URL Component" is unique; no more columns should need comparing.
+    ],
+    'url_column': [
+      'url_column',
+      'title_column',
+      'availability_column',
+      'enrolled_column',
+    ],
+    'availability_column': [
+      'availability_column',
+      'title_column',
+      'url_column',
+      // A "URL Component" is unique; no more columns should need comparing.
+    ],
+    'enrolled_column': [
+      'enrolled_column',
+      'title_column',
+      'url_column',
+      // A "URL Component" is unique; no more columns should need comparing.
+    ],
+  };
+  function _sortedIcon($th) {
+    // Returns the Material Design icon container in the supplied table header.
+    return $th.children('i.gcb-sorted-icon').eq(0);
+  }
+  function _setIconFromSorted($th, sorted) {
+    // Sets the displaed Material Design arrow icon based on sorted class.
+    var $icon = _sortedIcon($th);
+
+    // If no recognized gcb-sorted class is supplied, set the Material Design
+    // arrow container to an empty string. Otherwise set it to 'arrow_upward'
+    // or 'arrow_downward' based on the sorted order.
+    var arrow = (sorted == 'gcb-sorted-descending') ? 'arrow_downward' :
+        (sorted == 'gcb-sorted-ascending') ? 'arrow_upward' : '';
+    $icon.text(arrow);
+    $icon.removeClass('gcb-sorted-hover');
+  }
+  function _sortedFromHeader($th) {
+    // Returns the first gcb-sorted CSS class encountered, from the following
+    // order of priority:
+    //   'gcb-sorted-descending', 'gcb-sorted-descending'
+    // or 'gcb-sorted-none' if no recognized gcb-sorted class was found.
+    return $th.hasClass('gcb-sorted-descending') ? 'gcb-sorted-descending' :
+        $th.hasClass('gcb-sorted-ascending') ? 'gcb-sorted-ascending' :
+        'gcb-sorted-none';
+  }
+  function _nextFromHeader($th) {
+    // If gcb-sorted order is already ascending, return descending. Otherwise,
+    // (for descending or no sorted order at all), return ascending.
+    return $th.hasClass('gcb-sorted-ascending') ?
+        'gcb-sorted-descending' : 'gcb-sorted-ascending';
+  }
+  function _textToSortBy(tr, idx) {
+    // Returns the text to sort by in a given column of the supplied row.
+    var $td = $(tr).children('td').eq(idx);
+
+    // Each element in a table row has the text by which the column should be
+    // sorted in a different "container". Some are in link anchors, and some
+    // are just plain text. This function finds the inner element at the
+    // specified index in the row actually containing the text to sort by.
+    var elem = $td.find('.gcb-text-to-sort-by').get()[0];
+    return $(elem).text();
+  }
+  var _compareOptions = {
+    // The key is the element #id of a sortable table column header.
+    //
+    // The value is an "options" object supplied to localeCompare to tune
+    // how two row cells in the column in question are compared.
+    //
+    // These defaults are assumed and thus not explicitly specified unless being
+    // overridden:
+    //   localeMatcher:     'best fit'
+    //   usage:             'sort'     // Comparison is being done to sort.
+    //   sensitivity:       'variant'  // Consider case, accents, diacritics.
+    //   ignorePunctuation: 'false'
+    //   caseFirst:         'false'    // Use locale default.
+    'title_column': {
+      sensitivity: 'accent',   // Case-insensitive, but still use accents, etc.
+      ignorePunctuation: 'true',
+    },
+    'url_column': {
+      sensitivity: 'accent',   // Case-insensitive, but still use accents, etc.
+    },
+    'availability_column': {
+      sensitivity: 'accent',   // Case-insensitive, but still use accents, etc.
+      ignorePunctuation: 'true',
+    },
+    'enrolled_column': {
+      numeric: 'true',
+    },
+  };
+  function _compareSortByText(trA, trB, id, idx, dir) {
+    // Compares, for the purposes of sorting a collection of strings, two text
+    // text values, after trimming any leading and trailing whitespace, as
+    // case-insensitive strings.
+    var textA = _textToSortBy(trA, idx).trim();
+    var textB = _textToSortBy(trB, idx).trim();
+
+    // An empty value (or one that becomes empty after all leading and trailing
+    // whitespace has been removed) always sorts "at the end" (for +1 dir sign,
+    // or at the beginning for -1 dir sign), unless both are empty, in which
+    // case both are "equally empty".
+    if (textA === "") {
+      if (textB === "") {
+        return 0;
+      }
+      return dir;
+    }
+    if (textB === "") {
+      return -dir;
+    }
+    return textA.localeCompare(textB, undefined, _compareOptions[id]) * dir;
+  }
+  function _clearHeadersSorted(hdrs) {
+    // Clears any existing sorted column state from the supplied table headers.
+    $.each(hdrs, function(unused, th) {
+      $th = $(th);
+      _setIconFromSorted($th, 'gcb-sorted-none');
+      $th.addClass('gcb-sorted-none');
+      $th.removeClass('gcb-sorted-ascending gcb-sorted-descending');
+    });
+  }
+  function _setHeaderSorted($th, sorted) {
+    // Set the supplied table header to the supplied sorted state.
+    $th.removeClass(
+        'gcb-sorted-none gcb-sorted-ascending gcb-sorted-descending');
+    $th.addClass(sorted);
+    _setIconFromSorted($th, sorted);
+  }
+  function sortCourseRows() {
+    // Sorts rows in the table containing the clicked table header (this).
+    var $th = $(this);
+    var next = _nextFromHeader($th);
+    var $table = $th.closest('table');
+
+    // Only some of the table columns can be used to sort the table rows.
+    var hdrs = $table.find('thead > tr > th:not(.gcb-not-sortable)').get();
+    _clearHeadersSorted(hdrs, $th.index(), next);
+
+    // Make a slice copy of the _sortBySequence selected by id.
+    var ids = _sortBySequence[$th.attr('id')].slice(0);
+
+    // The "compare" multiplier that sets sorted direction by altering the
+    // sort comparison return value sign.
+    var dir = (next == 'gcb-sorted-descending') ? -1 : 1;
+
+    // Only the rows in the table body (not thead or tfoot) are to be sorted.
+    var rows =  $table.find('tbody > tr').get();
+    rows.sort(function(trA, trB) {
+      for (var i in ids) {
+        var id = ids[i];
+        var hdr = $table.find('thead > tr > th#' + id).get()[0];
+        var cmp = _compareSortByText(trA, trB, id, $(hdr).index(), dir);
+        if (cmp != 0) {
+          // Element text values are different, so no more column checking.
+          return cmp;
+        }
+      }
+      return 0;
+    });
+
+    // Update the table rows.
+    $.each(rows, function(unused, tr) {
+      $table.children('tbody').append(tr);
+    });
+
+    // Indicate in the clicked table header that the table is now sorted by it.
+    _setHeaderSorted($th, next);
+  }
+  function hintNextSort() {
+    // Change the displayed Material Design arrow icon to what *would* be the
+    // next sorted state, but do not change the CSS style (which is used to
+    // save current sorted state of the table).
+    var $th = $(this);
+    _setIconFromSorted($th, _nextFromHeader($th));
+    _sortedIcon($th).addClass('gcb-sorted-hover');
+  }
+  function unhintSort() {
+    // Restore the displayed Material Design arrow icon (if any) to the current
+    // sorted state of the table.
+    var $th = $(this);
+    _setIconFromSorted($th, _sortedFromHeader($th));
+    _sortedIcon($th).removeClass('gcb-sorted-hover');
+  }
+
   function bind() {
     $('#add_course').click(addCourse);
     $('#add_sample_course').click(addSampleCourse);
     $('#all_courses_select').click(selectAll);
     $('#edit_multi_course_availability').click(editMultiCourseAvailability);
     $('.gcb-course-checkbox').click(selectCourse);
+    $('div.gcb-list > table > thead > tr > th:not(.gcb-not-sortable)').click(
+        sortCourseRows);
+    $('div.gcb-list > table > thead > tr > th:not(.gcb-not-sortable)').hover(
+        hintNextSort, unhintSort);
 
     // Forms have no submit control unless this JS runs successfully to
     // add the are-you-sure safety check.
@@ -358,6 +569,9 @@ $(function() {
       anyChecked |= checkbox.checked;
     });
     setMultiCourseActionAvailability(anyChecked);
+
+    // Click on the Title column header to force an initial ascending sort.
+    $('div.gcb-list > table > thead > tr > th#title_column').click();
   }
 
   init();

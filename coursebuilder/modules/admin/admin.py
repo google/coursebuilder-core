@@ -786,6 +786,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
         else:
             this_namespace = None  # GlobalAdminHandler
 
+        total_students = 0
         all_courses = []
         for app_context in sorted(
             sites.get_all_courses(),
@@ -814,6 +815,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
             last_modified = dto.last_modified
             if last_modified:
                 total_enrolled = dto.get()
+                total_students += total_enrolled
                 fmt = 'Most recent activity at %s for %s.' % (
                     self.ISO_8601_UTC_HUMAN_FMT, name)
                 most_recent_enroll = utc.to_text(
@@ -858,6 +860,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
                         edit_course_availability_xsrf_token,
                     'course_availability_options': course_availability_options,
                     'courses': all_courses,
+                    'total_students': total_students,
                     'email': users.get_current_user().email(),
                 },
                 'courses.html', [TEMPLATE_DIR]

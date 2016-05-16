@@ -23,6 +23,7 @@ from selenium.common import exceptions
 from models import courses
 from modules.admin import admin_pageobjects
 from tests.integration import integration
+from tests.integration import pageobjects
 
 
 class _CoursesListTestBase(integration.TestBase):
@@ -140,7 +141,6 @@ class CourseMultiEditTests(_CoursesListTestBase):
         course_list.verify_availability(
             course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_PUBLIC]['title'])
-
 
         # Refresh page and verify that course is still public.
         course_list = self.load_courses_list()
@@ -295,3 +295,28 @@ class CoursesEnrollmentsTests(_CoursesListTestBase):
         #   2) Confirm count decrements to 0, not an em dash, and tooltip
         #      still indicates "Most recent activity at...", and not
         #      "(registration activity...is being computed)".
+
+
+class CoursesListSortingTests(_CoursesListTestBase):
+
+    # The Courses list page is intiially already sorted by the 'Title' column,
+    # in ascending order. Check that state without clicking on the 'Title'
+    # column header, then also explicitly click on the 'Title' column header
+    # at the end.
+    COLUMNS_TO_CHECK = pageobjects.CoursesListPage.COLUMNS_ORDER + ['title']
+
+    def test_material_design_sorted_by_arrows(self):
+        initial = True  # Skip first click on initial sorted-by 'Title' column.
+        courses_page = self.load_courses_list()
+
+        for column in self.COLUMNS_TO_CHECK:
+            initial = courses_page.click_if_not_initial(column, initial)
+            courses_page.verify_sorted_by_arrows(
+                column, 'ascending',
+            # Clicking ascending-sorted column sorts it again, descending.
+            ).click_sortable_column(
+                column
+            ).verify_sorted_by_arrows(
+                column, 'descending',
+            )
+
