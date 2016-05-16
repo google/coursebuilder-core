@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-05-09 08:30-0700\n"
+"POT-Creation-Date: 2016-05-16 07:31-0700\n"
 "PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: uk <LL@li.org>\n"
@@ -375,43 +375,6 @@ msgid ""
 msgstr ""
 "Ви ще не відповідаєте вимогам для отримання сертифіката про завершення "
 "курсу."
-
-#. Navbar tab.
-#. Text for title of navigation bar tab to reach list of all
-#. available courses when user is logged out.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
-#: experimental/coursebuilder/views/base_course.html:84
-msgid "Explore Courses"
-msgstr "Огляд курсів"
-
-#. Navbar tab.
-#. Text for title of navigation bar tab to reach list of
-#. courses the current user is enrolled in or whitelisted for.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
-#: experimental/coursebuilder/views/base_course.html:78
-msgid "My Courses"
-msgstr "Мої курси"
-
-#. Text for a button on the 'list of courses' page that takes students to a
-#. page where they can view score.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:17
-msgid "View score"
-msgstr "Переглянути результат"
-
-#. Text for a button on the 'list of courses' page that takes students to the
-#. page for that course.
-#. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:22
-#: experimental/coursebuilder/views/base_course.html:53
-msgid "Progress"
-msgstr "Перебіг"
-
-#. Registration button on the main course page.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:27
-#: experimental/coursebuilder/views/registration_module.html:7
-#: experimental/coursebuilder/views/registration_module.html:15
-msgid "Register"
-msgstr "Зареєструватися"
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -1157,23 +1120,23 @@ msgid "Not registered"
 msgstr "ви не записалися на цей курс"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:240
+#: experimental/coursebuilder/views/base.html:243
 msgid "Logout"
 msgstr "Вийти"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:246
+#: experimental/coursebuilder/views/base.html:249
 msgid "Login"
 msgstr "Увійти"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:287
+#: experimental/coursebuilder/views/base.html:290
 msgid "Privacy & Terms"
 msgstr "Конфіденційність і умови"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:294
+#: experimental/coursebuilder/views/base.html:297
 msgid "Language:"
 msgstr "Мова:"
 
@@ -1194,9 +1157,26 @@ msgid "Forum"
 msgstr "Форум"
 
 #. Navbar tab.
+#: experimental/coursebuilder/views/base_course.html:53
+msgid "Progress"
+msgstr "Перебіг"
+
+#. Navbar tab.
 #: experimental/coursebuilder/views/base_course.html:58
 msgid "Registration"
 msgstr "Реєстрація"
+
+#. Text for title of navigation bar tab to reach list of
+#. courses the current user is enrolled in or whitelisted for.
+#: experimental/coursebuilder/views/base_course.html:78
+msgid "My Courses"
+msgstr "Мої курси"
+
+#. Text for title of navigation bar tab to reach list of all
+#. available courses when user is logged out.
+#: experimental/coursebuilder/views/base_course.html:84
+msgid "Explore Courses"
+msgstr "Огляд курсів"
 
 #. This is shown to the student in a popup after registration.
 #: experimental/coursebuilder/views/course.html:14
@@ -1322,6 +1302,12 @@ msgstr "Як вас звати?"
 #: experimental/coursebuilder/views/register.html:72
 msgid "Enroll"
 msgstr "Записатися"
+
+#. Registration button on the main course page.
+#: experimental/coursebuilder/views/registration_module.html:7
+#: experimental/coursebuilder/views/registration_module.html:15
+msgid "Register"
+msgstr "Зареєструватися"
 
 #. Title of the webpage.
 #: experimental/coursebuilder/views/review.html:15
@@ -1633,12 +1619,5 @@ msgstr "Наступна сторінка"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Кінець"
-
-
-
-
-
-
-
 
 

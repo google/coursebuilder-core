@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-05-09 08:30-0700\n"
+"POT-Creation-Date: 2016-05-16 07:31-0700\n"
 "PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: gu <LL@li.org>\n"
@@ -377,43 +377,6 @@ msgid ""
 msgstr ""
 "તમે હજી સુધી પૂર્ણતા પ્રમાણપત્ર માટેની અભ્યાસક્રમ જરૂરિયાતોને પૂરી કરી "
 "નથી."
-
-#. Navbar tab.
-#. Text for title of navigation bar tab to reach list of all
-#. available courses when user is logged out.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
-#: experimental/coursebuilder/views/base_course.html:84
-msgid "Explore Courses"
-msgstr "અભ્યાસક્રમોનું અન્વેષણ કરો"
-
-#. Navbar tab.
-#. Text for title of navigation bar tab to reach list of
-#. courses the current user is enrolled in or whitelisted for.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
-#: experimental/coursebuilder/views/base_course.html:78
-msgid "My Courses"
-msgstr "મારા અભ્યાસક્રમો"
-
-#. Text for a button on the 'list of courses' page that takes students to a
-#. page where they can view score.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:17
-msgid "View score"
-msgstr "સ્કોર જુઓ"
-
-#. Text for a button on the 'list of courses' page that takes students to the
-#. page for that course.
-#. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:22
-#: experimental/coursebuilder/views/base_course.html:53
-msgid "Progress"
-msgstr "પ્રગતિ"
-
-#. Registration button on the main course page.
-#: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:27
-#: experimental/coursebuilder/views/registration_module.html:7
-#: experimental/coursebuilder/views/registration_module.html:15
-msgid "Register"
-msgstr "નોંધણી કરો"
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -1162,23 +1125,23 @@ msgid "Not registered"
 msgstr "નોંધાયેલ નથી"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:240
+#: experimental/coursebuilder/views/base.html:243
 msgid "Logout"
 msgstr "લૉગઆઉટ કરો"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:246
+#: experimental/coursebuilder/views/base.html:249
 msgid "Login"
 msgstr "લૉગિન કરો"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:287
+#: experimental/coursebuilder/views/base.html:290
 msgid "Privacy & Terms"
 msgstr "ગોપનીયતા અને શરતો"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:294
+#: experimental/coursebuilder/views/base.html:297
 msgid "Language:"
 msgstr "ભાષા:"
 
@@ -1199,9 +1162,26 @@ msgid "Forum"
 msgstr "ચર્ચા મંચ"
 
 #. Navbar tab.
+#: experimental/coursebuilder/views/base_course.html:53
+msgid "Progress"
+msgstr "પ્રગતિ"
+
+#. Navbar tab.
 #: experimental/coursebuilder/views/base_course.html:58
 msgid "Registration"
 msgstr "નોંધણી"
+
+#. Text for title of navigation bar tab to reach list of
+#. courses the current user is enrolled in or whitelisted for.
+#: experimental/coursebuilder/views/base_course.html:78
+msgid "My Courses"
+msgstr "મારા અભ્યાસક્રમો"
+
+#. Text for title of navigation bar tab to reach list of all
+#. available courses when user is logged out.
+#: experimental/coursebuilder/views/base_course.html:84
+msgid "Explore Courses"
+msgstr "અભ્યાસક્રમોનું અન્વેષણ કરો"
 
 #. This is shown to the student in a popup after registration.
 #: experimental/coursebuilder/views/course.html:14
@@ -1328,6 +1308,12 @@ msgstr "તમારું નામ શું છે?"
 #. Button at the end of the registration form for a course.
 #: experimental/coursebuilder/views/register.html:72
 msgid "Enroll"
+msgstr "નોંધણી કરો"
+
+#. Registration button on the main course page.
+#: experimental/coursebuilder/views/registration_module.html:7
+#: experimental/coursebuilder/views/registration_module.html:15
+msgid "Register"
 msgstr "નોંધણી કરો"
 
 #. Title of the webpage.
@@ -1640,12 +1626,5 @@ msgstr "આગલું પૃષ્ઠ"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "સમાપ્ત"
-
-
-
-
-
-
-
 
 
