@@ -12,7 +12,7 @@ tests:
     - modules.admin.admin_integration_tests.CourseAdministrationTests = 1
     - modules.admin.admin_integration_tests.CourseMultiEditTests = 3
     - modules.admin.admin_integration_tests.CoursesEnrollmentsTests = 1
-    - modules.admin.admin_integration_tests.CoursesListSortingTests = 1
+    - modules.admin.admin_integration_tests.CoursesListSortingTests = 2
 
 files:
   - modules/admin/__init__.py

@@ -30,6 +30,8 @@ from selenium import webdriver
 from selenium.common import exceptions
 from selenium.webdriver.chrome import options
 
+from models import courses
+
 
 BROWSER_WIDTH = 1600
 BROWSER_HEIGHT = 1000
@@ -180,58 +182,109 @@ class TestBase(suite.TestBase):
             avail
         )
 
+    # Courses in one of the following Publish > Availability visibility
+    # states will not display the [Register] button.
+    AVAILABILITY_TITLES_WITHOUT_REGISTER = [
+        courses.COURSE_AVAILABILITY_POLICIES[
+            courses.COURSE_AVAILABILITY_PRIVATE]['title'],
+        courses.COURSE_AVAILABILITY_POLICIES[
+            courses.COURSE_AVAILABILITY_PUBLIC]['title'],
+    ]
+
+    # Courses in one of the following Publish > Availability visibility
+    # states display the [Register] button.
+    AVAILABILITY_TITLES_WITH_REGISTER = [
+        courses.COURSE_AVAILABILITY_POLICIES[
+            courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL]['title'],
+        courses.COURSE_AVAILABILITY_POLICIES[
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'],
+    ]
+
     def init_availability_and_whitelist(self, course_name, avail, emails):
         if emails is None:
             emails = []
+        else:
+            # "Flatten" any generators into an actual list.
+            emails = [e for e in emails]
 
         avail_page = self.set_course_availability(course_name, avail)
 
-        if avail == 'Public - No Registration':
-            # 'Public' courses do not accept registrations, so expect that
-            # no list of student emails to whitelist was provided.
-            self.assertEqual(0, len(emails))
-        else:
+        if avail not in self.AVAILABILITY_TITLES_WITHOUT_REGISTER:
             avail_page.set_whitelisted_students(emails)
+        else:
+            # Apparently, the [Register] button no longer appears for
+            # courses with an availability of 'Public - No Registration' or
+            # 'Private', so expect the caller to *not* provide any email
+            # email addresses to be whitelisted.
+            self.assertEqual(0, len(emails))
 
         avail_page.click_save()
 
     Person = collections.namedtuple('Person', 'email name admin')
 
-    def some_students(self, avail, how_many):
-        if avail == 'Public':
-            self.assertEquals(how_many, 0)
-            return  # Not possible to enroll in Public courses.
+    # To obtain some randomly initialized Person tuples regardless of course
+    # availability, supply this constant for the `avail` parameter.
+    IGNORE_AVAILABILITY = AVAILABILITY_TITLES_WITH_REGISTER[0]
 
-        if avail == 'Private':
-            is_admin = [True]  # Generate only admins.
-        else:
-            # "Registration Required" or "Registration Optional".
-            # Generate more students than admins.
-            is_admin = [True, False, False]
+    def some_persons(self, qty, admins=False, pupils=False,
+                     avail=IGNORE_AVAILABILITY):
+        if not self._check_availability_vs_person_count(avail, qty):
+            return
 
-        for count in xrange(1, how_many+1):
-            admin = random.choice(is_admin)
-            if admin:
-                user = 'admin'
-                name = 'Admin'
+        if admins:
+            if pupils:
+                who = ['Admin', 'Pupil']  # Both wanted so, 50-50 chance.
             else:
-                user = 'test'
-                name = 'Student'
-            email = '{}{}@example.com'.format(user, count)
-            name = 'Test{} {}'.format(count, name)
-            yield self.Person(email, name, admin)
+                who = ['Admin']  # Just admins, no pupils at all.
+        elif pupils:
+            who = ['Pupil']  # Just pupils, no admins at all.
+        else:
+            # No preference, so produce a mix with more pupils than admins.
+            who = ['Admin', 'Pupil', 'Pupil', 'Pupil']
 
-    def enroll_students(self, course_name, students):
-        """Enrolls a list of students (Person) in the course_name course.
+        for count in xrange(1, qty + 1):
+            name = random.choice(who)
+            person_id = random.randint(1, (2 << 32) - 1)
+            email = '{:08X}-{}@example.com'.format(person_id, name.lower())
+            full_name = '{:08X} {}'.format(person_id, name)
+            yield self.Person(email, full_name, name == 'Admin')
+
+    def one_person(self, admin=True, pupil=True):
+        one = [p for p in
+               self.some_persons(1, admins=admin, pupils=pupil)]
+        self.assertEquals(1, len(one))
+        return one[0]
+
+    def one_admin(self):
+        return self.one_person(admin=True, pupil=False)
+
+    def one_pupil(self):
+        return self.one_person(admin=False, pupil=True)
+
+    def enroll_persons(self, course_name, persons,
+                       avail=IGNORE_AVAILABILITY):
+        """Enrolls list of Persons (pupils, admins) in the course_name course.
 
         Expects someone to already be logged in when called. Last Person to be
         enrolled will remain logged in at end of call.
         """
-        for student in students:
-            self.login(student.email, admin=student.admin, logout_first=True)
+        if not self._check_availability_vs_person_count(avail, len(persons)):
+            return
+
+        for p in persons:
+            self.login(p.email, admin=p.admin, logout_first=True)
             self.load_course(
                 course_name
             ).click_register(
             ).enroll(
-                student.name
+                p.name
             )
+
+    def _check_availability_vs_person_count(self, avail, count):
+        if avail in self.AVAILABILITY_TITLES_WITHOUT_REGISTER:
+            self.assertEquals(0, count)
+            # No [Register] button on Public or Private course pages, so bail.
+            return False  # Do *not* whitelist or attempt to enroll.
+        # else:
+        #   "Registration Required" or "Registration Optional", so keep going.
+        return True

@@ -23,7 +23,6 @@ from selenium.common import exceptions
 from models import courses
 from modules.admin import admin_pageobjects
 from tests.integration import integration
-from tests.integration import pageobjects
 
 
 class _CoursesListTestBase(integration.TestBase):
@@ -211,48 +210,41 @@ class CoursesEnrollmentsTests(_CoursesListTestBase):
             course_namespace, title
         )
 
-        # Form additional user email addresses from self.LOGIN.  Do not use
-        # self.LOGIN itself, as that email address enrolled in the sample
-        # course as "Admin Test". For whatever reason, this cause the
-        # enrollment form to be skipped. click_register_expecting_no_survey()
-        # would need to be used, but when that method is required, no
-        # enrollment event occurs at all. (Is this a bug?)
-        login_user, login_domain = self.LOGIN.split('@', 1)
-        email1 = login_user + '1@' + login_domain
-        email2 = login_user + '2@' + login_domain
-        email3 = login_user + '3@' + login_domain
+        admin1 = self.one_admin()
+        admin2 = self.one_admin()
+        pupil3 = self.one_pupil()
+        emails = [admin1.email, admin2.email, pupil3.email]
 
         # 'Private' will not let students enroll. 'Public' causes the
         # [Register] button to not be displayed for anyone, even the course
         # creator. Fix both of those by requiring registration, which allows
         # non-admins to register.
-        whitelisted = [email1, email2, email3]
-        self.init_availability_and_whitelist(
-            course_name, 'Registration Required', whitelisted)
+        avail = 'Registration Required'
+        self.init_availability_and_whitelist(course_name, avail, emails)
 
         # Double-check that whitelisted students were indeed saved.
         self.load_dashboard(
             course_name
         ).click_availability(
         ).verify_whitelisted_students(
-            '\n'.join(whitelisted)
+            '\n'.join(emails)
         )
 
         # Confirm that Courses page no longer indicates newly-created test
         # course as being 'Private'.
         self.load_courses_list(
         ).verify_availability(
-            course_namespace, 'Registration Required'
+            course_namespace, avail,
         )
 
         # Register an admin user as a student; confirm count is now "1".
         # Log out course creator admin and log in as this new admin.
-        self.login(email1, admin=True, logout_first=True)
+        self.login(admin1.email, admin=admin1.admin, logout_first=True)
         self.load_course(
             course_name
         ).click_register(
         ).enroll(
-            'Test1 Admin'
+            admin1.name
         )
         self.load_courses_list(
         ).verify_total_enrollments(
@@ -261,12 +253,12 @@ class CoursesEnrollmentsTests(_CoursesListTestBase):
 
         # Register another admin user as a student; confirm count is now "2".
         # Log out course creator admin and log in as a second admin.
-        self.login(email2, admin=True, logout_first=True)
+        self.login(admin2.email, admin=admin2.admin, logout_first=True)
         self.load_course(
             course_name
         ).click_register(
         ).enroll(
-            'Test2 Admin'
+            admin2.name
         )
         self.load_courses_list(
         ).verify_total_enrollments(
@@ -275,12 +267,12 @@ class CoursesEnrollmentsTests(_CoursesListTestBase):
 
         # Register non-admin user as a student; confirm count is now "3".
         # Log out 2nd admin and log in as a non-admin student.
-        self.login(email3, admin=False, logout_first=True)
+        self.login(pupil3.email, admin=pupil3.admin, logout_first=True)
         self.load_course(
             course_name
         ).click_register(
         ).enroll(
-            'Test3 Student'
+            pupil3.name
         ).click_course()
 
         # Log out and log in as course creator to check enrollment totals.
@@ -299,11 +291,13 @@ class CoursesEnrollmentsTests(_CoursesListTestBase):
 
 class CoursesListSortingTests(_CoursesListTestBase):
 
+    COLUMNS_ORDER = admin_pageobjects.CoursesListPage.SORTABLE_COLUMNS_ORDER
+
     # The Courses list page is intiially already sorted by the 'Title' column,
     # in ascending order. Check that state without clicking on the 'Title'
     # column header, then also explicitly click on the 'Title' column header
     # at the end.
-    COLUMNS_TO_CHECK = pageobjects.CoursesListPage.COLUMNS_ORDER + ['title']
+    COLUMNS_TO_CHECK = COLUMNS_ORDER + ['title']
 
     def test_material_design_sorted_by_arrows(self):
         initial = True  # Skip first click on initial sorted-by 'Title' column.
@@ -320,3 +314,61 @@ class CoursesListSortingTests(_CoursesListTestBase):
                 column, 'descending',
             )
 
+    COURSES = [
+        admin_pageobjects.CoursesListPage.Course(
+            '     ', 'all_whitespace_title_test_sort_url', 'Private', 0),
+        admin_pageobjects.CoursesListPage.Course(
+            'wHITESPACE', 'b_test_sort_url', 'Public - No Registration', 0),
+        admin_pageobjects.CoursesListPage.Course(
+            '  Whitespace', 'c_test_sort_url', 'Private', 0),
+        admin_pageobjects.CoursesListPage.Course(
+            'NAME DUPE', 'd_test_sort_url', 'Registration Required', 1),
+        admin_pageobjects.CoursesListPage.Course(
+            'NAME DUPE', 'e_test_sort_url', 'Private', 0),
+        admin_pageobjects.CoursesListPage.Course(
+            '4 ENROLL dupe', 'g_test_sort_url', 'Registration Optional', 2),
+        admin_pageobjects.CoursesListPage.Course(
+            '3 enroll DUPE', 'p_test_sort_url', 'Registration Required', 2),
+        admin_pageobjects.CoursesListPage.Course(
+            '2 reg dupe', 't_test_sort_url', 'Registration Optional', 4),
+        admin_pageobjects.CoursesListPage.Course(
+            '1 REG DUPE', 'v_test_sort_url', 'Registration Optional', 3),
+        admin_pageobjects.CoursesListPage.Course(
+            '0 Last URL', 'zzzz_test_sort_url', 'Public - No Registration', 0),
+    ]
+
+    SAMPLE = admin_pageobjects.CoursesListPage.Course(
+        'Power Searching with Google', '', 'Registration Optional', 1)
+
+    ALL_COURSES = COURSES + [SAMPLE]
+
+    def test_sort_courses(self):
+        # Create several courses with specific names and titles.
+        for c in self.COURSES:
+            self.create_course(c.title, c.url, login=False)
+            persons = [p for p in self.some_persons(c.enroll, avail=c.avail)]
+            emails = [p.email for p in persons]
+            self.init_availability_and_whitelist(c.url, c.avail, emails)
+
+            # Enroll the selected persons. Someone is expected to be logged
+            # in prior to calling enroll_students (and that should be true,
+            # as the course-creating admin should still be logged in at this
+            # point).
+            self.enroll_persons(c.url, persons, avail=c.avail)
+
+            # The last-enrolled student is still logged in, so log that user
+            # out and switch to the course-creating admin.
+            self.login(self.LOGIN, admin=True, logout_first=True)
+
+        initial = True  # Skip first click on initial sorted-by 'Title' column.
+        courses_page = self.load_courses_list()
+        for cl in self.COLUMNS_TO_CHECK:
+            initial = courses_page.click_if_not_initial(cl, initial)
+            courses_page.verify_rows_sorted_by_column(
+                cl, 'ascending', self.ALL_COURSES,
+            # Clicking ascending-sorted column sorts it again, descending.
+            ).click_sortable_column(
+                cl
+            ).verify_rows_sorted_by_column(
+                cl, 'descending', self.ALL_COURSES,
+            )

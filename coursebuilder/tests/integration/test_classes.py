@@ -24,11 +24,10 @@ import time
 import urllib
 import urllib2
 
-import pageobjects
-
 from models import transforms
 from tests.integration import fake_visualizations
 from tests.integration import integration
+from tests.integration import pageobjects
 
 
 class IntegrationServerInitializationTask(integration.TestBase):

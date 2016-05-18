@@ -583,24 +583,6 @@ class CoursesListPage(PageObject):
         except exceptions.NoSuchElementException:
             return False
 
-    COLUMNS_ORDER = [
-        'title',
-        'url',
-        'availability',
-        'enrolled',
-    ]
-
-    COLUMNS_SET = frozenset(COLUMNS_ORDER)
-
-    def click_sortable_column(self, column):
-        self.find_element_by_css_selector(self._col_hdr_id_sel(column)).click()
-        return self
-
-    def click_if_not_initial(self, column, initial):
-        if not initial:
-            self.click_sortable_column(column)
-        return False  # Used to overwrite `initial` value passed by caller.
-
 
 class DashboardPage(PageObject):
     """Page object to model the interactions with the dashboard landing page."""

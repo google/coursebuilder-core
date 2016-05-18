@@ -18,6 +18,8 @@ __author__ = [
     'Mike Gainer (mgainer@google.com)'
 ]
 
+import collections
+import logging
 import re
 
 from modules.admin import admin
@@ -28,8 +30,86 @@ from selenium.webdriver.support import select
 from tests.integration import pageobjects
 
 
+def _norm_url(url):
+    """Returns the supplied URL in "canonical" form for a course URL."""
+    url = url.strip()  # No leading/trailing whitespace.
+    if not url:
+        return '/'  # Special-case 'Power Searching with Google' sample.
+    if url[0] != '/':
+        url = '/' + url  # Prepend missing leading URL path delimiter.
+    url = url.split()[0]  # Any text after 1st space in elem is not URL.
+    return url
+
+
+def _norm_enrolled(enrolled):
+    """Returns the supplied 'Registered Students' text as an int."""
+    try:
+        return int(enrolled.strip())
+    except ValueError as err:
+        if enrolled == admin.BaseAdminHandler.NONE_ENROLLED:
+            return 0
+        raise err
+
+
+def _cmp_by_url(a, b):
+    """sorted() cmp to simulate clicking the 'URL Component' column."""
+    a_url = _norm_url(a.url)
+    b_url = _norm_url(b.url)
+    if a_url < b_url:
+        return -1
+    if a_url > b_url:
+        return 1
+    return 0
+
+
+def _cmp_by_title_then_url(a, b):
+    """sorted() cmp to simulate clicking the 'Title' column."""
+    a_title = a.title.strip().lower()
+    b_title = b.title.strip().lower()
+
+    if a_title == b_title:
+        return _cmp_by_url(a, b)
+
+    if not a_title:
+        return 1
+    if not b_title:
+        return -1
+    if a_title < b_title:
+        return -1
+    return 1  # a_title > b_title
+
+
+def _cmp_by_avail_then_title_then_url(a, b):
+    """sorted() cmp to simulate clicking the 'Availability' column."""
+    a_avail = a.avail.lower()
+    b_avail = b.avail.lower()
+    if a_avail < b_avail:
+        return -1
+    if a_avail > b_avail:
+        return 1
+    return _cmp_by_title_then_url(a, b)
+
+
+def _cmp_by_enrolled_then_title_then_url(a, b):
+    """sorted() cmp to simulate clicking the 'Registered Students' column."""
+    if a.enroll != b.enroll:
+        return a.enroll - b.enroll
+    return _cmp_by_title_then_url(a, b)
+
+
 class CoursesListPage(pageobjects.CoursesListPage):
     _SELECT_ALL_COURSES_CHECKBOX_ID = 'all_courses_select'
+
+    CMP_SORTABLE_COLUMNS = collections.OrderedDict([
+        ('title', _cmp_by_title_then_url),
+        ('url', _cmp_by_url),
+        ('availability', _cmp_by_avail_then_title_then_url),
+        ('enrolled', _cmp_by_enrolled_then_title_then_url),
+    ])
+    SORTABLE_COLUMNS_ORDER = CMP_SORTABLE_COLUMNS.keys()
+    SORTABLE_COLUMNS = frozenset(SORTABLE_COLUMNS_ORDER)
+
+    LOG_LEVEL = logging.INFO
 
     def _click_checkbox_and_wait_for_effects_to_propagate(self, checkbox):
         prev_counter = self._tester.driver.execute_script(
@@ -200,7 +280,7 @@ class CoursesListPage(pageobjects.CoursesListPage):
         # All other columns should indicate gcb-sorted-none and no arrow,
         # then an upward arrow when hovered over ("next" for an unsorted
         # column is always gcb-sorted-ascending, so upward gray arrow).
-        others = self.COLUMNS_SET.difference([column])
+        others = self.SORTABLE_COLUMNS.difference([column])
         for other in others:
             self.verify_no_sorted_arrow(
                 other
@@ -213,6 +293,80 @@ class CoursesListPage(pageobjects.CoursesListPage):
         self.verify_hover_arrow(
             column, sort_dir, self._next_arrow(arrow)
         )
+        return self
+
+    def click_sortable_column(self, column):
+        self.find_element_by_css_selector(self._col_hdr_id_sel(column)).click()
+        return self
+
+    def click_if_not_initial(self, column, initial):
+        if not initial:
+            self.click_sortable_column(column)
+        return False  # Used to overwrite `initial` value passed by caller.
+
+    # Course "Title", "URL Component", "Availability", "Registered Students",
+    # tuples, with titles having mixed cases, leading and trailing whitespace,
+    # etc.
+    Course = collections.namedtuple('Course', 'title url avail enroll')
+
+    def verify_rows_sorted_by_column(self, column, sort_dir, courses):
+        # Course URLs are by definition unique, so save a set of known URLs.
+        known = set([_norm_url(c.url) for c in courses])
+        table_rows = self.find_elements_by_css_selector(
+            'div.gcb-list > table > tbody > tr')
+        logging.info('%s by %s:', sort_dir.upper(), column)
+
+        sorted_courses = sorted(
+            courses, reverse=(sort_dir == 'descending'),
+            cmp=self.CMP_SORTABLE_COLUMNS[column])
+        self._tester.assertTrue(len(table_rows) >= len(sorted_courses))
+
+        for tr in table_rows:
+            name = _norm_url(tr.find_element_by_css_selector(
+                'td.gcb-courses-url .gcb-text-to-sort-by').text)
+            if name not in known:
+                # Ignore courses added by other tests accessing the same
+                # integration server. The courses intentionally added for
+                # this test should still end up in the desired sorted order,
+                # regardless of what other unknown tests are interleaved
+                # between them.
+                continue
+            else:
+                known.remove(name)
+
+            # This will result in test failure if more courses with "known"
+            # URLs than sorted_courses somehow exist.
+            course = sorted_courses.pop(0)
+            want_name = _norm_url(course.url)
+            logging.info('NAME:      %s\nexpected: %s', name, want_name)
+
+            # Any leading/trailing whitespace is also removed while sorting.
+            want_title = course.title.strip()
+            title = tr.find_element_by_css_selector(
+                'td.gcb-courses-title .gcb-text-to-sort-by').text.strip()
+            logging.info('TITLE:     %s\nexpected: %s', title, want_title)
+
+            want_avail = course.avail.strip()
+            avail = tr.find_element_by_css_selector(
+                'td.gcb-courses-availability .gcb-text-to-sort-by').text.strip()
+            logging.info('AVAIL:     %s\nexpected: %s', avail, want_avail)
+
+            # Course.enroll is already an int in the namedtuple.
+            want_enroll = course.enroll
+            enroll = _norm_enrolled(
+                tr.find_element_by_css_selector(
+                    'td.gcb-courses-enrolled .gcb-text-to-sort-by').text)
+            logging.info('ENROLLED:  %s\nexpected: %s', enroll, want_enroll)
+
+            self._tester.assertEqual(want_title, title)
+            self._tester.assertEqual(want_name, name)
+            self._tester.assertEqual(want_avail, avail)
+            self._tester.assertEqual(want_enroll, enroll)
+
+        # All of the sorted courses should have been consumed, regardless of
+        # courses created by other tests interleaved in the courses list.
+        self._tester.assertEqual(0, len(sorted_courses))
+        self._tester.assertEqual(0, len(known))
         return self
 
 
