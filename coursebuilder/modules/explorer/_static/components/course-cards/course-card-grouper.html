@@ -3,7 +3,7 @@
 
 <dom-module id="course-card-grouper">
   <template>
-    <course-card-group courses="[[openCourses]]">
+    <course-card-group courses="[[openCourses]]" id="open">
       <span title>
         [[openCourses.length]]
         course<template
@@ -12,7 +12,7 @@
       </span>
     </course-card-group>
 
-    <course-card-group courses="[[otherCourses]]">
+    <course-card-group courses="[[otherCourses]]" id="library">
       <span title>
         [[otherCourses.length]] more
         course<template

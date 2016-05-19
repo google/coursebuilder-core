@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="/static/polymer-1.2.0/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <script src="/static/polymer-1.2.0/web-component-tester/browser.js"></script>
+    <script src="/static/polymer-1.2.0/test-fixture/test-fixture-mocha.js"></script>
+    <script src="/modules/gql/_static/test/fakeGqlServer.js"></script>
+    <link rel="import" href="../course-explorer.html">
+  </head>
+  <body>
+    <test-fixture id="explorer-fixture">
+      <template>
+        <course-explorer id="explorer"></course-explorer>
+      </template>
+    </test-fixture>
+    <script>
+      var EXPORER_GQL_QUERY = '{' +
+        'site {title, logo {url, altText},' +
+        '  courseExplorer {extraContent}},' +
+        'allCourses {edges {node {' +
+        '  id, title, url, abstract, instructorDetails,' +
+        '  enrollment {enrolled}, openForRegistration,' +
+        '  startDate, endDate, estimatedWorkload, category {name} }}},' +
+        'currentUser {' +
+        '  email, loggedIn, canViewDashboard, loginUrl (destUrl: "/"),' +
+        '  logoutUrl (destUrl: "/")}' +
+        '}';
+      function flushed(test) {
+        // Execute the test function after events have fired and page is loaded
+        return function(done) {
+          flush(function() {
+            test();
+            done();
+          });
+        }
+      }
+      function buildResponse() {
+        return {
+          site: {
+            title: 'Course Builder Tests',
+            logo: {url: '/assets/img/logo.png', altText: 'Tests'},
+            courseExplorer: {extraContent: 'This is a test setup.'}
+          },
+          allCourses: {
+            edges: []
+          },
+          currentUser: {
+            email: 'test@example.com',
+            loggedIn: true,
+            canViewDashboard: true,
+            loginUrl: '/login',
+            logoutUrl: '/logout'
+          }
+        };
+      }
+      function buildCourse() {
+        return {
+          node: {
+            id: 'course-1',
+            title: 'Course',
+            url: '/course',
+            abstract: 'About the course',
+            instructorDetails: 'Professor Socrates',
+            enrollment: {enrolled: true},
+            openForRegistration: true,
+            startDate: '2016-05-01T07:00:00.000Z',
+            endDate: '2016-05-15T07:00:00.000Z',
+            estimatedWorkload: '10hr',
+            category: {name: 'Philosophy'}
+          }
+        };
+      }
+      function collapseWhitespace(s) {
+        return s.replace(/\s+/g, ' ').trim();
+      }
+
+      function expectTitlesMatch(cardGroup, titleList) {
+        var cardList = cardGroup.querySelectorAll('course-card');
+        expect(cardList).to.have.length(titleList.length);
+        titleList.forEach(function(title, index) {
+          var card = cardList[index];
+          expect(card.$$('#course-title').textContent).to.equal(title);
+        });
+      }
+      function expectOpenCourses(titleList) {
+        var courses = explorer.$.grouper.$.open;
+        expectTitlesMatch(courses, titleList);
+      }
+      function expectClosedCourses(titleList) {
+        var courses = explorer.$.grouper.$.library;
+        expectTitlesMatch(courses, titleList);
+      }
+
+      describe('the Course Explorer', function() {
+        var explorer;
+
+        beforeEach(function() {
+          fakeGqlServer.setUp();
+          fixture('explorer-fixture');
+          // document.getElementById('explorer-fixture').create()
+          explorer = document.getElementById('explorer');
+
+          var response = buildResponse();
+          var course1 = buildCourse();
+          course1.node.title = 'Course 1';
+
+          var course2 = buildCourse();
+          course2.node.title = 'Course 2';
+          course2.node.instructorDetails = 'Professor Euclid';
+          course2.node.category.name = 'Mathematics';
+
+          var course3 = buildCourse();
+          course3.node.title = 'Course 3';
+          course3.node.openForRegistration = false;
+
+          var course4 = buildCourse();
+          course4.node.title = 'Course 4';
+          course4.node.enrollment.enrolled = false;
+
+          response.allCourses.edges = [course1, course2, course3, course4]
+          fakeGqlServer.addResponse(EXPORER_GQL_QUERY, response);
+
+          var ajax = explorer.getElementsByTagName('iron-ajax')[0];
+          ajax.generateRequest();
+          fakeGqlServer.respond();
+        });
+
+        afterEach(function() {
+          fakeGqlServer.tearDown();
+        });
+
+        it('counts the open courses', flushed(function(done) {
+          var heading = collapseWhitespace(
+              explorer.$.grouper.$.open.$$('h2').textContent);
+          expect(heading).to.equal('2 courses open for registration');
+        }));
+
+        it('counts the closed courses', flushed(function(done) {
+          var heading = collapseWhitespace(
+              explorer.$.grouper.$.library.$$('h2').textContent);
+          expect(heading).to.equal('1 more course in the library');
+        }));
+
+        it('has a card for each open course', flushed(function(done) {
+          expectOpenCourses(['Course 1', 'Course 2']);
+        }));
+
+        it('has a card for each closed course', flushed(function(done) {
+          expectClosedCourses(['Course 3']);
+        }));
+
+        describe('a single course card', function() {
+          function card() {
+            return explorer.$.grouper.$.open.querySelector('course-card');
+          };
+
+          it('shows the title', flushed(function() {
+            expect(card().$$('#course-title').textContent).to.equal('Course 1');
+          }));
+
+          it('shows the instructor', flushed(function() {
+            expect(card().$$('#instructor-details').textContent)
+                .to.equal('Professor Socrates');
+          }));
+
+          it('shows the course description', flushed(function() {
+            expect(collapseWhitespace(card().$$('#abstract').textContent))
+                .to.equal('About the course');
+          }));
+
+          it('shows the course enrollment', flushed(function() {
+            expect(card().$$('#enrollment-status').textContent)
+                .to.equal('Registered');
+          }));
+
+          it('shows the run dates', flushed(function() {
+            expect(collapseWhitespace(card().$$('.date-range').textContent))
+                .to.equal('May 1 - May 15');
+          }));
+
+          it('shows the duration and workload', flushed(function() {
+            durationDescription = collapseWhitespace(
+                card().$$('.duration-description').textContent);
+            expect(durationDescription).to.equal('2 week course, 10hr');
+          }));
+        });
+
+        it('can filter by status', function(done) {
+          function clickStatus(status) {
+            explorer.querySelector(
+              'course-status-selector ' +
+              'paper-radio-button[name="' + status + '"]').click();
+          }
+          flush(function() {
+            // First flush waits for course list to populate page
+
+            function expectAll() {
+              // Expect Course 4 to show up in the open courses list
+              expectOpenCourses(['Course 1', 'Course 2', 'Course 4']);
+              expectClosedCourses(['Course 3']);
+            }
+            function expectRegistered() {
+              expectOpenCourses(['Course 1', 'Course 2']);
+              expectClosedCourses(['Course 3']);
+            }
+            function expectCompleted() {
+              expectOpenCourses([]);
+              expectClosedCourses(['Course 3']);
+            }
+
+            clickStatus('all');
+            flush(function() {
+              expectAll();
+
+              clickStatus('enrolled');
+              flush(function() {
+                expectRegistered();
+
+                clickStatus('completed');
+                flush(function() {
+                  expectCompleted();
+                  done();
+                });
+
+              });
+            });
+          });
+        });
+
+        it('can filter by category', function(done) {
+          function clickCategory(category) {
+            var buttons = explorer.querySelectorAll(
+                'course-category-selector paper-radio-button');
+            // Polymer appears not to set the name attribute on the stamped
+            // element and so we have to search by property value instead of
+            // using a [name="value"] CSS selector.
+            for (var i = 0; i < buttons.length; i++) {
+              if (buttons[i].name == category) {
+                buttons[i].click();
+                return;
+              }
+            }
+          }
+          flush(function() {
+            // First flush waits for course list to populate page
+
+            function expectAll() {
+              expectOpenCourses(['Course 1', 'Course 2']);
+              expectClosedCourses(['Course 3']);
+            }
+            function expectMathematics() {
+              expectOpenCourses(['Course 2']);
+              expectClosedCourses([]);
+            }
+            function expectPhilosophy() {
+              expectOpenCourses(['Course 1']);
+              expectClosedCourses(['Course 3']);
+            }
+
+            clickCategory('all');
+            flush(function() {
+              expectAll();
+
+              clickCategory('Mathematics');
+              flush(function() {
+                expectMathematics();
+
+                clickCategory('Philosophy');
+                flush(function() {
+                  expectPhilosophy();
+                  done();
+                });
+
+              });
+            });
+          });
+        });
+
+        it('can filter by key word', flushed(function() {
+          var input = explorer.querySelector('#keyword-input');
+          input.value = 'Socrates';
+          expectOpenCourses(['Course 1']);
+          expectClosedCourses(['Course 3']);
+        }));
+
+      });
+    </script>
+  </body>
+</html>

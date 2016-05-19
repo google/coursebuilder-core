@@ -32,6 +32,8 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support import select
 from selenium.webdriver.support import wait
 
+from tests import suite
+
 
 DEFAULT_TIMEOUT = 20
 
@@ -1695,3 +1697,32 @@ class DatastorePage(PageObject):
             self._tester.driver.back()
 
         return data
+
+
+class PolymerPageObject(PageObject):
+
+    def load(self, url):
+        self.get(suite.TestBase.INTEGRATION_SERVER_BASE_URL + url)
+        return self
+
+    def assert_test_results(self):
+        def tests_complete(driver):
+            return driver.execute_script('return window.WCT._reporter.complete')
+
+        self.wait().until(tests_complete)
+        test_stats = self._tester.driver.execute_script(
+            'return window.WCT._reporter.stats')
+
+        if test_stats['failures']:
+            log = []
+            log.append(
+                'Ran %(tests)s Polymer tests: '
+                '%(passes)s pass, %(failures)s fail' %
+                test_stats)
+            log.append('------------------------------------')
+            log.append('Test Log:')
+            for entry in self._tester.driver.get_log('browser'):
+                if entry.get('source') == 'console-api':
+                    log.append(entry['message'].split('%c', 2)[1])
+            log.append('------------------------------------')
+            self._tester.fail('\n'.join(log))

@@ -16,4 +16,5 @@ files:
   - modules/gql/_static/query/cbLogin.directive.html
   - modules/gql/_static/query/index.html
   - modules/gql/_static/query/query.js
+  - modules/gql/_static/test/fakeGqlServer.js
   - modules/gql/templates/content_with_tags.html

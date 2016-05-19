@@ -4,6 +4,9 @@ registration:
 tests:
   functional:
     - modules.explorer.explorer_tests = 8
+  integration:
+    - modules.explorer.explorer_integration_tests.PolymerTests = 1
+
 
 files:
   - modules/explorer/__init__.py
@@ -15,6 +18,7 @@ files:
   - modules/explorer/_static/components/filter-sidebar/filter-sidebar.html
   - modules/explorer/_static/components/filter-sidebar/course-status-selector.html
   - modules/explorer/_static/components/filter-sidebar/course-category-selector.html
+  - modules/explorer/_static/components/test/index.html
   - modules/explorer/_static/components/top-bar/top-bar.html
   - modules/explorer/_static/components/utility/unsafe-html.html
   - modules/explorer/_static/components/utility/floating-sidebar.html
@@ -22,6 +26,7 @@ files:
   - modules/explorer/constants.py
   - modules/explorer/course_settings.py
   - modules/explorer/explorer.py
+  - modules/explorer/explorer_integration_tests.py
   - modules/explorer/explorer_tests.py
   - modules/explorer/graphql.py
   - modules/explorer/handlers.py

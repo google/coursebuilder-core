@@ -8,6 +8,7 @@
     "molecules": "1.0.0",
     "neon-elements": "1.0.0",
     "paper-elements": "1.0.7",
-    "platinum-elements": "2.0.0"
+    "platinum-elements": "2.0.0",
+    "web-component-tester": "4.2.2"
   }
 }

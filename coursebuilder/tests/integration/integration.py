@@ -28,6 +28,7 @@ from tests.integration import pageobjects
 
 from selenium import webdriver
 from selenium.common import exceptions
+from selenium.webdriver.common import desired_capabilities
 from selenium.webdriver.chrome import options
 
 from models import courses
@@ -46,6 +47,8 @@ class TestBase(suite.TestBase):
         super(TestBase, self).setUp()
         chrome_options = options.Options()
         chrome_options.add_argument('--disable-extensions')
+        capabilities = desired_capabilities.DesiredCapabilities.CHROME
+        capabilities['loggingPrefs'] = {'browser':'ALL'}
 
         # Sadly, the max wait for the driver to become ready is hard-coded at
         # 30 seconds.  However, that seems like it'd be enough for our
@@ -57,7 +60,9 @@ class TestBase(suite.TestBase):
         while not self.driver:
             tries -= 1
             try:
-                self.driver = webdriver.Chrome(chrome_options=chrome_options)
+                self.driver = webdriver.Chrome(
+                    chrome_options=chrome_options,
+                    desired_capabilities=capabilities)
             except exceptions.WebDriverException, ex:
                 print ex
                 if tries:
