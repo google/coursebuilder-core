@@ -74,7 +74,7 @@ export KARMA_LIB=$RUNTIME_HOME/karma_lib
 CB_ARCHIVE_URL=https://github.com/google/coursebuilder-resources/raw/master
 CB_ARCHIVE_CONFIG_URL=$CB_ARCHIVE_URL/config
 CB_ARCHIVE_LIB_URL=$CB_ARCHIVE_URL/lib
-CB_ARCHIVE_GAE_SDK_URL=$CB_ARCHIVE_CONFIG_URL/gae_sdk_download_url_cb_1_10
+CB_ARCHIVE_GAE_SDK_URL=$CB_ARCHIVE_CONFIG_URL/gae_sdk_download_url_cb_1_11
 
 echo Ensuring runtime folder $RUNTIME_HOME
 if [ ! -d "$RUNTIME_HOME" ]; then
