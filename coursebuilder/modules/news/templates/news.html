@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="/modules/news/_static/css/news.css"/>
+
+<div id="gcb_news_titlebar_item">
+  {% if news and news[0].is_new_news %}
+    {% set class = "has_new_news" %}
+  {% else %}
+    {% set class = "has_only_old_news" %}
+  {% endif %}
+  <span id="gcb_news_titlebar_text" class="{{ class }}">
+    {# I18N: Hovering on this text brings up a list of news items about
+       recent changes to the course or student status. #}
+    News
+  </span>
+
+  <nav id="gcb_news_nav_wrapper">
+    {% for item in news %}
+      {% if item.is_new_news %}
+        {% set class = "gcb_news_item gcb_new_news" %}
+      {% else %}
+        {% set class = "gcb_news_item gcb_old_news" %}
+      {% endif %}
+      <div class="{{ class }}">
+        <a href="{{ item.url }}" class="gcb-news-link">
+          {{ item.description }}
+        </a>
+      </div>
+    {% endfor %}
+  </nav>
+</div>

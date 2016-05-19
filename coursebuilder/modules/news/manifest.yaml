@@ -1,0 +1,16 @@
+registration:
+  main_module: modules.news.news
+
+tests:
+  functional:
+    - modules.news.news_tests.NewsEntityTests = 15
+    - modules.news.news_tests.NewsHttpTests = 10
+
+files:
+  - modules/news/__init__.py
+  - modules/news/_static/css/news.css
+  - modules/news/manifest.yaml
+  - modules/news/messages.py
+  - modules/news/news.py
+  - modules/news/news_tests.py
+  - modules/news/templates/news.html

@@ -88,7 +88,7 @@ class ExtraTabsTests(actions.TestBase):
 
     def test_extra_tabs_with_url_point_to_target(self):
         dom = self.parse_html_string(self.get('course').body)
-        resources_el = dom.find('.//div[@id="gcb-nav-x"]//ul/li[5]/a')
+        resources_el = dom.find('.//div[@id="gcb-nav-x"]//ul/li[6]/a')
         self.assertEquals('Resources', resources_el.text)
         self.assertEquals('http://www.example.com', resources_el.attrib['href'])
 
@@ -105,7 +105,7 @@ class ExtraTabsTests(actions.TestBase):
         dom = self.parse_html_string(self.get('course').body)
         faq_li = dom.find('.//div[@id="gcb-nav-x"]//ul/li[4]')
         self.assertIsNone(faq_li.attrib.get('class'))
-        resources_li = dom.find('.//div[@id="gcb-nav-x"]//ul/li[5]')
+        resources_li = dom.find('.//div[@id="gcb-nav-x"]//ul/li[6]')
         self.assertIn('gcb-pull-right', resources_li.attrib['class'])
 
     def test_tabs_are_translated(self):

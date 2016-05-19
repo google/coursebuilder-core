@@ -1,0 +1,29 @@
+#gcb_news_nav_wrapper {
+    display: none;
+    position: absolute;
+    top: 90%;
+    padding: 5px;
+    background-color: #4D5B76;
+    z-index: 1;
+    font-size: smaller;
+}
+
+li:hover > #gcb_news_titlebar_item > #gcb_news_nav_wrapper {
+    display: block;
+}
+
+.gcb_news_item {
+    padding: 5px;
+}
+
+.gcb_old_news {
+    opacity: 0.6;
+}
+
+.has_new_news {
+    font-style: italic;
+}
+
+.has_only_old_news {
+    opacity: 0.4;
+}

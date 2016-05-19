@@ -72,6 +72,11 @@ def text_to_timestamp(text, fmt=schema_transforms.ISO_8601_DATETIME_FORMAT):
     return datetime_to_timestamp(utc_dt)
 
 
+def text_to_datetime(text, fmt=schema_transforms.ISO_8601_DATETIME_FORMAT):
+    """Returns UTC datetime for stringified date in given format."""
+    return timestamp_to_datetime(text_to_timestamp(text, fmt))
+
+
 def now_as_timestamp(_test_fixed_seconds=None):
     """Returns the current UTC time, as whole seconds since epoch."""
     # datetime alternative:
@@ -83,6 +88,11 @@ def now_as_timestamp(_test_fixed_seconds=None):
 
     # calendar.timegm() always produces whole seconds (int or long) results.
     return struct_time_to_timestamp(time.gmtime(_test_fixed_seconds))
+
+
+def now_as_datetime():
+    """Get UTC datetime for current time."""
+    return timestamp_to_datetime(now_as_timestamp())
 
 
 def to_timestamp(seconds=None, dt=None, st=None, text=None,

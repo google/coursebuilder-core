@@ -58,9 +58,17 @@
             <a href="register">{{ gettext('Registration') }}</a>
           </li>
         {% endif %}
-        {% for href, link in left_links %}
+        {% for item in left_links %}
           <li>
-            <a href="{{ href }}">{{ link }}</a>
+            {% if item is string %}
+              {{ item }}
+            {% else %}
+              {# For convenience for simple items, leftnavs can be
+                 2-tuples of href and link text.  More complex things
+                 can be injected as template evaluations, SafeDOM, etc. #}
+              {% set href, link = item %}
+              <a href="{{ href }}">{{ link }}</a>
+            {% endif %}
           </li>
         {% endfor %}
 
