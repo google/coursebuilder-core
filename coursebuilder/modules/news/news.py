@@ -105,6 +105,7 @@ class NewsItem(SerializableList):
     FIELD_WHEN = 'when'
     FIELD_URL = 'url'
     FIELD_DESCRIPTION = 'description'
+    FIELD_LABELS = 'labels'
 
     SCHEMA = schema_fields.FieldRegistry('NewsItem')
     SCHEMA.add_property(schema_fields.SchemaField(
@@ -115,8 +116,10 @@ class NewsItem(SerializableList):
         FIELD_URL, 'URL', 'string'))
     SCHEMA.add_property(schema_fields.SchemaField(
         FIELD_DESCRIPTION, 'Description', 'string'))
+    SCHEMA.add_property(schema_fields.SchemaField(
+        FIELD_LABELS, 'Labels', 'string'))
 
-    def __init__(self, resource_key, url, description, when=None):
+    def __init__(self, resource_key, url, description, when=None, labels=None):
         # String version of common.resource.Key
         self.resource_key = resource_key
 
@@ -129,6 +132,15 @@ class NewsItem(SerializableList):
         # Text to display on the list of news items visible to student.
         # Note: Should be I18N'd.
         self.description = description
+
+        # Single string giving IDs of labels, whitespace separated.  Same as
+        # labels field on Student, Announcement, Unit and so on.  Used to
+        # restrict news on items that are labelled to only students with
+        # matching labels.  Follows usual label-match rules: if either Student
+        # or NewsItem does not have labels in a category, category does not
+        # filter.  If both have labels, at least one label must exist in
+        # common for match.
+        self.labels = labels or ''
 
         # --------------------------------------------------------------------
         # Below here is transient data - not persisted.  Overwritten only for
@@ -343,6 +355,12 @@ def course_page_navbar_callback(app_context):
     news = student_dao.get_news_items() + CourseNewsDao.get_news_items()
     seen_times = {s.resource_key: s.when
                   for s in student_dao.get_seen_items()}
+
+    # Filter out items that student can't see due to label matching.  Do
+    # this before reducing number of items displayed to a fixed maximum.
+    course = courses.Course.get(app_context)
+    models.LabelDAO.apply_course_track_labels_to_student_labels(
+        course, student, news)
 
     # Run through news items, categorizing 'new' and 'old' news for display.
     # news is everything else.

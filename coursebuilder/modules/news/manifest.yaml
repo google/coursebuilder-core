@@ -4,7 +4,7 @@ registration:
 tests:
   functional:
     - modules.news.news_tests.NewsEntityTests = 15
-    - modules.news.news_tests.NewsHttpTests = 10
+    - modules.news.news_tests.NewsHttpTests = 11
 
 files:
   - modules/news/__init__.py

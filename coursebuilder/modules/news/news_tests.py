@@ -23,6 +23,7 @@ import time
 
 from controllers import sites
 from common import utc
+from common import utils as common_utils
 from models import models
 from modules.news import news
 from tests.functional import actions
@@ -49,7 +50,8 @@ class NewsTestBase(actions.TestBase):
             return (thing_one.resource_key == thing_two.resource_key and
                     thing_one.when == thing_two.when and
                     thing_one.url == thing_two.url and
-                    thing_one.description == thing_two.description)
+                    thing_one.description == thing_two.description and
+                    thing_one.labels == thing_two.labels)
         news.NewsItem.__eq__ = news_items_are_equal
         news.NewsItem.__repr__ = lambda x: x.__dict__.__repr__()
         def seen_items_are_equal(thing_one, thing_two):
@@ -92,7 +94,8 @@ class NewsEntityTests(NewsTestBase):
 
     def _test_add_news_item(self, dao_class):
         now = utc.now_as_datetime()
-        news_item = news.NewsItem('the_key', 'the_url', 'the_description', now)
+        news_item = news.NewsItem('the_key', 'the_url', 'the_description',
+                                  when=now)
         dao_class.add_news_item(news_item)
         self.assertEquals([news_item], dao_class.get_news_items())
 
@@ -106,7 +109,8 @@ class NewsEntityTests(NewsTestBase):
 
     def _test_add_duplicate_news_item(self, dao_class):
         now = utc.now_as_datetime()
-        news_item = news.NewsItem('the_key', 'the_url', 'the_description', now)
+        news_item = news.NewsItem('the_key', 'the_url', 'the_description',
+                                  when=now)
         dao_class.add_news_item(news_item)
         dao_class.add_news_item(news_item)
         dao_class.add_news_item(news_item)
@@ -125,9 +129,9 @@ class NewsEntityTests(NewsTestBase):
         now_ts = utc.now_as_timestamp()
 
         older = news.NewsItem('the_key', 'the_url', 'the_description',
-                              utc.timestamp_to_datetime(now_ts))
+                              when=utc.timestamp_to_datetime(now_ts))
         newer = news.NewsItem('the_key', 'the_url', 'the_description',
-                              utc.timestamp_to_datetime(now_ts + 1))
+                              when=utc.timestamp_to_datetime(now_ts + 1))
 
         dao_class.add_news_item(older)
         self.assertEquals([older], dao_class.get_news_items())
@@ -172,7 +176,8 @@ class NewsEntityTests(NewsTestBase):
         actions.register(self, 'John Smith')
 
         now = utc.now_as_datetime()
-        news_item = news.NewsItem('the_key', 'the_url', 'the_description', now)
+        news_item = news.NewsItem('the_key', 'the_url', 'the_description',
+                                  when=now)
         dao_class.add_news_item(news_item)
         self.assertEquals([news_item], dao_class.get_news_items())
         news.StudentNewsDao.mark_item_seen(news_item.resource_key)
@@ -190,8 +195,10 @@ class NewsEntityTests(NewsTestBase):
         actions.login(self.STUDENT_EMAIL)
         actions.register(self, 'John Smith')
         now = utc.now_as_datetime()
-        item_one = news.NewsItem('key_one', 'the_url', 'the_description', now)
-        item_two = news.NewsItem('key_two', 'the_url', 'the_description', now)
+        item_one = news.NewsItem('key_one', 'the_url', 'the_description',
+                                 when=now)
+        item_two = news.NewsItem('key_two', 'the_url', 'the_description',
+                                 when=now)
         news.StudentNewsDao.add_news_item(item_one)
         news.StudentNewsDao.add_news_item(item_two)
 
@@ -459,4 +466,50 @@ class NewsHttpTests(NewsTestBase):
         self.assertEquals(
             [NewsItem('after_desc', 'after_url', True),
              NewsItem('at_desc', 'at_url', True)],
+            self._get_news_items(response))
+
+    def test_news_label_filtering(self):
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, 'John Smith')
+
+        label_foo = models.LabelDAO.save(models.LabelDTO(
+            None, {'title': 'Foo',
+                   'descripton': 'foo',
+                   'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+        label_bar = models.LabelDAO.save(models.LabelDTO(
+            None, {'title': 'Bar',
+                   'descripton': 'bar',
+                   'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+
+        now_ts = utc.now_as_timestamp() + 3  # Avoid filtering in-past items
+        news.CourseNewsDao.add_news_item(news.NewsItem(
+            'key_no_labels', 'url_no_labels', 'desc_no_labels',
+            when=utc.timestamp_to_datetime(now_ts)))
+        news.CourseNewsDao.add_news_item(news.NewsItem(
+            'key_with_labels', 'url_with_labels', 'desc_with_labels',
+            labels=common_utils.list_to_text([label_foo]),
+            when=utc.timestamp_to_datetime(now_ts - 1)))
+
+        # Student starts life with no labels, so should match both items.
+        response = self.get('course')
+        self.assertEquals(
+            [NewsItem('desc_no_labels', 'url_no_labels', True),
+             NewsItem('desc_with_labels', 'url_with_labels', True)],
+            self._get_news_items(response))
+
+        # Apply non-matching label to Student; should not see labeled news.
+        models.Student.set_labels_for_current(
+            common_utils.list_to_text([label_bar]))
+        response = self.get('course')
+        self.assertEquals(
+            [NewsItem('desc_no_labels', 'url_no_labels', True)],
+            self._get_news_items(response))
+
+        # Apply matching label to Student; should again see labeled news.
+        models.Student.set_labels_for_current(
+            common_utils.list_to_text([label_foo, label_bar]))
+        response = self.get('course')
+        self.assertEquals(
+            [NewsItem('desc_no_labels', 'url_no_labels', True),
+             NewsItem('desc_with_labels', 'url_with_labels', True)],
             self._get_news_items(response))
