@@ -34,7 +34,6 @@ import jinja2
 
 import appengine_config
 from common import jinja_utils
-from models import models
 from modules.announcements import announcements
 
 from google.appengine.api import search
@@ -172,14 +171,10 @@ def _url_allows_robots(url):
 
 
 def get_locale_filtered_announcement_list(course):
-    # TODO(jorr): Restrict search in announcements by all tracking labels,
-    # not just locale.
-    announcement_list = (
-        announcements.AnnouncementEntity.get_announcements())
-    # pylint: disable=protected-access
-    return models.LabelDAO._apply_locale_labels_to_locale(
-        course.app_context.get_current_locale(), announcement_list)
-    # pylint: enable=protected-access
+    locale = course.app_context.get_current_locale()
+    if locale == course.app_context.default_locale:
+        locale = None
+    return announcements.AnnouncementEntity.get_announcements(locale=locale)
 
 
 class Resource(object):

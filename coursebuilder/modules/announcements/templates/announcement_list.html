@@ -1,7 +1,11 @@
 {% if announcements.add_action %}
   <div class="gcb-button-toolbar">
-    <form id='gcb-add-announcement' action='{{ announcements.add_action }}' method='POST'>
-      <input type="hidden" name="xsrf_token" value="{{ announcements.add_xsrf_token }}">
+    <form id='gcb-add-announcement'
+          action='{{ announcements.add_action }}'
+          method='POST'>
+      <input type="hidden"
+             name="xsrf_token"
+             value="{{ announcements.add_xsrf_token }}">
       <button class="gcb-button" type="submit">Add Announcement</button>
     </form>
   </div>
@@ -40,10 +44,16 @@
 
           <td>
             {% if item.delete_action %}
-            <form id='gcb-delete-announcement-{{ loop.index0 }}' action='{{ item.delete_action }}' method='POST'>
-              <input type="hidden" name="xsrf_token" value="{{ item.delete_xsrf_token }}">
-              <button class="material-icons gcb-list__icon gcb-list__icon--rowhover" type="submit"
-                onclick='return confirm("Delete this item?");'>delete</button>
+            <form id='gcb-delete-announcement-{{ loop.index0 }}'
+                  action='{{ item.delete_action }}'
+                  method='POST'>
+              <input type="hidden"
+                     name="xsrf_token"
+                     value="{{ item.delete_xsrf_token }}">
+              <button
+                 class="material-icons gcb-list__icon gcb-list__icon--rowhover"
+                 type="submit"
+                 onclick='return confirm("Delete this item?");'>delete</button>
             </form>
             {% endif %}
           </td>

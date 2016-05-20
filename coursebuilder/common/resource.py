@@ -167,6 +167,12 @@ class Registry(object):
         cls._RESOURCE_HANDLERS[type_name] = resource_handler
 
     @classmethod
+    def unregister(cls, resource_handler):
+        type_name = resource_handler.TYPE
+        if type_name in cls._RESOURCE_HANDLERS:
+            del cls._RESOURCE_HANDLERS[type_name]
+
+    @classmethod
     def get(cls, name):
         if not cls.is_valid_name(name):
             raise ValueError('Unknown resource type: %s' % name)

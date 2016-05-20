@@ -18,6 +18,7 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 
 
 import cgi
+import collections
 import datetime
 import os
 import urllib
@@ -25,20 +26,24 @@ import urllib
 import jinja2
 
 import appengine_config
+from common import crypto
 from common import tags
 from common import utils as common_utils
 from common import schema_fields
+from common import resource
+from common import utc
+from controllers import sites
 from controllers import utils
 from models import resources_display
+from models import courses
 from models import custom_modules
 from models import entities
 from models import models
 from models import roles
 from models import transforms
-from models.models import MemcacheManager
-from models.models import Student
 from modules.announcements import messages
 from modules.dashboard import dashboard
+from modules.i18n_dashboard import i18n_dashboard
 from modules.oeditor import oeditor
 
 from google.appengine.ext import db
@@ -145,16 +150,15 @@ class AnnouncementsStudentHandler(
         if user is None:
             transient_student = True
         else:
-            student = Student.get_enrolled_student_by_user(user)
+            student = models.Student.get_enrolled_student_by_user(user)
             if not student:
                 transient_student = True
         self.template_value['transient_student'] = transient_student
-        items = AnnouncementEntity.get_announcements()
+        locale = self.app_context.get_current_locale()
+        if locale == self.app_context.default_locale:
+            locale = None
+        items = AnnouncementEntity.get_announcements(locale=locale)
         items = AnnouncementsRights.apply_rights(self, items)
-        if not roles.Roles.is_course_admin(self.get_course().app_context):
-            items = models.LabelDAO.apply_course_track_labels_to_student_labels(
-                self.get_course(), student, items)
-
         self.template_value['announcements'] = self.format_items_for_template(
             items)
         self._render()
@@ -172,6 +176,7 @@ class AnnouncementsDashboardHandler(
     EDIT_ACTION = 'edit_announcement'
     DELETE_ACTION = 'delete_announcement'
     ADD_ACTION = 'add_announcement'
+    DEFAULT_TITLE_TEXT = 'New Announcement'
 
     get_actions = [LIST_ACTION, EDIT_ACTION]
     post_actions = [ADD_ACTION, DELETE_ACTION]
@@ -254,7 +259,7 @@ class AnnouncementsDashboardHandler(
             self.error(401)
             return
 
-        entity = AnnouncementEntity.make('New Announcement', '', True)
+        entity = AnnouncementEntity.make(self.DEFAULT_TITLE_TEXT, '', True)
         entity.put()
 
         self.redirect(self.get_announcement_action_url(
@@ -266,6 +271,7 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
 
     URL = '/rest/announcements/item'
 
+    ACTION = 'announcement-put'
     STATUS_ACTION = 'set_draft_status_announcement'
 
     @classmethod
@@ -292,8 +298,6 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
                 '_type': 'datetime',
                 'className': 'inputEx-CombineField gcb-datetime '
                 'inputEx-fieldWrapper date-only inputEx-required'}))
-        resources_display.LabelGroupsHelper.add_labels_schema_fields(
-            schema, 'announcement')
         schema.add_property(schema_fields.SchemaField(
             'is_draft', 'Status', 'boolean',
             description=messages.ANNOUNCEMENT_STATUS_DESCRIPTION,
@@ -317,7 +321,6 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
             transforms.send_json_response(
                 self, 404, 'Object not found.', {'key': key})
             return
-
         viewable = AnnouncementsRights.apply_rights(self, [entity])
         if not viewable:
             transforms.send_json_response(
@@ -335,16 +338,11 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
         date = datetime.datetime(date.year, date.month, date.day)
         entity_dict['date'] = date
 
-        entity_dict.update(
-            resources_display.LabelGroupsHelper.labels_to_field_data(
-                common_utils.text_to_list(entity.labels)))
-
         json_payload = transforms.dict_to_json(entity_dict)
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,
-            xsrf_token=utils.XsrfTokenManager.create_xsrf_token(
-                'announcement-put'))
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(self.ACTION))
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
@@ -352,7 +350,7 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
         key = request.get('key')
 
         if not self.assert_xsrf_token_or_fail(
-                request, 'announcement-put', {'key': key}):
+                request, self.ACTION, {'key': key}):
             return
 
         if not AnnouncementsRights.can_edit(self):
@@ -374,12 +372,7 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
 
         # The datetime widget returns a datetime object and we need a UTC date.
         update_dict['date'] = update_dict['date'].date()
-
-        entity.labels = common_utils.list_to_text(
-            resources_display.LabelGroupsHelper.field_data_to_labels(
-                update_dict))
-        resources_display.LabelGroupsHelper.remove_label_field_data(update_dict)
-
+        del update_dict['key']  # Don't overwrite key member method in entity.
         transforms.dict_to_entity(entity, update_dict)
 
         entity.put()
@@ -459,32 +452,53 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
 
 
 class AnnouncementEntity(entities.BaseEntity):
-    """A class that represents a persistent database entity of announcement."""
+    """A class that represents a persistent database entity of announcements.
+
+    Note that this class was added to Course Builder prior to the idioms
+    introduced in models.models.BaseJsonDao and friends.  That being the
+    case, this class is much more hand-coded and not well integrated into
+    the structure of callbacks and hooks that have accumulated around
+    entity caching, i18n, and the like.
+    """
+
     title = db.StringProperty(indexed=False)
     date = db.DateProperty()
     html = db.TextProperty(indexed=False)
-    labels = db.StringProperty(indexed=False)
     is_draft = db.BooleanProperty()
 
-    memcache_key = 'announcements'
+    _MEMCACHE_KEY = 'announcements'
 
     @classmethod
-    def get_announcements(cls, allow_cached=True):
-        items = MemcacheManager.get(cls.memcache_key)
-        if not allow_cached or items is None:
-            items = AnnouncementEntity.all().order('-date').fetch(1000)
+    def get_announcements(cls, locale=None):
+        memcache_key = cls._cache_key(locale)
+        items = models.MemcacheManager.get(memcache_key)
+        if items is None:
+            items = list(common_utils.iter_all(AnnouncementEntity.all()))
+            items.sort(key=lambda item: item.date, reverse=True)
+            if locale:
+                cls._translate_content(items)
 
             # TODO(psimakov): prepare to exceed 1MB max item size
             # read more here: http://stackoverflow.com
             #   /questions/5081502/memcache-1-mb-limit-in-google-app-engine
-            MemcacheManager.set(cls.memcache_key, items)
+            models.MemcacheManager.set(memcache_key, items)
         return items
+
+    @classmethod
+    def _cache_key(cls, locale=None):
+        if not locale:
+            return cls._MEMCACHE_KEY
+        return cls._MEMCACHE_KEY + ':' + locale
+
+    @classmethod
+    def purge_cache(cls, locale=None):
+        models.MemcacheManager.delete(cls._cache_key(locale))
 
     @classmethod
     def make(cls, title, html, is_draft):
         entity = cls()
         entity.title = title
-        entity.date = datetime.datetime.now().date()
+        entity.date = utc.now_as_datetime().date()
         entity.html = html
         entity.is_draft = is_draft
         return entity
@@ -492,16 +506,110 @@ class AnnouncementEntity(entities.BaseEntity):
     def put(self):
         """Do the normal put() and also invalidate memcache."""
         result = super(AnnouncementEntity, self).put()
-        MemcacheManager.delete(self.memcache_key)
+        self.purge_cache()
+        if i18n_dashboard.I18nProgressDeferredUpdater.is_translatable_course():
+            i18n_dashboard.I18nProgressDeferredUpdater.update_resource_list(
+                [TranslatableResourceAnnouncement.key_for_entity(self)])
         return result
 
     def delete(self):
         """Do the normal delete() and invalidate memcache."""
         super(AnnouncementEntity, self).delete()
-        MemcacheManager.delete(self.memcache_key)
+        self.purge_cache()
+
+    @classmethod
+    def _translate_content(cls, items):
+        app_context = sites.get_course_for_current_request()
+        course = courses.Course.get(app_context)
+        key_list = [
+            TranslatableResourceAnnouncement.key_for_entity(item)
+            for item in items]
+        FakeDto = collections.namedtuple('FakeDto', ['dict'])
+        fake_items = [
+            FakeDto({'title': item.title, 'html': item.html})
+            for item in items]
+        i18n_dashboard.translate_dto_list(course, fake_items, key_list)
+        for item, fake_item in zip(items, fake_items):
+            item.title = str(fake_item.dict['title'])
+            item.html = str(fake_item.dict['html'])
+
+
+class TranslatableResourceAnnouncement(
+    i18n_dashboard.AbstractTranslatableResourceType):
+
+    @classmethod
+    def get_ordering(cls):
+        return i18n_dashboard.TranslatableResourceRegistry.ORDERING_LAST
+
+    @classmethod
+    def get_title(cls):
+        return MODULE_TITLE
+
+    @classmethod
+    def key_for_entity(cls, announcement, course=None):
+        return resource.Key(ResourceHandlerAnnouncement.TYPE,
+                            announcement.key().id(), course)
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        return [(announcement, cls.key_for_entity(announcement, course))
+                for announcement in AnnouncementEntity.get_announcements()]
+
+    @classmethod
+    def get_resource_types(cls):
+        return [ResourceHandlerAnnouncement.TYPE]
+
+    @classmethod
+    def notify_translations_changed(cls, key):
+        AnnouncementEntity.purge_cache(key.locale)
+
+
+class ResourceHandlerAnnouncement(resource.AbstractResourceHandler):
+    """Generic resoruce accessor for applying translations to announcements."""
+
+    TYPE = 'announcement'
+
+    @classmethod
+    def _entity_key(cls, key):
+        return db.Key.from_path(AnnouncementEntity.kind(), int(key))
+
+    @classmethod
+    def get_resource(cls, course, key):
+        return AnnouncementEntity.get(cls._entity_key(key))
+
+    @classmethod
+    def get_resource_title(cls, rsrc):
+        return rsrc.title
+
+    @classmethod
+    def get_schema(cls, course, key):
+        return AnnouncementsItemRESTHandler.SCHEMA()
+
+    @classmethod
+    def get_data_dict(cls, course, key):
+        entity = cls.get_resource(course, key)
+        return transforms.entity_to_dict(entity)
+
+    @classmethod
+    def get_view_url(cls, rsrc):
+        return AnnouncementsStudentHandler.URL.lstrip('/')
+
+    @classmethod
+    def get_edit_url(cls, key):
+        return (AnnouncementsDashboardHandler.LINK_URL + '?' +
+                urllib.urlencode({
+                    'action': AnnouncementsDashboardHandler.EDIT_ACTION,
+                    'key': cls._entity_key(key),
+                }))
 
 
 custom_module = None
+
+
+def on_module_enabled():
+    resource.Registry.register(ResourceHandlerAnnouncement)
+    i18n_dashboard.TranslatableResourceRegistry.register(
+        TranslatableResourceAnnouncement)
 
 
 def register_module():
@@ -525,5 +633,5 @@ def register_module():
     custom_module = custom_modules.Module(
         MODULE_TITLE,
         'A set of pages for managing course announcements.',
-        [], handlers)
+        [], handlers, notify_module_enabled=on_module_enabled)
     return custom_module

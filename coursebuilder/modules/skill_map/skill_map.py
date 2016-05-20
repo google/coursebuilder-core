@@ -268,6 +268,10 @@ class TranslatableResourceSkill(
         ret.sort(key=lambda x: x[0].name)
         return ret
 
+    @classmethod
+    def get_resource_types(cls):
+        return [ResourceSkill.TYPE]
+
 
 class SkillGraph(caching.RequestScopedSingleton):
     """Facade to handle the CRUD lifecycle of the skill dependency graph."""

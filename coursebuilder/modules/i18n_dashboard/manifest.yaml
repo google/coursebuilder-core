@@ -8,9 +8,10 @@ tests:
     - modules.i18n_dashboard.i18n_dashboard_tests.I18nProgressDeferredUpdaterTests = 5
     - modules.i18n_dashboard.i18n_dashboard_tests.IsTranslatableRestHandlerTests = 3
     - modules.i18n_dashboard.i18n_dashboard_tests.LazyTranslatorTests = 5
+    - modules.i18n_dashboard.i18n_dashboard_tests.NotificationTests = 1
     - modules.i18n_dashboard.i18n_dashboard_tests.ResourceBundleKeyTests = 2
     - modules.i18n_dashboard.i18n_dashboard_tests.ResourceRowTests = 6
-    - modules.i18n_dashboard.i18n_dashboard_tests.SampleCourseLocalizationTest = 17
+    - modules.i18n_dashboard.i18n_dashboard_tests.SampleCourseLocalizationTest = 15
     - modules.i18n_dashboard.i18n_dashboard_tests.TranslationConsoleRestHandlerTests = 8
     - modules.i18n_dashboard.i18n_dashboard_tests.TranslationConsoleValidationTests = 5
     - modules.i18n_dashboard.i18n_dashboard_tests.TranslationContentsTests = 7

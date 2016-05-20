@@ -376,7 +376,8 @@ class ResourceRow(TableRow):
         resource_handler = resource.Registry.get(self._type)
         view_url = resource_handler.get_view_url(self._resource)
         if view_url:
-            view_url += '&hl=%s' % locale
+            view_url += '&' if '?' in view_url else '?'
+            view_url += 'hl=%s' % locale
         return view_url
 
     def edit_url(self, locale):
@@ -1897,6 +1898,41 @@ class AbstractTranslatableResourceType(object):
         """
         raise NotImplementedError('Derived classes must implement this.')
 
+    @classmethod
+    def get_resource_types(cls):
+        """Give the type strings for resource keys.
+
+        When get_resources_and_keys() is called, the keys will all have a type
+        member which corresponds to the TYPE field of a class derived from
+        common.resource.AbstractResourceHandler.  Derived classes should
+        return the type strings that may appear in keys so that this
+        translatable resource handler can be looked up by type.
+
+        Note that this implies that only one TranslatableResourceType class
+        can operate on resources of a given type.
+        """
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
+    def notify_translations_changed(cls, key):
+        """Notify a derived TranslatableResourceType that translations changed.
+
+        This is called when a set of translations for a language corresponding
+        to the object identified by 'key' has changed.
+
+        Normally, this is not necessary, because pre- and post-load hooks in
+        DTOs take care of automagically overwriting the contents of DTOs to
+        replace the nominal content with translated versions when that is
+        appropriate.  However, there are some cases where translatable
+        resources are not implemented using DTOs.  In this situation, we rely
+        on an explicit callback so that the TranslatableResourceType can do
+        the appropriate things when a translated version has changed.  (E.g.,
+        purge cached translations.)  This is generally appropriate only for
+        legacy code, and you should strongly prefer to use the
+        POST_{LOAD,SAVE}_HOOKS paradigm when possible.
+        """
+        pass  # Implementation of this function is optional.
+
 
 class TranslatableResourceRegistry(object):
 
@@ -1908,6 +1944,7 @@ class TranslatableResourceRegistry(object):
 
     _RESOURCE_TYPES = []
     _RESOURCE_TITLES = set()
+    _RESOURCE_HANDLERS_BY_TYPE = {}
 
     @classmethod
     def register(cls, translatable_resource):
@@ -1916,8 +1953,27 @@ class TranslatableResourceRegistry(object):
             raise ValueError(
                 'Title "%s" is already registered as a translatable resource.' %
                 title)
+        types = translatable_resource.get_resource_types()
+        for type_str in types:
+            if type_str in cls._RESOURCE_HANDLERS_BY_TYPE:
+                raise ValueError(
+                    'A TranslatableResource for "%s" is already registred.' %
+                    type_str)
         cls._RESOURCE_TITLES.add(title)
         cls._RESOURCE_TYPES.append(translatable_resource)
+        for type_str in types:
+            cls._RESOURCE_HANDLERS_BY_TYPE[type_str] = translatable_resource
+
+    @classmethod
+    def unregister(cls, translatable_resource):
+        title = translatable_resource.get_title()
+        if title in cls._RESOURCE_TITLES:
+            cls._RESOURCE_TITLES.remove(title)
+        if translatable_resource in cls._RESOURCE_TYPES:
+            cls._RESOURCE_TYPES.remove(translatable_resource)
+        for type_str in translatable_resource.get_resource_types():
+            if type_str in cls._RESOURCE_HANDLERS_BY_TYPE:
+                del cls._RESOURCE_HANDLERS_BY_TYPE[type_str]
 
     @classmethod
     def get_all(cls):
@@ -1930,6 +1986,10 @@ class TranslatableResourceRegistry(object):
         for resource_type in cls.get_all():
             ret += resource_type.get_resources_and_keys(course)
         return ret
+
+    @classmethod
+    def get_by_type(cls, type_str):
+        return cls._RESOURCE_HANDLERS_BY_TYPE.get(type_str)
 
 
 def has_translatable_fields(schema):
@@ -1961,6 +2021,10 @@ class TranslatableResourceCourseSettings(AbstractTranslatableResourceType):
                         section_name, course),
                     ))
         return ret
+
+    @classmethod
+    def get_resource_types(cls):
+        return [resources_display.ResourceCourseSettings.TYPE]
 
 
 class TranslatableResourceCourseComponents(AbstractTranslatableResourceType):
@@ -2011,6 +2075,15 @@ class TranslatableResourceCourseComponents(AbstractTranslatableResourceType):
                                  unit.post_assessment, course)))
         return ret
 
+    @classmethod
+    def get_resource_types(cls):
+        return [
+            resources_display.ResourceUnit.TYPE,
+            resources_display.ResourceAssessment.TYPE,
+            resources_display.ResourceLink.TYPE,
+            resources_display.ResourceLesson.TYPE,
+        ]
+
 
 class TranslatableResourceQuestions(AbstractTranslatableResourceType):
 
@@ -2031,6 +2104,13 @@ class TranslatableResourceQuestions(AbstractTranslatableResourceType):
                     qu), qu.id, course)))
         return ret
 
+    @classmethod
+    def get_resource_types(cls):
+        return [
+            resources_display.ResourceSAQuestion.TYPE,
+            resources_display.ResourceMCQuestion.TYPE,
+        ]
+
 
 class TranslatableResourceQuestionGroups(AbstractTranslatableResourceType):
 
@@ -2050,6 +2130,10 @@ class TranslatableResourceQuestionGroups(AbstractTranslatableResourceType):
                 resources_display.ResourceQuestionGroup.TYPE, qg.id, course)))
         return ret
 
+    @classmethod
+    def get_resource_types(cls):
+        return [resources_display.ResourceQuestionGroup.TYPE]
+
 
 class TranslatableResourceHtmlHooks(AbstractTranslatableResourceType):
 
@@ -2067,6 +2151,10 @@ class TranslatableResourceHtmlHooks(AbstractTranslatableResourceType):
                for k, v in utils.ResourceHtmlHook.get_all(course).iteritems()]
         ret.sort(key=lambda row: row[0][utils.ResourceHtmlHook.NAME])
         return ret
+
+    @classmethod
+    def get_resource_types(cls):
+        return [utils.ResourceHtmlHook.TYPE]
 
 
 class I18nDashboardHandler(BaseDashboardExtension):
@@ -2321,7 +2409,6 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         request = transforms.loads(self.request.get('request'))
         key = ResourceBundleKey.fromstring(request['key'])
         validate = request.get('validate', False)
-
         if not self.assert_xsrf_token_or_fail(
                 request, self.XSRF_TOKEN_NAME, {'key': str(key)}):
             return
@@ -2387,12 +2474,13 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         if not resource_bundle_dto:
             resource_bundle_dto = ResourceBundleDTO(key, {})
 
+        any_changed = False
         for section in sections:
             changed = False
             data = []
             for item in section['data']:
                 if item['changed']:
-                    changed = True
+                    any_changed = changed = True
                     data.append({
                         'source_value': item['source_value'],
                         'target_value': item['target_value']})
@@ -2450,6 +2538,10 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         else:
             progress = I18nProgressDTO.NOT_STARTED
         i18n_progress_dto.set_progress(key.locale, progress)
+        if any_changed:
+            resource_class = TranslatableResourceRegistry.get_by_type(
+                key.resource_key.type)
+            resource_class.notify_translations_changed(key)
 
     @staticmethod
     def build_sections_for_key(

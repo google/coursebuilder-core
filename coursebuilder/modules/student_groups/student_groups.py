@@ -1203,6 +1203,10 @@ class TranslatableResourceStudentGroups(
         ret.sort(key=lambda x: x[0].name)
         return ret
 
+    @classmethod
+    def get_resource_types(cls):
+        return [ResourceHandlerStudentGroup.TYPE]
+
 
 class ResourceHandlerStudentGroup(resource.AbstractResourceHandler):
     """Generic resource accessor for applying translations to student groups."""

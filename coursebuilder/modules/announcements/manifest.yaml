@@ -1,9 +1,14 @@
 registration:
   main_module: modules.announcements.announcements
 
+tests:
+  functional:
+    - modules.announcements.announcements_tests.AnnouncementsTests = 19
+
 files:
   - modules/announcements/__init__.py
   - modules/announcements/announcements.py
+  - modules/announcements/announcements_tests.py
   - modules/announcements/templates/announcement_list.html
   - modules/announcements/manifest.yaml
   - modules/announcements/messages.py

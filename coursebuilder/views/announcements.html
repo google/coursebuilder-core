@@ -7,7 +7,8 @@
 
 {% block assets %}
   {{ super() }}
-  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet"
+        href="//fonts.googleapis.com/icon?family=Material+Icons">
 {% endblock %}
 
 {% block top_content %}
@@ -19,23 +20,34 @@
     <div class="gcb-aside">
       {% if announcements %}
         {% if announcements.add_action %}
-          <form id='gcb-add-announcement' action='{{ announcements.add_action }}' method='POST'>
-            <input type="hidden" name="xsrf_token" value="{{ announcements.add_xsrf_token }}">
-            <button class="gcb-button gcb-button-action gcb-button-author" type="submit">Add Announcement</button>
+          <form id='gcb-add-announcement'
+                action='{{ announcements.add_action }}'
+                method='POST'>
+            <input type="hidden"
+                   name="xsrf_token"
+                   value="{{ announcements.add_xsrf_token }}">
+            <button class="gcb-button gcb-button-action gcb-button-author"
+                    type="submit">Add Announcement</button>
           </form>
           <div style='clear: both; padding-top: 2px;' />
         {% endif %}
         {% if not announcements.children %}
           {# I18N: Shown if the list of announcements is empty. #}
-          <p>{{ gettext('Currently, there are no announcements.') }}</p>
+          <p class="gcb-announcement-content">
+            {{ gettext('Currently, there are no announcements.') }}
+          </p>
         {% endif %}
         {% for item in announcements.children %}
           <hr>
           <h2>
             <a name='{{ item.key }}'></a>
-            {{ item.title }} {% if item.is_draft %}(Private){% endif %}
+            <span class="gcb-announcement-title">
+              {{ item.title }}
+              {% if item.is_draft %}(Private){% endif %}
+            </span>
             {% if item.edit_action %}
-              <a href="{{ item.edit_action }}" class="gcb-edit-resource-button icon material-icons">edit</a>
+              <a href="{{ item.edit_action }}"
+                 class="gcb-edit-resource-button icon material-icons">edit</a>
             {% endif %}
           </h2>
           <p>
@@ -53,8 +65,9 @@
               })();
             </script>
           </p>
-          <p "margin: 20px 0px;">
-          {{ item.html | gcb_tags }}
+          <p class="gcb-announcement-content" "margin: 20px 0px;">
+            {{ item.html | gcb_tags }}
+          </p>
         {% endfor %}
       {% else %}
         {{ content }}

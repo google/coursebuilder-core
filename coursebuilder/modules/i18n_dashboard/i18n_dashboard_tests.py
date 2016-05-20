@@ -17,8 +17,6 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
-
-
 import cgi
 import collections
 import cStringIO
@@ -46,7 +44,6 @@ from models import resources_display
 from models import models
 from models import roles
 from models import transforms
-from modules.announcements import announcements
 from modules.dashboard import dashboard
 from modules.i18n_dashboard import i18n_dashboard
 from modules.i18n_dashboard.i18n_dashboard import I18nProgressDAO
@@ -408,6 +405,10 @@ class I18nDashboardHandlerTests(actions.TestBase):
             },
             {
                 'title': 'Student Groups',
+                'rows': [],
+            },
+            {
+                'title': 'Announcements',
                 'rows': [],
             },
             {
@@ -3141,32 +3142,6 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
             for label in labels:
                 self._locale_to_label[label.title] = label
 
-    def _add_announcement(self, title, locales):
-        with Namespace('ns_first'):
-            labels = models.LabelDAO.get_all_of_type(
-                models.LabelDTO.LABEL_TYPE_LOCALE)
-            label_ids = []
-            for label in labels:
-                for locale in locales:
-                    if label.title == locale:
-                        label_ids.append(label.id)
-            annon = announcements.AnnouncementEntity()
-            annon.title = title
-            annon.labels = utils.list_to_text(label_ids)
-            annon.is_draft = False
-            annon.put()
-
-    def _add_announcements(self):
-        self._add_announcement('Test announcement EN', ['en_US'])
-        self._add_announcement('Test announcement RU', ['ru_RU'])
-        self._add_announcement('Test announcement ES', ['es_ES'])
-        self._add_announcement(
-            'Test announcement ALL', ['en_US', 'ru_RU', 'es_ES'])
-        self._add_announcement('Test announcement NONE', [])
-        with Namespace('ns_first'):
-            items = announcements.AnnouncementEntity.get_announcements()
-            self.assertEqual(5, len(items))
-
     def _add_units(self, locale_labels=False):
         with Namespace('ns_first'):
             course = courses.Course(None, sites.get_all_courses()[0])
@@ -3247,33 +3222,6 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
             self.assertFalse(dom.find('.//select[@id="locale-select"]'))
         actions.logout()
 
-    def _assert_en_ru_es_all_none(self, en, ru, es, _all, _none, lang):
-        response = self.get('first/announcements')
-        self.assertEquals(response.status_int, 200)
-        if en:
-            self.assertIn('Test announcement EN', response.body)
-        else:
-            self.assertNotIn('Test announcement EN', response.body)
-        if ru:
-            self.assertIn('Test announcement RU', response.body)
-        else:
-            self.assertNotIn('Test announcement RU', response.body)
-        if es:
-            self.assertIn('Test announcement ES', response.body)
-        else:
-            self.assertNotIn('Test announcement ES', response.body)
-        if _all:
-            self.assertIn('Test announcement ALL', response.body)
-        else:
-            self.assertNotIn('Test announcement ALL', response.body)
-        if _none:
-            self.assertIn('Test announcement NONE', response.body)
-        else:
-            self.assertNotIn('Test announcement NONE', response.body)
-        self.assertEquals(self.parse_html_string(
-                response.body).get('lang'), lang)
-        return response
-
     def _course_en_ru_es_all_none(self, en, ru, es, _all, _none, lang):
         response = self.get('first/course')
         self.assertEquals(response.status_int, 200)
@@ -3335,94 +3283,6 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                 'now_available': True, 'can_student_change_locale': False}}):
             self._assert_picker(
                 True, ['en_US', 'ru_RU', 'es_ES'], is_admin=True)
-
-    def test_view_announcement_via_locale_picker(self):
-        self._setup_locales()
-        self._add_announcements()
-
-        actions.logout()
-        actions.login('test_view_announcement_via_locale_picker@example.com')
-
-        with actions.OverriddenEnvironment(
-            {'course': {
-                'now_available': True, 'can_student_change_locale': True}}):
-            actions.register(
-                self,
-                'test_view_announcement_via_locale_picker', course='first')
-
-            self._set_prefs_locale(None)
-            response = self._assert_en_ru_es_all_none(
-                True, False, False, True, True, 'en_US')
-            self.assertIn('Announcements', response.body)
-
-            self._set_prefs_locale('ru_RU')
-            response = self._assert_en_ru_es_all_none(
-                False, True, False, True, True, 'ru_RU')
-            self.assertIn('Сообщения', response.body)
-
-            self._set_prefs_locale('es_ES')
-            response = self._assert_en_ru_es_all_none(
-                False, False, True, True, True, 'es_ES')
-            self.assertIn('Avisos', response.body)
-
-            # when locale labels are combined with prefs, labels win
-            self._set_prefs_locale(None)
-            self._set_labels_on_current_student(
-                [self._locale_to_label['ru_RU']])
-            self._assert_en_ru_es_all_none(
-                False, True, False, True, True, 'ru_RU')
-
-            self._set_prefs_locale('es_ES')
-            self._set_labels_on_current_student(
-                [self._locale_to_label['ru_RU']])
-            self._assert_en_ru_es_all_none(
-                False, True, False, True, True, 'ru_RU')
-
-    def test_announcements_via_locale_labels(self):
-        self._setup_locales()
-        self._add_announcements()
-
-        actions.logout()
-        actions.login('test_announcements_via_locale_labels@example.com')
-
-        with actions.OverriddenEnvironment(
-            {'course': {
-                'now_available': True, 'can_student_change_locale': False}}):
-            actions.register(
-                self, 'test_announcements_via_locale_labels', course='first')
-
-            self._set_prefs_locale(None)
-            self._set_labels_on_current_student([])
-            self._assert_en_ru_es_all_none(
-                True, True, True, True, True, 'en_US')
-
-            self._set_labels_on_current_student(
-                [self._locale_to_label['en_US']])
-            self._assert_en_ru_es_all_none(
-                True, False, False, True, True, 'en_US')
-
-            self._set_labels_on_current_student(
-                [self._locale_to_label['ru_RU']])
-            self._assert_en_ru_es_all_none(
-                False, True, False, True, True, 'ru_RU')
-
-            self._set_labels_on_current_student(
-                [self._locale_to_label['es_ES']])
-            self._assert_en_ru_es_all_none(
-                False, False, True, True, True, 'es_ES')
-
-            self._set_prefs_locale('ru_RU')
-            self._set_labels_on_current_student([])
-            response = self._assert_en_ru_es_all_none(
-                True, True, True, True, True, 'ru_RU')
-            self.assertIn('Сообщения', response.body)
-
-            self._set_prefs_locale('ru_RU')
-            self._set_labels_on_current_student(
-                [self._locale_to_label['es_ES']])
-            response = self._assert_en_ru_es_all_none(
-                False, False, True, True, True, 'es_ES')
-            self.assertIn('Avisos', response.body)
 
     def test_course_track_via_locale_picker(self):
         self._setup_locales()
@@ -4053,3 +3913,125 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
             memcache._CLIENT._make_async_call = old_memcache_make_async_call
             datastore_rpc.BaseConnection._make_rpc_call = old_db_make_rpc_call
             del config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name]
+
+
+class FooEntity(object):
+
+    def __init__(self, description):
+        self._description = description
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, value):
+        self._description = value
+
+
+class ResourceHandlerFoo(resource.AbstractResourceHandler):
+
+    TYPE = 'foo'
+
+    # Nominally should implement all the required methods here, but they
+    # are not required for the tests.
+
+
+class TranslatableResourceFoo(i18n_dashboard.AbstractTranslatableResourceType):
+
+    THE_ENTITY = FooEntity('This is a FooEntity.')
+    TYPE = 'foo'
+
+    NOTIFIED_OF_CHANGE_FOR_KEYS = []
+
+    @classmethod
+    def get_ordering(cls):
+        return i18n_dashboard.TranslatableResourceRegistry.ORDERING_LAST
+
+    @classmethod
+    def get_title(cls):
+        return 'Foo'
+
+    @classmethod
+    def get_resources_and_keys(cls, course):
+        return [(cls.THE_ENTITY, resource.Key(cls.TYPE, '1', course))]
+
+    @classmethod
+    def get_resource_types(cls):
+        return [cls.TYPE]
+
+    @classmethod
+    def notify_translations_changed(cls, key):
+        cls.NOTIFIED_OF_CHANGE_FOR_KEYS.append(key)
+
+
+class NotificationTests(actions.TestBase):
+
+    COURSE = 'notifications'
+    NAMESPACE = 'ns_%s' % COURSE
+    ADMIN_EMAIL = 'admin@foo.com'
+    URL = 'rest/modules/i18n_dashboard/translation_console'
+
+    def setUp(self):
+        super(NotificationTests, self).setUp()
+        actions.simple_add_course(self.COURSE, self.ADMIN_EMAIL, 'Notification')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE)
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        TranslatableResourceFoo.NOTIFIED_OF_CHANGE_FOR_KEYS = []
+        resource.Registry.register(ResourceHandlerFoo)
+        i18n_dashboard.TranslatableResourceRegistry.register(
+            TranslatableResourceFoo)
+
+    def tearDown(self):
+        namespace_manager.set_namespace(self.old_namespace)
+        sites.reset_courses()
+        i18n_dashboard.TranslatableResourceRegistry.unregister(
+            TranslatableResourceFoo)
+        resource.Registry.unregister(ResourceHandlerFoo)
+        super(NotificationTests, self).tearDown()
+
+    def _put_translations(self, key, translations):
+        request = {
+            'key': str(key),
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'translation-console'),
+                  'payload': transforms.dumps(translations),
+                  'validate': True}
+
+        response = self.put(self.URL, {'request': transforms.dumps(request)})
+        self.assertEquals(200, response.status_int)
+        response = transforms.loads(response.body)
+        self.assertEquals(200, response['status'])
+        payload = transforms.loads(response['payload'])
+        return payload
+
+    def test_notifications(self):
+        key = i18n_dashboard.ResourceBundleKey(
+            TranslatableResourceFoo.TYPE, '1', 'de')
+        self._put_translations(key, {
+            'title': 'Foo',
+            'key': str(key),
+            'source_locale': 'en_US',
+            'target_locale': 'de',
+            'sections': [{
+                'name': 'description',
+                'label': 'Description',
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': 'old description',
+                    'target_value': 'new description',
+                    'verb': 1,  # verb NEW
+                    'old_source_value': '',
+                    'changed': True
+                }]
+            }]
+        })
+
+        # Verify that we got notified about the change to our resource's
+        # translation bundle
+        self.assertEquals(
+            [str(key)],
+            [str(k) for k in
+             TranslatableResourceFoo.NOTIFIED_OF_CHANGE_FOR_KEYS])
