@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-05-16 07:31-0700\n"
+"POT-Creation-Date: 2016-05-23 08:03-0700\n"
 "PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fa <LL@li.org>\n"
@@ -567,7 +567,7 @@ msgstr "خطا: قبلاً ایمیل دعوت برای «%s» ارسال کرد
 #: experimental/coursebuilder/modules/invitation/invitation.py:320
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
-msgstr "برخی از  پیام‌ها ارسال نشدند (%‏s‏ ‏/‏ ‏%s):"
+msgstr "برخی از  پیام‌ها ارسال نشدند (%s‏ ‏/‏ ‏%s):"
 
 #. Success message indicating number of emails sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:328
@@ -759,13 +759,13 @@ msgstr "ارسال"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:363
+#: experimental/coursebuilder/modules/search/resources.py:358
 #: experimental/coursebuilder/views/unit.html:84
 msgid "Lesson"
 msgstr "درس"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:730
+#: experimental/coursebuilder/modules/search/resources.py:725
 msgid "Announcement"
 msgstr "اطلاعیه"
 
@@ -1017,7 +1017,7 @@ msgid "Announcements"
 msgstr "اعلامیه‌ها"
 
 #. Shown if the list of announcements is empty.
-#: experimental/coursebuilder/views/announcements.html:30
+#: experimental/coursebuilder/views/announcements.html:37
 msgid "Currently, there are no announcements."
 msgstr "در حال حاضر، هیچ اطلاعیه‌ای وجود ندارد."
 
@@ -1154,13 +1154,13 @@ msgstr "ثبت‌نام"
 
 #. Text for title of navigation bar tab to reach list of
 #. courses the current user is enrolled in or whitelisted for.
-#: experimental/coursebuilder/views/base_course.html:78
+#: experimental/coursebuilder/views/base_course.html:86
 msgid "My Courses"
 msgstr "دوره‌های آموزشی من"
 
 #. Text for title of navigation bar tab to reach list of all
 #. available courses when user is logged out.
-#: experimental/coursebuilder/views/base_course.html:84
+#: experimental/coursebuilder/views/base_course.html:92
 msgid "Explore Courses"
 msgstr "کاوش دوره‌های آموزشی"
 
@@ -1606,5 +1606,4 @@ msgstr "صفحه بعدی"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "پایان"
-
 
