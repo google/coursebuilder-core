@@ -2237,8 +2237,8 @@ class SkillCompletionTrackerTests(BaseSkillMapTests):
 
         student = models.Student(user_id='1')
         student.put()
-        comp = UnitLessonCompletionTracker.get_or_create_progress(
-            student)
+        tracker = self.course.get_progress_tracker()
+        comp = tracker.get_or_create_progress(student)
         comp.value = transforms.dumps(student_progress)
         comp.put()
 

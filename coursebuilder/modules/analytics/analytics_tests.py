@@ -38,7 +38,6 @@ from models import jobs
 from models import models
 from models import transforms
 from models.data_sources import paginated_table
-from models.progress import UnitLessonCompletionTracker
 from modules.analytics import clustering
 from modules.analytics import filters
 from modules.analytics import gradebook
@@ -1522,8 +1521,8 @@ class StudentVectorGeneratorProgressTests(actions.TestBase):
             key_name=self.student_id,
             data=zlib.compress(transforms.dumps({})))
         self.aggregate_entity.put()
-        self.progress = UnitLessonCompletionTracker.get_or_create_progress(
-            self.student)
+        tracker = self.course.get_progress_tracker()
+        self.progress = tracker.get_or_create_progress(self.student)
         self.progress.value = transforms.dumps(
             {"u.{}.l.{}".format(unit.unit_id, lesson.lesson_id): 2,
              "u.{}".format(unit.unit_id): 1})

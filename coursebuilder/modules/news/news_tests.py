@@ -136,6 +136,10 @@ class NewsEntityTests(NewsTestBase):
         dao_class.add_news_item(older)
         self.assertEquals([older], dao_class.get_news_items())
 
+        # Newer items added with no-overwrite flag do not displace older item.
+        dao_class.add_news_item(newer, overwrite_existing=False)
+        self.assertEquals([older], dao_class.get_news_items())
+
         # Newer items displace older items with the same key.
         dao_class.add_news_item(newer)
         self.assertEquals([newer], dao_class.get_news_items())
@@ -183,6 +187,13 @@ class NewsEntityTests(NewsTestBase):
         news.StudentNewsDao.mark_item_seen(news_item.resource_key)
 
         seen_item = news.SeenItem(news_item.resource_key, now)
+        self.assertEquals([seen_item], news.StudentNewsDao.get_seen_items())
+
+        # Move time forward one tick, and verify that the timestamp *does*
+        # move forward on the 'seen' record.
+        time.sleep(1)
+        seen_item.when = utc.now_as_datetime()
+        news.StudentNewsDao.mark_item_seen(news_item.resource_key)
         self.assertEquals([seen_item], news.StudentNewsDao.get_seen_items())
 
     def test_mark_course_item_seen(self):

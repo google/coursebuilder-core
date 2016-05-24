@@ -115,18 +115,21 @@ class ProgressPercent(actions.TestBase):
 
         # Progress is counted when navigating _on to_ lesson.
         response = self._get_unit_page(self.unit)
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
 
         # Navigate to next lesson.  Verify rounding to 3 decimal places.
         response = self._click_next_button(response)
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(0.667, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
 
         # Navigate to next lesson.
         response = self._click_next_button(response)
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
@@ -137,36 +140,42 @@ class ProgressPercent(actions.TestBase):
         self.course.save()
 
         # Zero progress when no unit actions taken.
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(0.0, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
 
         # Zero progress when navigate to pre-assessment
         response = self._get_unit_page(self.unit)
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
 
         # Progress is counted when navigating _on to_ lesson.
         response = self._click_next_button(response)
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
 
         # Navigate to next lesson.  Verify rounding to 3 decimal places.
         response = self._click_next_button(response)
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(0.667, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
 
         # Navigate to next lesson.
         response = self._click_next_button(response)
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
 
         # Navigate to post-assessment does not change completion
         response = self._click_next_button(response)
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
@@ -184,18 +193,21 @@ class ProgressPercent(actions.TestBase):
             self.student = models.Student.get_by_user(users.get_current_user())
 
         # Zero progress because posting the assessment did not score 100%.
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
 
         # Still zero progress when take redirect to assessment confirmation.
         response = response.follow()
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])
 
         # But have 33% progress when following the link to the 1st lesson
         response = self._click_next_button(response)
+        self.tracker._progress_by_user_id.clear()
         with Namespace(NAMESPACE):
             self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
                 self.student)[self.unit.unit_id])

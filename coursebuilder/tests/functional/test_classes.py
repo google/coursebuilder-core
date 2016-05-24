@@ -6388,6 +6388,39 @@ class NamespaceTest(actions.TestBase):
         self.assertEqual(namespace_manager.get_namespace(), pre_test_namespace)
 
 
+class ProgressTests(actions.TestBase):
+
+    ADMIN_EMAIL = 'admin@foo.com'
+    STUDENT_EMAIL = 'student@foo.com'
+    COURSE_NAME = 'news_test'
+    NAMESPACE = 'ns_%s' % COURSE_NAME
+
+    def setUp(self):
+        super(ProgressTests, self).setUp()
+        self.base = '/' + self.COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Title')
+        self.course = courses.Course.get(self.app_context)
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(self.NAMESPACE)
+
+    def tearDown(self):
+        sites.reset_courses()
+        namespace_manager.set_namespace(self.old_namespace)
+        super(ProgressTests, self).tearDown()
+
+    def test_same_user_progress_instance_on_repeated_get_or_create(self):
+        user = actions.login(self.STUDENT_EMAIL)
+        actions.register(self, 'John Smith')
+        student = models.Student.get_enrolled_student_by_user(user)
+
+        progress_1 = (
+            self.course.get_progress_tracker().get_or_create_progress(student))
+        progress_2 = (
+            self.course.get_progress_tracker().get_or_create_progress(student))
+        self.assertIs(progress_1, progress_2)
+
+
 ALL_COURSE_TESTS = (
     StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
     StaticHandlerTest, AdminAspectTest,

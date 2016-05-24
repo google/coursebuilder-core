@@ -55,18 +55,28 @@ from models import custom_modules
 from models import data_sources
 from models import jobs
 from models import models
+from models import progress
 from models import services
 from modules.analytics import student_aggregate
 from modules.certificate import custom_criteria
 from modules.certificate import messages
 from modules.courses import settings
 from modules.dashboard import dashboard
+from modules.news import news
 
 MODULE_NAME = 'certificates'
 MODULE_TITLE = 'Certificates'
 CERTIFICATE_HANDLER_PATH = 'certificate'
 CERTIFICATE_PDF_HANDLER_PATH = 'certificate.pdf'
 RESOURCES_PATH = '/modules/certificate/resources'
+
+# Not a fully-fledged resource key, but since the News module only needs
+# something that walks like a resource key and quacks like a resource key,
+# this is close enough: It parses like one, and the type does not collide
+# with other resource type names.  It is also "unique enough", in that
+# since it's per-student, we don't really care what the ID component of
+# the key is.
+RESOURCE_KEY = 'certificate:1'
 
 
 class ShowCertificateHandler(utils.BaseHandler):
@@ -483,6 +493,19 @@ class CertificateAggregator(
           'generated.')
 
 
+def post_update_progress(course, student, progress_, event_entity, event_key):
+    """Called back when student has progress event recorded."""
+
+    if student_is_qualified(student, course):
+        app_context = sites.get_app_context_for_current_request()
+        # I18N: Brief note appearing in per-Student news dropdown menu
+        # indicating that this student has recently earned a course
+        # completion certificate.
+        desc = app_context.gettext('Course completion certificate earned!')
+        item = news.NewsItem(RESOURCE_KEY, CERTIFICATE_HANDLER_PATH, desc)
+        news.StudentNewsDao.add_news_item(item, overwrite_existing=False)
+
+
 custom_module = None
 
 
@@ -507,6 +530,8 @@ def register_module():
             get_certificate_table_entry)
         student_aggregate.StudentAggregateComponentRegistry.register_component(
             CertificateAggregator)
+        progress.UnitLessonCompletionTracker.POST_UPDATE_PROGRESS_HOOK.append(
+            post_update_progress)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]

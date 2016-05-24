@@ -104,6 +104,7 @@ class UnitLessonCompletionTracker(object):
 
     def __init__(self, course):
         self._course = course
+        self._progress_by_user_id = {}
 
     def _get_course(self):
         return self._course
@@ -920,13 +921,20 @@ class UnitLessonCompletionTracker(object):
         value = self.get_custom_unit_status(progress, unit_id)
         return self.COMPLETED_STATE == value
 
-    @classmethod
-    def get_or_create_progress(cls, student):
-        progress = StudentPropertyEntity.get(student, cls.PROPERTY_KEY)
+    def get_or_create_progress(self, student):
+        if student.user_id in self._progress_by_user_id:
+            # Use per-instance cache of student progress entities.  This is
+            # necessary due to multiple calls to this function during
+            # callbacks to POST_UPDATE_PROGRESS_HOOK functions.  Note that
+            # this relies on callers being disciplined about getting the
+            # progress entity via Course.get_progress_tracker().
+            return self._progress_by_user_id[student.user_id]
+        progress = StudentPropertyEntity.get(student, self.PROPERTY_KEY)
         if not progress:
             progress = StudentPropertyEntity.create(
-                student=student, property_name=cls.PROPERTY_KEY)
+                student=student, property_name=self.PROPERTY_KEY)
             progress.put()
+        self._progress_by_user_id[student.user_id] = progress
         return progress
 
     def get_course_progress(self, student):

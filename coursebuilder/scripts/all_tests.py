@@ -132,6 +132,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.MemcacheTest': 65,
     'tests.functional.test_classes.MultipleCoursesTest': 1,
     'tests.functional.test_classes.NamespaceTest': 2,
+    'tests.functional.test_classes.ProgressTests': 1,
     'tests.functional.test_classes.StaticHandlerTest': 3,
     'tests.functional.test_classes.StudentAspectTest': 19,
     'tests.functional.test_classes.StudentKeyNameTest': 8,

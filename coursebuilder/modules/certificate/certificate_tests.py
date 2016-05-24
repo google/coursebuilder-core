@@ -16,13 +16,14 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
-
+from common import utc
 from controllers import sites
 from models import courses
 from models import models
 from models import student_work
 from modules.certificate import certificate
 from modules.certificate import custom_criteria
+from modules.news import news
 from modules.review import domain
 from modules.review import peer
 from modules.review import review as review_module
@@ -257,6 +258,30 @@ class CertificateCriteriaTestCase(actions.TestBase):
         response = self.get('certificate')
         self.assertEquals(200, response.status_code)
         self._run_analytic_and_expect(1, 1, 1)  # 1 student, 1 active, 1 cert
+
+    def test_news_notification(self):
+        assessment = self.course.add_assessment()
+        assessment.title = 'Assessment'
+        assessment.html_content = 'assessment content'
+        assessment.availability = courses.AVAILABILITY_AVAILABLE
+        self.course.save()
+        self.certificate_criteria.append(
+            {'assessment_id': assessment.unit_id, 'pass_percent': 70.0})
+        actions.submit_assessment(
+            self, assessment.unit_id,
+            {'answers': '', 'score': 70, 'assessment_type': assessment.unit_id},
+            presubmit_checks=False)
+
+        news_items = news.StudentNewsDao.get_news_items()
+        self.assertEquals(1, len(news_items))
+        item = news_items[0]
+        now_ts = utc.now_as_timestamp()
+        self.assertEquals(certificate.CERTIFICATE_HANDLER_PATH, item.url)
+        self.assertEquals(
+            'Course completion certificate earned!', item.description)
+        self.assertEquals(certificate.RESOURCE_KEY, item.resource_key)
+        self.assertAlmostEqual(
+            now_ts, utc.datetime_to_timestamp(item.when), delta=10)
 
     def _submit_review(self, assessment):
         """Submits a review by the current student.

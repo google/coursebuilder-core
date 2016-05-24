@@ -196,14 +196,14 @@ class BaseNewsDto(object):
     def _set_news_items(self, news_items):
         self.dict[self.NEWS_ITEMS] = NewsItem.list_to_json(news_items)
 
-    def add_news_item(self, news_item):
+    def add_news_item(self, news_item, overwrite_existing):
         news_items = self.get_news_items()
         # Only one News item per course object.  If user has not seen older
         # alert, no point retaining it.
         old_item = common_utils.find(
             lambda i: i.resource_key == news_item.resource_key, news_items)
         if old_item:
-            if old_item.when < news_item.when:
+            if overwrite_existing and old_item.when < news_item.when:
                 news_items.remove(old_item)
                 news_items.append(news_item)
         else:
@@ -214,10 +214,10 @@ class BaseNewsDto(object):
 class BaseNewsDao(models.BaseJsonDao):
 
     @classmethod
-    def add_news_item(cls, news_item):
+    def add_news_item(cls, news_item, overwrite_existing=True):
         """Convenience method when only one operation is needed on DTO."""
         dto = cls.load_or_default()
-        dto.add_news_item(news_item)
+        dto.add_news_item(news_item, overwrite_existing)
         cls.save(dto)
 
     @classmethod
