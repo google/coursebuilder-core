@@ -119,10 +119,15 @@ def _resolve_id(cls, node_id):
 class CourseAwareObjectType(object):
     """Mixin providing methods for Graphene objects having a course context."""
 
-    def __init__(self, course, course_view, **kwargs):
+    def __init__(self, app_context, course=None, course_view=None, **kwargs):
         super(CourseAwareObjectType, self).__init__(**kwargs)
-        self.course = course
+        self.app_context = app_context
+        self._course = course
         self._course_view = course_view
+
+    @property
+    def course(self):
+        return self._course or courses.Course(None, self.app_context)
 
     @property
     def course_view(self):
@@ -130,7 +135,7 @@ class CourseAwareObjectType(object):
         # needed, and inherit from the parent if possible.
         if not self._course_view:
             self._course_view = self.get_course_view(
-                self.course, self.get_student(self.course))
+                self.course, self.get_student(self.app_context))
         return self._course_view
 
     @classmethod
@@ -157,15 +162,15 @@ class CourseAwareObjectType(object):
     def expand_tags(self, text_with_tags, info):
         handler = info.context.request_context.get('handler')
         try:
-            handler.app_context = self.course.app_context
+            handler.app_context = self.app_context
             return self._render(
                 handler, {'content': text_with_tags}, 'content_with_tags.html')
         finally:
             del handler.app_context
 
     @classmethod
-    def get_student(cls, course):
-        with common_utils.Namespace(course.app_context.namespace):
+    def get_student(cls, app_context):
+        with common_utils.Namespace(app_context.namespace):
             _, student = utils.CourseHandler.get_user_and_student_or_transient()
             return student
 
@@ -174,8 +179,8 @@ class Lesson(CourseAwareObjectType, graphene.relay.Node):
     title = graphene.String()
     body = graphene.String()
 
-    def __init__(self, course, course_view, unit, lesson, **kwargs):
-        super(Lesson, self).__init__(course, course_view, **kwargs)
+    def __init__(self, app_context, unit, lesson, **kwargs):
+        super(Lesson, self).__init__(app_context, **kwargs)
         self._lesson = lesson
         self._unit = unit
 
@@ -208,13 +213,14 @@ class Lesson(CourseAwareObjectType, graphene.relay.Node):
     def get_lesson(cls, lesson_id):
         course_id, unit_id, lesson_id = lesson_id.split(ID_SEP)
         course = Course.get_course(course_id).course
-        student = cls.get_student(course)
+        student = cls.get_student(course.app_context)
         course_view = cls.get_course_view(course, student)
         unit = course_view.find_element([unit_id]).course_element
         lesson = course_view.find_element([unit_id, lesson_id]).course_element
         if lesson:
             return Lesson(
-                course, course_view, unit, lesson,
+                course.app_context, unit, lesson,
+                course=course, course_view=course_view,
                 id=cls._get_lesson_id(course, unit, lesson))
         else:
             return None
@@ -223,7 +229,8 @@ class Lesson(CourseAwareObjectType, graphene.relay.Node):
     def get_all_lessons(cls, course, course_view, unit):
         return [
             Lesson(
-                course, course_view, unit, lesson,
+                course.app_context, unit, lesson,
+                course=course, course_view=course_view,
                 id=cls._get_lesson_id(course, unit, lesson))
             for lesson in course_view.get_lessons(unit.unit_id)]
 
@@ -238,8 +245,8 @@ class Unit(CourseAwareObjectType, graphene.relay.Node):
     header = graphene.String()
     footer = graphene.String()
 
-    def __init__(self, course, course_view, unit, **kwargs):
-        super(Unit, self).__init__(course, course_view, **kwargs)
+    def __init__(self, app_context, unit, **kwargs):
+        super(Unit, self).__init__(app_context, **kwargs)
         self._unit = unit
 
     @classmethod
@@ -261,19 +268,24 @@ class Unit(CourseAwareObjectType, graphene.relay.Node):
     def get_unit(cls, unit_id):
         course_id, unit_id = unit_id.split(ID_SEP)
         course = Course.get_course(course_id).course
-        student = cls.get_student(course)
+        student = cls.get_student(course.app_context)
         course_view = cls.get_course_view(course, student)
         unit = course_view.find_element([unit_id]).course_element
         if unit:
             return Unit(
-                course, course_view, unit, id=cls._get_unit_id(course, unit))
+                course.app_context, unit,
+                course=course, course_view=course_view,
+                id=cls._get_unit_id(course, unit))
         else:
             return None
 
     @classmethod
     def get_all_units(cls, course, course_view):
         return [
-            Unit(course, course_view, unit, id=cls._get_unit_id(course, unit))
+            Unit(
+                course.app_context, unit,
+                course=course, course_view=course_view,
+                id=cls._get_unit_id(course, unit))
             for unit in course_view.get_units()
         ]
 
@@ -366,7 +378,7 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
 
     @property
     def course_settings(self):
-        return courses.Course.get_environ(self.course.app_context)
+        return courses.Course.get_environ(self.app_context)
 
     @classmethod
     def get_node(cls, node_id, info):
@@ -377,29 +389,26 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
             return None
 
     @classmethod
-    def _is_visible(cls, course):
-        return sites.can_handle_course_requests(course.app_context)
+    def _is_visible(cls, app_context):
+        with common_utils.Namespace(app_context.namespace):
+            return sites.can_handle_course_requests(app_context)
 
     @classmethod
     def get_course(cls, course_id):
         app_context = sites.get_course_for_path(course_id)
         if not app_context or app_context.get_slug() != course_id:
             return None
-        with common_utils.Namespace(app_context.namespace):
-            course = courses.Course.get(app_context)
-            if cls._is_visible(course):
-                return Course(course, None, id=course_id)
+        if cls._is_visible(app_context):
+            return Course(app_context, id=app_context.get_slug())
         return None
 
     @classmethod
     def get_all_courses(cls):
         all_courses = []
         for app_context in sites.get_all_courses():
-            with common_utils.Namespace(app_context.namespace):
-                course = courses.Course(None, app_context)
-                if cls._is_visible(course):
-                    all_courses.append(
-                        Course(course, None, id=app_context.get_slug()))
+            if cls._is_visible(app_context):
+                all_courses.append(Course(
+                    app_context=app_context, id=app_context.get_slug()))
         return all_courses
 
     def resolve_title(self, args, info):
@@ -417,7 +426,7 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
             return None
 
     def resolve_enrollment(self, args, info):
-        return Enrollment(self.get_student(self.course))
+        return Enrollment(self.get_student(self.app_context))
 
     def resolve_abstract(self, args, info):
         try:
@@ -432,7 +441,7 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
             return None
 
     def resolve_url(self, args, info):
-        return self.course.app_context.get_slug()
+        return self.app_context.get_slug()
 
     def resolve_open_for_registration(self, args, info):
         try:
