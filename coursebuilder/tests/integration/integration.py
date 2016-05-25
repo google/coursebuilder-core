@@ -104,6 +104,10 @@ class TestBase(suite.TestBase):
         return pageobjects.AppengineAdminPage(
             self, suite.TestBase.ADMIN_SERVER_BASE_URL, course_name)
 
+    def load_appengine_cron(self):
+        return pageobjects.AppengineCronPage(self).load(
+            suite.TestBase.ADMIN_SERVER_BASE_URL, suffix='/cron')
+
     def login(self, email, admin=True, logout_first=False):
         root_page = self.load_root_page()
         if logout_first:

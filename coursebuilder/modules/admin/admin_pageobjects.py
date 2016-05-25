@@ -21,6 +21,7 @@ __author__ = [
 import collections
 import logging
 import re
+import time
 
 from modules.admin import admin
 from selenium.common import exceptions
@@ -165,19 +166,31 @@ class CoursesListPage(pageobjects.CoursesListPage):
         self._tester.assertEqual(expected_state, actual_state)
         return self
 
-    def _match_enrolled_count_and_tooltip(self, namespace, count, tooltip):
+    def _match_enrolled_count_and_tooltip(self, namespace, count, tooltip,
+                                          delay_scale_factor):
         count_div_selector = '#enrolled_{}'.format(namespace)
         tooltip_selector = '#activity_{}'.format(namespace)
+        wait_timeout = pageobjects.DEFAULT_TIMEOUT
+
+        if delay_scale_factor >= 1:
+            reload_sleep = delay_scale_factor
+            # Caller is slowing down this test, so adjust wait() to compensate.
+            wait_timeout = wait_timeout * delay_scale_factor
+        else:
+            # For fraction, zero, or negative scale factors, use time.sleep(0)
+            # (which is the no-op POSIX sleep(0) on Linux, at least).
+            reload_sleep = 0
 
         def count_div_equals_count(driver):
             count_div = self.find_element_by_css_selector(count_div_selector)
             match = (count == count_div.text.strip())
             if not match:
-                self.load(None) # Just use last-seen base_url value.
+                time.sleep(reload_sleep)
+                self.load(self._base_url)
             return match
 
         # Verification will fail by timeout if expected count never appears.
-        self.wait().until(count_div_equals_count)
+        self.wait(timeout=wait_timeout).until(count_div_equals_count)
 
         def tooltip_match_pops_up(driver):
             count_div = self.find_element_by_css_selector(count_div_selector)
@@ -186,26 +199,31 @@ class CoursesListPage(pageobjects.CoursesListPage):
             tooltip_div = self.find_element_by_css_selector(tooltip_selector)
             match = re.match(tooltip, tooltip_div.text.strip())
             if not match:
-                self.load(None) # Just use last-seen base_url value.
+                time.sleep(reload_sleep)
+                self.load(self._base_url)
             return match
 
         # Verification will fail by timeout if expected count never appears.
-        self.wait().until(tooltip_match_pops_up)
+        self.wait(timeout=wait_timeout).until(tooltip_match_pops_up)
         return self
 
-    def verify_no_enrollments(self, namespace, title):
+    def verify_no_enrollments(self, namespace, title,
+                              delay_scale_factor=0):
         text = admin.BaseAdminHandler.NONE_ENROLLED
         regexp = re.escape(
             '(registration activity for %s is being computed)' % title)
-        return self._match_enrolled_count_and_tooltip(namespace, text, regexp)
+        return self._match_enrolled_count_and_tooltip(
+            namespace, text, regexp, delay_scale_factor)
 
     DATETIME_REGEXP = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}"
 
-    def verify_total_enrollments(self, namespace, title, count):
+    def verify_total_enrollments(self, namespace, title, count,
+                                 delay_scale_factor=1):
         text = "%d" % count
         regexp = ('Most recent activity at %s UTC for %s' %
                   (self.DATETIME_REGEXP, re.escape(title + '.')))
-        return self._match_enrolled_count_and_tooltip(namespace, text, regexp)
+        return self._match_enrolled_count_and_tooltip(
+            namespace, text, regexp, delay_scale_factor)
 
     def verify_availability(self, namespace, expected):
         a_href = self.find_element_by_id('availability_' + namespace)

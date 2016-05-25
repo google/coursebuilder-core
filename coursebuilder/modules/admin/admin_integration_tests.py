@@ -22,6 +22,7 @@ from selenium.common import exceptions
 
 from models import courses
 from modules.admin import admin_pageobjects
+from modules.admin import enrollments_mapreduce
 from tests.integration import integration
 
 
@@ -195,6 +196,28 @@ class CourseMultiEditTests(_CoursesListTestBase):
 
 
 class CoursesEnrollmentsTests(_CoursesListTestBase):
+
+    COURSES_LIST_PAGE_RELOAD_WAIT = 5
+
+    def test_enrollments_mapreduce_zero(self):
+        course_name, title = self.create_new_course(login=False)
+        course_namespace = 'ns_' + course_name
+
+        # Specifically do *not* load the Courses list just yet, instead,
+        # kick off the site_admin_enrollments/total MapReduce first.
+        cron_page = self.load_appengine_cron(
+        ).run_cron(
+            enrollments_mapreduce.StartEnrollmentsJobs.URL
+        )
+
+        # Now load the Courses list page and confirm that the value in the
+        # "Registered Students" column is (eventually) definitely 0 (zero)
+        # and not an em dash.
+        self.load_courses_list(
+        ).verify_total_enrollments(
+            course_namespace, title, 0,
+            delay_scale_factor=self.COURSES_LIST_PAGE_RELOAD_WAIT
+        )
 
     def test_registered_students_updated(self):
         course_name, title = self.create_new_course(login=False)

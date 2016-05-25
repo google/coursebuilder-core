@@ -49,7 +49,7 @@ class PageObject(object):
 
     def __init__(self, tester):
         self._tester = tester
-        self._last_base_url = None
+        self._base_url = suite.TestBase.INTEGRATION_SERVER_BASE_URL
 
     def get(self, url, can_retry=True):
         if can_retry:
@@ -67,17 +67,7 @@ class PageObject(object):
             'Timeout waiting for %s page to load', url)
 
     def load(self, base_url, suffix=BASE_URL_SUFFIX):
-        if base_url is None:
-            # Allow sub-classes to *explicitly* pass None to attempt to use
-            # the last-seen base_url value. This is used in methods that need
-            # to repeatedly reload the page (e.g. looking for a value to be
-            # updated on an non-dynamic page) but do not want to require the
-            # calling test to keep supplying that value.
-            base_url = self._last_base_url
-        else:
-            self._last_base_url = base_url
-        # If base_url is still None at this point, should base_url fall back to
-        # suite.TestBase.INTEGRATION_SERVER_BASE_URL as a default value?
+        self._base_url = base_url
         self.get(base_url + suffix)
         return self
 
@@ -590,6 +580,7 @@ class DashboardPage(PageObject):
     """Page object to model the interactions with the dashboard landing page."""
 
     def load(self, base_url, name):
+        self._base_url = base_url
         dest = '/'.join([base_url, name, 'dashboard'])
         def page_loaded(driver):
             self.get(dest)
@@ -1652,6 +1643,21 @@ class AppengineAdminPage(PageObject):
             '?namespace=ns_%s' % self._course_name +
             '&kind=%s' % entity_kind)
         return DatastorePage(self._tester)
+
+
+class AppengineCronPage(PageObject):
+
+    def run_cron(self, name):
+        # Click on the [Run now] button of the named cron job.
+        run_now = self.find_element_by_css_selector(
+            'button[name="{}"].ae-cron-run'.format(name))
+        run_now.click()
+
+        # Confirm that the request to the named cron job succeeded.
+        succeeded = 'Request to {} succeeded!'.format(name)
+        self.wait().until(ec.text_to_be_present_in_element(
+            (by.By.ID, 'cron-feedback'), succeeded))
+        return self
 
 
 class DatastorePage(PageObject):
