@@ -45,11 +45,13 @@ def get_parent_element(web_element):
 class PageObject(object):
     """Superclass to hold shared logic used by page objects."""
 
-    BASE_URL_SUFFIX = '/'
+    URL_PATH_SEP = '/'
+    BASE_URL_SUFFIX = ''  # canonicalize() will add a trailing URL_PATH_SEP.
 
-    def __init__(self, tester):
+    def __init__(self, tester,
+                 base_url=suite.TestBase.INTEGRATION_SERVER_BASE_URL):
         self._tester = tester
-        self._base_url = suite.TestBase.INTEGRATION_SERVER_BASE_URL
+        self._base_url = self.canonicalize_base_url(base_url)
 
     def get(self, url, can_retry=True):
         if can_retry:
@@ -66,9 +68,58 @@ class PageObject(object):
         raise exceptions.TimeoutException(
             'Timeout waiting for %s page to load', url)
 
-    def load(self, base_url, suffix=BASE_URL_SUFFIX):
-        self._base_url = base_url
-        self.get(base_url + suffix)
+    def canonicalize_base_url(self, base_url):
+        """Alters the supplied "base" URL for combination with a suffix.
+
+        Args:
+            base_url: a string, typically the <scheme>://<host>:<port>
+                portion of a complete URL, but could also include some
+                /<path>/ part beginning and ending in the / URL path
+                separator (to which some addtional path suffix would be
+                later appended).
+        Returns:
+            base_url with no trailing / URL path separators, or the empty
+            string if base_url is empty or None.
+        """
+        if base_url:
+            return base_url.rstrip(self.URL_PATH_SEP)
+
+        # Results in a relative path URL starting with / when combined with
+        # a suffix via canonicalize().
+        return ''
+
+    def canonicalize(self, base_url, suffix):
+        """Returns canonicalized combined URL, base_url, and suffix parts.
+
+        The combined URL always has exactly one / URL path separator between
+        the supplied base_url and the supplied suffix. The supplied base_url
+        is first passed to canonicalize_base_url(). The suffix is similarly
+        adjusted to have no leading / URL path separators.
+
+        If base_url is empty or None, canonicalize_base_url() returns an empty
+        string, and the combined URL will be a path URL, with an implied host.
+        Example: "/dashboard"
+
+        If suffix is empty, the combined URL will be a host URL with only a
+        trailing / URL path separator as the path portion of the URL.
+        Example: "http://localhost:8081/"
+
+        If both are empty, the minimal implied-host, path URL "/" results.
+        """
+        base_url = self.canonicalize_base_url(base_url)
+
+        if suffix:
+            suffix = suffix.lstrip(self.URL_PATH_SEP)
+        else:
+            suffix = ''  # Results in a trailing URL_PATH_SEP.
+
+        url = self.URL_PATH_SEP.join([base_url, suffix])
+        return (url, base_url, suffix)
+
+    def load(self, base_url, suffix=''):
+        url, base_url, _ = self.canonicalize(base_url, suffix)
+        self._base_url = base_url  # Remember canonicalized base_url.
+        self.get(url)
         return self
 
     def wait(self, timeout=None):
@@ -580,8 +631,10 @@ class DashboardPage(PageObject):
     """Page object to model the interactions with the dashboard landing page."""
 
     def load(self, base_url, name):
+        suffix = self.URL_PATH_SEP.join([name, 'dashboard'])
+        dest, base_url, _ = self.canonicalize(base_url, suffix)
+        # Store _base_url explicitly since super() load() is not called.
         self._base_url = base_url
-        dest = '/'.join([base_url, name, 'dashboard'])
         def page_loaded(driver):
             self.get(dest)
             return driver.current_url == dest
@@ -1633,15 +1686,14 @@ class AnalyticsPage(PageObject):
 class AppengineAdminPage(PageObject):
 
     def __init__(self, tester, base_url, course_name):
-        super(AppengineAdminPage, self).__init__(tester)
-        self._base_url = base_url
+        super(AppengineAdminPage, self).__init__(tester, base_url=base_url)
         self._course_name = course_name
 
     def get_datastore(self, entity_kind):
-        self.get(
-            self._base_url + '/datastore' +
-            '?namespace=ns_%s' % self._course_name +
-            '&kind=%s' % entity_kind)
+        suffix = '/datastore?namespace=ns_%s&kind=%s' % (
+            self._course_name, entity_kind)
+        url, _, _ = self.canonicalize(self._base_url, suffix)
+        self.get(url)
         return DatastorePage(self._tester)
 
 
@@ -1707,8 +1759,8 @@ class DatastorePage(PageObject):
 
 class PolymerPageObject(PageObject):
 
-    def load(self, url):
-        self.get(suite.TestBase.INTEGRATION_SERVER_BASE_URL + url)
+    def load(self, suffix):
+        super(PolymerPageObject, self).load(self._base_url, suffix=suffix)
         return self
 
     def assert_test_results(self):
