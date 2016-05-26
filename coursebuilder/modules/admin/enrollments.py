@@ -445,6 +445,14 @@ def _count_drop(unused_id, utc_date_time):
     EnrollmentsDroppedDAO.inc(namespace_name, utc_date_time)
 
 
+def _new_course_counts(app_context, unused_errors):
+    """Called back from CoursesItemRESTHandler when new course is created."""
+    namespace_name = app_context.get_namespace_name()
+    TotalEnrollmentDAO.set(namespace_name, 0)
+    EnrollmentsAddedDAO.set(namespace_name, utc.now_as_datetime(), 0)
+    EnrollmentsDroppedDAO.set(namespace_name, utc.now_as_datetime(), 0)
+
+
 class EnrollmentsDataSource(data_sources.AbstractSmallRestDataSource,
                             data_sources.SynchronousQuery):
     """Merge adds/drops data to single source for display libraries."""
@@ -516,6 +524,11 @@ def register_callbacks():
     models.StudentLifecycleObserver.EVENT_CALLBACKS[
         models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED][
             MODULE_NAME] = _count_drop
+
+    # Set counters for newly-created courses initially to zero (to avoid
+    # extraneous enrollments MapReduce runs).
+    config.CoursesItemRESTHandler.NEW_COURSE_ADDED_HOOKS[
+        MODULE_NAME] = _new_course_counts
 
     # Delete the corresponding enrollments counters when a course is deleted.
     config.CourseDeleteHandler.COURSE_DELETED_HOOKS[

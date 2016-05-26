@@ -224,13 +224,16 @@ class CoursesEnrollmentsTests(_CoursesListTestBase):
         course_namespace = 'ns_' + course_name
 
         # Newly-created course should have 'Private' availability.
-        # "Registered Students" count starts as em dash to indicate
-        # "no count", and tooltip contents are different.
+        # "Registered Students" count starts as zero.
+        #
+        # (A "No count" em dash can only be displayed for legacy courses that
+        # existed before the release of Course Builder that added enrollment
+        # counts, a state is difficult to create during integration tests.)
         self.load_courses_list(
         ).verify_availability(
             course_namespace, 'Private'
-        ).verify_no_enrollments(
-            course_namespace, title
+        ).verify_total_enrollments(
+            course_namespace, title, 0
         )
 
         admin1 = self.one_admin()

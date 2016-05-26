@@ -229,7 +229,24 @@ class CoursesPropertyRights(object):
 
 
 class CoursesItemRESTHandler(utils.BaseRESTHandler):
-    """Provides REST API for course entries."""
+    """Provides REST API for course entries.
+
+    Modules can register to be called back when a new course has been
+    successfully created. Callbacks are registered like this:
+
+        config.CoursesItemRESTHandler.NEW_COURSE_ADDED_HOOKS[
+            'my_module'] = my_handler
+
+    New course callbacks are called a single time, and in no particular order,
+    via common.utils.run_hooks().
+
+    New course callbacks must accept two parameters:
+        - app_context
+        - errors, a (possibly non-empty) list to which any errors occurring
+            during the callback are appended
+    """
+
+    NEW_COURSE_ADDED_HOOKS = {}
 
     # Enable other modules to make changes to sample course import.
     # Each member must be a function of the form:
@@ -247,8 +264,7 @@ class CoursesItemRESTHandler(utils.BaseRESTHandler):
             return
 
         if not CoursesPropertyRights.can_add():
-            transforms.send_json_response(
-                self, 401, 'Access denied.')
+            self._send_json_error_response(401, 'Access denied.')
             return
 
         payload = request.get('payload')
@@ -264,7 +280,7 @@ class CoursesItemRESTHandler(utils.BaseRESTHandler):
         if not entry and not errors:
             errors.append('Error adding a new course entry.')
         if errors:
-            transforms.send_json_response(self, 412, '\n'.join(errors))
+            self._send_json_error_response(412, errors)
             return
 
         # We can't expect our new configuration being immediately available due
@@ -275,8 +291,7 @@ class CoursesItemRESTHandler(utils.BaseRESTHandler):
         # Update course with a new title and admin email.
         new_course = courses.Course(None, app_context=app_context)
         if not new_course.init_new_course_settings(title, admin_email):
-            transforms.send_json_response(
-                self, 412,
+            self._send_json_error_response(412,
                 'Added new course entry, but failed to update title and/or '
                 'admin email. The course.yaml file already exists and must be '
                 'updated manually.')
@@ -284,23 +299,34 @@ class CoursesItemRESTHandler(utils.BaseRESTHandler):
 
         if template_course:
             if template_course != 'sample':
-                transforms.send_json_response(
-                    self, 412,
-                    'Unknown template course: %s' % template_course)
+                self._send_json_error_response(
+                    412, 'Unknown template course: %s' % template_course)
                 return
-            errors = []
             src_app_context = sites.get_all_courses('course:/:/:')[0]
             new_course.import_from(src_app_context, errors)
             new_course.save()
             if not errors:
                 common_utils.run_hooks(
                     self.COPY_SAMPLE_COURSE_HOOKS, app_context, errors)
-            if errors:
-                transforms.send_json_response(self, 412, '\n'.join(errors))
-                return
 
-        transforms.send_json_response(
-            self, 200, 'Added.', {'entry': entry})
+        if not errors:
+            common_utils.run_hooks(
+                self.NEW_COURSE_ADDED_HOOKS.itervalues(), app_context, errors)
+
+        if errors:
+            # Any errors at this point are the result of one or more failed
+            # _HOOKS callbacks. It is probably not possible to determine if
+            # these are caused by bad server state or instead by bad user
+            # input, so return a rather generic 500 HTTP status.
+            self._send_json_error_response(500, errors)
+        else:
+            transforms.send_json_response(
+                self, 200, 'Added.', {'entry': entry})
+
+    def _send_json_error_response(self, status, errors):
+        if isinstance(errors, basestring):
+            errors = [errors]
+        transforms.send_json_response(self, status, '\n'.join(errors))
 
 
 class Model(object):
