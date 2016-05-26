@@ -20,6 +20,7 @@ import os
 
 import appengine_config
 from common import crypto
+from common import resource
 from common import schema_fields
 from controllers import utils
 from models import courses
@@ -41,10 +42,12 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
 
     ACTION = 'availability'
     URL = 'rest/availability'
+    ADD_TRIGGER_BUTTON_TEXT = 'Add date/time availability change'
 
     @classmethod
     def get_form(cls, handler):
-        schema = cls.get_schema()
+        course = handler.get_course()
+        schema = cls.get_schema(course)
         return oeditor.ObjectEditor.get_html_for(
             handler, schema.get_json_schema(), schema.get_schema_dict(),
             'dummy_key', cls.URL, additional_dirs=[TEMPLATES_DIR], exit_url='',
@@ -52,7 +55,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             extra_js_files=['availability.js'])
 
     @classmethod
-    def get_schema(cls):
+    def get_schema(cls, course):
         ret = schema_fields.FieldRegistry(
             'Availability', 'Course Availability Settings',
             extra_schema_dict_values={
@@ -67,6 +70,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             select_data=[
                 (k, v['title'])
                 for k, v in courses.COURSE_AVAILABILITY_POLICIES.iteritems()]))
+
         element_settings = schema_fields.FieldRegistry(
             'Element Settings', 'Availability settings for course elements',
             extra_schema_dict_values={'className': 'content-element'})
@@ -101,12 +105,47 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'element_settings', 'Content Availability',
             item_type=element_settings, optional=True,
             extra_schema_dict_values={'className': 'content-availability'}))
+
         ret.add_property(schema_fields.SchemaField(
             'whitelist', 'Students Allowed to Register', 'text',
             description='Only students with email addresses in this list may '
             'register for the course.  Separate addresses with any combination '
             'of commas, spaces, or separate lines.',
             i18n=False, optional=True))
+
+        availability_trigger = schema_fields.FieldRegistry(
+            'Trigger', 'Date/Time Triggered Availability Change',
+            extra_schema_dict_values={'className': 'availability-trigger'})
+        availability_trigger.add_property(schema_fields.SchemaField(
+            'content', 'For course content:', 'string',
+            description='The course content, such as unit or lesson, '
+            'for which to change the availability to students.',
+            i18n=False, select_data=cls.content_select(course),
+            extra_schema_dict_values={'className': 'trigger-content'}))
+        availability_trigger.add_property(schema_fields.SchemaField(
+            'availability', 'Change availability to:', 'string',
+            description='The availability of the course resource will '
+            'change to this value after the trigger date and time.',
+            i18n=False, select_data=courses.AVAILABILITY_SELECT_DATA,
+            extra_schema_dict_values={'className': 'trigger-availability'}))
+        availability_trigger.add_property(schema_fields.SchemaField(
+            'when', 'At this date & UTC hour:', 'datetime',
+            i18n=False,
+            description='The date and hour (UTC) when the availability of the '
+            'resource will be changed.',
+            extra_schema_dict_values={
+                'className': 'trigger-when inputEx-required'}))
+        ret.add_property(schema_fields.FieldArray(
+            'availability_triggers',
+            'Change Course Content Availability at Date/Time',
+            item_type=availability_trigger, optional=True,
+            description=services.help_urls.make_learn_more_message(
+                messages.AVAILABILITY_TRIGGERS_DESCRIPTION,
+                'course:availability:triggers'),
+            extra_schema_dict_values={
+                'className': 'availability-triggers',
+                'listAddLabel': cls.ADD_TRIGGER_BUTTON_TEXT,
+                'listRemoveLabel': 'Delete'}))
         return ret
 
     @classmethod
@@ -150,15 +189,60 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         return elements
 
     @classmethod
+    def add_content_option(cls, content_id, content_type, title, select,
+                           note='', indent=0):
+        value = str(resource.Key(content_type, content_id))
+        text = title
+        if note:
+            text = '{} ({})'.format(text, note)
+        if indent:
+            text = ('&emsp;' * indent) + text
+        select.append((value, text))
+
+    @classmethod
+    def content_select(cls, course):
+        select = []
+        for unit in course.get_units():
+            if unit.is_assessment():
+                if course.get_parent_unit(unit.unit_id):
+                    continue
+                note = 'assessment'
+            elif unit.is_link():
+                note = 'link'
+            else:
+                note = 'unit'
+            cls.add_content_option(unit.unit_id, 'unit', unit.title, select,
+                                   note=note)
+            if unit.is_unit():
+                if unit.pre_assessment:
+                    pre = course.find_unit_by_id(unit.pre_assessment)
+                    cls.add_content_option(
+                        pre.unit_id, 'unit', pre.title, select,
+                        note='pre-assessment', indent=2)
+                for lesson in course.get_lessons(unit.unit_id):
+                    cls.add_content_option(
+                        lesson.lesson_id, 'lesson', lesson.title, select,
+                        indent=1)
+                if unit.post_assessment:
+                    post = course.find_unit_by_id(unit.post_assessment)
+                    cls.add_content_option(
+                        post.unit_id, 'unit', post.title, select,
+                        note='post-assessment', indent=2)
+        return select
+
+    @classmethod
     def construct_entity(cls, course):
         """Expose as function for convenience in wrapping this handler."""
 
         course_availability = course.get_course_availability()
         settings = course.app_context.get_environ()
+        reg_form = settings.setdefault('reg_form', {})
+        publish = settings.setdefault('publish', {})
         entity = {
             'course_availability': course_availability,
-            'whitelist': settings['reg_form']['whitelist'],
+            'whitelist': reg_form.get('whitelist', ''),
             'element_settings': cls.traverse_course(course),
+            'availability_triggers': publish.get('triggers', []),
         }
         return entity
 
@@ -206,6 +290,10 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         whitelist = payload.get('whitelist')
         if whitelist is not None:
             settings['reg_form']['whitelist'] = whitelist
+
+        triggers = payload.get('availability_triggers')
+        if triggers is not None:
+            settings.setdefault('publish', {})['triggers'] = triggers
 
         course.save_settings(settings)
 

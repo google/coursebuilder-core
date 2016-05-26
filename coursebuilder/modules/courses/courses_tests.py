@@ -18,10 +18,12 @@ __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 
 import collections
 import copy
+import re
 import urlparse
 
 from common import utils as common_utils
 from common import crypto
+from common import resource
 from controllers import sites
 from controllers import utils
 from models import courses
@@ -2137,6 +2139,168 @@ class AvailabilityTests(actions.TestBase):
         expected = []
         actual = self._parse_leftnav(response)
         self.assertEquals(expected, actual)
+
+    DetectOption = collections.namedtuple(
+        'DetectOption', 'type indent link_re note_re text_re')
+
+    DETECT_OPTION_ORDER = [
+        DetectOption(
+            'unit',
+            '',  # Top-level assessments are not indented.
+            re.compile(r'^assessment\?name=([0-9]+)$'),
+            re.compile(r' \(assessment\)$'),
+            None,
+        ),
+        DetectOption(
+            'lesson',
+            '&emsp;',  # Lessons are under units and indented.
+            re.compile(r'^unit\?unit=[0-9]+&lesson=([0-9]+)$'),
+            None,
+            re.compile(r'[0-9]+\.[0-9]+ '),  # E.g. "2.1 "
+        ),
+        DetectOption(
+            'unit',
+            '&emsp;' * 2,  # Double-indented for emphasis, compared to lesson.
+            re.compile(r'^unit\?unit=[0-9]+&assessment=([0-9]+)$'),
+            re.compile(r' \((pre|post)-assessment\)$'),
+            None
+        ),
+        DetectOption(
+            'unit', '',
+            re.compile(r'^unit\?unit=([0-9]+)$'),
+            re.compile(r' \(unit\)$'),
+            re.compile(r'Unit [0-9]+ - '),  # E.g. "Unit 1 - "
+        ),
+        DetectOption(
+            'unit',
+            '',  # Top-level links are not indented.
+            None,
+            re.compile(r' \(link\)$'),
+            None,
+        ),
+    ]
+
+    def _check_content_option(self, option, element):
+        expected_text = element.text
+        link = element.link
+
+        for detect in self.DETECT_OPTION_ORDER:
+            expected_type = detect.type
+            expected_indent = detect.indent
+            expected_note_re = detect.note_re
+
+            if link and detect.link_re:
+                matched = detect.link_re.match(link)
+                if matched:
+                    expected_id = matched.group(1)
+                    if detect.text_re:
+                        prefixed = detect.text_re.match(expected_text)
+                        if prefixed:
+                            prefix = prefixed.group(0)
+                            expected_text = expected_text[len(prefix):]
+                    break
+            else:
+                # Top-level link is the only thing remaining?
+                expected_id = None  # No way to determine from Link Element.
+
+        label = option['label']
+        text = label
+        if expected_indent:
+            text = text[len(expected_indent):]  # Trim off the indentation.
+
+        content_type, content_id = option['value'].split(':')
+
+        if expected_note_re:
+            annotated = expected_note_re.search(label)
+            self.assertTrue(annotated)
+            annotation = annotated.group(0)
+            text = text[:-len(annotation)]  # Trim off the annotation.
+
+        if expected_indent:
+            self.assertTrue(label.startswith(expected_indent))
+        else:
+            self.assertFalse(label.startswith('emsp;'))
+
+        self.assertEquals(expected_type, content_type)
+        if expected_id:
+            self.assertEquals(expected_id, content_id)
+
+        self.assertEquals(expected_text, text)
+
+    JSON_PARSE_CALL = 'JSON.parse('
+
+    def test_content_select(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        response = self.get(self.action_url)
+        self.assertEquals(200, response.status_int)
+
+        # Find all of the <script> tags that contain inlined Javascript.
+        soup = self.parse_html_string_to_soup(response.body)
+        scripts = soup.find('script', type='text/javascript', src='')
+
+        # Combine all of the lines from these scripts that contain a
+        # JSON.parse() call. This works for the purposes of this test because
+        # currently the JSON.parse() call that defines the trigger-content
+        # <select> definition of interest is always a single, long line of
+        # text.
+        trigger_content_json = []
+        for script in scripts:
+            for line in str(script).splitlines():
+                call_start = line.find(self.JSON_PARSE_CALL)
+                if call_start > -1:
+                    arg_start = call_start + len(self.JSON_PARSE_CALL)
+                    escaped_json = line[arg_start:-1]
+                    if 'trigger-content' in escaped_json:
+                        trigger_content_json.append(escaped_json)
+
+        self.assertEquals(1, len(trigger_content_json))
+        decoded = transforms.loads(transforms.loads(trigger_content_json[0]))
+        self.assertEquals('trigger-content', decoded['className'])
+        self.assertEquals('select', decoded['_type'])
+        options = decoded['choices']
+        for unit in self.ALL_LEVELS_WITH_LINKS_NO_PROGRESS:
+            self._check_content_option(options.pop(0), unit)
+            for item in unit.contents:
+                if not item.link:
+                    # E.g. "Review peer assignments" which dot show up in
+                    # traverse_course() results on the Publish > Availability
+                    # page in the Content Availability section either.
+                    continue
+                self._check_content_option(options.pop(0), item)
+
+    def test_put_triggers(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+
+        # Expect no triggers to be present in course settings initially.
+        publish = app_context.get_environ().get('publish', {})
+        self.assertEquals(publish.get('triggers', []), [])
+
+        # Define a unit trigger and a lesson trigger far into the future, so
+        # there is no chance that a cron task will execute them and remove
+        # them from the course settings prematurely.
+        date_and_time = '9999-05-13T00:00:00.0Z'
+        unit_two_key = str(resource.Key('unit', self.unit_two.unit_id))
+        unit_two_trigger = {
+            'content': unit_two_key,
+            'availability': courses.AVAILABILITY_AVAILABLE,
+            'when': date_and_time,
+        }
+        lesson_one_key = str(resource.Key('lesson', self.lesson_one.lesson_id))
+        lesson_one_trigger = {
+            'content': lesson_one_key,
+            'availability': courses.AVAILABILITY_UNAVAILABLE,
+            'when': date_and_time,
+        }
+        response = self._post({
+            'availability_triggers': [
+                unit_two_trigger, lesson_one_trigger,
+            ],
+        })
+        self.assertEquals(200, response.status_int)
+        expected = [unit_two_trigger, lesson_one_trigger]
+        publish = app_context.get_environ().get('publish', {})
+        self.assertEquals(expected, publish.get('triggers'))
 
 
 class CourseSettingsRESTHandlerTests(actions.TestBase):

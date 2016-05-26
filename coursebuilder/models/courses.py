@@ -151,7 +151,7 @@ DEFAULT_COURSE_YAML_DICT = {
         'can_register': True,
         'whitelist': '',
         'additional_registration_fields': '',
-        }
+        },
 }
 
 # Here are the defaults for an existing course.

@@ -3,12 +3,14 @@ registration:
 
 tests:
   functional:
-    - modules.courses.courses_tests.AvailabilityTests = 35
+    - modules.courses.courses_tests.AvailabilityTests = 37
     - modules.courses.courses_tests.BackgroundImportTests = 7
     - modules.courses.courses_tests.CourseAccessPermissionsTests = 7
     - modules.courses.courses_tests.CourseSettingsRESTHandlerTests = 1
     - modules.courses.courses_tests.ReorderAccess = 2
     - modules.courses.courses_tests.UnitLessonEditorAccess = 3
+  integration:
+    - modules.courses.courses_integration_tests.AvailabilityTests = 1
 
 files:
   - modules/courses/__init__.py
@@ -18,6 +20,8 @@ files:
   - modules/courses/constants.py
   - modules/courses/course_outline.html
   - modules/courses/courses.py
+  - modules/courses/courses_pageobjects.py
+  - modules/courses/courses_integration_tests.py
   - modules/courses/courses_tests.py
   - modules/courses/import_running.html
   - modules/courses/lessons.py

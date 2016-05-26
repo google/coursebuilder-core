@@ -755,7 +755,8 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
         if not student_groups:
             return availability.AvailabilityRESTHandler.get_form(handler)
 
-        schema = cls.get_schema(student_groups)
+        course = handler.get_course()
+        schema = cls.get_schema(student_groups, course)
         return oeditor.ObjectEditor.get_html_for(
             handler, schema.get_json_schema(), schema.get_schema_dict(),
             '', handler.canonicalize_url(cls.URL), '',
@@ -768,7 +769,7 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
                 'student_group_availability.css'])
 
     @classmethod
-    def get_schema(cls, student_groups):
+    def get_schema(cls, student_groups, course):
 
         element_settings = schema_fields.FieldRegistry(
             'Element Settings', 'Availability settings for course elements',
@@ -838,7 +839,7 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             i18n=False, optional=True,
             description=messages.GROUP_MEMBERS_DESCRIPTION))
 
-        ret = availability.AvailabilityRESTHandler.get_schema()
+        ret = availability.AvailabilityRESTHandler.get_schema(course)
         ret.add_property(schema_fields.SchemaField(
             cls._STUDENT_GROUP, 'Set Availability For', 'string',
             i18n=False, optional=True,

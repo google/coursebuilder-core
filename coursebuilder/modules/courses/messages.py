@@ -27,6 +27,10 @@ If checked, the content displays its title in the syllabus even when it is
 private.
 """
 
+AVAILABILITY_TRIGGERS_DESCRIPTION = """
+Changes to availability that are triggered at a specified date and time.
+"""
+
 CONTENTS_OF_THE_COURSE_DESCRIPTION = """
 The course.yaml file contains all course-level settings.  It can be
 modified from other settings sub-tabs, or directly edited in its
