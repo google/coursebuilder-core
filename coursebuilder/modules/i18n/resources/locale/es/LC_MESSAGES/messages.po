@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-05-16 07:31-0700\n"
+"POT-Creation-Date: 2016-05-31 06:57-0700\n"
 "PO-Revision-Date: 2016-04-11 08:00-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: es <LL@li.org>\n"
@@ -323,7 +323,7 @@ msgstr "Volver a la página del curso"
 #. Title line indicating what this page is.
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:121
+#: experimental/coursebuilder/modules/certificate/certificate.py:131
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "Certificado de realización del curso"
@@ -333,7 +333,7 @@ msgstr "Certificado de realización del curso"
 #. that the certificate is being presented to someone.
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:129
+#: experimental/coursebuilder/modules/certificate/certificate.py:139
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "Otorgado a"
@@ -341,7 +341,7 @@ msgstr "Otorgado a"
 #. Message fragment on a certificate of course completion.
 #. Indicates that the student has successfully completed something.
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:134
+#: experimental/coursebuilder/modules/certificate/certificate.py:144
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "por haber completado satisfactoriamente el"
@@ -349,35 +349,42 @@ msgstr "por haber completado satisfactoriamente el"
 #. Message fragment on a certificate of course completion.
 #. Gives the name of the course, followed by the word "course".
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:137
+#: experimental/coursebuilder/modules/certificate/certificate.py:147
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "curso %(course)s"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:269
+#: experimental/coursebuilder/modules/certificate/certificate.py:279
 msgid "Certificate"
 msgstr "Certificado"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:279
+#: experimental/coursebuilder/modules/certificate/certificate.py:289
 msgid "Click for certificate"
 msgstr "Haz clic para obtener el certificado"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:287
+#: experimental/coursebuilder/modules/certificate/certificate.py:297
 msgid "Download PDF"
 msgstr "Descargar PDF"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:295
+#: experimental/coursebuilder/modules/certificate/certificate.py:305
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
 msgstr ""
 "Aún no has cumplido los requisitos del curso para obtener un certificado "
 "de realización del curso."
+
+#. Brief note appearing in per-Student news dropdown menu
+#. indicating that this student has recently earned a course
+#. completion certificate.
+#: experimental/coursebuilder/modules/certificate/certificate.py:504
+msgid "Course completion certificate earned!"
+msgstr ""
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -770,13 +777,13 @@ msgstr "Enviar"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:363
+#: experimental/coursebuilder/modules/search/resources.py:358
 #: experimental/coursebuilder/views/unit.html:84
 msgid "Lesson"
 msgstr "Lección"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:730
+#: experimental/coursebuilder/modules/search/resources.py:725
 msgid "Announcement"
 msgstr "Anuncio"
 
@@ -1032,7 +1039,7 @@ msgid "Announcements"
 msgstr "Avisos"
 
 #. Shown if the list of announcements is empty.
-#: experimental/coursebuilder/views/announcements.html:30
+#: experimental/coursebuilder/views/announcements.html:37
 msgid "Currently, there are no announcements."
 msgstr "No hay anuncios por el momento."
 
@@ -1174,13 +1181,13 @@ msgstr "Registro"
 
 #. Text for title of navigation bar tab to reach list of
 #. courses the current user is enrolled in or whitelisted for.
-#: experimental/coursebuilder/views/base_course.html:78
+#: experimental/coursebuilder/views/base_course.html:86
 msgid "My Courses"
 msgstr "Mis cursos"
 
 #. Text for title of navigation bar tab to reach list of all
 #. available courses when user is logged out.
-#: experimental/coursebuilder/views/base_course.html:84
+#: experimental/coursebuilder/views/base_course.html:92
 msgid "Explore Courses"
 msgstr "Explorar cursos"
 
@@ -1624,5 +1631,4 @@ msgstr "Página siguiente"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Fin"
-
 
