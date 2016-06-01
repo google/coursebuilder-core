@@ -1,5 +1,6 @@
 <link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
 <link rel="import" href="/static/polymer-1.2.0/iron-ajax/iron-ajax.html" />
+<link rel="import" href="/static/polymer-1.2.0/paper-spinner/paper-spinner.html" />
 <link rel="import" href="/modules/explorer/_static/components/utility/unsafe-html.html">
 <link rel="import" href="/modules/explorer/_static/components/utility/floating-sidebar.html">
 <link rel="import" href="/modules/explorer/_static/components/course-cards/course-card-grouper.html">
@@ -17,29 +18,45 @@
       #content {
         flex: 1;
         padding-left: 48px;
+        padding-top: 32px;
+        position: relative;
       }
 
       #main {
         display: flex;
       }
+
+      paper-spinner {
+        position: absolute;
+        left: 32px;
+        top: 32px;
+      }
     </style>
 
     <iron-ajax
       auto url="/modules/gql/query"
-      params="[[_getParams()]]"
+      params="[[_getCoursesQuery()]]"
       handle-as="json"
       json-prefix=")]}'"
-      on-response="_onResponse"
+      on-response="_onCoursesResponse"
+    ></iron-ajax>
+
+    <iron-ajax
+      auto url="/modules/gql/query"
+      params="[[_getBasicQuery()]]"
+      handle-as="json"
+      json-prefix=")]}'"
+      on-response="_onBasicResponse"
     ></iron-ajax>
 
     <div id="top-content">
       <top-bar
-        site="[[data.site]]"
-        current-user="[[data.currentUser]]"
+        site="[[site]]"
+        current-user="[[currentUser]]"
       ></top-bar>
 
       <unsafe-html
-        html="[[data.site.courseExplorer.extraContent]]"
+        html="[[site.courseExplorer.extraContent]]"
       ></unsafe-html>
     </div>
 
@@ -52,9 +69,10 @@
       </floating-sidebar>
 
       <div id="content">
+        <paper-spinner active="{{!coursesLoaded}}"></paper-spinner>
         <course-card-grouper
           id="grouper"
-          courses="[[_filter(data.allCourses.edges, filterOptions.*)]]"
+          courses="[[_filter(courses.edges, filterOptions.*)]]"
         ></course-card-grouper>
       </div>
     </div>
@@ -77,46 +95,66 @@
           },
           notify: true,
         },
-        data: {
+        courses: {
+          type: Array,
+        },
+        currentUser: {
+          type: Object,
+        },
+        site: {
           type: Object,
         },
         categories: {
           type: Array,
           value: [],
+        },
+        coursesLoaded: {
+          type: Boolean,
+          value: false,
         }
       },
 
-      _getParams: function() {
-        return {q: '{' +
-            'site {title, logo {url, altText},' +
-            '  courseExplorer {extraContent}},' +
-            'allCourses {edges {node {' +
-            '  id, title, url, abstract, instructorDetails,' +
-            '  enrollment {enrolled}, openForRegistration,' +
-            '  startDate, endDate, estimatedWorkload, category {name} }}},' +
+      _getBasicQuery: function() {
+        return {q:
+            '{site {title, logo {url, altText},' +
+            '  courseExplorer {extraContent}}, ' +
             'currentUser {' +
             '  email, loggedIn, canViewDashboard, loginUrl (destUrl: "/"),' +
-            '  logoutUrl (destUrl: "/")}' +
-            '}'
+            '  logoutUrl (destUrl: "/")}}'
+        }
+      },
+
+      _onBasicResponse: function(event) {
+        this.set('site', event.detail.response.data.site);
+        this.set('currentUser', event.detail.response.data.currentUser);
+      },
+
+      _getCoursesQuery: function() {
+        return {q:
+            '{allCourses {edges {node {' +
+            '  id, title, url, abstract, instructorDetails,' +
+            '  enrollment {enrolled}, openForRegistration,' +
+            '  startDate, endDate, estimatedWorkload, category {name} }}}}'
         };
       },
 
-      _onResponse: function(event) {
-        this.data = event.detail.response.data;
+      _onCoursesResponse: function(event) {
+        this.set('courses', event.detail.response.data.allCourses);
         this.set(
-          'filterOptions.status', this._enrolledInAny() ? 'enrolled' : 'all')
-        this.set('categories', this._getCategories().sort())
+          'filterOptions.status', this._enrolledInAny() ? 'enrolled' : 'all');
+        this.set('categories', this._getCategories().sort());
+        this.set('coursesLoaded', true);
       },
 
       _enrolledInAny: function() {
-        return this.data.allCourses.edges.some(function(course) {
+        return this.courses.edges.some(function(course) {
           return course.node.enrollment.enrolled;
         })
       },
 
       _getCategories: function() {
         var categories = []
-        this.data.allCourses.edges.forEach(function(edge) {
+        this.courses.edges.forEach(function(edge) {
           if (
               edge.node.category &&
               categories.indexOf(edge.node.category.name) == -1 ) {

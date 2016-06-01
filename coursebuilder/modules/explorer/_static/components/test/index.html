@@ -14,17 +14,17 @@
       </template>
     </test-fixture>
     <script>
-      var EXPORER_GQL_QUERY = '{' +
-        'site {title, logo {url, altText},' +
-        '  courseExplorer {extraContent}},' +
-        'allCourses {edges {node {' +
-        '  id, title, url, abstract, instructorDetails,' +
-        '  enrollment {enrolled}, openForRegistration,' +
-        '  startDate, endDate, estimatedWorkload, category {name} }}},' +
-        'currentUser {' +
-        '  email, loggedIn, canViewDashboard, loginUrl (destUrl: "/"),' +
-        '  logoutUrl (destUrl: "/")}' +
-        '}';
+      var EXPLORER_CHROME_GQL = (
+          '{site {title, logo {url, altText},' +
+          '  courseExplorer {extraContent}}, ' +
+          'currentUser {' +
+          '  email, loggedIn, canViewDashboard, loginUrl (destUrl: "/"),' +
+          '  logoutUrl (destUrl: "/")}}');
+      var EXPLORER_COURSES_GQL = (
+          '{allCourses {edges {node {' +
+          '  id, title, url, abstract, instructorDetails,' +
+          '  enrollment {enrolled}, openForRegistration,' +
+          '  startDate, endDate, estimatedWorkload, category {name} }}}}');
       function flushed(test) {
         // Execute the test function after events have fired and page is loaded
         return function(done) {
@@ -34,15 +34,12 @@
           });
         }
       }
-      function buildResponse() {
+      function buildChromeResponse() {
         return {
           site: {
             title: 'Course Builder Tests',
             logo: {url: '/assets/img/logo.png', altText: 'Tests'},
             courseExplorer: {extraContent: 'This is a test setup.'}
-          },
-          allCourses: {
-            edges: []
           },
           currentUser: {
             email: 'test@example.com',
@@ -50,6 +47,13 @@
             canViewDashboard: true,
             loginUrl: '/login',
             logoutUrl: '/logout'
+          }
+        };
+      }
+      function buildCoursesResponse() {
+        return {
+          allCourses: {
+            edges: []
           }
         };
       }
@@ -100,7 +104,8 @@
           // document.getElementById('explorer-fixture').create()
           explorer = document.getElementById('explorer');
 
-          var response = buildResponse();
+          var chromeResponse = buildChromeResponse();
+          var coursesResponse = buildCoursesResponse();
           var course1 = buildCourse();
           course1.node.title = 'Course 1';
 
@@ -117,12 +122,16 @@
           course4.node.title = 'Course 4';
           course4.node.enrollment.enrolled = false;
 
-          response.allCourses.edges = [course1, course2, course3, course4]
-          fakeGqlServer.addResponse(EXPORER_GQL_QUERY, response);
-
-          var ajax = explorer.getElementsByTagName('iron-ajax')[0];
-          ajax.generateRequest();
-          fakeGqlServer.respond();
+          coursesResponse.allCourses.edges = [
+              course1, course2, course3, course4]
+          fakeGqlServer.addResponse(EXPLORER_CHROME_GQL, chromeResponse);
+          fakeGqlServer.addResponse(EXPLORER_COURSES_GQL, coursesResponse);
+          Array.prototype.forEach.call(
+            explorer.getElementsByTagName('iron-ajax'), function(ajax){
+              ajax.generateRequest();
+              fakeGqlServer.respond();
+            }
+          );
         });
 
         afterEach(function() {
@@ -131,13 +140,13 @@
 
         it('counts the open courses', flushed(function(done) {
           var heading = collapseWhitespace(
-              explorer.$.grouper.$.open.$$('h2').textContent);
+              explorer.$.grouper.$$('#open h2').textContent);
           expect(heading).to.equal('2 courses open for registration');
         }));
 
         it('counts the closed courses', flushed(function(done) {
           var heading = collapseWhitespace(
-              explorer.$.grouper.$.library.$$('h2').textContent);
+              explorer.$.grouper.$$('#library h2').textContent);
           expect(heading).to.equal('1 more course in the library');
         }));
 

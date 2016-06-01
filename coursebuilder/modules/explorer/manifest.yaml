@@ -11,7 +11,6 @@ tests:
 files:
   - modules/explorer/__init__.py
   - modules/explorer/_static/components/course-cards/course-info-item.html
-  - modules/explorer/_static/components/course-cards/course-card-group.html
   - modules/explorer/_static/components/course-cards/course-card.html
   - modules/explorer/_static/components/course-cards/course-card-grouper.html
   - modules/explorer/_static/components/course-cards/course-cards.html

@@ -1,25 +1,47 @@
 <link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
-<link rel="import" href="/modules/explorer/_static/components/course-cards/course-card-group.html">
+<link rel="import" href="/modules/explorer/_static/components/course-cards/course-cards.html">
 
 <dom-module id="course-card-grouper">
+  <style>
+    h2 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-weight: normal;
+      font-size: 18px;
+      color: rgba(0, 0, 0, 0.54);
+    }
+    course-cards {
+      margin-bottom: 32px;
+    }
+  </style>
   <template>
-    <course-card-group courses="[[openCourses]]" id="open">
-      <span title>
-        [[openCourses.length]]
-        course<template
-          is="dom-if" if="[[isntOne(openCourses.length)}]]">s</template>
-        open for registration
-      </span>
-    </course-card-group>
+    <template is="dom-if" if="[[noCourses]]">
+      <h2>No courses</h2>
+    </template>
 
-    <course-card-group courses="[[otherCourses]]" id="library">
-      <span title>
-        [[otherCourses.length]] more
-        course<template
-          is="dom-if" if="[[isntOne(otherCourses.length)]]">s</template>
-        in the library
-      </span>
-    </course-card-group>
+    <div id="open">
+      <template is="dom-if" if="[[openCourses.length]]">
+        <h2>
+          [[openCourses.length]]
+          course<template
+            is="dom-if" if="[[isntOne(openCourses.length)}]]">s</template>
+          open for registration
+        </h2>
+        <course-cards courses="[[openCourses]]"></course-cards>
+      </template>
+    </div>
+
+    <div id="library">
+      <template is="dom-if" if="[[otherCourses.length]]">
+        <h2>
+          [[otherCourses.length]] more
+          course<template
+            is="dom-if" if="[[isntOne(otherCourses.length)]]">s</template>
+          in the library
+        </h2>
+        <course-cards courses="[[otherCourses]]"></course-cards>
+      </template>
+    </div>
   </template>
   <script>
     Polymer({
@@ -43,6 +65,7 @@
         });
         this.openCourses = open;
         this.otherCourses = other;
+        this.noCourses = (other.length == 0 && open.length == 0);
       },
       isntOne: function(value) {
         return value != 1;
