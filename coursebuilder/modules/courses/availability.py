@@ -107,10 +107,12 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             extra_schema_dict_values={'className': 'content-availability'}))
 
         ret.add_property(schema_fields.SchemaField(
-            'whitelist', 'Students Allowed to Register', 'text',
+            'whitelist', 'Students Allowed to Access', 'text',
             description='Only students with email addresses in this list may '
-            'register for the course.  Separate addresses with any combination '
-            'of commas, spaces, or separate lines.',
+            'access course content.  Separate addresses with any combination '
+            'of commas, spaces, or separate lines.  Course, site, and App '
+            'Engine administrators always have access and need not be '
+            'listed explicitly.',
             i18n=False, optional=True))
 
         availability_trigger = schema_fields.FieldRegistry(
