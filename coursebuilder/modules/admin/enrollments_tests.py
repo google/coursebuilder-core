@@ -31,7 +31,6 @@ from models import transforms
 from models.data_sources import paginated_table
 from modules.admin import admin
 from modules.admin import enrollments
-from modules.admin import enrollments_mapreduce
 from tests.functional import actions
 
 
@@ -270,12 +269,36 @@ class EnrollmentsTests(actions.TestBase):
                 else:
                     ns_total = course_totals[ns_name]
 
-                self.assertEquals(popped.namespace_name, ns_name)
+                key_name = enrollments.TotalEnrollmentDAO.key_name(ns_name)
+                self.assertEquals(popped.id, key_name)
+                self.assertEquals(
+                    enrollments.TotalEnrollmentDAO.namespace_name(popped.id),
+                    ns_name)
                 self.assertEquals(popped.get(), ns_total)
 
                 self.assertTrue(ns_name in mapped)
-                self.assertEquals(mapped[ns_name].namespace_name, ns_name)
+                self.assertEquals(mapped[ns_name].id, key_name)
                 self.assertEquals(mapped[ns_name].get(), ns_total)
+
+    def test_load_all(self):
+        # 500 is larger than the default common.utils.iter_all() batch_size.
+        all_totals = dict([("ns_all_%03d" % i, random.randrange(1, 1000))
+                           for i in xrange(500)])
+
+        # Use namespace that is *not* appengine_config.DEFAULT_NAMESPACE_NAME.
+        with utils.Namespace("test_total_load_all"):
+            for ns, count in all_totals.iteritems():
+                enrollments.TotalEnrollmentDAO.set(ns, count)
+
+            for total in enrollments.TotalEnrollmentDAO.load_all():
+                ns = enrollments.TotalEnrollmentDAO.namespace_name(total.id)
+                self.assertEquals(
+                    enrollments.TotalEnrollmentDAO.key_name(ns), total.id)
+                self.assertEquals(total.get(), all_totals[ns])
+                del all_totals[ns]
+
+            # All totals should have been checked, and checked exactly once.
+            self.assertEquals(len(all_totals), 0)
 
 
 class EventHandlersTests(actions.TestBase):
@@ -284,11 +307,15 @@ class EventHandlersTests(actions.TestBase):
     NAMESPACE = 'ns_' + COURSE
     ADMIN_EMAIL = 'admin@example.com'
     STUDENT_EMAIL = 'student@example.com'
+    STUDENT_NAME = 'Test Student'
     LOG_LEVEL = logging.DEBUG
 
     def setUp(self):
         super(EventHandlersTests, self).setUp()
-        actions.simple_add_course(
+        # These tests rely on the fact that simple_add_course() does *not*
+        # execute the CoursesItemRESTHandler.NEW_COURSE_ADDED_HOOKS, to
+        # simulate "legacy" courses existing prior to enrollments counters.
+        self.app_ctxt = actions.simple_add_course(
             self.COURSE, self.ADMIN_EMAIL, 'Enrollments Events')
 
     def tearDown(self):
@@ -300,7 +327,10 @@ class EventHandlersTests(actions.TestBase):
             start_dt = datetime.datetime.utcfromtimestamp(start)
             user = actions.login(self.STUDENT_EMAIL)
 
-            # All counters should start out at zero.
+            # _new_course_counts() was not called by simple_add_course().
+            # As a result, all counters will *not exist at all*, instead of
+            # simply starting out with zero values (as is the case when
+            # courses are created via the actual web UI.
             self.assertEquals(enrollments.TotalEnrollmentDAO.get(
                 self.NAMESPACE), 0)
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
@@ -319,28 +349,41 @@ class EventHandlersTests(actions.TestBase):
                 self.NAMESPACE)
             self.assertTrue(dropped_dto.is_empty)
 
-            actions.register(self, self.STUDENT_EMAIL, course=self.COURSE)
+            actions.login(self.STUDENT_EMAIL)
+            actions.register(self, self.STUDENT_NAME, course=self.COURSE)
             self.execute_all_deferred_tasks(
                 models.StudentLifecycleObserver.QUEUE_NAME)
 
             # Confirm executing deferred tasks did not cross day boundary.
             registered = utc.now_as_timestamp()
             self.assertEquals(utc.day_start(registered), start)
+
+            # When the counters are completely uninitialized (e.g. "legacy"
+            # courses in an installation that is upgrading to enrollments
+            # counters), student lifecycle events will *not* increment or
+            # decrement missing 'total' counters. However, the information is
+            # not lost, since SetCourseEnrollments MapReduceJobs will recover
+            # actual enrollment totals when they are scheduled (via the first
+            # view of the Courses list page, or via the site_admin_enrollments
+            # cron job).
+
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
                 self.NAMESPACE)
-            self.assertFalse(total_dto.is_empty)
+            self.assertTrue(total_dto.is_empty)  # No inc for a missing total.
             self.assertEquals(enrollments.TotalEnrollmentDAO.get(
-                self.NAMESPACE), 1)
+                self.NAMESPACE), 0)
 
             added_dto = enrollments.EnrollmentsAddedDAO.load_or_default(
                 self.NAMESPACE)
+            # Always count today's 'adds', since SetCourseEnrollments will not.
             self.assertFalse(added_dto.is_empty)
+            self.assertEquals(1, added_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
                 self.NAMESPACE, start_dt), 1)
 
             dropped_dto = enrollments.EnrollmentsDroppedDAO.load_or_default(
                 self.NAMESPACE)
-            self.assertTrue(dropped_dto.is_empty) # Not yet incremented.
+            self.assertTrue(dropped_dto.is_empty)  # No 'drops' to count yet.
             self.assertEquals(enrollments.EnrollmentsDroppedDAO.get(
                 self.NAMESPACE, start_dt), 0)
 
@@ -354,21 +397,35 @@ class EventHandlersTests(actions.TestBase):
 
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
                 self.NAMESPACE)
-            self.assertFalse(total_dto.is_empty) # Back to zero, not "empty".
+            self.assertTrue(total_dto.is_empty)  # Still does not exist.
             self.assertEquals(enrollments.TotalEnrollmentDAO.get(
                 self.NAMESPACE), 0)
 
             added_dto = enrollments.EnrollmentsAddedDAO.load_or_default(
                 self.NAMESPACE)
-            self.assertFalse(added_dto.is_empty)
+            self.assertFalse(added_dto.is_empty)  # Unchanged by a drop event.
+            self.assertEquals(1, added_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
                 self.NAMESPACE, start_dt), 1)
 
             dropped_dto = enrollments.EnrollmentsDroppedDAO.load_or_default(
                 self.NAMESPACE)
-            self.assertFalse(dropped_dto.is_empty) # Finally incremented.
+            # Always count today's 'drops', since SetCourseEnrollments will not.
+            self.assertFalse(dropped_dto.is_empty)
+            self.assertEquals(1, dropped_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsDroppedDAO.get(
                 self.NAMESPACE, start_dt), 1)
+
+            # Run the MapReduceJob to recover the missing 'total' and 'adds'.
+            enrollments.init_missing_total(total_dto, self.app_ctxt)
+            self.execute_all_deferred_tasks()
+
+            total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
+                self.NAMESPACE)
+            self.assertFalse(total_dto.is_empty)  # Finally exists.
+            self.assertEquals(0, total_dto.get())  # Add and then drop is 0.
+            self.assertEquals(enrollments.TotalEnrollmentDAO.get(
+                self.NAMESPACE), 0)
 
             models.StudentProfileDAO.update(
                 user.user_id(), self.STUDENT_EMAIL, is_enrolled=True)
@@ -382,18 +439,21 @@ class EventHandlersTests(actions.TestBase):
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
                 self.NAMESPACE)
             self.assertFalse(total_dto.is_empty)
+            self.assertEquals(1, total_dto.get())
             self.assertEquals(enrollments.TotalEnrollmentDAO.get(
                 self.NAMESPACE), 1)
 
             added_dto = enrollments.EnrollmentsAddedDAO.load_or_default(
                 self.NAMESPACE)
             self.assertFalse(added_dto.is_empty)
+            self.assertEquals(2, added_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
                 self.NAMESPACE, start_dt), 2)
 
             dropped_dto = enrollments.EnrollmentsDroppedDAO.load_or_default(
                 self.NAMESPACE)
             self.assertFalse(dropped_dto.is_empty)
+            self.assertEquals(1, dropped_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsDroppedDAO.get(
                 self.NAMESPACE, start_dt), 1)
 
@@ -416,6 +476,10 @@ class MapReduceTests(actions.TestBase):
     def _count_drop(unused_id, unused_utc_date_time):
         pass
 
+    @staticmethod
+    def _new_course_counts(unused_app_context, unused_errors):
+        pass
+
     def setUp(self):
         super(MapReduceTests, self).setUp()
 
@@ -434,6 +498,9 @@ class MapReduceTests(actions.TestBase):
             models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED][
                 enrollments.MODULE_NAME] = MapReduceTests._count_drop
 
+        # These tests rely on the fact that simple_add_course() does *not*
+        # execute the CoursesItemRESTHandler.NEW_COURSE_ADDED_HOOKS, to
+        # simulate "legacy" courses existing prior to enrollments counters.
         self.app_ctxt = actions.simple_add_course(
             self.COURSE, self.ADMIN1_EMAIL, 'Enrollments MapReduce')
 
@@ -530,7 +597,7 @@ class MapReduceTests(actions.TestBase):
             self.NAMESPACE)
         self.assertTrue(after_queue_adds.is_empty)
 
-        enrollments_mapreduce.SetCourseEnrollments(self.app_ctxt).submit()
+        enrollments.init_missing_total(after_queue_total, self.app_ctxt)
         self.execute_all_deferred_tasks()
 
         self.assertEquals(enrollments.TotalEnrollmentDAO.get(
@@ -570,18 +637,35 @@ class MapReduceTests(actions.TestBase):
     def test_no_enrollments_initiates_mapreduce_job_but_only_once(self):
         admin1 = actions.login(self.ADMIN1_EMAIL, is_admin=True)
 
-        # Load courses page, which has side-effect of starting M/R job to
-        # count students in course.
+        # Load courses page, which, given that the _new_course_counts callback
+        # has been disabled in NEW_COURSE_ADDED_HOOKS, has the side-effect of
+        # starting M/R job to count students in course.
         response = self.get('/admin?action=courses')
         dom = self.parse_html_string_to_soup(response.body)
         enrollment_div = dom.select('#enrolled_')[0]
         self.assertEquals(admin.BaseAdminHandler.NONE_ENROLLED,
                           enrollment_div.text.strip())
 
+        # Confirm that the Courses list page called init_missing_total() for
+        # the courses that are missing an enrollment total entity in the
+        # Datastore. The resulting DTOs should have no count but *should*
+        # have a non-zero last_modified value.
+        last_modifieds = {}
+        before = enrollments.TotalEnrollmentDAO.load_all()
+        for dto in before:
+            # init_missing_total() stores timestamped entities with no count.
+            self.assertTrue(dto.is_empty)
+            self.assertTrue(dto.last_modified)
+            # Check that MapReduceJob updates last_modified to a later value.
+            last_modifieds[dto.id] = dto.last_modified
+
         # Verify that M/R job runs and produces a row.
-        self.assertIsNone(enrollments.TotalEnrollmentEntity.all().get())
         self.execute_all_deferred_tasks()
-        self.assertIsNotNone(enrollments.TotalEnrollmentEntity.all().get())
+        after = enrollments.TotalEnrollmentDAO.load_all()
+        for dto in after:
+            self.assertFalse(dto.is_empty)
+            self.assertEquals(0, dto.get())
+            self.assertGreater(dto.last_modified, last_modifieds[dto.id])
 
         # Load the courses page again, now getting 0 for number of students.
         response = self.get('/admin?action=courses')

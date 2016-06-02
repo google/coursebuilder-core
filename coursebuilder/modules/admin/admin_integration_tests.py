@@ -22,7 +22,7 @@ from selenium.common import exceptions
 
 from models import courses
 from modules.admin import admin_pageobjects
-from modules.admin import enrollments_mapreduce
+from modules.admin import enrollments
 from tests.integration import integration
 
 
@@ -207,7 +207,7 @@ class CoursesEnrollmentsTests(_CoursesListTestBase):
         # kick off the site_admin_enrollments/total MapReduce first.
         cron_page = self.load_appengine_cron(
         ).run_cron(
-            enrollments_mapreduce.StartEnrollmentsJobs.URL
+            enrollments.StartEnrollmentsJobs.URL
         )
 
         # Now load the Courses list page and confirm that the value in the

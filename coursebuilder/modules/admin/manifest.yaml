@@ -4,7 +4,7 @@ registration:
 tests:
   functional:
     - modules.admin.admin_tests.AdminDashboardTabTests = 8
-    - modules.admin.enrollments_tests.EnrollmentsTests = 4
+    - modules.admin.enrollments_tests.EnrollmentsTests = 5
     - modules.admin.enrollments_tests.EventHandlersTests = 1
     - modules.admin.enrollments_tests.MapReduceTests = 2
     - modules.admin.enrollments_tests.GraphTests = 5
@@ -26,7 +26,6 @@ files:
   - modules/admin/admin_tests.py
   - modules/admin/config.py
   - modules/admin/enrollments.py
-  - modules/admin/enrollments_mapreduce.py
   - modules/admin/enrollments_tests.py
   - modules/admin/manifest.yaml
   - modules/admin/templates/enrollments.html

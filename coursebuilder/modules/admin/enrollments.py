@@ -50,12 +50,25 @@ These counters are stored in the default namespace to reduce the implementation
 complexity and to concentrate the data into a fixed number of rows for speed
 in loading. The 'total', 'adds', and 'drops' counters are separate entities to
 reduce contention between the StudentLifecycleObserver handlers updating them.
+
+A _new_course_counts callback initializes these enrollments counters to zero
+upon course creation. Student lifecycle events will update these counters in
+near real-time soon after the course is created.
+
+Courses that exist in the Datastore prior to updating an installation to a new
+Course Builder version that implements enrollments counters will be missing
+those counter entities in the Datastore. These missing counters will be
+initialized for the first time by enrollments_mapreduce.SetCourseEnrollments
+MapReduceJobs. Viewing the Courses list page once will trigger the necessary
+background jobs. Student lifecycle events will update these missing counters
+in near real-time soon after they are initialized by the MapReduceJobs.
 """
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
 
 import copy
+import logging
 
 import appengine_config
 from google.appengine.api import namespace_manager
@@ -63,10 +76,13 @@ from google.appengine.ext import db
 
 from common import schema_fields
 from common import utc
-from common import utils
+from common import utils as common_utils
+from controllers import sites
+from controllers import utils
 from models import analytics
 from models import data_sources
 from models import entities
+from models import jobs
 from models import models
 from models import transforms
 from modules.admin import config
@@ -105,20 +121,55 @@ class EnrollmentsDroppedEntity(EnrollmentsEntity):
 class EnrollmentsDTO(object):
     """Features common to all DTO of enrollments counters."""
 
-    LAST_MODIFIED_PROPERTY = '_last_modified'
-
-    def __init__(self, namespace_name, props_dict):
-        self.namespace_name = namespace_name
-        self.properties = props_dict
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
 
     @property
     def last_modified(self):
-        return self.properties.get(self.LAST_MODIFIED_PROPERTY) or 0
+        return self.dict.get('_last_modified') or 0
 
-    def marshal(self, properties=None):
-        if properties is None:
-            properties = self.properties
-        return transforms.dumps(properties)
+    def set_last_modified_to_now(self):
+        """Sets the last_modified property to the current UTC time."""
+        self.dict['_last_modified'] = utc.now_as_timestamp()
+
+    @property
+    def is_empty(self):
+        return not self.binned
+
+    @property
+    def is_pending(self):
+        """Returns True if some background job is initializing the counter."""
+        return self.is_empty and self.last_modified
+
+    @property
+    def binned(self):
+        """Returns an empty binned counters dict (subclasses should override).
+
+        This method exists to provide a uniform representation of what is
+        stored in an enrollments counter. Some counters are binned (e.g.,
+        EnrollmentsDroppedDTO), and their get() method requires an extra
+        timestamp parameter to select a particular bin. Other counters are
+        single, unbinned counts (e.g. TotalEnrollmentDTO), and their get()
+        method does not accept the meaningless timestamp parameter.
+
+        Some clients want to treat all of these enrollments counter DTOs the
+        same, rather than needing to distinquish between those with get() that
+        needs a timestamp and those that do not. So, all of the EnrollmentsDTO
+        subclasses implement the binned property. For binned counters, it
+        simply returns all of the bins. For single, unbinned counters, a
+        single "bin" of the current day is returned, containing the single
+        counter value.
+
+        Returns:
+          Subclasses should override this method to return a dict whose keys
+          are integer 00:00:00 UTC "start of day" dates in seconds since
+          epoch, and whose values are the counts corresponding to those keys.
+        """
+        return {}
+
+    def marshal(self, the_dict):
+        return transforms.dumps(the_dict)
 
     @classmethod
     def unmarshal(cls, json):
@@ -128,16 +179,14 @@ class EnrollmentsDTO(object):
 class TotalEnrollmentDTO(EnrollmentsDTO):
     """Data transfer object for a single, per-course enrollment count."""
 
-    TOTAL_PROPERTY = 'count'
-
     def get(self):
         """Returns the value of an enrollment counter (or 0 if not yet set)."""
-        return self.properties.get(self.TOTAL_PROPERTY, 0)
+        return self.dict.get('count', 0)
 
     def set(self, count):
         """Overwrite the enrollment counter with a new count value."""
-        self.properties[self.TOTAL_PROPERTY] = count
-        self.properties[self.LAST_MODIFIED_PROPERTY] = utc.now_as_timestamp()
+        self.dict['count'] = count
+        self.set_last_modified_to_now()
 
     def inc(self, offset=1):
         """Increment an enrollment counter by a signed offset; default is 1."""
@@ -145,26 +194,52 @@ class TotalEnrollmentDTO(EnrollmentsDTO):
 
     @property
     def is_empty(self):
-        return self.TOTAL_PROPERTY not in self.properties
+        # Faster than base class version that could cause creation of the
+        # temporary binned dict.
+        return 'count' not in self.dict
+
+    @property
+    def binned(self):
+        """Returns the binned counters dict (empty if uninitialized counter).
+
+        Returns:
+            If the counter is initialized (has been set() at least once), a
+            dict containing a single bin containing the total enrollments count
+            is constructed and returned.  The single key in the returned dict
+            is the 00:00:00 UTC "start of day" time of last_modified, as
+            seconds since epoch. The single value is the get() count.
+
+            Otherwise, if the counter is uninitialized, an empty dict is
+            returned (just like the EnrollmentsDTO base class).
+        """
+        if self.is_empty:
+            return super(TotalEnrollmentDTO, self).binned
+
+        return {
+            utc.day_start(self.last_modified): self.get(),
+        }
 
 
 class BinnedEnrollmentsDTO(EnrollmentsDTO):
     """Data transfer object for per-course, binned enrollment event counts."""
-
-    BINNED_PROPERTY = 'binned'
 
     @property
     def binned(self):
         """Returns the binned counters dict (possibly empty).
 
         Returns:
-            Returns a dict containing a bin for each day with at least one
-            counted event. The keys of the returned dict are the 00:00:00 UTC
-            time of each non-zero daily bin, as seconds since epoch. The values
-            are the total number of counted events in the day starting at that
-            time key.
+            If the counter is initialized (at least one timestamped bin has
+            been set()), the dict containing a bin for each day with at least
+            one counted event is returned. The keys of the returned dict are
+            the 00:00:00 UTC "start of day" time of each non-zero daily bin,
+            as seconds since epoch. The values are the total number of
+            counted events in the day starting at that time key.
+
+            Otherwise, if the counter is uninitialized, an empty dict is
+            returned (just like the EnrollmentsDTO base class).
         """
-        return self.properties.setdefault(self.BINNED_PROPERTY, {})
+        return self.dict.setdefault(
+            'binned', super(BinnedEnrollmentsDTO, self).binned)
 
     @classmethod
     def bin(cls, timestamp):
@@ -177,10 +252,6 @@ class BinnedEnrollmentsDTO(EnrollmentsDTO):
             in the self.binned dict associated with the supplied UTC time.
         """
         return utc.day_start(timestamp)
-
-    @property
-    def is_empty(self):
-        return not self.binned
 
     def _get_bin(self, bin_key):
         return self.binned.get(bin_key, 0)
@@ -198,7 +269,7 @@ class BinnedEnrollmentsDTO(EnrollmentsDTO):
 
     def _set_bin(self, bin_key, count):
         self.binned[bin_key] = count
-        self.properties[self.LAST_MODIFIED_PROPERTY] = utc.now_as_timestamp()
+        self.set_last_modified_to_now()
 
     def set(self, timestamp, count):
         """Overwrites the count of events for a day (selected via a UTC time).
@@ -222,31 +293,32 @@ class BinnedEnrollmentsDTO(EnrollmentsDTO):
         """
         bin_key = self.bin(timestamp)
         self._set_bin(bin_key, self._get_bin(bin_key) + offset)
-        self.properties[self.LAST_MODIFIED_PROPERTY] = utc.now_as_timestamp()
+        self.set_last_modified_to_now()
 
-    BIN_FORMAT = '%Y%m%d'
+    _BIN_FORMAT = '%Y%m%d'
 
-    def marshal(self, properties=None):
-        if properties is None:
-            properties = copy.copy(self.properties)
-
-        binned = properties.get(self.BINNED_PROPERTY)
+    def marshal(self, the_dict):
+        binned = the_dict.get('binned')
         if binned:
-            properties[self.BINNED_PROPERTY] = dict(
-                [(utc.to_text(seconds=seconds, fmt=self.BIN_FORMAT), count)
+            # A copy (to avoid mutating the original) is only necessary if
+            # there are actually int seconds since epoch bin keys that need
+            # to be made compatible with JSON.
+            the_dict = copy.copy(the_dict)
+            the_dict['binned'] = dict(
+                [(utc.to_text(seconds=seconds, fmt=self._BIN_FORMAT), count)
                  for seconds, count in binned.iteritems()])
 
-        return super(BinnedEnrollmentsDTO, self).marshal(properties=properties)
+        return super(BinnedEnrollmentsDTO, self).marshal(the_dict)
 
     @classmethod
     def unmarshal(cls, json):
-        properties = super(BinnedEnrollmentsDTO, cls).unmarshal(json)
-        binned = properties.get(cls.BINNED_PROPERTY)
+        the_dict = super(BinnedEnrollmentsDTO, cls).unmarshal(json)
+        binned = the_dict.get('binned')
         if binned:
-            properties[cls.BINNED_PROPERTY] = dict(
-                [(utc.text_to_timestamp(text, fmt=cls.BIN_FORMAT), count)
+            the_dict['binned'] = dict(
+                [(utc.text_to_timestamp(text, fmt=cls._BIN_FORMAT), count)
                  for text, count in binned.iteritems()])
-        return properties
+        return the_dict
 
 
 class EnrollmentsDAO(object):
@@ -264,7 +336,7 @@ class EnrollmentsDAO(object):
     KEY_SEP = ':'
 
     @classmethod
-    def _key_name(cls, namespace_name):
+    def key_name(cls, namespace_name):
         """Creates enrollment counter key_name strings for Datastore operations.
 
         Enrollment counter keys are grouped by namespace_name and then by what
@@ -282,7 +354,7 @@ class EnrollmentsDAO(object):
         return "%s%s%s" % (namespace_name, cls.KEY_SEP, cls.ENTITY.COUNTING)
 
     @classmethod
-    def _namespace_name(cls, key_name):
+    def namespace_name(cls, key_name):
         """Returns the namespace_name extracted from the supplied key_name."""
         # string.split() always returns a list of at least length 1, even for
         # an empty string or string that does not contain the separator, so
@@ -290,28 +362,28 @@ class EnrollmentsDAO(object):
         return key_name.split(cls.KEY_SEP, 1)[0]
 
     @classmethod
-    def new_dto(cls, namespace_name, properties=None, entity=None):
+    def new_dto(cls, namespace_name, the_dict=None, entity=None):
         """Returns a DTO initialized from entity or namespace_name."""
         if entity is not None:
             # Prefer namespace_name derived from the entity key name if present.
             name = entity.key().name()
             if name is not None:
-                namespace_name = cls._namespace_name(name)
+                namespace_name = cls.namespace_name(name)
 
-            # Prefer properties JSON-decoded from the entity if present.
+            # Prefer the_dict JSON-decoded from the entity if present.
             if entity.json:
-                properties = cls.DTO.unmarshal(entity.json)
+                the_dict = cls.DTO.unmarshal(entity.json)
 
-        if properties is None:
-            properties = {}
+        if the_dict is None:
+            the_dict = {}
 
-        return cls.DTO(namespace_name, properties)
+        return cls.DTO(cls.key_name(namespace_name), the_dict)
 
     @classmethod
     def load_or_default(cls, namespace_name):
         """Returns DTO of the namespace_name entity, or a DTO.is_empty one."""
-        with utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
-            entity = cls.ENTITY.get_by_key_name(cls._key_name(namespace_name))
+        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            entity = cls.ENTITY.get_by_key_name(cls.key_name(namespace_name))
             return cls.new_dto(namespace_name, entity=entity)
 
     @classmethod
@@ -327,33 +399,79 @@ class EnrollmentsDAO(object):
             namespace name, a DTO where DTO.is_empty is true is placed in that
             slot in the returned list (not None like, say, get_by_key_name()).
         """
-        with utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
             many_entities = cls.ENTITY.get_by_key_name(
-                [cls._key_name(ns_name) for ns_name in namespace_names])
+                [cls.key_name(ns_name) for ns_name in namespace_names])
             return [cls.new_dto(ns_name, entity=entity)
                     for ns_name, entity in zip(namespace_names, many_entities)]
 
     @classmethod
     def load_many_mapped(cls, namespace_names):
-        """Returns a dict with namespace name keys and DTO values."""
-        return dict([(dto.namespace_name, dto)
+        """Returns a dict with namespace_name keys and DTO values."""
+        return dict([(cls.namespace_name(dto.id), dto)
                      for dto in cls.load_many(namespace_names)])
+
+    @classmethod
+    def load_all(cls):
+        """Loads all DTOs that have valid entities, in no particular order.
+
+        Returns:
+            An iterator that produces cls.DTOs created from all the ENTITY
+            values in the Datastore, in no particular order.
+        """
+        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            for e in common_utils.iter_all(cls.ENTITY.all()):
+                if e.key().name():
+                    yield cls.new_dto('', entity=e)
 
     @classmethod
     def delete(cls, namespace_name):
         """Deletes from the Datastore the namespace_name counter entity."""
-        with utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
-            entity = cls.ENTITY.get_by_key_name(cls._key_name(namespace_name))
+        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            entity = cls.ENTITY.get_by_key_name(cls.key_name(namespace_name))
             if entity is not None:
                 entity.delete()
+
+    @classmethod
+    def mark_pending(cls, dto=None, namespace_name=''):
+        """Indicates that a background job is initializing the counter.
+
+        The last_modified property is set to the current time and stored,
+        without any counter value, a state that indicates to others that some
+        background job is currently computing the value of the counter.
+
+        Args:
+            dto: an existing DTO to be "marked" and stored in the Datastore;
+              (dto.is_empty and (not dto.is_pending)) must be True.
+            namespace_name: used to create a new DTO if dto was not supplied.
+
+        Returns:
+            The original dto if one was provided; unchanged if the required
+            (dto.is_empty and (not dto.is_pending)) precondition was not met.
+            Otherwise, the last_modified property will be set to the current
+            UTC time, but no counter value will be set, resulting in
+            dto.is_empty being True and now dto.is_pending also being True.
+
+            If an existing dto was not supplied, creates a new one using the
+            provided namespace_name, setting last_modified only, as above,
+            again resulting in dto.is_empty and dto.is_pending being True.
+        """
+        if not dto:
+            dto = cls.new_dto(namespace_name, the_dict={})
+
+        if dto.is_empty and (not dto.is_pending):
+            dto.set_last_modified_to_now()
+            cls._save(dto)
+
+        return dto
 
     @classmethod
     def _save(cls, dto):
         # The "save" operation is not public because clients of the enrollments
         # module should cause Datastore mutations only via set() and inc().
-        with utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
-            entity = cls.ENTITY(key_name=cls._key_name(dto.namespace_name))
-            entity.json = dto.marshal()
+        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            entity = cls.ENTITY(key_name=dto.id)
+            entity.json = dto.marshal(dto.dict)
             entity.put()
 
 
@@ -371,7 +489,7 @@ class TotalEnrollmentDAO(EnrollmentsDAO):
     @classmethod
     def set(cls, namespace_name, count):
         """Forces single enrollment total in the Datastore to a new count."""
-        dto = cls.new_dto(namespace_name, properties={})
+        dto = cls.new_dto(namespace_name, the_dict={})
         dto.set(count)
         cls._save(dto)
         return dto
@@ -424,6 +542,134 @@ class EnrollmentsDroppedDAO(BinnedEnrollmentsDAO):
     ENTITY = EnrollmentsDroppedEntity
 
 
+class SetCourseEnrollments(jobs.MapReduceJob):
+    """MapReduce job to set the student total enrollment count for courses.
+
+    This MapReduce updates two of the course enrollments counters, the simple
+    'total' enrollment count and the daily-binned 'adds' counts.
+
+    The 'total' counter is updated by calling TotalEnrollmentDAO.set()
+    to force a known value on the 'total' counter for a specified course. The
+    purpose of this MapReduce is to "reset" the total enrollment count to an
+    absolute starting point, and then allow that count to be incremented and
+    decremented in real time, between runs of the MapReduce, by the registered
+    StudentLifecycleObserver handlers. Those handlers adjust the MapReduce-
+    computed starting point by the equivalent of:
+
+    (number of EVENT_ADD + number of EVENT_REENROLL)
+     - (number of EVENT_UNENROLL + number of EVENT_UNENROLL_COMMANDED)
+
+    Counters in the daily bins of the 'adds' counters are updated by calling
+    EnrollmentsAddedDAO.set() overwrite the values for each daily bin. The
+    bin is determined from the Student.enrolled_on value of each student
+    enrolled in the specified course. To avoid race conditions between this
+    MapReduce and real time updates being made by the student lifecycle event
+    handlers, the bin corresponding to "today" when the MapReduce is run is
+    *not* overwritten.
+    """
+
+    @classmethod
+    def get_description(cls):
+        return "Update the 'total' and 'adds' counters for a course."
+
+    @classmethod
+    def entity_class(cls):
+        return models.Student
+
+    @classmethod
+    def map(cls, student):
+        if student.is_enrolled:
+            yield (TotalEnrollmentEntity.COUNTING, 1)
+            bin_seconds_since_epoch = BinnedEnrollmentsDTO.bin(
+                utc.datetime_to_timestamp(student.enrolled_on))
+            yield (bin_seconds_since_epoch, 1)
+
+    @classmethod
+    def combine(cls, unused_key, values, previously_combined_outputs=None):
+        total = sum([int(value) for value in values])
+        if previously_combined_outputs is not None:
+            total += sum([int(value) for value in previously_combined_outputs])
+        yield total
+
+    @classmethod
+    def reduce(cls, key, values):
+        total = sum(int(value) for value in values)
+        ns_name = namespace_manager.get_namespace()
+
+        if key == TotalEnrollmentEntity.COUNTING:
+            TotalEnrollmentDAO.set(ns_name, total)
+            yield key, total
+        else:
+            # key is actually a daily 'adds' counter bin seconds since epoch.
+            bin_seconds_since_epoch = long(key)
+            today = utc.day_start(utc.now_as_timestamp())
+            # Avoid race conditions by not updating today's daily bin (which
+            # is being updated by student lifecycle events).
+            if bin_seconds_since_epoch != today:
+                date_time = utc.timestamp_to_datetime(bin_seconds_since_epoch)
+                EnrollmentsAddedDAO.set(ns_name, date_time, total)
+
+    @classmethod
+    def complete(cls, kwargs, results):
+        if not results:
+            ns_name = namespace_manager.get_namespace()
+            # Re-check that value actually is zero; there is a race between
+            # this M/R job running and student registration on the user
+            # lifecycle queue, so don't overwrite to zero unless it really
+            # is zero _now_.
+            if TotalEnrollmentDAO.get(ns_name) == 0:
+                TotalEnrollmentDAO.set(ns_name, 0)
+
+
+MODULE_NAME = 'site_admin_enrollments'
+
+
+class StartEnrollmentsJobs(utils.AbstractAllCoursesCronHandler):
+    """Handle callback from cron by launching enrollments counts MapReduce."""
+
+    # /cron/site_admin_enrollments/total
+    URL = '/cron/%s/%s' % (MODULE_NAME, TotalEnrollmentEntity.COUNTING)
+
+    @classmethod
+    def is_globally_enabled(cls):
+        return True
+
+    @classmethod
+    def is_enabled_for_course(cls, app_context):
+        return True
+
+    def cron_action(self, app_context, global_state):
+        cron_jobs = [SetCourseEnrollments(app_context)]
+        for job in cron_jobs:
+            if job.is_active():
+                job.cancel()
+            job.submit()
+
+
+def init_missing_total(enrolled_total_dto, app_context):
+    """Returns True if a SetCourseEnrollments MapReduceJob was submitted."""
+    if not enrolled_total_dto.is_empty:
+        logging.warning('SKIPPING update of "%s" existing total %d.',
+                        enrolled_total_dto.id, enrolled_total_dto.get())
+        return False
+
+    if enrolled_total_dto.is_pending:
+        logging.info('PENDING "%s" update already requested at %s.',
+                     enrolled_total_dto.id,
+                     utc.to_text(seconds=enrolled_total_dto.last_modified))
+        return False
+
+    # enrolled_total_dto is *completely* empty, not *just* missing its
+    # counter property (and thus not indicating initialization of that count
+    # is in progress), so store "now" as a last_modified value to indicate
+    # that a MapReduce update has been requested.
+    marked_dto = TotalEnrollmentDAO.mark_pending(dto=enrolled_total_dto)
+    logging.info('SCHEDULING "%s" update at %s.', marked_dto.id,
+                 utc.to_text(seconds=marked_dto.last_modified))
+    SetCourseEnrollments(app_context).submit()
+    return True
+
+
 def delete_counters(namespace_name):
     """Called by admin.config.DeleteCourseHandler.delete_course()."""
     TotalEnrollmentDAO.delete(namespace_name)
@@ -432,16 +678,45 @@ def delete_counters(namespace_name):
 
 
 def _count_add(unused_id, utc_date_time):
-    """Called back from student lifecycle queue when student (re-)enrolls."""
+    """Called back from student lifecycle queue when student (re-)enrolls.
+
+    This callback only increments 'total' and 'adds' counters that already
+    exist in the Datastore.
+    """
     namespace_name = namespace_manager.get_namespace()
-    TotalEnrollmentDAO.inc(namespace_name)
+    total_dto = TotalEnrollmentDAO.load_or_default(namespace_name)
+
+    if not total_dto.is_empty:
+        TotalEnrollmentDAO.inc(namespace_name)
+    else:
+        init_missing_total(
+            total_dto, sites.get_app_context_for_namespace(namespace_name))
+
+    # Update today's 'adds' no matter what, because the SetCourseEnrollments
+    # MapReduceJob avoids the current day bin, specifically to avoid races
+    # with this callback.
     EnrollmentsAddedDAO.inc(namespace_name, utc_date_time)
 
 
 def _count_drop(unused_id, utc_date_time):
-    """Called back from StudentLifecycleObserver when user is unenrolled."""
+    """Called back from StudentLifecycleObserver when user is unenrolled.
+
+    This callback only decrements 'total' and increments 'drops' counters that
+    already exist in the Datastore.
+    """
     namespace_name = namespace_manager.get_namespace()
-    TotalEnrollmentDAO.inc(namespace_name, offset=-1)
+    total_dto = TotalEnrollmentDAO.load_or_default(namespace_name)
+
+    if not total_dto.is_empty:
+        TotalEnrollmentDAO.inc(namespace_name, offset=-1)
+    else:
+        init_missing_total(
+            total_dto, sites.get_app_context_for_namespace(namespace_name))
+
+    # Update today's 'drops' no matter what, because the SetCourseEnrollments
+    # MapReduceJob avoids the current day bin, specifically to avoid races
+    # with this callback. (Also, the SetCourseEnrollments MapReduceJob does
+    # not implement collecting drops at this time.)
     EnrollmentsDroppedDAO.inc(namespace_name, utc_date_time)
 
 
@@ -505,9 +780,6 @@ class EnrollmentsDataSource(data_sources.AbstractSmallRestDataSource,
         dto = EnrollmentsAddedDAO.load_or_default(
             app_context.get_namespace_name())
         template_values['enrollment_data_available'] = not dto.is_empty
-
-
-MODULE_NAME = 'site_admin_enrollments'
 
 
 def register_callbacks():

@@ -46,7 +46,6 @@ from models import transforms
 from models.config import ConfigProperty
 import modules.admin.config
 from modules.admin import enrollments
-from modules.admin import enrollments_mapreduce
 from modules.admin.config import ConfigPropertyEditor
 from modules.admin.config import CourseDeleteHandler
 from modules.courses import availability
@@ -778,6 +777,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
         template_values['main_content'] = content
         self.render_page(template_values)
 
+    # Submit at most this many SetCourseEnrollments MapReduceJobs.
+    INIT_MISSING_TOTALS_MAX = 10
+
     def get_courses(self):
         """Shows a list of all courses available on this site."""
 
@@ -788,18 +790,20 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
         total_students = 0
         all_courses = []
-        for app_context in sorted(
-            sites.get_all_courses(),
-            key=lambda app_context: app_context.get_title().lower()):
 
+        app_contexts = sites.get_all_courses()
+        app_contexts.sort(
+            key=lambda app_context: app_context.get_title().lower())
+        namespaces = [
+            app_context.get_namespace_name() for app_context in app_contexts]
+        enrolled_totals = enrollments.TotalEnrollmentDAO.load_many(namespaces)
+        missing_totals_inits = 0
+
+        for app_context, enrolled_dto in zip(app_contexts, enrolled_totals):
             slug = app_context.get_slug()
             name = app_context.get_title()
             ns_name = app_context.get_namespace_name()
-            if app_context.fs.is_read_write():
-                location = 'namespace: %s' % ns_name
-            else:
-                location = 'disk: %s' % sites.abspath(
-                    app_context.get_home_folder(), '/')
+
             if slug == '/':
                 link = '/dashboard'
             else:
@@ -811,20 +815,21 @@ class BaseAdminHandler(ConfigPropertyEditor):
                     app_context))
             availability_title = courses.COURSE_AVAILABILITY_POLICIES[
                 course_availability]['title']
-            dto = enrollments.TotalEnrollmentDAO.load_or_default(ns_name)
-            last_modified = dto.last_modified
-            if last_modified:
-                total_enrolled = dto.get()
+            if not enrolled_dto.is_empty:
+                # 'count' property is present, so counter *is* initialized.
+                total_enrolled = enrolled_dto.get()
                 total_students += total_enrolled
                 fmt = 'Most recent activity at %s for %s.' % (
                     self.ISO_8601_UTC_HUMAN_FMT, name)
                 most_recent_enroll = utc.to_text(
-                    seconds=last_modified, fmt=fmt)
+                    seconds=enrolled_dto.last_modified, fmt=fmt)
             else:
                 total_enrolled = self.NONE_ENROLLED
                 most_recent_enroll = (
                     '(registration activity for %s is being computed)' % name)
-                enrollments_mapreduce.SetCourseEnrollments(app_context).submit()
+                if missing_totals_inits < self.INIT_MISSING_TOTALS_MAX:
+                    missing_totals_inits += enrollments.init_missing_total(
+                        enrolled_dto, app_context)
 
             all_courses.append({
                 'link': link,
@@ -1056,6 +1061,13 @@ class GlobalAdminHandler(
             handler=self)
 
     def render_page(self, template_values, in_action=None):
+        """Render page contents and write them into the response.
+
+        NOTE: The resulting contents are *not* sent to the client (user's
+        browser) as a result of calling render_page(). webapp2 does not
+        forward the response and its contents to the client until the
+        handler itself completes.
+        """
         page_title = template_values['page_title']
         template_values['header_title'] = page_title
         template_values['page_headers'] = [
@@ -1112,8 +1124,8 @@ def register_module():
 
     global_handlers = [
         (GlobalAdminHandler.URL, GlobalAdminHandler),
-        (enrollments_mapreduce.StartEnrollmentsJobs.URL,
-         enrollments_mapreduce.StartEnrollmentsJobs),
+        (enrollments.StartEnrollmentsJobs.URL,
+         enrollments.StartEnrollmentsJobs),
         ('/admin/welcome', WelcomeHandler),
         ('/rest/config/item', (
             modules.admin.config.ConfigPropertyItemRESTHandler)),
