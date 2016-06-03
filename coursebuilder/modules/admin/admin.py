@@ -777,9 +777,6 @@ class BaseAdminHandler(ConfigPropertyEditor):
         template_values['main_content'] = content
         self.render_page(template_values)
 
-    # Submit at most this many SetCourseEnrollments MapReduceJobs.
-    INIT_MISSING_TOTALS_MAX = 10
-
     def get_courses(self):
         """Shows a list of all courses available on this site."""
 
@@ -797,7 +794,6 @@ class BaseAdminHandler(ConfigPropertyEditor):
         namespaces = [
             app_context.get_namespace_name() for app_context in app_contexts]
         enrolled_totals = enrollments.TotalEnrollmentDAO.load_many(namespaces)
-        missing_totals_inits = 0
 
         for app_context, enrolled_dto in zip(app_contexts, enrolled_totals):
             slug = app_context.get_slug()
@@ -827,9 +823,6 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 total_enrolled = self.NONE_ENROLLED
                 most_recent_enroll = (
                     '(registration activity for %s is being computed)' % name)
-                if missing_totals_inits < self.INIT_MISSING_TOTALS_MAX:
-                    missing_totals_inits += enrollments.init_missing_total(
-                        enrolled_dto, app_context)
 
             all_courses.append({
                 'link': link,

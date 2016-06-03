@@ -59,9 +59,9 @@ Courses that exist in the Datastore prior to updating an installation to a new
 Course Builder version that implements enrollments counters will be missing
 those counter entities in the Datastore. These missing counters will be
 initialized for the first time by enrollments_mapreduce.SetCourseEnrollments
-MapReduceJobs. Viewing the Courses list page once will trigger the necessary
-background jobs. Student lifecycle events will update these missing counters
-in near real-time soon after they are initialized by the MapReduceJobs.
+MapReduceJobs. Student lifecycle events will trigger MapReduceJobs for these
+missing counters and then update them in near real-time soon after they are
+initialized by the background jobs.
 """
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'

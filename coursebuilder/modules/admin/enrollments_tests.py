@@ -29,7 +29,6 @@ from controllers import sites
 from models import models
 from models import transforms
 from models.data_sources import paginated_table
-from modules.admin import admin
 from modules.admin import enrollments
 from tests.functional import actions
 
@@ -363,9 +362,9 @@ class EventHandlersTests(actions.TestBase):
             # counters), student lifecycle events will *not* increment or
             # decrement missing 'total' counters. However, the information is
             # not lost, since SetCourseEnrollments MapReduceJobs will recover
-            # actual enrollment totals when they are scheduled (via the first
-            # view of the Courses list page, or via the site_admin_enrollments
-            # cron job).
+            # actual enrollment totals when they are scheduled (e.g. via
+            # register and unregister student lifecycle events, or via the
+            # site_admin_enrollments cron job).
 
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
                 self.NAMESPACE)
@@ -633,50 +632,6 @@ class MapReduceTests(actions.TestBase):
         # this test).
         self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
             self.NAMESPACE, start_dt), 0)  # STUDENT4
-
-    def test_no_enrollments_initiates_mapreduce_job_but_only_once(self):
-        admin1 = actions.login(self.ADMIN1_EMAIL, is_admin=True)
-
-        # Load courses page, which, given that the _new_course_counts callback
-        # has been disabled in NEW_COURSE_ADDED_HOOKS, has the side-effect of
-        # starting M/R job to count students in course.
-        response = self.get('/admin?action=courses')
-        dom = self.parse_html_string_to_soup(response.body)
-        enrollment_div = dom.select('#enrolled_')[0]
-        self.assertEquals(admin.BaseAdminHandler.NONE_ENROLLED,
-                          enrollment_div.text.strip())
-
-        # Confirm that the Courses list page called init_missing_total() for
-        # the courses that are missing an enrollment total entity in the
-        # Datastore. The resulting DTOs should have no count but *should*
-        # have a non-zero last_modified value.
-        last_modifieds = {}
-        before = enrollments.TotalEnrollmentDAO.load_all()
-        for dto in before:
-            # init_missing_total() stores timestamped entities with no count.
-            self.assertTrue(dto.is_empty)
-            self.assertTrue(dto.last_modified)
-            # Check that MapReduceJob updates last_modified to a later value.
-            last_modifieds[dto.id] = dto.last_modified
-
-        # Verify that M/R job runs and produces a row.
-        self.execute_all_deferred_tasks()
-        after = enrollments.TotalEnrollmentDAO.load_all()
-        for dto in after:
-            self.assertFalse(dto.is_empty)
-            self.assertEquals(0, dto.get())
-            self.assertGreater(dto.last_modified, last_modifieds[dto.id])
-
-        # Load the courses page again, now getting 0 for number of students.
-        response = self.get('/admin?action=courses')
-        dom = self.parse_html_string_to_soup(response.body)
-        enrollment_div = dom.select('#enrolled_')[0]
-        self.assertEquals('0', enrollment_div.text.strip())
-
-        # Important: Verify that re-load of courses page did _not_ kick off
-        # another map/reduce job.
-        tasks = self.taskq.GetTasks('default')
-        self.assertEquals(0, len(tasks))
 
 
 class GraphTests(actions.TestBase):
