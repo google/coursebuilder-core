@@ -26,6 +26,7 @@ from models import student_labels
 from modules.courses import admin_preferences_editor
 from modules.courses import assets
 from modules.courses import availability
+from modules.courses import availability_cron
 from modules.courses import lessons
 from modules.courses import outline
 from modules.courses import roles as course_roles
@@ -71,6 +72,11 @@ def register_module():
     # provide parser to verify
     verify.parse_content = content.parse_string_in_scope
 
+    global_handlers = [
+        (availability_cron.StartAvailabilityJobs.URL,
+         availability_cron.StartAvailabilityJobs),
+    ]
+
     # setup routes
     courses_routes = [
         ('/forum', utils.ForumHandler),
@@ -92,6 +98,6 @@ def register_module():
     custom_module = custom_modules.Module(
         MODULE_NAME,
         'A set of pages for delivering an online course.',
-        [], courses_routes,
+        global_handlers, courses_routes,
         notify_module_enabled=on_module_enabled)
     return custom_module

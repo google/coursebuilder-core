@@ -16,6 +16,8 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import collections
+import logging
 import os
 
 import appengine_config
@@ -43,6 +45,21 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
     ACTION = 'availability'
     URL = 'rest/availability'
     ADD_TRIGGER_BUTTON_TEXT = 'Add date/time availability change'
+
+    MISSING_CONTENT_FMT = 'MISSING content with resource Key "%s".'
+
+    # On the Publish > Availability form (in the element_settings course
+    # outline and the <option> values in the availability_triggers 'content'
+    # <select>), there are only two content types: 'unit', and 'lesson'.
+    # All types other than 'lesson' (e.g. 'unit', 'link', 'assessment') are
+    # represented by 'unit' instead.
+    OUTLINE_CONTENT_TYPES = ['unit', 'lesson']
+
+    UNEXPECTED_CONTENT_FMT = 'Unexpected content type "%%s" not in %s.' % (
+        OUTLINE_CONTENT_TYPES)
+
+    UNEXPECTED_AVAIL_FMT = 'Unexpected availability "%%s" not in %s.' % (
+        courses.AVAILABILITY_VALUES)
 
     @classmethod
     def get_form(cls, handler):
@@ -122,7 +139,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'content', 'For course content:', 'string',
             description='The course content, such as unit or lesson, '
             'for which to change the availability to students.',
-            i18n=False, select_data=cls.content_select(course),
+            i18n=False, select_data=cls.content_select(course).items(),
             extra_schema_dict_values={'className': 'trigger-content'}))
         availability_trigger.add_property(schema_fields.SchemaField(
             'availability', 'Change availability to:', 'string',
@@ -199,11 +216,11 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             text = '{} ({})'.format(text, note)
         if indent:
             text = ('&emsp;' * indent) + text
-        select.append((value, text))
+        select[value] = text
 
     @classmethod
     def content_select(cls, course):
-        select = []
+        select = collections.OrderedDict()
         for unit in course.get_units():
             if unit.is_assessment():
                 if course.get_parent_unit(unit.unit_id):
@@ -237,14 +254,40 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         """Expose as function for convenience in wrapping this handler."""
 
         course_availability = course.get_course_availability()
-        settings = course.app_context.get_environ()
+        app_context = course.app_context
+        settings = app_context.get_environ()
         reg_form = settings.setdefault('reg_form', {})
         publish = settings.setdefault('publish', {})
+
+        # Course content associated with existing availability triggers could
+        # have been deleted since the trigger itself was created. If the
+        # content whose availability was meant to be updated by the trigger
+        # has been deleted, also discard the obsolete trigger and do not
+        # display it in the Publish > Availability form. (It displays
+        # incorrectly anyway, using the first <option> since the trigger
+        # content key value is non longer present in the <select>.
+        #
+        # Saving the resulting form will then omit the obsolete triggers.
+        # The UpdateCourseAvailability cron job also detects these obsolete
+        # triggers and discards them as well.
+        triggers = publish.get('triggers', [])
+        selectable_content = cls.content_select(course)
+        triggers_with_content = []
+        for trigger in triggers:
+            content_key = trigger.get('content')
+            if content_key in selectable_content:
+                triggers_with_content.append(trigger)
+            else:
+                cls.log_trigger_error(
+                    trigger, what='OBSOLETE',
+                    ns=app_context.get_namespace_name(),
+                    cause=cls.MISSING_CONTENT_FMT % content_key)
+
         entity = {
             'course_availability': course_availability,
             'whitelist': reg_form.get('whitelist', ''),
             'element_settings': cls.traverse_course(course),
-            'availability_triggers': publish.get('triggers', []),
+            'availability_triggers': triggers_with_content,
         }
         return entity
 
@@ -310,7 +353,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             elif item['type'] == 'lesson':
                 element = course.find_lesson_by_id(None, item['id'])
             else:
-                raise ValueError('Unexpected item type "%s"' % item['type'])
+                raise ValueError(cls.UNEXPECTED_CONTENT_FMT % item['type'])
             if element:
                 if 'availability' in item:
                     element.availability = item['availability']
@@ -320,6 +363,22 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         course.save()
         transforms.send_json_response(
             handler, 200, 'Saved.', payload_dict=response_payload)
+
+    @classmethod
+    def log_trigger_error(cls, trigger,
+                          what='INVALID', why='content', ns='', cause=''):
+        """Assemble a trigger error message from optional parts and log it."""
+        # "INVALID content in...
+        parts = ["%s '%s' in" % (what, why)]
+        if ns:
+            # "INVALID content in ns_foo...
+            parts.append('"%s"' % ns)
+        # "INVALID content in... trigger: {avail...} ...
+        parts.append('trigger: %s' % trigger)
+        # "INVALID content in... trigger: {avail...} cause: ValueError: ...
+        if cause:
+            parts.append('cause: "%s"' % cause)
+        logging.error(' '.join(parts))
 
 
 def get_namespaced_handlers():

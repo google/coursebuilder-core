@@ -166,7 +166,7 @@ def day_start(seconds):
     return (seconds // _SECONDS_PER_DAY) * _SECONDS_PER_DAY
 
 
-_LAST_SECOND = _SECONDS_PER_DAY - 1
+_LAST_SECOND_OF_DAY = _SECONDS_PER_DAY - 1
 
 
 def day_end(seconds):
@@ -196,7 +196,72 @@ def day_end(seconds):
     #             23, 59, 59, # Force to 23:59:59, leaving all else unchanged.
     #             gmt_st.tm_wday, gmt_st.tm_yday, gmt_st.tm_isdst)
     #   return long(calendar.timegm(day_st)) # Back to seconds since epoch.
-    return day_start(seconds) + _LAST_SECOND
+    return day_start(seconds) + _LAST_SECOND_OF_DAY
+
+
+_SECONDS_PER_HOUR = 60 * 60
+
+
+def hour_start(seconds):
+    """Truncates a POSIX timestamp to the start of that hour (HH:00:00).
+
+    Args:
+        seconds: an arbitrary UTC time, as seconds since epoch (stored
+            in whatever time.gmtime will accept, i.e. int, long, or float).
+    Returns:
+        The supplied UTC time truncated to HH:00:00 of that same hour, as whole
+        seconds since epoch.
+    """
+    # datetime alternative:
+    #
+    #   if seconds is None:
+    #     utc_dt = datetime.datetime.utcnow()
+    #   else:
+    #     utc_dt = datetime.datetime.utcfromtimestamp(seconds)
+    #   day_dt = utc_dt.replace(minute=0, second=0)
+    #   return long(calendar.timegm(day_dt.utctimetuple()))
+    #
+    # struct_time alternative:
+    #
+    #   gmt_st = time.gmtime(seconds) # Convert UTC seconds to struct_time.
+    #   day_st = (gmt_st.tm_year, gmt_st.tm_mon, gmt_st.tm_mday,
+    #             gmt_st.tm_hour, 0, 0, # Force to HH:00:00.
+    #             gmt_st.tm_wday, gmt_st.tm_yday, gmt_st.tm_isdst)
+    #   return long(calendar.timegm(day_st)) # Back to seconds since epoch.
+    return (seconds // _SECONDS_PER_HOUR) * _SECONDS_PER_HOUR
+
+
+_LAST_SECOND_OF_HOUR = _SECONDS_PER_HOUR - 1
+
+
+def hour_end(seconds):
+    """Forces a POSIX timestamp to the end of that hour (HH:59:59).
+
+    Args:
+        seconds: an arbitrary UTC time, as seconds since epoch (stored
+            in whatever time.gmtime will accept, i.e. int, long, or float).
+    Returns:
+        The supplied UTC time forced to HH:59:59 of that same hour, as whole
+        seconds since epoch. This function ignores the possibility of leap
+        seconds, returning strict POSIX timestamps.
+    """
+    # datetime alternative:
+    #
+    #   if seconds is None:
+    #     utc_dt = datetime.datetime.utcnow()
+    #   else:
+    #     utc_dt = datetime.datetime.utcfromtimestamp(seconds)
+    #   day_dt = utc_dt.replace(minute=59, second=59)
+    #   return long(calendar.timegm(day_dt.utctimetuple()))
+    #
+    # struct_time alternative:
+    #
+    #   gmt_st = time.gmtime(seconds) # Convert UTC seconds to struct_time.
+    #   day_st = (gmt_st.tm_year, gmt_st.tm_mon, gmt_st.tm_mday,
+    #             gmt_st.tm_hour, 59, 59, # Force to HH:59:59.
+    #             gmt_st.tm_wday, gmt_st.tm_yday, gmt_st.tm_isdst)
+    #   return long(calendar.timegm(day_st)) # Back to seconds since epoch.
+    return hour_start(seconds) + _LAST_SECOND_OF_HOUR
 
 
 def to_text(seconds=None, dt=None, st=None,
