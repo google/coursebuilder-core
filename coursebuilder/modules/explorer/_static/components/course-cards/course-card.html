@@ -144,18 +144,12 @@
         if (course.enrollment.enrolled) {
           return 'Registered';
         } else if (!course.openForRegistration) {
-          return 'Completed';
-        } else if (course.startDate && course.endDate) {
-          var now = new Date();
-          if (now < new Date(course.startDate)) {
-            return 'Pre-registration';
-          } else if (now < new Date(course.endDate)) {
-            return 'In progress';
-          } else {
-            return 'Ended';
-          }
+          return 'Ended';
+        } else if (
+            course.startDate && new Date() < new Date(course.startDate)) {
+          return 'Pre-registration';
         } else {
-          return 'Available';
+          return 'In progress';
         }
       },
       _formatDate: function(dateString) {
