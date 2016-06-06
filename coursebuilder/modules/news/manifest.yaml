@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.news.news_tests.NewsEntityTests = 15
+    - modules.news.news_tests.NewsEntityTests = 17
     - modules.news.news_tests.NewsHttpTests = 11
 
 files:
@@ -13,4 +13,5 @@ files:
   - modules/news/messages.py
   - modules/news/news.py
   - modules/news/news_tests.py
+  - modules/news/news_tests_lib.py
   - modules/news/templates/news.html

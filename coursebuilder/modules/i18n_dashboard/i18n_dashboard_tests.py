@@ -1497,6 +1497,39 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertIn('TEST LESSON', page_html)
         self.assertIn('<p>C</p><p>D</p>', page_html)
 
+    def test_i18n_course_element_title(self):
+        self._store_resource_bundle()
+        lesson_key = resource.Key(resources_display.ResourceLesson.TYPE,
+                                  self.lesson.lesson_id)
+        unit_key = resource.Key(resources_display.ResourceUnit.TYPE,
+                                self.unit.unit_id)
+
+        # Verify that one-off title translation also works.
+        try:
+            sites.set_path_info('/' + self.COURSE_NAME)
+            ctx = sites.get_course_for_current_request()
+            save_locale = ctx.get_current_locale()
+
+            # Untranslated
+            courses.Course.clear_current()
+            ctx.set_current_locale(None)
+            resource_class = i18n_dashboard.TranslatableResourceCourseComponents
+            i18n_title = str(resource_class.get_i18n_title(lesson_key))
+            self.assertEquals('Test Lesson', i18n_title)
+            i18n_title = str(resource_class.get_i18n_title(unit_key))
+            self.assertEquals('Test Unit', i18n_title)
+
+            # Translated
+            courses.Course.clear_current()
+            ctx.set_current_locale('el')
+            i18n_title = str(resource_class.get_i18n_title(lesson_key))
+            self.assertEquals('TEST LESSON', i18n_title)
+            i18n_title = str(resource_class.get_i18n_title(unit_key))
+            self.assertEquals('TEST UNIT', i18n_title)
+        finally:
+            ctx.set_current_locale(save_locale)
+            sites.unset_path_info()
+
     def test_links_are_translated(self):
         link = self.course.add_link()
         link.title = 'Test Link'
@@ -1845,6 +1878,58 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertIn('CHOICE 1', page_html)
         self.assertIn('CHOICE 2', page_html)
 
+    def test_course_settings_i18n_title(self):
+        # Course settings don't have student-visible titles, so the 'title' is
+        # nearly a no-op.  Test here is not for functionality, but rather just
+        # to ensure that when course settings are handled polymorphically,
+        # nothing explodes.
+        found_any = False
+        for rsrc, key in (i18n_dashboard.TranslatableResourceCourseSettings
+                          .get_resources_and_keys(self.course)):
+            title = (i18n_dashboard.TranslatableResourceCourseSettings
+                     .get_i18n_title(key))
+            self.assertEquals(title, key.key)
+            found_any = True
+        self.assertTrue(found_any)
+
+    def test_course_settings_html_hooks(self):
+        # HTML hooks don't have student-visible titles, so the 'title' is
+        # nearly a no-op.  Test here is not for functionality, but rather just
+        # to ensure that when course settings are handled polymorphically,
+        # nothing explodes.
+        found_any = False
+        for rsrc, key in (i18n_dashboard.TranslatableResourceHtmlHooks
+                          .get_resources_and_keys(self.course)):
+            title = (i18n_dashboard.TranslatableResourceHtmlHooks.
+                     get_i18n_title(key))
+            self.assertEquals(title, key.key)
+            found_any = True
+        self.assertTrue(found_any)
+
+    def test_question_i18n_title(self):
+        qu_id = self._add_question()
+        key = resource.Key(resources_display.ResourceMCQuestion.TYPE, qu_id)
+
+        try:
+            sites.set_path_info('/' + self.COURSE_NAME)
+            ctx = sites.get_course_for_current_request()
+            save_locale = ctx.get_current_locale()
+
+            # Untranslated
+            ctx.set_current_locale(None)
+            resource_class = i18n_dashboard.TranslatableResourceQuestions
+            i18n_title = str(resource_class.get_i18n_title(key))
+            self.assertEquals('description text', i18n_title)
+
+            # Translated
+            courses.Course.clear_current()
+            ctx.set_current_locale('el')
+            i18n_title = str(resource_class.get_i18n_title(key))
+            self.assertEquals('DESCRIPTION TEXT', i18n_title)
+        finally:
+            ctx.set_current_locale(save_locale)
+            sites.unset_path_info()
+
     def test_legacy_questions_with_null_body(self):
         # Create a question
         qu_dict = {
@@ -1889,8 +1974,7 @@ class CourseContentTranslationTests(actions.TestBase):
             self.get('assessment?name=%s' % assessment.unit_id).body)
         self.assertIsNone(dom.find('.//div[@class="qt-question"]').text)
 
-    def test_question_groups_are_translated(self):
-        # Create a question group with one question
+    def _add_question_group_and_translations(self):
         qgp_dict = {
             'description': 'description text',
             'introduction': '<p>a</p><p>b</p>',
@@ -1901,16 +1985,6 @@ class CourseContentTranslationTests(actions.TestBase):
         qgp_dto = models.QuestionGroupDTO(None, qgp_dict)
         qgp_id = models.QuestionGroupDAO.save(qgp_dto)
 
-        # Create an assessment and add the question group to the content
-        assessment = self.course.add_assessment()
-        assessment.title = 'Test Assessment'
-        assessment.html_content = """
-            <question-group qgid="%s" instanceid="test-qgp">
-            </question-group><br>
-        """ % qgp_id
-        self.course.save()
-
-        # Store translation data for the question
         qgp_bundle = {
             'description': {
                 'source_value': None,
@@ -1939,6 +2013,22 @@ class CourseContentTranslationTests(actions.TestBase):
             resources_display.ResourceQuestionGroup.TYPE, qgp_id, 'el')
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(key_el), qgp_bundle))
+        return qgp_id
+
+    def test_question_groups_are_translated(self):
+        # Create a question group with one question
+        qgp_id = self._add_question_group_and_translations()
+
+        # Create an assessment and add the question group to the content
+        assessment = self.course.add_assessment()
+        assessment.title = 'Test Assessment'
+        assessment.html_content = """
+            <question-group qgid="%s" instanceid="test-qgp">
+            </question-group><br>
+        """ % qgp_id
+        self.course.save()
+
+        # Store translation data for the question
 
         page_html = self.get('assessment?name=%s' % assessment.unit_id).body
         dom = self.parse_html_string(page_html)
@@ -1955,6 +2045,30 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertEquals(
             'CHOICE 2',
             main.findall('.//div[@class="qt-choices"]//label')[1].text.strip())
+
+    def test_question_group_i18n_title(self):
+        qgp_id = self._add_question_group_and_translations()
+        key = resource.Key(resources_display.ResourceQuestionGroup.TYPE, qgp_id)
+
+        try:
+            sites.set_path_info('/' + self.COURSE_NAME)
+            ctx = sites.get_course_for_current_request()
+            save_locale = ctx.get_current_locale()
+
+            # Untranslated
+            ctx.set_current_locale(None)
+            resource_class = i18n_dashboard.TranslatableResourceQuestionGroups
+            i18n_title = str(resource_class.get_i18n_title(key))
+            self.assertEquals('description text', i18n_title)
+
+            # Translated
+            courses.Course.clear_current()
+            ctx.set_current_locale('el')
+            i18n_title = str(resource_class.get_i18n_title(key))
+            self.assertEquals('DESCRIPTION TEXT', i18n_title)
+        finally:
+            ctx.set_current_locale(save_locale)
+            sites.unset_path_info()
 
     def test_course_settings_are_translated(self):
         course_bundle = {

@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.announcements.announcements_tests.AnnouncementsTests = 19
+    - modules.announcements.announcements_tests.AnnouncementsTests = 21
 
 files:
   - modules/announcements/__init__.py

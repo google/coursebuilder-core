@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.i18n_dashboard.i18n_dashboard_tests.CourseContentTranslationTests = 15
+    - modules.i18n_dashboard.i18n_dashboard_tests.CourseContentTranslationTests = 20
     - modules.i18n_dashboard.i18n_dashboard_tests.I18nDashboardHandlerTests = 4
     - modules.i18n_dashboard.i18n_dashboard_tests.I18nProgressDeferredUpdaterTests = 5
     - modules.i18n_dashboard.i18n_dashboard_tests.IsTranslatableRestHandlerTests = 3

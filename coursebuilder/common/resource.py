@@ -191,6 +191,8 @@ class Key(object):
     manages serialization/deserialization as strings.
     """
 
+    SEPARATOR = ':'
+
     def __init__(self, type_str, key, course=None):
         self._type = type_str
         self._key = key
@@ -199,7 +201,7 @@ class Key(object):
             'Unknown resource type: %s' % type_str)
 
     def __str__(self):
-        return '%s:%s' % (self._type, self._key)
+        return '%s%s%s' % (self._type, self.SEPARATOR, self._key)
 
     def __repr__(self):
         return "<{} {}>".format(self.__class__.__name__, str(self))
@@ -214,7 +216,7 @@ class Key(object):
 
     @classmethod
     def fromstring(cls, key_str):
-        index = key_str.index(':')
+        index = key_str.index(cls.SEPARATOR)
         return Key(key_str[:index], key_str[index + 1:])
 
     def get_resource(self, course):

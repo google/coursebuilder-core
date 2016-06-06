@@ -18,7 +18,6 @@ __author__ = [
     'mgainer@google.com (Mike Gainer)',
 ]
 
-import collections
 import time
 
 from controllers import sites
@@ -26,6 +25,7 @@ from common import utc
 from common import utils as common_utils
 from models import models
 from modules.news import news
+from modules.news import news_tests_lib
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
@@ -50,7 +50,6 @@ class NewsTestBase(actions.TestBase):
             return (thing_one.resource_key == thing_two.resource_key and
                     thing_one.when == thing_two.when and
                     thing_one.url == thing_two.url and
-                    thing_one.description == thing_two.description and
                     thing_one.labels == thing_two.labels)
         news.NewsItem.__eq__ = news_items_are_equal
         news.NewsItem.__repr__ = lambda x: x.__dict__.__repr__()
@@ -59,6 +58,8 @@ class NewsTestBase(actions.TestBase):
                     abs((thing_one.when - thing_two.when).total_seconds()) < 2)
         news.SeenItem.__eq__ = seen_items_are_equal
         news.SeenItem.__repr__ = lambda x: x.__dict__.__repr__()
+        news.I18nTitleRegistry.register(
+            'test', lambda x: 'Test Item ' + x.split(':', 1)[1])
 
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace(self.NAMESPACE)
@@ -68,6 +69,7 @@ class NewsTestBase(actions.TestBase):
         del news.NewsItem.__repr__
         del news.SeenItem.__eq__
         del news.SeenItem.__repr__
+        news.I18nTitleRegistry.unregister('test')
         sites.reset_courses()
         namespace_manager.set_namespace(self.old_namespace)
         super(NewsTestBase, self).tearDown()
@@ -94,8 +96,7 @@ class NewsEntityTests(NewsTestBase):
 
     def _test_add_news_item(self, dao_class):
         now = utc.now_as_datetime()
-        news_item = news.NewsItem('the_key', 'the_url', 'the_description',
-                                  when=now)
+        news_item = news.NewsItem('test:key', 'test:url', when=now)
         dao_class.add_news_item(news_item)
         self.assertEquals([news_item], dao_class.get_news_items())
 
@@ -107,10 +108,35 @@ class NewsEntityTests(NewsTestBase):
         actions.register(self, 'John Smith')
         self._test_add_news_item(news.StudentNewsDao)
 
+    def _test_remove_news_item(self, dao_class):
+        # Just need to see no explosions.
+        dao_class.remove_news_item('no_such_item_key')
+
+        # Add an item so that we can remove it next.
+        now = utc.now_as_datetime()
+        news_item = news.NewsItem('test:key', 'test:url', when=now)
+        dao_class.add_news_item(news_item)
+        self.assertEquals([news_item], dao_class.get_news_items())
+
+        # Remove the item; verify empty set of items.
+        dao_class.remove_news_item(news_item.resource_key)
+        self.assertEquals([], dao_class.get_news_items())
+
+        # Remove again an item that had existed; just want no explosions.
+        dao_class.remove_news_item(news_item.resource_key)
+        self.assertEquals([], dao_class.get_news_items())
+
+    def test_remove_course_news_item(self):
+        self._test_remove_news_item(news.CourseNewsDao)
+
+    def test_remove_student_news_item(self):
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, 'John Smith')
+        self._test_remove_news_item(news.StudentNewsDao)
+
     def _test_add_duplicate_news_item(self, dao_class):
         now = utc.now_as_datetime()
-        news_item = news.NewsItem('the_key', 'the_url', 'the_description',
-                                  when=now)
+        news_item = news.NewsItem('test:key', 'test:url', when=now)
         dao_class.add_news_item(news_item)
         dao_class.add_news_item(news_item)
         dao_class.add_news_item(news_item)
@@ -128,9 +154,9 @@ class NewsEntityTests(NewsTestBase):
     def _test_add_newer_and_older_news_item(self, dao_class):
         now_ts = utc.now_as_timestamp()
 
-        older = news.NewsItem('the_key', 'the_url', 'the_description',
+        older = news.NewsItem('test:key', 'test:url',
                               when=utc.timestamp_to_datetime(now_ts))
-        newer = news.NewsItem('the_key', 'the_url', 'the_description',
+        newer = news.NewsItem('test:key', 'test:url',
                               when=utc.timestamp_to_datetime(now_ts + 1))
 
         dao_class.add_news_item(older)
@@ -160,8 +186,7 @@ class NewsEntityTests(NewsTestBase):
         NUM_ITEMS = 10
         expected_items = []
         for x in xrange(NUM_ITEMS):
-            news_item = news.NewsItem(
-                'the_key_%d' % x, 'the_url', 'the_description')
+            news_item = news.NewsItem('test:key_%d' % x, 'test:url')
             expected_items.append(news_item)
             dao_class.add_news_item(news_item)
         actual_items = dao_class.get_news_items()
@@ -180,8 +205,7 @@ class NewsEntityTests(NewsTestBase):
         actions.register(self, 'John Smith')
 
         now = utc.now_as_datetime()
-        news_item = news.NewsItem('the_key', 'the_url', 'the_description',
-                                  when=now)
+        news_item = news.NewsItem('test:key', 'test:url', when=now)
         dao_class.add_news_item(news_item)
         self.assertEquals([news_item], dao_class.get_news_items())
         news.StudentNewsDao.mark_item_seen(news_item.resource_key)
@@ -206,10 +230,8 @@ class NewsEntityTests(NewsTestBase):
         actions.login(self.STUDENT_EMAIL)
         actions.register(self, 'John Smith')
         now = utc.now_as_datetime()
-        item_one = news.NewsItem('key_one', 'the_url', 'the_description',
-                                 when=now)
-        item_two = news.NewsItem('key_two', 'the_url', 'the_description',
-                                 when=now)
+        item_one = news.NewsItem('key_one', 'test:url', when=now)
+        item_two = news.NewsItem('key_two', 'test:url', when=now)
         news.StudentNewsDao.add_news_item(item_one)
         news.StudentNewsDao.add_news_item(item_two)
 
@@ -248,8 +270,6 @@ class NewsEntityTests(NewsTestBase):
             news.NEWSWORTHINESS_SECONDS = save_newsworthiness_seconds
 
 
-NewsItem = collections.namedtuple('NewsItem', ['description', 'url', 'is_new'])
-
 
 class NewsHttpTests(NewsTestBase):
 
@@ -269,36 +289,18 @@ class NewsHttpTests(NewsTestBase):
         response = news.course_page_navbar_callback(self.app_context)
         self.assertEquals([], response)
 
-    def _get_news_title_styles(self, response):
-        soup = self.parse_html_string_to_soup(response.body)
+    def _get_news_title_styles(self, soup):
         title = soup.find(id='gcb_news_titlebar_text')
         return title.get('class')
-
-    def _get_news_items(self, response):
-        soup = self.parse_html_string_to_soup(response.body)
-        news_items = soup.select('.gcb_news_item')
-        ret = []
-        for item in news_items:
-            is_new = None
-            if 'gcb_new_news' in item.get('class'):
-                is_new = True
-            elif 'gcb_old_news' in item.get('class'):
-                is_new = False
-            else:
-                raise ValueError('News item not marked as new or old!')
-            link = item.find('a')
-            href = link.get('href')
-            text = link.text.strip()
-            ret.append(NewsItem(text, href, is_new))
-        return ret
 
     def test_get_news_no_news(self):
         actions.login(self.STUDENT_EMAIL)
         actions.register(self, 'John Smith')
         response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
         self.assertEquals(['has_only_old_news'],
-                          self._get_news_title_styles(response))
-        self.assertEquals([], self._get_news_items(response))
+                          self._get_news_title_styles(soup))
+        self.assertEquals([], news_tests_lib.extract_news_items_from_soup(soup))
 
     def test_get_news_unseen(self):
         user = actions.login(self.STUDENT_EMAIL)
@@ -309,14 +311,16 @@ class NewsHttpTests(NewsTestBase):
         then_ts = utc.now_as_timestamp() - news.NEWSWORTHINESS_SECONDS - 1
         then = utc.timestamp_to_datetime(then_ts)
         self._set_student_enroll_date(user, then)
-        news_item = news.NewsItem('the_key', 'the_url', 'the description', then)
+        news_item = news.NewsItem('test:key', 'test:url', then)
         news.CourseNewsDao.add_news_item(news_item)
 
         response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
         self.assertEquals(['has_new_news'],
-                          self._get_news_title_styles(response))
-        self.assertEquals([NewsItem('the description', 'the_url', True)],
-                          self._get_news_items(response))
+                          self._get_news_title_styles(soup))
+        self.assertEquals(
+            [news_tests_lib.NewsItem('Test Item key', 'test:url', True)],
+            news_tests_lib.extract_news_items_from_soup(soup))
 
     def test_get_news_recently_seen(self):
         user = actions.login(self.STUDENT_EMAIL)
@@ -326,16 +330,18 @@ class NewsHttpTests(NewsTestBase):
         then_ts = utc.now_as_timestamp() - news.NEWSWORTHINESS_SECONDS - 1
         then = utc.timestamp_to_datetime(then_ts)
         self._set_student_enroll_date(user, then)
-        news_item = news.NewsItem('the_key', 'the_url', 'the description', then)
+        news_item = news.NewsItem('test:key', 'test:url', then)
         news.CourseNewsDao.add_news_item(news_item)
         # But student has seen the thing, so it's marked as non-new.
-        news.StudentNewsDao.mark_item_seen('the_key')
+        news.StudentNewsDao.mark_item_seen('test:key')
 
         response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
         self.assertEquals(['has_only_old_news'],
-                          self._get_news_title_styles(response))
-        self.assertEquals([NewsItem('the description', 'the_url', False)],
-                          self._get_news_items(response))
+                          self._get_news_title_styles(soup))
+        self.assertEquals(
+            [news_tests_lib.NewsItem('Test Item key', 'test:url', False)],
+            news_tests_lib.extract_news_items_from_soup(soup))
 
 
     def test_get_news_some_old_some_new(self):
@@ -346,22 +352,23 @@ class NewsHttpTests(NewsTestBase):
         then_ts = utc.now_as_timestamp() - news.NEWSWORTHINESS_SECONDS - 1
         then = utc.timestamp_to_datetime(then_ts)
         self._set_student_enroll_date(user, then)
-        news_item = news.NewsItem('key_one', 'url_one', 'description one', then)
+        news_item = news.NewsItem('test:one', 'url_one', then)
         news.CourseNewsDao.add_news_item(news_item)
-        news_item = news.NewsItem('key_two', 'url_two', 'description two', then)
+        news_item = news.NewsItem('test:two', 'url_two', then)
         news.CourseNewsDao.add_news_item(news_item)
         # But student has seen the thing, so it's marked as non-new.
-        news.StudentNewsDao.mark_item_seen('key_one')
+        news.StudentNewsDao.mark_item_seen('test:one')
 
         response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
         self.assertEquals(['has_new_news'],
-                          self._get_news_title_styles(response))
+                          self._get_news_title_styles(soup))
         self.assertEquals(
             [
-                NewsItem('description two', 'url_two', True),
-                NewsItem('description one', 'url_one', False),
+                news_tests_lib.NewsItem('Test Item two', 'url_two', True),
+                news_tests_lib.NewsItem('Test Item one', 'url_one', False),
             ],
-            self._get_news_items(response))
+            news_tests_lib.extract_news_items_from_soup(soup))
 
     def test_student_and_course_news(self):
         user = actions.login(self.STUDENT_EMAIL)
@@ -370,20 +377,21 @@ class NewsHttpTests(NewsTestBase):
         then_ts = utc.now_as_timestamp() - news.NEWSWORTHINESS_SECONDS - 1
         then = utc.timestamp_to_datetime(then_ts)
         self._set_student_enroll_date(user, then)
-        news_item = news.NewsItem('key_one', 'url_one', 'description one', then)
+        news_item = news.NewsItem('test:one', 'url_one', then)
         news.CourseNewsDao.add_news_item(news_item)
-        news_item = news.NewsItem('key_two', 'url_two', 'description two', then)
+        news_item = news.NewsItem('test:two', 'url_two', then)
         news.StudentNewsDao.add_news_item(news_item)
 
         response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
         self.assertEquals(['has_new_news'],
-                          self._get_news_title_styles(response))
+                          self._get_news_title_styles(soup))
         self.assertEquals(
             [
-                NewsItem('description two', 'url_two', True),
-                NewsItem('description one', 'url_one', True),
+                news_tests_lib.NewsItem('Test Item two', 'url_two', True),
+                news_tests_lib.NewsItem('Test Item one', 'url_one', True),
             ],
-            self._get_news_items(response))
+            news_tests_lib.extract_news_items_from_soup(soup))
 
     def test_old_news_excluded_by_new_news(self):
         NUM_OLD_ITEMS = news.MIN_NEWS_ITEMS_TO_DISPLAY * 2
@@ -399,12 +407,13 @@ class NewsHttpTests(NewsTestBase):
         # Add many old items - twice as many as we're willing to show.
         expected_old_items = []
         for i in xrange(NUM_OLD_ITEMS):
-            expected_old_items.append(NewsItem('d%i' % i, 'u%i' % i, False))
+            expected_old_items.append(news_tests_lib.NewsItem(
+                'Test Item %i' % i, 'u%i' % i, False))
 
             then = utc.timestamp_to_datetime(then_ts + i)
-            item = news.NewsItem('k%d' % i, 'u%d' % i, 'd%i' % i, then)
+            item = news.NewsItem('test:%d' % i, 'u%d' % i, then)
             news.CourseNewsDao.add_news_item(item)
-            news.StudentNewsDao.mark_item_seen('k%d' % i)
+            news.StudentNewsDao.mark_item_seen('test:%d' % i)
 
         # Force everything we just did to be old news.
         try:
@@ -418,17 +427,19 @@ class NewsHttpTests(NewsTestBase):
             # Verify that we are only shown half of the old-news items before
             # we add any new ones.
             response = self.get('course')
+            soup = self.parse_html_string_to_soup(response.body)
             self.assertEquals(
                 expected_old_items[0:NUM_OLD_ITEMS / 2],
-                self._get_news_items(response))
+                news_tests_lib.extract_news_items_from_soup(soup))
 
             # Start adding new news items, one at a time.
             expected_new_items = []
             for i in xrange(NUM_NEW_ITEMS):
                 j = NUM_OLD_ITEMS + i
-                expected_new_items.append(NewsItem('d%i' % j, 'u%i' % j, True))
+                expected_new_items.append(news_tests_lib.NewsItem(
+                    'Test Item %i' % j, 'u%i' % j, True))
                 then = utc.timestamp_to_datetime(then_ts + j)
-                item = news.NewsItem('k%d' % j, 'u%d' % j, 'd%i' % j, then)
+                item = news.NewsItem('test:%d' % j, 'u%d' % j, then)
                 news.CourseNewsDao.add_news_item(item)
 
                 # Expect to see all new items, and maybe some old items,
@@ -440,7 +451,8 @@ class NewsHttpTests(NewsTestBase):
                         :news.MIN_NEWS_ITEMS_TO_DISPLAY - i - 1]
 
                 response = self.get('course')
-                actual_items = self._get_news_items(response)
+                soup = self.parse_html_string_to_soup(response.body)
+                actual_items = news_tests_lib.extract_news_items_from_soup(soup)
                 self.assertEquals(expected_items, actual_items)
 
         finally:
@@ -458,26 +470,27 @@ class NewsHttpTests(NewsTestBase):
 
     def test_news_before_user_registration_is_not_news(self):
         news_item = news.NewsItem(
-            'before_key', 'before_url', 'before_desc', utc.now_as_datetime())
+            'test:before', 'before_url', utc.now_as_datetime())
         news.CourseNewsDao.add_news_item(news_item)
         time.sleep(1)
         user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, 'John Smith')
         now = utc.now_as_datetime()
-        news_item = news.NewsItem('at_key', 'at_url', 'at_desc', now)
+        news_item = news.NewsItem('test:at', 'at_url', now)
         self._set_student_enroll_date(user, now)
         news.CourseNewsDao.add_news_item(news_item)
         time.sleep(1)
         news_item = news.NewsItem(
-            'after_key', 'after_url', 'after_desc', utc.now_as_datetime())
+            'test:after', 'after_url', utc.now_as_datetime())
         news.CourseNewsDao.add_news_item(news_item)
 
         # Expect to not see news item from before student registration.
         response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
         self.assertEquals(
-            [NewsItem('after_desc', 'after_url', True),
-             NewsItem('at_desc', 'at_url', True)],
-            self._get_news_items(response))
+            [news_tests_lib.NewsItem('Test Item after', 'after_url', True),
+             news_tests_lib.NewsItem('Test Item at', 'at_url', True)],
+            news_tests_lib.extract_news_items_from_soup(soup))
 
     def test_news_label_filtering(self):
         actions.login(self.STUDENT_EMAIL)
@@ -494,33 +507,41 @@ class NewsHttpTests(NewsTestBase):
 
         now_ts = utc.now_as_timestamp() + 3  # Avoid filtering in-past items
         news.CourseNewsDao.add_news_item(news.NewsItem(
-            'key_no_labels', 'url_no_labels', 'desc_no_labels',
+            'test:no_labels', 'url_no_labels',
             when=utc.timestamp_to_datetime(now_ts)))
         news.CourseNewsDao.add_news_item(news.NewsItem(
-            'key_with_labels', 'url_with_labels', 'desc_with_labels',
+            'test:with_labels', 'url_with_labels',
             labels=common_utils.list_to_text([label_foo]),
             when=utc.timestamp_to_datetime(now_ts - 1)))
 
         # Student starts life with no labels, so should match both items.
         response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
         self.assertEquals(
-            [NewsItem('desc_no_labels', 'url_no_labels', True),
-             NewsItem('desc_with_labels', 'url_with_labels', True)],
-            self._get_news_items(response))
+            [news_tests_lib.NewsItem(
+                'Test Item no_labels', 'url_no_labels', True),
+             news_tests_lib.NewsItem(
+                 'Test Item with_labels', 'url_with_labels', True)],
+            news_tests_lib.extract_news_items_from_soup(soup))
 
         # Apply non-matching label to Student; should not see labeled news.
         models.Student.set_labels_for_current(
             common_utils.list_to_text([label_bar]))
         response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
         self.assertEquals(
-            [NewsItem('desc_no_labels', 'url_no_labels', True)],
-            self._get_news_items(response))
+            [news_tests_lib.NewsItem(
+                'Test Item no_labels', 'url_no_labels', True)],
+            news_tests_lib.extract_news_items_from_soup(soup))
 
         # Apply matching label to Student; should again see labeled news.
         models.Student.set_labels_for_current(
             common_utils.list_to_text([label_foo, label_bar]))
         response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
         self.assertEquals(
-            [NewsItem('desc_no_labels', 'url_no_labels', True),
-             NewsItem('desc_with_labels', 'url_with_labels', True)],
-            self._get_news_items(response))
+            [news_tests_lib.NewsItem(
+                'Test Item no_labels', 'url_no_labels', True),
+             news_tests_lib.NewsItem(
+                 'Test Item with_labels', 'url_with_labels', True)],
+            news_tests_lib.extract_news_items_from_soup(soup))

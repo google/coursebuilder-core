@@ -1049,6 +1049,16 @@ class StudentGroupFilter(data_sources.AbstractEnumFilter):
         return [None]
 
 
+def _maybe_translate_student_group(student_group):
+    if i18n_dashboard.is_translation_required():
+        # Copy to prevent clobbering the base language name/descr in the cache.
+        student_group = copy.deepcopy(student_group)
+        resource_key = resource.Key(ResourceHandlerStudentGroup.TYPE,
+                                    student_group.id)
+        i18n_dashboard.translate_dto_list(None, [student_group], [resource_key])
+    return student_group
+
+
 def _add_student_group_to_profile(handler, app_context, student):
     """Callback for student profile page: Add group name/desc to page HTML."""
 
@@ -1056,13 +1066,7 @@ def _add_student_group_to_profile(handler, app_context, student):
         student.user_id)
     if not student_group:
         return None
-
-    if i18n_dashboard.is_translation_required():
-        # Copy to prevent clobbering the base language name/descr in the cache.
-        student_group = copy.deepcopy(student_group)
-        resource_key = resource.Key(ResourceHandlerStudentGroup.TYPE,
-                                    student_group.id)
-        i18n_dashboard.translate_dto_list(None, [student_group], [resource_key])
+    student_group = _maybe_translate_student_group(student_group)
 
     ret = safe_dom.NodeList()
     # I18N: Name of section title appearing on student profile page.  Title
@@ -1191,6 +1195,13 @@ class TranslatableResourceStudentGroups(
     @classmethod
     def get_title(cls):
         return MODULE_NAME
+
+    @classmethod
+    def get_i18n_title(cls, resource_key):
+        student_group = model_caching.CacheFactory.get_manager_class(
+            MODULE_NAME_AS_IDENTIFIER).get(resource_key.key)
+        student_group = _maybe_translate_student_group(student_group)
+        return student_group.name
 
     @classmethod
     def get_resources_and_keys(cls, course):

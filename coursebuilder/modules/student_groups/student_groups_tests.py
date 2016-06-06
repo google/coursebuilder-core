@@ -1419,6 +1419,42 @@ class I18nTests(StudentGroupsTestBase):
         actions.login(self.STUDENT_EMAIL)
         self._verify_profile_content('MY NEW GROUP', 'THIS IS MY GROUP')
 
+    def test_i18n_title(self):
+        actions.login(self.ADMIN_EMAIL)
+        response = self._put_group(None, 'My New Group', 'this is my group')
+        group_id = transforms.loads(response['payload'])['key']
+        self._put_availability(group_id, [self.STUDENT_EMAIL])
+        self.execute_all_deferred_tasks()
+        key = resource.Key(student_groups.ResourceHandlerStudentGroup.TYPE,
+                           group_id)
+        self._put_translation(key, 'MY NEW GROUP', 'THIS IS MY GROUP')
+        self.execute_all_deferred_tasks()
+
+        actions.login(self.STUDENT_EMAIL)
+
+        # Verify that one-off title translation also works.
+        try:
+            sites.set_path_info('/' + self.COURSE_NAME)
+            ctx = sites.get_course_for_current_request()
+            save_locale = ctx.get_current_locale()
+
+            # Untranslated
+            ctx.set_current_locale(None)
+            i18n_title = str(
+                student_groups.TranslatableResourceStudentGroups.get_i18n_title(
+                    key))
+            self.assertEquals('My New Group', i18n_title)
+
+            # Translated
+            ctx.set_current_locale(self.LOCALE)
+            i18n_title = str(
+                student_groups.TranslatableResourceStudentGroups.get_i18n_title(
+                    key))
+            self.assertEquals('MY NEW GROUP', i18n_title)
+        finally:
+            ctx.set_current_locale(save_locale)
+            sites.unset_path_info()
+
     def test_with_blank_description(self):
         actions.login(self.ADMIN_EMAIL)
         response = self._put_group(None, 'My New Group', '')

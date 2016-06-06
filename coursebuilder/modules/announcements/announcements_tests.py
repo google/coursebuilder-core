@@ -20,6 +20,7 @@ __author__ = [
 ]
 
 import re
+import time
 import urllib
 import urlparse
 
@@ -31,6 +32,8 @@ from models import models
 from models import transforms
 from modules.announcements import announcements
 from modules.i18n_dashboard import i18n_dashboard
+from modules.news import news
+from modules.news import news_tests_lib
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
@@ -352,55 +355,147 @@ class AnnouncementsTests(actions.TestBase):
         self.assertIn(announcements_title, response.body)
         self.assertEquals(self.parse_html_string(
             response.body).get('lang'), locale)
-        self._verify_announcements(['Test Announcement %s' % locale],
-                                   ['Announcement Content %s' % locale])
+        if locale == 'en_US':
+            self._verify_announcements(['Test Announcement'],
+                                       ['Announcement Content'])
+        else:
+            self._verify_announcements(['TEST ANNOUNCEMENT'],
+                                       ['ANNOUNCEMENT CONTENT'])
 
-    def test_view_announcement_via_locale_picker(self):
+    def _add_announcement_and_translation(self, locale, is_draft=False):
         announcement = announcements.AnnouncementEntity()
-        announcement.title = 'Test Announcement en_US'
-        announcement.html = 'Announcement Content en_US'
-        announcement.is_draft = False
+        announcement.title = 'Test Announcement'
+        announcement.html = 'Announcement Content'
+        announcement.is_draft = is_draft
         announcement.put()
 
-        for locale in ('ru_RU', 'es_ES'):
-            key = i18n_dashboard.ResourceBundleKey(
-                announcements.ResourceHandlerAnnouncement.TYPE,
-                announcement.key().id(), locale)
-            dto = i18n_dashboard.ResourceBundleDTO(str(key), {
-                'title': {
-                    'type': 'string',
-                    'source_value': '',
-                    'data': [
-                        {'source_value': 'Test Announcement en_US',
-                         'target_value': 'Test Announcement ' + locale}]
-                },
-                'html': {
-                    'type': 'string',
-                    'source_value': '',
-                    'data': [
-                        {'source_value': 'Content en_US',
-                         'target_value': 'Announcement Content ' + locale}]
-                },
-            })
-            i18n_dashboard.ResourceBundleDAO.save(dto)
+        key = i18n_dashboard.ResourceBundleKey(
+            announcements.ResourceHandlerAnnouncement.TYPE,
+            announcement.key().id(), locale)
+        dto = i18n_dashboard.ResourceBundleDTO(str(key), {
+            'title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {'source_value': 'Test Announcement',
+                     'target_value': 'TEST ANNOUNCEMENT'}]
+            },
+            'html': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {'source_value': 'Announcement Content',
+                     'target_value': 'ANNOUNCEMENT CONTENT'}]
+            },
+        })
+        i18n_dashboard.ResourceBundleDAO.save(dto)
+        return announcement
 
+    def test_view_announcement_via_locale_picker(self):
+        locale = 'ru_RU'
+        self._add_announcement_and_translation(locale)
         actions.login('student@sample.com')
         actions.register(self, 'John Doe')
 
         with actions.OverriddenEnvironment({
             'course': {'locale': 'en_US'},
-            'extra_locales': [
-                {'locale': 'ru_RU', 'availability': 'true'},
-                {'locale':'es_ES', 'availability':'true'},
-            ]
-            }):
+            'extra_locales': [{'locale': locale, 'availability': 'true'}]}):
 
             self._set_prefs_locale(None)
             self._assert_announcement_locale('Announcements', 'en_US')
             self._set_prefs_locale('ru_RU')
             self._assert_announcement_locale('Сообщения', 'ru_RU')
-            self._set_prefs_locale('es_ES')
-            self._assert_announcement_locale('Avisos', 'es_ES')
+
+    def test_announcement_i18n_title(self):
+        locale = 'de'
+        announcement = self._add_announcement_and_translation(locale)
+        actions.login('student@sample.com')
+        actions.register(self, 'John Doe')
+
+        # Verify that one-off title translation also works.
+        try:
+            sites.set_path_info('/' + self.COURSE)
+            ctx = sites.get_course_for_current_request()
+            save_locale = ctx.get_current_locale()
+            key = announcements.TranslatableResourceAnnouncement.key_for_entity(
+                announcement)
+
+            # Untranslated
+            ctx.set_current_locale(None)
+            i18n_title = str(
+                announcements.TranslatableResourceAnnouncement.get_i18n_title(
+                    key))
+            self.assertEquals('Test Announcement', i18n_title)
+
+            # Translated
+            ctx.set_current_locale(locale)
+            i18n_title = str(
+                announcements.TranslatableResourceAnnouncement.get_i18n_title(
+                    key))
+            self.assertEquals('TEST ANNOUNCEMENT', i18n_title)
+        finally:
+            ctx.set_current_locale(save_locale)
+            sites.unset_path_info()
+
+    def test_announcement_news(self):
+        actions.login('student@sample.com')
+        actions.register(self, 'John Doe')
+        time.sleep(1)
+        locale = 'de'
+        announcement = self._add_announcement_and_translation(
+            locale, is_draft=True)
+        sent_data = {
+            'key': str(announcement.key()),
+            'title': 'Test Announcement',
+            'date': utc.to_text(seconds=utc.now_as_timestamp()),
+            'is_draft': False,
+        }
+        actions.login(self.ADMIN_EMAIL)
+        response = self._put_announcement(sent_data)
+        actions.login('student@sample.com')
+
+        # Verify announcement news item using news API directly
+        news_items = news.CourseNewsDao.get_news_items()
+        self.assertEquals(1, len(news_items))
+        item = news_items[0]
+        now_timestamp = utc.now_as_timestamp()
+        self.assertEquals(
+            announcements.AnnouncementsStudentHandler.URL.lstrip('/'), item.url)
+        self.assertEquals(
+            str(announcements.TranslatableResourceAnnouncement.key_for_entity(
+                announcement)),
+            item.resource_key)
+        self.assertAlmostEqual(
+            now_timestamp, utc.datetime_to_timestamp(item.when), delta=10)
+
+        # Verify announcement news item looking at HTTP response to /course
+        response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
+        self.assertEquals(
+            [news_tests_lib.NewsItem(
+                'Test Announcement',
+                announcements.AnnouncementsStudentHandler.URL.lstrip('/'),
+                True)],
+            news_tests_lib.extract_news_items_from_soup(soup))
+
+        # Verify announcement news item translated title.
+        self._set_prefs_locale(locale)
+        response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
+        self.assertEquals(
+            [news_tests_lib.NewsItem(
+                'TEST ANNOUNCEMENT',
+                announcements.AnnouncementsStudentHandler.URL.lstrip('/'),
+                True)],
+            news_tests_lib.extract_news_items_from_soup(soup))
+
+        # Delete the announcement; news item should also go away.
+        actions.login(self.ADMIN_EMAIL)
+        self._delete_announcement(str(announcement.key()))
+        actions.login('student@sample.com')
+        response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
+        self.assertEquals([], news_tests_lib.extract_news_items_from_soup(soup))
 
     def test_announcement_caching(self):
 

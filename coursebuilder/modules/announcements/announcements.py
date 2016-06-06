@@ -44,6 +44,7 @@ from models import transforms
 from modules.announcements import messages
 from modules.dashboard import dashboard
 from modules.i18n_dashboard import i18n_dashboard
+from modules.news import news
 from modules.oeditor import oeditor
 
 from google.appengine.ext import db
@@ -369,6 +370,11 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
         payload = request.get('payload')
         update_dict = transforms.json_to_dict(
             transforms.loads(payload), schema.get_json_schema_dict())
+        if entity.is_draft and not update_dict.get('set_draft'):
+            item = news.NewsItem(
+                str(TranslatableResourceAnnouncement.key_for_entity(entity)),
+                AnnouncementsStudentHandler.URL.lstrip('/'))
+            news.CourseNewsDao.add_news_item(item)
 
         # The datetime widget returns a datetime object and we need a UTC date.
         update_dict['date'] = update_dict['date'].date()
@@ -434,6 +440,12 @@ class AnnouncementsItemRESTHandler(utils.BaseRESTHandler):
                 {'set_draft': set_draft}
             )
             return
+
+        if entity.is_draft and not set_draft:
+            item = news.NewsItem(
+                str(TranslatableResourceAnnouncement.key_for_entity(entity)),
+                AnnouncementsStudentHandler.URL.lstrip('/'))
+            news.CourseNewsDao.add_news_item(item)
 
         entity.is_draft = set_draft
         entity.put()
@@ -514,6 +526,8 @@ class AnnouncementEntity(entities.BaseEntity):
 
     def delete(self):
         """Do the normal delete() and invalidate memcache."""
+        news.CourseNewsDao.remove_news_item(
+            str(TranslatableResourceAnnouncement.key_for_entity(self)))
         super(AnnouncementEntity, self).delete()
         self.purge_cache()
 
@@ -560,8 +574,20 @@ class TranslatableResourceAnnouncement(
         return [ResourceHandlerAnnouncement.TYPE]
 
     @classmethod
-    def notify_translations_changed(cls, key):
-        AnnouncementEntity.purge_cache(key.locale)
+    def notify_translations_changed(cls, resource_bundle_key):
+        AnnouncementEntity.purge_cache(resource_bundle_key.locale)
+
+    @classmethod
+    def get_i18n_title(cls, resource_key):
+        locale = None
+        app_context = sites.get_course_for_current_request()
+        if (app_context and
+            app_context.default_locale != app_context.get_current_locale()):
+            locale = app_context.get_current_locale()
+        announcements = AnnouncementEntity.get_announcements(locale)
+        item = common_utils.find(
+            lambda a: a.key().id() == int(resource_key.key), announcements)
+        return item.title if item else None
 
 
 class ResourceHandlerAnnouncement(resource.AbstractResourceHandler):

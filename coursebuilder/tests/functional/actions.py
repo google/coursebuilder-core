@@ -339,7 +339,8 @@ class TestBase(suite.AppEngineTestBase):
 
         return False
 
-    def parse_html_string(self, html_str):
+    @classmethod
+    def parse_html_string(cls, html_str):
         """Parse the given HTML string to a XML DOM tree.
 
         Args:
@@ -353,7 +354,8 @@ class TestBase(suite.AppEngineTestBase):
             namespaceHTMLElements=False)
         return parser.parse(html_str)
 
-    def parse_html_string_to_soup(self, html_str):
+    @classmethod
+    def parse_html_string_to_soup(cls, html_str):
         return bs4.BeautifulSoup(html_str)
 
     def execute_all_deferred_tasks(self, queue_name='default',

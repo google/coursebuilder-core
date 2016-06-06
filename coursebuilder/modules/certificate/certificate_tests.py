@@ -24,6 +24,7 @@ from models import student_work
 from modules.certificate import certificate
 from modules.certificate import custom_criteria
 from modules.news import news
+from modules.news import news_tests_lib
 from modules.review import domain
 from modules.review import peer
 from modules.review import review as review_module
@@ -277,11 +278,17 @@ class CertificateCriteriaTestCase(actions.TestBase):
         item = news_items[0]
         now_ts = utc.now_as_timestamp()
         self.assertEquals(certificate.CERTIFICATE_HANDLER_PATH, item.url)
-        self.assertEquals(
-            'Course completion certificate earned!', item.description)
         self.assertEquals(certificate.RESOURCE_KEY, item.resource_key)
         self.assertAlmostEqual(
             now_ts, utc.datetime_to_timestamp(item.when), delta=10)
+
+        response = self.get('course')
+        soup = self.parse_html_string_to_soup(response.body)
+        self.assertEquals(
+            [news_tests_lib.NewsItem(
+                'Course completion certificate earned!',
+                certificate.CERTIFICATE_HANDLER_PATH, True)],
+            news_tests_lib.extract_news_items_from_soup(soup))
 
     def _submit_review(self, assessment):
         """Submits a review by the current student.

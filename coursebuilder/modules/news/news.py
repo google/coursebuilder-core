@@ -42,6 +42,7 @@ import os
 import jinja2
 
 import appengine_config
+from common import resource
 from common import schema_fields
 from common import users
 from common import utc
@@ -53,6 +54,7 @@ from models import data_removal
 from models import models
 from models import services
 from models import transforms
+from modules.i18n_dashboard import i18n_dashboard
 from modules.news import messages
 
 from google.appengine.ext import db
@@ -104,7 +106,6 @@ class NewsItem(SerializableList):
     FIELD_KEY = 'resource_key'
     FIELD_WHEN = 'when'
     FIELD_URL = 'url'
-    FIELD_DESCRIPTION = 'description'
     FIELD_LABELS = 'labels'
 
     SCHEMA = schema_fields.FieldRegistry('NewsItem')
@@ -115,11 +116,9 @@ class NewsItem(SerializableList):
     SCHEMA.add_property(schema_fields.SchemaField(
         FIELD_URL, 'URL', 'string'))
     SCHEMA.add_property(schema_fields.SchemaField(
-        FIELD_DESCRIPTION, 'Description', 'string'))
-    SCHEMA.add_property(schema_fields.SchemaField(
         FIELD_LABELS, 'Labels', 'string'))
 
-    def __init__(self, resource_key, url, description, when=None, labels=None):
+    def __init__(self, resource_key, url, when=None, labels=None):
         # String version of common.resource.Key
         self.resource_key = resource_key
 
@@ -128,10 +127,6 @@ class NewsItem(SerializableList):
 
         # URL to the page showing the item.
         self.url = url
-
-        # Text to display on the list of news items visible to student.
-        # Note: Should be I18N'd.
-        self.description = description
 
         # Single string giving IDs of labels, whitespace separated.  Same as
         # labels field on Student, Announcement, Unit and so on.  Used to
@@ -153,6 +148,9 @@ class NewsItem(SerializableList):
         # are likely old news for the student.
         self._is_new_news = None
 
+        # Title, suitably i18n'd for the current display locale.
+        self._i18n_title = None
+
     @property
     def is_new_news(self):
         return self._is_new_news
@@ -160,6 +158,14 @@ class NewsItem(SerializableList):
     @is_new_news.setter
     def is_new_news(self, value):
         self._is_new_news = value
+
+    @property
+    def i18n_title(self):
+        return self._i18n_title
+
+    @i18n_title.setter
+    def i18n_title(self, value):
+        self._i18n_title = value
 
 
 class SeenItem(SerializableList):
@@ -210,6 +216,16 @@ class BaseNewsDto(object):
             news_items.append(news_item)
         self._set_news_items(news_items)
 
+    def remove_news_item(self, resource_key):
+        news_items = self.get_news_items()
+        item = common_utils.find(
+            lambda i: i.resource_key == resource_key, news_items)
+        if not item:
+            return False
+        news_items.remove(item)
+        self._set_news_items(news_items)
+        return True
+
 
 class BaseNewsDao(models.BaseJsonDao):
 
@@ -219,6 +235,12 @@ class BaseNewsDao(models.BaseJsonDao):
         dto = cls.load_or_default()
         dto.add_news_item(news_item, overwrite_existing)
         cls.save(dto)
+
+    @classmethod
+    def remove_news_item(cls, resource_key):
+        dto = cls.load_or_default()
+        if dto.remove_news_item(resource_key):
+            cls.save(dto)
 
     @classmethod
     def get_news_items(cls):
@@ -367,6 +389,7 @@ def course_page_navbar_callback(app_context):
     new_news = []
     old_news = []
     now = utc.now_as_datetime()
+    enrolled_on = student.enrolled_on.replace(microsecond=0)
     for item in news:
         seen_when = seen_times.get(item.resource_key)
         if seen_when is None:
@@ -375,7 +398,7 @@ def course_page_navbar_callback(app_context):
             # we assume that on enroll, the student is on notice that all
             # course content is "new", and we don't need to redundantly bring
             # it to their attention.
-            if item.when >= student.enrolled_on:
+            if item.when >= enrolled_on:
                 item.is_new_news = True
                 new_news.append(item)
         elif (now - seen_when).total_seconds() < NEWSWORTHINESS_SECONDS:
@@ -395,12 +418,65 @@ def course_page_navbar_callback(app_context):
     news = new_news + old_news[
         0:max(0, MIN_NEWS_ITEMS_TO_DISPLAY - len(new_news))]
 
+    for item in news:
+        try:
+            key = resource.Key.fromstring(item.resource_key)
+            resource_handler = (
+                i18n_dashboard.TranslatableResourceRegistry.get_by_type(
+                    key.type))
+            item.i18n_title = resource_handler.get_i18n_title(key)
+        except AssertionError:
+            # Not all news things are backed by AbstractResourceHandler types.
+            # Fall back to news-specific registry for these.
+            resource_handler = I18nTitleRegistry
+            key_type, _ = item.resource_key.split(resource.Key.SEPARATOR, 1)
+            item.i18n_title = resource_handler.get_i18n_title(
+                key_type, item.resource_key)
+
     # Fill template
     template_environ = app_context.get_template_environ(
         app_context.get_current_locale(), [TEMPLATES_DIR])
     template = template_environ.get_template('news.html', [TEMPLATES_DIR])
     return [
         jinja2.utils.Markup(template.render({'news': news}, autoescape=True))]
+
+
+class I18nTitleRegistry(object):
+
+    _REGISTRY = {}
+
+    @classmethod
+    def register(cls, type_str, i18n_title_provider):
+        """Register a resource handler for news items.
+
+        If your newsworthy thing has already implemented a class inheriting
+        from common.resource.AbstractResourceHandler, you need not register
+        here; that class will be detected from its registration with
+        common.resource.Registry and used directly.  This registry is only for
+        things that are newsworthy but do not represent actual resource
+        entities.  This primarily includes less tangible notions, such as
+        course completion indications.
+
+        Args:
+          i18n_title_provider: A callback that can provide i18n'd title string
+              for a news item.  The callback is provided with one argument:
+              key: Whatever was set as the news item's key string when it
+              was added.  If the current course or locale are required, use
+              the various get_current_X functions in controllers.sites.
+        """
+        if type_str in cls._REGISTRY:
+            raise ValueError('Resource type %s is already registered.' %
+                             type_str)
+        cls._REGISTRY[type_str] = i18n_title_provider
+
+    @classmethod
+    def unregister(cls, type_str):
+        if type_str in cls._REGISTRY:
+            del cls._REGISTRY[type_str]
+
+    @classmethod
+    def get_i18n_title(cls, key_type, key):
+        return cls._REGISTRY[key_type](key)
 
 
 def register_module():

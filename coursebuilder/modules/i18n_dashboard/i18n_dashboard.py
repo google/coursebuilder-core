@@ -1865,6 +1865,23 @@ class AbstractTranslatableResourceType(object):
         raise NotImplementedError('Derived classes must implement this.')
 
     @classmethod
+    def get_i18n_title(cls, resource_key):
+        """Provide an I18N'd title for a resource.
+
+        The current course and current language are implied; use common
+        methods in controllers.sites to get the context for the current
+        request and from that, the current locale.
+
+        Args:
+          resource_key: common.resource.Key instance naming the entity
+              for which we want a title.
+        Returns:
+          I18N'd version of the title for the entity corresponding to the
+          locale in the key.
+        """
+        raise NotImplementedError('Derived classes must implement this.')
+
+    @classmethod
     def get_resources_and_keys(cls, course):
         """Return an iterable of ordered resources for this type.
 
@@ -2009,6 +2026,22 @@ class TranslatableResourceCourseSettings(AbstractTranslatableResourceType):
         return 'Settings'
 
     @classmethod
+    def get_i18n_title(cls, resource_key):
+        """Return the name of the setting as the "translated" title.
+
+        Course settings aren't student visible, and so their names don't
+        get translated.  Return just the name of the setting, since that
+        makes as much sense as anything else.
+
+        Args:
+          resource_key: common.resource.Key instance naming the entity
+              for which we want a title.
+        Returns:
+          Setting name
+        """
+        return resource_key.key
+
+    @classmethod
     def get_resources_and_keys(cls, course):
         ret = []
         for section_name in sorted(courses.Course.get_schema_sections()):
@@ -2036,6 +2069,20 @@ class TranslatableResourceCourseComponents(AbstractTranslatableResourceType):
     @classmethod
     def get_title(cls):
         return 'Create > Outline'
+
+    @classmethod
+    def get_i18n_title(cls, resource_key):
+        # This will pick up from the Course instance for the current request,
+        # so very low overhead here.
+        app_context = sites.get_course_for_current_request()
+        if not app_context:
+            return None
+        course = courses.Course.get(app_context)
+        if resource_key.type == resources_display.ResourceLesson.TYPE:
+            item = course.find_lesson_by_id(None, resource_key.key)
+        else:
+            item = course.find_unit_by_id(resource_key.key)
+        return item.title if item else None
 
     @classmethod
     def get_resources_and_keys(cls, course):
@@ -2096,6 +2143,14 @@ class TranslatableResourceQuestions(AbstractTranslatableResourceType):
         return 'Questions'
 
     @classmethod
+    def get_i18n_title(cls, resource_key):
+        # I18N is done by POST_LOAD_HOOKS automatically.  Since QuestionEntity
+        # are in the DAO/DTO/Entity paradigm, they're automatically memcached,
+        # as are the translation bundles that will be applied.
+        question = models.QuestionDAO.load(resource_key.key)
+        return question.description if question else None
+
+    @classmethod
     def get_resources_and_keys(cls, course):
         ret = []
         for qu in models.QuestionDAO.get_all():
@@ -2123,6 +2178,15 @@ class TranslatableResourceQuestionGroups(AbstractTranslatableResourceType):
         return 'Question Groups'
 
     @classmethod
+    def get_i18n_title(cls, resource_key):
+        # I18N is done by POST_LOAD_HOOKS automatically.  Since
+        # QuestionGroupEntityEntity are in the DAO/DTO/Entity paradigm,
+        # they're automatically memcached, as are the translation bundles that
+        # will be applied.
+        question_group = models.QuestionGroupDAO.load(resource_key.key)
+        return question_group.description if question_group else None
+
+    @classmethod
     def get_resources_and_keys(cls, course):
         ret = []
         for qg in models.QuestionGroupDAO.get_all():
@@ -2144,6 +2208,25 @@ class TranslatableResourceHtmlHooks(AbstractTranslatableResourceType):
     @classmethod
     def get_title(cls):
         return 'HTML Hooks'
+
+    @classmethod
+    def get_i18n_title(cls, resource_key):
+        """Return the name of the hook as the "translated" title.
+
+        HTML hook entities aren't student visible, and so their names don't
+        get translated.  Return just the name of the setting, since that
+        makes as much sense as anything else.  (Yes, the _contents_ of
+        hooks are student-visible, and are i18n'd, but it doesn't make sense
+        to return what may well be fragmentary HTML gibberish as a concise
+        title.)
+
+        Args:
+          resource_key: common.resource.Key instance naming the entity
+              for which we want a title.
+        Returns:
+          Hook name
+        """
+        return resource_key.key
 
     @classmethod
     def get_resources_and_keys(cls, course):

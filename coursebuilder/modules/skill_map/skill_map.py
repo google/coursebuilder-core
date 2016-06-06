@@ -259,6 +259,11 @@ class TranslatableResourceSkill(
         return 'Skills'
 
     @classmethod
+    def get_i18n_title(cls, resource_key):
+        # I18N is done by post-load hook.
+        return ResourceSkill.get_resource(None, resource_key.key).name
+
+    @classmethod
     def get_resources_and_keys(cls, course):
         ret = []
         for skill in _SkillDao.get_all():

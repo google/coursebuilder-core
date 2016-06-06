@@ -51,6 +51,7 @@ from modules.skill_map.skill_map import SkillCompletionAggregate
 from modules.skill_map.skill_map import _SkillDao
 from modules.skill_map.skill_map import SkillCompletionTracker
 from modules.skill_map.skill_map import SkillMapDataSource
+from modules.skill_map.skill_map import TranslatableResourceSkill
 from modules.skill_map.skill_map_metrics import SkillMapMetrics
 from modules.skill_map.skill_map_metrics import CHAINS_MIN_LENGTH
 from modules.skill_map.recommender import SkillRecommender
@@ -2052,6 +2053,25 @@ class SkillI18nTests(actions.TestBase):
                             skill.description.upper())
         skill_text = (''.join(skill_li.itertext())).strip()
         self.assertEqual(skill.name.upper(), skill_text)
+
+        # Verify that one-off title translation also works.
+        try:
+            sites.set_path_info('/' + self.COURSE_NAME)
+            ctx = sites.get_course_for_current_request()
+            save_locale = ctx.get_current_locale()
+
+            # Untranslated
+            ctx.set_current_locale(None)
+            i18n_title = str(TranslatableResourceSkill.get_i18n_title(key))
+            self.assertEquals(SKILL_NAME, i18n_title)
+
+            # Translated
+            ctx.set_current_locale('el')
+            i18n_title = str(TranslatableResourceSkill.get_i18n_title(key))
+            self.assertEquals(SKILL_NAME.upper(), i18n_title)
+        finally:
+            ctx.set_current_locale(save_locale)
+            sites.unset_path_info()
 
     def test_skills_appear_on_i18n_dashboard(self):
         skill = Skill(None, {

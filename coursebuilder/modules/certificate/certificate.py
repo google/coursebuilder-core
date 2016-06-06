@@ -44,6 +44,7 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
 import appengine_config
+from common import resource
 from common import safe_dom
 from common import schema_fields
 from common import tags
@@ -76,7 +77,8 @@ RESOURCES_PATH = '/modules/certificate/resources'
 # with other resource type names.  It is also "unique enough", in that
 # since it's per-student, we don't really care what the ID component of
 # the key is.
-RESOURCE_KEY = 'certificate:1'
+RESOURCE_TYPE = 'certificate'
+RESOURCE_KEY = RESOURCE_TYPE + resource.Key.SEPARATOR + '1'
 
 
 class ShowCertificateHandler(utils.BaseHandler):
@@ -493,17 +495,19 @@ class CertificateAggregator(
           'generated.')
 
 
-def post_update_progress(course, student, progress_, event_entity, event_key):
+def _post_update_progress(course, student, progress_, event_entity, event_key):
     """Called back when student has progress event recorded."""
 
     if student_is_qualified(student, course):
-        app_context = sites.get_app_context_for_current_request()
-        # I18N: Brief note appearing in per-Student news dropdown menu
-        # indicating that this student has recently earned a course
-        # completion certificate.
-        desc = app_context.gettext('Course completion certificate earned!')
-        item = news.NewsItem(RESOURCE_KEY, CERTIFICATE_HANDLER_PATH, desc)
+        item = news.NewsItem(RESOURCE_KEY, CERTIFICATE_HANDLER_PATH)
         news.StudentNewsDao.add_news_item(item, overwrite_existing=False)
+
+
+def _get_i18n_news_title(_unused_key):
+    # I18N: Shown in list of news item titles (short descriptions)
+    # when student has earned a course completion certificate.
+    app_context = sites.get_app_context_for_current_request()
+    return app_context.gettext('Course completion certificate earned!')
 
 
 custom_module = None
@@ -531,7 +535,8 @@ def register_module():
         student_aggregate.StudentAggregateComponentRegistry.register_component(
             CertificateAggregator)
         progress.UnitLessonCompletionTracker.POST_UPDATE_PROGRESS_HOOK.append(
-            post_update_progress)
+            _post_update_progress)
+        news.I18nTitleRegistry.register(RESOURCE_TYPE, _get_i18n_news_title)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
