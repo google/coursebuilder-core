@@ -14,6 +14,13 @@ cron:
 - description: Run job to update total enrollment counters.
   url: /cron/site_admin_enrollments/total
   schedule: every sunday 01:00
+  retry_parameters:
+    min_backoff_seconds: 3600
+- description: Run job to check for missing enrollment counters.
+  url: /cron/site_admin_enrollments/missing
+  schedule: every 1 hours
+  retry_parameters:
+    min_backoff_seconds: 120
 - description: Run job to report count of courses and students to CourseBuilder.
   url: /cron/usage_reporting/report_usage
   schedule: every sunday 05:00

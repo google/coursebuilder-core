@@ -1117,8 +1117,10 @@ def register_module():
 
     global_handlers = [
         (GlobalAdminHandler.URL, GlobalAdminHandler),
-        (enrollments.StartEnrollmentsJobs.URL,
-         enrollments.StartEnrollmentsJobs),
+        (enrollments.StartComputeCounts.URL,
+         enrollments.StartComputeCounts),
+        (enrollments.StartInitMissingCounts.URL,
+         enrollments.StartInitMissingCounts),
         ('/admin/welcome', WelcomeHandler),
         ('/rest/config/item', (
             modules.admin.config.ConfigPropertyItemRESTHandler)),

@@ -6,7 +6,7 @@ tests:
     - modules.admin.admin_tests.AdminDashboardTabTests = 8
     - modules.admin.enrollments_tests.EnrollmentsTests = 5
     - modules.admin.enrollments_tests.EventHandlersTests = 1
-    - modules.admin.enrollments_tests.MapReduceTests = 1
+    - modules.admin.enrollments_tests.MapReduceTests = 2
     - modules.admin.enrollments_tests.GraphTests = 5
   integration:
     - modules.admin.admin_integration_tests.CourseAdministrationTests = 1

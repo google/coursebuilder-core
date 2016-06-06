@@ -207,7 +207,7 @@ class CoursesEnrollmentsTests(_CoursesListTestBase):
         # kick off the site_admin_enrollments/total MapReduce first.
         cron_page = self.load_appengine_cron(
         ).run_cron(
-            enrollments.StartEnrollmentsJobs.URL
+            enrollments.StartComputeCounts.URL
         )
 
         # Now load the Courses list page and confirm that the value in the

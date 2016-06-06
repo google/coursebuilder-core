@@ -58,7 +58,7 @@ near real-time soon after the course is created.
 Courses that exist in the Datastore prior to updating an installation to a new
 Course Builder version that implements enrollments counters will be missing
 those counter entities in the Datastore. These missing counters will be
-initialized for the first time by enrollments_mapreduce.SetCourseEnrollments
+initialized for the first time by enrollments_mapreduce.ComputeCounts
 MapReduceJobs. Student lifecycle events will trigger MapReduceJobs for these
 missing counters and then update them in near real-time soon after they are
 initialized by the background jobs.
@@ -135,12 +135,18 @@ class EnrollmentsDTO(object):
 
     @property
     def is_empty(self):
+        """Returns True if no count is present (but may still be pending)."""
         return not self.binned
 
     @property
     def is_pending(self):
         """Returns True if some background job is initializing the counter."""
         return self.is_empty and self.last_modified
+
+    @property
+    def is_missing(self):
+        """Returns True for uninitialized counters (empty and not pending)."""
+        return self.is_empty and (not self.last_modified)
 
     @property
     def binned(self):
@@ -442,24 +448,27 @@ class EnrollmentsDAO(object):
 
         Args:
             dto: an existing DTO to be "marked" and stored in the Datastore;
-              (dto.is_empty and (not dto.is_pending)) must be True.
+              dto.is_missing must be True.
             namespace_name: used to create a new DTO if dto was not supplied.
 
         Returns:
             The original dto if one was provided; unchanged if the required
-            (dto.is_empty and (not dto.is_pending)) precondition was not met.
+            dto.is_missing precondition was not met.
+
             Otherwise, the last_modified property will be set to the current
             UTC time, but no counter value will be set, resulting in
-            dto.is_empty being True and now dto.is_pending also being True.
+            dto.is_empty being True and now dto.is_pending also being True
+            (and dto.is_missing changing to False).
 
             If an existing dto was not supplied, creates a new one using the
             provided namespace_name, setting last_modified only, as above,
-            again resulting in dto.is_empty and dto.is_pending being True.
+            again resulting in dto.is_empty and dto.is_pending being True and
+            dto.is_missing being False.
         """
         if not dto:
             dto = cls.new_dto(namespace_name, the_dict={})
 
-        if dto.is_empty and (not dto.is_pending):
+        if dto.is_missing:
             dto.set_last_modified_to_now()
             cls._save(dto)
 
@@ -542,7 +551,7 @@ class EnrollmentsDroppedDAO(BinnedEnrollmentsDAO):
     ENTITY = EnrollmentsDroppedEntity
 
 
-class SetCourseEnrollments(jobs.MapReduceJob):
+class ComputeCounts(jobs.MapReduceJob):
     """MapReduce job to set the student total enrollment count for courses.
 
     This MapReduce updates two of the course enrollments counters, the simple
@@ -624,11 +633,9 @@ class SetCourseEnrollments(jobs.MapReduceJob):
 MODULE_NAME = 'site_admin_enrollments'
 
 
-class StartEnrollmentsJobs(utils.AbstractAllCoursesCronHandler):
-    """Handle callback from cron by launching enrollments counts MapReduce."""
+class _BaseCronHandler(utils.AbstractAllCoursesCronHandler):
 
-    # /cron/site_admin_enrollments/total
-    URL = '/cron/%s/%s' % (MODULE_NAME, TotalEnrollmentEntity.COUNTING)
+    URL_FMT = '/cron/%s/%%s' % MODULE_NAME
 
     @classmethod
     def is_globally_enabled(cls):
@@ -638,36 +645,79 @@ class StartEnrollmentsJobs(utils.AbstractAllCoursesCronHandler):
     def is_enabled_for_course(cls, app_context):
         return True
 
+
+class StartComputeCounts(_BaseCronHandler):
+    """Handle callback from cron by launching enrollments counts MapReduce."""
+
+    # /cron/site_admin_enrollments/total
+    URL = _BaseCronHandler.URL_FMT % TotalEnrollmentEntity.COUNTING
+
     def cron_action(self, app_context, global_state):
-        cron_jobs = [SetCourseEnrollments(app_context)]
-        for job in cron_jobs:
-            if job.is_active():
-                job.cancel()
-            job.submit()
+        job = ComputeCounts(app_context)
+        if job.is_active():
+            # Weekly re-computation of enrollments counters, so forcibly stop
+            # any already-running job and start over.
+            ns = app_context.get_namespace_name()
+            total_dto = TotalEnrollmentDAO.load_or_default(ns)
+            if not total_dto.is_empty:
+                logging.warning(
+                    'CANCELING periodic "%s" recomputation unexpectedly'
+                    ' unexpectedly still running.', ns)
+            elif total_dto.is_pending:
+                logging.warning(
+                    'INTERRUPTING "%s" initialization started on %s.', ns,
+                    utc.to_text(dt=total_dto.last_modified))
+            job.cancel()
+        job.submit()
 
 
 def init_missing_total(enrolled_total_dto, app_context):
-    """Returns True if a SetCourseEnrollments MapReduceJob was submitted."""
+    """Returns True if a ComputeCounts MapReduceJob was submitted."""
     if not enrolled_total_dto.is_empty:
-        logging.warning('SKIPPING update of "%s" existing total %d.',
-                        enrolled_total_dto.id, enrolled_total_dto.get())
+        StartInitMissingCounts.log_skipping(
+            enrolled_total_dto, logging.warning)
         return False
 
     if enrolled_total_dto.is_pending:
-        logging.info('PENDING "%s" update already requested at %s.',
-                     enrolled_total_dto.id,
-                     utc.to_text(seconds=enrolled_total_dto.last_modified))
+        logging.info(
+            'PENDING initialization of "%s" at %s.', enrolled_total_dto.id,
+            utc.to_text(seconds=enrolled_total_dto.last_modified))
         return False
 
-    # enrolled_total_dto is *completely* empty, not *just* missing its
+    # enrolled_total_dto is *completely* missing, not *just* lacking its
     # counter property (and thus not indicating initialization of that count
     # is in progress), so store "now" as a last_modified value to indicate
     # that a MapReduce update has been requested.
-    marked_dto = TotalEnrollmentDAO.mark_pending(dto=enrolled_total_dto)
+    marked_dto = TotalEnrollmentDAO.mark_pending(dto=enrolled_total_dto,
+        namespace_name=app_context.get_namespace_name())
     logging.info('SCHEDULING "%s" update at %s.', marked_dto.id,
                  utc.to_text(seconds=marked_dto.last_modified))
-    SetCourseEnrollments(app_context).submit()
+    ComputeCounts(app_context).submit()
     return True
+
+
+class StartInitMissingCounts(_BaseCronHandler):
+    """Handle callback from cron by checking for missing enrollment totals."""
+
+    # /cron/site_admin_enrollments/missing
+    URL = _BaseCronHandler.URL_FMT % 'missing'
+
+    def cron_action(self, app_context, global_state):
+        total_dto = TotalEnrollmentDAO.load_or_default(
+            app_context.get_namespace_name())
+        if total_dto.is_missing:
+            init_missing_total(total_dto, app_context)
+        else:
+            # Debug-level log message only for tests examining logs.
+            self.log_skipping(total_dto, logging.debug)
+
+    @classmethod
+    def log_skipping(cls, total_dto, logger):
+        logger(
+            'SKIPPING recomputation of existing "%s" total, %d since %s.',
+            total_dto.id, total_dto.get(),
+            utc.to_text(seconds=total_dto.last_modified))
+
 
 
 def delete_counters(namespace_name):
@@ -688,11 +738,11 @@ def _count_add(unused_id, utc_date_time):
 
     if not total_dto.is_empty:
         TotalEnrollmentDAO.inc(namespace_name)
-    else:
+    elif total_dto.is_missing:
         init_missing_total(
             total_dto, sites.get_app_context_for_namespace(namespace_name))
 
-    # Update today's 'adds' no matter what, because the SetCourseEnrollments
+    # Update today's 'adds' no matter what, because the ComputeCounts
     # MapReduceJob avoids the current day bin, specifically to avoid races
     # with this callback.
     EnrollmentsAddedDAO.inc(namespace_name, utc_date_time)
@@ -709,13 +759,13 @@ def _count_drop(unused_id, utc_date_time):
 
     if not total_dto.is_empty:
         TotalEnrollmentDAO.inc(namespace_name, offset=-1)
-    else:
+    elif total_dto.is_missing:
         init_missing_total(
             total_dto, sites.get_app_context_for_namespace(namespace_name))
 
-    # Update today's 'drops' no matter what, because the SetCourseEnrollments
+    # Update today's 'drops' no matter what, because the ComputeCounts
     # MapReduceJob avoids the current day bin, specifically to avoid races
-    # with this callback. (Also, the SetCourseEnrollments MapReduceJob does
+    # with this callback. (Also, the ComputeCounts MapReduceJob does
     # not implement collecting drops at this time.)
     EnrollmentsDroppedDAO.inc(namespace_name, utc_date_time)
 
