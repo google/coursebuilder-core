@@ -429,7 +429,9 @@ class YouTube(CoreTag):
         return 'YouTube Video'
 
     def render(self, node, handler):
-        video_id = node.attrib.get('videoid')
+        video_id = common_utils.find_youtube_video_id(
+            node.attrib.get('videoid'))
+
         if handler.can_record_student_events():
             return self._render_with_tracking(video_id)
         else:

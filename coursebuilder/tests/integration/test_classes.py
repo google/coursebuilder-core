@@ -266,6 +266,8 @@ class AdminTests(integration.TestBase):
     def test_add_and_edit_custom_tags(self):
         name = self.create_new_course()[0]
         instanceid_regex = 'instanceid="[A-Za-z0-9]{12}"'
+        video_id_1 = 'f1U4SAgy60c'
+        video_id_2 = 'https://www.youtube.com/embed/sIE0mcOGnms'
 
         self.load_dashboard(
             name
@@ -281,11 +283,11 @@ class AdminTests(integration.TestBase):
         ).click_rte_add_custom_tag(
             'YouTube Video'
         ).set_rte_lightbox_field(
-            'input[name=videoid]', '123'
+            'input[name=videoid]', video_id_1
         ).click_rte_save(
         ).click_preview(
         ).ensure_preview_document_matches_text(
-            '<script>gcbTagYoutubeEnqueueVideo("123", '
+            '<script>gcbTagYoutubeEnqueueVideo("' + video_id_1 + '", '
         ).click_plain_text(
         ).ensure_instanceid_count_equals(
             1
@@ -294,13 +296,13 @@ class AdminTests(integration.TestBase):
         ).doubleclick_rte_element(
             'img.gcbMarker'
         ).ensure_rte_lightbox_field_has_value(
-            'input[name=videoid]', '123'
+            'input[name=videoid]', video_id_1
         ).set_rte_lightbox_field(
-            'input[name=videoid]', '321'
+            'input[name=videoid]', video_id_2
         ).click_rte_save(
         ).click_plain_text(
         ).ensure_lesson_body_textarea_matches_regex(
-            'YouTube:<gcb-youtube videoid="321" %s>'
+            'YouTube:<gcb-youtube videoid="' + video_id_2 + '" %s>'
             '</gcb-youtube>' % instanceid_regex
         ).ensure_instanceid_list_matches_last_snapshot(
         ).click_rich_text(
@@ -315,7 +317,8 @@ class AdminTests(integration.TestBase):
         ).click_rte_save(
         ).click_plain_text(
         ).ensure_lesson_body_textarea_matches_regex(
-            'YouTube:<gcb-youtube videoid="321" %s></gcb-youtube>'
+            'YouTube:<gcb-youtube videoid="' + video_id_2 +
+            '" %s></gcb-youtube>'
             'Google Group:'
             '<gcb-googlegroup group="abc" category="def" %s>'
             '</gcb-googlegroup>' % (instanceid_regex, instanceid_regex)

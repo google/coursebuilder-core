@@ -19,13 +19,13 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 
 import copy
 import datetime
-import re
 import urllib
 import urlparse
 
 from common import crypto
 from common import jinja_utils
 from common import safe_dom
+from common import utils as common_utils
 from controllers import utils
 from models import counters
 from models import courses
@@ -184,9 +184,10 @@ class CourseHandler(utils.BaseHandler):
         show_image_or_video = unicode(
             settings['course'].get('main_image', {}).get('url'))
         if show_image_or_video:
-            if re.search(r'//(www\.youtube\.com|youtu\.be)/',
-                         show_image_or_video):
+            video_id = common_utils.find_youtube_video_id(show_image_or_video)
+            if video_id:
                 self.template_value['show_video'] = True
+                self.template_value['video_id'] = video_id
             else:
                 self.template_value['show_image'] = True
 

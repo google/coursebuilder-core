@@ -318,3 +318,32 @@ class ValidateTimedeltaTests(unittest.TestCase):
         errors = []
         utils.ValidateTimedelta.validate('3 months', errors)
         self.assertEquals(1, len(errors))
+
+
+class ValidateYoutubeVideoRecognizer(unittest.TestCase):
+
+    def test_urls(self):
+        VIDEO_ID = 'MRc_tS-cw8Q'
+        self.assertEquals(VIDEO_ID, utils.find_youtube_video_id(
+            'https://youtu.be/MRc_tS-cw8Q'))
+        self.assertEquals(VIDEO_ID, utils.find_youtube_video_id(
+            'https://www.youtube.com/watch?v=MRc_tS-cw8Q'))
+        self.assertEquals(VIDEO_ID, utils.find_youtube_video_id(
+            '<iframe width="560" height="315" '
+            'src="https://www.youtube.com/embed/MRc_tS-cw8Q" '
+            'frameborder="0" allowfullscreen></iframe>'))
+        self.assertEquals(VIDEO_ID, utils.find_youtube_video_id(
+            '<a href="http://www.youtube.com/attribution_link?'
+            'a=l-cnFmYB3Wk&amp;u=/watch%3Fv%3DMRc_tS-cw8Q%26feature%3D'
+            'em-share_video_user" style="text-decoration:none;display:block" '
+            'class="nonplayable" target="_blank" '
+            'data-saferedirecturl="https://www.google.com/url?'
+            'hl=en&amp;q=http://www.youtube.com/attribution_link?'
+            'a%3Dl-cnFmYB3Wk%26u%3D/watch'
+            '%253Fv%253DMRc_tS-cw8Q%2526feature%253Dem-share_video_user&amp;'
+            'source=gmail&amp;ust=1465506905750000&amp;'
+            'usg=AFQjCNELKJqzhBDZku-v0uUapICQMZCGGg">'))
+        self.assertEquals(VIDEO_ID, utils.find_youtube_video_id(VIDEO_ID))
+
+        self.assertIsNone(utils.find_youtube_video_id(''))
+        self.assertIsNone(utils.find_youtube_video_id(VIDEO_ID[1:]))

@@ -275,3 +275,22 @@ class ValidateTimedelta(object):
                 'the following are equivalent: "3w1d7h", '
                 '"3 weeks, 1 day, 7 hours"')
         return datetime.timedelta(**kwargs).total_seconds()
+
+
+YOUTUBE_RECOGNIZERS = [re.compile(p) for p in (
+    r'https?://(?:www\.)?youtu\.be/([A-Za-z0-9_-]{11,})',
+    r'https?://(?:www\.)?youtube\.[a-z]+/watch\?v=([A-Za-z0-9_-]{11,})',
+    r'https?://(?:www\.)?youtube\.[a-z]+/watch/([A-Za-z0-9_-]{11,})',
+    r'https?://(?:www\.)?youtube\.[a-z]+/embed/([A-Za-z0-9_-]{11,})',
+    r'https?://(?:www\.)?youtube\.[a-z]+/attribution_link.*' +
+        r'u=/watch%3Fv%3D([A-Za-z0-9_-]{11,})',
+    r'^([A-Za-z0-9_-]{11,})$',
+)]
+
+
+def find_youtube_video_id(text):
+    for recognizer in YOUTUBE_RECOGNIZERS:
+        match = recognizer.search(text)
+        if match:
+            return match.group(1)
+    return None

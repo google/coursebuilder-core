@@ -174,6 +174,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.common_utils.CommonUnitTests': 11,
     'tests.unit.common_utils.ParseTimedeltaTests': 8,
     'tests.unit.common_utils.ValidateTimedeltaTests': 6,
+    'tests.unit.common_utils.ValidateYoutubeVideoRecognizer': 1,
     'tests.unit.common_utils.ZipAwareOpenTests': 2,
     'tests.unit.javascript_tests.AllJavaScriptTests': 2,
     'tests.unit.models_analytics.AnalyticsTests': 6,
