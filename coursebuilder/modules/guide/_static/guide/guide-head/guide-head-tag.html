@@ -1,0 +1,41 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Guide behaviors. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-head/guide-head-tag-manager-behavior.html">
+
+<!--
+  'guide-head' provides one-way binding to a tag in a document 'head' element.
+  It is simply the component version of the HeadTagManagerBehavior, useful to handle binding with
+  several <head> tags in a component.
+-->
+<dom-module id="guide-head-tag">
+  <script>
+    (function() {
+      'use strict';
+      Polymer({
+        is: 'guide-head-tag',
+        behaviors: [ GuideBehaviors.HeadTagManagerBehavior, ],
+      });
+    })();
+  </script>
+
+</dom-module>

@@ -119,20 +119,14 @@ class GraphQLRestHandlerTests(BaseGqlTests):
     USER_QUERY = '{currentUser { loggedIn email }}'
 
     def test_access_control(self):
-        # By default the service is disabled
-        response = self.query(self.COURSE_LIST_QUERY)
-        self.assertEquals(404, response.status_int)
-
-        # Enable the service and expect to be able to query courses
-        self.set_service_enabled(True)
-
+        # By default the service is enabled.
         response = self.get_response(self.COURSE_LIST_QUERY)
         self.assertEquals(
             {'allCourses': {'edges': [{'node': {
                 'title': 'Power Searching with Google'}}]}},
             response['data'])
 
-        # Explicitly disable the service and it's unavailable again
+        # Explicitly disable the service and it's unavailable.
         self.set_service_enabled(False)
         response = self.query(self.COURSE_LIST_QUERY)
         self.assertEquals(404, response.status_int)
@@ -606,6 +600,8 @@ class UnitTests(GraphQLTreeTests):
                     'kind': 'NON_NULL', 'name': None,
                     'ofType': {'name': 'ID'}}},
                 {'name': 'title', 'type': {
+                    'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
+                {'name': 'description', 'type': {
                     'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
                 {'name': 'allLessons', 'type': {
                     'kind': 'OBJECT', 'name': 'LessonDefaultConnection',

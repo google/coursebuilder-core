@@ -1,0 +1,235 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Neon elements. -->
+<link rel="import" href="/static/polymer-1.2.0/neon-animation/neon-animated-pages.html">
+
+<!-- Guide elements. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-data/guide-data.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-head/guide-head-tag.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-loader/guide-loader.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-pages/guide-home-page.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-pages/guide-steps-page.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-url/guide-url-hash.html">
+
+<!-- Guide behaviors. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-errors/guide-error-notifier-behavior.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-navigation/guide-navigation-manager-behavior.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-theme/guide-app-theme-manager-behavior.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-theme/guide-themeable-behavior.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-xsrf/guide-xsrf-token-manager-behavior.html">
+
+<!-- Guide styles. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-styles/guide-styles.html">
+
+
+<!--
+  'guide-app' is a full guide webapp.
+-->
+<dom-module id="guide-app">
+
+  <template>
+    <style include="guide-styles">
+      :host {
+        @apply(--layout-fit);
+      }
+      neon-animated-pages {
+        @apply(--layout-fit);
+      }
+    </style>
+
+    <!-- Data fetching. -->
+    <guide-data id="data"
+      nav-info="[[navInfo]]" outline="{{outline}}" lessons="{{lessons}}"> </guide-data>
+
+    <!-- Enables binding with url query string on navigation change. -->
+    <guide-url-hash nav-info="[[navInfo]]"></guide-url-hash>
+
+    <!-- Enables updates of the document's <base> tag on course change. -->
+    <guide-head-tag
+      tag-name="base"
+      tag-attributes="[[baseTagAttributes]]"
+      tag-selector="base">
+    </guide-head-tag>
+
+    <!-- Enables updates of the document's <title> tag on course change. -->
+    <guide-head-tag
+      tag-name="title"
+      tag-inner-text="[[title]]"
+      tag-selector="title">
+    </guide-head-tag>
+
+    <!-- Legacy JS lib. -->
+    <guide-head-tag
+      tag-name="script"
+      tag-attributes="[[legacyScriptsAttributes]]"
+      tag-selector="#guideLegacy">
+    </guide-head-tag>
+
+    <!-- Spinner visible while awaiting data. -->
+    <guide-loader active="[[navPending]]"></guide-loader>
+
+    <!-- The applications pages with transitions handled by 'neon-animated-pages' -->
+    <neon-animated-pages id="pages"
+      selected="[[selectedPage]]" attr-for-selected="id">
+      <!-- Home page, displayed when no unit is selected. -->
+      <guide-home-page
+        id="homePage"
+        outline="[[outline]]" nav-info="[[navInfo]]" pending="[[pending]]">
+      </guide-home-page>
+      <!-- Steps page, displayed whenever a unit a selected. -->
+      <guide-steps-page
+        id="stepsPage"
+        outline="[[outline]]" lessons="[[lessons]]" nav-info="[[navInfo]]" pending="[[pending]]">
+      </guide-steps-page>
+    </neon-animated-pages>
+  </template>
+
+  <script>
+  (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'guide-app',
+
+      behaviors: [
+        /**
+         * To listen to selection events and update the app's navigation state.
+         * Provides:
+         * - navInfo: Navigation state for the app (current course, unit and/or lesson selection).
+         */
+        GuideBehaviors.NavigationManagerBehavior,
+        /**
+         * To update this component's theme color via its 'themeColor' property.
+         * Provides:
+         *   - themeColor: The theme color for this app.
+         */
+        GuideBehaviors.ThemeableBehavior,
+        /**
+         * To update the brower's theme color via its 'themeColor' property.
+         * Provides:
+         *   - themeColor: The theme color for the browser.
+         */
+        GuideBehaviors.AppThemeManagerBehavior,
+        /**
+         * To enable the notification of errors to the user.
+         * Provides:
+         *   - notifyError()
+         */
+        GuideBehaviors.ErrorNotifierBehavior,
+        /**
+         * To store Xsrf tokens and prompt user for refresh.
+         * Provides:
+         *   - eventXsrfToken
+         */
+        GuideBehaviors.XsrfTokenManagerBehavior,
+      ],
+
+      properties: {
+        /**
+         * The page ('guide-*-page' element) currently displayed by the app.
+         */
+        selectedPage: {
+          type: String,
+          notify: true,
+          readOnly: true,
+          computed: '_computeSelectedPage(navInfo.current.unit)'
+        },
+
+        /**
+         * The attributes of the <base> tag for this app.
+         * Used to load courses assets, updated on course change.
+         */
+        baseTagAttributes: {
+          type: Object,
+          notify: true,
+          readOnly: true,
+          computed: '_computeBaseTagAttributes(navInfo.current.course)'
+        },
+
+        /**
+         * The attributes of a <script> tag that loads legacy CourseBuilder JS.
+         * Updated on course change.
+         */
+        legacyScriptsAttributes: {
+          type: Object,
+          notify: true,
+          readOnly: true,
+          computed: '_computeLegacyScriptAttributes(navInfo.current.course)'
+        },
+
+        /* The title of the app's tab. Updated on navigation change. */
+        title: {
+          type: String,
+          notify: true,
+          readOnly: true,
+          computed: '_computeTitle(navInfo.current.*)'
+        },
+
+        /* The theme color for this app (see ThemeableBehavior & ThemeManagerBehavior). */
+        themeColor: {
+          type: String,
+          computed: '_computeThemeColor(navInfo.current.course, navInfo.current.lesson)'
+        },
+      },
+
+      _computeBaseTagAttributes: function() {
+        return [{
+          name: 'href',
+          value: this.navInfo.current.course && this.navInfo.current.course.url + '/' || '/',
+        }];
+      },
+
+      _computeTitle: function() {
+        var title = 'Course Builder > Guides';
+        if (this.navInfo.current.course) {
+          title += ' > ' + this.navInfo.current.course.title;
+        }
+        if (this.navInfo.current.unit) {
+          title += ' > ' + this.navInfo.current.unit.title;
+        }
+        if (this.navInfo.current.lesson) {
+          title += ' > ' + this.navInfo.current.lesson.title;
+        }
+        return title;
+      },
+
+      _computeLegacyScriptAttributes: function() {
+        return [
+          {name: 'id', value: 'guideLegacy'},
+          {name: 'src', value: this.navInfo.current.course && (
+            this.navInfo.current.course.url + '/assets/lib/activity-generic-1.3.js')},
+        ];
+      },
+
+      _computeSelectedPage: function() {
+        return this.navInfo.current.lesson ? 'stepsPage' : 'homePage';
+      },
+
+      _computeThemeColor: function(course, lesson) {
+        return course && lesson && course.guide.color;
+      },
+    });
+  })(window);
+  </script>
+
+</dom-module>
+

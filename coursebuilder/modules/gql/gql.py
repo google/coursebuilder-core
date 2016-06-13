@@ -240,6 +240,7 @@ class Lesson(CourseAwareObjectType, graphene.relay.Node):
 # TODO(jorr): Support for pre-, post- Assessments at Lesson containment level.
 class Unit(CourseAwareObjectType, graphene.relay.Node):
     title = graphene.String()
+    description = graphene.String()
     all_lessons = graphene.relay.ConnectionField(Lesson)
     lesson = graphene.Field(Lesson, id=graphene.String())
     header = graphene.String()
@@ -291,6 +292,9 @@ class Unit(CourseAwareObjectType, graphene.relay.Node):
 
     def resolve_title(self, args, info):
         return self._unit.title
+
+    def resolve_description(self, args, info):
+        return self._unit.description
 
     def resolve_header(self, args, info):
         if not self.course_view.is_visible([self._unit.unit_id]):
@@ -522,7 +526,7 @@ class GraphQLRestHandler(utils.BaseRESTHandler):
 
 GQL_SERVICE_ENABLED = config.ConfigProperty(
     'gcb_gql_service_enabled', bool, 'Enable the GraphQL REST endpoint.',
-    default_value=False, label='GraphQL')
+    default_value=True, label='GraphQL')
 
 
 def register_module():

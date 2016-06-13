@@ -1,0 +1,83 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Paper Styles -->
+<link rel="import" href="/static/polymer-1.2.0/paper-styles/paper-styles.html">
+
+
+<dom-module id="guide-styles">
+  <template>
+    <style is="custom-style">
+      :root {
+        --primary-color: var(--paper-cyan-500);
+        --accent-color: var(--paper-cyan-500);
+        --app-background-color: var(--paper-blue-grey-50);
+      }
+
+      div, p, span {
+        @apply(--paper-font-common-base);
+      }
+
+      h1 {
+        @apply(--paper-font-headline);
+      }
+
+      h1 + span {
+        @apply(--paper-font-subhead);
+      }
+
+      h2 {
+        @apply(--paper-font-title);
+        font-weight: 300;
+      }
+
+      body {
+        @apply(--layout-fullbleed);
+        background-color: var(--app-background-color);
+        margin: 0px;
+      }
+
+      paper-drawer-panel {
+        --paper-drawer-panel-left-drawer-container: {
+          background-color: var(--app-background-color);
+        };
+      }
+
+      paper-drawer-panel[narrow] {
+        --paper-drawer-panel-left-drawer-container: {
+          background-color: var(--app-background-color);
+          z-index: 6;
+        };
+      }
+
+      paper-header-panel {
+        --paper-header-panel-body: {
+          background-color: var(--app-background-color);
+        };
+      }
+
+      paper-fab:hover {
+        @apply(--shadow-elevation-6dp);
+        transition: box-shadow .2s;
+      }
+    </style>
+  </template>
+</dom-module>

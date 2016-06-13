@@ -1,0 +1,281 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Iron elements. -->
+<link rel="import" href="/static/polymer-1.2.0/iron-icon/iron-icon.html">
+<link rel="import" href="/static/polymer-1.2.0/iron-icons/iron-icons.html">
+<link rel="import" href="/static/polymer-1.2.0/iron-icons/social-icons.html">
+
+<!-- Paper elements. -->
+<link rel="import" href="/static/polymer-1.2.0/paper-drawer-panel/paper-drawer-panel.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-header-panel/paper-header-panel.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-scroll-header-panel/paper-scroll-header-panel.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-toolbar/paper-toolbar.html">
+
+<!-- Guide elements. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-courses/guide-course-item.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-loader/guide-loader.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-login/guide-login.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-units/guide-unit-card.html">
+
+<!-- Guide behaviors. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-errors/guide-error-notifier-behavior.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-navigation/guide-navigator-behavior.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-theme/guide-themeable-behavior.html">
+
+<!-- Guide styles. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-styles/guide-styles.html">
+
+
+<!-- Animations. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-pages/animations/guide-home-page-animations.html">
+
+
+<!-- 'guide-home-page' is the home page of a guide app. -->
+<dom-module id="guide-home-page">
+  <template>
+    <style include="guide-styles">
+      /* Title. */
+      h1 {
+        font-size: 30px;
+        font-weight: 300;
+        margin: 20px 0px 0px;
+      }
+
+      /* Subtitle. */
+      h1 + span {
+        font-weight: 300;
+        line-height: normal;
+      }
+
+      /* Logo & title container. */
+      #logoContainer {
+        @apply(--layout-flex);
+        @apply(--layout-horizontal);
+        @apply(--layout-center-justified);
+      }
+
+      /* Logo. */
+      #logoContainer iron-icon {
+        height: 96px;
+        width: 96px;
+        margin: 0px 24px;
+      }
+
+      /* Login button widget. */
+      #mainToolbar guide-login {
+        margin-right: 12px;
+        /* To push above mainContent when to mode=cover. */
+        z-index: 2;
+      }
+
+      .title-narrow {
+        @apply(--layout-flex);
+        @apply(--layout-horizontal);
+        @apply(--layout-center);
+      }
+
+      /* Courses menu. */
+      #courseMenu {
+        @apply(--layout-flex);
+        @apply(--layout-vertical);
+        @apply(--layout-end);
+        @apply(--layout-start-justified);
+        margin: 4px;
+      }
+      #courseMenu guide-course-item {
+        width: 75%;
+      }
+
+      /* Courses menu responsive. */
+      #courseMenu[narrow] {
+        @apply(--layout-start);
+      }
+      #courseMenu[narrow] guide-course-item {
+        width: 100%;
+      }
+
+      #cardsContainer {
+        @apply(--layout-flex);
+        @apply(--layout-vertical);
+        @apply(--layout-start-justified);
+      }
+
+      /* Drawer body.  */
+      paper-header-panel[drawer] {
+        --paper-header-panel-body: {
+          @apply(--layout-flex);
+          @apply(--layout-vertical);
+          @apply(--layout-end-justified);
+        };
+      }
+
+      /* Main panel */
+      paper-scroll-header-panel {
+        @apply(--layout-fit);
+      }
+
+      /* To avoid auto-hiding of [paper-drawer-toggle] elements when drawer is open. */
+      guide-course-item[paper-drawer-toggle] {
+        display: block !important;
+      }
+    </style>
+
+    <!-- Spinner visible while awaiting data. -->
+    <guide-loader active="[[pending]]"></guide-loader>
+
+    <paper-drawer-panel narrow="{{narrow}}" drawer-width="[[_computeDrawerWidth(narrow)]]">
+      <!-- Drawer. -->
+      <paper-scroll-header-panel mode="waterfall" drawer>
+        <!-- Drawer toolbar on large screens with logo and title. -->
+        <paper-toolbar  class="tall" hidden="[[narrow]]">
+          <div id="logoContainer" class="middle">
+            <iron-icon icon="social:school"></iron-icon>
+            <div>
+              <h1>My Guide</h1>
+              <span>Subtitle</span>
+            </div>
+          </div>
+        </paper-toolbar>
+        <!-- Drawer courses menu -->
+        <div id="courseMenu" role="listbox" narrow$="[[narrow]]">
+          <template is="dom-repeat" items="[[outline.allCourses.edges]]" as="edge">
+            <guide-course-item
+              course-id="[[edge.node.id]]" title="[[edge.node.title]]"
+              selected="{{_computeEqual(edge.node, navInfo.current.course)}}"
+              on-tap="_handleCourseItemTap"
+              paper-drawer-toggle></guide-course-item>
+          </template>
+        </div>
+      </paper-scroll-header-panel>
+      <!-- /Drawer. -->
+
+      <paper-header-panel mode="[[_computeMainHeaderPanelMode(narrow)]]" main>
+        <paper-toolbar id="mainToolbar" class$="[[_computeMainToolbarClasses(narrow)]]">
+          <div class="title-narrow">
+            <template is="dom-if" if="[[narrow]]">
+              <paper-icon-button icon="menu" paper-drawer-toggle></paper-icon-button>
+              <div> My Guide </div>
+            </template>
+          </div>
+          <guide-login id="login" current-user="{{currentUser}}"></guide-login>
+        </paper-toolbar>
+
+        <!-- Main panel with unit cards. -->
+        <paper-scroll-header-panel id="mainPanel">
+          <div id="cardsContainer">
+            <template is="dom-repeat" items="[[outline.allCourses.edges]]" as="courseEdge">
+              <template is="dom-repeat" items="[[courseEdge.node.allUnits.edges]]" as="unitEdge">
+                <guide-unit-card unit="[[unitEdge.node]]" course="[[courseEdge.node]]"
+                  narrow$="[[narrow]]" selected="{{_computeUnitSelected(unitEdge.node, navInfo.current.unit)}}"
+                  on-action="_handleCardAction"></guide-unit-card>
+              </template>
+            </template>
+          </div>
+        </paper-scroll-header-panel>
+      </paper-header-panel>
+    </paper-drawer-panel>
+  </template>
+  <script>
+    (function(){
+      'use strict';
+
+      Polymer({
+        is: 'guide-home-page',
+
+        behaviors: [
+          /**
+           * To enable the notification of errors to the user.
+           * Provides:
+           *   - notifyError()
+           */
+          GuideBehaviors.ErrorNotifierBehavior,
+          /**
+           * To enable the emission of navigation events.
+           * Provides:
+           *   - navInfo: Navigation state for the app.
+           *   - selectPath(): Triggers navigation by emission of 'guide-select' events.
+           */
+          GuideBehaviors.NavigatorBehavior,
+          /**
+           * To update this component's theme color via its 'themeColor' property.
+           * Provides:
+           *   - themeColor: The theme color for this app.
+           */
+          GuideBehaviors.ThemeableBehavior,
+          // Animations for this component.
+          GuideBehaviors.HomePageAnimationsBehavior,
+        ],
+
+        properties: {
+          /* Course outline. */
+          outline: {
+            type: Object,
+          },
+        },
+
+        _computeMainHeaderPanelMode: function(narrow) {
+          return narrow ? 'waterfall' : 'cover';
+        },
+
+        _computeDrawerWidth: function(narrow) {
+          return narrow ? '70%' : '30%';
+        },
+
+        _computeMainToolbarClasses: function(narrow) {
+          var classes = '';
+          for (var i = 0; i < this.$.mainToolbar.classList.length; i++) {
+            classes += ' ' + this.$.mainToolbar.classList[i];
+          }
+          if (!narrow) {
+            classes += ' tall'
+          }
+          return classes;
+        },
+
+        _computeUnitSelected: function(unit) {
+          return unit == this.navInfo.current.unit;
+        },
+
+        _computeEqual: function(a, b) {
+          return a === b;
+        },
+
+        _handleCourseItemTap: function(e) {
+          this.selectPath(e.target.courseId);
+        },
+
+        _handleCardAction: function(e) {
+          if (e.target.unit.allLessons.edges.length > 0) {
+            this.selectPath(
+                e.target.course.id,
+                e.target.unit.id,
+                e.target.unit.allLessons.edges[0].node.id);
+          } else {
+            this.notifyError('This unit has no lessons to display');
+          }
+        },
+      });
+    })();
+  </script>
+</dom-module>
+

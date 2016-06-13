@@ -1,0 +1,271 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Iron elements. -->
+<link rel="import" href="/static/polymer-1.2.0/iron-icons/iron-icons.html">
+<link rel="import" href="/static/polymer-1.2.0/iron-icons/maps-icons.html">
+
+<!-- Paper elements. -->
+<link rel="import" href="/static/polymer-1.2.0/paper-button/paper-button.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-card/paper-card.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-ripple/paper-ripple.html">
+
+<!-- Guide behaviors. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-theme/guide-themeable-behavior.html">
+
+<!-- Guide styles. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-styles/guide-styles.html">
+
+<!--
+  'guide-unit-card' is a material design card that represents a unit.
+  It is a wrapper around a 'paper-card' element.
+-->
+<dom-module id="guide-unit-card">
+
+  <template>
+    <style include="guide-styles">
+
+      paper-card {
+        @apply(--layout-flex);
+        @apply(--layout-vertical);
+        margin: 10px 96px 10px 10px;
+        max-width: 75%;
+      }
+
+      :host[narrow] paper-card {
+        @apply(--layout-flex);
+        @apply(--layout-horizontal);
+        margin: 0px;
+        max-width: 100%;
+        border-bottom: 1px solid #fff;
+      }
+
+      paper-card:hover {
+        @apply(--shadow-elevation-8dp);
+      }
+
+      :host[narrow] paper-card:hover {
+        @apply(--shadow-none);
+      }
+
+      :host[narrow][selected] paper-card {
+        background-color: var(--paper-grey-300);
+      }
+
+      paper-button {
+        color: var(--primary-color);
+      }
+
+      iron-icon {
+        margin: 16px;
+      }
+
+      iron-icon[icon=chevron-right] {
+        color: var(--primary-color);
+      }
+
+      h2 {
+        margin: 0px;
+      }
+
+      .card-header {
+        @apply(--layout-horizontal);
+        @apply(--layout-start-justified);
+        @apply(--layout-center);
+        background-color: var(--primary-color);
+        color: #fff;
+        cursor: pointer;
+      }
+
+      :host[narrow] .card-content {
+        @apply(--layout-flex);
+        @apply(--layout-horizontal);
+        @apply(--layout-center);
+      }
+
+      .card-actions {
+        @apply(--layout-horizontal);
+        @apply(--layout-justified);
+        @apply(--layout-center);
+      }
+
+      :host[narrow] .card-actions {
+        border: none;
+      }
+
+      .card-duration {
+        @apply(--layout-horizontal);
+        @apply(--layout-start-justified);
+        @apply(--layout-center);
+        opacity: .5;
+        font-style: italic;
+        font-size: small;
+      }
+
+      .card-duration iron-icon {
+        margin: 0px 4px;
+        height: 18px; width: 18px;
+      }
+
+      paper-card[narrow] .card-actions {
+        border: none;
+      }
+    </style>
+
+    <paper-card
+      id="card"
+      animated-shadow="true"
+      elevation="[[_computeElevation(narrow)]]"
+      on-tap="_handleCardTap">
+
+      <div id="cardHeader" class="card-header" on-tap="_handleHeaderTap">
+        <paper-ripple></paper-ripple>
+        <iron-icon icon="maps:local-library"></iron-icon>
+        <h2 hidden="[[narrow]]">[[title]]</h2>
+      </div>
+
+      <div id="cardContent" class="card-content">
+        <template is="dom-if" if="[[narrow]]">
+          <span>[[title]]</span>
+        </template>
+        <template is="dom-if" if="[[!narrow]]">
+          <span>[[description]]</span>
+        </template>
+      </div>
+
+      <div id="cardActions" class="card-actions">
+        <!-- Duration indicator if duration is set. -->
+        <div class="card-duration">
+          <template is="dom-if" if="[[duration]]">
+            <iron-icon icon="schedule" hidden="[[narrow]]"></iron-icon>
+            <span>[[duration]]mn</span>
+            <iron-icon icon="schedule" hidden="[[!narrow]]"></iron-icon>
+          </template>
+        </div>
+        <paper-button
+          id="cardButton"
+          hidden$="[[narrow]]"
+          on-tap="_handleButtonTap">
+          <span>Start</span>
+        </paper-button>
+        <iron-icon icon="chevron-right" hidden$="[[!narrow]]"></iron-icon>
+      </div>
+    </paper-card>
+
+  </template>
+
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'guide-unit-card',
+
+      behaviors: [
+        /**
+         * To update this component's theme color via its 'themeColor' property.
+         * Provides:
+         *   - themeColor: The theme color for this app.
+         */
+        GuideBehaviors.ThemeableBehavior,
+      ],
+
+      properties: {
+        unit: {
+          type: Object,
+          notify: true,
+        },
+        course: {
+          type: Object,
+          notify: true
+        },
+
+        narrow: {
+          type: Boolean,
+        },
+        selected: {
+          type: Boolean,
+          reflectToAttribute: true
+        },
+
+        title: {
+          type: String,
+          computed: '_computeTitle(unit)'
+        },
+        description: {
+          type: String,
+          computed: '_computeDescription(unit)'
+        },
+        duration: {
+          type: Number,
+          computed: '_computeDuration(unit, course)'
+        },
+
+        themeColor: {
+          type: String,
+          notify: true,
+          computed: '_computeThemeColor(course)',
+        }
+      },
+
+      _computeThemeColor: function(course) {
+        return course && course.guide && course.guide.color;
+      },
+
+      _computeElevation: function(narrow) {
+        return narrow ? 0 : 1;
+      },
+
+      _computeTitle: function(unit) {
+        return unit.title;
+      },
+
+      _computeDescription: function(unit) {
+        return unit.description || 'Add description...';
+      },
+
+      _computeDuration: function(unit, course) {
+        return course.guide.durationMinutes * unit.allLessons.edges.length;
+      },
+
+      _handleCardTap: function() {
+        if (this.narrow) { this._fireAction(); }
+      },
+
+      _handleHeaderTap: function() {
+        if (!this.narrow) { this._fireAction(); }
+      },
+
+      _handleButtonTap: function() {
+        this._fireAction();
+      },
+
+      _fireAction: function(){
+        this.fire('action');
+      },
+
+    })
+
+  })();
+  </script>
+
+</dom-module>

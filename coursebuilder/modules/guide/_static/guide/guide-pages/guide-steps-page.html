@@ -1,0 +1,336 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Iron elements. -->
+<link rel="import" href="/static/polymer-1.2.0/iron-icons/iron-icons.html">
+<link rel="import" href="/static/polymer-1.2.0/iron-icons/maps-icons.html">
+<!-- Iron behaviors. -->
+<link rel="import" href="/static/polymer-1.2.0/iron-a11y-keys-behavior/iron-a11y-keys-behavior.html">
+
+<!-- Paper elements. -->
+<link rel="import" href="/static/polymer-1.2.0/paper-fab/paper-fab.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-drawer-panel/paper-drawer-panel.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-header-panel/paper-header-panel.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-toolbar/paper-toolbar.html">
+
+<!-- Guide elements. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-lessons/guide-lesson-item.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-lessons/guide-lesson-view.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-loader/guide-loader.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-styles/guide-styles.html">
+<!-- Guide behaviors. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-navigation/guide-navigator-behavior.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-theme/guide-themeable-behavior.html">
+
+<!-- Animations. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-pages/animations/guide-steps-page-animations.html">
+
+
+<!-- 'guide-steps-page' is the unit steps page of a guide app. -->
+<dom-module id="guide-steps-page">
+  <template>
+    <style include="guide-styles">
+      :host {
+        @apply(--shadow-elevation-6dp);
+      }
+
+     #title {
+        @apply(--layout-flex);
+        margin: 0px 12px;
+        @apply(--paper-font-title);
+        font-weight: 300;
+      }
+
+      #nav {
+        @apply(--layout-horizontal-reverse);
+        @apply(--layout-center);
+        @apply(--layout-around-justified);
+        @apply(--layout-flex);
+        position: absolute;
+        bottom: 56px; left: 0px; right: 0px;
+        pointer-events: none;
+      }
+
+      #nav paper-fab {
+        pointer-events: all;
+      }
+
+      #viewContainer {
+        @apply(--layout-fit);
+        overflow-y: auto;
+      }
+
+      paper-drawer-panel div[drawer] {
+        margin: 16px;
+        overflow-y: auto;
+      }
+
+      div[main] {
+        overflow-y: auto;
+      }
+
+      guide-lesson-item:last-of-type {
+        margin-bottom: 56px;
+      }
+
+      iron-icon[icon="schedule"] {
+        margin-left: 12px;
+      }
+
+      /* To avoid auto-hiding of [paper-drawer-toggle] elements when drawer is open. */
+      guide-lesson-item[paper-drawer-toggle] {
+        display: block !important;
+      }
+
+    </style>
+    <paper-header-panel mode="waterfall">
+      <paper-toolbar>
+        <paper-icon-button id="toolbarButtonBack" icon="arrow-back" paper-drawer-toggle
+          on-tap="goBack"></paper-icon-button>
+        <iron-icon icon="maps:local-library"></iron-icon>
+        <div id="title">[[navInfo.current.unit.title]]</div>
+        <!-- Remaining time indicator if duration is set. -->
+        <template is="dom-if" if="[[remainingDuration]]">
+          <span>[[remainingDuration]]mn</span>
+          <iron-icon icon="schedule"></iron-icon>
+        </template>
+      </paper-toolbar>
+      <paper-drawer-panel id="drawerPanel"
+        narrow="{{narrow}}" drawer-width="[[drawerWidth]]" disable-edge-swipe>
+        <!-- Drawer with unit lessons menu. -->
+        <div drawer id="drawer">
+          <template is="dom-repeat"
+            items="[[navInfo.current.unit.allLessons.edges]]"
+            as="lessonEdge"
+            index-as="index">
+            <guide-lesson-item
+              lesson-id="[[lessonEdge.node.id]]" title="[[lessonEdge.node.title]]"
+              index="[[_computeLessonIndex(index)]]"
+              selected="{{_computeLessonSelected(lessonEdge.node, navInfo.current.lesson)}}"
+              completed="{{_computeLessonCompleted(lessonEdge.node, navInfo.current.lesson)}}"
+              on-tap="_handleLessonItemTap"
+              paper-drawer-toggle> </guide-lesson-item>
+          </template>
+        </div>
+        <div main>
+          <!-- Spinner visible while awaiting data. -->
+          <guide-loader active="[[loading]]"></guide-loader>
+          <!-- The div where the 'guide-lesson-view' will be added. -->
+          <div id="viewContainer" on-iron-swipe="_handleSwipe"></div>
+          <!-- Navigation controls. -->
+          <div id="nav">
+            <paper-fab id="navButtonDone"
+              icon="done" hidden$="[[navInfo.siblings.next.lesson]]"
+              on-tap="goBack"></paper-fab>
+           <paper-fab id="navButtonNext"
+              icon="chevron-right" hidden$="[[!navInfo.siblings.next.lesson]]"
+              on-tap="goToNextLesson"> </paper-fab>
+            <paper-fab id="navButtonMenu" icon="menu" paper-drawer-toggle></paper-fab>
+            <paper-fab id="navButtonPrevious"
+              icon="chevron-left" hidden$="[[!navInfo.siblings.previous.lesson]]"
+              on-tap="goToPreviousLesson"></paper-fab>
+            <paper-fab id="navButtonBack"
+              icon="arrow-back" hidden$="[[navInfo.siblings.previous.lesson]]"
+              on-tap="goBack"></paper-fab>
+          </div>
+        </div>
+      </paper-drawer-panel>
+    </paper-header-panel>
+  </template>
+  <script>
+    (function(){
+      'use strict';
+      Polymer({
+        is: 'guide-steps-page',
+
+        behaviors: [
+          /**
+           * To react to key press events.
+           * Provides:
+           *   - addOwnKeyBinding(): To add a key binding.
+           */
+          Polymer.IronA11yKeysBehavior,
+          /**
+           * To update this component's theme color via its 'themeColor' property.
+           * Provides:
+           *   - themeColor: The theme color for this app.
+           */
+          GuideBehaviors.ThemeableBehavior,
+          /**
+           * To enable the emission of navigation events.
+           * Provides:
+           *   - navInfo: Navigation state for the app.
+           *   - selectPath(): Triggers navigation by emission of 'guide-select' events.
+           *   - goToNextLesson, goToPreviousLesson, goBack: Navigation utility methods.
+           */
+          GuideBehaviors.NavigatorBehavior,
+          // Animations for this component.
+          GuideBehaviors.StepsPageAnimationsBehavior,
+        ],
+
+        properties: {
+          outline: {
+            type: Object,
+            notify: true
+          },
+          lessons: {
+            type: Object,
+            notify: true
+          },
+          loading: {
+            type: Boolean,
+            notify: true,
+            readOnly: true,
+            value: true
+          },
+
+          remainingDuration: {
+            type: Number,
+            notify: true,
+            readOnly: true,
+            computed: '_computeRemainingDuration(navInfo.current.lesson)'
+          },
+
+          themeColor: {
+            type: String,
+            notify: true,
+            readOnly: true,
+            computed: '_computeThemeColor(navInfo.current.course)'
+          },
+
+          drawerWidth: {
+            type: Number,
+            notify: true,
+            readOnly: true,
+            computed: '_computeDrawerWidth(narrow)'
+          },
+
+        },
+
+        observers: [
+          '_updateLessonView(navInfo.current.lesson, lessons)',
+          '_setupKeyBindings(navInfo.current.lesson)'
+        ],
+
+        _computeThemeColor: function() {
+          return this.navInfo.current.course &&
+            this.navInfo.current.course.guide.color;
+        },
+
+        _computeDrawerWidth: function(narrow) {
+          return narrow ? '70%' : '250px';
+        },
+
+        _computeLessonIndex: function(index) {
+          return index + 1;
+        },
+
+        _computeLessonSelected: function(lesson) {
+          return lesson == this.navInfo.current.lesson;
+        },
+
+        _computeLessonCompleted: function(lesson) {
+          var selectedLesson = this.navInfo.current.lesson;
+          return this.navInfo.current.unit && (
+            this.navInfo.current.unit.allLessons.edges.findIndex(function(edge) {
+              return edge.node == lesson; }) <
+            this.navInfo.current.unit.allLessons.edges.findIndex(function(edge) {
+              return edge.node == selectedLesson; }));
+        },
+
+        _computeRemainingDuration: function(lesson) {
+          if (!this.navInfo.current.unit) {return 0;}
+          return this.navInfo.current.course.guide.durationMinutes * (
+            this.navInfo.current.unit.allLessons.edges.length -
+            this.navInfo.current.unit.allLessons.edges.findIndex(function(edge) {
+                return edge.node == lesson; })
+            );
+        },
+
+        _handleLessonItemTap: function(e) {
+          this.selectPath(
+            this.navInfo.current.course.id,
+            this.navInfo.current.unit.id,
+            e.target.lessonId);
+        },
+
+        _handleSwipe: function(e) {
+          if (e.detail.direction == 'left') {
+            this.navInfo.siblings.next.lesson ? this.goToNextLesson() : this.goBack();
+          } else if (e.detail.direction == 'right') {
+            this.navInfo.siblings.previous.lesson ? this.goToPreviousLesson() : this.goBack();
+          }
+        },
+
+        _setupKeyBindings: function(lesson) {
+          if (lesson) {
+            this.addOwnKeyBinding('up down left right', '_handleKeyPressed');
+            this.set('keyEventTarget', document.body);
+          } else {
+            this.removeOwnKeyBindings();
+            this.set('keyEventTarget', this);
+          }
+        },
+
+        _handleKeyPressed: function(e) {
+          var key = e.detail.keyboardEvent.key;
+          if (key == 'ArrowDown' || key == 'ArrowRight') {
+            this.navInfo.siblings.next.lesson ? this.goToNextLesson() : this.goBack();
+          } else if (key == 'ArrowUp' || key == 'ArrowLeft') {
+            this.navInfo.siblings.previous.lesson ? this.goToPreviousLesson() : this.goBack();
+          }
+        },
+
+        /**
+         * Updates the lesson view:
+         *  Finds and removes old 'guide-lesson-view' and replaces with a new one that renders
+         *  the current lesson.
+         */
+        _updateLessonView: function() {
+          if (!this.lessons || !this.navInfo.current.lesson) { return; }
+          this._setLoading(true);
+
+          var oldElements = this.$.viewContainer.querySelectorAll('guide-lesson-view');
+          for (var i = 0; i < oldElements.length; i++) {
+            this.$.viewContainer.removeChild(oldElements.item(i));
+          }
+
+          // Find full lesson object (passed lesson is an outline lesson object).
+          var currentLesson = this.navInfo.current.lesson;
+          var fullLesson = this.lessons.edges.find(function(edge) {
+            return edge.node.id == currentLesson.id;
+          });
+
+          // Creates and appends new <guide-lesson-view> Element.
+          if (fullLesson) {
+            var lessonViewElement = this.ownerDocument.createElement('guide-lesson-view');
+            lessonViewElement.set('lesson', fullLesson.node);
+            if (this.narrow) { lessonViewElement.set('narrow', true); }
+            this.$.viewContainer.appendChild(lessonViewElement);
+          }
+          this._setLoading(false);
+        },
+
+      });
+    })();
+  </script>
+</dom-module>

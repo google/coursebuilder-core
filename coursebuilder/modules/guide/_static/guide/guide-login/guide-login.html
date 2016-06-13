@@ -1,0 +1,135 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Course Builder elements. -->
+<link rel="import" href="/modules/guide/_static/coursebuilder/cb-login/cb-login.html">
+
+<!-- Iron Elements. -->
+<link rel="import" href="/static/polymer-1.2.0/iron-icon/iron-icon.html">
+<link rel="import" href="/static/polymer-1.2.0/iron-icons/iron-icons.html">
+<link rel="import" href="/static/polymer-1.2.0/iron-icons/social-icons.html">
+
+<!-- Paper elements. -->
+<link rel="import" href="/static/polymer-1.2.0/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-dialog/paper-dialog.html">
+<link rel="import" href="/static/polymer-1.2.0/paper-tooltip/paper-tooltip.html">
+
+<!-- Guide elements. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-styles/guide-styles.html">
+
+
+<!--
+  'guide-login' is a login/logout button widget for a guide app.
+  It uses a coursebuilder 'cb-login' element to fetch user data from coursebuilder graphql endpoint.
+-->
+<dom-module id="guide-login">
+  <style include="guide-styles"></style>
+  <template>
+    <!-- Coursebuilder login helper element. -->
+    <cb-login id="cbLogin" current-user="{{currentUser}}" loading="{{loading}}"></cb-login>
+
+    <!-- Logout Dialog -->
+    <paper-dialog id="logoutDialog"
+       on-iron-overlay-opened="patchOverlay"
+       with-backdrop="true" on-iron-overlay-closed="_handleLayoutDialogClosed">
+      <div>Sign out from [[currentUser.email]]?</div>
+      <div class="buttons">
+        <paper-button dialog-dismiss>Cancel</paper-button>
+        <paper-button dialog-confirm autofocus>Sign out</paper-button>
+      </div>
+    </paper-dialog>
+
+    <!-- Login/Logout Button & Tooltip. -->
+    <paper-icon-button id="loginButton"
+      icon="social:person" disabled$="[[loading]]" on-tap="_handleLoginButtonTap">
+    </paper-icon-button>
+    <paper-tooltip for="loginButton"
+      position="left" offset="4" animation-delay="0">[[tooltipText]]</paper-tooltip>
+  </template>
+
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'guide-login',
+
+      properties: {
+        /**
+         * The current user information from CourseBuilder graphql endpoint.
+         * Updated on login/logout.
+         */
+        currentUser: {
+          type: Object,
+          notify: true,
+        },
+
+        tooltipText: {
+          type: String,
+          readOnly: true,
+          computed: '_computeToolTipText(currentUser)'
+        }
+      },
+
+      _computeToolTipText: function(currentUser) {
+       if (this.currentUser && this.currentUser.loggedIn == true) {
+          return 'Signed in as ' + currentUser.email;
+        } else {
+          return 'Sign in';
+        }
+      },
+
+      _handleLoginButtonTap: function(e) {
+        if (this.currentUser && this.currentUser.loggedIn == true) {
+          this.$.logoutDialog.open();
+        } else {
+          this.logIn();
+        }
+      },
+
+      _handleLayoutDialogClosed: function(e) {
+        if (e.detail.confirmed) {
+          this.logOut();
+        }
+      },
+
+      logIn: function() {
+        this.$.cbLogin.login();
+      },
+
+      logOut: function() {
+        this.$.cbLogin.logout();
+      },
+
+      // TODO(davyrisso): Remove when the issue below is fixed:
+      // https://github.com/PolymerElements/paper-dialog/issues/7
+      // Prevents the modal dialog from appearing behind its backdrop, due to 'paper-header-panel'.
+      patchOverlay: function (e) {
+        if (e.target.withBackdrop) {
+          e.currentTarget.parentNode.insertBefore(e.currentTarget.backdropElement, e.currentTarget);
+        }
+      },
+    });
+
+  })();
+  </script>
+
+</dom-module>

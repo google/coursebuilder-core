@@ -110,9 +110,6 @@ STATIC_SERV_URLS = [
     (
         '/static/2in3/2in3-master/dist/2.9.0/build/yui2-editor/yui2-editor.js',
         'CustomZipHandler'),
-    (
-        '/modules/guide/resources/polymer/bower_components/bower.json',
-        'CustomZipHandler')
     ]
 
 # a lists of tests URL's served by combo zip handler

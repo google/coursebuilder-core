@@ -1,0 +1,96 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Iron elements. -->
+<link rel="import" href="/static/polymer-1.2.0/iron-ajax/iron-ajax.html">
+
+<!--
+  'cb-data' is a low-level coursebuilder component for fetching data against the graphql endoint.
+  It uses an iron-ajax to handle ajax calls.
+-->
+<dom-module id="cb-data">
+  <template>
+    <iron-ajax
+       id="ajax"
+       auto="[[query]]"
+       url="/modules/gql/query"
+       params="[[_ajaxParams]]"
+       json-prefix=")]}'"
+       on-response="_onAjaxResponse"
+       loading="{{loading}}">
+    </iron-ajax>
+  </template>
+
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'cb-data',
+
+      properties: {
+        /* The graphql query to be executed against coursebuilder graphql endpoint. */
+        query: {
+          type: String,
+          notify: true,
+          value: null,
+        },
+
+        /* The data retrieved from coursebuilder graphql endpoint. */
+        data: {
+          type: Object,
+          notify: true,
+          readOnly: true
+        },
+
+        /* Indicates if a request is in flight. */
+        loading: {
+          type: Boolean,
+          notify: true,
+        },
+
+        /* The parameters used by the underlying iron-ajax component. */
+        _ajaxParams: {
+          type: Object,
+          notify: true,
+          readOnly: true,
+          computed: '_computeAjaxParams(query)'
+        }
+      },
+
+      /* Wraps a graphql query in a params object to be consumed by iron-ajax. */
+      _computeAjaxParams: function(query) {
+        return {q: query};
+      },
+
+      /* Called on response received by iron-ajax. */
+      _onAjaxResponse: function(e) {
+        if (!e.detail.response.errors || e.detail.response.errors.length == 0) {
+          this._setData(e.detail.response.data);
+        } else {
+          console.error('Error(s) when fetching coursebuilder data:', e.detail.response.errors);
+        }
+      },
+
+    });
+  })();
+  </script>
+</dom-module>

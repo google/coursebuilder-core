@@ -1,0 +1,182 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Guide behaviors. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-errors/guide-error-notifier-behavior.html">
+<link rel="import" href="/modules/guide/_static/guide/guide-navigation/guide-navigation-base-behavior.html">
+
+
+<!--
+  'guide-navigation-manager-behavior' is a behavior that enables updates to the navInfo object
+  exposed by its NavigationBase behavior. It exposes a selectPath method as well as event handlers
+  to react to 'guide-select' events, to enable its children to trigger navigation.
+
+  When reactToEvents="true" (default), the element will listen to 'guide-select' events from
+  its children elements.
+
+  When stopEventsPropagation="true" (default), the element will stop the propagation of the
+  'guide-select' events from its children elements.
+-->
+<script>
+  (function(window) {
+    'use strict';
+
+    window.GuideBehaviors = window.GuideBehaviors || {};
+
+    var NavigationManagerBehaviorImpl = {
+      properties: {
+        /**
+         * Course outline, must be set for this element to be functional.
+         */
+        outline: {},
+
+        /* Indicates that the behavior is awaiting data in order to be functional. */
+        navPending: {
+          type: Boolean,
+          notify: true,
+          readOnly: true,
+          computed: '_computeNavPending(outline)',
+          value: true
+        },
+
+        /* Indicates if this element should listen and react to 'guide-select' events. */
+        reactToEvents: {
+          type: Boolean,
+          notify: true,
+          value: true
+        },
+        /* Indicates if this element should stop its childrens 'guide-select' events propagation.*/
+        stopEventsPropagation: {
+          type: Boolean,
+          notify: true,
+          value: true
+        }
+      },
+
+      observers: [
+        '_setListener(reactToEvents)',
+        '_handlePendingEvents(navPending)',
+      ],
+
+      /* Events received while pending, handled when pending switches to false. */
+      _pendingEvents: [],
+
+      _computeNavPending: function(outline) {
+        return outline === null;
+      },
+
+      _setListener: function(reactToEvents) {
+        if (reactToEvents) {
+          this.listen(this, 'guide-select', '_handleSelectEvent');
+        } else {
+          this.unlisten(this, 'guide-select', '_handleSelectEvent');
+        }
+      },
+
+      // Handles a 'guide-select' event. If pending, will store the event for later handling.
+      _handleSelectEvent: function(e) {
+        if (!this.reactToEvents) { return; }
+
+        if (this.stopEventsPropagation) {
+          e.stopPropagation();
+        }
+
+        if (this.navPending) {
+          this._pendingEvents.push(e);
+        } else {
+          this.selectPath(e.detail.courseId, e.detail.unitId, e.detail.lessonId);
+        }
+      },
+
+      _handlePendingEvents: function() {
+        for (var i in this._pendingEvents) {
+          this._handleSelectEvent(this._pendingEvents[i]);
+        }
+        this._pendingEvents.length = 0;
+      },
+
+      /**
+       * Validates and ultimately applies a selection command.
+       */
+      selectPath: function(courseId, unitId, lessonId) {
+        var current = this.navInfo.current;
+
+        // Locates course if provided, errors if not found.
+        var courseEdge = this.outline.allCourses.edges.find(function(edge) {
+          return edge.node.id == courseId;
+        });
+        current.course = courseEdge ? courseEdge.node : null;
+        if (!current.course) {
+          this.notifyError('Course not found');
+          return;
+        }
+
+        // Locates unit if provided, errors if not found.
+        var unitEdge = current.course && current.course.allUnits.edges.find(function(edge) {
+          return edge.node.id == unitId;
+        });
+        current.unit = unitEdge ? unitEdge.node : null;
+        if (unitId && !current.unit) {
+          this.notifyError('Unit not found');
+          return;
+        }
+
+        // Locates lesson if provided, errors if not found.
+        var lessonEdge = current.unit && current.unit.allLessons.edges.find(function(edge) {
+          return edge.node.id == lessonId;
+        });
+        current.lesson = lessonEdge ? lessonEdge.node : null;
+        if (lessonId && !current.lesson) {
+          this.notifyError('Lesson not found');
+          return;
+        }
+
+        // Updates the current navigation state.
+        this.set('navInfo.current', current);
+        this.notifyPath('navInfo.current');
+      },
+
+      clearSelection: function() {
+        this.set('navInfo.current', {course: null, unit: null, lesson: null});
+        this.notifyPath('navInfo.current');
+      }
+    };
+
+    GuideBehaviors.NavigationManagerBehavior = [
+      /**
+       * To enable the notification of errors to the user.
+       * Provides:
+       *   - notifyError()
+       */
+      GuideBehaviors.ErrorNotifierBehavior,
+      /**
+       * Base navigation behavior.
+       * Provides:
+       * - navInfo: Navigation state for the app (current course, unit and/or lesson selection).
+       */
+      GuideBehaviors.NavigationBaseBehavior,
+      NavigationManagerBehaviorImpl,
+    ];
+
+  })(window);
+</script>
+
+

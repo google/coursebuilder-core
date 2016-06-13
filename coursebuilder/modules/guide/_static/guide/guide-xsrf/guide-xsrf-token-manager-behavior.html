@@ -1,0 +1,84 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Paper Elements. -->
+<link re="import" href="/static/polymer-1.2.0/paper-dialog/paper-dialog.html">
+
+<!-- Guide Elements. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-xsrf/guide-xsrf-token-refresh-dialog.html">
+
+<!--
+  A behavior that stores XSRF tokens and prompts the user for refresh before expiration.
+  Exposes the tokens globally in GuideXsrfTokens.
+
+  Handled XSRF tokens:
+    - eventXsrfToken
+-->
+<script>
+  (function(window) {
+    'use strict';
+
+    window.GuideBehaviors = window.GuideBehaviors || {};
+    window.GuideXsrfTokens = window.GuideXsrfTokens || {};
+
+    var TOKEN_REFRESH_CUTOFF_SEC = 3.75 * 60 * 60; // 3.75 hours
+    var MINUTE_IN_MS = 60 * 1000;
+
+    var XsrfTokenManagerBehaviorImpl = {
+      properties: {
+        /**
+         * XSRF Token set by the server, used for student events recording.
+         */
+        eventXsrfToken: {
+          type: String,
+          observer: '_handleEventXsrfTokenChanged'
+        },
+      },
+
+      _refreshDialog: null,
+
+      _handleEventXsrfTokenChanged: function(token) {
+        window.GuideXsrfTokens.eventXsrfToken = token;
+        if (!token) { return; }
+        var tokenTimestampSec = parseInt(token.split('/')[0], 10);
+        // Checks every minute for token expiration.
+        setInterval(function() {
+          var currentTimestampSec = Math.floor(Date.now() / 1000);
+          if (currentTimestampSec - tokenTimestampSec > TOKEN_REFRESH_CUTOFF_SEC) {
+            this._refreshDialog.open();
+          }
+        }.bind(this), MINUTE_IN_MS);
+      },
+
+      attached: function(){
+        this._refreshDialog = document.createElement('guide-xsrf-token-refresh-dialog');
+        this.appendChild(this._refreshDialog);
+      }
+    };
+
+    GuideBehaviors.XsrfTokenManagerBehavior = [
+      XsrfTokenManagerBehaviorImpl,
+    ];
+
+  })(window);
+</script>
+
+

@@ -1,0 +1,157 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Course Builder elements. -->
+<link rel="import" href="/modules/guide/_static/coursebuilder/cb-data/cb-data.html">
+
+<!-- Guide Behaviors. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-navigation/guide-navigation-base-behavior.html">
+
+<!--
+  'guide-data' is a helper element that fetches and exposes data for use in 'guide-app'.
+
+  It relies on coursebuilder 'cb-data' elements to query coursebuilder's graphql endpoint.
+
+  - Fetches outline data once (full hierarchy of all courses with minimal object representation)
+  - Fetches lessons data on every change of navigation that touches the currently selected unit
+      (flat list of a unit's lessons with full object representation, including html).
+
+-->
+<dom-module id="guide-data">
+  <template>
+    <cb-data id="outlineData" query="[[queries.outline]]" data="{{cbData.outline}}"></cb-data>
+    <cb-data id="lessonsData" query="[[queries.lessons]]" data="{{cbData.lessons}}"></cb-data>
+  </template>
+  <script>
+    (function(){
+      'use strict';
+
+      var OUTLINE_QUERY = '{allCourses ' +
+            '{edges {node {id title url guide {color durationMinutes} allUnits ' +
+              '{edges {node {id title description allLessons ' +
+                '{edges {node {id title}}}' + '}}}' + '}}}}';
+
+      var LESSONS_QUERY_TEMPLATE = '{course(id: \"__courseId__\")' +
+          '{id unit(id: \"__unitId__\"){id header footer description allLessons' +
+          '{edges {node {id title body}}}}}}';
+
+
+      Polymer({
+        is: 'guide-data',
+
+        behaviors: [
+          /**
+           * Base navigation behavior.
+           * Provides:
+           * - navInfo: Navigation state for the app (current course, unit and/or lesson selection).
+           */
+          GuideBehaviors.NavigationBaseBehavior,
+        ],
+
+        properties: {
+          /**
+           * The graphql queries used by this elements 'cb-data' children.
+           * Data is fetched on update to a query, no fetching happens for null queries.
+           */
+          queries: {
+            type: Object,
+            notify: true,
+            readOnly: true,
+            value: function() {
+              return {
+                outline: OUTLINE_QUERY,
+                lessons: null};
+            }
+          },
+
+          /**
+           * The data returned by this elements 'cb-data' children.
+           */
+          cbData: {
+            type: Object,
+            notify: true,
+            value: function() {
+              return {
+                outline: null,
+                lessons: null};
+            }
+          },
+
+          /**
+           * Outline data, to be consumed by 'guide-app'.
+           * Relay node with a connection to all courses.
+           */
+          outline: {
+            type: Object,
+            notify: true,
+            readOnly: true,
+            computed: '_prepareOutline(cbData.outline)'
+          },
+
+          /**
+           * Lessons data, to be consumed by 'guide-app'.
+           * Relay connection to the selected unit's lessons.
+           */
+          lessons: {
+            type: Object,
+            notify: true,
+            readOnly: true,
+            computed: '_prepareLessons(cbData.lessons)'
+          }
+        },
+
+        observers: [
+          '_handleNavigationChanged(navInfo.current)'
+        ],
+
+        _computeLessonsQuery: function(courseId, unitId) {
+          if (!courseId || !unitId) {
+            return null;
+          } else {
+            return LESSONS_QUERY_TEMPLATE
+              .replace('__courseId__', courseId)
+              .replace('__unitId__', unitId);
+          }
+        },
+
+        /* Recomputes the lessons query on navigation change to trigger data fetching. */
+        _handleNavigationChanged: function() {
+          if (!this.navInfo.current.lesson) { return; }
+          this._setQueries({
+            outline: OUTLINE_QUERY,
+            lessons: this._computeLessonsQuery(
+              this.navInfo.current.course.id, this.navInfo.current.unit.id)
+          });
+        },
+
+        _prepareOutline: function(cbData) {
+          return cbData;
+        },
+
+        _prepareLessons: function(cbData) {
+          return cbData && cbData.course && cbData.course.unit.allLessons || null;
+        },
+
+      });
+    })();
+  </script>
+</dom-module>
+

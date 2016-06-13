@@ -1,0 +1,152 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Paper elements. -->
+<link rel="import" href="/static/polymer-1.2.0/paper-item/paper-item.html">
+
+<!-- Guide styles. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-styles/guide-styles.html">
+
+
+<!--
+  'guide-lesson-item' is a material design menu item that represents a lesson.
+  It is a wrapper around a 'paper-item' element.
+-->
+<dom-module id="guide-lesson-item">
+
+  <template>
+    <style include="guide-styles">
+      paper-item {
+        font-size: 14px;
+        color: var(--paper-grey-500);
+        overflow: hidden;
+        border-radius: 4px;
+        padding: 6px 16px;
+        cursor: pointer;
+      }
+
+      paper-item i {
+        display: inline-block;
+        font-style: normal;
+        font-weight: normal;
+        width: 24px;
+        min-width: 24px;
+        background: #fff;
+        border-radius: 50%;
+        text-align: center;
+        height: 24px;
+        vertical-align: middle;
+        border: 1px solid var(--paper-grey-400);
+        margin-right: 8px;
+      }
+
+      paper-item i::before,
+      paper-item i::after {
+        content: '';
+        display: block;
+        border-left: 1px solid var(--paper-grey-400);
+        width: 0;
+        height: 44px;
+        z-index: 1;
+        margin-top: 1px;
+        margin-left: 11px;
+      }
+
+      paper-item i::before {
+        margin-top: -44px;
+      }
+
+      paper-item:hover {
+        color: var(--paper-grey-900);
+        background-color: var(--paper-grey-300);
+      }
+
+      :host[completed] paper-item {
+        color: var(--paper-grey-900);
+      }
+
+      :host[selected] paper-item {
+        color: var(--paper-grey-900);
+        background-color: var(--paper-grey-300);
+        font-weight: bold;
+      }
+
+      :host[completed] paper-item i,
+      :host[completed] paper-item i::before,
+      :host[completed] paper-item i::after,
+      :host[selected] paper-item i,
+      :host[selected] paper-item i:before {
+        border-color: #00BCD4;
+      }
+
+      :host:first-of-type paper-item i::before,
+      :host:last-of-type paper-item i::after {
+        display: none;
+      }
+    </style>
+
+    <paper-item on-tap="_onItemTap">
+      <i>[[index]]</i>
+      <span>[[title]]</span>
+    </paper-item>
+
+  </template>
+
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'guide-lesson-item',
+
+      properties: {
+        lessonId: {
+          type: String,
+        },
+        title: {
+          type: String,
+        },
+        index: {
+          type: Number,
+        },
+
+        selected: {
+          type: Boolean,
+          reflectToAttribute: true
+        },
+        completed: {
+          type: Boolean,
+          reflectToAttribute: true
+        }
+      },
+
+      _onItemTap: function(e) {
+        // Stops the propagation of children's tap events and fire its own to avoid mixed events.
+        e.stopPropagation();
+        this.fire('tap');
+      }
+
+    });
+
+  })();
+  </script>
+
+</dom-module>

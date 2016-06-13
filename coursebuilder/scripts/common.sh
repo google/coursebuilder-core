@@ -316,7 +316,6 @@ DISTRIBUTED_LIBS="\
   mrs-mapreduce-0.9.zip \
   networkx-1.9.1.zip \
   oauth-1.0.1.zip \
-  polymer-guide-1.2.0.zip \
   polymer-1.2.0.zip \
   pyparsing-1.5.7.zip \
   rdflib-4.2.2-dev.zip \

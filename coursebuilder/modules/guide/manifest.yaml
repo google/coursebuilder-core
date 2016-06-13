@@ -1,20 +1,43 @@
 registration:
   main_module: modules.guide.guide
 
-tests:
-  functional:
-    - modules.guide.guide_tests.GuideTests = 5
-
 files:
   - modules/guide/__init__.py
-  - modules/guide/guide.py
-  - modules/guide/guide_tests.py
-  - modules/guide/manifest.yaml
-  - modules/guide/_static/components/guides.html
-  - modules/guide/_static/components/steps.html
-  - modules/guide/_static/img/book-icon-md.png
+  - modules/guide/_static/coursebuilder/cb-data/cb-data.html
+  - modules/guide/_static/coursebuilder/cb-login/cb-login.html
+  - modules/guide/_static/guide/guide-app/guide-app.html
+  - modules/guide/_static/guide/guide-courses/guide-course-item.html
+  - modules/guide/_static/guide/guide-data/guide-data.html
+  - modules/guide/_static/guide/guide-errors/guide-error-notifier-behavior.html
+  - modules/guide/_static/guide/guide-head/guide-head-tag-manager-behavior.html
+  - modules/guide/_static/guide/guide-head/guide-head-tag.html
+  - modules/guide/_static/guide/guide-lessons/animations/guide-lesson-view-animations.html
+  - modules/guide/_static/guide/guide-lessons/guide-lesson-item.html
+  - modules/guide/_static/guide/guide-lessons/guide-lesson-view.html
+  - modules/guide/_static/guide/guide-loader/guide-loader.html
+  - modules/guide/_static/guide/guide-login/guide-login.html
+  - modules/guide/_static/guide/guide-navigation/guide-navigation-base-behavior.html
+  - modules/guide/_static/guide/guide-navigation/guide-navigation-manager-behavior.html
+  - modules/guide/_static/guide/guide-navigation/guide-navigator-behavior.html
+  - modules/guide/_static/guide/guide-pages/animations/guide-home-page-animations.html
+  - modules/guide/_static/guide/guide-pages/animations/guide-steps-page-animations.html
+  - modules/guide/_static/guide/guide-pages/guide-home-page.html
+  - modules/guide/_static/guide/guide-pages/guide-steps-page.html
+  - modules/guide/_static/guide/guide-styles/guide-styles.html
+  - modules/guide/_static/guide/guide-theme/guide-app-theme-manager-behavior.html
+  - modules/guide/_static/guide/guide-theme/guide-themeable-behavior.html
+  - modules/guide/_static/guide/guide-units/guide-unit-card.html
+  - modules/guide/_static/guide/guide-url/guide-url.html
+  - modules/guide/_static/guide/guide-url/guide-url-hash.html
+  - modules/guide/_static/guide/guide-xsrf/guide-xsrf-token-manager-behavior.html
+  - modules/guide/_static/guide/guide-xsrf/guide-xsrf-token-refresh-dialog.html
   - modules/guide/_static/img/favicon.ico
-  - modules/guide/scripts/bower.json
-  - modules/guide/scripts/bower.sh
-  - modules/guide/templates/guides.html
-  - modules/guide/templates/steps.html
+  - modules/guide/constants.py
+  - modules/guide/course_settings.py
+  - modules/guide/graphql.py
+  - modules/guide/guide.py
+  - modules/guide/handlers.py
+  - modules/guide/manifest.yaml
+  - modules/guide/messages.py
+  - modules/guide/settings.py
+  - modules/guide/templates/guide.html

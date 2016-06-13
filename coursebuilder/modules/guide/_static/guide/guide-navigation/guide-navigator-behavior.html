@@ -1,0 +1,80 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Guide Behaviors. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-navigation/guide-navigation-base-behavior.html">
+
+
+<!--
+  A behavior that provides methods for initiating navigation in a guide app.
+
+  The exposed methods fire 'guide-select' events that will be picked up by an ancestor with
+  'guide-navigation-manager-behavior' to update an app navigation state.
+-->
+<script>
+  (function(window) {
+    'use strict';
+
+    window.GuideBehaviors = window.GuideBehaviors || {};
+
+    var NavigatorBehaviorImpl = {
+      selectPath: function(courseId, unitId, lessonId) {
+        this.fire('guide-select', {
+          courseId: courseId,
+          unitId: unitId,
+          lessonId: lessonId});
+      },
+
+      goToPreviousLesson: function() {
+        this.selectPath(
+          this.navInfo.current.course.id,
+          this.navInfo.current.unit.id,
+          this.navInfo.siblings.previous.lesson.id);
+      },
+
+      goToNextLesson: function() {
+        this.selectPath(
+          this.navInfo.current.course.id,
+          this.navInfo.current.unit.id,
+          this.navInfo.siblings.next.lesson.id);
+      },
+
+      goBack: function() {
+        this.selectPath(this.navInfo.current.course.id,
+                        this.navInfo.current.unit && this.navInfo.current.unit.id || null,
+                        null);
+      },
+    };
+
+    GuideBehaviors.NavigatorBehavior = [
+      /**
+       * Base navigation behavior.
+       * Provides:
+       * - navInfo: Navigation state for the app (current course, unit and/or lesson selection).
+       */
+      GuideBehaviors.NavigationBaseBehavior,
+      NavigatorBehaviorImpl,
+    ];
+
+  })(window);
+</script>
+
+

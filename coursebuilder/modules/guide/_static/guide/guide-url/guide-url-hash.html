@@ -1,0 +1,103 @@
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!-- Iron elements. -->
+<link rel="import" href="/static/polymer-1.2.0/iron-location/iron-location.html">
+<link rel="import" href="/static/polymer-1.2.0/iron-location/iron-query-params.html">
+
+<!-- Guide behaviors. -->
+<link rel="import" href="/modules/guide/_static/guide/guide-navigation/guide-navigator-behavior.html">
+
+<!--
+  'guide-url' is a helper element to enable binding with the document url hash string.
+
+  - Triggers a 'guide-select' event upon reading eventual navigation info from url on hash change.
+  - Updates the url hash string to reflect updates made on parameters.
+-->
+<dom-module id="guide-url-hash">
+  <template>
+    <iron-location id="location" hash="{{urlHash}}" dwell-time="1000"></iron-location>
+  </template>
+
+  <script>
+    (function() {
+      'use strict';
+
+      Polymer({
+        is: 'guide-url-hash',
+
+        behaviors: [
+          /**
+           * To enable the emission of navigation events.
+           * Provides:
+           *   - navInfo: Navigation state for the app.
+           *   - selectPath(): Triggers navigation by emission of 'guide-select' events.
+           */
+          GuideBehaviors.NavigatorBehavior,
+        ],
+
+        properties: {
+          urlHash: {
+            type: String,
+            observer: '_handleHashChanged'
+          },
+        },
+
+        observers: [
+          '_handleNavigationChanged(navInfo.current)',
+        ],
+
+        _computeUrlParams: function(hash) {
+          var parts = hash.split('/');
+          return {
+            courseId: parts[1],
+            unitId: parts[2],
+            lessonId: parts[3]
+          };
+        },
+
+        _handleNavigationChanged: function() {
+          var hash = '';
+          if (this.navInfo.current.course) {
+            hash += '/' + this.navInfo.current.course.id; }
+          if (this.navInfo.current.unit) {
+            hash += '/' + this.navInfo.current.unit.id; }
+          if (this.navInfo.current.lesson) {
+            hash += '/' + this.navInfo.current.lesson.id; }
+          this.set('urlHash', hash);
+        },
+
+        _handleHashChanged: function(hash){
+          if (!hash) { return; }
+          var urlParams = this._computeUrlParams(hash);
+          if ((!this.navInfo.current.course ||
+               (this.navInfo.current.course.id != urlParams.courseId)) ||
+              (!this.navInfo.current.unit ||
+               (this.navInfo.current.unit.id != urlParams.unitId)) ||
+              (!this.navInfo.current.lesson ||
+               (this.navInfo.current.lesson.id != urlParams.lessonId))) {
+            this.selectPath(urlParams.courseId, urlParams.unitId, urlParams.lessonId);
+          }
+        }
+      })
+    })();
+  </script>
+</dom-module>

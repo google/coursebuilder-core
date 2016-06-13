@@ -1,0 +1,139 @@
+
+<!--
+
+  Copyright 2015 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<!-- Polymer. -->
+<link rel="import" href="/static/polymer-1.2.0/polymer/polymer.html">
+
+<!--
+  'guide-navigation-base-behavior' exposes navInfo property used to represents the
+  navigation state of a 'guide-app'.
+-->
+<script>
+  (function(window) {
+    'use strict';
+
+    window.GuideBehaviors = window.GuideBehaviors || {};
+
+    var NavigationBaseBehaviorImpl = {
+
+      properties: {
+        /**
+         * Course outline, must be set for this element to calculate siblings on navigation.
+         */
+        outline: {},
+
+        /* Navigation info. Includes current selection, next & previous outline items. */
+        navInfo: {
+          type: Object,
+          notify: true,
+          value: function() {
+            return {
+              /* The current navigation information (i.e user selection). */
+              current: {
+                course: null,
+                unit: null,
+                lesson: null
+              },
+
+              /**
+               * Shorthands to previous and next items in an outline, updated when current changes.
+               * NB: the 'outline' property must be set for these helpers to be computed.
+               */
+              siblings: {
+                previous: {
+                  course: null,
+                  unit: null,
+                  lesson: null
+                },
+                next: {
+                  course: null,
+                  unit: null,
+                  lesson: null
+                },
+              }
+            };
+          }
+        },
+      },
+
+      observers: [
+        '_updateSiblings(navInfo.current.lesson)',
+      ],
+
+      /**
+       * Finds the previous item in a connection for a given node.
+       */
+      _findPreviousItem: function(node, connection) {
+        var index = connection.edges.findIndex(function(edge) {
+          return edge.node == node; });
+        return index > 0 ? connection.edges[index - 1].node : null;
+      },
+
+      /**
+       * Finds the next item in a connection for a given node.
+       */
+      _findNextItem: function(node, connection) {
+        var index = connection.edges.findIndex(function(edge) {
+          return edge.node == node; });
+        return index < connection.edges.length - 1 ? connection.edges[index + 1].node : null;
+      },
+
+      /**
+       * Computes the navInfo.siblings shorthands to previous and next elements in an outline
+       * for a given set of (course, unit, lesson).
+       */
+      _computeSiblings: function(selection, outline) {
+        var previous = {course: null, unit: null, lesson: null};
+        var next = {course: null, unit: null, lesson: null};
+
+        if (selection.course) {
+          previous.course = this._findPreviousItem(selection.course, outline.allCourses);
+          next.course = this._findNextItem(selection.course, outline.allCourses);
+        }
+
+        if (selection.unit) {
+          previous.unit = this._findPreviousItem(selection.unit, selection.course.allUnits);
+          next.unit = this._findNextItem(selection.unit, selection.course.allUnits);
+        }
+
+        if (selection.lesson) {
+          previous.lesson = this._findPreviousItem(selection.lesson, selection.unit.allLessons);
+          next.lesson = this._findNextItem(selection.lesson, selection.unit.allLessons);
+        }
+
+        return {previous: previous, next: next};
+      },
+
+      _updateSiblings: function() {
+        if (this.outline) {
+          var siblings = this._computeSiblings(this.navInfo.current, this.outline);
+          this.set('navInfo.siblings', siblings);
+        }
+      },
+
+    };
+
+    GuideBehaviors.NavigationBaseBehavior = [
+      NavigationBaseBehaviorImpl,
+    ];
+
+  })(window);
+</script>
+
+

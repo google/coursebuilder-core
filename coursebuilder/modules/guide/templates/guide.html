@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <!-- Chrome, Firefox OS and Opera -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- iOS Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Legacy global variables.  -->
+    <script>
+      (function(window){
+        window.GuideLegacy = window.GuideLegacy || {};
+        // TODO(davyrisso): Query through GraphQL as it is set at a course level.
+        {% if can_record_student_events %}
+        var GuideLegacy.gcbCanRecordStudentEvents = true;
+        {% endif %}
+      })(window);
+    </script>
+
+    <!-- To enable webcomponents support in older browsers. -->
+    <script src="/static/polymer-1.2.0/webcomponentsjs/webcomponents-lite.js"></script>
+
+    <!-- Guide web app. -->
+    <link rel="import" href="/modules/guide/_static/guide/guide-app/guide-app.html">
+  </head>
+  <body>
+    <guide-app event-xsrf-token="{{ event_xsrf_token }}"></guide-app>
+  </body>
+</html>
+
+
+
