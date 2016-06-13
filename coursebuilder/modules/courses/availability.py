@@ -17,12 +17,10 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import collections
-import logging
 import os
 
 import appengine_config
 from common import crypto
-from common import resource
 from common import schema_fields
 from controllers import utils
 from models import courses
@@ -31,6 +29,7 @@ from models import services
 from models import transforms
 from modules.courses import constants
 from modules.courses import messages
+from modules.courses import triggers
 from modules.dashboard import dashboard
 from modules.oeditor import oeditor
 
@@ -44,22 +43,11 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
 
     ACTION = 'availability'
     URL = 'rest/availability'
+
+    # Used only once in AvailabilityRESTHandler, but exists as a public
+    # constant for use by courses_pageobjects.py (and thus indirectly
+    # courses_integration_tests.py).
     ADD_TRIGGER_BUTTON_TEXT = 'Add date/time availability change'
-
-    MISSING_CONTENT_FMT = 'MISSING content with resource Key "%s".'
-
-    # On the Publish > Availability form (in the element_settings course
-    # outline and the <option> values in the availability_triggers 'content'
-    # <select>), there are only two content types: 'unit', and 'lesson'.
-    # All types other than 'lesson' (e.g. 'unit', 'link', 'assessment') are
-    # represented by 'unit' instead.
-    OUTLINE_CONTENT_TYPES = ['unit', 'lesson']
-
-    UNEXPECTED_CONTENT_FMT = 'Unexpected content type "%%s" not in %s.' % (
-        OUTLINE_CONTENT_TYPES)
-
-    UNEXPECTED_AVAIL_FMT = 'Unexpected availability "%%s" not in %s.' % (
-        courses.AVAILABILITY_VALUES)
 
     @classmethod
     def get_form(cls, handler):
@@ -72,22 +60,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             extra_js_files=['availability.js'])
 
     @classmethod
-    def get_schema(cls, course):
-        ret = schema_fields.FieldRegistry(
-            'Availability', 'Course Availability Settings',
-            extra_schema_dict_values={
-                'className': (
-                    'inputEx-Group new-form-layout hidden-header '
-                    'availability-manager')})
-        ret.add_property(schema_fields.SchemaField(
-            'course_availability', 'Course Availability', 'string',
-            description='This sets the availability of the course for '
-            'registered and unregistered students.',
-            i18n=False, optional=True,
-            select_data=[
-                (k, v['title'])
-                for k, v in courses.COURSE_AVAILABILITY_POLICIES.iteritems()]))
-
+    def get_common_element_schema(cls):
         element_settings = schema_fields.FieldRegistry(
             'Element Settings', 'Availability settings for course elements',
             extra_schema_dict_values={'className': 'content-element'})
@@ -104,6 +77,47 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'name', 'Course Outline', 'string',
             i18n=False, optional=True, editable=False,
             extra_schema_dict_values={'className': 'title'}))
+        return element_settings
+
+    @classmethod
+    def get_content_trigger_schema(cls, course):
+        content_trigger = schema_fields.FieldRegistry(
+            'Trigger', 'Date/Time Triggered Availability Change',
+            extra_schema_dict_values={'className': 'content-trigger'})
+        content_trigger.add_property(schema_fields.SchemaField(
+            'content', 'For course content:', 'string',
+            description=messages.CONTENT_TRIGGER_RESOURCE_DESCRIPTION,
+            i18n=False, select_data=cls.content_select(course).items(),
+            extra_schema_dict_values={'className': 'trigger-content'}))
+        content_trigger.add_property(schema_fields.SchemaField(
+            'availability', 'Change availability to:', 'string',
+            description=messages.CONTENT_TRIGGER_AVAIL_DESCRIPTION,
+            i18n=False, select_data=courses.AVAILABILITY_SELECT_DATA,
+            extra_schema_dict_values={'className': 'trigger-availability'}))
+        content_trigger.add_property(schema_fields.SchemaField(
+            'when', 'At this date & UTC hour:', 'datetime',
+            i18n=False,
+            description=messages.CONTENT_TRIGGER_WHEN_DESCRIPTION,
+            extra_schema_dict_values={
+                'className': 'trigger-when inputEx-required'}))
+        return content_trigger
+
+    @classmethod
+    def get_schema(cls, course):
+        ret = schema_fields.FieldRegistry(
+            'Availability', 'Course Availability Settings',
+            extra_schema_dict_values={
+                'className': (
+                    'inputEx-Group new-form-layout hidden-header '
+                    'availability-manager')})
+        ret.add_property(schema_fields.SchemaField(
+            'course_availability', 'Course Availability', 'string',
+            description='This sets the availability of the course for '
+            'registered and unregistered students.',
+            i18n=False, optional=True,
+            select_data=courses.COURSE_AVAILABILITY_SELECT_DATA))
+
+        element_settings = cls.get_common_element_schema()
         element_settings.add_property(schema_fields.SchemaField(
             'shown_when_unavailable', 'Shown When Private', 'boolean',
             description=services.help_urls.make_learn_more_message(
@@ -118,6 +132,8 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
                 'course:availability:availability'), i18n=False, optional=True,
             select_data=courses.AVAILABILITY_SELECT_DATA,
             extra_schema_dict_values={'className': 'availability'}))
+
+
         ret.add_property(schema_fields.FieldArray(
             'element_settings', 'Content Availability',
             item_type=element_settings, optional=True,
@@ -132,37 +148,16 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'listed explicitly.',
             i18n=False, optional=True))
 
-        availability_trigger = schema_fields.FieldRegistry(
-            'Trigger', 'Date/Time Triggered Availability Change',
-            extra_schema_dict_values={'className': 'availability-trigger'})
-        availability_trigger.add_property(schema_fields.SchemaField(
-            'content', 'For course content:', 'string',
-            description='The course content, such as unit or lesson, '
-            'for which to change the availability to students.',
-            i18n=False, select_data=cls.content_select(course).items(),
-            extra_schema_dict_values={'className': 'trigger-content'}))
-        availability_trigger.add_property(schema_fields.SchemaField(
-            'availability', 'Change availability to:', 'string',
-            description='The availability of the course resource will '
-            'change to this value after the trigger date and time.',
-            i18n=False, select_data=courses.AVAILABILITY_SELECT_DATA,
-            extra_schema_dict_values={'className': 'trigger-availability'}))
-        availability_trigger.add_property(schema_fields.SchemaField(
-            'when', 'At this date & UTC hour:', 'datetime',
-            i18n=False,
-            description='The date and hour (UTC) when the availability of the '
-            'resource will be changed.',
-            extra_schema_dict_values={
-                'className': 'trigger-when inputEx-required'}))
+        content_trigger = cls.get_content_trigger_schema(course)
         ret.add_property(schema_fields.FieldArray(
-            'availability_triggers',
+            triggers.ContentTrigger.ENCODED_TRIGGERS,
             'Change Course Content Availability at Date/Time',
-            item_type=availability_trigger, optional=True,
+            item_type=content_trigger, optional=True,
             description=services.help_urls.make_learn_more_message(
-                messages.AVAILABILITY_TRIGGERS_DESCRIPTION,
+                messages.CONTENT_TRIGGERS_DESCRIPTION,
                 'course:availability:triggers'),
             extra_schema_dict_values={
-                'className': 'availability-triggers',
+                'className': triggers.ContentTrigger.ENCODED_TRIGGERS_CSS,
                 'listAddLabel': cls.ADD_TRIGGER_BUTTON_TEXT,
                 'listRemoveLabel': 'Delete'}))
         return ret
@@ -210,7 +205,8 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
     @classmethod
     def add_content_option(cls, content_id, content_type, title, select,
                            note='', indent=0):
-        value = str(resource.Key(content_type, content_id))
+        value = triggers.ContentTrigger.encode_content(
+            content_type=content_type, content_id=content_id)
         text = title
         if note:
             text = '{} ({})'.format(text, note)
@@ -253,41 +249,20 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
     def construct_entity(cls, course):
         """Expose as function for convenience in wrapping this handler."""
 
-        course_availability = course.get_course_availability()
         app_context = course.app_context
+        namespace = app_context.get_namespace_name()
         settings = app_context.get_environ()
         reg_form = settings.setdefault('reg_form', {})
-        publish = settings.setdefault('publish', {})
 
-        # Course content associated with existing availability triggers could
-        # have been deleted since the trigger itself was created. If the
-        # content whose availability was meant to be updated by the trigger
-        # has been deleted, also discard the obsolete trigger and do not
-        # display it in the Publish > Availability form. (It displays
-        # incorrectly anyway, using the first <option> since the trigger
-        # content key value is non longer present in the <select>.
-        #
-        # Saving the resulting form will then omit the obsolete triggers.
-        # The UpdateCourseAvailability cron job also detects these obsolete
-        # triggers and discards them as well.
-        triggers = publish.get('triggers', [])
         selectable_content = cls.content_select(course)
-        triggers_with_content = []
-        for trigger in triggers:
-            content_key = trigger.get('content')
-            if content_key in selectable_content:
-                triggers_with_content.append(trigger)
-            else:
-                cls.log_trigger_error(
-                    trigger, what='OBSOLETE',
-                    ns=app_context.get_namespace_name(),
-                    cause=cls.MISSING_CONTENT_FMT % content_key)
+        triggers_with_content = triggers.ContentTrigger.triggers_with_content(
+            settings, selectable_content)
 
         entity = {
-            'course_availability': course_availability,
+            'course_availability': course.get_course_availability(),
             'whitelist': reg_form.get('whitelist', ''),
             'element_settings': cls.traverse_course(course),
-            'availability_triggers': triggers_with_content,
+            'content_triggers': triggers_with_content,
         }
         return entity
 
@@ -336,9 +311,8 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         if whitelist is not None:
             settings['reg_form']['whitelist'] = whitelist
 
-        triggers = payload.get('availability_triggers')
-        if triggers is not None:
-            settings.setdefault('publish', {})['triggers'] = triggers
+        triggers.ContentTrigger.payload_triggers_into_settings(
+            payload, settings)
 
         course.save_settings(settings)
 
@@ -353,7 +327,10 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             elif item['type'] == 'lesson':
                 element = course.find_lesson_by_id(None, item['id'])
             else:
-                raise ValueError(cls.UNEXPECTED_CONTENT_FMT % item['type'])
+                tct = triggers.ContentTrigger
+                raise ValueError(
+                    tct.UNEXPECTED_CONTENT_FMT.format(
+                        item['type'], tct.ALLOWED_CONTENT_TYPES))
             if element:
                 if 'availability' in item:
                     element.availability = item['availability']
@@ -363,22 +340,6 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         course.save()
         transforms.send_json_response(
             handler, 200, 'Saved.', payload_dict=response_payload)
-
-    @classmethod
-    def log_trigger_error(cls, trigger,
-                          what='INVALID', why='content', ns='', cause=''):
-        """Assemble a trigger error message from optional parts and log it."""
-        # "INVALID content in...
-        parts = ["%s '%s' in" % (what, why)]
-        if ns:
-            # "INVALID content in ns_foo...
-            parts.append('"%s"' % ns)
-        # "INVALID content in... trigger: {avail...} ...
-        parts.append('trigger: %s' % trigger)
-        # "INVALID content in... trigger: {avail...} cause: ValueError: ...
-        if cause:
-            parts.append('cause: "%s"' % cause)
-        logging.error(' '.join(parts))
 
 
 def get_namespaced_handlers():

@@ -267,6 +267,12 @@ COURSE_AVAILABILITY_POLICIES = collections.OrderedDict([
     }),
 ])
 
+COURSE_AVAILABILITY_VALUES = COURSE_AVAILABILITY_POLICIES.keys()
+
+COURSE_AVAILABILITY_SELECT_DATA = [
+    (k, v['title'])
+    for k, v in COURSE_AVAILABILITY_POLICIES.iteritems()]
+
 
 Displayability = collections.namedtuple(
     'Displayability', [

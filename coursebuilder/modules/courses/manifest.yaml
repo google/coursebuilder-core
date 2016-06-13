@@ -38,5 +38,6 @@ files:
   - modules/courses/templates/question_group_list.html
   - modules/courses/templates/question_list.html
   - modules/courses/templates/question_location_macros.html
+  - modules/courses/triggers.py
   - modules/courses/unit_lesson_editor.py
   - modules/courses/unit_outline.py

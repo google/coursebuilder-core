@@ -27,8 +27,22 @@ If checked, the content displays its title in the syllabus even when it is
 private.
 """
 
-AVAILABILITY_TRIGGERS_DESCRIPTION = """
+CONTENT_TRIGGERS_DESCRIPTION = """
 Changes to availability that are triggered at a specified date and time.
+"""
+
+CONTENT_TRIGGER_RESOURCE_DESCRIPTION = """
+The course content, such as unit or lesson, for which to change the
+availability to students.
+"""
+
+CONTENT_TRIGGER_AVAIL_DESCRIPTION = """
+The availability of the course resource will change to this value after the
+trigger date and time.
+"""
+
+CONTENT_TRIGGER_WHEN_DESCRIPTION = """
+The date and hour (UTC) when the availability of the resource will be changed.
 """
 
 CONTENTS_OF_THE_COURSE_DESCRIPTION = """

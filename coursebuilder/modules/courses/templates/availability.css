@@ -94,11 +94,11 @@
  */
 /* Leave room for [Delete] by limiting width of a trigger to less than 100%. */
 .availability-manager .inputEx-ListField-childContainer
-    .availability-trigger.inputEx-ListField-subFieldEl {
+    .content-trigger.inputEx-ListField-subFieldEl {
   width: auto;
 }
 /* Align [Delete] button approximately its height above bottom of div. */
-.availability-manager .availability-triggers
+.availability-manager .content-triggers
     > .inputEx-ListField-childContainer > div {
   display: inline-block;
   height: 100%;
@@ -106,7 +106,7 @@
   position: relative;
 }
 /* Duplicate gcb-button class for the [Delete] button. */
-.availability-manager .availability-triggers
+.availability-manager .content-triggers
     > .inputEx-ListField-childContainer > div > .inputEx-List-link {
   display: inline !important;
   position: absolute;
@@ -124,7 +124,7 @@
   cursor: default;
 }
 /* All but first field add margin on the left. */
-.availability-manager .availability-trigger > fieldset
+.availability-manager .content-trigger > fieldset
     > .inputEx-fieldWrapper +.inputEx-fieldWrapper {
   margin-left: 20px;
 }
@@ -134,7 +134,7 @@
   width: 250px;
 }
 /* Float the "For course content:" field to the left, since it is first. */
-.availability-manager .availability-trigger > fieldset
+.availability-manager .content-trigger > fieldset
     > .inputEx-fieldWrapper:first {
   float: left;
 }
@@ -143,7 +143,7 @@
   width: 150px;
 }
 /* "Change availability to:" is the middle of three fields. */
-.availability-manager .availability-trigger > fieldset
+.availability-manager .content-trigger > fieldset
     > .inputEx-fieldWrapper {
   float: none;
 }
@@ -152,7 +152,7 @@
   width: 250px;
 }
 /* Float the "At this date & UTC hour:" field to the right, since it is last. */
-.availability-manager .availability-trigger > fieldset
+.availability-manager .content-trigger > fieldset
     > .inputEx-fieldWrapper:last {
   float: right;
 }
@@ -176,12 +176,12 @@
   display: none;
 }
 /* Remove some extraneous whitespace. */
-.availability-manager .availability-trigger .trigger-when
+.availability-manager .content-trigger .trigger-when
     > .inputEx-clear-div {
   display: none;
 }
 /* Hide unused datetime control [Clear] button. */
-.availability-manager .availability-trigger .trigger-when
+.availability-manager .content-trigger .trigger-when
     .inputEx-DatePicker-ClearButton {
   display: none;
 }

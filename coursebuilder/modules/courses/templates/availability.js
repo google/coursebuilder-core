@@ -32,11 +32,11 @@ $(function() {
       });
     }
 
-    var triggers = cb_global.form.inputsNames.availability_triggers;
+    var triggers = cb_global.form.inputsNames.content_triggers;
     $(triggers.divEl).addClass('section-with-heading');
     if (triggers.subFields.length == 0) {
       var container = $(triggers.divEl).find(
-          '.availability-triggers > .inputEx-ListField-childContainer');
+          '.content-triggers > .inputEx-ListField-childContainer');
 
       if (contentElements.subFields.length == 0) {
         $('<div class="no-course-content">' +
@@ -48,7 +48,7 @@ $(function() {
     if (contentElements.subFields.length > 0) {
       // Re-parent 'Add...' button to be after entire triggers list section.
       var $button = $($(triggers.divEl).find(
-          '.availability-triggers > a.inputEx-List-link'));
+          '.content-triggers > a.inputEx-List-link'));
       $button.insertAfter($button.parent());
 
       // Unhide the "Add...change" button if course content exists.

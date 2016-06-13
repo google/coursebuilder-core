@@ -30,7 +30,7 @@ class CourseAvailabilityPage(pageobjects.CourseAvailabilityPage):
     EMPTY_CONTENT_CSS_SEL = CONTENT_LIST_CSS_SEL + ' .no-course-content'
 
     TRIGGER_LIST_CSS_SEL = (
-        '.availability-manager .availability-triggers' +
+        '.availability-manager .content-triggers' +
         ' > .inputEx-ListField-childContainer')
     EMPTY_TRIGGER_CSS_SEL = TRIGGER_LIST_CSS_SEL + ' .no-course-content'
 
@@ -83,7 +83,7 @@ class CourseAvailabilityPage(pageobjects.CourseAvailabilityPage):
         return self
 
     NO_TRIGGER_BUTTON_CSS_SEL = (
-        '.availability-manager .availability-triggers > a.inputEx-List-link')
+        '.availability-manager .content-triggers > a.inputEx-List-link')
 
     def verify_no_trigger_button(self):
         """Verifies the 'Add date/time availability change' button is not
@@ -96,14 +96,14 @@ class CourseAvailabilityPage(pageobjects.CourseAvailabilityPage):
         self._tester.assertEquals('', add_button.text.strip())
         return self
 
-    # 'Add...' button is re-parented out of div.availability-triggers.
+    # 'Add...' button is re-parented out of div.content-triggers.
     ADD_TRIGGER_BUTTON_CSS_SEL = (
         '.availability-manager .section-with-heading > a.gcb-button')
 
     def verify_add_trigger_button(self):
         """Verifies if course content is present, that the
         'Add date/time availability change' button text is visible, and that
-        the <a> button has been re-parented outside the .availability-triggers
+        the <a> button has been re-parented outside the .content-triggers
         list div, to appear below that section.
         """
         # .gcb-button 'Add' button should be visible; wait for it to appear.
