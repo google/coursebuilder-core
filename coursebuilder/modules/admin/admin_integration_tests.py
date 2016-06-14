@@ -131,7 +131,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         multi_edit.click_save()
         multi_edit.assert_status(course_namespace, 'Saved.')
         multi_edit.expect_status_message_to_be(
-            'Set availability to public for 1 course.')
+            'Updated settings in 1 course.')
         course_list = multi_edit.click_cancel()
 
         # Course still should be checked on main list.
@@ -172,7 +172,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
 
         multi_edit.expect_status_message_to_be(
-            'Set availability to registration required for %d courses.' %
+            'Updated settings in %d courses.' %
             NUM_COURSES)
 
         # Attempt to set courses to Private, but with an error that
@@ -191,7 +191,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
                 course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
         multi_edit.expect_status_message_to_be(
-            'Set availability to private for 0 courses and had %d errors.' %
+            'Updated settings in 0 courses and had %d errors.' %
             NUM_COURSES)
 
 

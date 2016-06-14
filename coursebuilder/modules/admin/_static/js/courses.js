@@ -116,7 +116,7 @@ $(function() {
         .open();
   }
 
-  function setMultiCourseActionAvailability(isAvailable) {
+  function setMultiCourseActionAllowed(isAvailable) {
     if (isAvailable) {
       $('.multi-course-actions').removeClass('inactive');
     } else {
@@ -136,7 +136,7 @@ $(function() {
     });
     $('.gcb-course-checkbox').prop('checked', newState);
     $('#all_courses_select').prop('checked', newState);
-    setMultiCourseActionAvailability(newState);
+    setMultiCourseActionAllowed(newState);
     gcbAdminOperationCount++;
   }
 
@@ -158,25 +158,70 @@ $(function() {
           .prop('indeterminate', false)
           .prop('checked', anyChecked);
     }
-    setMultiCourseActionAvailability(anyChecked);
+    setMultiCourseActionAllowed(anyChecked);
     gcbAdminOperationCount++;
   }
 
-  var EditMultiCourseAvailabilityPanel = function(xsrfToken, courses, options) {
-    this._xsrfToken = xsrfToken;
-    this._courses = courses;
+  // ---------------------------------------------------------------------------
+  // Abstract base popup panel that supports modifications to multiple courses.
+  //
+  // Derived classes should implement the following functions.  These take
+  // no parameters other than the implied 'this'.
+  //
+  // - _getTitle(): Returns a string for titling the popup window.
+  // - _getXsrfToken(): Returns a string containing the xsrf token authorizing
+  //       changes to course settings.
+  // - _getFormFieldHtml(): Returns a string containing HTML that is added to
+  //       the popup window.  Typically contains form fields for settings.
+  // - _configureFormFields(): After the page HTML has been incorporated into
+  //       the page DOM, the derived class may wish to configure fields,
+  //       look up and cache handles to fields, and so on.
+  // - _getSaveUrl(): Return the URL component (e.g., "/rest/assessment")
+  //       without the course slug prefix that will accept an HTTP PUT.
+  //       This handler *must* return a payload dict with an item named
+  //       "key" and a value giving the slug identifying the course.
+  // - _getSavePayload(): Return a dict/object containing key/value pairs
+  //       of data that is sent in the PUT request.
+  // - _settingSaved(payload): Called back when a PUT for a given course
+  //       returns successfully.  Derived classes may wish to use this
+  //       opportunity to update the contents of the page to reflect the new
+  //       setting.  The payload parameter is the payload component of the
+  //       JSON response returned from the REST handler.
+  //
+  var EditMultiCoursePanel = function() {
+    // Constructors must take no parameters and have no side effects, since
+    // declaring class inheritance is done by setting the derived class'
+    // .prototype member to a constructed (new'd) instance of the base class.
+    // We separate the declaration of the inheritance structure into the
+    // constructor-function, and object initialization is deferred to init().
+    //
+    // Derived classes may wish to call init() as part of their constructor,
+    // but doing so implicitly declares that class to be a leaf - it will not
+    // be usable as a base class.
+  };
+
+  EditMultiCoursePanel.prototype.init = function() {
+    this._xsrfToken = this._getXsrfToken();
     this._documentBody = $(document.body);
     this._lightbox = new window.gcb.Lightbox();
     this._numSuccessResponses = 0;
     this._numFailureResponses = 0;
+    this._courses = $('.gcb-course-checkbox:checked').map(
+        function(index, item){
+          return {
+            namespace: $(item).data('course-namespace'),
+            title: $(item).data('course-title'),
+            slug: $(item).data('course-slug')
+          };
+        });
+
+    var title = this._getTitle();
+    var formFields = this._getFormFieldHtml();
+
     this._form = $(
         '<div class="add-course-panel" id="multi-course-edit-panel">' +
-        '  <h2 class="title">Set Course Availability</h2>' +
-        '  <div class="form-row">' +
-        '    <label>Availability</label>' +
-        '    <select id="multi-course-select-availability" ' +
-        '            name="availability"></select> ' +
-        '  </div>' +
+        '  <h2 class="title">' + title + '</h2>' +
+        formFields +
         '  <div class="edit-multi-course-list">' +
         '    <table>' +
         '      <thead>' +
@@ -200,15 +245,9 @@ $(function() {
         '    <span class="icon spinner md md-settings md-spin"></span>' +
         '  </div>' +
         '</div>');
-    var availabilitySelect = this._form.find(
-        '#multi-course-select-availability');
-    this._availabilitySelect = availabilitySelect;
-    $(options).each(function(index, opt) {
-      availabilitySelect.append(
-          $('<option value=' + opt.value + '>' + opt.title + '</option>'));
-    });
+    this._configureFormFields();
     var courseList = this._form.find('#course_list');
-    $(courses).each(function(index, course) {
+    $(this._courses).each(function(index, course) {
       courseList.append(
           $('<tr><td>' + course.title + '</td>' +
             '<td id="course_status_' + course.namespace + '"> - </td></tr>'));
@@ -217,22 +256,20 @@ $(function() {
     this._form.find('#multi-course-cancel').click(this._close.bind(this));
     this._spinner = this._form.find('.spinner');
   };
-  EditMultiCourseAvailabilityPanel.prototype.open = function() {
+  EditMultiCoursePanel.prototype.open = function() {
     this._lightbox
       .bindTo(this._documentBody)
       .setContent(this._form)
       .show();
   };
-  EditMultiCourseAvailabilityPanel.prototype._save = function() {
+  EditMultiCoursePanel.prototype._save = function() {
     this._showSpinner();
-    var availability = this._availabilitySelect.val();
     var errorHandler = this._saveError.bind(this);
     var successHandler = this._saveSuccess.bind(this);
     var completeHandler = this._saveComplete.bind(this);
     var xsrfToken = this._xsrfToken;
-    var payload = JSON.stringify({
-      course_availability: availability
-    });
+    var saveUrl = this._getSaveUrl();
+    var payload = JSON.stringify(this._getSavePayload());
     this._numSuccessResponses = 0;
     this._numFailureResponses = 0;
 
@@ -245,7 +282,7 @@ $(function() {
         xsrf_token: xsrfToken,
         payload: payload,
       };
-      var url = '/' + course.slug + '/rest/availability';
+      var url = '/' + course.slug + saveUrl;
       url = url.replace('//', '/');
 
       $.ajax(url, {
@@ -258,33 +295,31 @@ $(function() {
       });
     });
   };
-  EditMultiCourseAvailabilityPanel.prototype._showSpinner = function() {
+  EditMultiCoursePanel.prototype._showSpinner = function() {
     this._spinner.removeClass('hidden');
   };
-  EditMultiCourseAvailabilityPanel.prototype._hideSpinner = function() {
+  EditMultiCoursePanel.prototype._hideSpinner = function() {
     this._spinner.addClass('hidden');
   };
-  EditMultiCourseAvailabilityPanel.prototype._close = function() {
+  EditMultiCoursePanel.prototype._close = function() {
     this._lightbox.close();
   };
-  EditMultiCourseAvailabilityPanel.prototype._saveError = function() {
+  EditMultiCoursePanel.prototype._saveError = function() {
     cbShowMsg('Something went wrong. Please try again.');
     this._spinner.addClass('hidden')
   };
-  EditMultiCourseAvailabilityPanel.prototype._saveSuccess = function(data) {
+  EditMultiCoursePanel.prototype._saveSuccess = function(data) {
     var data = window.gcb.parseJsonResponse(data);
     var payload = window.gcb.parseJsonResponse(data.payload);
-    var courseNamespace = payload.key;
-    var availabilityField = $('#availability_' + courseNamespace);
-    var statusField = $('#course_status_' + courseNamespace);
-    var availability = this._availabilitySelect[0].selectedOptions[0].text
 
+    var courseNamespace = payload.key;
+    var statusField = $('#course_status_' + courseNamespace);
     var message;
     if (data.status != 200) {
       message = data.message || 'Unknown error.';
       this._numFailureResponses++;
     } else {
-      availabilityField.text(availability)
+      this._settingSaved(payload);
       message = 'Saved.';
       this._numSuccessResponses++;
     }
@@ -292,12 +327,11 @@ $(function() {
     statusField.get(0).scrollIntoView();
   };
 
-  EditMultiCourseAvailabilityPanel.prototype._saveComplete = function() {
+  EditMultiCoursePanel.prototype._saveComplete = function() {
     var numResponses = this._numSuccessResponses + this._numFailureResponses;
     if (numResponses >= this._courses.length) {
-      var availability = this._availabilitySelect.val().replace('_', ' ');
-      var message = ('Set availability to ' + availability +
-          ' for ' + this._numSuccessResponses + ' course');
+      var message = (
+          'Updated settings in ' + this._numSuccessResponses +' course');
       if (this._numSuccessResponses != 1) {
         message += 's';
       }
@@ -314,20 +348,62 @@ $(function() {
     }
   };
 
-  function editMultiCourseAvailability() {
-    var xsrfToken = $('#edit_multi_course_availability').data('xsrfToken');
-    var courses = $('.gcb-course-checkbox:checked').map(
-        function(index, item){
-          return {
-            namespace: $(item).data('course-namespace'),
-            title: $(item).data('course-title'),
-            slug: $(item).data('course-slug')
-          };
-        });
+  // ---------------------------------------------------------------------------
+  // For editing availability on multiple courses.
+  //
+  // Used for immediate change of course availability, and also as a base class
+  // for changing course start/end date + availability settings.
+  //
+  EditMultiCourseAvailabilityPanel = function () {
+    EditMultiCoursePanel.call(this);
+  };
+  EditMultiCourseAvailabilityPanel.prototype = new EditMultiCoursePanel();
+  EditMultiCourseAvailabilityPanel.prototype._getTitle = function() {
+    return 'Set Course Availability';
+  };
+  EditMultiCourseAvailabilityPanel.prototype._getXsrfToken = function() {
+    return $('#edit_multi_course_availability').data('xsrfToken');
+  };
+  EditMultiCourseAvailabilityPanel.prototype._getFormFieldHtml = function() {
+    return (
+        '<div class="form-row">' +
+        '  <label>Availability</label>' +
+        '  <select ' +
+        '      id="multi-course-select-availability" ' +
+        '      name="availability">' +
+        '  </select>' +
+        '</div>'
+        );
+  };
+  EditMultiCourseAvailabilityPanel.prototype._configureFormFields = function() {
+    var availabilitySelect = this._form.find(
+        '#multi-course-select-availability');
+    this._availabilitySelect = availabilitySelect;
     var options = $('#edit_multi_course_availability').data('options');
+    $(options).each(function(index, opt) {
+      availabilitySelect.append(
+          $('<option value=' + opt.value + '>' + opt.title + '</option>'));
+    });
+  };
+  EditMultiCourseAvailabilityPanel.prototype._getSaveUrl = function() {
+    return '/rest/availability';
+  };
+  EditMultiCourseAvailabilityPanel.prototype._getSavePayload = function() {
+    var availability = this._availabilitySelect.val();
+    return {
+      course_availability: availability
+    };
+  };
+  EditMultiCourseAvailabilityPanel.prototype._settingSaved = function(payload) {
+    var courseNamespace = payload.key;
+    var availabilityField = $('#availability_' + courseNamespace);
+    var availability = this._availabilitySelect[0].selectedOptions[0].text;
+    availabilityField.text(availability);
+  }
+  function editMultiCourseAvailability() {
     // Var name intentionally in global namespace as hook for tests to modify.
-    gcb_multi_edit_dialog = new EditMultiCourseAvailabilityPanel(
-        xsrfToken, courses, options);
+    gcb_multi_edit_dialog = new EditMultiCourseAvailabilityPanel();
+    gcb_multi_edit_dialog.init();
     gcb_multi_edit_dialog.open();
   }
 
@@ -568,7 +644,7 @@ $(function() {
     $('.gcb-course-checkbox').each(function(_, checkbox){
       anyChecked |= checkbox.checked;
     });
-    setMultiCourseActionAvailability(anyChecked);
+    setMultiCourseActionAllowed(anyChecked);
 
     // Click on the Title column header to force an initial ascending sort.
     $('div.gcb-list > table > thead > tr > th#title_column').click();
