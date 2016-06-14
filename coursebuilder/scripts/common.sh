@@ -233,6 +233,9 @@ if need_install node ChangeLog Version 0.12.4 ; then
 
   echo Installing Karma
   pushd $RUNTIME_HOME/node > /dev/null
+  if [ ! -d node_modules ]; then
+    mkdir node_modules
+  fi
   ./bin/npm --cache $RUNTIME_HOME/node/cache install \
       jasmine-core@2.3.4 phantomjs@1.9.8 karma@0.12.36 \
       karma-jasmine@0.3.5 karma-phantomjs-launcher@0.2.0 karma-jasmine-jquery \
