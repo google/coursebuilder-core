@@ -73,7 +73,7 @@
       },
 
       _handleTap: function(e) {
-        e.stopPropagation();
+        e && e.stopPropagation();
         this.fire('tap');
       }
     });

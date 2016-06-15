@@ -140,7 +140,7 @@
 
       _onItemTap: function(e) {
         // Stops the propagation of children's tap events and fire its own to avoid mixed events.
-        e.stopPropagation();
+        e && e.stopPropagation();
         this.fire('tap');
       }
 
