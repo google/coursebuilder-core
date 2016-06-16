@@ -88,12 +88,15 @@
         _handleHashChanged: function(hash){
           if (!hash) { return; }
           var urlParams = this._computeUrlParams(hash);
-          if ((!this.navInfo.current.course ||
-               (this.navInfo.current.course.id != urlParams.courseId)) ||
-              (!this.navInfo.current.unit ||
-               (this.navInfo.current.unit.id != urlParams.unitId)) ||
-              (!this.navInfo.current.lesson ||
-               (this.navInfo.current.lesson.id != urlParams.lessonId))) {
+
+          var courseChanged = urlParams.courseId &&  (
+            !this.navInfo.current.course || urlParams.courseId != this.navInfo.current.course.id);
+          var unitChanged = urlParams.unitId && (
+            !this.navInfo.current.unit || urlParams.unitId != this.navInfo.current.unit.id);
+          var lessonChanged = urlParams.lessonId && (
+            !this.navInfo.current.lesson || urlParams.lessonId != this.navInfo.current.lesson.id);
+
+          if (courseChanged || unitChanged || lessonChanged) {
             this.selectPath(urlParams.courseId, urlParams.unitId, urlParams.lessonId);
           }
         }
