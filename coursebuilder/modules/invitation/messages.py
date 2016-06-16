@@ -23,3 +23,9 @@ ALLOW_INVITATION = """
 If checked, students will be able to send emails through the system to invite
 others to the course.
 """
+
+INVITATION_BODY = """
+Enter the text for the body of the invitation email.
+Use the string {{sender_name}} to include the name of the student
+issuing the invitation.
+"""

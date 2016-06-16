@@ -353,7 +353,7 @@ def get_course_settings_fields():
     body_template = schema_fields.SchemaField(
         'course:invitation_email:body_template',
         'Invitation Body', 'text',
-        description=messages.ALLOW_INVITATION,
+        description=messages.INVITATION_BODY,
         extra_schema_dict_values={'className': 'invitation-data inputEx-Field'},
         optional=True)
 
