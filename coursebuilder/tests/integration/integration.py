@@ -20,8 +20,11 @@ __author__ = [
 ]
 
 import collections
+import datetime
+import os
 import random
 import time
+import traceback
 
 from tests import suite
 from tests.integration import pageobjects
@@ -30,6 +33,8 @@ from selenium import webdriver
 from selenium.common import exceptions
 from selenium.webdriver.common import desired_capabilities
 from selenium.webdriver.chrome import options
+from selenium.webdriver.remote import webelement
+from selenium.webdriver.support import wait
 
 from models import courses
 
@@ -42,6 +47,7 @@ class TestBase(suite.TestBase):
     """Base class for all integration tests."""
 
     LOGIN = 'test@example.com'
+    TEST_BUNDLE_ONE = 'tests.integration.test_classes.IntegrationTestBundle1.'
 
     def setUp(self):
         super(TestBase, self).setUp()
@@ -75,9 +81,44 @@ class TestBase(suite.TestBase):
         # click actions can be performed correctly.
         self.driver.set_window_size(BROWSER_WIDTH, BROWSER_HEIGHT)
 
+        # Add names of flaky tests below to collect extra information to help
+        # with debugging flaky tests.  Configure the WHAT_... items collected
+        # for various WHEN_... events.  The list of items collected can be
+        # modified to collect only enough data to reproduce a timing-sensitive
+        # flake while (hopefully) not adding enough latency to prevent the
+        # flake.
+        #
+        # If no WHAT_... items are specified for a WHEN_... event, the event
+        # is not hooked for data collection and thus adds no delay or
+        # alternate code execution paths.  As checked in, no items are
+        # collected.
+        #
+        # Collected facts are stored in ./snapshots/<timestamp>_<test-name>.
+        # Each event's data is stored in a sub-directory named for the
+        # hour/minute/second/fraction for that step.  The WHAT_...  contents
+        # are stored in appropriately-named files within that directory.
+        #
+        self._snapshot = None
+        if self.id() in [
+            # self.TEST_BUNDLE_ONE + 'test_admin_can_add_announcement',
+        ]:
+            self._snapshot = Snapshot(self.driver, self.id(), collect_what={
+                Snapshot.WHEN_GET: [
+                    Snapshot.WHAT_PAGE_SOURCE,
+                    Snapshot.WHAT_URL,
+                ],
+                Snapshot.WHEN_CLICK: [
+                    Snapshot.WHAT_PAGE_SOURCE,
+                    Snapshot.WHAT_URL,
+                ],
+                Snapshot.WHEN_WAIT_TIMEOUT: Snapshot.WHAT_ALL,
+            })
+
     def tearDown(self):
         time.sleep(1)  # avoid broken sockets on the server
         self.driver.quit()
+        if self._snapshot:
+            self._snapshot.tearDown()
         super(TestBase, self).tearDown()
 
     def load_root_page(self, suffix=pageobjects.PageObject.BASE_URL_SUFFIX):
@@ -297,3 +338,111 @@ class TestBase(suite.TestBase):
         # else:
         #   "Registration Required" or "Registration Optional", so keep going.
         return True
+
+
+class Snapshot(object):
+
+    SNAPSHOTS_DIR = 'snapshots'
+    IGNORE_IDS = [
+        'tests.integration.test_classes.IntegrationServerInitializationTask'
+        '.test_setup_default_course',
+    ]
+
+    WHAT_URL = 'url'
+    WHAT_SCREENSHOT = 'screenshot'
+    WHAT_TRACEBACK = 'traceback'
+    WHAT_PAGE_SOURCE = 'page_source'
+    WHAT_TITLE = 'title'
+    WHAT_ALL = [
+        WHAT_URL,
+        WHAT_SCREENSHOT,
+        WHAT_TRACEBACK,
+        WHAT_PAGE_SOURCE,
+        WHAT_TITLE]
+    WHEN_GET = 'get'
+    WHEN_CLICK = 'click'
+    WHEN_WAIT_TIMEOUT = 'wait_timeout'
+
+    def __init__(self, driver, test_id, collect_what):
+        self._save_get = None
+        self._save_click = None
+        self._save_until = None
+
+        if test_id in self.IGNORE_IDS or not collect_what:
+            return
+
+        self._active = True
+        now = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+        dirname = os.path.join(self.SNAPSHOTS_DIR, '%s_%s' % (now, test_id))
+
+        def collect_snapshot(collect_what):
+            if not collect_what:
+                return
+
+            step_time = datetime.datetime.now().strftime('%H:%M:%S.%f')
+            subdir_name = os.path.join(dirname, step_time)
+            os.makedirs(subdir_name)
+
+            if self.WHAT_SCREENSHOT in collect_what:
+                screenshot_name = os.path.join(subdir_name, 'screenshot.png')
+                try:
+                    with open(screenshot_name, 'wb') as fp:
+                        fp.write(driver.get_screenshot_as_png())
+                except Exception:  # pylint: disable=broad-except
+                    os.unlink(screenshot_name)
+
+            if self.WHAT_TRACEBACK in collect_what:
+                with open(os.path.join(subdir_name, 'traceback'), 'w') as fp:
+                    fp.writelines(traceback.format_stack()[:-2])
+
+            if self.WHAT_URL in collect_what:
+                current_url_name = os.path.join(subdir_name, 'current_url')
+                try:
+                    with open(current_url_name, 'w') as fp:
+                        fp.write(driver.current_url + '\n')
+                except exceptions.NoSuchWindowException:
+                    os.unlink(current_url_name)
+
+            if self.WHAT_PAGE_SOURCE in collect_what:
+                with open(os.path.join(subdir_name, 'page_source'), 'w') as fp:
+                    fp.write((driver.page_source).encode('utf-8'))
+
+            if self.WHAT_TITLE in collect_what:
+                with open(os.path.join(subdir_name, 'title'), 'w') as fp:
+                    fp.write(driver.title + '\n')
+
+        if self.WHEN_GET in collect_what:
+            save_get = webdriver.chrome.webdriver.WebDriver.get
+            def wrap_get(self, url):
+                ret = save_get(self, url)
+                collect_snapshot(collect_what[Snapshot.WHEN_GET])
+                return ret
+            webdriver.chrome.webdriver.WebDriver.get = wrap_get
+            self._save_get = save_get
+
+        if self.WHEN_CLICK in collect_what:
+            save_click = webelement.WebElement.click
+            def wrap_click(self):
+                ret = save_click(self)
+                collect_snapshot(collect_what[Snapshot.WHEN_GET])
+                return ret
+            webelement.WebElement.click = wrap_click
+            self._save_click = save_click
+
+        if self.WHEN_WAIT_TIMEOUT in collect_what:
+            save_until = wait.WebDriverWait.until
+            def wrap_until(self, method, message=''):
+                try:
+                    return save_until(method, message)
+                except exceptions.TimeoutException:
+                    collect_snapshot(collect_what[Snapshot.WHEN_WAIT_TIMEOUT])
+                    raise
+            self._save_until = save_until
+
+    def tearDown(self):
+        if self._save_get:
+            webdriver.chrome.webdriver.WebDriver.get = self._save_get
+        if self._save_click:
+            webelement.WebElement.click = self._save_click
+        if self._save_until:
+            wait.WebDriverWait.until = self._save_until
