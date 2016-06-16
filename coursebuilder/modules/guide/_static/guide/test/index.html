@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="/static/polymer-1.2.0/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <script src="/static/polymer-1.2.0/web-component-tester/browser.js"></script>
+    <script src="/static/polymer-1.2.0/test-fixture/test-fixture-mocha.js"></script>
+    <script src="/modules/gql/_static/test/fakeGqlServer.js"></script>
+    <link rel="import" href="./test-data.html">
+    <link rel="import" href="../guide-app/guide-app.html">
+  </head>
+  <body>
+    <test-fixture id="guide-fixture">
+      <template>
+        <guide-app id="guide"></guide-app>
+      </template>
+    </test-fixture>
+    <script>
+
+      var GUIDE_OUTLINE_QUERY = '{allCourses ' +
+            '{edges {node {id title url guide {color durationMinutes} allUnits ' +
+              '{edges {node {id title description allLessons ' +
+                '{edges {node {id title}}}' + '}}}' + '}}}}';
+
+      var GUIDE_LESSONS_QUERY = '{course(id: "course-2")' +
+              '{id unit(id: "unit-2-2")' +
+              '{id header footer description allLessons' +
+              '{edges {node {id title body}}}}}}';
+
+      var GUIDE_USER_QUERY_TEMPLATE = '{currentUser {' +
+            'loggedIn email loginUrl(destUrl: "__here__")' +
+            'logoutUrl(destUrl: "__here__")}}';
+
+      var ASYNC_SCRIPTS_POLLING_INTERVAL_MS = 50;
+      var ASYNC_SCRIPTS_POLLING_TIMEOUT_MS = 10000;
+
+
+      function flushed(test) {
+        // Execute the test function after events have fired and page is loaded.
+        return function(done) {
+          flush(function() {
+            test();
+            done();
+          });
+        }
+      }
+
+      function expectAsync(testFunc, done) {
+        var elapsedTimeMs = 0;
+        var timer = setInterval(function() {
+          if (testFunc()) {
+            clearInterval(timer);
+            done();
+          } else if (elapsedTimeMs > ASYNC_SCRIPTS_POLLING_TIMEOUT_MS) {
+            expect.fail('Timeout while polling');
+            done();
+          }
+          elapsedTimeMs += ASYNC_SCRIPTS_POLLING_INTERVAL_MS;
+        }, ASYNC_SCRIPTS_POLLING_INTERVAL_MS);
+      }
+
+      describe('the Guide module', function() {
+        var guide;
+
+        beforeEach(function() {
+          fakeGqlServer.setUp();
+          fixture('guide-fixture');
+          guide = document.getElementById('guide');
+
+          // Fake outline.
+          fakeGqlServer.addResponse(
+            GUIDE_OUTLINE_QUERY, GUIDE_MOCK_OUTLINE_DATA);
+          guide.$.data.$.outlineData.$.ajax.generateRequest();
+          fakeGqlServer.respond();
+
+          // Fake (logged-out) user info.
+          fakeGqlServer.addResponse(
+            GUIDE_USER_QUERY_TEMPLATE.replace(/__here__/g, window.location),
+            GUIDE_MOCK_USER_DATA_LOGGED_OUT);
+          guide.$.homePage.$.login.$.cbLogin.$.data.$.ajax.generateRequest();
+          fakeGqlServer.respond();
+
+          // Fake lessons details.
+          // NB: The query is hardcoded for course-2>unit-2-2, render only this unit's lessons.
+          fakeGqlServer.addResponse(
+            GUIDE_LESSONS_QUERY, GUIDE_MOCK_LESSONS_DATA);
+          guide.$.data.$.lessonsData.$.ajax.generateRequest();
+          fakeGqlServer.respond();
+        });
+
+        afterEach(function() {
+          fakeGqlServer.tearDown();
+        });
+
+        it('initially has an empty selection', flushed(function(done) {
+          expect(guide.navInfo.current.course).to.equal(null);
+          expect(guide.navInfo.current.unit).to.equal(null);
+          expect(guide.navInfo.current.lesson).to.equal(null);
+        }));
+
+        it('displays the home page when the selection is empty', flushed(function(done) {
+          expect(guide.navInfo.current.course).to.equal(null);
+          expect(guide.navInfo.current.unit).to.equal(null);
+          expect(guide.navInfo.current.lesson).to.equal(null);
+          expect(guide.$.pages.selected).to.equal('homePage');
+        }));
+
+        it('displays the home page when the a course is selected', function(done) {
+          flush(function() {
+            guide.selectPath('course-1');
+            flush(function() {
+              expect(guide.navInfo.current.course.id).to.equal('course-1');
+              expect(guide.navInfo.current.unit).to.equal(null);
+              expect(guide.navInfo.current.lesson).to.equal(null);
+              expect(guide.$.pages.selected).to.equal('homePage');
+              done();
+            })
+          })
+        });
+
+        it('displays the home page when the a unit is selected', function(done) {
+          flush(function() {
+            guide.selectPath('course-1', 'unit-1-2');
+            flush(function() {
+              expect(guide.navInfo.current.course.id).to.equal('course-1');
+              expect(guide.navInfo.current.unit.id).to.equal('unit-1-2');
+              expect(guide.navInfo.current.lesson).to.equal(null);
+              expect(guide.$.pages.selected).to.equal('homePage');
+              done();
+            })
+          })
+        });
+
+        it('displays the steps page when the a lesson is selected', function(done) {
+          flush(function() {
+            guide.selectPath('course-1', 'unit-1-2', 'lesson-1-2-1');
+            flush(function() {
+              expect(guide.navInfo.current.course.id).to.equal('course-1');
+              expect(guide.navInfo.current.unit.id).to.equal('unit-1-2');
+              expect(guide.navInfo.current.lesson.id).to.equal('lesson-1-2-1');
+              expect(guide.$.pages.selected).to.equal('stepsPage');
+              done();
+            });
+          });
+        });
+
+        it('updates the url hash when its navigation state changes', function(done) {
+          flush(function() {
+            guide.selectPath('course-1', 'unit-1-2', 'lesson-1-2-1');
+            flush(function() {
+              expect(window.location.hash).to.equal('#/course-1/unit-1-2/lesson-1-2-1');
+              done();
+            });
+          });
+        });
+
+        it('updates its navigation state when the url hash changes', function(done) {
+          flush(function() {
+            window.location.hash = '#/course-1/unit-1-2/lesson-1-2-2';
+            flush(function() {
+              expect(guide.navInfo.current.course.id).to.equal('course-1');
+              expect(guide.navInfo.current.unit.id).to.equal('unit-1-2');
+              expect(guide.navInfo.current.lesson.id).to.equal('lesson-1-2-2');
+              done();
+            });
+          });
+        });
+
+        it('updates its <base> when its navigation state changes', function(done) {
+          flush(function() {
+            guide.selectPath('course-2');
+            flush(function() {
+              var baseTag = document.querySelector('base');
+              expect(baseTag.href.endsWith('/course2/')).to.equal(true);
+              done();
+            });
+          });
+        });
+
+        it('updates its <title> when its navigation state changes', function(done) {
+          flush(function() {
+            guide.selectPath('course-1', 'unit-1-2', 'lesson-1-2-1');
+            flush(function() {
+              var titleTag = document.querySelector('title');
+              expect(titleTag.innerText).to.equal(
+                'Course Builder > Guides > Course 1 > Unit 1-2 > Lesson 1-2-1');
+              done();
+            });
+          })
+        });
+
+        it('updates its meta theme-color tag when its nav. state changes', function(done) {
+          flush(function() {
+            guide.selectPath('course-1', 'unit-1-2', 'lesson-1-2-1');
+            flush(function() {
+              var metaTag = document.head.querySelector('meta[name="theme-color"]');
+              expect(metaTag.content).to.equal('blue');
+              done();
+            });
+          });
+        });
+
+        it('updates its theme color when its navigation state changes', function(done) {
+          flush(function() {
+            guide.selectPath('course-2', 'unit-2-2', 'lesson-2-2-1');
+            flush(function() {
+              expect(guide.themeColor).to.equal('red');
+              done();
+            });
+          });
+        });
+
+        describe('the login widget', function() {
+          it('updates its state correctly after login', function(done) {
+            fakeGqlServer.addResponse(
+              GUIDE_USER_QUERY_TEMPLATE.replace(/__here__/g, window.location),
+              GUIDE_MOCK_USER_DATA_LOGGED_IN);
+            guide.$.homePage.$.login.$.cbLogin.$.data.$.ajax.generateRequest();
+            fakeGqlServer.respond();
+            flush(function() {
+              expect(guide.$.homePage.$.login.currentUser.loggedIn).to.equal(true);
+              expect(guide.$.homePage.$.login.currentUser.email).to.equal('user@domain.com');
+              done();
+            });
+          });
+
+          it('updates its state correctly after logout', function(done) {
+            fakeGqlServer.addResponse(
+              GUIDE_USER_QUERY_TEMPLATE.replace(/__here__/g, window.location),
+              GUIDE_MOCK_USER_DATA_LOGGED_OUT);
+            guide.$.homePage.$.login.$.cbLogin.$.data.$.ajax.generateRequest();
+            fakeGqlServer.respond();
+            flush(function() {
+              expect(guide.$.homePage.$.login.currentUser.loggedIn).to.equal(false);
+              expect(guide.$.homePage.$.login.currentUser.email).to.equal(undefined);
+              done();
+            });
+          });
+        });
+
+        describe('the home page', function() {
+          it('lists all courses as menu items', flushed(function(done) {
+            var nodes = guide.$.homePage.$.courseMenu.querySelectorAll('guide-course-item');
+            expect(nodes.length).to.equal(2);
+            expect(nodes[0].title).to.equal('Course 1');
+            expect(nodes[0].courseId).to.equal('course-1');
+            expect(nodes[1].title).to.equal('Course 2');
+            expect(nodes[1].courseId).to.equal('course-2');
+          }));
+
+          it('lists all units as cards', flushed(function(done) {
+            var nodes = guide.$.homePage.$.cardsContainer.querySelectorAll('guide-unit-card');
+            expect(nodes.length).to.equal(4);
+            expect(nodes[0].title).to.equal('Unit 1-1');
+            expect(nodes[0].description).to.equal('Add description...');
+            expect(nodes[0].themeColor).to.equal('blue');
+            expect(nodes[3].title).to.equal('Unit 2-2');
+            expect(nodes[3].description).to.equal('Unit 2-2 description');
+            expect(nodes[3].themeColor).to.equal('red');
+          }));
+
+          it('calculates the duration of the units', flushed(function(done) {
+            var nodes = guide.$.homePage.$.cardsContainer.querySelectorAll('guide-unit-card');
+            expect(nodes[0].duration).to.equal(0);
+            expect(nodes[3].duration).to.equal(15);
+          }));
+
+          it('highlights the selected course in the course menu', function(done) {
+            flush(function() {
+              guide.selectPath('course-2');
+              flush(function() {
+                var menuItem = guide.$.homePage.$.courseMenu
+                  .querySelectorAll('guide-course-item')[1];
+                expect(menuItem.selected).to.equal(true);
+                done();
+              });
+            });
+          });
+
+          it('reacts to a course menu item tap by selecting the course', function(done){
+            flush(function() {
+              var menuItem = guide.$.homePage.$.courseMenu.querySelectorAll('guide-course-item')[1];
+              menuItem.fire('tap');
+              flush(function() {
+                expect(guide.navInfo.current.course.id).to.equal('course-2');
+                done();
+              });
+            });
+          });
+
+          it('reacts to a card tap by selecting the 1st lesson of the unit',function(done){
+            flush(function() {
+              var card = guide.$.homePage.$.cardsContainer.querySelectorAll('guide-unit-card')[3];
+              card.$.cardButton.fire('tap');
+             flush(function() {
+               expect(guide.navInfo.current.lesson.id).to.equal('lesson-2-2-1');
+               done();
+             });
+            });
+          });
+        });
+
+        describe('the steps page', function() {
+
+          it('lists all lessons as menu items', function(done) {
+            flush(function() {
+              guide.selectPath('course-2', 'unit-2-2', 'lesson-2-2-2');
+              flush(function() {
+                var nodes = guide.$.stepsPage.$.drawerPanel.querySelectorAll('guide-lesson-item');
+                expect(nodes.length).to.equal(3);
+                expect(nodes[0].title).to.equal('Lesson 2-2-1');
+                expect(nodes[1].title).to.equal('Lesson 2-2-2');
+                expect(nodes[2].title).to.equal('Lesson 2-2-3');
+                done();
+              });
+            });
+          });
+
+          it('highlights the selected lesson in the unit outline', function(done) {
+            flush(function() {
+              var menuItem = guide.$.stepsPage.$.drawerPanel.querySelectorAll('guide-lesson-item')[1];
+              expect(menuItem.selected).to.equal(true);
+              done();
+            });
+          });
+
+          it('calculates the remaining duration of the unit', flushed(function(done) {
+            expect(guide.$.stepsPage.remainingDuration).to.equal(10);
+          }));
+
+          it('reacts to a lesson menu item tap by selecting the lesson', function(done) {
+            flush(function() {
+              guide.$.stepsPage.$.drawerPanel.querySelectorAll('guide-lesson-item')[0].fire('tap');
+              flush(function() {
+                expect(guide.navInfo.current.lesson.id).to.equal('lesson-2-2-1');
+                done();
+              });
+            });
+          });
+
+          it('reacts to a \'next\' button tap by selecting the lesson', function(done) {
+            flush(function() {
+              guide.selectPath('course-2', 'unit-2-2', 'lesson-2-2-2');
+              flush(function() {
+                guide.$.stepsPage.$.navButtonNext.fire('tap');
+                flush(function() {
+                  expect(guide.navInfo.current.lesson.id).to.equal('lesson-2-2-3');
+                  done();
+                });
+              });
+            });
+          });
+
+          it('reacts to a \'previous\' button tap by selecting the lesson', function(done) {
+            flush(function() {
+              guide.selectPath('course-2', 'unit-2-2', 'lesson-2-2-2');
+              flush(function() {
+                guide.$.stepsPage.$.navButtonPrevious.fire('tap');
+                flush(function() {
+                  expect(guide.navInfo.current.lesson.id).to.equal('lesson-2-2-1');
+                  done();
+                });
+              });
+            });
+          });
+
+          it('reacts to a \'back\' button tap by going to the home page', function(done) {
+            flush(function() {
+              guide.selectPath('course-2', 'unit-2-2', 'lesson-2-2-2');
+              flush(function() {
+                guide.$.stepsPage.$.navButtonBack.fire('tap');
+                flush(function() {
+                  expect(guide.navInfo.current.course.id).to.equal('course-2');
+                  expect(guide.navInfo.current.unit.id).to.equal('unit-2-2');
+                  expect(guide.navInfo.current.lesson).to.equal(null);
+                  expect(guide.$.pages.selected).to.equal('homePage');
+                  done();
+                });
+              });
+            });
+          });
+
+          it('renders a lesson HTML in the lesson view', function(done) {
+            flush(function() {
+              guide.selectPath('course-2', 'unit-2-2', 'lesson-2-2-2');
+              guide.$.data.$.lessonsData.$.ajax.generateRequest();
+              fakeGqlServer.respond();
+              flush(function() {
+                var lessonView = guide.$.stepsPage.querySelector('guide-lesson-view').$.view;
+                expect(lessonView.children.length).to.equal(2);
+                expect(lessonView.children[0].tagName).to.equal('DIV');
+                expect(lessonView.children[0].id).to.equal('div1');
+                expect(lessonView.children[0].classList.contains('class-a')).to.equal(true);
+                expect(lessonView.children[0].innerText).to.equal('Lesson 2-2-2 Body');
+                expect(lessonView.children[1].tagName).to.equal('SCRIPT');
+                done();
+              });
+            });
+          });
+
+          it('executes inline scripts when rendering a lesson', function(done) {
+            flush(function() {
+              guide.selectPath('course-2', 'unit-2-2', 'lesson-2-2-2');
+              guide.$.data.$.lessonsData.$.ajax.generateRequest();
+              fakeGqlServer.respond();
+              flush(function() {
+                expect(window.GUIDE_TEST_INLINE).to.equal('Ok');
+                done();
+              });
+            });
+          });
+
+          it('executes async scripts when rendering a lesson', function(done) {
+            flush(function() {
+              guide.selectPath('course-2', 'unit-2-2', 'lesson-2-2-3');
+              guide.$.data.$.lessonsData.$.ajax.generateRequest();
+              fakeGqlServer.respond();
+              flush(function() {
+                expectAsync(function() {
+                  return window.GUIDE_TEST_ASYNC == 'Ok'
+                }, done);
+              });
+            });
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

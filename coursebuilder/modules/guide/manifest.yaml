@@ -1,6 +1,10 @@
 registration:
   main_module: modules.guide.guide
 
+tests:
+  integration:
+    - modules.guide.guide_integration_tests.PolymerTests = 1
+
 files:
   - modules/guide/__init__.py
   - modules/guide/_static/coursebuilder/cb-data/cb-data.html
@@ -31,11 +35,15 @@ files:
   - modules/guide/_static/guide/guide-url/guide-url-hash.html
   - modules/guide/_static/guide/guide-xsrf/guide-xsrf-token-manager-behavior.html
   - modules/guide/_static/guide/guide-xsrf/guide-xsrf-token-refresh-dialog.html
+  - modules/guide/_static/guide/tests/index.html
+  - modules/guide/_static/guide/tests/mockScripts.js
+  - modules/guide/_static/guide/tests/test-data.html
   - modules/guide/_static/img/favicon.ico
   - modules/guide/constants.py
   - modules/guide/course_settings.py
   - modules/guide/graphql.py
   - modules/guide/guide.py
+  - modules/guide/guide_integration_tests.py
   - modules/guide/handlers.py
   - modules/guide/manifest.yaml
   - modules/guide/messages.py

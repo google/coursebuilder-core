@@ -1,0 +1,154 @@
+<script>
+  var GUIDE_MOCK_OUTLINE_DATA = {
+      "allCourses": {
+        "edges": [{
+          "node": {
+            "id": "course-1",
+            "title": "Course 1",
+            "url": "/course1",
+            "guide": {
+              "color": "blue",
+              "durationMinutes": 0
+            },
+            "allUnits": {
+              "edges": [{
+                "node": {
+                  "id": "unit-1-1",
+                  "title": "Unit 1-1",
+                  "description": null,
+                  "allLessons": {
+                    "edges": []
+                  }
+                }
+              }, {
+                "node": {
+                  "id": "unit-1-2",
+                  "title": "Unit 1-2",
+                  "description": "Unit 1-2 description",
+                  "allLessons": {
+                    "edges": [{
+                      "node": {
+                        "id": "lesson-1-2-1",
+                        "title": "Lesson 1-2-1"
+                      }
+                    }, {
+                      "node": {
+                        "id": "lesson-1-2-2",
+                        "title": "Lesson 1-2-2"
+                      }
+                    }]
+                  }
+                }
+              }]
+            }
+          }
+        }, {
+          "node": {
+            "id": "course-2",
+            "title": "Course 2",
+            "url": "/course2",
+            "guide": {
+              "color": "red",
+              "durationMinutes": 5
+            },
+            "allUnits": {
+              "edges": [{
+                "node": {
+                  "id": "unit-2-1",
+                  "title": "Unit 2-1",
+                  "description": "Unit 2-1 description",
+                  "allLessons": {
+                    "edges": [{
+                      "node": {
+                        "id": "lesson-2-1-1",
+                        "title": "Lesson 2-1-1"
+                      }
+                    }, {
+                      "node": {
+                        "id": "lesson-2-1-2",
+                        "title": "Lesson 2-1-2"
+                      }
+                    }]
+                  }
+                }
+              }, {
+                "node": {
+                  "id": "unit-2-2",
+                  "title": "Unit 2-2",
+                  "description": "Unit 2-2 description",
+                  "allLessons": {
+                    "edges": [{
+                      "node": {
+                        "id": "lesson-2-2-1",
+                        "title": "Lesson 2-2-1"
+                      }
+                    }, {
+                      "node": {
+                        "id": "lesson-2-2-2",
+                        "title": "Lesson 2-2-2"
+                      }
+                    }, {
+                      "node": {
+                        "id": "lesson-2-2-3",
+                        "title": "Lesson 2-2-3"
+                      }
+                    }]
+                  }
+                }
+              }]
+            }
+          }
+        }]
+      }
+    };
+
+  var GUIDE_MOCK_LESSONS_DATA = {
+    "course": {
+      "id": "course-2",
+      "unit": {
+        "id": "unit-2-2",
+        "description": "Unit 2-2 description",
+        "allLessons": {
+          "edges": [{
+            "node": {
+              "id": "lesson-2-2-1",
+              "title": "Lesson 2-2-1",
+              "body": "<div class=\"class-a\" id=\"div1\">Lesson 2-2-1 Body</div>"
+            }
+          }, {
+            "node": {
+              "id": "lesson-2-2-2",
+              "title": "Lesson 2-2-2",
+              "body": "<div class=\"class-a\" id=\"div1\">Lesson 2-2-2 Body</div><script>window.GUIDE_TEST_INLINE='Ok';<\/script>"
+            }
+          }, {
+            "node": {
+              "id": "lesson-2-2-3",
+              "title": "Lesson 2-2-3",
+              "body": "<div class=\"class-a\" id=\"div1\">Lesson 2-2-3 Body</div><script src=\"../modules/guide/_static/guide/test/mockScript.js\"><\/script>"
+            }
+          }]
+        }
+      }
+    }
+  };
+
+  var GUIDE_MOCK_USER_DATA_LOGGED_IN = {
+    "currentUser": {
+      "loggedIn": true,
+      "email": "user@domain.com",
+      "loginUrl": "/login",
+      "logoutUrl": "/logout"
+    }
+  };
+
+    var GUIDE_MOCK_USER_DATA_LOGGED_OUT = {
+    "currentUser": {
+      "loggedIn": false,
+      "loginUrl": "/login",
+      "logoutUrl": "/logout"
+    }
+  };
+
+</script>
+
