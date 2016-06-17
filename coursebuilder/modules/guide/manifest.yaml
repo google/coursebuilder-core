@@ -2,8 +2,8 @@ registration:
   main_module: modules.guide.guide
 
 tests:
-  integration:
-    - modules.guide.guide_integration_tests.PolymerTests = 1
+  functional:
+    - modules.guide.guide_tests.GuideTests = 5
 
 files:
   - modules/guide/__init__.py
@@ -31,13 +31,13 @@ files:
   - modules/guide/_static/guide/guide-theme/guide-app-theme-manager-behavior.html
   - modules/guide/_static/guide/guide-theme/guide-themeable-behavior.html
   - modules/guide/_static/guide/guide-units/guide-unit-card.html
-  - modules/guide/_static/guide/guide-url/guide-url.html
   - modules/guide/_static/guide/guide-url/guide-url-hash.html
+  - modules/guide/_static/guide/guide-url/guide-url.html
   - modules/guide/_static/guide/guide-xsrf/guide-xsrf-token-manager-behavior.html
   - modules/guide/_static/guide/guide-xsrf/guide-xsrf-token-refresh-dialog.html
-  - modules/guide/_static/guide/tests/index.html
-  - modules/guide/_static/guide/tests/mockScripts.js
-  - modules/guide/_static/guide/tests/test-data.html
+  - modules/guide/_static/guide/test/index.html
+  - modules/guide/_static/guide/test/mockScript.js
+  - modules/guide/_static/guide/test/test-data.html
   - modules/guide/_static/img/favicon.ico
   - modules/guide/constants.py
   - modules/guide/course_settings.py
