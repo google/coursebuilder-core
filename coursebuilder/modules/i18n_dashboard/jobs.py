@@ -129,12 +129,12 @@ class DeleteTranslations(_BaseJob):
     Usage for deleting all locales:
 
       sh scripts/etl.sh run modules.i18n_dashboard.jobs.DeleteTranslations \
-        /target_course appid servername
+        /target_course servername
 
     To delete specific locales:
 
       sh scripts/etl.sh run modules.i18n_dashboard.jobs.DeleteTranslations \
-        /target_course appid servername \
+        /target_course servername \
         --job_args='--locales=en_US,fr'
     """
 
@@ -158,13 +158,13 @@ class DownloadTranslations(_BaseJob):
     Usage for downloading all locales:
 
       sh scripts/etl.sh run modules.i18n_dashboard.jobs.DownloadTranslations \
-        /target_course appid servername \
+        /target_course servername \
         --job_args='/tmp/download.zip'
 
     To download specific locales:
 
       sh scripts/etl.sh run modules.i18n_dashboard.jobs.DownloadTranslations \
-        /target_course appid servername \
+        /target_course servername \
         --job_args='/tmp/download.zip --locales=en_US,fr'
     """
 
@@ -273,7 +273,7 @@ class TranslateToReversedCase(_BaseJob):
 
       sh scripts/etl.sh run \
         modules.i18n_dashboard.jobs.TranslateToReversedCase \
-        /target_course appid servername
+        /target_course servername
     """
 
     def main(self):
@@ -289,7 +289,7 @@ class UploadTranslations(_BaseJob):
     Usage:
 
       sh scripts/etl.sh run modules.i18n_dashboard.jobs.UploadTranslations \
-        /target_course appid servername \
+        /target_course servername \
         --job_args='/tmp/file.zip'
     """
 
