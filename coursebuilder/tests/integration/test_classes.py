@@ -947,6 +947,7 @@ class EventsTest(integration.TestBase):
             ExpectedEvent('ended', 'end'),
             ]
 
+        # Positions are in seconds since start of video
         end_position = 5.568
         for event, expected in zip(events, expected_events):
             self.assertEquals(instanceid, event['instance_id'])
@@ -954,12 +955,14 @@ class EventsTest(integration.TestBase):
             self.assertEquals(1, event['default_rate'])
             self.assertEquals(expected.event_type, event['event_type'])
             if expected.position == 'zero':
-                self.assertEquals(0, event['position'])
+                self.assertAlmostEqual(0, event['position'], delta=0.01)
             elif expected.position == 'middle':
-                self.assertNotEquals(0, event['position'])
-                self.assertNotEquals(end_position, event['position'])
+                self.assertNotAlmostEquals(0, event['position'], delta=0.01)
+                self.assertNotAlmostEquals(
+                    end_position, event['position'], delta=0.01)
             elif expected.position == 'end':
-                self.assertEquals(end_position, event['position'])
+                self.assertAlmostEquals(
+                    end_position, event['position'], delta=0.01)
 
 
 class IntegrationTestBundle1(
