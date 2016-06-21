@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-05-31 06:57-0700\n"
-"PO-Revision-Date: 2016-04-11 08:00-0700\n"
+"POT-Creation-Date: 2016-06-20 07:55-0700\n"
+"PO-Revision-Date: 2016-06-20 07:55-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: el <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -334,7 +334,7 @@ msgstr "Επιστροφή στη σελίδα της Σειράς μαθημά�
 #. Title line indicating what this page is.
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:131
+#: experimental/coursebuilder/modules/certificate/certificate.py:133
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "Πιστοποιητικό ολοκλήρωσης παρακολούθησης"
@@ -344,7 +344,7 @@ msgstr "Πιστοποιητικό ολοκλήρωσης παρακολούθη
 #. that the certificate is being presented to someone.
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:139
+#: experimental/coursebuilder/modules/certificate/certificate.py:141
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "Απονέμεται σε"
@@ -352,7 +352,7 @@ msgstr "Απονέμεται σε"
 #. Message fragment on a certificate of course completion.
 #. Indicates that the student has successfully completed something.
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:144
+#: experimental/coursebuilder/modules/certificate/certificate.py:146
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "για την επιτυχή ολοκλήρωση της παρακολούθησης"
@@ -360,29 +360,29 @@ msgstr "για την επιτυχή ολοκλήρωση της παρακολ�
 #. Message fragment on a certificate of course completion.
 #. Gives the name of the course, followed by the word "course".
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:147
+#: experimental/coursebuilder/modules/certificate/certificate.py:149
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "του μαθήματος %(course)s"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:279
+#: experimental/coursebuilder/modules/certificate/certificate.py:281
 msgid "Certificate"
 msgstr "Πιστοποιητικό"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:289
+#: experimental/coursebuilder/modules/certificate/certificate.py:291
 msgid "Click for certificate"
 msgstr "Κάντε κλικ για το πιστοποιητικό"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:297
+#: experimental/coursebuilder/modules/certificate/certificate.py:299
 msgid "Download PDF"
 msgstr "Λήψη PDF"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:305
+#: experimental/coursebuilder/modules/certificate/certificate.py:307
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -390,12 +390,11 @@ msgstr ""
 "Δεν ικανοποιείτε ακόμη τις απαιτήσεις του μαθήματος για το πιστοποιητικό "
 "ολοκλήρωσης παρακολούθησης."
 
-#. Brief note appearing in per-Student news dropdown menu
-#. indicating that this student has recently earned a course
-#. completion certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:504
+#. Shown in list of news item titles (short descriptions)
+#. when student has earned a course completion certificate.
+#: experimental/coursebuilder/modules/certificate/certificate.py:510
 msgid "Course completion certificate earned!"
-msgstr ""
+msgstr "Κερδίσατε ένα πιστοποιητικό ολοκλήρωσης μαθήματος!"
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -1664,4 +1663,5 @@ msgstr "Επόμενη σελίδα"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Λήξη"
+
 

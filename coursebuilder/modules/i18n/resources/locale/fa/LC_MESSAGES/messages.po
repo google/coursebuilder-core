@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-05-31 06:57-0700\n"
-"PO-Revision-Date: 2016-04-11 08:00-0700\n"
+"POT-Creation-Date: 2016-06-20 07:55-0700\n"
+"PO-Revision-Date: 2016-06-20 07:55-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fa <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -171,17 +171,17 @@ msgstr "زمان تحویل این تکلیف: "
 #. Text telling students what their recorded email address is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:53
 msgid "Your answers have been recorded under the email"
-msgstr "پاسخ‌های شما با استفاده از ایمیل ثبت شدند"
+msgstr "پاسخ‌های شما با استفاده از رایانامه ثبت شدند"
 
 #. Text telling students there are not answers recorded for them.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:57
 msgid "You have not submitted any answers to this assignment under the email"
-msgstr "هیچ پاسخی به این تکلیف با ایمیل ارسال نکرده‌اید"
+msgstr "هیچ پاسخی به این تکلیف با رایانامه ارسال نکرده‌اید"
 
 #. Text telling students what their recorded email address is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:62
 msgid "Your answers will be recorded under the email"
-msgstr "پاسخ‌های شما با استفاده از ایمیل ثبت می‌شوند"
+msgstr "پاسخ‌های شما با استفاده از رایانامه ثبت می‌شوند"
 
 #. Text telling students what their total score is.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:72
@@ -237,7 +237,7 @@ msgstr "هنوز هیچ کس تکلیف شما را صحیح نکرده است."
 #. Text shown for an assessment that has not been made public.
 #: experimental/coursebuilder/modules/assessments/templates/assessment.html:180
 msgid "This assessment is not available."
-msgstr "این ارزیابی دردسترس نیست."
+msgstr "این ارزیابی در دسترس نیست."
 
 #. Text on the button for saving a draft answer.
 #: experimental/coursebuilder/modules/assessments/templates/assessment_html_content.html:38
@@ -317,7 +317,7 @@ msgstr "بازگشت به صفحه دوره"
 #. Title line indicating what this page is.
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:131
+#: experimental/coursebuilder/modules/certificate/certificate.py:133
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "گواهینامه تکمیل دوره"
@@ -327,7 +327,7 @@ msgstr "گواهینامه تکمیل دوره"
 #. that the certificate is being presented to someone.
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:139
+#: experimental/coursebuilder/modules/certificate/certificate.py:141
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "اعطا شده به"
@@ -335,7 +335,7 @@ msgstr "اعطا شده به"
 #. Message fragment on a certificate of course completion.
 #. Indicates that the student has successfully completed something.
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:144
+#: experimental/coursebuilder/modules/certificate/certificate.py:146
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "برای گذراندن موفقیت‌آمیز"
@@ -343,40 +343,39 @@ msgstr "برای گذراندن موفقیت‌آمیز"
 #. Message fragment on a certificate of course completion.
 #. Gives the name of the course, followed by the word "course".
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:147
+#: experimental/coursebuilder/modules/certificate/certificate.py:149
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "دوره %(course)s"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:279
+#: experimental/coursebuilder/modules/certificate/certificate.py:281
 msgid "Certificate"
 msgstr "گواهینامه"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:289
+#: experimental/coursebuilder/modules/certificate/certificate.py:291
 msgid "Click for certificate"
 msgstr "برای مشاهده گواهینامه، کلیک کنید"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:297
+#: experimental/coursebuilder/modules/certificate/certificate.py:299
 msgid "Download PDF"
 msgstr "دانلود PDF"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:305
+#: experimental/coursebuilder/modules/certificate/certificate.py:307
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
 msgstr "برای دریافت گواهینامه تکمیل دوره، هنوز پیش‌نیازهای دوره را طی نکرده‌اید."
 
-#. Brief note appearing in per-Student news dropdown menu
-#. indicating that this student has recently earned a course
-#. completion certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:504
+#. Shown in list of news item titles (short descriptions)
+#. when student has earned a course completion certificate.
+#: experimental/coursebuilder/modules/certificate/certificate.py:510
 msgid "Course completion certificate earned!"
-msgstr ""
+msgstr "گواهی پایان دوره کسب کرده است!"
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -482,7 +481,7 @@ msgstr "برای ادامه، حسابی انتخاب کنید."
 #. a parenthesized note that this is an example implementation.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:6
 msgid "(SAMPLE) Please confirm your email change"
-msgstr "(نمونه) لطفاً تغییر ایمیلتان را تأیید کنید"
+msgstr "(نمونه) لطفاً تغییر رایانامه‌تان را تأیید کنید"
 
 #. Page header text indicating that this is an example
 #. implementation.
@@ -495,7 +494,7 @@ msgstr "نمونه"
 #. has changed from one value to another.
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:16
 msgid "An email change has been requested from"
-msgstr "تغییر ایمیل از"
+msgstr "تغییر رایانامه از"
 
 #. sentence fragment connecting the old email address and the new email
 #. address.
@@ -541,7 +540,7 @@ msgstr "تغییر گذرواژه برای این مورد درخواست شده
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:276
 msgid "Error: Empty email list"
-msgstr "خطا: لیست ایمیل خالی است"
+msgstr "خطا: فهرست رایانامه خالی است"
 
 #. Error indicating that the user cannot add the desired
 #. list of additional email addresses to the list of invitations;
@@ -555,26 +554,26 @@ msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
 "messages sent."
 msgstr ""
-"این تعداد از ظرفیت ایمیل شما بیشتر است. تعداد دعوت‌های باقی مانده: ‎%s. "
-"هیچ پیامی ارسال نشد."
+"این تعداد از ظرفیت رایانامه شما بیشتر است. تعداد دعوت‌های باقی مانده: "
+"‎%s. هیچ پیامی ارسال نشد."
 
 #. Error indicating an email addresses is not well-formed.
 #: experimental/coursebuilder/modules/invitation/invitation.py:299
 #, python-format
 msgid "Error: Invalid email \"%s\""
-msgstr "خطا: ایمیل «%s» نادرست است"
+msgstr "خطا: رایانامه «%s» نادرست است"
 
 #. Error indicating an email addresses is already known.
 #: experimental/coursebuilder/modules/invitation/invitation.py:303
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
-msgstr "خطا: قبلاً ایمیل دعوت برای «%s» ارسال کرده‌اید"
+msgstr "خطا: قبلاً رایانامه دعوت برای «%s» ارسال کرده‌اید"
 
 #. Error indicating not all email messages were sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:320
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
-msgstr "برخی از  پیام‌ها ارسال نشدند (%s‏ ‏/‏ ‏%s):"
+msgstr "برخی از  پیام‌ها ارسال نشدند (%‏s‏ ‏/‏ ‏%s):"
 
 #. Success message indicating number of emails sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:328
@@ -605,7 +604,9 @@ msgstr "مشترک شدن/لغو اشتراک"
 #. Message - user has unsubscribed from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:402
 msgid "You are currently unsubscribed from course-related emails."
-msgstr "در حال حاضر اشتراکتان را برای ایمیل‌های مربوط به دوره آموزشی لغو کرده‌اید."
+msgstr ""
+"در حال حاضر اشتراکتان را برای رایانامه‌های مربوط به دوره آموزشی لغو "
+"کرده‌اید."
 
 #. Control allowing user to re-subscribe to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:406
@@ -615,7 +616,7 @@ msgstr "برای اشتراک مجدد، اینجا کلیک کنید."
 #. Text indicating user has opted in to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:411
 msgid "You are currently receiving course-related emails. "
-msgstr "در حال حاضر ایمیل‌های مربوط به دوره آموزشی را دریافت می‌کنید. "
+msgstr "در حال حاضر رایانامه‌های مربوط به دوره آموزشی را دریافت می‌کنید. "
 
 #. Control allowing user to unsubscribe from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:415
@@ -640,9 +641,9 @@ msgid ""
 "email addresses below and click \"Send\". They will receive an email from"
 " you with the text shown below."
 msgstr ""
-"آیا اشخاصی را می‌شناسید که مایل باشند در این دوره شرکت کنند؟ آدرس ایمیل "
-"آن‌ها را در زیر وارد کنید و روی «ارسال» کلیک کنید. این اشخاص ایمیلی با "
-"نوشتار زیر از شما دریافت می‌کنند."
+"آیا اشخاصی را می‌شناسید که مایل باشند در این دوره شرکت کنند؟ آدرس "
+"رایانامه آن‌ها را در زیر وارد کنید و روی «ارسال» کلیک کنید. این اشخاص "
+"رایانامه‌ای با نوشتار زیر از شما دریافت می‌کنند."
 
 #. Instructions on how to fill out email addresses in a form.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:43
@@ -650,8 +651,8 @@ msgid ""
 "Enter recipients' email addresses separated by commas. E.g., "
 "alice@gmail.com, ben@gmail.com"
 msgstr ""
-"آدرس ایمیل گیرندگان باید با کاما از هم جدا شود. مثلاً alice@gmail.com, "
-"ben@gmail.com"
+"آدرس رایانامه گیرندگان باید با کاما از هم جدا شود. مثلاً alice@gmail.com,"
+" ben@gmail.com"
 
 #. Label on control submitting a form with email addresses
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:52
@@ -661,7 +662,7 @@ msgstr "ارسال"
 #. Section title indicating an example of an email.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:57
 msgid "Sample Email"
-msgstr "نمونه ایمیل"
+msgstr "نمونه رایانامه"
 
 #. Example subject line of an email to be sent.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:60
@@ -909,14 +910,14 @@ msgstr "در حال حاضر مهارت توصیه‌شده‌ای ندارید.
 msgid ""
 "The following email address has been subscribed to receive emails for "
 "this course:"
-msgstr "آدرس ایمیل زیر برای دریافت ایمیل‌های این دوره مشترک شده است:"
+msgstr "آدرس رایانامه زیر برای دریافت رایانامه‌های این دوره مشترک شده است:"
 
 #. Indicates that a user will no longer recieve email about a course
 #: experimental/coursebuilder/modules/unsubscribe/templates/unsubscribe.html:25
 msgid ""
 "The following email address has been unsubscribed from emails for this "
 "course:"
-msgstr "آدرس ایمیل زیر از دریافت ایمیل‌های این دوره انصراف داده است:"
+msgstr "آدرس رایانامه زیر از دریافت رایانامه‌های این دوره انصراف داده است:"
 
 #. After a user has unsubscribed from email notifications, indicate that
 #. re-subscribing is possible using a control lower on the page.
@@ -1458,7 +1459,7 @@ msgstr "تاریخ نام‌نویسی"
 #. Table header for the student's email address. This is a noun.
 #: experimental/coursebuilder/views/student_data_table.html:15
 msgid "Email"
-msgstr "ایمیل"
+msgstr "رایانامه"
 
 #. Table header for the student's name.
 #: experimental/coursebuilder/views/student_data_table.html:21
@@ -1613,4 +1614,5 @@ msgstr "صفحه بعدی"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "پایان"
+
 

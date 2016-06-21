@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-05-31 06:57-0700\n"
-"PO-Revision-Date: 2016-04-11 08:00-0700\n"
+"POT-Creation-Date: 2016-06-20 07:55-0700\n"
+"PO-Revision-Date: 2016-06-20 07:55-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: gu <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -322,7 +322,7 @@ msgstr "અભ્યાસક્રમ પૃષ્ઠ પર પાછા"
 #. Title line indicating what this page is.
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:131
+#: experimental/coursebuilder/modules/certificate/certificate.py:133
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "પૂર્ણતા પ્રમાણપત્ર"
@@ -332,7 +332,7 @@ msgstr "પૂર્ણતા પ્રમાણપત્ર"
 #. that the certificate is being presented to someone.
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:139
+#: experimental/coursebuilder/modules/certificate/certificate.py:141
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "આમને પ્રસ્તુત કર્યું"
@@ -340,7 +340,7 @@ msgstr "આમને પ્રસ્તુત કર્યું"
 #. Message fragment on a certificate of course completion.
 #. Indicates that the student has successfully completed something.
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:144
+#: experimental/coursebuilder/modules/certificate/certificate.py:146
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "સફળતાપૂર્વક આ પૂર્ણ કરવા બદલ"
@@ -348,29 +348,29 @@ msgstr "સફળતાપૂર્વક આ પૂર્ણ કરવા બ�
 #. Message fragment on a certificate of course completion.
 #. Gives the name of the course, followed by the word "course".
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:147
+#: experimental/coursebuilder/modules/certificate/certificate.py:149
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "%(course)s અભ્યાસક્રમ"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:279
+#: experimental/coursebuilder/modules/certificate/certificate.py:281
 msgid "Certificate"
 msgstr "પ્રમાણપત્ર"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:289
+#: experimental/coursebuilder/modules/certificate/certificate.py:291
 msgid "Click for certificate"
 msgstr "પ્રમાણપત્ર માટે ક્લિક કરો"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:297
+#: experimental/coursebuilder/modules/certificate/certificate.py:299
 msgid "Download PDF"
 msgstr "PDF ડાઉનલોડ કરો"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:305
+#: experimental/coursebuilder/modules/certificate/certificate.py:307
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -378,12 +378,11 @@ msgstr ""
 "તમે હજી સુધી પૂર્ણતા પ્રમાણપત્ર માટેની અભ્યાસક્રમ જરૂરિયાતોને પૂરી કરી "
 "નથી."
 
-#. Brief note appearing in per-Student news dropdown menu
-#. indicating that this student has recently earned a course
-#. completion certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:504
+#. Shown in list of news item titles (short descriptions)
+#. when student has earned a course completion certificate.
+#: experimental/coursebuilder/modules/certificate/certificate.py:510
 msgid "Course completion certificate earned!"
-msgstr ""
+msgstr "અભ્યાસક્રમની પૂર્ણતાનું પ્રમાણપત્ર પ્રાપ્ત થયું!"
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -457,7 +456,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/data_removal/delete_confirmation.html:58
 #: experimental/coursebuilder/views/unenroll_confirmation.html:30
 msgid "OK"
-msgstr "ઑકે"
+msgstr "ઓકે"
 
 #. Cancellation button, indicating that the student does not              want
 #. to have all data about them removed from the course.
@@ -590,7 +589,7 @@ msgstr "બધા સંદેશા મોકલ્યાં નહોતા (%
 #: experimental/coursebuilder/modules/invitation/invitation.py:328
 #, python-format
 msgid "OK, %s messages sent"
-msgstr "ઑકે, %s સંદેશા મોકલ્યાં"
+msgstr "ઓકે, %s સંદેશા મોકલ્યાં"
 
 #. Title encouraging user to invite friends to join a course
 #: experimental/coursebuilder/modules/invitation/invitation.py:374
@@ -1633,4 +1632,5 @@ msgstr "આગલું પૃષ્ઠ"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "સમાપ્ત"
+
 

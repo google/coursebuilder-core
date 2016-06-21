@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-05-31 06:57-0700\n"
-"PO-Revision-Date: 2016-04-11 08:00-0700\n"
+"POT-Creation-Date: 2016-06-20 07:55-0700\n"
+"PO-Revision-Date: 2016-06-20 07:55-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ar <LL@li.org>\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n>=3 "
@@ -318,7 +318,7 @@ msgstr "رجوع إلى صفحة الدورة"
 #. Title line indicating what this page is.
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:131
+#: experimental/coursebuilder/modules/certificate/certificate.py:133
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "شهادة الإتمام"
@@ -328,7 +328,7 @@ msgstr "شهادة الإتمام"
 #. that the certificate is being presented to someone.
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:139
+#: experimental/coursebuilder/modules/certificate/certificate.py:141
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "مقدَّمة إلى"
@@ -336,7 +336,7 @@ msgstr "مقدَّمة إلى"
 #. Message fragment on a certificate of course completion.
 #. Indicates that the student has successfully completed something.
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:144
+#: experimental/coursebuilder/modules/certificate/certificate.py:146
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "لإتمامه بنجاح"
@@ -344,40 +344,39 @@ msgstr "لإتمامه بنجاح"
 #. Message fragment on a certificate of course completion.
 #. Gives the name of the course, followed by the word "course".
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:147
+#: experimental/coursebuilder/modules/certificate/certificate.py:149
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "دورة %(course)s"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:279
+#: experimental/coursebuilder/modules/certificate/certificate.py:281
 msgid "Certificate"
 msgstr "شهادة"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:289
+#: experimental/coursebuilder/modules/certificate/certificate.py:291
 msgid "Click for certificate"
 msgstr "انقر للحصول على شهادة"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:297
+#: experimental/coursebuilder/modules/certificate/certificate.py:299
 msgid "Download PDF"
 msgstr "تنزيل ملف PDF"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:305
+#: experimental/coursebuilder/modules/certificate/certificate.py:307
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
 msgstr "إنك لم تستوفي متطلبات الدورة بعد حتى تحصل على شهادة الإتمام."
 
-#. Brief note appearing in per-Student news dropdown menu
-#. indicating that this student has recently earned a course
-#. completion certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:504
+#. Shown in list of news item titles (short descriptions)
+#. when student has earned a course completion certificate.
+#: experimental/coursebuilder/modules/certificate/certificate.py:510
 msgid "Course completion certificate earned!"
-msgstr ""
+msgstr "تم نيل شهادة إتمام الدورة"
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -524,7 +523,7 @@ msgstr "لتأكيد هذا التغيير"
 #: experimental/coursebuilder/modules/gitkit/templates/change_email.html:32
 #: experimental/coursebuilder/modules/gitkit/templates/reset_password.html:29
 msgid "Diagnostic information:"
-msgstr "معلومات التشخيص:"
+msgstr "بيانات التشخيص:"
 
 #. Page title for the password reset HTML message, starting with a
 #. parenthesized note that this is an example implementation.
@@ -1608,4 +1607,5 @@ msgstr "الصفحة التالية"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "النهاية"
+
 

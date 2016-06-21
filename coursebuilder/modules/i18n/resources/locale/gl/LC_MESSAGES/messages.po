@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-05-31 06:57-0700\n"
-"PO-Revision-Date: 2016-04-11 08:00-0700\n"
+"POT-Creation-Date: 2016-06-20 07:55-0700\n"
+"PO-Revision-Date: 2016-06-20 07:55-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: gl <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -321,7 +321,7 @@ msgstr "Volver á páxina do curso"
 #. Title line indicating what this page is.
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
-#: experimental/coursebuilder/modules/certificate/certificate.py:131
+#: experimental/coursebuilder/modules/certificate/certificate.py:133
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
 msgstr "Certificado de finalización"
@@ -331,7 +331,7 @@ msgstr "Certificado de finalización"
 #. that the certificate is being presented to someone.
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
-#: experimental/coursebuilder/modules/certificate/certificate.py:139
+#: experimental/coursebuilder/modules/certificate/certificate.py:141
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
 msgstr "Outorgado a"
@@ -339,7 +339,7 @@ msgstr "Outorgado a"
 #. Message fragment on a certificate of course completion.
 #. Indicates that the student has successfully completed something.
 #. Phrase signifying that a student has successfully completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:144
+#: experimental/coursebuilder/modules/certificate/certificate.py:146
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
 msgstr "por completar con éxito o"
@@ -347,29 +347,29 @@ msgstr "por completar con éxito o"
 #. Message fragment on a certificate of course completion.
 #. Gives the name of the course, followed by the word "course".
 #. Phrase giving the name of an instructional course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:147
+#: experimental/coursebuilder/modules/certificate/certificate.py:149
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
 msgstr "curso %(course)s"
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:279
+#: experimental/coursebuilder/modules/certificate/certificate.py:281
 msgid "Certificate"
 msgstr "Certificado"
 
 #. Label on control to navigate to page showing certificate
-#: experimental/coursebuilder/modules/certificate/certificate.py:289
+#: experimental/coursebuilder/modules/certificate/certificate.py:291
 msgid "Click for certificate"
 msgstr "Fai clic para ver o certificado"
 
 #. Link for a PDF.
-#: experimental/coursebuilder/modules/certificate/certificate.py:297
+#: experimental/coursebuilder/modules/certificate/certificate.py:299
 msgid "Download PDF"
 msgstr "Descargar PDF"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:305
+#: experimental/coursebuilder/modules/certificate/certificate.py:307
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -377,12 +377,11 @@ msgstr ""
 "Aínda non cumpriches os requisitos do curso para obter un certificado de "
 "finalización."
 
-#. Brief note appearing in per-Student news dropdown menu
-#. indicating that this student has recently earned a course
-#. completion certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:504
+#. Shown in list of news item titles (short descriptions)
+#. when student has earned a course completion certificate.
+#: experimental/coursebuilder/modules/certificate/certificate.py:510
 msgid "Course completion certificate earned!"
-msgstr ""
+msgstr "Conseguiches o certificado de finalización do curso!"
 
 #. Shown when a student is attempting to re-enroll in a
 #. course soon after un-enrolling.  It takes up to several
@@ -682,19 +681,19 @@ msgstr "Asunto:"
 #. having completed a lesson in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:12
 msgid "I have completed this lesson."
-msgstr "Finalicei esta lección."
+msgstr "Rematei esta lección."
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed a unit in an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:26
 msgid "I have completed this unit."
-msgstr "Finalicei esta unidade."
+msgstr "Rematei esta unidade."
 
 #. Text for a button allowing user to manually mark themselves          as
 #. having completed an educational course.
 #: experimental/coursebuilder/modules/manual_progress/templates/manual_progress.html:41
 msgid "I have completed this course."
-msgstr "Finalicei este curso."
+msgstr "Rematei este curso."
 
 #. Message to show the user was not allowed to access to resource
 #. Message displayed to non-logged in user
@@ -1629,4 +1628,5 @@ msgstr "Páxina seguinte"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Fin"
+
 

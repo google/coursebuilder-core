@@ -504,9 +504,9 @@ def _post_update_progress(course, student, progress_, event_entity, event_key):
 
 
 def _get_i18n_news_title(_unused_key):
+    app_context = sites.get_app_context_for_current_request()
     # I18N: Shown in list of news item titles (short descriptions)
     # when student has earned a course completion certificate.
-    app_context = sites.get_app_context_for_current_request()
     return app_context.gettext('Course completion certificate earned!')
 
 
