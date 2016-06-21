@@ -14,6 +14,10 @@
 .availability-manager .inputEx-description {
   display: none !important;
 }
+/* Remove 20px of margin from the very first field section on the form. */
+.availability-manager > fieldset > .inputEx-fieldWrapper:first-child {
+  margin-top: 0px;
+}
 /* Hide some extraneous vertical whitespace. */
 .availability-manager > fieldset > .inputEx-fieldWrapper > .inputEx-label + div
     > span:first-child {
@@ -78,6 +82,12 @@
 .availability-manager .indent {
   padding-left: 20px;
 }
+/* Hide white bordered element around <select> controls. */
+.availability-manager > fieldset > .gcb-select > .inputEx-label
+    + div.inputEx-Field {
+  border: none !important;
+  background-color: #f9f9f9;
+}
 
 /*
  * Styling specific to the Content Availability subsection.
@@ -122,6 +132,11 @@
   font-size: 12px;
   font-weight: normal;
   cursor: default;
+}
+/* Flow [Add date/time/availability change] button below content triggers. */
+.availability-manager .add-content-trigger {
+  display: inline-block;
+  width: 100%;
 }
 /* All but first field add margin on the left. */
 .availability-manager .content-trigger > fieldset

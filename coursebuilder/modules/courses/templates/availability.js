@@ -32,28 +32,26 @@ $(function() {
       });
     }
 
-    var triggers = cb_global.form.inputsNames.content_triggers;
-    $(triggers.divEl).addClass('section-with-heading');
-    if (triggers.subFields.length == 0) {
-      var container = $(triggers.divEl).find(
-          '.content-triggers > .inputEx-ListField-childContainer');
+    // If there is no course content, add helpful message, which also
+    // disguises the fact that a list field with no content looks odd.
+    $('.content-triggers').parent().addClass('section-with-heading');
+    $('.content-triggers .inputEx-ListField-childContainer:empty')
+        .append($('<div class="no-course-content">' +
+        'Create course content (units, lessons, assessments) before' +
+        ' defining any date/time availability change triggers.</div>'));
 
-      if (contentElements.subFields.length == 0) {
-        $('<div class="no-course-content">' +
-          'Create course content (units, lessons, assessments) before' +
-          ' defining any date/time availability change triggers.</div>')
-            .appendTo(container);
-      }
-    }
+    // If course content exists, unhide add/change button.  Also move
+    // button to be after list section.
     if (contentElements.subFields.length > 0) {
-      // Re-parent 'Add...' button to be after entire triggers list section.
-      var $button = $($(triggers.divEl).find(
-          '.content-triggers > a.inputEx-List-link'));
-      $button.insertAfter($button.parent());
-
-      // Unhide the "Add...change" button if course content exists.
-      $button.removeClass('inputEx-List-link');
-      $button.addClass('gcb-button');
+      $('.content-triggers > a.inputEx-List-link')
+      .removeClass('inputEx-List-link')
+      .addClass('gcb-button')
+      .each(function(index, button) {
+        $button = $(button);
+        $div = $('<div class="add-content-trigger"></div>');
+        $div.insertAfter($button.parent());
+        $button.appendTo($div);
+      });
     }
   }
 

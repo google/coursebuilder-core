@@ -18,6 +18,7 @@ files:
   - modules/courses/assets.py
   - modules/courses/availability.py
   - modules/courses/availability_cron.py
+  - modules/courses/availability_options.py
   - modules/courses/constants.py
   - modules/courses/course_outline.html
   - modules/courses/courses.py

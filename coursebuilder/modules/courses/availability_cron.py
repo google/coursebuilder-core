@@ -36,6 +36,7 @@ import logging
 
 from google.appengine.api import namespace_manager
 
+from common import utils as common_utils
 from common import utc
 from controllers import sites
 from controllers import utils
@@ -45,7 +46,24 @@ from modules.courses import triggers
 
 
 class UpdateCourseAvailability(jobs.DurableJob):
-    """Examines date/time triggers and updates content availability."""
+    """Examines date/time triggers and updates content availability.
+
+    Modules can register to be called back when run() is called. These are
+    called strictly after course-level triggers have been applied and saved.
+    Callbacks are registered like this:
+
+        availability_cron.UpdateCourseAvailability.RUN_HOOKS[
+            'my_module'] = my_handler
+
+    RUN_HOOKS callbacks are called a single time, and in no particular order,
+    via common.utils.run_hooks().
+
+    Hooks should accept the following parameters:
+        - course, a normal models.courses.Course instance; app context,
+            settings, and the rest can all be fetched from this.
+    """
+
+    RUN_HOOKS = {}
 
     @classmethod
     def get_description(cls):
@@ -61,15 +79,13 @@ class UpdateCourseAvailability(jobs.DurableJob):
         tct = triggers.ContentTrigger
         all_cts = tct.get_from_settings(settings)
         num_cts = len(all_cts)
-        logging.info(
-            'EXAMINING %d existing "%s" content triggers.', num_cts, namespace)
 
         # separate_valid_triggers() logs any invalid content triggers and
         # just discards them by not returning them. The only triggers of
         # interest are those triggers ready to be applied now and any
         # triggers who await a future time to be applied.
         future_cts, ready_cts = tct.separate_valid_triggers(
-            all_cts, course=course, now=now)
+            all_cts, now=now, course=course, namespace=namespace)
 
         changes = tct.apply_triggers(ready_cts, namespace=namespace)
         cts_remaining = len(future_cts)
@@ -81,26 +97,26 @@ class UpdateCourseAvailability(jobs.DurableJob):
             tct.set_into_settings(future_cts, settings)
 
             if course.save_settings(settings):
-                logging.info(
-                    'KEPT %d future "%s" content triggers.',
-                    cts_remaining, namespace)
+                if cts_remaining:
+                    logging.info('KEPT %d future %s(s) in %s.',
+                        cts_remaining, tct.typename(), namespace)
             else:
-                logging.warning(
-                    'FAILED to keep %d future "%s" content triggers.',
-                    cts_remaining, namespace)
-        else:
-            logging.info(
-                'AWAITING %d future "%s" content triggers.',
-                cts_remaining, namespace)
+                logging.warning('FAILED to keep %d future %s(s) in %s.',
+                    cts_remaining, tct.typename(), namespace)
+        elif cts_remaining:
+            logging.info('AWAITING %d future %s(s) in %s.',
+                cts_remaining, tct.typename(), namespace)
 
         if changes:
             course.save()
             logging.info(
-                'SAVED %d changes to "%s" course content availability.',
+                'SAVED %d changes to %s course content availability.',
                 changes, namespace)
         else:
-            logging.info(
-                'UNTOUCHED "%s" course content availability.', namespace)
+            logging.info('UNTOUCHED %s course content availability.',
+                namespace)
+
+        common_utils.run_hooks(self.RUN_HOOKS.itervalues(), course)
 
 
 class StartAvailabilityJobs(utils.AbstractAllCoursesCronHandler):

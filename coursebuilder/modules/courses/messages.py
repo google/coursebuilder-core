@@ -31,6 +31,8 @@ CONTENT_TRIGGERS_DESCRIPTION = """
 Changes to availability that are triggered at a specified date and time.
 """
 
+CONTENT_TRIGGERS_LEARN_MORE = 'course:availability:triggers'
+
 CONTENT_TRIGGER_RESOURCE_DESCRIPTION = """
 The course content, such as unit or lesson, for which to change the
 availability to students.

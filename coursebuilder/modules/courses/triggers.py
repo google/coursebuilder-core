@@ -17,7 +17,7 @@
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
 
-import copy
+import collections
 import datetime
 import logging
 
@@ -27,6 +27,20 @@ from common import resource
 from common import utc
 from controllers import sites
 from models import courses
+from modules.courses import availability_options
+
+
+def _fully_qualified_typename(cls):
+    """Returns a 'package...module.ClassName' string for the supplied class."""
+    return '{}.{}'.format(cls.__module__, cls.__name__)
+
+
+def _qualified_typename(cls, num_package_path_parts_to_keep=1):
+    """Returns a 'module.ClassName' string of the supplied class."""
+    num_parts_plus_trailing_class = num_package_path_parts_to_keep + 1
+    package_modules_class_parts = _fully_qualified_typename(cls).split('.')
+    kept_parts = package_modules_class_parts[-num_parts_plus_trailing_class:]
+    return '.'.join(kept_parts)
 
 
 class DateTimeTrigger(object):
@@ -47,9 +61,7 @@ class DateTimeTrigger(object):
         return self.encoded_when
 
     def __str__(self):
-        return self.name
-
-    def __repr__(self):
+        """Simply returns the `name` property string."""
         return self.name
 
     @property
@@ -59,24 +71,16 @@ class DateTimeTrigger(object):
 
     @classmethod
     def validate_when(cls, when):
-        """Validates encoded when; returns it decoded or None if invalid."""
+        """Validates when (encoded or decoded); returns datetime or None."""
         if isinstance(when, datetime.datetime):
             return when
 
-        # validate_when is partially implemented in terms of decode_when, and
-        # not the other way around, because detailed error logging happens in
-        # the try-except block.
-        return cls.decode_when({'when': when})
-
-    @classmethod
-    def decode_when(cls, encoded):
-        """Decodes encoded['when']; None if missing or invalid."""
-        when = encoded.get('when')
         try:
             return utc.text_to_datetime(when)
         except (ValueError, TypeError) as err:
-            cls.log_issue(encoded, 'INVALID', 'date/time', cause=repr(err))
-        return None
+            cls.log_issue({'when': when}, 'INVALID',
+                          datetime.datetime.__name__, cause=repr(err))
+            return None
 
     @classmethod
     def encode_when(cls, when):
@@ -90,24 +94,64 @@ class DateTimeTrigger(object):
         """Encodes `when` into form payload (stored settings) form."""
         return self.encode_when(self.when)
 
+    ValidOrNot = collections.namedtuple('ValidOrNot',
+        ['valid', 'invalid', 'missing', 'unused'])
+
+    @classmethod
+    def validate_property(cls, prop_name, validator, encoded, valid_or_not):
+        """Updates ValidOrNot in-place for a specified property.
+
+        Args:
+            prop_name: name string of the property of interest
+            validator: function that accepts single encoded value and returns
+                either the valid decoded value or None.
+            encoded: a dict of property names to their encoded values.
+            valid_or_not: updated in-place ValidOrNot namedtuple containing:
+                valid, dict of valid property names and decoded values
+                invalid, dict of invalid property names and bad encoded values
+                missing, set of names of expected but missing properties
+                unused, dict of encoded property names and values not in any
+                    of `valid`, `invalid`, or `missing`
+        """
+        if prop_name in encoded:
+            raw = encoded[prop_name]
+            validated = validator(raw)
+            if validated:
+                valid_or_not.valid[prop_name] = validated
+            else:
+                valid_or_not.invalid[prop_name] = raw
+        else:
+            valid_or_not.missing.add(prop_name)
+
+        valid_or_not.unused.pop(prop_name, None)  # No KeyError if missing.
+
+    VALIDATES = ['when']
+
     @classmethod
     def validate(cls, encoded):
-        """Returns two dicts, valid decoded properties, and invalid ones."""
-        valid = {}
-        invalid = {}
-        valid_when = cls.decode_when(encoded)
-        if valid_when:
-            valid['when'] = valid_when
-        else:
-            invalid['when'] = encoded.get('when')
-        return (valid, invalid)
+        """Extracts, validates, and decodes properties from an encoded dict.
+
+        Args:
+            encoded: a dict of property names to their encoded values.
+
+        Returns:
+          A ValidOrNot namedtuple updated by one or more calls to
+          validate_property().
+        """
+        valid_or_not = cls.ValidOrNot({}, {}, set(), encoded.copy())
+        cls.validate_property('when',
+            cls.validate_when, encoded, valid_or_not)
+        return valid_or_not
 
     @classmethod
     def decode(cls, encoded, **kwargs):
-        """Decodes form payload (or stored settings) into DateTimeTrigger."""
-        valid, _ = cls.validate(encoded)
-        valid.update(kwargs)
-        return cls(**valid)
+        """Decodes form payload (or stored settings) into a trigger."""
+        # Ctor will complain about any missing properties not present in
+        # encoded or kwargs overrides.
+        valid_or_not = cls.validate(encoded)
+        ctor_kwargs = valid_or_not.valid
+        ctor_kwargs.update(cls.only_explicit_overrides(kwargs))
+        return cls(**ctor_kwargs)
 
     @property
     def decoded(self):
@@ -175,16 +219,20 @@ class DateTimeTrigger(object):
         return triggers
 
     @classmethod
-    def separate_valid_triggers(cls, encoded_triggers, course=None, now=None):
+    def separate_valid_triggers(cls, encoded_triggers,
+                                now=None, course=None, namespace=None):
         """Separates triggers into ready and future, discarding invalid ones.
 
         Args:
             encoded_triggers: a list of encoded (e.g. form payload or marshaled
                 for storing with course settings) triggers.
-            course: optional Course used by some triggers for additional
-                decoding, initialization, and validation.
             now: UTC time as a datetime; default is None, indicating that
                 utc.now_as_datetime() should be called.
+            course: optional Course used by some triggers for additional
+                decoding, initialization, and validation; default is None,
+                which causes it to be determined from namespace.
+            namespace: namespace name; default is None, indicating that it
+                should be obtained from course or the namespace_manager.
 
         Returns:
             Two lists:
@@ -200,15 +248,24 @@ class DateTimeTrigger(object):
             have their defects logged and are then discarded ("dropped on the
             floor").
         """
+        if not encoded_triggers:
+            return [], []  # Nothing to do, so don't waste time logging, etc.
+
         if now is None:
             now = utc.now_as_datetime()
 
-        future_encoded = []
-        ready_decoded = []
+        if (namespace is None) or (course is None):
+            course, namespace, _ = _get_course_namespace_app_context(
+                course=course, namespace=namespace)
 
+        logging.info(
+            'SEPARATING %d encoded %s(s) in %s.',
+            len(encoded_triggers), cls.typename(), namespace)
+
+        future_encoded, ready_decoded = [], []
         for et in encoded_triggers:
             if et is None:
-                cls.log_issue(et, 'MISSING', 'trigger',
+                cls.log_issue(et, 'MISSING', cls.typename(),
                     cause=cls.MISSING_TRIGGER_FMT.format(None))
                 continue
             dt = cls.decode(et, course=course)
@@ -222,11 +279,36 @@ class DateTimeTrigger(object):
             if dt.is_ready(now=now):
                 # Valid trigger whose time has passed, ready to apply.
                 ready_decoded.append(dt)
-            cls.log_issue(et, 'UNEXPECTED', 'trigger',
+                continue
+            cls.log_issue(et, 'UNEXPECTED', cls.typename(),
                 cause=cls.UNEXPECTED_TRIGGER_FMT.format(
                     dt.is_valid, dt.is_future(now=now), dt.is_ready(now=now)))
 
         return future_encoded, cls.sort(ready_decoded)
+
+    @classmethod
+    def only_explicit_overrides(cls, overrides):
+        """Returns dict of only override items that have non-None values.
+
+        Args:
+            overrides: an iterator of 2-tuples containing property name and
+                override values, or a dict, in which case it is converted to
+                the required 2-tuple iterator by calling iteritems().
+        """
+        if isinstance(overrides, dict):
+            overrides = overrides.iteritems()
+        return dict([(k, v) for k, v in overrides if v is not None])
+
+    @classmethod
+    def typename(cls):
+        """Returns a 'module.ClassName' string used in logging."""
+        return _qualified_typename(cls)
+
+    @property
+    def logged(self):
+        """Returns a verbose string of the trigger intended for logging."""
+        return '{}({})'.format(self.__class__.typename(),
+                               self.name.replace(self.NAME_PART_SEP, ', '))
 
     @classmethod
     def log_issue(cls, encoded, what, why,
@@ -236,9 +318,9 @@ class DateTimeTrigger(object):
         parts = ["{} '{}' in".format(what, why)]
         if namespace is None:  # Note: Blank namespace is permitted and valid.
             namespace = namespace_manager.get_namespace()
-        parts.append('namespace "{}"'.format(namespace))
+        parts.append('namespace {}'.format(namespace))
         # "INVALID content in... encoded: {avail...} ...
-        parts.append('encoded: {}'.format(encoded))
+        parts.append('encoded: "{}"'.format(encoded))
         # "INVALID content in... encoded: {avail...} cause: ValueError: ...
         if cause:
             parts.append('cause: "{}"'.format(cause))
@@ -267,26 +349,21 @@ class AvailabilityTrigger(DateTimeTrigger):
 
     @property
     def availability(self):
-        """Returns a subclass-specific AVAILABILITY_OPTIONS string or None."""
+        """Returns a subclass-specific AVAILABILITY_VALUES string or None."""
         return self._availability
 
     @classmethod
     def validate_availability(cls, availability):
-        """Returns availability if in AVAILABILITY_OPTIONS, otherwise None."""
-        if availability not in cls.AVAILABILITY_OPTIONS:
-            return None
-        return availability
+        """Returns availability if in AVAILABILITY_VALUES, otherwise None."""
+        if availability in cls.AVAILABILITY_VALUES:
+            return availability
 
-    @classmethod
-    def decode_availability(cls, encoded):
-        """Decodes encoded['availability']; None if missing or invalid."""
-        encoded_availability = encoded.get('availability')
-        availability = cls.validate_availability(encoded_availability)
-        if not availability:
-            cls.log_issue(encoded, 'INVALID', 'availability',
-                cause=cls.UNEXPECTED_AVAIL_FMT.format(
-                    encoded_availability, cls.AVAILABILITY_OPTIONS))
-        return availability
+        encoded = {'availability': availability}
+        cls.log_issue(encoded, 'INVALID', 'availability',
+            cause=cls.UNEXPECTED_AVAIL_FMT.format(
+                availability, cls.AVAILABILITY_VALUES))
+        return None
+
 
     @classmethod
     def encode_availability(cls, availability):
@@ -297,16 +374,14 @@ class AvailabilityTrigger(DateTimeTrigger):
     def encoded_availability(self):
         return self.encode_availability(self.availability)
 
+    VALIDATES = ['availability']
+
     @classmethod
     def validate(cls, encoded):
-        """Returns two dicts, valid decoded properties, and invalid ones."""
-        valid, invalid = super(AvailabilityTrigger, cls).validate(encoded)
-        valid_availability = cls.decode_availability(encoded)
-        if valid_availability:
-            valid['availability'] = valid_availability
-        else:
-            invalid['availability'] = encoded.get('availability')
-        return (valid, invalid)
+        valid_or_not = super(AvailabilityTrigger, cls).validate(encoded)
+        cls.validate_property('availability',
+            cls.validate_availability, encoded, valid_or_not)
+        return valid_or_not
 
     @property
     def decoded(self):
@@ -335,13 +410,10 @@ class ContentTrigger(AvailabilityTrigger):
     """A course content availability change applied at specified date/time."""
 
     ENCODED_TRIGGERS = 'content_triggers'
-    ENCODED_TRIGGERS_CSS = ENCODED_TRIGGERS.replace('_', '-')
+    TRIGGERS_CSS = ENCODED_TRIGGERS.replace('_', '-')
+    TRIGGER_CSS = TRIGGERS_CSS[:-1]
 
-    # The valid options for availability of course content items on the
-    # Publish > Availability page, in the "Element Settings" and
-    # "Change Course Content Availability at Date/Time" sections of the form
-    # (currently 'public', 'private', and 'course').
-    AVAILABILITY_OPTIONS = courses.AVAILABILITY_VALUES
+    AVAILABILITY_VALUES = availability_options.ELEMENT_VALUES
 
     # On the Publish > Availability form (in the element_settings course
     # outline and the <option> values in the content_triggers 'content'
@@ -358,12 +430,19 @@ class ContentTrigger(AvailabilityTrigger):
     UNEXPECTED_CONTENT_FMT = 'Content type "{}" not in {}.'
     MISSING_CONTENT_FMT = 'No content matches resource Key "{}".'
 
+    KEY_TYPENAME = _qualified_typename(resource.Key)
+
     def __init__(self, content=None, content_type=None, content_id=None,
-                 found=None, **super_kwargs):
+                 found=None, course=None, **super_kwargs):
         """Validates the content type and id and then initializes `content`."""
         super(ContentTrigger, self).__init__(**super_kwargs)
+
         self._content = self.validate_content(content=content,
             content_type=content_type, content_id=content_id)
+
+        if (not found) and course and self._content:
+            found = self.find_content_in_course(self._content, course)
+
         self._found = found
 
     @property
@@ -378,9 +457,31 @@ class ContentTrigger(AvailabilityTrigger):
     @classmethod
     def validate_content_type(cls, content_type):
         """Returns content_type if in ALLOWED_CONTENT_TYPES, otherwise None."""
-        if content_type not in cls.ALLOWED_CONTENT_TYPES:
+        if content_type in cls.ALLOWED_CONTENT_TYPES:
+            return content_type
+
+        cls.log_issue({'content_type': content_type}, 'INVALID',
+            cls.KEY_TYPENAME, cause=cls.UNEXPECTED_CONTENT_FMT.format(
+                content_type, cls.ALLOWED_CONTENT_TYPES))
+        return None
+
+
+    @classmethod
+    def validate_content_type_and_id(cls, content_type, content_id):
+        """Returns a content resource.Key if content type and ID are valid."""
+        if not cls.validate_content_type(content_type):
             return None
-        return content_type
+
+        # Both content_type and content_id were provided, and content_type
+        # is one of the ALLOWED_CONTENT_TYPES, so now attempt to produce a
+        # resource.Key from the two.
+        try:
+            return resource.Key(content_type, content_id)
+        except (AssertionError, AttributeError, ValueError) as err:
+            encoded = {'content_type': content_type, 'content_id': content_id}
+            cls.log_issue(encoded, 'INVALID', cls.KEY_TYPENAME,
+                          cause=repr(err))
+            return None
 
     @classmethod
     def validate_content(cls, content=None,
@@ -395,69 +496,44 @@ class ContentTrigger(AvailabilityTrigger):
                 must be able to validate.
             content_id: an optional course content ID, used only if `content`
                 was not supplied.
+
+        Returns:
+            Either a valid content resource.Key obtained from one or more of
+            the supplied keyword arguments, or None.
         """
-        # validate_content() is implemented in terms of decode_content(), and
-        # not the other way around, because detailed error logging happens in
-        # the try-except block inside decode_content().
+        # If `content` was not provided, validate content type and ID instead.
+        if not content:
+            return cls.validate_content_type_and_id(content_type, content_id)
 
-        # See if any named parameters can produce a valid content key.
-        if content:
-            # If `content` is already a resource.Key (such as when the
-            # ContentTrigger class itself calls encode_content()),
-            # decode_content() is actually quite cheap to call: it just skips
-            # all the way down to a validate_content_type() check.
-            #
+        if not isinstance(content, resource.Key):
             # If `content` is a valid string encoding of a resource.Key, it
-            # needs to be a resource.Key before its content.type can be
-            # checked and decode_content() does that.
-            return cls.decode_content({'content': content})
+            # needs to actually be a resource.Key before its content.type can
+            # be checked, so attempt a conversion.
+            try:
+                content = resource.Key.fromstring(content)
+            except (AssertionError, AttributeError, ValueError) as err:
+                cls.log_issue({'content': content}, 'INVALID',
+                              cls.KEY_TYPENAME, cause=repr(err))
+                return None
+        # else:
+        # `content` is already a resource.Key (such as when the ContentTrigger
+        # class itself calls encode_content()), just skip straight to the
+        # validate_content_type() check.
 
-        if content_type and content_id:
-            # If `content` was not supplied (for example, the use case in
-            # availability.AvailabilityRESTHandler.add_content_option()),
-            # resource.Key(content_type, content_id) combines the other two
-            # named parameters, and the Key.type is checked with
-            # validate_content_type().
-            return cls.decode_content(
-                {'content_type': content_type, 'content_id': content_id})
+        if cls.validate_content_type(content.type):
+            return content
 
+        # `content` is now a valid resource.Key, but resource.Key.type is not
+        # one of the ALLOWED_CONTENT_TYPES.
+        cls.log_issue({'content': str(content)}, 'INVALID', cls.KEY_TYPENAME,
+            cause=cls.UNEXPECTED_CONTENT_FMT.format(
+                content.type, cls.ALLOWED_CONTENT_TYPES))
         return None
 
     @classmethod
-    def decode_content(cls, encoded):
-        """Decodes encoded['content']; None if missing or invalid.
-
-        Args:
-            encoded: a dict containing keys and values with the same usage
-                as the corresponding validate_content() named parameters.
-        """
-        content = encoded.get('content')
-
-        if not isinstance(content, resource.Key):
-            try:
-                if content:
-                    # Attempt to convert encoded_key into a resource.Key.
-                    content = resource.Key.fromstring(content)
-                else:
-                    # Attempt to construct a resource.Key from type and ID.
-                    content = resource.Key(
-                        encoded.get('content_type'), encoded.get('content_id'))
-            except (AssertionError, AttributeError, ValueError) as err:
-                cls.log_issue(encoded, 'INVALID', 'content', cause=repr(err))
-                return None
-        # else:
-        # `content` is already a resource.Key, so just validate its type.
-
-        # Just because encoded_key or content_type and content_id produce a
-        # valid resource.Key does not guarantee that the resource.Key.type
-        # used is one of the ALLOWED_CONTENT_TYPES.
-        if not cls.validate_content_type(content.type):
-            cls.log_issue(encoded, 'INVALID', 'content',
-                cause=cls.UNEXPECTED_CONTENT_FMT.format(
-                    content.type, cls.ALLOWED_CONTENT_TYPES))
-            return None
-
-        return content
+    def encode_content_type_and_id(cls, content_type, content_id):
+        content = cls.validate_content_type_and_id(content_type, content_id)
+        return str(content) if content else None
 
     @classmethod
     def encode_content(cls, content=None, content_type=None, content_id=None):
@@ -468,64 +544,51 @@ class ContentTrigger(AvailabilityTrigger):
         content = cls.validate_content(content=content,
             content_type=content_type, content_id=content_id)
 
-        if not content:
-            # Encoding failed because of one of the following:
-            # 1) resource.Key.fromstring(content) in decode_content() failed
-            #    to make a resource.Key.
-            # 2) resource.Key(content_type, content_id) in decode_content()
-            #    failed to make a resource.Key.
-            # 3) validate_content_type(content.type) in decode_content()
-            #    failed for the existing or created content key because
-            #    content.type was not in ALLOWED_CONTENT_TYPES.
-            return None
-
-        # validate_content() found a way to return a resource.Key with a
-        # Key.type in the ALLOWED_CONTENT_TYPES, so str(content) is the
-        # desired encoded content key.
-        return str(content)
+        # Either validate_content() found a way to return a resource.Key with
+        # a Key.type in the ALLOWED_CONTENT_TYPES, so str(content) is the
+        # desired encoded content key, or it failed.
+        #
+        # Reasons encoding can fail:
+        # 1) resource.Key.fromstring(content) in decode_content() failed
+        #    to make a resource.Key.
+        # 2) resource.Key(content_type, content_id) in decode_content()
+        #    failed to make a resource.Key.
+        # 3) validate_content_type(content.type) in decode_content()
+        #    failed for the existing or created content key because
+        #    content.type was not in ALLOWED_CONTENT_TYPES.
+        return str(content) if content else None
 
     @property
     def encoded_content(self):
         """Encodes `content` into form payload (stored settings) form."""
         return self.encode_content(content=self.content)
 
+    VALIDATES = ['content', 'content_type', 'content_id']
+
     @classmethod
     def validate(cls, encoded):
-        """Returns two dicts, valid decoded properties, and invalid ones."""
-        valid, invalid = super(ContentTrigger, cls).validate(encoded)
-        valid_content = cls.decode_content(encoded)
+        valid_or_not = super(ContentTrigger, cls).validate(encoded)
+
+        validate_content_kwargs = dict(
+            [(k, encoded[k]) for k in cls.VALIDATES if k in encoded])
+        valid_content = cls.validate_content(**validate_content_kwargs)
+
         if valid_content:
-            valid['content'] = valid_content
+            valid_or_not.valid['content'] = valid_content
+            valid_or_not.valid['content_type'] = valid_content.type
+            valid_or_not.valid['content_id'] = valid_content.key
         else:
-            if 'content' in encoded:
-                invalid['content'] = encoded.get('content')
-            else:
-                invalid['content_type'] = encoded.get('content_type')
-                invalid['content_id'] = encoded.get('content_id')
-        return (valid, invalid)
+            # Only set in invalid the encoded values actually present.
+            for k in cls.VALIDATES:
+                if k in encoded:
+                    valid_or_not.invalid[k] = encoded[k]
+                else:
+                    valid_or_not.missing.add(k)
 
-    @classmethod
-    def decode(cls, encoded, course=None):
-        """Decodes and then attempts to find the associated course content."""
-        # Preemptively attempt to decode content, so that it can be used
-        # to attempt to find the course content inside the supplied course.
-        content = cls.decode_content(encoded)
+        for k in ContentTrigger.VALIDATES:
+            valid_or_not.unused.pop(k, None)  # No KeyError if no k.
 
-        found = cls.find_content_in_course(content, course)
-        if not found:
-            cls.log_issue(encoded, 'OBSOLETE', 'content',
-                cause=cls.MISSING_CONTENT_FMT.format(content))
-
-        # If content decode succeeded, keep from doing it all over again later:
-        #   super.decode(encoded)
-        #     --> cls.validate(encoded)
-        #       -->  cls.decode_content(encoded)
-        if content:
-            # Do *not* mutate the original dict supplied by the caller.
-            encoded = copy.copy(encoded)
-            encoded['content'] = content
-
-        return super(ContentTrigger, cls).decode(encoded, found=found)
+        return valid_or_not
 
     @property
     def decoded(self):
@@ -568,34 +631,44 @@ class ContentTrigger(AvailabilityTrigger):
                 super(ContentTrigger, self).is_valid)
 
     @classmethod
-    def find_content_in_course(cls, content, course):
-        if not course:
-            cls.log_issue({'content': cls.encode_content(content=content)},
-                'ABSENT', 'course', namespace='None',
-                cause='IMPOSSIBLE to find course content without a course.')
-            return None
-
+    def get_content_finder(cls, content):
         if not content:
-            cls.log_issue({'content': cls.encode_content(content=content)},
-                'UNSPECIFIED', 'content',
-                namespace=course.app_context.get_namespace_name(),
-                cause='Cannot find unspecified content in a course.')
+            cls.log_issue({'content': content}, 'UNSPECIFIED',
+                cls.KEY_TYPENAME,
+                cause='"{}" has no content finder function.'.format(content))
             return None
 
         find_func = cls.CONTENT_TYPE_FINDERS.get(content.type)
-        if not find_func:
-            cls.log_issue({'content': cls.encode_content(content=content)},
-                'UNEXPECTED', 'content',
-                namespace=course.app_context.get_namespace_name(),
-                cause=cls.UNEXPECTED_CONTENT_FMT.format(
-                    content.type, cls.ALLOWED_CONTENT_TYPES))
+        if find_func:
+            return find_func
+
+        cls.log_issue({'content': str(content)}, 'UNEXPECTED',
+            cls.KEY_TYPENAME,
+            cause=cls.UNEXPECTED_CONTENT_FMT.format(
+                content.type, cls.ALLOWED_CONTENT_TYPES))
+        return None
+
+    @classmethod
+    def find_content_in_course(cls, content, course, find_func=None):
+        if not course:
+            cls.log_issue({'content': str(content)}, 'ABSENT', 'course',
+                cause='CANNOT find content in "{}" course.'.format(course))
             return None
 
-        # TODO(tlarsen): Add hook into content item (unit, lesson, etc.)
-        #   deletion to delete any date/time availability triggers associated
-        #   with the deleted item.
+        if not find_func:
+            find_func = cls.get_content_finder(content)
 
-        return find_func(course, content.key)
+        if not find_func:
+            return None  # get_content_finder() already logged the issue.
+
+        found = find_func(course, content.key)
+
+        if found:
+            return found
+
+        cls.log_issue({'content': str(content)}, 'OBSOLETE', cls.KEY_TYPENAME,
+                      cause=cls.MISSING_CONTENT_FMT.format(content))
+        return None
 
     @classmethod
     def triggers_with_content(cls, settings, selectable_content):
@@ -630,7 +703,7 @@ class ContentTrigger(AvailabilityTrigger):
             if encoded_content in selectable_content:
                 triggers_with_content.append(encoded)
             else:
-                cls.log_issue(encoded, 'OBSOLETE', 'content',
+                cls.log_issue(encoded, 'OBSOLETE', cls.KEY_TYPENAME,
                     cause=cls.MISSING_CONTENT_FMT.format(encoded_content))
 
         return triggers_with_content
@@ -661,8 +734,12 @@ class ContentTrigger(AvailabilityTrigger):
                 to have been sorted in order of increasing `when` values.
             namespace: optional namespace name string, used in log messages.
         """
+        if not triggers:
+            return 0  # Nothing to do, so don't waste time logging, etc.
+
         if namespace is None:  # Note: Blank namespace is permitted and valid.
             namespace = namespace_manager.get_namespace()
+
         changes = 0
         for t in triggers:
             current = t.found.availability
@@ -670,12 +747,12 @@ class ContentTrigger(AvailabilityTrigger):
                 changes += 1
                 t.found.availability = t.availability
                 logging.info(
-                    'TRIGGERED "%s" content availability "%s" to "%s": %s',
-                    namespace, current, t.availability, t)
+                    'TRIGGERED %s content availability "%s" to "%s": %s',
+                    namespace, current, t.availability, t.logged)
             else:
                 logging.info(
-                    'UNCHANGED "%s" content availability "%s": %s',
-                    namespace, current, t)
+                    'UNCHANGED %s content availability "%s": %s',
+                    namespace, current, t.logged)
 
         return changes
 

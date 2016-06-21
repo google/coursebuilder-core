@@ -97,8 +97,9 @@ class CourseAvailabilityPage(pageobjects.CourseAvailabilityPage):
         return self
 
     # 'Add...' button is re-parented out of div.content-triggers.
-    ADD_TRIGGER_BUTTON_CSS_SEL = (
-        '.availability-manager .section-with-heading > a.gcb-button')
+    ADD_TRIGGER_BUTTON_CSS_SEL = ' '.join([
+        '.availability-manager', '.content-triggers',
+        '+ div.add-content-trigger', '> a.gcb-button'])
 
     def verify_add_trigger_button(self):
         """Verifies if course content is present, that the
