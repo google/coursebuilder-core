@@ -752,9 +752,6 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
     @classmethod
     def get_form(cls, handler):
         student_groups = StudentGroupDAO.get_all()
-        if not student_groups:
-            return availability.AvailabilityRESTHandler.get_form(handler)
-
         course = handler.get_course()
         schema = cls.get_schema(student_groups, course)
         return oeditor.ObjectEditor.get_html_for(
@@ -842,6 +839,7 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
         ret = availability.AvailabilityRESTHandler.get_schema(course)
         ret.add_property(schema_fields.SchemaField(
             cls._STUDENT_GROUP, 'Set Availability For', 'string',
+            description=messages.AVAILABILITY_FOR_PICKER_MESSAGE,
             i18n=False, optional=True,
             select_data=[
                 ('', 'Course')] + [

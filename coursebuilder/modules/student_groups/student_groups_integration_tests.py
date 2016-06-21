@@ -41,7 +41,7 @@ class AvailabilityTests(integration.TestBase):
         ).click_availability(
             cls=student_groups_pageobjects.CourseAvailabilityPage
         ).verify_student_group_selector_presence(
-            False
+            True
         )
 
         # Use availability page to set different students for whitelist

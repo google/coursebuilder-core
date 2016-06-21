@@ -14,6 +14,9 @@
 
 """Static text messages relating to student groups."""
 
+from common import safe_dom
+
+
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 STUDENT_GROUPS_DESCRIPTION = """
@@ -71,3 +74,8 @@ If you plan to change multiple student groups, or you otherwise need
 your student group changes to take effect rapidly, this can be set to
 'False'.  Otherwise, keep this setting at 'True' to maximize performance.
 """
+
+AVAILABILITY_FOR_PICKER_MESSAGE = (
+'Availability can be set for the course as a whole and overridden for '
+) + str(safe_dom.assemble_link(
+  "dashboard?action=edit_student_groups", "specific groups of students."))
