@@ -955,14 +955,14 @@ class EventsTest(integration.TestBase):
             self.assertEquals(1, event['default_rate'])
             self.assertEquals(expected.event_type, event['event_type'])
             if expected.position == 'zero':
-                self.assertAlmostEqual(0, event['position'], delta=0.01)
+                self.assertAlmostEqual(0, event['position'], delta=0.03)
             elif expected.position == 'middle':
-                self.assertNotAlmostEquals(0, event['position'], delta=0.01)
+                self.assertNotAlmostEquals(0, event['position'], delta=0.03)
                 self.assertNotAlmostEquals(
-                    end_position, event['position'], delta=0.01)
+                    end_position, event['position'], delta=0.03)
             elif expected.position == 'end':
                 self.assertAlmostEquals(
-                    end_position, event['position'], delta=0.01)
+                    end_position, event['position'], delta=0.03)
 
 
 class IntegrationTestBundle1(
