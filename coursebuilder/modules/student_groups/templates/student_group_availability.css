@@ -1,15 +1,13 @@
 /*
  * Styling for Student Groups availability settings page.
  */
-.gcb-default-course-availability {
-  border-bottom: none !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !imporant;
-}
-.gcb-group-course-availability {
-  border-top: none !important;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  margin-top: 0 !important;
-  padding-top: 0 !important;
+.availability-manager > fieldset > .group-availability > fieldset
+    > .gcb-default-course-availability > .inputEx-Field {
+  border: none !important;
+  border-radius: 0 !important;
+  background-color: #f9f9f9;
+  font-style: italic;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
 }

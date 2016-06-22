@@ -107,7 +107,7 @@ class StudentGroupsTestBase(actions.TestBase):
                           content_availability=None, xsrf_token=None):
         if not course_availability:
             course_availability = (
-                AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE)
+                student_groups.AVAILABILITY_NO_OVERRIDE)
         if not content_availability:
             content_availability = []
 
@@ -383,7 +383,11 @@ class UserIdLookupLifecycleTests(StudentGroupsTestBase):
         Cleanup = student_groups.EmailToObfuscatedUserIdCleanup
         try:
             tmp = Cleanup.MIN_AGE
-            Cleanup.MIN_AGE = datetime.timedelta(days=0)
+            # Due to last_modified having a fractional seconds part and cutoff
+            # only being in whole seconds, it can sometimes appear that
+            # last_modified is later in the same whole second than cutoff
+            # (whose truncated fractional seconds is zero).
+            Cleanup.MIN_AGE = datetime.timedelta(seconds=-1)
             Cleanup._for_testing_only_get()
         finally:
             Cleanup.MIN_AGE = tmp
@@ -766,8 +770,8 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         payload = transforms.loads(response['payload'])
         availability = payload[AvailabilityRestHandler._STUDENT_GROUP_SETTINGS][
             AvailabilityRestHandler._COURSE_AVAILABILITY]
-        self.assertEquals(AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE,
-                          availability)
+        self.assertEquals(
+            student_groups.AVAILABILITY_NO_OVERRIDE, availability)
 
         # Set availability to something non-default; verify.
         response = self._put_availability(
@@ -816,8 +820,8 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
 
         # unit default availability
         self.assertEquals(
-            AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE,
-            unit_settings[AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY])
+            student_groups.AVAILABILITY_NO_OVERRIDE,
+            unit_settings['availability'])
         self.assertEquals(
             courses.AVAILABILITY_COURSE.title(),
             unit_settings[AvailabilityRestHandler._DEFAULT_AVAILABILITY])
@@ -826,9 +830,8 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         self.assertEquals('New Unit', unit_settings['name'])
 
         # lesson default availability
-        self.assertEquals(
-            AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE,
-            lesson_settings[AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY])
+        self.assertEquals(student_groups.AVAILABILITY_NO_OVERRIDE,
+                          lesson_settings['availability'])
         self.assertEquals(
             courses.AVAILABILITY_COURSE.title(),
             lesson_settings[AvailabilityRestHandler._DEFAULT_AVAILABILITY])
@@ -851,16 +854,14 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         lesson_settings = common_utils.find(
             lambda e: str(e['id']) == str(lesson.lesson_id), settings)
 
-        self.assertEquals(
-            AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE,
-            unit_settings[AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY])
+        self.assertEquals(student_groups.AVAILABILITY_NO_OVERRIDE,
+                          unit_settings['availability'])
         self.assertEquals(
             courses.AVAILABILITY_AVAILABLE.title(),
             unit_settings[AvailabilityRestHandler._DEFAULT_AVAILABILITY])
 
-        self.assertEquals(
-            AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE,
-            lesson_settings[AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY])
+        self.assertEquals(student_groups.AVAILABILITY_NO_OVERRIDE,
+                          lesson_settings['availability'])
         self.assertEquals(
             courses.AVAILABILITY_UNAVAILABLE.title(),
             lesson_settings[AvailabilityRestHandler._DEFAULT_AVAILABILITY])
@@ -868,15 +869,13 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         # Set overrides at the group level to be opposite of the settings on
         # the base unit and lesson.
         response = self._put_availability(
-            group_id, [], AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE,
+            group_id, [], student_groups.AVAILABILITY_NO_OVERRIDE,
             [{'id': str(unit.unit_id),
               'type': 'unit',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_UNAVAILABLE},
+              'availability': courses.AVAILABILITY_UNAVAILABLE},
              {'id': str(lesson.lesson_id),
               'type': 'lesson',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_AVAILABLE}])
+              'availability': courses.AVAILABILITY_AVAILABLE}])
         self.assertEquals(200, response['status'])
         response = self._get_availability(group_id)
         payload = transforms.loads(response['payload'])
@@ -889,14 +888,14 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
 
         self.assertEquals(
             courses.AVAILABILITY_UNAVAILABLE,
-            unit_settings[AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY])
+            unit_settings['availability'])
         self.assertEquals(
             courses.AVAILABILITY_AVAILABLE.title(),
             unit_settings[AvailabilityRestHandler._DEFAULT_AVAILABILITY])
 
         self.assertEquals(
             courses.AVAILABILITY_AVAILABLE,
-            lesson_settings[AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY])
+            lesson_settings['availability'])
         self.assertEquals(
             courses.AVAILABILITY_UNAVAILABLE.title(),
             lesson_settings[AvailabilityRestHandler._DEFAULT_AVAILABILITY])
@@ -964,7 +963,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         response = self._put_group(None, 'Group One', 'this is my group')
         group_id = transforms.loads(response['payload'])['key']
         response = self._put_availability(
-            group_id, [], AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE, [],
+            group_id, [], student_groups.AVAILABILITY_NO_OVERRIDE, [],
             'not a valid XSRF token')
         self.assertEquals(403, response['status'])
         self.assertEquals(
@@ -978,7 +977,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
 
         actions.login(self.ADMIN_ASSISTANT_EMAIL)
         response = self._put_availability(
-            group_id, [], AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE, [])
+            group_id, [], student_groups.AVAILABILITY_NO_OVERRIDE, [])
         self.assertEquals(401, response['status'])
         self.assertEquals('Access denied.', response['message'])
 
@@ -990,7 +989,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
 
         actions.login(self.ADMIN_ASSISTANT_EMAIL)
         response = self._put_availability(
-            group_id, [], AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE, [])
+            group_id, [], student_groups.AVAILABILITY_NO_OVERRIDE, [])
         self.assertEquals(200, response['status'])
         self.assertEquals('Saved', response['message'])
 
@@ -1093,15 +1092,13 @@ class AvailabilityTests(StudentGroupsTestBase):
               'availability': courses.AVAILABILITY_UNAVAILABLE}])
         self._put_availability(
             self.group_id, [self.IN_GROUP_STUDENT_EMAIL],
-            AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE,
+            student_groups.AVAILABILITY_NO_OVERRIDE,
             [{'id': str(self.unit_two.unit_id),
               'type': 'unit',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_AVAILABLE},
+              'availability': courses.AVAILABILITY_AVAILABLE},
              {'id': str(self.lesson_two.lesson_id),
               'type': 'lesson',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_AVAILABLE}])
+              'availability': courses.AVAILABILITY_AVAILABLE}])
 
         actions.login(self.IN_GROUP_STUDENT_EMAIL)
         actions.register(self, 'John Smith')
@@ -1177,23 +1174,19 @@ class AvailabilityTests(StudentGroupsTestBase):
         group_id = transforms.loads(response['payload'])['key']
         self._put_availability(
             group_id, [self.STUDENT_EMAIL],
-            AvailabilityRestHandler._AVAILABILITY_NO_OVERRIDE,
+            student_groups.AVAILABILITY_NO_OVERRIDE,
             [{'id': str(self.unit_one.unit_id),
               'type': 'unit',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_COURSE},
+              'availability': courses.AVAILABILITY_COURSE},
              {'id': str(self.lesson_one.lesson_id),
               'type': 'lesson',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_COURSE},
+              'availability': courses.AVAILABILITY_COURSE},
              {'id': str(self.unit_two.unit_id),
               'type': 'unit',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_AVAILABLE},
+              'availability': courses.AVAILABILITY_AVAILABLE},
              {'id': str(self.lesson_two.lesson_id),
               'type': 'lesson',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_AVAILABLE}])
+              'availability': courses.AVAILABILITY_AVAILABLE}])
 
         # No course-level override from group, so we should see the
         # reg-required from the base course.  Both lessons marked
@@ -1235,20 +1228,16 @@ class AvailabilityTests(StudentGroupsTestBase):
             courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
             [{'id': str(self.unit_one.unit_id),
               'type': 'unit',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_COURSE},
+              'availability': courses.AVAILABILITY_COURSE},
              {'id': str(self.lesson_one.lesson_id),
               'type': 'lesson',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_COURSE},
+              'availability': courses.AVAILABILITY_COURSE},
              {'id': str(self.unit_two.unit_id),
               'type': 'unit',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_AVAILABLE},
+              'availability': courses.AVAILABILITY_AVAILABLE},
              {'id': str(self.lesson_two.lesson_id),
               'type': 'lesson',
-              AvailabilityRestHandler._OVERRIDDEN_AVAILABILITY:
-                  courses.AVAILABILITY_AVAILABLE}])
+              'availability': courses.AVAILABILITY_AVAILABLE}])
 
         # No course-level override from group, so we should see the
         # reg-required from the base course.  Both lessons marked

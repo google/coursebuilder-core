@@ -2234,6 +2234,22 @@ class AvailabilityTests(actions.TestBase):
 
     JSON_PARSE_CALL = 'JSON.parse('
 
+    def _check_content_select_json(self, json):
+        decoded = transforms.loads(transforms.loads(json))
+        self.assertEquals(
+            'trigger-content inputEx-Field', decoded['className'])
+        self.assertEquals('select', decoded['_type'])
+        options = decoded['choices']
+        for unit in self.ALL_LEVELS_WITH_LINKS_NO_PROGRESS:
+            self._check_content_option(options.pop(0), unit)
+            for item in unit.contents:
+                if not item.link:
+                    # E.g. "Review peer assignments" which dot show up in
+                    # traverse_course() results on the Publish > Availability
+                    # page in the Content Availability section either.
+                    continue
+                self._check_content_option(options.pop(0), item)
+
     def test_content_select(self):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         response = self.get(self.action_url)
@@ -2258,21 +2274,15 @@ class AvailabilityTests(actions.TestBase):
                     if 'trigger-content' in escaped_json:
                         trigger_content_json.append(escaped_json)
 
-        self.assertEquals(1, len(trigger_content_json))
-        decoded = transforms.loads(transforms.loads(trigger_content_json[0]))
-        self.assertEquals(
-            'trigger-content inputEx-Field', decoded['className'])
-        self.assertEquals('select', decoded['_type'])
-        options = decoded['choices']
-        for unit in self.ALL_LEVELS_WITH_LINKS_NO_PROGRESS:
-            self._check_content_option(options.pop(0), unit)
-            for item in unit.contents:
-                if not item.link:
-                    # E.g. "Review peer assignments" which dot show up in
-                    # traverse_course() results on the Publish > Availability
-                    # page in the Content Availability section either.
-                    continue
-                self._check_content_option(options.pop(0), item)
+        # ['content_triggers']['items']['properties']['content'] encoded JSON
+        # is found in two places in schema.root:
+        # 1) ['properties']
+        #    (the original <select> for course content triggers)
+        # 2) ['properties']['student_group_settings']['properties']
+        #    (the <select> for student_groups content triggers)
+        self.assertEquals(2, len(trigger_content_json))
+        for json in trigger_content_json:
+            self._check_content_select_json(json)
 
     def _utc_past_text(self, now):
         return utc.to_text(seconds=utc.hour_start(now - (60 * 60)))

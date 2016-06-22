@@ -19,6 +19,9 @@ from common import safe_dom
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+from modules.courses import messages as courses_messages
+
+
 STUDENT_GROUPS_DESCRIPTION = """
 Manage groups of students.  Group level settings can override course level
 settings, and apply only to students in that group.  This page allows you
@@ -79,3 +82,6 @@ AVAILABILITY_FOR_PICKER_MESSAGE = (
 'Availability can be set for the course as a whole and overridden for '
 ) + str(safe_dom.assemble_link(
   "dashboard?action=edit_student_groups", "specific groups of students."))
+
+CONTENT_TRIGGERS_DESCRIPTION = courses_messages.CONTENT_TRIGGERS_DESCRIPTION
+CONTENT_TRIGGERS_LEARN_MORE = courses_messages.CONTENT_TRIGGERS_LEARN_MORE
