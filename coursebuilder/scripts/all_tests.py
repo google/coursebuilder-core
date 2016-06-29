@@ -121,7 +121,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.CourseUrlRewritingTest': 44,
     'tests.functional.test_classes.DatastoreBackedCustomCourseTest': 6,
     'tests.functional.test_classes.DatastoreBackedSampleCourseTest': 44,
-    'tests.functional.test_classes.EtlMainTestCase': 46,
+    'tests.functional.test_classes.EtlMainTestCase': 47,
     'tests.functional.test_classes.EtlTranslationRoundTripTest': 1,
     'tests.functional.test_classes.ExtensionSwitcherTests': 3,
     'tests.functional.test_classes.InaccessiblePageHandlingTest': 7,

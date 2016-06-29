@@ -43,6 +43,7 @@ from common import crypto
 from common.utils import Namespace
 from common import tags
 from common import users
+from common import utils as common_utils
 from controllers import sites
 from controllers import utils
 from controllers.utils import XsrfTokenManager
@@ -101,7 +102,7 @@ def _add_data_entity(app_context, entity_type, data):
         namespace_manager.set_namespace(old_namespace)
 
 
-def _assert_identical_data_entity_exists(app_context, test_object):
+def _assert_identical_data_entity_exists(test, app_context, test_object):
     """Checks a specific entity exists in a given namespace."""
     old_namespace = namespace_manager.get_namespace()
     try:
@@ -110,8 +111,17 @@ def _assert_identical_data_entity_exists(app_context, test_object):
         entity_class = test_object.__class__
         existing_object = entity_class().get(test_object.key())
         assert existing_object
-        assert existing_object.data == test_object.data
-        assert existing_object.key().id() == test_object.key().id()
+        for prop_name, prop in entity_class.properties().iteritems():
+            if ((hasattr(prop, 'auto_now') and prop.auto_now) or
+                (hasattr(prop, 'auto_now_add') and prop.auto_now_add)):
+                continue
+            test.assertEquals(
+                prop.get_value_for_datastore(existing_object),
+                prop.get_value_for_datastore(test_object),
+                'Equality of property %s in class %s' % (
+                    prop_name, test_object.__class__.__name__))
+        test.assertEquals(
+            existing_object.key().id_or_name(), test_object.key().id_or_name())
     finally:
         namespace_manager.set_namespace(old_namespace)
 
@@ -735,7 +745,7 @@ class InfrastructureTest(actions.TestBase):
         assert src_course_out_a.get_units() == dst_course_out_b.get_units()
         for dependent in dependents:
             _assert_identical_data_entity_exists(
-                dst_course_out_b.app_context, dependent)
+                self, dst_course_out_b.app_context, dependent)
 
         # Import imported 1.3 course into 1.3.
         errors = []
@@ -746,7 +756,7 @@ class InfrastructureTest(actions.TestBase):
         assert dst_course_out_c.get_units() == dst_course_out_b.get_units()
         for dependent in dependents:
             _assert_identical_data_entity_exists(
-                dst_course_out_c.app_context, dependent)
+                self, dst_course_out_c.app_context, dependent)
 
         # Test delete.
         units_to_delete = dst_course_a.get_units()
@@ -5081,7 +5091,8 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         # Verify archive has only the non-error type written.
         archive = etl._init_archive(self.archive_path, archive_type)
         archive.open('r')
-        course_models = set(['I18nProgressEntity.json',
+        course_models = set(['ContentChunkEntity.json',
+                             'I18nProgressEntity.json',
                              'LabelEntity.json',
                              'RoleEntity.json',
                              'ResourceBundleEntity.json',
@@ -5388,7 +5399,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
         # check uploaded question matches original
         _assert_identical_data_entity_exists(
-            sites.get_all_courses()[0], question)
+            self, sites.get_all_courses()[0], question)
 
     def test_upload_course_with_force_overwrite_succeeds(self):
         """Tests upload into non-empty course with --force_overwrite."""
@@ -5666,6 +5677,32 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.assertEqual(
             crypto.hmac_sha_2_256_transform('secret', 'value'),
             etl._get_privacy_transform_fn(True, 'secret')('value'))
+
+    def test_save_restore_course_classes(self):
+        """Verify course classes can be default-constructed & round tripped."""
+        course_classes = list(courses.COURSE_CONTENT_ENTITIES) + list(
+            courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT)
+        with common_utils.Namespace(self.namespace):
+            for course_class in course_classes:
+                entity = course_class()
+                entity.put()
+
+        self._download_archive()
+
+        with common_utils.Namespace(self.namespace):
+            for course_class in course_classes:
+                entity = course_class.all().get()
+                entity.delete()
+            for course_class in course_classes:
+                entity = course_class.all().get()
+                self.assertIsNone(entity)
+
+        self._upload_archive()
+
+        with common_utils.Namespace(self.namespace):
+            for course_class in course_classes:
+                entity = course_class.all().get()
+                self.assertIsNotNone(entity)
 
 
 class EtlTranslationRoundTripTest(

@@ -16,7 +16,6 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
-import base64
 import copy
 import datetime
 import urllib
