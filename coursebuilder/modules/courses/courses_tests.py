@@ -28,6 +28,7 @@ from common import resource
 from common import utc
 from controllers import sites
 from controllers import utils
+from models import config
 from models import courses
 from models import custom_modules
 from models import models
@@ -38,6 +39,7 @@ from modules.courses import availability
 from modules.courses import availability_cron
 from modules.courses import constants
 from modules.courses import courses as modules_courses
+from modules.courses import lessons
 from modules.courses import triggers
 from modules.courses import unit_lesson_editor
 from tests.functional import actions
@@ -2634,3 +2636,151 @@ class CourseSettingsRESTHandlerTests(actions.TestBase):
         self._put_extra_locales('el', ['fr'])
         self.assertEquals(
             {'el', 'fr'}, self._get_locale_label_titles())
+
+
+class EventRecordingRestHandlerTests(actions.TestBase):
+
+    ADMIN_EMAIL = 'admin@foo.com'
+    COURSE_ONE_NAME = 'events_tests_one'
+    COURSE_TWO_NAME = 'events_tests_two'
+    COURSE_THREE_NAME = 'events_tests_three'
+    COURSE_ONE_NS = 'ns_%s' % COURSE_ONE_NAME
+    COURSE_TWO_NS = 'ns_%s' % COURSE_TWO_NAME
+    COURSE_THREE_NS = 'ns_%s' % COURSE_THREE_NAME
+    COURSE_ONE_SLUG = '/c1'
+    COURSE_TWO_SLUG = '/c2'
+    COURSE_THREE_SLUG = '/'
+    USER_EMAIL = 'user@foo.com'
+
+    def setUp(self):
+        super(EventRecordingRestHandlerTests, self).setUp()
+        self.app_context_one = actions.simple_add_course(
+            self.COURSE_ONE_NAME, self.ADMIN_EMAIL, 'Course Settings')
+        self.app_context_two = actions.simple_add_course(
+            self.COURSE_TWO_NAME, self.ADMIN_EMAIL, 'Course Settings')
+        self.app_context_three = actions.simple_add_course(
+            self.COURSE_THREE_NAME, self.ADMIN_EMAIL, 'Course Settings')
+
+        # Take direct control of the courses config so that we can have one
+        # course with a slug of just "/" and another with a nonblank slug
+        # so that we can verify that cookies for "/" and "/c2" are handled.
+        course_config = config.Registry.test_overrides[
+            sites.GCB_COURSES_CONFIG.name] = '\n'.join([
+                'course:' + self.COURSE_ONE_SLUG + '::' + self.COURSE_ONE_NS,
+                'course:' + self.COURSE_TWO_SLUG + '::' + self.COURSE_TWO_NS,
+                'course:' + self.COURSE_THREE_SLUG + '::' + self.COURSE_THREE_NS
+            ])
+        self.user_id = actions.login(self.USER_EMAIL).user_id()
+
+    def tearDown(self):
+        del config.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        sites.reset_courses()
+        super(EventRecordingRestHandlerTests, self).tearDown()
+
+    def _post_event(self, slug, source=None, payload=None):
+        source = source or 'course'
+        payload = payload or {}
+        request = {
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                lessons.EventsRESTHandler.XSRF_TOKEN),
+            'source': source,
+            'payload': transforms.dumps(payload),
+            }
+
+        url = slug.rstrip('/') + lessons.EventsRESTHandler.URL
+        response = self.post(url, {'request': transforms.dumps(request)})
+        self.assertEquals(response.status_int, 200)
+
+    def _get_event(self, namespace):
+        with common_utils.Namespace(namespace):
+            return models.EventEntity.all().get()
+
+    def test_non_student_gets_randomized_id(self):
+        # Check that we get an ID starting with "RND_" and which is not
+        # equal to our user ID.
+        self._post_event(self.COURSE_ONE_SLUG)
+        event = self._get_event(self.COURSE_ONE_NS)
+        random_id = event.user_id
+        self.assertTrue(random_id.startswith('RND_'))
+        self.assertNotEquals(random_id, self.user_id)
+
+        # Bonk that event and make another.  Verify that we get the same
+        # random ID so that non-registered user activity can be tracked.
+        event.delete()
+        self._post_event(self.COURSE_ONE_SLUG)
+        event = self._get_event(self.COURSE_ONE_NS)
+        self.assertEquals(event.user_id, random_id)
+
+        # Clear cookies; verify that the random ID we get is now different.
+        self.testapp.cookiejar.clear()
+        event.delete()
+        self._post_event(self.COURSE_ONE_SLUG)
+        event = self._get_event(self.COURSE_ONE_NS)
+        self.assertNotEquals(event.user_id, random_id)
+
+        # And verify that this new ID is also persistent.
+        new_random_id = event.user_id
+        event.delete()
+        self._post_event(self.COURSE_ONE_SLUG)
+        event = self._get_event(self.COURSE_ONE_NS)
+        self.assertEquals(event.user_id, new_random_id)
+        self.assertNotEquals(event.user_id, random_id)
+
+    def test_non_student_gets_different_ids_in_different_courses(self):
+        self._post_event(self.COURSE_ONE_SLUG)
+        event = self._get_event(self.COURSE_ONE_NS)
+        random_id_one = event.user_id
+        event.delete()
+
+        self._post_event(self.COURSE_TWO_SLUG)
+        event = self._get_event(self.COURSE_TWO_NS)
+        random_id_two = event.user_id
+        event.delete()
+
+        self._post_event(self.COURSE_THREE_SLUG)
+        event = self._get_event(self.COURSE_THREE_NS)
+        random_id_three = event.user_id
+        event.delete()
+
+        # Verify that IDs from different courses are different.
+        self.assertNotEquals(random_id_one, random_id_two)
+        self.assertNotEquals(random_id_one, random_id_three)
+        self.assertNotEquals(random_id_two, random_id_three)
+
+        # And just for safety, verify that the IDs are consistent.  (As
+        # opposed to us having gotten reassigned a new random ID each time we
+        # change courses or similar silliness) Sadly, however, since course
+        # three is intentionally being a jerk and using a slug of "/", it's
+        # legit for the path matching on cookies for a path matching course
+        # one or course two to also match on course three's path - "/", even
+        # if there's a longer match.  Sigh.
+        self._post_event(self.COURSE_ONE_SLUG)
+        event = self._get_event(self.COURSE_ONE_NS)
+        self.assertTrue(
+            event.user_id == random_id_one or
+            event.user_id == random_id_three)
+
+        self._post_event(self.COURSE_TWO_SLUG)
+        event = self._get_event(self.COURSE_TWO_NS)
+        self.assertTrue(
+            event.user_id == random_id_two or
+            event.user_id == random_id_three)
+
+        self._post_event(self.COURSE_THREE_SLUG)
+        event = self._get_event(self.COURSE_THREE_NS)
+        self.assertEquals(event.user_id, random_id_three)
+
+    def test_user_id_used_after_registration(self):
+        self._post_event(self.COURSE_ONE_SLUG)
+        event = self._get_event(self.COURSE_ONE_NS)
+        random_id_one = event.user_id
+        event.delete()
+
+        # Verify that once the student is registered, events *are* tagged
+        # with that student's user_id.
+        actions.register(self, 'John Smith', self.COURSE_ONE_SLUG.lstrip('/'))
+        self._post_event(self.COURSE_ONE_SLUG)
+        event = self._get_event(self.COURSE_ONE_NS)
+
+        self.assertEquals(self.user_id, event.user_id)
+        self.assertNotEquals(random_id_one, self.user_id)

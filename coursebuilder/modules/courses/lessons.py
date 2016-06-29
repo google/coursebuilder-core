@@ -16,11 +16,12 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
-
+import base64
 import copy
 import datetime
 import urllib
 import urlparse
+import uuid
 
 from common import crypto
 from common import jinja_utils
@@ -139,7 +140,7 @@ class CourseHandler(utils.BaseHandler):
     @classmethod
     def get_child_routes(cls):
         """Add child handlers for REST."""
-        return [('/rest/events', EventsRESTHandler)]
+        return [(EventsRESTHandler.URL, EventsRESTHandler)]
 
     def get_user_student_profile(self):
         user = self.personalize_page_and_get_user()
@@ -976,6 +977,10 @@ class ReviewHandler(utils.BaseHandler):
 class EventsRESTHandler(utils.BaseRESTHandler):
     """Provides REST API for an Event."""
 
+    URL = '/rest/events'
+    NON_PII_RANDOMIZED_ID = 'session_id'
+    XSRF_TOKEN = 'event-post'
+
     def get(self):
         """Returns a 404 error; this handler should not be GET-accessible."""
         self.error(404)
@@ -1011,26 +1016,43 @@ class EventsRESTHandler(utils.BaseRESTHandler):
             return
 
         request = transforms.loads(self.request.get('request'))
-        if not self.assert_xsrf_token_or_fail(request, 'event-post', {}):
+        if not self.assert_xsrf_token_or_fail(request, self.XSRF_TOKEN, {}):
             return
 
         user = self.get_user()
         if not user:
             return
 
+        # For non-Students, the amount of logged PII is tiny - just
+        # EventEntity.  We don't want to bother doing the full Wipeout support
+        # dance for these users, so rather than record their actual user ID,
+        # we instead make up a random string and record that.  This string
+        # simply can not be traced back to a specific user.  The user may
+        # clear cookies at any time and be 100% divorced from that session
+        # identity in logs.  Further, when a user signs in as a student, their
+        # previous course activity is not correlatable with their previous
+        # non-registered activity.
+        student = models.Student.get_enrolled_student_by_user(user)
+        user_id = None
+        if not student:
+            user_id = self.request.cookies.get(self.NON_PII_RANDOMIZED_ID)
+            if not user_id:
+                user_id = 'RND_' + uuid.uuid4().hex
+                self.response.set_cookie(
+                    self.NON_PII_RANDOMIZED_ID, value=user_id,
+                    path=self.app_context.get_slug())
+
         source = request.get('source')
         payload_json = request.get('payload')
         payload_json = self._add_request_facts(payload_json)
-        models.EventEntity.record(source, user, payload_json)
+        models.EventEntity.record(source, user, payload_json, user_id)
         COURSE_EVENTS_RECORDED.inc()
 
-        self.process_event(user, source, payload_json)
+        if student:
+            self.process_event(student, source, payload_json)
 
-    def process_event(self, user, source, payload_json):
+    def process_event(self, student, source, payload_json):
         """Processes an event after it has been recorded in the event stream."""
-        student = models.Student.get_enrolled_student_by_user(user)
-        if not student:
-            return
 
         payload = transforms.loads(payload_json)
 

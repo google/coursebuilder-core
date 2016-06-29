@@ -1694,7 +1694,7 @@ class EventEntity(BaseEntity):
                     source, user.user_id(), data_dict)
 
     @classmethod
-    def record(cls, source, user, data):
+    def record(cls, source, user, data, user_id=None):
         """Records new event into a datastore."""
         data_dict = transforms.loads(data)
         cls._run_record_hooks(source, user, data_dict)
@@ -1702,7 +1702,7 @@ class EventEntity(BaseEntity):
 
         event = cls()
         event.source = source
-        event.user_id = user.user_id()
+        event.user_id = user_id if user_id else user.user_id()
         event.data = data
         event.put()
 
