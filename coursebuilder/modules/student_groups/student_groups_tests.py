@@ -188,14 +188,14 @@ class GroupLifecycleTests(StudentGroupsTestBase):
         response = self.get('dashboard?action=%s' %
                             student_groups.StudentGroupListHandler.ACTION)
         self.assertEquals(200, response.status_int)
-        self.assertIn(messages.STUDENT_GROUPS_DESCRIPTION, response.body)
+        self.assertIn(str(messages.STUDENT_GROUPS_DESCRIPTION), response.body)
 
     def test_list_page_with_no_groups(self):
         actions.login(self.ADMIN_EMAIL)
         response = self.get('dashboard?action=%s' %
                             student_groups.StudentGroupListHandler.ACTION)
         self.assertEquals(200, response.status_int)
-        self.assertIn(messages.STUDENT_GROUPS_DESCRIPTION, response.body)
+        self.assertIn(str(messages.STUDENT_GROUPS_DESCRIPTION), response.body)
         self.assertIn('No items', response.body)
 
     def test_button_to_add_new_student_group(self):

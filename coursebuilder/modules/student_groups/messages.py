@@ -22,16 +22,19 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 from modules.courses import messages as courses_messages
 
 
-STUDENT_GROUPS_DESCRIPTION = """
-Manage groups of students.  Group level settings can override course level
-settings, and apply only to students in that group.  This page allows you
-to manage group membership.  Configuration of per-group settings overrides
-is done on pages for those settings.
-
-Additionally, events recorded for students are marked with their current
-group.  Certain analytics can be filtered to show only results relating
-to individual groups.
-"""
+STUDENT_GROUPS_DESCRIPTION = safe_dom.NodeList(
+    ).append(safe_dom.Element('p').add_text(
+        """Manage groups of students. Group level settings can override
+course level settings, and apply only to students in that
+group. Events recorded for students are marked with their current
+group. Certain analytics can be filtered to show only results relating
+to individual groups.""")
+    ).append(safe_dom.Element('span').add_text(
+        """This page allows you to create your student groups. You can then
+        manage membership and content access on the
+        """)
+    ).append(safe_dom.assemble_link(
+        'dashboard?action=availability', 'availability page'))
 
 GROUP_MEMBERS_DESCRIPTION = """
 A list of email addresses of students.  Student emails may be assigned to
