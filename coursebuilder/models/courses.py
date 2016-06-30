@@ -42,12 +42,14 @@ from common import safe_dom
 from common import schema_fields
 from common import utils as common_utils
 import common.tags
+from common.utils import Namespace
 import models
 from models import MemcacheManager
 from models import QuestionImporter
 from models import services
 from tools import verify
 
+from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 
 COURSE_MODEL_VERSION_1_2 = '1.2'
@@ -59,7 +61,7 @@ DEFAULT_FETCH_LIMIT = 100
 # import
 COURSE_CONTENT_ENTITIES = frozenset([
     models.QuestionEntity, models.QuestionGroupEntity, models.LabelEntity,
-    models.RoleEntity, models.ContentChunkEntity])
+    models.RoleEntity])
 
 # add your custom entities here during module registration; they will also be
 # copied from source to target during course import
@@ -2071,23 +2073,35 @@ class CourseModel13(object):
         def _copy_entities_between_namespaces(entity_types, from_ns, to_ns):
             """Copies entities between different namespaces."""
 
-            with common_utils.Namespace(from_ns):
-                for entity_class in entity_types:
-                    mapper = utils.QueryMapper(
-                        entity_class.all(), batch_size=DEFAULT_FETCH_LIMIT,
-                        report_every=0)
-                    mapper.run(_add_entity_instance_to_a_namespace,
-                               entity_class, to_ns)
+            def _mapper_func(entity, unused_ns):
+                _add_entity_instance_to_a_namespace(
+                    to_ns, entity.__class__, entity.key().id_or_name(),
+                    entity.data)
 
-        def _add_entity_instance_to_a_namespace(entity, entity_class, to_ns):
+            old_namespace = namespace_manager.get_namespace()
+            try:
+                namespace_manager.set_namespace(from_ns)
+                for _entity_class in entity_types:
+                    mapper = utils.QueryMapper(
+                        _entity_class.all(), batch_size=DEFAULT_FETCH_LIMIT,
+                        report_every=0)
+                    mapper.run(_mapper_func, from_ns)
+            finally:
+                namespace_manager.set_namespace(old_namespace)
+
+        def _add_entity_instance_to_a_namespace(
+                ns, entity_class, _id_or_name, data):
             """Add new entity to the datastore of and a given namespace."""
-            with common_utils.Namespace(to_ns):
-                new_key = db.Key.from_path(
-                    entity_class.kind(), entity.key().id_or_name())
-                kwargs = {}
-                for prop_name, prop in entity_class.properties().iteritems():
-                    kwargs[prop_name] = prop.get_value_for_datastore(entity)
-                entity_class(key=new_key, **kwargs).put()
+            old_namespace = namespace_manager.get_namespace()
+            try:
+                namespace_manager.set_namespace(ns)
+
+                new_key = db.Key.from_path(entity_class.__name__, _id_or_name)
+                new_instance = entity_class(key=new_key)
+                new_instance.data = data
+                new_instance.put()
+            finally:
+                namespace_manager.set_namespace(old_namespace)
 
         # check editable
         if not self._app_context.is_editable_fs():
@@ -2111,7 +2125,7 @@ class CourseModel13(object):
             return None, None
 
         # iterate over course structure and assets and import each item
-        with common_utils.Namespace(self.app_context.get_namespace_name()):
+        with Namespace(self.app_context.get_namespace_name()):
             for unit in src_course.get_units():
                 # import unit
                 new_unit = self.add_unit(unit.type, unit.title)

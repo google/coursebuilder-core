@@ -400,9 +400,9 @@ class ContentChunkEntity(BaseEntity):
     # make no restrictions on the values that can be used here -- we only
     # require that a type is given. The type here may be independent of any
     # notion of Content-Type in an HTTP header.
-    content_type = db.StringProperty()
+    content_type = db.StringProperty(required=True)
     # UTC last modification timestamp.
-    last_modified = db.DateTimeProperty(auto_now=True)
+    last_modified = db.DateTimeProperty(auto_now=True, required=True)
     # Whether or not the chunk supports custom tags. If True, the renderer may
     # be extended to parse and render those tags at display time (this is a stub
     # for future functionality that does not exist yet). If False, the contents
