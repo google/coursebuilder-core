@@ -16,13 +16,22 @@
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
-
 from models import courses
 
 
-def value_to_title(value):
+def option_to_text(option):
+    """Converts, for example, 'no_override' to 'no override'."""
+    return option.replace('_', ' ')
+
+
+def option_to_title(option):
     """Converts, for example, 'no_override' to 'No Override'."""
-    return value.replace('_', ' ').title()
+    return option_to_text(option).title()
+
+
+def option_to_css(option):
+    """Returns, for example, 'no_override' as 'no-override'."""
+    return option_to_text(option).replace(' ', '-')
 
 
 # Each valid <option> to <select> availability of course content items on
@@ -33,6 +42,7 @@ ELEMENT_SELECT_DATA = courses.AVAILABILITY_SELECT_DATA
 
 # Just the values of each SELECT_DATA <option>, not the "title" text.
 ELEMENT_VALUES = courses.AVAILABILITY_VALUES
+ELEMENT_DEFAULT = courses.AVAILABILITY_UNAVAILABLE
 
 # Each valid <option> to <select> overall availability of an entire course
 # on the "Publish > Availability" page, in the "Course Availability" field
@@ -42,3 +52,15 @@ COURSE_SELECT_DATA = courses.COURSE_AVAILABILITY_SELECT_DATA
 
 # Just the values of each SELECT_DATA <option>, not the "title" text.
 COURSE_VALUES = courses.COURSE_AVAILABILITY_VALUES
+COURSE_DEFAULT = courses.COURSE_AVAILABILITY_PRIVATE
+
+AVAILABILITY_NONE_SELECTED = 'none'
+NONE_SELECTED_TITLE = '--- none selected ---'
+NONE_SELECTED_OPTION = (AVAILABILITY_NONE_SELECTED, NONE_SELECTED_TITLE)
+
+# Adds a '--- none selected ---' choice to the existing "Course Availability"
+# options on the "Publish > Availability" page (currently 'private',
+# 'registration_required', 'registration_optional', and 'public').
+COURSE_WITH_NONE_SELECT_DATA = [
+    NONE_SELECTED_OPTION,
+] + COURSE_SELECT_DATA

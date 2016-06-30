@@ -72,7 +72,7 @@ custom_module = None
 
 AVAILABILITY_NO_OVERRIDE = 'no_override'
 AVAILABILITY_NO_OVERRIDE_OPTION = (AVAILABILITY_NO_OVERRIDE,
-    availability_options.value_to_title(AVAILABILITY_NO_OVERRIDE))
+    availability_options.option_to_title(AVAILABILITY_NO_OVERRIDE))
 
 ELEMENT_AVAILABILITY_SELECT_DATA = [
     AVAILABILITY_NO_OVERRIDE_OPTION,
@@ -83,12 +83,74 @@ COURSE_AVAILABILITY_SELECT_DATA = [
 ] + availability_options.COURSE_SELECT_DATA
 
 
-class ElementOverrideTrigger(triggers.ContentTrigger):
+class ContentOverrideTrigger(triggers.ContentTrigger):
 
     # Customize to add the 'no_override' value.
     AVAILABILITY_VALUES = [
         AVAILABILITY_NO_OVERRIDE,
     ] + availability_options.ELEMENT_VALUES
+
+    @classmethod
+    def kind(cls):
+        """E.g., 'content availability override' from content_triggers."""
+        return super(ContentOverrideTrigger, cls).kind() + ' override'
+
+    def act(self, course, student_group):
+        """Updates content availability override as indicated by trigger."""
+        changed = None
+        new_override = self.availability
+        keys = [self.type, self.id, 'availability']
+        override = student_group.get_override(keys, AVAILABILITY_NO_OVERRIDE)
+
+        if override != new_override:
+            namespace = course.app_context.get_namespace_name()
+            if new_override == AVAILABILITY_NO_OVERRIDE:
+                student_group.remove_override(keys)
+                logging.info('REMOVED %s %s "%s" from %s: %s',
+                    student_group.name, self.kind(), new_override,
+                    namespace, self.logged)
+            else:
+                student_group.set_override(keys, new_override)
+                logging.info('APPLIED %s %s from "%s" to "%s" in %s: %s',
+                    student_group.name, self.kind(), override,
+                    new_override, namespace, self.logged)
+            changed = self.ChangedByAct(override, new_override)
+
+        return changed
+
+    @classmethod
+    def from_settings(cls, unused_course, student_group):
+        """Gets content availability override triggers from a student group.
+
+        Args:
+            unused_course: all triggers for student groups are stored in the
+                student_group properties, so the Course is unused here.
+            student_group: a StudentGroupDTO, which can be None in the case
+                where the "Publish > Availability" form entity is being
+                initialized but no student groups have been defined for the
+                course.
+
+        Returns:
+            An empty list if student_group is None, otherwise the already
+            JSON-decoded student_group.content_triggers list (which may itself
+            be empty).
+        """
+        return ([] if student_group is None
+                else student_group.content_triggers)
+
+    @classmethod
+    def set_into_settings(cls, encoded_triggers, unused_course, student_group):
+        """Sets content availability override triggers into a student group.
+
+        Args:
+            encoded_triggers: a list of encoded content triggers, marshaled
+                for storing as student group settings values.
+            unused_course: all triggers for student groups are stored in the
+                student_group properties, so the Course is unused here.
+            student_group: a StudentGroupDTO into which the encoded_triggers
+                will be stored in the content_triggers property.
+        """
+        student_group.content_triggers = encoded_triggers
 
 
 class EmailToObfuscatedUserId(models.BaseEntity):
@@ -465,7 +527,7 @@ class StudentGroupDTO(object):
     NAME_PROPERTY = 'name'
     DESCRIPTION_PROPERTY = 'description'
     OVERRIDES_PROPERTY = 'overrides'
-    CONTENT_TRIGGERS_PROPERTY = ElementOverrideTrigger.ENCODED_TRIGGERS
+    CONTENT_TRIGGERS_PROPERTY = ContentOverrideTrigger.SETTINGS_NAME
 
     def __init__(self, the_id, the_dict):
         self.id = the_id
@@ -489,7 +551,7 @@ class StudentGroupDTO(object):
 
     @property
     def content_triggers(self):
-        return self.dict.get(self.CONTENT_TRIGGERS_PROPERTY, '[]')
+        return self.dict.get(self.CONTENT_TRIGGERS_PROPERTY, [])
 
     @content_triggers.setter
     def content_triggers(self, value):
@@ -773,15 +835,28 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
     _MEMBERS = 'members'
     MAX_NUM_MEMBERS = 100
 
+    _arh = availability.AvailabilityRESTHandler
+
     _STUDENT_GROUP = 'student_group'
     _STUDENT_GROUP_SETTINGS = 'student_group_settings'
-    _ELEMENT_SETTINGS = 'element_settings'
-    _COURSE_AVAILABILITY = 'course_availability'
+    _ELEMENT_SETTINGS = _arh.ELEMENT_SETTINGS
+    _COURSE_AVAILABILITY = _arh.COURSE_AVAILABILITY_SETTING
     _DEFAULT_COURSE_AVAILABILITY = 'default_course_availability'
     _DEFAULT_AVAILABILITY = 'default_availability'
     _CONTENT_TRIGGERS = StudentGroupDTO.CONTENT_TRIGGERS_PROPERTY
 
-    _arh = availability.AvailabilityRESTHandler
+    _AVAILABILITY_CSS = _arh.AVAILABILITY_CSS
+    _AVAILABILITY_WRAPPER_CSS = (
+        'gcb-group-course-availability ' + _arh.AVAILABILITY_WRAPPER_CSS)
+    _MEMBERS_WRAPPER_CSS = _arh.WHITELIST_WRAPPER_CSS
+
+    # Only the top-level schema FieldRegistry needs to be "scoped", since it
+    # is a sub-registry that is appended, in its entirety, to the end of the
+    # "Publish > Availability" form schema. The student_group_availability.js
+    # can thus hide this entire sub-registry at the top-most level.
+    _STUDENT_GROUP_SCOPE_CSS = 'group-scope'
+    _AVAILABILITY_MANAGER_CSS = (
+        _STUDENT_GROUP_SCOPE_CSS + ' ' + _arh.AVAILABILITY_MANAGER_CSS)
 
     @classmethod
     def get_form(cls, handler):
@@ -822,15 +897,14 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
 
     @classmethod
     def get_schema(cls, student_groups, course):
-        # Per-course-element availability (units, lessons)
-        element_settings = cls.get_student_group_element_schema()
-
         group_settings = schema_fields.FieldRegistry(
             'Student Group Availability',
             extra_schema_dict_values={
-                'className': (
-                    'inputEx-Group new-form-layout hidden-header '
-                    'group-availability availability-manager')})
+                'className': cls._AVAILABILITY_MANAGER_CSS})
+
+        # This read-only field and the next modifiable field replace the
+        # single COURSE_AVAILABILITY_SETTING of the course_wide_settings
+        # schema in availability.AvailabilityRESTHandler.
         group_settings.add_property(schema_fields.SchemaField(
             cls._DEFAULT_COURSE_AVAILABILITY,
             'Course Availability for Non-Grouped Students',
@@ -845,37 +919,35 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             i18n=False, optional=True,
             select_data=COURSE_AVAILABILITY_SELECT_DATA,
             extra_schema_dict_values={
-                'wrapperClassName': (
-                    'gcb-group-course-availability inputEx-fieldWrapper')}))
-        group_settings.add_property(schema_fields.FieldArray(
-            cls._ELEMENT_SETTINGS, 'Content Availability',
-            item_type=element_settings, optional=True,
-            extra_schema_dict_values={'className': 'content-availability'}))
+                'className': cls._AVAILABILITY_CSS,
+                'wrapperClassName': cls._AVAILABILITY_WRAPPER_CSS}))
+
+        # Per-course-element availability (units, lessons)
+        element_settings = cls.get_student_group_element_schema()
+        group_settings.add_property(
+            cls._arh.get_element_array_schema(
+                element_settings, scope_css=cls._STUDENT_GROUP_SCOPE_CSS))
+
         group_settings.add_property(schema_fields.SchemaField(
             cls._MEMBERS, 'Members', 'text',
             i18n=False, optional=True,
-            description=messages.GROUP_MEMBERS_DESCRIPTION))
+            description=messages.GROUP_MEMBERS_DESCRIPTION,
+            extra_schema_dict_values={
+                'wrapperClassName': cls._MEMBERS_WRAPPER_CSS}))
 
         content_trigger = cls._arh.get_content_trigger_schema(
             course, avail_select=ELEMENT_AVAILABILITY_SELECT_DATA)
-        group_settings.add_property(schema_fields.FieldArray(
-            cls._CONTENT_TRIGGERS,
-            'Change Course Content Availability at Date/Time',
-            item_type=content_trigger, optional=True,
-            description=services.help_urls.make_learn_more_message(
-                messages.CONTENT_TRIGGERS_DESCRIPTION,
-                messages.CONTENT_TRIGGERS_LEARN_MORE),
-            extra_schema_dict_values={
-                'className': cls._arh.TRIGGERS_LIST_CSS,
-                'listAddLabel': cls._arh.ADD_TRIGGER_BUTTON_TEXT,
-                'listRemoveLabel': 'Delete'}))
+        group_settings.add_property(
+            cls._arh.get_content_trigger_array_schema(
+                ContentOverrideTrigger, content_trigger,
+                scope_css=cls._STUDENT_GROUP_SCOPE_CSS))
 
         # Select dropdown which determines whether we show the form elements
         # for the overall course settings or just settings for a particular
         # student group.
-        ret = cls._arh.get_schema(course)
-        ret.add_property(schema_fields.SchemaField(
-            cls._STUDENT_GROUP, 'Set Availability For', 'string',
+        course_wide_availability = cls._arh.get_schema(course)
+        course_wide_availability.add_property(schema_fields.SchemaField(
+            cls._STUDENT_GROUP, 'Settings For:', 'string',
             description=messages.AVAILABILITY_FOR_PICKER_MESSAGE,
             i18n=False, optional=True,
             select_data=[
@@ -883,11 +955,11 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
                 (sg.id, 'Student Group: %s' % sg.name)
                 for sg in student_groups],
             extra_schema_dict_values={'className': (
-                'student-group inputEx-fieldWrapper gcb-select inputEx-empty'),
+                'student-group inputEx-Field gcb-select'),
             }))
-        ret.add_sub_registry(
+        course_wide_availability.add_sub_registry(
             cls._STUDENT_GROUP_SETTINGS, registry=group_settings)
-        return ret
+        return course_wide_availability
 
     @classmethod
     def _add_unit(cls, unit, elements, student_group, indent=False):
@@ -938,8 +1010,9 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
                 self._ELEMENT_SETTINGS:
                     self._traverse_course(course, NoOverridesStudentGroup()),
                 self._MEMBERS: [],
-                self._CONTENT_TRIGGERS: [],
                 }
+            student_group_settings.update(
+                ContentOverrideTrigger.for_form(course, None))
         else:
             student_group_id = int(student_group_id)
             if not roles.Roles.is_user_allowed(self.app_context, custom_module,
@@ -960,9 +1033,9 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
                     course.get_course_availability().title().replace('_', ' '),
                 self._COURSE_AVAILABILITY: student_group.get_override(
                     [self._COURSE_AVAILABILITY], AVAILABILITY_NO_OVERRIDE),
-                self._CONTENT_TRIGGERS:
-                    transforms.loads(student_group.content_triggers)
             }
+            student_group_settings.update(
+                ContentOverrideTrigger.for_form(course, student_group))
 
         entity = self._arh.construct_entity(course)
         entity[self._STUDENT_GROUP] = student_group_id
@@ -1009,8 +1082,9 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             student_group.set_override(
                 [self._COURSE_AVAILABILITY],
                 group_settings[self._COURSE_AVAILABILITY])
-        student_group.content_triggers = transforms.dumps(
-            group_settings.get(self._CONTENT_TRIGGERS, '[]'))
+        course = courses.Course(None, self.app_context)
+        ContentOverrideTrigger.payload_into_settings(
+            group_settings, course, student_group)
         StudentGroupDAO.save(student_group)
 
         # Update references in join table.
@@ -1162,57 +1236,23 @@ def modify_unit_and_lesson_attributes(course, units, lessons):
             lesson.availability = lesson_availability
 
 
-def apply_content_triggers(course, group, content_triggers, now):
-    if not content_triggers:
-        return   # Nothing to do, so don't waste time logging, etc.
-
-    for t in content_triggers:
-        keys = [t.content.type, t.content.key, 'availability']
-        override = group.get_override(keys, AVAILABILITY_NO_OVERRIDE)
-        if override != t.availability:
-            if t.availability == AVAILABILITY_NO_OVERRIDE:
-                group.remove_override(keys)
-                logging.info('REMOVED "%s" content availability override '
-                    '"%s" from "%s": %s', group.name, t.availability,
-                    course.app_context.get_namespace_name(), t.logged)
-            else:
-                group.set_override(keys, t.availability)
-                logging.info('APPLIED "%s" content availability override '
-                    '"%s" to "%s": %s', group.name, t.availability,
-                    course.app_context.get_namespace_name(), t.logged)
-        else:
-            logging.info('UNCHANGED "%s" content availability override "%s" '
-                'in "%s": %s', group.name, override,
-                course.app_context.get_namespace_name(), t.logged)
-
-
-def save_content_triggers(course, student_group, future, content_encoded):
-    eot = ElementOverrideTrigger
-
-    # If any trigger was consumed, persist all changes.
-    if len(future) != len(content_encoded):
-        student_group.content_triggers = transforms.dumps(future)
-        StudentGroupDAO.save(student_group)
-        if len(future):
-            logging.info('KEPT %d future "%s" group %s(s) in "%s".',
-                len(future), student_group.name, eot.typename(),
-                course.app_context.get_namespace_name())
-    elif len(future):
-        logging.info('AWAITING %d future "%s" group %s(s) in "%s".',
-            len(future), student_group.name, eot.typename(),
-            course.app_context.get_namespace_name())
-
-
-def apply_availability_triggers(course):
+def act_on_all_triggers(course):
     """Hourly cron callback that updates availability based on triggers."""
-    for student_group in StudentGroupDAO.get_all_iter():  # Not cache-affecting.
-        now = utc.now_as_datetime()
-        content_encoded = transforms.loads(student_group.content_triggers)
-        future, decoded = ElementOverrideTrigger.separate_valid_triggers(
-            content_encoded, course=course, now=now)
+    cot = ContentOverrideTrigger
+    namespace = course.app_context.get_namespace_name()
 
-        apply_content_triggers(course, student_group, decoded, now)
-        save_content_triggers(course, student_group, future, content_encoded)
+    for group in StudentGroupDAO.get_all_iter():  # Not cache-affecting.
+        now = utc.now_as_datetime()
+        content_acts = cot.act_on_settings(course, group, now)
+
+        settings_saved = content_acts.num_consumed
+        if settings_saved:
+            # At least one of the override triggers was consumed or discarded,
+            # so save the changes into the student group settings.
+            StudentGroupDAO.save(group)
+
+        save_course = content_acts.num_changed
+        cot.log_acted_on(namespace, content_acts, save_course, settings_saved)
 
 
 class AddToStudentAggregate(
@@ -1442,7 +1482,7 @@ def register_module():
         # Add ourselves to the callbacks for the hourly cron job for buffing
         # up course availability.
         availability_cron.UpdateCourseAvailability.RUN_HOOKS[
-            MODULE_NAME] = apply_availability_triggers
+            MODULE_NAME] = act_on_all_triggers
 
     custom_module = custom_modules.Module(
         MODULE_NAME, 'Define and manage groups of students.',

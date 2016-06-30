@@ -34,11 +34,12 @@ $(function() {
 
     // If there is no course content, add helpful message, which also
     // disguises the fact that a list field with no content looks odd.
-    $('.content-triggers').parent().addClass('section-with-heading');
-    $('.content-triggers .inputEx-ListField-childContainer:empty')
+    if (contentElements.subFields.length == 0) {
+      $('.content-triggers .inputEx-ListField-childContainer:empty')
         .append($('<div class="no-course-content">' +
-        'Create course content (units, lessons, assessments) before' +
-        ' defining any date/time availability change triggers.</div>'));
+          'Create course content (units, lessons, assessments) before' +
+          ' defining any date/time availability change triggers.</div>'));
+    }
 
     // If course content exists, unhide add/change button.  Also move
     // button to be after list section.

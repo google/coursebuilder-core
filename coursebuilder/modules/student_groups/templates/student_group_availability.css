@@ -1,7 +1,7 @@
 /*
  * Styling for Student Groups availability settings page.
  */
-.availability-manager > fieldset > .group-availability > fieldset
+.availability-manager > fieldset > .group-scope > fieldset
     > .gcb-default-course-availability > .inputEx-Field {
   border: none !important;
   border-radius: 0 !important;

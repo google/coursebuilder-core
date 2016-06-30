@@ -25,8 +25,6 @@ from google.appengine.api import namespace_manager
 
 from common import resource
 from common import utc
-from controllers import sites
-from models import courses
 from modules.courses import availability_options
 
 
@@ -60,14 +58,70 @@ class DateTimeTrigger(object):
         """Returns a "name" string that can be compared, sorted, etc."""
         return self.encoded_when
 
+    @property
+    def name_as_items(self):
+        """Returns name @property parts as a comma-separated items string."""
+        return self.name.replace(self.NAME_PART_SEP, ', ')
+
     def __str__(self):
         """Simply returns the `name` property string."""
         return self.name
+
+    @classmethod
+    def kind(cls):
+        """Human-readable "kind" of trigger, e.g. 'content availability'."""
+        return cls.SETTINGS_NAME.split('_')[0]
+
+    @classmethod
+    def settings_css(cls):
+        """Returns the base plural CSS class name used to compute values."""
+        return availability_options.option_to_css(cls.SETTINGS_NAME)
+
+    REGISTRY_CSS = 'inputEx-Group inputEx-valid inputEx-ListField-subFieldEl'
+
+    @classmethod
+    def registry_css(cls, extra_css=None):
+        """Returns 'className' value used with a trigger FieldRegistry."""
+        plural_css_class = cls.settings_css()
+        crop = 2 if plural_css_class.endswith('es') else 1
+        singular_css_class = plural_css_class[:-crop]
+        extra_css = [] if not extra_css else [extra_css]
+        classes = [singular_css_class, cls.REGISTRY_CSS] + extra_css
+        return ' '.join(classes)
+
+    ARRAY_CSS = 'inputEx-Field inputEx-ListField'
+
+    @classmethod
+    def array_css(cls, extra_css=None):
+        """Returns 'className' value used with a FieldArray of triggers."""
+        extra_css = [] if not extra_css else [extra_css]
+        classes = [cls.settings_css(), cls.ARRAY_CSS] + extra_css
+        return ' '.join(classes)
+
+    ARRAY_WRAPPER_CSS = 'section-with-heading inputEx-fieldWrapper'
+
+    @classmethod
+    def array_wrapper_css(cls, extra_css=None):
+        """Returns 'wrapperClassName' value used with a triggers FieldArray."""
+        extra_css = [] if not extra_css else [extra_css]
+        classes = [cls.settings_css(), cls.ARRAY_WRAPPER_CSS] + extra_css
+        return ' '.join(classes)
+
+    DATETIME_CSS = 'gcb-datetime inputEx-fieldWrapper'
+
+    @classmethod
+    def when_css(cls, extra_css=None):
+        """Returns 'className' value for a 'when' SchemaField."""
+        extra_css = [] if not extra_css else [extra_css]
+        classes = ['when', cls.DATETIME_CSS] + extra_css
+        return ' '.join(classes)
 
     @property
     def when(self):
         """Returns a UTC datetime.datetime or None if `when` is invalid."""
         return self._when
+
+    WHEN_TYPENAME = datetime.datetime.__name__
 
     @classmethod
     def validate_when(cls, when):
@@ -78,8 +132,8 @@ class DateTimeTrigger(object):
         try:
             return utc.text_to_datetime(when)
         except (ValueError, TypeError) as err:
-            cls.log_issue({'when': when}, 'INVALID',
-                          datetime.datetime.__name__, cause=repr(err))
+            cls.log_issue({'when': when}, 'INVALID', cls.WHEN_TYPENAME,
+                          cause=repr(err))
             return None
 
     @classmethod
@@ -102,7 +156,7 @@ class DateTimeTrigger(object):
         """Updates ValidOrNot in-place for a specified property.
 
         Args:
-            prop_name: name string of the property of interest
+            prop_name: name string of the property of interest.
             validator: function that accepts single encoded value and returns
                 either the valid decoded value or None.
             encoded: a dict of property names to their encoded values.
@@ -111,7 +165,7 @@ class DateTimeTrigger(object):
                 invalid, dict of invalid property names and bad encoded values
                 missing, set of names of expected but missing properties
                 unused, dict of encoded property names and values not in any
-                    of `valid`, `invalid`, or `missing`
+                    of `valid`, `invalid`, or `missing`.
         """
         if prop_name in encoded:
             raw = encoded[prop_name]
@@ -150,7 +204,9 @@ class DateTimeTrigger(object):
         # encoded or kwargs overrides.
         valid_or_not = cls.validate(encoded)
         ctor_kwargs = valid_or_not.valid
-        ctor_kwargs.update(cls.only_explicit_overrides(kwargs))
+        for k, v in kwargs.iteritems():
+            if v is not None:
+                ctor_kwargs[k] = v  # Apply explicit override from kwargs.
         return cls(**ctor_kwargs)
 
     @property
@@ -191,25 +247,83 @@ class DateTimeTrigger(object):
         return self.is_valid and (now > self.when)
 
     @classmethod
-    def get_from_settings(cls, settings):
-        """Returns the encoded triggers from the supplied settings."""
-        publish = cls._get_publish_settings(settings)
-        return publish.get(cls.ENCODED_TRIGGERS, [])
+    def encoded_defaults(cls, **unused):
+        """Creates an encoded trigger initialized to any possible defaults.
+
+        There is no meaningful default value for the date/time of a trigger,
+        so intentionally *no* 'when' value is provided.
+
+        Returns:
+          Returns an encoded trigger initialized with any explicitly supplied
+          keyword argument defaults or class defaults, or None if it was not
+          possible to encode a default trigger of the class type.
+        """
+        return {}
 
     @classmethod
-    def set_into_settings(cls, triggers, settings):
-        """Sets the encoded triggers into the supplied settings."""
-        publish = cls._get_publish_settings(settings)
-        if triggers:
-            publish[cls.ENCODED_TRIGGERS] = triggers
-        elif cls.ENCODED_TRIGGERS in publish:
-            del publish[cls.ENCODED_TRIGGERS]
+    def from_settings(cls, course, settings):
+        """Gets encoded availability triggers from course and/or settings.
+
+        Args:
+            course: a Course from which some settings may be obtained; also
+                used in validation of some encoded triggers.
+            settings: subclass-specific settings containing encoded triggers.
+
+        Returns:
+            A list of encoded triggers (dicts with JSON encode-able values).
+        """
+        return ([] if settings is None
+                else settings.setdefault('publish', {}).setdefault(
+                    cls.SETTINGS_NAME, []))
 
     @classmethod
-    def payload_triggers_into_settings(cls, payload, settings):
-        """Places triggers from form payload into the supplied settings."""
-        cls.set_into_settings(
-            payload.get(cls.ENCODED_TRIGGERS), settings)
+    def for_form(cls, course, settings, **kwargs):
+        """Returns encoded availability triggers from settings as form values.
+
+        Args:
+            course: passed, untouched, through to from_settings().
+            settings: passed, untouched, through to from_settings().
+            kwargs: subclass-specific keyword arguments.
+
+        Returns:
+          The base class implementation simply returns a dict containing a
+          single key/value pair, with SETTINGS_NAME as the key and the
+          unaltered results of from_settings() as the value.
+        """
+        return {
+            cls.SETTINGS_NAME: ([] if settings is None
+                                else cls.from_settings(course, settings)),
+        }
+
+    @classmethod
+    def set_into_settings(cls, encoded_triggers, course, settings):
+        """Sets encoded availability triggers into the supplied settings.
+
+        If a non-empty encoded_triggers list was supplied, it is set as the
+        value of the SETTINGS_NAME key in the 'publish' dict within the
+        settings.
+
+        Args:
+            encoded_triggers: a list of encoded triggers, marshaled for
+                storing as settings values.
+            course: a Course used by some encoded_triggers during validation.
+            settings: course settings containing the 'publish' dict.
+        """
+        publish = settings.setdefault('publish', {})
+        if encoded_triggers:
+            publish[cls.SETTINGS_NAME] = encoded_triggers
+        else:
+            publish.pop(cls.SETTINGS_NAME, None)  # No KeyError if missing.
+
+    @classmethod
+    def from_payload(cls, payload):
+        """Gets just encoded triggers from the availability form payload."""
+        return payload.get(cls.SETTINGS_NAME, [])
+
+    @classmethod
+    def payload_into_settings(cls, payload, course, settings):
+        """Sets triggers from form payload in settings for a course."""
+        cls.set_into_settings(cls.from_payload(payload), course, settings)
 
     @classmethod
     def sort(cls, triggers):
@@ -218,86 +332,293 @@ class DateTimeTrigger(object):
         # As a convenience, also return the original sorted in-place list.
         return triggers
 
+    Separated = collections.namedtuple('Separated',
+        ['encoded', 'decoded', 'future', 'ready', 'invalid', 'all'])
+
     @classmethod
-    def separate_valid_triggers(cls, encoded_triggers,
-                                now=None, course=None, namespace=None):
-        """Separates triggers into ready and future, discarding invalid ones.
+    def separate(cls, encoded_triggers, course, now=None):
+        """Separates encoded triggers into various Separated categories.
+
+        Unless otherwise noted, all values in the various Separated lists
+        appear in the same order that they occurred in the original supplied
+        encoded_triggers list.
+
+        "Decoded" triggers are objects of some DateTimeTriggersubclass.
+
+        "Encoded" triggers result from JSON-decoding by transforms.loads().
 
         Args:
             encoded_triggers: a list of encoded (e.g. form payload or marshaled
-                for storing with course settings) triggers.
-            now: UTC time as a datetime; default is None, indicating that
-                utc.now_as_datetime() should be called.
-            course: optional Course used by some triggers for additional
-                decoding, initialization, and validation; default is None,
-                which causes it to be determined from namespace.
-            namespace: namespace name; default is None, indicating that it
-                should be obtained from course or the namespace_manager.
+                for storing into settings) triggers.
+            course: Course used by some triggers for additional decoding,
+                initialization, and validation.
+            now: optional UTC time as a datetime, used to decide if a trigger
+                is ready to be acted on; default is None, indicating that
+                `ready` and `future` separating can be skipped.
 
         Returns:
-            Two lists:
-            The first list contains still-encoded future triggers, in same
-            order in which they appeared in encoded_triggers.
-
-            The second list the valid, decoded, is_ready (based on the `now`
-            time) DateTimeTriggers available to be applied. These triggers
-            occur in the second list in "application order", sorted by
-            increasing `when` values.
-
-            Any triggers in encoded_triggers that were invalid in some way
-            have their defects logged and are then discarded ("dropped on the
-            floor").
+            A Separated namedtuple where:
+            `encoded` is a list of *all* valid triggers, in encoded form.
+            `decoded` is a list of *all* valid triggers, in decoded form.
+            `future` is a list of valid, future triggers, in encoded form.
+            `ready` is a list of valid triggers, in decoded form, ready
+                (is_ready(now) is True) to be applied. These triggers appear
+                in the `ready` list in "order of application", sorted by
+                increasing `when` datetime.
+            `invalid` is a list of  invalid triggers, in encoded form.
+            `all` is encoded_triggers in its original form.
         """
         if not encoded_triggers:
-            return [], []  # Nothing to do, so don't waste time logging, etc.
-
-        if now is None:
-            now = utc.now_as_datetime()
-
-        if (namespace is None) or (course is None):
-            course, namespace, _ = _get_course_namespace_app_context(
-                course=course, namespace=namespace)
+            # Nothing to do, so don't waste time logging, etc.
+            return cls.Separated([], [], [], [], [], encoded_triggers)
 
         logging.info(
-            'SEPARATING %d encoded %s(s) in %s.',
-            len(encoded_triggers), cls.typename(), namespace)
+            'SEPARATING %d encoded %s(s) in %s.', len(encoded_triggers),
+            cls.typename(), course.app_context.get_namespace_name())
 
-        future_encoded, ready_decoded = [], []
+        encoded = []
+        decoded = []
+        future = []
+        ready = []
+        invalid = []
+
         for et in encoded_triggers:
             if et is None:
                 cls.log_issue(et, 'MISSING', cls.typename(),
                     cause=cls.MISSING_TRIGGER_FMT.format(None))
+                # Nothing at all to do, and do not keep the None values.
                 continue
+
+            # decode() will log any detailed validation error messages.
             dt = cls.decode(et, course=course)
-            if (not dt) or (not dt.is_valid):
-                # decode() will have already logged various error messages.
+            if not dt:
+                invalid.append(et)
                 continue
-            if dt.is_future(now=now):
+            is_valid = dt.is_valid
+            if not is_valid:
+                invalid.append(et)
+                continue
+
+            # Keep both encoded and decoded forms of the known-valid trigger.
+            encoded.append(et)
+            decoded.append(dt)
+
+            if not now:
+                # `now` datetime not specified, so skip `future` vs. `ready`.
+                continue
+
+            is_future = dt.is_future(now=now)
+            if is_future:
                 # Valid, but future, trigger, so leave encoded for later.
-                future_encoded.append(et)
+                future.append(et)
                 continue
-            if dt.is_ready(now=now):
-                # Valid trigger whose time has passed, ready to apply.
-                ready_decoded.append(dt)
+
+            is_ready = dt.is_ready(now=now)
+            if is_ready:
+                # Valid trigger whose time has passed, ready to to call act().
+                ready.append(dt)
                 continue
+
             cls.log_issue(et, 'UNEXPECTED', cls.typename(),
                 cause=cls.UNEXPECTED_TRIGGER_FMT.format(
-                    dt.is_valid, dt.is_future(now=now), dt.is_ready(now=now)))
+                    is_valid, is_future, is_ready))
 
-        return future_encoded, cls.sort(ready_decoded)
+        cls.sort(ready)
+        return cls.Separated(
+            encoded, decoded, future, ready, invalid, encoded_triggers)
 
-    @classmethod
-    def only_explicit_overrides(cls, overrides):
-        """Returns dict of only override items that have non-None values.
+    ChangedByAct = collections.namedtuple('ChangedByAct',
+        ['previous', 'next'])
+
+    def act(self, course, settings):
+        """Perform whatever action is associated with the trigger.
+
+        The base class (DateTimeTrigger) implementation of act() is a no-op.
+        It simply logs that it was called and returns None. This is all that
+        can be reasponably expected, given that it has no specific course
+        about what to do or update (unlike more-specific subclasses).
 
         Args:
-            overrides: an iterator of 2-tuples containing property name and
-                override values, or a dict, in which case it is converted to
-                the required 2-tuple iterator by calling iteritems().
+            course: a Course that can be used or altered by subclass act()
+                methods.
+            settings: subclass-specific settings that can be used or altered
+                by subclass act() methods.
+
+        Returns:
+            A ChangedByAct namedtuple is returned if acting on the trigger
+            caused some state change that might require course or settings to
+            be saved.
+
+            None is returned if acting on the trigger produced no actual
+            change of any course or settings state.
         """
-        if isinstance(overrides, dict):
-            overrides = overrides.iteritems()
-        return dict([(k, v) for k, v in overrides if v is not None])
+        logging.warning('UNIMPLEMENTED %s.act(%s, %s): %s',
+            self.typename(), course.app_context.get_namespace_name(),
+            settings, self.logged)
+        return None
+
+    Acted = collections.namedtuple('Acted', ['trigger', 'changed'])
+
+    TriggeredActs = collections.namedtuple('TriggeredActs',
+        ['acted', 'ignored'])
+
+    @classmethod
+    def act_on_triggers(cls, decoded_triggers, course, settings):
+        """Takes actions for a list of decoded triggers (calls act() for each).
+
+        Calls act() to take action on each trigger in the supplied list of
+        "ready" triggers, in order. All of the triggers should be valid and
+        should already be sorted in the order of application, such as by
+        increasing values of `when`. The `ready` list in the Separated
+        namedtuple returned by separate() satisfies these preconditions.
+
+        "Valid" means the trigger is not malformed. "Ready" means `when`
+        specifies a date and time that is now in the past.
+
+        Sorting is required so that, in the case of multiple valid, ready
+        triggers associated with the action, the most significant trigger
+        (typicaly the chronologically last one) is the one whose taken
+        action persists.
+
+        Once applied, a trigger is considered consumed and should not be
+        added back to the future triggers stored in settings.
+
+        Args:
+            decoded_triggers: a list of objects of some DateTimeTrigger
+                subclass, assumed to all be valid and to have been sorted in
+                order of application.
+            course: a Course that can be used or altered by subclass act()
+                methods.
+            settings: subclass-specific settings that can be used or altered
+                by subclass act() methods.
+
+        Returns:
+            An TriggeredActs namedtuple containing:
+            acted, a list Acted namedtuples, each containing a decoded
+                trigger whose act() method indicated that an action was taken
+                that modified the course or settings and the ChangedByAct
+                value indicating what was modified by that act().
+            ignored, a list of decoded triggers whose act() methods indicate
+                that no modification to the course or settings occurred.
+        """
+        acted = []
+        ignored = []
+
+        if not decoded_triggers:
+            # Nothing to do, so don't waste time logging, etc.
+            return cls.TriggeredActs(acted, ignored)
+
+        namespace = course.app_context.get_namespace_name()
+
+        for dt in decoded_triggers:
+            changed = dt.act(course, settings)
+            if changed:
+                acted.append(cls.Acted(dt, changed))
+                logging.info('TRIGGERED %s %s from "%s" to "%s": %s',
+                             namespace, dt.kind(), changed.previous,
+                             changed.next, dt.logged)
+            else:
+                ignored.append(dt)
+                logging.info('UNCHANGED %s %s: %s',
+                             namespace, dt.kind(), dt.logged)
+
+        if acted:
+            logging.info('ACTED on %d %s %s(s).',
+                         len(acted), namespace, cls.typename())
+
+        if ignored:
+            logging.info('IGNORED %d %s %s(s).',
+                         len(ignored), namespace, cls.typename())
+
+        return cls.TriggeredActs(acted, ignored)
+
+    SettingsActs = collections.namedtuple('SettingsActs',
+        ['num_consumed', 'separated', 'num_changed', 'triggered_acts'])
+
+    @classmethod
+    def act_on_settings(cls, course, settings, now):
+        """Acts on triggers from settings and keeps future triggers.
+
+        Triggers are retrieved from settings and then separated into ready,
+        invalid, and future triggers lists. The "ready" triggers are acted
+        on (their act() methods are called), and any future triggers are
+        set_into_settings() to retain them for future separating and acting.
+
+        Args:
+            course: a Course, passed to from_settings() to obtain triggers,
+                that may also be used or altered by subclass act() methods.
+            settings: subclass-specific settings, passed to from_settings() to
+                obtain triggers, that may also be used or altered by subclass
+                act() methods.
+            now: current UTC time as a datetime, used to decide if a valid
+                trigger is ready to be acted on.
+
+        Returns:
+            An SettingsActs namedtuple containing:
+            num_changed, which is positive if any triggers retrieved
+                from settings were either invalid and discarded or ready and
+                acted on.
+            separated, the Separated namedtuple resulting from separate()
+                applied to the triggers retrieved from settings.
+            triggered_acts, the TriggeredActs namedtuple resulting from
+                act_on_triggers() applied to the "ready" triggers.
+        """
+        # Extract all cls type triggers from supplied settings.
+        encoded_triggers = cls.from_settings(course, settings)
+
+        # Separate triggers into "ready to apply" and future triggers.
+        separated = cls.separate(encoded_triggers, course, now=now)
+
+        future_encoded = separated.future
+        ready_decoded = separated.ready
+
+        # Were any of the triggers from settings['publish'] consumed ("ready"
+        # and applied) or discarded (invalid)?
+        num_consumed = len(encoded_triggers) - len(future_encoded)
+
+        # Apply availability changes for any valid, "ready to apply" triggers.
+        acts = cls.act_on_triggers(ready_decoded, course, settings)
+        num_changed = len(acts.acted)
+
+        if num_consumed:
+            # Update the triggers stored in the settings with the remaining
+            # future triggers.  (These settings are not yet saved, as that is
+            # the responsibility of the caller.)
+            cls.set_into_settings(future_encoded, course, settings)
+
+        return cls.SettingsActs(num_consumed, separated, num_changed, acts)
+
+    @classmethod
+    def log_acted_on(cls, namespace, settings_acts,
+                     course_saved, settings_saved):
+        num_invalid = len(settings_acts.separated.invalid)
+        if num_invalid:
+            logging.warning('DISCARDED %d invalid %s(s) in %s.',
+                            num_invalid, cls.typename(), namespace)
+
+        num_consumed = settings_acts.num_consumed
+        num_remaining = len(settings_acts.separated.future)
+        if num_consumed:
+            if settings_saved:
+                logging.info('KEPT %d future %s(s) in %s.',
+                    num_remaining, cls.typename(), namespace)
+            else:
+                logging.warning('FAILED to keep %d future %s(s) in %s.',
+                    num_remaining, cls.typename(), namespace)
+        elif num_remaining:
+            logging.info('AWAITING %d future %s(s) in %s.',
+                num_remaining, cls.typename(), namespace)
+
+        num_changed = settings_acts.num_changed
+        if num_changed:
+            if course_saved:
+                logging.info('SAVED %d change(s) to %s %s.',
+                    num_changed, namespace, cls.kind())
+            else:
+                logging.info('FAILED to save %d change(s) to %s %s.',
+                    num_changed, namespace, cls.kind())
+        else:
+            logging.info('UNTOUCHED %s %s.', namespace, cls.kind())
 
     @classmethod
     def typename(cls):
@@ -307,12 +628,11 @@ class DateTimeTrigger(object):
     @property
     def logged(self):
         """Returns a verbose string of the trigger intended for logging."""
-        return '{}({})'.format(self.__class__.typename(),
-                               self.name.replace(self.NAME_PART_SEP, ', '))
+        return '{}({})'.format(self.__class__.typename(), self.name_as_items)
 
     @classmethod
     def log_issue(cls, encoded, what, why,
-                  namespace=None, cause='', log_level=logging.error):
+                  namespace=None, cause='', log_level=logging.warning):
         """Assemble a trigger error message from optional parts and log it."""
         # "INVALID content in...
         parts = ["{} '{}' in".format(what, why)]
@@ -325,10 +645,6 @@ class DateTimeTrigger(object):
         if cause:
             parts.append('cause: "{}"'.format(cause))
         log_level(' '.join(parts))
-
-    @classmethod
-    def _get_publish_settings(cls, settings):
-        return settings.setdefault('publish', {})
 
 
 class AvailabilityTrigger(DateTimeTrigger):
@@ -347,6 +663,20 @@ class AvailabilityTrigger(DateTimeTrigger):
         return '{}{}{}'.format(super(AvailabilityTrigger, self).name,
             self.NAME_PART_SEP, self.encoded_availability)
 
+    @classmethod
+    def kind(cls):
+        """Forms, e.g., 'content availability' from 'content_triggers.'"""
+        return super(AvailabilityTrigger, cls).kind() + ' availability'
+
+    SELECT_CSS = 'gcb-select inputEx-Field'
+
+    @classmethod
+    def availability_css(cls, extra_css=None):
+        """Returns 'className' value for an 'availability' SchemaField."""
+        extra_css = [] if not extra_css else [extra_css]
+        classes = ['availability', cls.SELECT_CSS] + extra_css
+        return ' '.join(classes)
+
     @property
     def availability(self):
         """Returns a subclass-specific AVAILABILITY_VALUES string or None."""
@@ -358,12 +688,10 @@ class AvailabilityTrigger(DateTimeTrigger):
         if availability in cls.AVAILABILITY_VALUES:
             return availability
 
-        encoded = {'availability': availability}
-        cls.log_issue(encoded, 'INVALID', 'availability',
-            cause=cls.UNEXPECTED_AVAIL_FMT.format(
+        cls.log_issue({'availability': availability}, 'INVALID',
+            'availability', cause=cls.UNEXPECTED_AVAIL_FMT.format(
                 availability, cls.AVAILABILITY_VALUES))
         return None
-
 
     @classmethod
     def encode_availability(cls, availability):
@@ -405,15 +733,37 @@ class AvailabilityTrigger(DateTimeTrigger):
         """Returns True if the Trigger properties are *all* currently valid."""
         return self.availability and super(AvailabilityTrigger, self).is_valid
 
+    @classmethod
+    def encoded_defaults(cls, availability=None, **super_kwargs):
+        """Returns an encoded trigger initialized to any possible defaults.
+
+        The availability value (either the explicitly supplied keyword
+        parameter or the class DEFAULT_AVAILABILITY) is *not* validated.
+        This allows for form default values like AVAILABILITY_NONE_SELECTED
+        that must be supplied *to* a form via an entity, but must not be stored
+        *from* that form if still "none selected".
+
+        Args:
+            availability: an optional explicitly specified availability value;
+                default is to use cls.DEFAULT_AVAILABILITY
+            super_kwargs: keyword arguments passed on to base class
+        """
+        defaults = super(AvailabilityTrigger, cls).encoded_defaults(
+            **super_kwargs)
+        if availability is None:
+            availability = cls.DEFAULT_AVAILABILITY
+
+        defaults['availability'] = availability
+        return defaults
+
 
 class ContentTrigger(AvailabilityTrigger):
     """A course content availability change applied at specified date/time."""
 
-    ENCODED_TRIGGERS = 'content_triggers'
-    TRIGGERS_CSS = ENCODED_TRIGGERS.replace('_', '-')
-    TRIGGER_CSS = TRIGGERS_CSS[:-1]
+    SETTINGS_NAME = 'content_triggers'
 
     AVAILABILITY_VALUES = availability_options.ELEMENT_VALUES
+    DEFAULT_AVAILABILITY = availability_options.ELEMENT_DEFAULT
 
     # On the Publish > Availability form (in the element_settings course
     # outline and the <option> values in the content_triggers 'content'
@@ -450,6 +800,15 @@ class ContentTrigger(AvailabilityTrigger):
         return '{}{}{}'.format(super(ContentTrigger, self).name,
             self.NAME_PART_SEP, self.encoded_content)
 
+    DATETIME_CSS = 'inputEx-required ' + AvailabilityTrigger.DATETIME_CSS
+
+    @classmethod
+    def content_css(cls, extra_css=None):
+        """Returns 'className' value for a 'content' SchemaField."""
+        extra_css = [] if not extra_css else [extra_css]
+        classes = ['content', cls.SELECT_CSS] + extra_css
+        return ' '.join(classes)
+
     @property
     def content(self):
         return self._content
@@ -464,7 +823,6 @@ class ContentTrigger(AvailabilityTrigger):
             cls.KEY_TYPENAME, cause=cls.UNEXPECTED_CONTENT_FMT.format(
                 content_type, cls.ALLOWED_CONTENT_TYPES))
         return None
-
 
     @classmethod
     def validate_content_type_and_id(cls, content_type, content_id):
@@ -631,6 +989,36 @@ class ContentTrigger(AvailabilityTrigger):
                 super(ContentTrigger, self).is_valid)
 
     @classmethod
+    def for_form(cls, course, settings, selectable_content=None,
+                 **super_kwargs):
+        """Returns encoded availability triggers from settings as form values.
+
+        Args:
+            course: passed, untouched, through to the base class.
+            settings: passed, untouched, through to the base class.
+            selectable_content:  a collection (typically a select_data dict)
+                containing the encoded 'content' resource.Key strings of
+                existing Course units, lessons, etc.
+            super_kwargs: remaining keyword arguments passed to the base class.
+
+        Returns:
+          A list of the ContentTriggers from the encoded from_settings()
+          triggers whose associated 'content' exists (that is, the encoded
+          key of the unit, lessong, et.c, was found in selectable_content).
+        """
+        form_fields = super(ContentTrigger, cls).for_form(
+            course, settings, **super_kwargs)
+
+        if not selectable_content:
+            # Without knowledge of valid content, there is no way to discard
+            # obsolete triggers, so just bail out by returning everything.
+            return form_fields
+
+        return dict([(field,
+                      cls.has_content(encoded_triggers, selectable_content))
+                     for field, encoded_triggers in form_fields.iteritems()])
+
+    @classmethod
     def get_content_finder(cls, content):
         if not content:
             cls.log_issue({'content': content}, 'UNSPECIFIED',
@@ -662,7 +1050,6 @@ class ContentTrigger(AvailabilityTrigger):
             return None  # get_content_finder() already logged the issue.
 
         found = find_func(course, content.key)
-
         if found:
             return found
 
@@ -671,11 +1058,12 @@ class ContentTrigger(AvailabilityTrigger):
         return None
 
     @classmethod
-    def triggers_with_content(cls, settings, selectable_content):
-        """Removes obsolete content triggers from the course settings.
+    def has_content(cls, encoded_triggers, selectable_content):
+        """Removes obsolete content triggers from a list of triggers.
 
         Args:
-            settings: the course settings, from app_context.get_environ().
+            encoded_triggers: a list of encoded (e.g. form payload or marshaled
+                for storing into settings) triggers.
             selectable_content: a dict of <select> <option> option/text pairs;
                 the option dict keys are treated as a set of the valid
                 course content resource.Keys, in encoded string form.
@@ -684,8 +1072,6 @@ class ContentTrigger(AvailabilityTrigger):
             A list of the remaining content triggers (encoded in form payload
             and stored settings form) whose associated content still exist.
         """
-        encoded_triggers = cls.get_from_settings(settings)
-
         # Course content associated with existing availability triggers could
         # have been deleted since the trigger itself was created. If the
         # content whose availability was meant to be updated by the trigger
@@ -708,69 +1094,13 @@ class ContentTrigger(AvailabilityTrigger):
 
         return triggers_with_content
 
-    @classmethod
-    def apply_triggers(cls, triggers, namespace=None):
-        """Updates course content availability from a list of triggers.
+    def act(self, unused_course, unused_settings):
+        """Updates course content availability as indicated by the trigger."""
+        current = self.found.availability
+        new = self.availability
 
-        Applies the supplied list of "ready" course content triggers in order.
-        All of the triggers should be valid and should already be sorted by
-        increasing values of `when`. The second list returned by
-        separate_valid_triggers() statisfies these preconditions.
+        if current == new:
+            return None
 
-        "Valid" means the trigger is not malformed and still has associated
-        course content that exists. "Ready" means `when` specifies a date and
-        time that is now in the past.
-
-        Sorting is required so that, in the case of multiple valid, ready
-        triggers associated with the same course content, the chronologically
-        last trigger is the one whose availability change persists for that
-        content.
-
-        Once applied, a trigger is considered consumed and is not added back
-        to the future triggers stored in the course settings.
-
-        Args:
-            triggers: a list of ContentTriggers, assumed to all be valid and
-                to have been sorted in order of increasing `when` values.
-            namespace: optional namespace name string, used in log messages.
-        """
-        if not triggers:
-            return 0  # Nothing to do, so don't waste time logging, etc.
-
-        if namespace is None:  # Note: Blank namespace is permitted and valid.
-            namespace = namespace_manager.get_namespace()
-
-        changes = 0
-        for t in triggers:
-            current = t.found.availability
-            if current != t.availability:
-                changes += 1
-                t.found.availability = t.availability
-                logging.info(
-                    'TRIGGERED %s content availability "%s" to "%s": %s',
-                    namespace, current, t.availability, t.logged)
-            else:
-                logging.info(
-                    'UNCHANGED %s content availability "%s": %s',
-                    namespace, current, t.logged)
-
-        return changes
-
-
-def _get_course_namespace_app_context(
-    course=None, namespace=None, app_context=None):
-    # Make calling this when all values are known as cheap as possible.
-    if course and namespace and app_context:
-        return (course, namespace, app_context)
-
-    if course and not app_context:
-        app_context = course.app_context
-    if app_context and not namespace:
-        namespace = app_context.get_namespace_name()
-    if not namespace:
-        namespace = namespace_manager.get_namespace()
-    if not app_context:
-        app_context = sites.get_app_context_for_namespace(namespace)
-    if not course:
-        course = courses.Course(app_context)
-    return (course, namespace, app_context)
+        self.found.availability = new
+        return self.ChangedByAct(current, new)

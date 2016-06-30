@@ -22,6 +22,18 @@ Content defaults to the availability of the course, but may also be restricted
 to admins (Private) or open to the public (Public).
 """
 
+COURSE_WIDE_AVAILABILITY_DESCRIPTION = """
+This sets the availability of the course for registered and unregistered
+students.
+"""
+
+COURSE_WIDE_STUDENTS_ALLOWED_DESCRIPTION = """
+Only students with email addresses in this list may access course content.
+ Separate addresses with any combination of commas, spaces, or separate lines.
+Course, site, and App Engine administrators always have access and need not be
+listed explicitly.
+"""
+
 AVAILABILITY_SHOWN_WHEN_UNAVAILABLE_DESCRIPTION = """
 If checked, the content displays its title in the syllabus even when it is
 private.

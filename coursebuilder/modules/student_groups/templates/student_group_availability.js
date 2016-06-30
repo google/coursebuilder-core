@@ -12,11 +12,11 @@ $(function() {
 
   function setVisibility(groupKey) {
     if (groupKey) {
-      $('.course-availability').hide()
-      $('.group-availability').show()
+      $('.course-wide-scope').hide()
+      $('.group-scope').show()
     } else {
-      $('.course-availability').show()
-      $('.group-availability').hide()
+      $('.course-wide-scope').show()
+      $('.group-scope').hide()
     }
   }
 
@@ -24,16 +24,6 @@ $(function() {
     // Save original query URL for simplicity in building variants for
     // individual groups.
     cb_global.original_get_url = cb_global.get_url;
-
-    // Mark course-level sections as being course level.  Student-group
-    // level fields are already marked via class naming from schema.
-    for (var name in cb_global.form.inputsNames) {
-      if (name == 'student_group' || name == 'student_group_settings') {
-        continue;
-      }
-      var fieldDiv = cb_global.form.inputsNames[name].divEl;
-      $(fieldDiv).addClass('course-availability');
-    }
 
     // Set indents on things needing to be indented.
     var contentElements = (cb_global.form.inputsNames.
@@ -46,7 +36,7 @@ $(function() {
     });
 
     // Move the what-set-are-we-affecting picker to be the first element on
-    // the form.  It's not first because, again, the course-level availability
+    // the form.  It's not first because, again, the course-wide availability
     // stuff necessarily comes first.
     var fieldset = cb_global.form.fieldset;
     var picker = cb_global.form.inputsNames['student_group'];

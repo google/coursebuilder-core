@@ -2236,10 +2236,9 @@ class AvailabilityTests(actions.TestBase):
 
     JSON_PARSE_CALL = 'JSON.parse('
 
-    def _check_content_select_json(self, json):
+    def _check_content_select_json(self, json, content_css):
         decoded = transforms.loads(transforms.loads(json))
-        self.assertEquals(
-            'trigger-content inputEx-Field', decoded['className'])
+        self.assertEquals(content_css, decoded['className'])
         self.assertEquals('select', decoded['_type'])
         options = decoded['choices']
         for unit in self.ALL_LEVELS_WITH_LINKS_NO_PROGRESS:
@@ -2266,6 +2265,7 @@ class AvailabilityTests(actions.TestBase):
         # currently the JSON.parse() call that defines the trigger-content
         # <select> definition of interest is always a single, long line of
         # text.
+        content_css = triggers.ContentTrigger.content_css()
         trigger_content_json = []
         for script in scripts:
             for line in str(script).splitlines():
@@ -2273,7 +2273,7 @@ class AvailabilityTests(actions.TestBase):
                 if call_start > -1:
                     arg_start = call_start + len(self.JSON_PARSE_CALL)
                     escaped_json = line[arg_start:-1]
-                    if 'trigger-content' in escaped_json:
+                    if content_css in escaped_json:
                         trigger_content_json.append(escaped_json)
 
         # ['content_triggers']['items']['properties']['content'] encoded JSON
@@ -2284,7 +2284,7 @@ class AvailabilityTests(actions.TestBase):
         #    (the <select> for student_groups content triggers)
         self.assertEquals(2, len(trigger_content_json))
         for json in trigger_content_json:
-            self._check_content_select_json(json)
+            self._check_content_select_json(json, content_css)
 
     def _utc_past_text(self, now):
         return utc.to_text(seconds=utc.hour_start(now - (60 * 60)))
@@ -2374,30 +2374,26 @@ class AvailabilityTests(actions.TestBase):
         cron_job.submit()
         self.execute_all_deferred_tasks()
 
-    def _separating_logged(self, logs, count, trigger_typename):
-        self.assertIn(
-            'SEPARATING %d encoded %s(s) in %s.' % (
-                count, trigger_typename, self.NAMESPACE), logs)
+    def _separating_logged(self, logs, count, trigger_cls):
+        self.assertIn('SEPARATING %d encoded %s(s) in %s.' % (
+            count, trigger_cls.typename(), self.NAMESPACE), logs)
 
-    def _awaiting_logged(self, logs, count, trigger_typename):
-        self.assertIn(
-            'AWAITING %d future %s(s) in %s.' % (
-                count, trigger_typename, self.NAMESPACE), logs)
+    def _awaiting_logged(self, logs, count, trigger_cls):
+        self.assertIn('AWAITING %d future %s(s) in %s.' % (
+            count, trigger_cls.typename(), self.NAMESPACE), logs)
 
-    def _untouched_logged(self, logs):
-        self.assertIn(
-            'UNTOUCHED %s course content availability.' % self.NAMESPACE,
-            logs)
+    def _untouched_logged(self, logs, trigger_classes):
+        for trigger_cls in trigger_classes:
+            self.assertIn('UNTOUCHED {} {}.'.format(
+                self.NAMESPACE, trigger_cls.kind()), logs)
 
-    def _kept_logged(self, logs, count, trigger_typename):
-        self.assertIn(
-            'KEPT %d future %s(s) in %s.' % (
-                count, trigger_typename, self.NAMESPACE), logs)
+    def _kept_logged(self, logs, count, trigger_cls):
+        self.assertIn('KEPT %d future %s(s) in %s.' % (
+            count, trigger_cls.typename(), self.NAMESPACE), logs)
 
-    def _saved_logged(self, logs, count):
-        self.assertIn(
-            'SAVED %d changes to %s course content availability.' % (
-                count, self.NAMESPACE), logs)
+    def _saved_logged(self, logs, count, trigger_cls):
+        self.assertIn('SAVED %d change(s) to %s %s.' % (
+                count, self.NAMESPACE, trigger_cls.kind()), logs)
 
     _ENCODED_TRIGGER_RE = '{.+}'
 
@@ -2411,25 +2407,24 @@ class AvailabilityTests(actions.TestBase):
             '.*%s \'%s\' in namespace %s encoded: "%s" cause: "%s".*' % (
                 what, why, self.NAMESPACE, trigger, cause))
 
-    def _unchanged_logged(self, logs, current, trigger, course):
-        decoded = triggers.ContentTrigger.decode(trigger, course=course)
-        self.assertIn(
-            'UNCHANGED %s content availability "%s": %s' % (
-                self.NAMESPACE, current, decoded.logged), logs)
+    def _unchanged_logged(self, logs, current, trigger, course, trigger_cls):
+        decoded = trigger_cls.decode(trigger, course=course)
+        self.assertIn('UNCHANGED %s %s: %s' % (
+            self.NAMESPACE, trigger_cls.kind(), decoded.logged), logs)
 
-    def _triggers_logged(self, logs, logged, previous_avail, course):
+    def _triggers_logged(self, logs, logged, previous_avail, course,
+                         trigger_cls):
         for lt in logged:
-            decoded = triggers.ContentTrigger.decode(lt, course=course)
+            decoded = trigger_cls.decode(lt, course=course)
             avail = lt.get('availability')
             if avail != previous_avail:
-                self.assertIn(
-                    'TRIGGERED %s content availability "%s" to "%s": %s' % (
-                        self.NAMESPACE, previous_avail, avail, decoded.logged),
-                    logs)
+                self.assertIn('TRIGGERED %s %s from "%s" to "%s": %s' % (
+                    self.NAMESPACE, trigger_cls.kind(), previous_avail,
+                    avail, decoded.logged), logs)
             else:
-                self.assertIn(
-                    'UNCHANGED %s content availability "%s": %s' % (
-                        self.NAMESPACE, previous_avail, decoded.logged), logs)
+                self.assertIn('UNCHANGED %s %s "%s": %s' % (
+                    self.NAMESPACE, trigger_cls.kind(), previous_avail,
+                    decoded.logged), logs)
 
     def _find_trigger_content(self, course, trigger):
         content = resource.Key.fromstring(trigger['content'])
@@ -2440,7 +2435,7 @@ class AvailabilityTests(actions.TestBase):
     def _check_triggers_applied(self, course, applied):
         for at in applied:
             found = self._find_trigger_content(course, at)
-            self.assertEquals(at['availability'], found.availability)
+            self.assertEquals(found.availability, at['availability'])
 
     def _check_triggers_unapplied(self, course, original_avail, unapplied):
         for ut in unapplied:
@@ -2455,6 +2450,7 @@ class AvailabilityTests(actions.TestBase):
         now = utc.now_as_timestamp()
         actions.login(self.ADMIN_EMAIL, is_admin=True)
         app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        course_for_elements = courses.Course(None, app_context=app_context)
 
         tdtt = triggers.DateTimeTrigger
         tat = triggers.AvailabilityTrigger
@@ -2465,12 +2461,13 @@ class AvailabilityTests(actions.TestBase):
 
         # Expect no triggers to be present in course settings initially.
         empty_settings = app_context.get_environ()
-        self.assertEquals(tct.get_from_settings(empty_settings), [])
+        self.assertEquals(tct.from_settings(
+            course_for_elements, empty_settings), [])
 
         # Cron job should log that there were triggers no waiting.
         self._run_availability_jobs(app_context)
         logs = self.get_log()
-        self._untouched_logged(logs)
+        self._untouched_logged(logs, [tct])
 
         # POST some past, future, and "bad" triggers to the course settings.
         future_cts = self._some_future_content_triggers(now)
@@ -2483,7 +2480,8 @@ class AvailabilityTests(actions.TestBase):
         response = self._post({'content_triggers': all_cts})
         self.assertEquals(200, response.status_int)
         posted_settings = app_context.get_environ()
-        self.assertEquals(all_cts, tct.get_from_settings(posted_settings))
+        self.assertEquals(all_cts, tct.from_settings(
+            course_for_elements, posted_settings))
 
         # All triggers now in course settings, so evaluate them in cron job.
         self._run_availability_jobs(app_context)
@@ -2491,7 +2489,7 @@ class AvailabilityTests(actions.TestBase):
         # Cron job should log some consumed and some future triggers.
         # Checking the logs first for anomolies pinpoints problems faster.
         logs = self.get_log()
-        self._separating_logged(logs, len(all_cts), tct.typename())
+        self._separating_logged(logs, len(all_cts), tct)
 
         # All of the "exceptional" triggers should have been logged.
         self._error_logged(logs, 'None', 'MISSING', tct.typename(),
@@ -2535,23 +2533,29 @@ class AvailabilityTests(actions.TestBase):
                 tdtt.UNEXPECTED_TRIGGER_FMT.format(True, True, True)))
 
         original_avail = courses.AVAILABILITY_COURSE
-        course = courses.Course(None, app_context=app_context)
 
-        self._unchanged_logged(logs, original_avail, unchanged, course)
-        self._triggers_logged(logs, past_cts, original_avail, course)
-        self._kept_logged(logs, len(future_cts), tct.typename())
-        self._saved_logged(logs, len(past_cts))
+        self._unchanged_logged(
+            logs, original_avail, unchanged, course_for_elements, tct)
+        self._triggers_logged(
+            logs, past_cts, original_avail, course_for_elements, tct)
+        self._kept_logged(logs, len(future_cts), tct)
+        self._saved_logged(logs, len(past_cts), tct)
 
         # Confirm that only valid future triggers remain (faulty triggers were
         # dropped and past triggers applied.
         after_settings = app_context.get_environ()
-        self.assertEquals(future_cts, tct.get_from_settings(after_settings))
+        self.assertEquals(future_cts, tct.from_settings(
+            course_for_elements, after_settings))
+
+        course_after_save = courses.Course(None, app_context=app_context)
 
         # Confirm that the availability changes specified by the valid past
         # triggers were applied.
-        self._check_triggers_applied(course, past_cts + [unchanged])
+        self._check_triggers_applied(
+            course_after_save, past_cts + [unchanged])
         # Also confirm that *future* triggers were *not* applied.
-        self._check_triggers_unapplied(course, original_avail, future_cts)
+        self._check_triggers_unapplied(
+            course_after_save, original_avail, future_cts)
 
         # Manually confirm that, while referring to the unit_id of an actual
         # assessment, the `unexpected` trigger was not actually applied, due
@@ -2563,7 +2567,7 @@ class AvailabilityTests(actions.TestBase):
         # Only future triggers remain, so run cron again and confirm no change.
         self._run_availability_jobs(app_context)
         logs = self.get_log()
-        self._awaiting_logged(logs, len(future_cts), tct.typename())
+        self._awaiting_logged(logs, len(future_cts), tct)
 
 
 class CourseSettingsRESTHandlerTests(actions.TestBase):

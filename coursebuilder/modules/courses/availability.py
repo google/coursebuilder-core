@@ -44,17 +44,60 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
     ACTION = 'availability'
     URL = 'rest/availability'
 
-    # One leading space so that it can simply be concatenated to the end.
-    _DATETIME_CSS = ' inputEx-required gcb-datetime inputEx-fieldWrapper'
-    _LIST_FIELD_CSS = ' inputEx-Field inputEx-ListField'
-    _SUB_REG_CSS = ' inputEx-Group inputEx-valid inputEx-ListField-subFieldEl'
-
     # Besides their use in AvailabilityRESTHandler, these values exist as
     # public contents for use by (at least): courses_pageobjects.py (and thus
     # indirectly courses_integration_tests.py) and student_groups.py.
     ADD_TRIGGER_BUTTON_TEXT = 'Add date/time availability change'
-    TRIGGERS_LIST_CSS = triggers.ContentTrigger.TRIGGERS_CSS + _LIST_FIELD_CSS
-    ELEM_AVAILABILITY_CSS = 'availability inputEx-Field'
+
+    # Used by both this REST handler and the one in modules/student_groups
+    # to style the course-wide and per-student-group schemas of the
+    # "Publish > Availability" form.
+    AVAILABILITY_MANAGER_CSS = (
+        'inputEx-Group new-form-layout hidden-header availability-manager')
+
+    # Common schema field names shared by both the course-wide and
+    # per-student-group "Publish > Availability" forms.
+    COURSE_AVAILABILITY_SETTING = 'course_availability'
+    ELEMENT_SETTINGS = 'element_settings'
+    WHITELIST_SETTING = 'whitelist'
+
+    # Match the "Content Availability" element <select> to that of triggers.
+    AVAILABILITY_CSS = triggers.AvailabilityTrigger.availability_css()
+    SELECT_WRAPPER_CSS = 'gcb-select inputEx-fieldWrapper'
+    AVAILABILITY_WRAPPER_CSS = SELECT_WRAPPER_CSS
+    ELEM_AVAILABILITY_CSS = AVAILABILITY_CSS
+
+    # Used by both the course-wide student whitelist <textarea> and the
+    # student group members <textarea> to style the outer wrapper <div>.
+    WHITELIST_WRAPPER_CSS = 'gcb-textarea inputEx-fieldWrapper'
+
+    # modules/student_groups "patches" the "Publish > Availability" form
+    # in order to add support for per-student-group availability settings.
+    # student_group_availability.js in that module toggles between showing the
+    # course-wide and per-student-group settings via two CSS classes. This
+    # CSS class needs to be applied to every top-level property in the
+    # "Publish > Availability" form schema.
+    _COURSE_WIDE_SCOPE_CSS = 'course-wide-scope'
+    _COURSE_WIDE_WRAPPER_CSS = 'inputEx-fieldWrapper ' + _COURSE_WIDE_SCOPE_CSS
+
+    _COURSE_AVAILABILITY_CSS = (AVAILABILITY_CSS + ' ' +
+        availability_options.option_to_css(COURSE_AVAILABILITY_SETTING))
+    _COURSE_AVAILABILITY_WRAPPER_CSS = (
+        SELECT_WRAPPER_CSS + ' ' + _COURSE_WIDE_SCOPE_CSS)
+
+    _WHITELIST_WRAPPER_CSS = (
+        _COURSE_WIDE_SCOPE_CSS + ' ' + WHITELIST_WRAPPER_CSS)
+
+    # className for "Content Availability" FieldArray.
+    _ELEM_ARRAY_CSS = 'content-availability inputEx-Field inputEx-ListField'
+
+    # wrapperClassName for "Content Availability" FieldArray.
+    _ELEM_WRAPPER_CSS = 'section-with-heading inputEx-fieldWrapper'
+
+    # className for the FieldRegistry of a complex element array item within
+    # the "Content Availability" FieldArray.
+    _ELEM_SUB_REG_CSS = (
+        'content-element inputEx-Group inputEx-ListField-subFieldEl')
 
     @classmethod
     def get_form(cls, handler):
@@ -68,10 +111,10 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
 
     @classmethod
     def get_common_element_schema(cls):
-        element_settings = schema_fields.FieldRegistry(
-            'Element Settings', 'Availability settings for course elements',
-            extra_schema_dict_values={'className':
-                'content-element' + cls._SUB_REG_CSS})
+        element_settings = schema_fields.FieldRegistry('Element Settings',
+            description='Availability settings for course elements',
+            extra_schema_dict_values={
+                'className': cls._ELEM_SUB_REG_CSS})
         element_settings.add_property(schema_fields.SchemaField(
             'type', 'Element Kind', 'string',
             i18n=False, optional=True, editable=False, hidden=True))
@@ -109,76 +152,95 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         return element_settings
 
     @classmethod
+    def get_element_array_schema(cls, item_type, scope_css=None):
+        if scope_css is None:
+            scope_css = cls._COURSE_WIDE_SCOPE_CSS
+        wrapper_classname = ' '.join([scope_css, cls._ELEM_WRAPPER_CSS])
+        return schema_fields.FieldArray(
+            cls.ELEMENT_SETTINGS, 'Content Availability', item_type=item_type,
+            optional=True, extra_schema_dict_values={
+                'className': cls._ELEM_ARRAY_CSS,
+                'wrapperClassName': wrapper_classname})
+
+    @classmethod
     def get_content_trigger_schema(cls, course, avail_select=None):
-        content_trigger = schema_fields.FieldRegistry(
-            'Trigger', 'Date/Time Triggered Availability Change',
-            extra_schema_dict_values={'className':
-                triggers.ContentTrigger.TRIGGER_CSS + cls._SUB_REG_CSS})
+        tct = triggers.ContentTrigger
+        content_trigger = schema_fields.FieldRegistry('Trigger',
+            description='Date/Time Triggered Availability Change',
+            extra_schema_dict_values={
+                'className': tct.registry_css()})
         content_trigger.add_property(schema_fields.SchemaField(
             'content', 'For course content:', 'string',
             description=messages.CONTENT_TRIGGER_RESOURCE_DESCRIPTION,
             i18n=False, select_data=cls.content_select(course).items(),
             extra_schema_dict_values={
-                'className': 'trigger-content inputEx-Field'}))
-        if avail_select is None:
-            avail_select = availability_options.ELEMENT_SELECT_DATA
-        content_trigger.add_property(schema_fields.SchemaField(
-            'availability', 'Change availability to:', 'string',
-            description=messages.CONTENT_TRIGGER_AVAIL_DESCRIPTION,
-            i18n=False, select_data=avail_select,
-            extra_schema_dict_values={
-                'className': 'trigger-availability inputEx-Field'}))
+                'className': tct.content_css()}))
         content_trigger.add_property(schema_fields.SchemaField(
             'when', 'At this date & UTC hour:', 'datetime',
             i18n=False,
             description=messages.CONTENT_TRIGGER_WHEN_DESCRIPTION,
             extra_schema_dict_values={
-                'className': 'trigger-when' + cls._DATETIME_CSS}))
+                'className': tct.when_css()}))
+        if avail_select is None:
+            avail_select = availability_options.ELEMENT_SELECT_DATA
+        title = 'Change {} to:'.format(tct.kind())
+        content_trigger.add_property(schema_fields.SchemaField(
+            'availability', title, 'string',
+            description=messages.CONTENT_TRIGGER_AVAIL_DESCRIPTION,
+            i18n=False, select_data=avail_select,
+            extra_schema_dict_values={
+                'className': tct.availability_css()}))
         return content_trigger
 
     @classmethod
-    def get_schema(cls, course):
-        ret = schema_fields.FieldRegistry(
-            'Availability', 'Course Availability Settings',
-            extra_schema_dict_values={
-                'className': ('inputEx-Group new-form-layout hidden-header '
-                              'availability-manager')})
-        ret.add_property(schema_fields.SchemaField(
-            'course_availability', 'Course Availability', 'string',
-            description='This sets the availability of the course for '
-            'registered and unregistered students.',
-            i18n=False, optional=True,
-            select_data=availability_options.COURSE_SELECT_DATA))
-
-        element_settings = cls.get_course_wide_element_schema()
-        ret.add_property(schema_fields.FieldArray(
-            'element_settings', 'Content Availability',
-            item_type=element_settings, optional=True,
-            extra_schema_dict_values={'className':
-                'content-availability' + cls._LIST_FIELD_CSS}))
-
-        ret.add_property(schema_fields.SchemaField(
-            'whitelist', 'Students Allowed to Access', 'text',
-            description='Only students with email addresses in this list may '
-            'access course content.  Separate addresses with any combination '
-            'of commas, spaces, or separate lines.  Course, site, and App '
-            'Engine administrators always have access and need not be '
-            'listed explicitly.',
-            i18n=False, optional=True))
-
-        content_trigger = cls.get_content_trigger_schema(course)
-        ret.add_property(schema_fields.FieldArray(
-            triggers.ContentTrigger.ENCODED_TRIGGERS,
+    def get_content_trigger_array_schema(cls, trigger_cls, item_type,
+                                         scope_css=None):
+        if scope_css is None:
+            scope_css = cls._COURSE_WIDE_SCOPE_CSS
+        wrapper_classname = trigger_cls.array_wrapper_css(extra_css=scope_css)
+        return schema_fields.FieldArray(
+            trigger_cls.SETTINGS_NAME,
             'Change Course Content Availability at Date/Time',
-            item_type=content_trigger, optional=True,
+            item_type=item_type, optional=True,
             description=services.help_urls.make_learn_more_message(
                 messages.CONTENT_TRIGGERS_DESCRIPTION,
                 messages.CONTENT_TRIGGERS_LEARN_MORE),
             extra_schema_dict_values={
-                'className': cls.TRIGGERS_LIST_CSS,
+                'className': trigger_cls.array_css(),
+                'wrapperClassName': wrapper_classname,
                 'listAddLabel': cls.ADD_TRIGGER_BUTTON_TEXT,
-                'listRemoveLabel': 'Delete'}))
-        return ret
+                'listRemoveLabel': 'Delete'})
+
+    @classmethod
+    def get_schema(cls, course):
+        course_wide_settings = schema_fields.FieldRegistry('Availability',
+            description='Course Availability Settings',
+            extra_schema_dict_values={
+                'className': cls.AVAILABILITY_MANAGER_CSS})
+
+        course_wide_settings.add_property(schema_fields.SchemaField(
+            cls.COURSE_AVAILABILITY_SETTING, 'Course Availability', 'string',
+            description=messages.COURSE_WIDE_AVAILABILITY_DESCRIPTION,
+            select_data=availability_options.COURSE_SELECT_DATA,
+            i18n=False, optional=True, extra_schema_dict_values={
+                'className': cls._COURSE_AVAILABILITY_CSS,
+                'wrapperClassName': cls._COURSE_AVAILABILITY_WRAPPER_CSS}))
+
+        element_settings = cls.get_course_wide_element_schema()
+        course_wide_settings.add_property(
+            cls.get_element_array_schema(element_settings))
+
+        course_wide_settings.add_property(schema_fields.SchemaField(
+            cls.WHITELIST_SETTING, 'Students Allowed to Access', 'text',
+            description=messages.COURSE_WIDE_STUDENTS_ALLOWED_DESCRIPTION,
+            i18n=False, optional=True, extra_schema_dict_values={
+                'wrapperClassName': cls._WHITELIST_WRAPPER_CSS}))
+
+        content_trigger = cls.get_content_trigger_schema(course)
+        course_wide_settings.add_property(
+            cls.get_content_trigger_array_schema(
+                triggers.ContentTrigger, content_trigger))
+        return course_wide_settings
 
     @classmethod
     def add_unit(cls, unit, elements, indent=False):
@@ -266,21 +328,18 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
     @classmethod
     def construct_entity(cls, course):
         """Expose as function for convenience in wrapping this handler."""
-
-        namespace = course.app_context.get_namespace_name()
         settings = course.app_context.get_environ()
         reg_form = settings.setdefault('reg_form', {})
 
-        selectable_content = cls.content_select(course)
-        triggers_with_content = triggers.ContentTrigger.triggers_with_content(
-            settings, selectable_content)
+        content_triggers = triggers.ContentTrigger.for_form(
+            course, settings, selectable_content=cls.content_select(course))
 
         entity = {
-            'course_availability': course.get_course_availability(),
-            'whitelist': reg_form.get('whitelist', ''),
-            'element_settings': cls.traverse_course(course),
-            'content_triggers': triggers_with_content,
+            cls.COURSE_AVAILABILITY_SETTING: course.get_course_availability(),
+            cls.WHITELIST_SETTING: reg_form.get('whitelist', ''),
+            cls.ELEMENT_SETTINGS: cls.traverse_course(course)
         }
+        entity.update(content_triggers)
         return entity
 
     def get(self):
@@ -304,7 +363,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
 
         request = transforms.loads(handler.request.get('request'))
         response_payload = {
-            'key': handler.app_context.get_namespace_name()
+            'key': handler.app_context.get_namespace_name(),
         }
 
         # Check access permissions.  Not coming through dashboard, so must
@@ -323,22 +382,27 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         settings = handler.app_context.get_environ()
         payload = transforms.loads(request.get('payload', '{}'))
 
-        # Course-level changes: user whitelist, available/browsable/registerable
+        # Date/Time triggers:
+        #   unit and lesson availability
+        triggers.ContentTrigger.payload_into_settings(
+            payload, course, settings)
+
+        # Course-level settings:
+        #   user whitelist, available/browsable/registerable
         whitelist = payload.get('whitelist')
         if whitelist is not None:
-            settings['reg_form']['whitelist'] = whitelist
-
-        triggers.ContentTrigger.payload_triggers_into_settings(
-            payload, settings)
+            reg_form = settings.setdefault('reg_form', {})
+            reg_form['whitelist'] = whitelist
 
         course.save_settings(settings)
 
+        # Course-level changes: course-wide availability
         course_availability = payload.get('course_availability')
         if course_availability:
             course.set_course_availability(course_availability)
 
         # Unit and lesson availability, visibility from syllabus list
-        for item in payload.get('element_settings', []):
+        for item in payload.get(cls.ELEMENT_SETTINGS, []):
             if item['type'] == 'unit':
                 element = course.find_unit_by_id(item['id'])
             elif item['type'] == 'lesson':

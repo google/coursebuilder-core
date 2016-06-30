@@ -32,8 +32,6 @@ removed from the course settings.
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
-import logging
-
 from google.appengine.api import namespace_manager
 
 from common import utils as common_utils
@@ -74,47 +72,24 @@ class UpdateCourseAvailability(jobs.DurableJob):
         namespace = namespace_manager.get_namespace()
         app_context = sites.get_app_context_for_namespace(namespace)
         course = courses.Course.get(app_context)
-        settings = course.app_context.get_environ()
+        settings = app_context.get_environ()
 
         tct = triggers.ContentTrigger
-        all_cts = tct.get_from_settings(settings)
-        num_cts = len(all_cts)
+        content_acts = tct.act_on_settings(course, settings, now)
 
-        # separate_valid_triggers() logs any invalid content triggers and
-        # just discards them by not returning them. The only triggers of
-        # interest are those triggers ready to be applied now and any
-        # triggers who await a future time to be applied.
-        future_cts, ready_cts = tct.separate_valid_triggers(
-            all_cts, now=now, course=course, namespace=namespace)
-
-        changes = tct.apply_triggers(ready_cts, namespace=namespace)
-        cts_remaining = len(future_cts)
-
-        if num_cts != cts_remaining:
-            # At least one of the settings['publish']['content_triggers']
-            # was consumed or discarded, so update 'content_triggers' stored
-            # in the course settings with the remaining future_cts triggers.
-            tct.set_into_settings(future_cts, settings)
-
-            if course.save_settings(settings):
-                if cts_remaining:
-                    logging.info('KEPT %d future %s(s) in %s.',
-                        cts_remaining, tct.typename(), namespace)
-            else:
-                logging.warning('FAILED to keep %d future %s(s) in %s.',
-                    cts_remaining, tct.typename(), namespace)
-        elif cts_remaining:
-            logging.info('AWAITING %d future %s(s) in %s.',
-                cts_remaining, tct.typename(), namespace)
-
-        if changes:
-            course.save()
-            logging.info(
-                'SAVED %d changes to %s course content availability.',
-                changes, namespace)
+        if content_acts.num_consumed:
+            # At least one of the settings['publish'] triggers was consumed
+            # or discarded, so save changes to triggers into the settings.
+            settings_saved = course.save_settings(settings)
         else:
-            logging.info('UNTOUCHED %s course content availability.',
-                namespace)
+            settings_saved = False
+
+        save_course = content_acts.num_changed
+        if save_course:
+            course.save()
+
+        tct.log_acted_on(
+            namespace, content_acts, save_course, settings_saved)
 
         common_utils.run_hooks(self.RUN_HOOKS.itervalues(), course)
 
@@ -133,8 +108,7 @@ class StartAvailabilityJobs(utils.AbstractAllCoursesCronHandler):
         return True
 
     def cron_action(self, app_context, global_state):
-        cron_jobs = [UpdateCourseAvailability(app_context)]
-        for job in cron_jobs:
-            if job.is_active():
-                job.cancel()
-            job.submit()
+        job = UpdateCourseAvailability(app_context)
+        if job.is_active():
+            job.cancel()
+        job.submit()

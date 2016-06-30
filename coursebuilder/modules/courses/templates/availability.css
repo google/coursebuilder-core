@@ -15,8 +15,32 @@
   display: none !important;
 }
 /* Remove 20px of margin from the very first field section on the form. */
-.availability-manager > fieldset > .inputEx-fieldWrapper:first-child {
+.form .availability-manager > fieldset > .inputEx-fieldWrapper:first-child {
   margin-top: 0px;
+}
+/* Remove 20px of margin from the very first field section on the form. */
+.form .availability-manager > fieldset > .inputEx-fieldWrapper {
+  margin-top: 15px;
+}
+/* Add margin on the left to all but first field section sub-field. */
+.availability-manager .inputEx-ListField-subFieldEl > fieldset
+    > .inputEx-fieldWrapper +.inputEx-fieldWrapper {
+  margin-left: 20px;
+}
+/* Float the first sub-field in a field section to the left. */
+.availability-manager .inputEx-ListField-subFieldEl > fieldset
+    > .inputEx-fieldWrapper:first {
+  float: left;
+}
+/* Float the last sub-field in a field section to the right. */
+.availability-manager .inputEx-ListField-subFieldEl > fieldset
+    > .inputEx-fieldWrapper:last {
+  float: right;
+}
+/* Do not float the sub-field(s) in the middle of a field section. */
+.availability-manager .inputEx-ListField-subFieldEl > fieldset
+    > .inputEx-fieldWrapper {
+  float: none;
 }
 /* Hide some extraneous vertical whitespace. */
 .availability-manager > fieldset > .inputEx-fieldWrapper > .inputEx-label + div
@@ -53,6 +77,8 @@
 }
 /* Use label as section header to present complex fields as sub-sections. */
 .availability-manager .section-with-heading > .inputEx-label {
+  margin-top: 0px;
+  margin-bottom: 5px;
   width: 100%;
 }
 .availability-manager .section-with-heading > .inputEx-label > label {
@@ -82,8 +108,10 @@
 .availability-manager .indent {
   padding-left: 20px;
 }
-/* Hide white bordered element around <select> controls. */
+/* Hide white bordered element around <select> and <textarea> inputs. */
 .availability-manager > fieldset > .gcb-select > .inputEx-label
+    + div.inputEx-Field,
+.availability-manager > fieldset > .gcb-textarea > .inputEx-label
     + div.inputEx-Field {
   border: none !important;
   background-color: #f9f9f9;
@@ -95,13 +123,12 @@
 .availability-manager .content-element > fieldset > .inputEx-fieldWrapper
     +.inputEx-fieldWrapper {
   float: right;
-  width: 200px;
-  margin-left: 20px;
+  width: 150px;
 }
 
 /*
  * Styling for Date/Time Availability Change Triggers subsection.
- */
+*/
 /* Leave room for [Delete] by limiting width of a trigger to less than 100%. */
 .availability-manager .inputEx-ListField-childContainer
     .content-trigger.inputEx-ListField-subFieldEl {
@@ -110,7 +137,7 @@
 /* Align [Delete] button approximately its height above bottom of div. */
 .availability-manager .content-triggers
     > .inputEx-ListField-childContainer > div {
-  display: inline-block;
+  display: block;
   height: 100%;
   vertical-align: bottom;
   position: relative;
@@ -118,9 +145,10 @@
 /* Duplicate gcb-button class for the [Delete] button. */
 .availability-manager .content-triggers
     > .inputEx-ListField-childContainer > div > .inputEx-List-link {
-  display: inline !important;
+  display: block !important;
   position: absolute;
   bottom: 20px;
+  right: 10px;
   float: none;
   margin: 0;
   padding: 4px 12px;
@@ -133,43 +161,37 @@
   font-weight: normal;
   cursor: default;
 }
+/* Display a thin ruling line between more than one content trigger. */
+.availability-manager .content-triggers .inputEx-ListField-childContainer
+    > div:first-child {
+  border: none;
+}
+.availability-manager .content-triggers .inputEx-ListField-childContainer
+    > div {
+  border-top: solid #e0e0e0 1px;
+}
 /* Flow [Add date/time/availability change] button below content triggers. */
 .availability-manager .add-content-trigger {
   display: inline-block;
   width: 100%;
 }
-/* All but first field add margin on the left. */
-.availability-manager .content-trigger > fieldset
-    > .inputEx-fieldWrapper +.inputEx-fieldWrapper {
-  margin-left: 20px;
-}
 /* Cap width of "For course content:" field, and the select it contains. */
-.availability-manager .trigger-content,
-.availability-manager .trigger-content select {
+.availability-manager .content-trigger .content {
   width: 250px;
-}
-/* Float the "For course content:" field to the left, since it is first. */
-.availability-manager .content-trigger > fieldset
-    > .inputEx-fieldWrapper:first {
-  float: left;
 }
 /* Cap width of "Change availability to:" field. */
-.availability-manager .trigger-availability {
-  width: 150px;
+.availability-manager .content-trigger .availability {
+  width: 140px;
 }
-/* "Change availability to:" is the middle of three fields. */
-.availability-manager .content-trigger > fieldset
-    > .inputEx-fieldWrapper {
-  float: none;
+.availability-manager .content-trigger .gcb-select {
+  margin-top: 4px;
 }
-/* Cap width of "At this date & UTC hour:" field. */
-.availability-manager .trigger-when {
+/*
+ * Styling specific to the DateTimeTrigger 'when' fields.
+ */
+/* Cap width of "...this date & UTC hour:" field. */
+.availability-manager .when {
   width: 250px;
-}
-/* Float the "At this date & UTC hour:" field to the right, since it is last. */
-.availability-manager .content-trigger > fieldset
-    > .inputEx-fieldWrapper:last {
-  float: right;
 }
 /* Hide the "minutes" select of the "At this date & UTC hour:" value. */
 .availability-manager .gcb-datetime .inputEx-CombineField-separator
@@ -177,26 +199,23 @@
   display: none;
 }
 /* Append hard-coded hour start ":00 UTC" to replace the "minutes" select. */
-.availability-manager .trigger-when .inputEx-CombineField
-    .inputEx-Field::after {
+.availability-manager .when .inputEx-CombineField .inputEx-Field::after {
   content: ':00 UTC';
 }
-.availability-manager .trigger-when .inputEx-CombineField
+.availability-manager .when .inputEx-CombineField
     +.inputEx-CombineField .inputEx-Field {
   display: none;
 }
 /* Hide the now-unused ":" time parts separators. */
-.availability-manager .trigger-when .inputEx-CombineField
+.availability-manager .when .inputEx-CombineField
     .inputEx-fieldWrapper + .inputEx-CombineField-separator {
   display: none;
 }
 /* Remove some extraneous whitespace. */
-.availability-manager .content-trigger .trigger-when
-    > .inputEx-clear-div {
+.availability-manager .when > .inputEx-clear-div {
   display: none;
 }
-/* Hide unused datetime control [Clear] button. */
-.availability-manager .content-trigger .trigger-when
-    .inputEx-DatePicker-ClearButton {
+/* Hide [Clear] button for required datetime fields. */
+.availability-manager .when.inputEx-required .inputEx-DatePicker-ClearButton {
   display: none;
 }
