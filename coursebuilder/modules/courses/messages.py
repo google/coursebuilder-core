@@ -34,6 +34,26 @@ Course, site, and App Engine administrators always have access and need not be
 listed explicitly.
 """
 
+MILESTONE_TRIGGER_DESCRIPTION_FMT = """
+Date and time of the {}, as well as the overall availability of any course
+resources marked with "Course" availability.
+"""
+
+MILESTONE_TRIGGER_WHEN_DESC_FMT = """
+The date and hour (UTC) at {} when overall course availability will be changed.
+
+Clear this date and time and save the form to remove the course-wide
+availability change scheduled for the {}.
+"""
+
+MILESTONE_TRIGGER_AVAIL_DESC_FMT = """
+The overall course availability will change to this value after the {} date
+and time, affecting any course resources marked with "Course" availability.
+
+Choose '{}' and save the form to remove the course-wide availability change
+scheduled for the {}.
+"""
+
 AVAILABILITY_SHOWN_WHEN_UNAVAILABLE_DESCRIPTION = """
 If checked, the content displays its title in the syllabus even when it is
 private.

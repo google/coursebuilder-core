@@ -110,6 +110,59 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             extra_js_files=['availability.js'])
 
     @classmethod
+    def get_milestone_trigger_schema(cls, milestone, avail_select=None):
+        tmt = triggers.MilestoneTrigger
+        title = '{} Availability'.format(
+            availability_options.option_to_title(milestone))
+        desc = messages.MILESTONE_TRIGGER_DESCRIPTION_FMT.format(milestone)
+        milestone_trigger = schema_fields.FieldRegistry(title,
+            description=desc, extra_schema_dict_values={
+                'className': tmt.registry_css()})
+        milestone_trigger.add_property(schema_fields.SchemaField(
+            'milestone', '', 'string', i18n=False, hidden=True,
+            extra_schema_dict_values={
+                'className': tmt.milestone_css()}))
+
+        ms_text = availability_options.option_to_text(milestone)
+        title = 'At {}, on this date & UTC hour:'.format(ms_text)
+        desc = messages.MILESTONE_TRIGGER_WHEN_DESC_FMT.format(
+            ms_text, ms_text)
+        milestone_trigger.add_property(schema_fields.SchemaField(
+            'when', title, 'datetime', description=desc, i18n=False,
+            optional=True, extra_schema_dict_values={
+                'className': tmt.when_css()}))
+
+        if avail_select is None:
+            avail_select = availability_options.COURSE_WITH_NONE_SELECT_DATA
+        title = 'Change {} availability to:'.format(milestone.split('_')[0])
+        desc = messages.MILESTONE_TRIGGER_AVAIL_DESC_FMT.format(
+            ms_text, availability_options.NONE_SELECTED_TITLE, ms_text)
+        milestone_trigger.add_property(schema_fields.SchemaField(
+            'availability', title, 'string', description=desc, i18n=False,
+            optional=True, select_data=avail_select, extra_schema_dict_values={
+                'className': tmt.availability_css()}))
+        return milestone_trigger
+
+    @classmethod
+    def get_milestone_array_schema(cls, milestone,
+                                   scope_css=None, avail_select=None):
+        if scope_css is None:
+            scope_css = cls._COURSE_WIDE_SCOPE_CSS
+        title = availability_options.option_to_title(milestone)
+        item_type = cls.get_milestone_trigger_schema(
+            milestone, avail_select=avail_select)
+        extra_css = (scope_css + ' ' +
+                     availability_options.option_to_css(milestone))
+        classname = triggers.MilestoneTrigger.array_css(extra_css=extra_css)
+        wrapper_classname = triggers.MilestoneTrigger.array_wrapper_css(
+            extra_css=extra_css)
+        return schema_fields.FieldArray(
+            milestone, title, item_type=item_type, optional=True,
+            extra_schema_dict_values={
+                'className': classname,
+                'wrapperClassName': wrapper_classname})
+
+    @classmethod
     def get_common_element_schema(cls):
         element_settings = schema_fields.FieldRegistry('Element Settings',
             description='Availability settings for course elements',
@@ -226,6 +279,10 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
                 'className': cls._COURSE_AVAILABILITY_CSS,
                 'wrapperClassName': cls._COURSE_AVAILABILITY_WRAPPER_CSS}))
 
+        for milestone in triggers.MilestoneTrigger.COURSE_MILESTONES:
+            course_wide_settings.add_property(cls.get_milestone_array_schema(
+                milestone))
+
         element_settings = cls.get_course_wide_element_schema()
         course_wide_settings.add_property(
             cls.get_element_array_schema(element_settings))
@@ -331,6 +388,8 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         settings = course.app_context.get_environ()
         reg_form = settings.setdefault('reg_form', {})
 
+        course_triggers = triggers.MilestoneTrigger.for_form(
+            course, settings)
         content_triggers = triggers.ContentTrigger.for_form(
             course, settings, selectable_content=cls.content_select(course))
 
@@ -339,6 +398,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             cls.WHITELIST_SETTING: reg_form.get('whitelist', ''),
             cls.ELEMENT_SETTINGS: cls.traverse_course(course)
         }
+        entity.update(course_triggers)
         entity.update(content_triggers)
         return entity
 
@@ -383,7 +443,9 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         payload = transforms.loads(request.get('payload', '{}'))
 
         # Date/Time triggers:
-        #   unit and lesson availability
+        #   unit and lesson availability, course-wide availability
+        triggers.MilestoneTrigger.payload_into_settings(
+            payload, course, settings)
         triggers.ContentTrigger.payload_into_settings(
             payload, course, settings)
 

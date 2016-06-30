@@ -1104,3 +1104,290 @@ class ContentTrigger(AvailabilityTrigger):
 
         self.found.availability = new
         return self.ChangedByAct(current, new)
+
+
+class MilestoneTrigger(AvailabilityTrigger):
+    """Course availability change at the specified start/end date/times.
+
+    Why for_form(), set_into_settings(), and from_payload() perform the
+    manipulations that they do to go back and forth between the way milestone
+    triggers are stored in the settings and the way they are defined in the
+    "Publish > Availability" form schema? (Rather than, say, just storing
+    each milestone trigger keyed by its milestone value into the 'publish'
+    dict?) One reason: complex properties in the "Publish > Availability" form
+    schema are implemented as FieldRegistry objects.
+
+    Each milestone trigger is one of these complex "form within a form"
+    fields, consisting of an availability value (as an AvailabilityTrigger)
+    and a "when" datetime (as a DateTimeTrigger). This is no different from
+    a ContentTrigger, though, so why the additional complexity?
+
+    Content triggers, being multiple and variable in number, are a natural
+    fit for being grouped inside a FieldArray, where a FieldRegistry is
+    easily used as an element of the variable-length array.
+
+    Milestone triggers, on the other hand, are singular (e.g. "course start",
+    "course end"). Unfortunately, it is not possible to add_property() one
+    FieldRegistry (how triggers are represented in the form schema) into
+    another FieldRegistry. Instead, add_sub_registry() must be used, but this
+    results in a bad layout of the form, because sub-registries are always
+    rendered at the very bottom of the form, after all of the properties
+    (SchemaFields and FieldArrays).
+
+    To instead allow these milestone triggers to appear in the form at the
+    most appropriate vertical location (near the top, beneath the existing
+    "Course Availability" <select>, rather than being relegated to the bottom
+    of the form), each milestone trigger FieldRegistry is embedded into a
+    single-value FieldArray, which *can* add_property() directly into the
+    top-level FieldRegistry of the form.
+
+    An added bonus of using a list of encoded triggers as the way all of the
+    milestone triggers are stored is that the same super @classmethods that
+    operate on lists of content triggers can be used with the milestone
+    triggers as well.
+    """
+
+    SETTINGS_NAME = 'milestone_triggers'
+
+    # Explicitly does *not* include the AVAILABILITY_NONE_SELECTED <option>
+    # value ('none', '--- none selected ---') from the form, even though that
+    # is the DEFAULT_AVAILABLITY value used in the form <select>.
+    AVAILABILITY_VALUES = availability_options.COURSE_VALUES
+
+    # ('none', '--- none selected ---') is the default form <option> in the
+    # course start/end availability <select> fields, but any milestone trigger
+    # that did not have an actual (present in COURSE_VALUES) availability
+    # selected will be discarded and not saved in the course settings.
+    NONE_SELECTED = availability_options.AVAILABILITY_NONE_SELECTED
+    DEFAULT_AVAILABILITY = NONE_SELECTED
+
+    COURSE_MILESTONES = ['course_start', 'course_end']
+    KNOWN_MILESTONES = COURSE_MILESTONES
+
+    UNEXPECTED_MILESTONE_FMT = "Milestone '{}' not in {}."
+    UNSPECIFIED_FMT = '{} not specified.'
+
+    def __init__(self, milestone=None, **super_kwargs):
+        """Validates and sets `milestone` and super class properties."""
+        super(MilestoneTrigger, self).__init__(**super_kwargs)
+        self._milestone = self.validate_milestone(milestone)
+
+    @property
+    def name(self):
+        """Returns a "name" string that can be compared, sorted, etc."""
+        return '{}{}{}'.format(super(MilestoneTrigger, self).name,
+            self.NAME_PART_SEP, self.encoded_milestone)
+
+    @classmethod
+    def validate_when(cls, when):
+        """Validates when (encoded or decoded); returns datetime or None."""
+        if when is None:
+            cls.log_issue({'when': when}, 'SKIPPED', cls.kind(),
+                cause=cls.UNSPECIFIED_FMT.format(cls.WHEN_TYPENAME),
+                log_level=logging.info)
+            return None
+        return super(MilestoneTrigger, cls).validate_when(when)
+
+    @classmethod
+    def validate_availability(cls, availability):
+        """Returns availability if in AVAILABILITY_VALUES, otherwise None."""
+        if (not availability) or (availability == cls.NONE_SELECTED):
+            cls.log_issue({'availability': availability}, 'SKIPPED',
+                          cls.kind(), cause='No availability selected.',
+                          log_level=logging.info)
+            return None
+        return super(MilestoneTrigger, cls).validate_availability(availability)
+
+    DATETIME_CSS = 'inputEx-Field ' + AvailabilityTrigger.DATETIME_CSS
+    ARRAY_WRAPPER_CSS = 'inputEx-fieldWrapper'
+
+    @classmethod
+    def milestone_css(cls, extra_css=None):
+        """Returns 'className' value for a 'milestone' SchemaField."""
+        extra_css = [] if not extra_css else [extra_css]
+        classes = ['milestone'] + extra_css
+        return ' '.join(classes)
+
+    @property
+    def milestone(self):
+        """Returns one of the KNOWN_MILESTONES or None.
+
+        The milestone property is a hidden field in the form schema of each
+        milestone trigger on the "Publish > Availability" form. Its sole use
+        is to transition a trigger back and forth between form payload
+        structured as a dict keyed by the milestone, and an unordered list of
+        milestone triggers as they are stored in the settings.
+        """
+        return self._milestone
+
+    @classmethod
+    def validate_milestone(cls, milestone):
+        """Returns milestone if in KNOWN_MILESTONES, otherwise None."""
+        if milestone in cls.KNOWN_MILESTONES:
+            return milestone
+
+        cls.log_issue({'milestone': milestone}, 'INVALID', 'milestone',
+            cause=cls.UNEXPECTED_MILESTONE_FMT.format(
+                milestone, cls.KNOWN_MILESTONES))
+        return None
+
+    @classmethod
+    def encode_milestone(cls, milestone):
+        """Returns validated milestone (encode and decode are identical)."""
+        return cls.validate_milestone(milestone)
+
+    @property
+    def encoded_milestone(self):
+        return self.encode_milestone(self.milestone)
+
+    DECODES = ['milestone']
+
+    @classmethod
+    def validate(cls, encoded):
+        valid_or_not = super(MilestoneTrigger, cls).validate(encoded)
+        cls.validate_property('milestone',
+            cls.validate_milestone, encoded, valid_or_not)
+        return valid_or_not
+
+    @property
+    def decoded(self):
+        """Returns the MilestoneTrigger as dict of *decoded* properties."""
+        present = super(MilestoneTrigger, self).decoded
+        if self.milestone:
+            present['milestone'] = self.milestone
+        return present
+
+    @classmethod
+    def encode(cls, milestone=None, **super_kwargs):
+        """Returns encoded dict containing only encode-able properties."""
+        encoded = super(MilestoneTrigger, cls).encode(**super_kwargs)
+        encoded_milestone = cls.encode_milestone(milestone)
+        if encoded_milestone:
+            encoded['milestone'] = encoded_milestone
+        return encoded
+
+    @property
+    def is_valid(self):
+        """Returns True if the Trigger properties are *all* currently valid."""
+        return self.milestone and super(MilestoneTrigger, self).is_valid
+
+    @classmethod
+    def encoded_defaults(cls, milestone=None, **super_kwargs):
+        """Returns an encoded trigger initialized to any possible defaults.
+
+        See MilestoneTrigger.with_form_defaults() for example usage.
+
+        Args:
+            milestone: an explicitly specified milestone "name"; there are
+                no "unnamed" MilestoneTriggers, so some valid milestone value
+                from the class KNOWN_MILESTONES *must* be supplied
+            super_kwargs: keyword arguments passed on to base class
+        """
+        if not cls.validate_milestone(milestone):
+            return None
+
+        defaults = super(MilestoneTrigger, cls).encoded_defaults(
+            **super_kwargs)
+        defaults['milestone'] = milestone
+        return defaults
+
+    @classmethod
+    def for_form(cls, course, settings, **super_kwargs):
+        """Groups milestone triggers; provides defaults for absent triggers.
+
+        Milestone triggers are stored as a single list that is the value of
+        the SETTINGS_NAME key in the 'publish' dict within the settings.
+
+        Args:
+            course: a Course from which to obtain encoded content triggers
+                from the course settings.
+            settings: passed, untouched, through to the base class.
+            super_kwargs: keyword arguments passed to the base class.
+
+        Returns:
+            A dict with all KNOWN_MILESTONES as keys, and single-value
+            lists as values. The single value in each list is one of:
+            - An encoded milestone trigger obtained from the course settings,
+              for the same milestone as the dict key.
+            - An encoded_defaults() placeholder for the same milestone as the
+              dict key, if that trigger was missing from the course settings.
+
+            Any trigger in the course settings corresponding to a milestone
+            not found in KNOWN_MILESTONES is simply dropped (not included in
+            the returned dict).
+        """
+        lists_of_encoded_triggers = super(MilestoneTrigger, cls).for_form(
+            course, settings, **super_kwargs).itervalues()
+        flattened = [et for ets in lists_of_encoded_triggers for et in ets]
+        deduped = dict([(et['milestone'], et)
+                        for et in cls.separate(flattened, course).encoded])
+        return dict([(m, [deduped[m]]) if m in deduped
+                     else (m, [cls.encoded_defaults(milestone=m)])
+                     for m in cls.KNOWN_MILESTONES])
+
+    @classmethod
+    def set_into_settings(cls, encoded_triggers, course, settings):
+        """Sets encoded course start/end triggers into the supplied settings.
+
+        Sets the value of the SETTINGS_NAME key in the 'publish' dict
+        within the settings to a list containing at most *one* trigger for
+        each of the KNOWN_MILESTONES, in no particular order.
+
+        separate() is used to obtain only the encoded_triggers that are valid
+        milestone triggers. For example, milestone triggers coming from form
+        payload that have no 'when' datetime (because the user pressed the
+        [Clear] button) or have 'none' availability (the user selected the
+        '--- none selected ---' value) are discarded and thus omitted from
+        the milestone triggers to be stored in the settings. Those two user
+        actions are perfectly valid ways to "deactivate" a milestone trigger.
+
+        The remaining valid, still-encoded triggers are then de-duped,
+        retaining only the last (in the order it occurred in the supplied
+        encoded_triggers list) valid trigger corresponding to each of the
+        KNOWN_MILESTONES. The result is stored as a single list in no
+        particular order.
+
+        Args:
+            encoded_triggers: a list of course triggers (typically encoded
+                form payload), in no particular order, and possibly including
+                invalid triggers (e.g. '--- none selected ---' availability,
+                no 'when' date/time, etc.); any invalid triggers are omitted.
+            course: passed, untouched, through to the base class.
+            settings: passed, untouched, through to the base class.
+        """
+        valid_triggers = cls.separate(encoded_triggers, course).encoded
+        deduped = dict([(et['milestone'], et) for et in valid_triggers])
+        super(MilestoneTrigger, cls).set_into_settings(
+            deduped.values(), course, settings)
+
+    @classmethod
+    def from_payload(cls, payload):
+        """Returns all encoded milestone triggers from form payload.
+
+        Milestone triggers in the "Publish > Availability" form are found in
+        single-value FieldArrays with a schema property name corresponding
+        cooresponding to one of the KNOWN_MILESTONES. So, they appear in
+        the payload dict like:
+          {
+            'course_start': [{'milestone': 'course_start', 'when': ...}],
+            'course_end':  [{'milestone': 'course_start', 'when': ...}],
+            ...
+          }
+        The callers of from_payload() expect the triggers to be returned in
+        a single list of all triggers for that SETTINGS_NAME.
+
+        from_paylaod() iterates through all of the KNOWN_MILESTONES, to get()
+        for each of those milestones a single-value list containing the
+        milestone trigger (or possibly just an empty list).
+        """
+        return [et for m in cls.KNOWN_MILESTONES for et in payload.get(m, [])]
+
+    def act(self, course, unused_settings):
+        """Updates course-wide availability as indicated by the trigger."""
+        previous = course.get_course_availability()
+
+        if previous == self.availability:
+            return None
+
+        course.set_course_availability(self.availability)
+        return self.ChangedByAct(previous, self.availability)

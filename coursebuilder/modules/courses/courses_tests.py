@@ -2455,6 +2455,7 @@ class AvailabilityTests(actions.TestBase):
         tdtt = triggers.DateTimeTrigger
         tat = triggers.AvailabilityTrigger
         tct = triggers.ContentTrigger
+        tmt = triggers.MilestoneTrigger
 
         self.assertNotIn(
             self._VALID_BUT_NOT_OUTLINE, tct.ALLOWED_CONTENT_TYPES)
@@ -2467,7 +2468,7 @@ class AvailabilityTests(actions.TestBase):
         # Cron job should log that there were triggers no waiting.
         self._run_availability_jobs(app_context)
         logs = self.get_log()
-        self._untouched_logged(logs, [tct])
+        self._untouched_logged(logs, [tct, tmt])
 
         # POST some past, future, and "bad" triggers to the course settings.
         future_cts = self._some_future_content_triggers(now)

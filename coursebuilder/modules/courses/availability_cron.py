@@ -77,19 +77,24 @@ class UpdateCourseAvailability(jobs.DurableJob):
         tct = triggers.ContentTrigger
         content_acts = tct.act_on_settings(course, settings, now)
 
-        if content_acts.num_consumed:
+        tmt = triggers.MilestoneTrigger
+        course_acts = tmt.act_on_settings(course, settings, now)
+
+        if content_acts.num_consumed or course_acts.num_consumed:
             # At least one of the settings['publish'] triggers was consumed
             # or discarded, so save changes to triggers into the settings.
             settings_saved = course.save_settings(settings)
         else:
             settings_saved = False
 
-        save_course = content_acts.num_changed
+        save_course = content_acts.num_changed or course_acts.num_changed
         if save_course:
             course.save()
 
         tct.log_acted_on(
             namespace, content_acts, save_course, settings_saved)
+        tmt.log_acted_on(
+            namespace, course_acts, save_course, settings_saved)
 
         common_utils.run_hooks(self.RUN_HOOKS.itervalues(), course)
 
