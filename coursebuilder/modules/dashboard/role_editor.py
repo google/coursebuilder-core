@@ -52,6 +52,8 @@ class RoleRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
     EXTRA_JS_FILES = ['role_editor.js']
 
+    EXTRA_CSS_FILES = ['role_editor.css']
+
     XSRF_TOKEN = 'role-edit'
 
     SCHEMA_VERSIONS = ['1.5']

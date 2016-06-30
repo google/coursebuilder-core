@@ -412,37 +412,9 @@ div.current-course {
   padding: 9px 11px;
 }
 /* Styles for role editor */
-div.permission-module {
-  display: inline-block;
-}
 div.permission-item.inputEx-ListField-subFieldEl {
   margin: 0;
   margin-bottom: 8px;
-}
-div.permission-item input {
-  margin: 1px 5px 0px 0px;
-}
-div.permission-item .inputEx-label,
-div.permission-item label,
-div.permission-item .inputEx-Group-legend,
-div.permission-module .inputEx-List-link {
-  display: none;
-}
-div.permission-item .inputEx-fieldWrapper {
-  display: inline-block;
-  vertical-align: text-top;
-  margin: 0;
-}
-.permission-label {
-  display: inline;
-}
-.permission-name {
-  display: none;
-}
-div#formContainer fieldset .permission-item fieldset {
-  margin: 0;
-  border: 0;
-  padding: 0;
 }
 .settings-section {
   width: 700px;

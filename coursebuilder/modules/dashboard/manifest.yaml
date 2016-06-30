@@ -65,6 +65,7 @@ files:
   - modules/dashboard/templates/question_preview.html
   - modules/dashboard/templates/readonly_assessment.html
   - modules/dashboard/templates/readonly_html_assessment.html
+  - modules/dashboard/templates/role_editor.css
   - modules/dashboard/templates/role_editor.js
   - modules/dashboard/templates/role_list.html
   - modules/dashboard/templates/sa_question_editor.js

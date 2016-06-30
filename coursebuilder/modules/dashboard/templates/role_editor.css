@@ -1,0 +1,37 @@
+.inputEx-fieldWrapper {
+  margin-top: 1em;
+}
+div.permission-module {
+  display: table;
+}
+div.permission-module > span {
+  display: block;
+  margin-top: 4px;
+}
+div.permission-item input {
+  margin: 1px 5px 0px 0px;
+}
+div.permission-item .inputEx-label,
+div.permission-item label,
+div.permission-item .inputEx-Group-legend,
+div.permission-module .inputEx-List-link {
+  display: none;
+}
+div.permission-item .inputEx-fieldWrapper {
+  display: inline-block;
+  vertical-align: text-top;
+  margin: 0;
+  max-width: 400px;
+}
+.permission-label {
+  display: inline;
+}
+.permission-name {
+  display: none;
+}
+div#formContainer fieldset .permission-item fieldset {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  margin-left: 1em;
+}
