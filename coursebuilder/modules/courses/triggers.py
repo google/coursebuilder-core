@@ -46,6 +46,7 @@ class DateTimeTrigger(object):
 
     MISSING_TRIGGER_FMT = "'{}' trigger is missing."
     UNEXPECTED_TRIGGER_FMT = 'is_valid ({}) is_future ({}) is_ready ({})'
+    LOG_ISSUE_FMT = '%s %s in namespace %s encoded: "%s" cause: "%s"'
 
     def __init__(self, when=None, **unused):
         """Validates and sets a `when` datetime property."""
@@ -132,8 +133,8 @@ class DateTimeTrigger(object):
         try:
             return utc.text_to_datetime(when)
         except (ValueError, TypeError) as err:
-            cls.log_issue({'when': when}, 'INVALID', cls.WHEN_TYPENAME,
-                          cause=repr(err))
+            logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.WHEN_TYPENAME,
+                namespace_manager.get_namespace(), {'when': when}, repr(err))
             return None
 
     @classmethod
@@ -372,9 +373,10 @@ class DateTimeTrigger(object):
             # Nothing to do, so don't waste time logging, etc.
             return cls.Separated([], [], [], [], [], encoded_triggers)
 
+        namespace = course.app_context.get_namespace_name()
         logging.info(
             'SEPARATING %d encoded %s(s) in %s.', len(encoded_triggers),
-            cls.typename(), course.app_context.get_namespace_name())
+            cls.typename(), namespace)
 
         encoded = []
         decoded = []
@@ -384,8 +386,8 @@ class DateTimeTrigger(object):
 
         for et in encoded_triggers:
             if et is None:
-                cls.log_issue(et, 'MISSING', cls.typename(),
-                    cause=cls.MISSING_TRIGGER_FMT.format(None))
+                logging.warning(cls.LOG_ISSUE_FMT, 'MISSING', cls.typename(),
+                    namespace, et, cls.MISSING_TRIGGER_FMT.format(None))
                 # Nothing at all to do, and do not keep the None values.
                 continue
 
@@ -419,8 +421,8 @@ class DateTimeTrigger(object):
                 ready.append(dt)
                 continue
 
-            cls.log_issue(et, 'UNEXPECTED', cls.typename(),
-                cause=cls.UNEXPECTED_TRIGGER_FMT.format(
+            logging.warning(cls.LOG_ISSUE_FMT, 'UNEXPECTED', cls.typename(),
+                namespace, et, cls.UNEXPECTED_TRIGGER_FMT.format(
                     is_valid, is_future, is_ready))
 
         cls.sort(ready)
@@ -630,22 +632,6 @@ class DateTimeTrigger(object):
         """Returns a verbose string of the trigger intended for logging."""
         return '{}({})'.format(self.__class__.typename(), self.name_as_items)
 
-    @classmethod
-    def log_issue(cls, encoded, what, why,
-                  namespace=None, cause='', log_level=logging.warning):
-        """Assemble a trigger error message from optional parts and log it."""
-        # "INVALID content in...
-        parts = ["{} '{}' in".format(what, why)]
-        if namespace is None:  # Note: Blank namespace is permitted and valid.
-            namespace = namespace_manager.get_namespace()
-        parts.append('namespace {}'.format(namespace))
-        # "INVALID content in... encoded: {avail...} ...
-        parts.append('encoded: "{}"'.format(encoded))
-        # "INVALID content in... encoded: {avail...} cause: ValueError: ...
-        if cause:
-            parts.append('cause: "{}"'.format(cause))
-        log_level(' '.join(parts))
-
 
 class AvailabilityTrigger(DateTimeTrigger):
     """Availability change to be applied at the specified date/time."""
@@ -688,8 +674,9 @@ class AvailabilityTrigger(DateTimeTrigger):
         if availability in cls.AVAILABILITY_VALUES:
             return availability
 
-        cls.log_issue({'availability': availability}, 'INVALID',
-            'availability', cause=cls.UNEXPECTED_AVAIL_FMT.format(
+        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', 'availability',
+            namespace_manager.get_namespace(), {'availability': availability},
+            cls.UNEXPECTED_AVAIL_FMT.format(
                 availability, cls.AVAILABILITY_VALUES))
         return None
 
@@ -819,8 +806,9 @@ class ContentTrigger(AvailabilityTrigger):
         if content_type in cls.ALLOWED_CONTENT_TYPES:
             return content_type
 
-        cls.log_issue({'content_type': content_type}, 'INVALID',
-            cls.KEY_TYPENAME, cause=cls.UNEXPECTED_CONTENT_FMT.format(
+        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
+            namespace_manager.get_namespace(), {'content_type': content_type},
+            cls.UNEXPECTED_CONTENT_FMT.format(
                 content_type, cls.ALLOWED_CONTENT_TYPES))
         return None
 
@@ -837,8 +825,8 @@ class ContentTrigger(AvailabilityTrigger):
             return resource.Key(content_type, content_id)
         except (AssertionError, AttributeError, ValueError) as err:
             encoded = {'content_type': content_type, 'content_id': content_id}
-            cls.log_issue(encoded, 'INVALID', cls.KEY_TYPENAME,
-                          cause=repr(err))
+            logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
+                namespace_manager.get_namespace(), encoded, repr(err))
             return None
 
     @classmethod
@@ -859,6 +847,8 @@ class ContentTrigger(AvailabilityTrigger):
             Either a valid content resource.Key obtained from one or more of
             the supplied keyword arguments, or None.
         """
+        namespace = namespace_manager.get_namespace()
+
         # If `content` was not provided, validate content type and ID instead.
         if not content:
             return cls.validate_content_type_and_id(content_type, content_id)
@@ -870,8 +860,8 @@ class ContentTrigger(AvailabilityTrigger):
             try:
                 content = resource.Key.fromstring(content)
             except (AssertionError, AttributeError, ValueError) as err:
-                cls.log_issue({'content': content}, 'INVALID',
-                              cls.KEY_TYPENAME, cause=repr(err))
+                logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
+                    namespace, {'content': str(content)}, repr(err))
                 return None
         # else:
         # `content` is already a resource.Key (such as when the ContentTrigger
@@ -883,8 +873,9 @@ class ContentTrigger(AvailabilityTrigger):
 
         # `content` is now a valid resource.Key, but resource.Key.type is not
         # one of the ALLOWED_CONTENT_TYPES.
-        cls.log_issue({'content': str(content)}, 'INVALID', cls.KEY_TYPENAME,
-            cause=cls.UNEXPECTED_CONTENT_FMT.format(
+        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
+            namespace, {'content': str(content)},
+            cls.UNEXPECTED_CONTENT_FMT.format(
                 content.type, cls.ALLOWED_CONTENT_TYPES))
         return None
 
@@ -1020,27 +1011,30 @@ class ContentTrigger(AvailabilityTrigger):
 
     @classmethod
     def get_content_finder(cls, content):
+        namespace = namespace_manager.get_namespace()
         if not content:
-            cls.log_issue({'content': content}, 'UNSPECIFIED',
-                cls.KEY_TYPENAME,
-                cause='"{}" has no content finder function.'.format(content))
+            logging.warning(cls.LOG_ISSUE_FMT, 'UNSPECIFIED', cls.KEY_TYPENAME,
+                namespace, {'content': content},
+                '"{}" has no content finder function.'.format(content))
             return None
 
         find_func = cls.CONTENT_TYPE_FINDERS.get(content.type)
         if find_func:
             return find_func
 
-        cls.log_issue({'content': str(content)}, 'UNEXPECTED',
-            cls.KEY_TYPENAME,
-            cause=cls.UNEXPECTED_CONTENT_FMT.format(
+        logging.warning(cls.LOG_ISSUE_FMT, 'UNEXPECTED', cls.KEY_TYPENAME,
+            namespace, {'content': str(content)},
+            cls.UNEXPECTED_CONTENT_FMT.format(
                 content.type, cls.ALLOWED_CONTENT_TYPES))
         return None
 
     @classmethod
     def find_content_in_course(cls, content, course, find_func=None):
+        namespace = namespace_manager.get_namespace()
         if not course:
-            cls.log_issue({'content': str(content)}, 'ABSENT', 'course',
-                cause='CANNOT find content in "{}" course.'.format(course))
+            logging.warning(cls.LOG_ISSUE_FMT, 'ABSENT', 'course',
+                namespace, {'content': str(content)},
+                'CANNOT find content in "{}" course.'.format(course))
             return None
 
         if not find_func:
@@ -1053,8 +1047,9 @@ class ContentTrigger(AvailabilityTrigger):
         if found:
             return found
 
-        cls.log_issue({'content': str(content)}, 'OBSOLETE', cls.KEY_TYPENAME,
-                      cause=cls.MISSING_CONTENT_FMT.format(content))
+        logging.warning(cls.LOG_ISSUE_FMT, 'OBSOLETE', cls.KEY_TYPENAME,
+            namespace, {'content': str(content)},
+            cls.MISSING_CONTENT_FMT.format(content))
         return None
 
     @classmethod
@@ -1072,6 +1067,8 @@ class ContentTrigger(AvailabilityTrigger):
             A list of the remaining content triggers (encoded in form payload
             and stored settings form) whose associated content still exist.
         """
+        namespace = namespace_manager.get_namespace()
+
         # Course content associated with existing availability triggers could
         # have been deleted since the trigger itself was created. If the
         # content whose availability was meant to be updated by the trigger
@@ -1089,8 +1086,9 @@ class ContentTrigger(AvailabilityTrigger):
             if encoded_content in selectable_content:
                 triggers_with_content.append(encoded)
             else:
-                cls.log_issue(encoded, 'OBSOLETE', cls.KEY_TYPENAME,
-                    cause=cls.MISSING_CONTENT_FMT.format(encoded_content))
+                logging.warning(cls.LOG_ISSUE_FMT, 'OBSOLETE',
+                    cls.KEY_TYPENAME, namespace, encoded,
+                    cls.MISSING_CONTENT_FMT.format(encoded_content))
 
         return triggers_with_content
 
@@ -1182,9 +1180,9 @@ class MilestoneTrigger(AvailabilityTrigger):
     def validate_when(cls, when):
         """Validates when (encoded or decoded); returns datetime or None."""
         if when is None:
-            cls.log_issue({'when': when}, 'SKIPPED', cls.kind(),
-                cause=cls.UNSPECIFIED_FMT.format(cls.WHEN_TYPENAME),
-                log_level=logging.info)
+            logging.info(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
+                namespace_manager.get_namespace(), {'when': when},
+                cls.UNSPECIFIED_FMT.format(cls.WHEN_TYPENAME))
             return None
         return super(MilestoneTrigger, cls).validate_when(when)
 
@@ -1192,9 +1190,9 @@ class MilestoneTrigger(AvailabilityTrigger):
     def validate_availability(cls, availability):
         """Returns availability if in AVAILABILITY_VALUES, otherwise None."""
         if (not availability) or (availability == cls.NONE_SELECTED):
-            cls.log_issue({'availability': availability}, 'SKIPPED',
-                          cls.kind(), cause='No availability selected.',
-                          log_level=logging.info)
+            logging.info(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
+                namespace_manager.get_namespace(),
+                {'availability': availability}, 'No availability selected.')
             return None
         return super(MilestoneTrigger, cls).validate_availability(availability)
 
@@ -1225,9 +1223,9 @@ class MilestoneTrigger(AvailabilityTrigger):
         """Returns milestone if in KNOWN_MILESTONES, otherwise None."""
         if milestone in cls.KNOWN_MILESTONES:
             return milestone
-
-        cls.log_issue({'milestone': milestone}, 'INVALID', 'milestone',
-            cause=cls.UNEXPECTED_MILESTONE_FMT.format(
+        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID' 'milestone',
+            namespace_manager.get_namespace(), {'milestone': milestone},
+            cls.UNEXPECTED_MILESTONE_FMT.format(
                 milestone, cls.KNOWN_MILESTONES))
         return None
 

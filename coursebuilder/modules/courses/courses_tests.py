@@ -2399,12 +2399,12 @@ class AvailabilityTests(actions.TestBase):
 
     def _error_logged(self, logs, trigger, what, why, cause):
         self.assertRegexpMatches(logs,
-            '.*%s \'%s\' in namespace %s encoded: "%s" cause: "%s".*' % (
+            '.*%s %s in namespace %s encoded: "%s" cause: "%s".*' % (
                 what, why, self.NAMESPACE, trigger, cause))
 
     def _error_not_logged(self, logs, trigger, what, why, cause):
         self.assertNotRegexpMatches(logs,
-            '.*%s \'%s\' in namespace %s encoded: "%s" cause: "%s".*' % (
+            '.*%s %s in namespace %s encoded: "%s" cause: "%s".*' % (
                 what, why, self.NAMESPACE, trigger, cause))
 
     def _unchanged_logged(self, logs, current, trigger, course, trigger_cls):
