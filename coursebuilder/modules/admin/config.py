@@ -48,8 +48,7 @@ SCHEMA_JSON_TEMPLATE = """
         "properties": {
             "label" : {"optional": true, "type": "string"},
             "name" : {"optional": true, "type": "string"},
-            "value": {"optional": true, "type": "%s"},
-            "is_draft": {"optional": true, "type": "boolean"}
+            "value": {"optional": true, "type": "%s"}
         }
     }
     """
@@ -61,11 +60,7 @@ SCHEMA_ANNOTATIONS_TEMPLATE = [
         'label': 'Setting Name', '_type': 'uneditable'}),
     (['properties', 'name', '_inputex'], {
         'label': 'Internal Name', '_type': 'uneditable'}),
-    oeditor.create_bool_select_annotation(
-        ['properties', 'is_draft'], 'Status', 'Pending', 'Active',
-        description='<strong>Active</strong>: This value is active and '
-        'overrides all other defaults.<br/><strong>Pending</strong>: This '
-        'value is not active yet, and the default settings still apply.')]
+]
 
 
 class ConfigPropertyRights(object):
@@ -146,6 +141,14 @@ class ConfigPropertyEditor(object):
                 'name': key,
                 'xsrf_token': cgi.escape
                     (self.create_xsrf_token('config_reset'))}))
+        # Suppress delete button when setting is not currently overridden
+        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            try:
+                entity = config.ConfigPropertyEntity.get_by_key_name(key)
+            except db.BadKeyError:
+                entity = None
+        if not entity or entity.is_draft:
+            delete_url = None
 
         template_values['main_content'] = oeditor.ObjectEditor.get_html_for(
             self, ConfigPropertyEditor.get_schema_json(item),
@@ -153,37 +156,6 @@ class ConfigPropertyEditor(object):
             key, rest_url, exit_url, delete_url=delete_url)
 
         self.render_page(template_values, in_action='settings')
-
-    def post_config_override(self):
-        """Handles 'override' property action."""
-        name = self.request.get('name')
-
-        # Find item in registry.
-        item = None
-        if name and name in config.Registry.registered.keys():
-            item = config.Registry.registered[name]
-        if not item:
-            self.redirect('?action=settings' % self.LINK_URL)
-
-        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
-            # Add new entity if does not exist.
-            try:
-                entity = config.ConfigPropertyEntity.get_by_key_name(name)
-            except db.BadKeyError:
-                entity = None
-            if not entity:
-                entity = config.ConfigPropertyEntity(key_name=name)
-                entity.value = str(item.value)
-                entity.is_draft = True
-                entity.put()
-
-            models.EventEntity.record(
-                'override-property', users.get_current_user(),
-                transforms.dumps({
-                    'name': name, 'value': str(entity.value)}))
-
-        self.redirect('%s?%s' % (self.URL, urllib.urlencode(
-            {'action': 'config_edit', 'name': name})))
 
     def post_config_reset(self):
         """Handles 'reset' property action."""
@@ -456,20 +428,18 @@ class ConfigPropertyItemRESTHandler(utils.BaseRESTHandler):
         except db.BadKeyError:
             entity = None
 
-        if not entity:
-            transforms.send_json_response(
-                self, 404, 'Object not found.', {'key': key})
-        else:
-            entity_dict = {'name': key, 'label': item.label,
-                'is_draft': entity.is_draft}
+        entity_dict = {'name': key, 'label': item.label}
+        if entity and not entity.is_draft:
             entity_dict['value'] = transforms.string_to_value(
                 entity.value, item.value_type)
-            json_payload = transforms.dict_to_json(entity_dict)
-            transforms.send_json_response(
-                self, 200, 'Success.',
-                payload_dict=json_payload,
-                xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
-                    'config-property-put'))
+        else:
+            entity_dict['value'] = item.default_value
+        json_payload = transforms.dict_to_json(entity_dict)
+        transforms.send_json_response(
+            self, 200, 'Success.',
+            payload_dict=json_payload,
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
+                'config-property-put'))
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
@@ -497,6 +467,11 @@ class ConfigPropertyItemRESTHandler(utils.BaseRESTHandler):
             transforms.send_json_response(
                 self, 404, 'Object not found.', {'key': key})
             return
+        if not entity:
+            entity = config.ConfigPropertyEntity(key_name=key)
+            old_value = None
+        else:
+            old_value = entity.value
 
         payload = request.get('payload')
         json_object = transforms.loads(payload)
@@ -511,9 +486,9 @@ class ConfigPropertyItemRESTHandler(utils.BaseRESTHandler):
             return
 
         # Update entity.
-        old_value = entity.value
+
         entity.value = str(new_value)
-        entity.is_draft = json_object['is_draft']
+        entity.is_draft = False
         entity.put()
         if item.after_change:
             item.after_change(item, old_value)

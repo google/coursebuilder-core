@@ -1732,10 +1732,6 @@ class AdminAspectTest(actions.TestBase):
         assert_contains('gcb_admin_user_emails', response.body)
         assert_contains('[test_admin_list@google.com]', response.body)
         assert_contains(
-            'admin?action=config_override&amp;'
-            'name=gcb_admin_user_emails',
-            response.body)
-        assert_contains(
             'admin?action=config_edit&amp;'
             'name=gcb_config_update_interval_sec',
             response.body)

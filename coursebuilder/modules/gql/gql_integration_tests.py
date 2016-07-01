@@ -114,8 +114,6 @@ class QueryAppTests(integration.TestBase):
         ).click_site_settings(
         ).click_override(
             'gcb_gql_service_enabled'
-        ).set_status(
-            'Active'
         ).set_value(
             enabled
         ).click_save()

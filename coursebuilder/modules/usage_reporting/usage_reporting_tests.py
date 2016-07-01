@@ -150,14 +150,6 @@ class ConfigTests(UsageReportingTestBase):
         self.assertEquals(expected, MockSender.get_sent())
 
     def test_admin_post_change_report_allowed(self):
-        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
-            'config_override')
-        response = self.post(
-            '/admin?action=config_override&name=%s' %
-            config.REPORT_ALLOWED.name,
-            {'xsrf_token': xsrf_token})
-        response = self.get('/rest/config/item?key=%s' %
-                            config.REPORT_ALLOWED.name)
         payload = {
             'name': config.REPORT_ALLOWED.name,
             'value': True,

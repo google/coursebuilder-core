@@ -202,7 +202,7 @@ class BaseAdminHandler(ConfigPropertyEditor):
     default_action = 'courses'
     get_actions = ['courses', 'config_edit', 'settings', 'deployment',
         'console']
-    post_actions = ['config_override', 'config_reset', 'console_run']
+    post_actions = ['config_reset', 'console_run']
 
     class AbstractDbTypeDescriber(object):
 
@@ -638,25 +638,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
         def get_actions(name, override):
             """Creates actions appropriate to an item."""
-            if override:
-                return get_action_html('Edit', {
-                    'action': 'config_edit', 'name': name}, idName=name)
-            else:
-                return safe_dom.Element(
-                    'form',
-                    action='%s?%s' % (
-                        self.LINK_URL,
-                        urllib.urlencode(
-                            {'action': 'config_override', 'name': name})),
-                    method='POST'
-                ).add_child(
-                    safe_dom.Element(
-                        'input', type='hidden', name='xsrf_token',
-                        value=self.create_xsrf_token('config_override'))
-                ).add_child(
-                    safe_dom.Element(
-                        'button', className='gcb-button', type='submit', id=name
-                    ).add_text('Override'))
+            return get_action_html('Edit', {
+                'action': 'config_edit', 'name': name}, idName=name)
 
         def get_doc_string(item, default_value):
             """Formats an item documentation string for display."""

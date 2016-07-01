@@ -75,8 +75,6 @@ class SampleCourseTests(integration.TestBase):
         ).click_override_admin_user_emails(
         ).set_value(
             email
-        ).set_status(
-            'Active'
         ).click_save(
         ).click_close(
         ).verify_admin_user_emails_contains(email)

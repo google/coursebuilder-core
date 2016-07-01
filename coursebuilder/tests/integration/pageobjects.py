@@ -239,11 +239,6 @@ class EditorPageObject(PageObject):
 
         self.wait().until(successful_butter_bar)
 
-    def set_status(self, status):
-        select.Select(self.find_element_by_name(
-            'is_draft')).select_by_visible_text(status)
-        return self
-
     def _wait_until_button_enabled(self, clickable):
         def button_enabled(driver):
             return ('inputEx-Button-disabled' not in
@@ -421,7 +416,7 @@ class RootPage(PageObject):
         self.load(base_url, suffix='/modules/admin?action=settings')
         AdminSettingsPage(self._tester).click_override(
             'gcb_courses_config'
-        ).set_status('Active').click_save()
+        ).click_save()
 
         # Registration acts different depending on whether any nickname is known
         # globally for a user.  Since sereval tests attempt to register the
@@ -1553,7 +1548,7 @@ class AdminSettingsPage(PageObject):
     """Page object for the admin settings."""
 
     def click_override_admin_user_emails(self):
-        self.find_element_by_css_selector('button.gcb-button', index=0).click()
+        self.find_element_by_css_selector('a.gcb-button', index=0).click()
         return ConfigPropertyOverridePage(self._tester)
 
     def click_override(self, setting_name):

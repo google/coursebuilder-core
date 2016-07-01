@@ -219,8 +219,6 @@ class TestBase(suite.TestBase):
             setting_name
         ).set_value(
             state
-        ).set_status(
-            'Active'
         ).click_save(
         ).click_close()
 
