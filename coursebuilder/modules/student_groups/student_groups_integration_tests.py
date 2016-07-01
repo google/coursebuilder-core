@@ -45,7 +45,11 @@ class AvailabilityTests(integration.TestBase):
         )
 
         # Use availability page to set different students for whitelist
-        # for course and group.
+        # for course and group. Also confirm that user is warned of unsaved
+        # changes when switching between course-wide settings and specific
+        # student group settings. Confirm that transition does not occur when
+        # [Cancel] is chosen, and confirm that changes are discarded when [OK]
+        # is chosen.
         self.load_dashboard(
             name
         ).click_leftnav_item_by_id(
@@ -78,18 +82,45 @@ class AvailabilityTests(integration.TestBase):
         ).wait_until_button_enabled(
             'Save'
         ).set_whitelisted_students(
-            ['group_student@foo.com'],
+            ['group_student@example.com'],
             'members'
+        ).select_student_group(
+            'Course',
+        ).cancel_unsaved_changes_warning(
+            'Student Group: My New Group',
         ).click_save(
             status_message='Saved'
-        ).select_student_group(
-            'Course'
         ).wait_until_button_enabled(
             'Save'
         ).set_whitelisted_students(
-            ['course_student@foo.com'],
+            ['not_a_group_student@example.com'],
+            'members'
+        ).select_student_group(
+            'Course',
+        ).ignore_unsaved_changes_warning(
+            'Student Group: My New Group',
+        ).set_whitelisted_students(
+            ['course_student@example.com'],
             'whitelist'
+        ).wait_until_button_enabled(
+            'Save'
+        ).select_student_group(
+            'Student Group: My New Group',
+        ).cancel_unsaved_changes_warning(
+            'Course',
         ).click_save(
+            status_message='Saved'
+        ).set_whitelisted_students(
+            ['not_a_course_student@example.com'],
+            'whitelist'
+        ).wait_until_button_enabled(
+            'Save'
+        ).select_student_group(
+            'Student Group: My New Group',
+        ).ignore_unsaved_changes_warning(
+            'Course',
+        ).wait_until_button_enabled(
+            'Save'
         )
 
         # Re-navigate to availability page.  Verify that corrent whitelist
@@ -99,14 +130,14 @@ class AvailabilityTests(integration.TestBase):
         ).click_availability(
             cls=student_groups_pageobjects.CourseAvailabilityPage
         ).verify_whitelisted_students(
-            'course_student@foo.com',
+            'course_student@example.com',
             'whitelist'
         ).select_student_group(
             'Student Group: My New Group'
         ).wait_until_button_enabled(
             'Save'
         ).verify_whitelisted_students(
-            'group_student@foo.com',
+            'group_student@example.com',
             'members'
         )
 

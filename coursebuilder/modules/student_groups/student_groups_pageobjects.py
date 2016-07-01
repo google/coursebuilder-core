@@ -80,3 +80,34 @@ class CourseAvailabilityPage(pageobjects.CourseAvailabilityPage):
         select.Select(self.find_element_by_name(
             'student_group')).select_by_visible_text(option_text)
         return self
+
+    def unsaved_changes_warning(self, option_text):
+        if option_text == "Course":
+            prefix = 'These course-wide availablity settings'
+        else:
+            prefix = 'These student group availability settings'
+        return (prefix + ' have unsaved changes that will be' +
+          ' lost if you switch.\n\nOK to switch anyway?')
+
+    def cancel_unsaved_changes_warning(self, option_text):
+        return self._handle_unsaved_changes_warning(option_text, dismiss=True)
+
+    def ignore_unsaved_changes_warning(self, option_text):
+        return self._handle_unsaved_changes_warning(option_text, accept=True)
+
+    def _handle_unsaved_changes_warning(self, option_text,
+                                        dismiss=False, accept=False):
+        # One and only one of `dismiss` or `accept` must be True.
+        self._tester.assertNotEqual(dismiss, accept)
+        alert = self.switch_to_alert()
+        self._tester.assertEqual(
+            self.unsaved_changes_warning(option_text),
+            alert.text)
+        if accept:
+            alert.accept()
+        if dismiss:
+            alert.dismiss()
+        self._tester.assertEqual(
+            self.where_am_i(),
+            'dashboard?action=availability')
+        return self

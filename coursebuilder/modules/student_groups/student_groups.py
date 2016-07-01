@@ -1001,11 +1001,18 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             element['availability'] = overridden_availability
         return elements
 
+    @classmethod
+    def _selected_student_group_id(cls, request):
+        try:
+            return int(request.get('key'))
+        except (ValueError, TypeError):
+            return None
+
     def get(self):
-        student_group_id = self.request.get('key')
+        student_group_id = self._selected_student_group_id(self.request)
 
         course = self.get_course()
-        if not student_group_id or student_group_id == 'None':
+        if not student_group_id:
             student_group_settings = {
                 self._ELEMENT_SETTINGS:
                     self._traverse_course(course, NoOverridesStudentGroup()),
@@ -1014,7 +1021,6 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             student_group_settings.update(
                 ContentOverrideTrigger.for_form(course, None))
         else:
-            student_group_id = int(student_group_id)
             if not roles.Roles.is_user_allowed(self.app_context, custom_module,
                                                EDIT_STUDENT_GROUPS_PERMISSION):
                 transforms.send_json_response(self, 401, 'Access denied.')
