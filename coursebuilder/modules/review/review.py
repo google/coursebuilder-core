@@ -1073,6 +1073,10 @@ class SubmissionDataSource(data_sources.AbstractDbTableRestDataSource):
         return 'Submissions'
 
     @classmethod
+    def get_default_chunk_size(cls):
+        return 100
+
+    @classmethod
     def get_context_class(cls):
         return data_sources.DbTableContext
 
