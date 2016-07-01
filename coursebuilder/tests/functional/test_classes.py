@@ -93,7 +93,10 @@ def _add_data_entity(app_context, entity_type, data):
     try:
         namespace_manager.set_namespace(app_context.get_namespace_name())
 
-        new_object = entity_type()
+        if entity_type is models.ContentChunkEntity:
+            new_object = entity_type(content_type='required field')
+        else:
+            new_object = entity_type()
         new_object.data = data
         new_object.put()
         return new_object
@@ -101,17 +104,27 @@ def _add_data_entity(app_context, entity_type, data):
         namespace_manager.set_namespace(old_namespace)
 
 
-def _assert_identical_data_entity_exists(app_context, test_object):
+def _assert_identical_data_entity_exists(test, app_context, test_object,
+                                         exclude_properties=None):
     """Checks a specific entity exists in a given namespace."""
     old_namespace = namespace_manager.get_namespace()
     try:
         namespace_manager.set_namespace(app_context.get_namespace_name())
 
         entity_class = test_object.__class__
-        existing_object = entity_class().get(test_object.key())
+        existing_object = entity_class.get(test_object.key())
+        exclude_properties = exclude_properties or set()
         assert existing_object
-        assert existing_object.data == test_object.data
-        assert existing_object.key().id() == test_object.key().id()
+        for prop_name, prop in entity_class.properties().iteritems():
+            if prop_name in exclude_properties:
+                continue
+            test.assertEquals(
+                prop.get_value_for_datastore(existing_object),
+                prop.get_value_for_datastore(test_object),
+                'Equality of property %s in class %s' % (
+                    prop_name, test_object.__class__.__name__))
+        test.assertEquals(
+            existing_object.key().id_or_name(), test_object.key().id_or_name())
     finally:
         namespace_manager.set_namespace(old_namespace)
 
@@ -734,8 +747,13 @@ class InfrastructureTest(actions.TestBase):
             raise Exception(errors)
         assert src_course_out_a.get_units() == dst_course_out_b.get_units()
         for dependent in dependents:
+            exclude_properties = set()
+            if dependent.entity_type() == 'ContentChunkEntity':
+                # last_modified is auto_now_add, so won't compare equal.
+                exclude_properties.add('last_modified')
             _assert_identical_data_entity_exists(
-                dst_course_out_b.app_context, dependent)
+                self, dst_course_out_b.app_context, dependent,
+                exclude_properties=exclude_properties)
 
         # Import imported 1.3 course into 1.3.
         errors = []
@@ -745,8 +763,13 @@ class InfrastructureTest(actions.TestBase):
             raise Exception(errors)
         assert dst_course_out_c.get_units() == dst_course_out_b.get_units()
         for dependent in dependents:
+            exclude_properties = set()
+            if dependent.entity_type() == 'ContentChunkEntity':
+                # last_modified is auto_now_add, so won't compare equal.
+                exclude_properties.add('last_modified')
             _assert_identical_data_entity_exists(
-                dst_course_out_c.app_context, dependent)
+                self, dst_course_out_c.app_context, dependent,
+                exclude_properties=exclude_properties)
 
         # Test delete.
         units_to_delete = dst_course_a.get_units()
@@ -5077,7 +5100,8 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         # Verify archive has only the non-error type written.
         archive = etl._init_archive(self.archive_path, archive_type)
         archive.open('r')
-        course_models = set(['I18nProgressEntity.json',
+        course_models = set(['ContentChunkEntity.json',
+                             'I18nProgressEntity.json',
                              'LabelEntity.json',
                              'RoleEntity.json',
                              'ResourceBundleEntity.json',
@@ -5384,7 +5408,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
         # check uploaded question matches original
         _assert_identical_data_entity_exists(
-            sites.get_all_courses()[0], question)
+            self, sites.get_all_courses()[0], question)
 
     def test_upload_course_with_force_overwrite_succeeds(self):
         """Tests upload into non-empty course with --force_overwrite."""

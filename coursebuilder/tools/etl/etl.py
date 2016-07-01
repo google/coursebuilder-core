@@ -1613,11 +1613,22 @@ def _get_entity_key(entity_class, entity):
 
 
 def _build_entity(entity_class, schema, entity, key):
-    new_instance = entity_class(key=key)
-    typed_dict = transforms.json_to_dict(
-        entity, schema, permit_none_values=True)
-    entity_transforms.dict_to_entity(new_instance, typed_dict)
-    return new_instance
+    kwargs = transforms.json_to_dict(entity, schema, permit_none_values=True)
+    current_properties = entity_class.properties()
+    for name in list(kwargs.keys()):
+        if name not in current_properties:
+            # Remove args for fields that used to be present (and were exported
+            # when those fields were current), but are no longer supported.
+            kwargs.pop(name)
+        elif (isinstance(current_properties[name], db.ReferenceProperty) and
+              isinstance(kwargs[name], basestring)):
+            # Reference args need to be passed in as actual reference keys,
+            # not stringified versions.
+            kwargs[name] = entity_transforms.string_to_key(kwargs[name])
+        # else:
+        #     All other field types in kwargs do not need conversion beyond
+        #     that already done by transforms.json_to_dict().
+    return entity_class(key=key, **kwargs)
 
 
 def _validate_arguments(parsed_args):
