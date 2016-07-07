@@ -51,7 +51,7 @@ class Site(graphene.ObjectType):
         self.data = data
 
     def resolve_title(self, args, info):
-        return self.data['title']
+        return self.data.get('title')
 
     def resolve_logo(self, args, info):
         try:
@@ -81,7 +81,10 @@ class CourseCategory(graphene.ObjectType):
 
 
 def resolve_site(gql_root, args, info):
-    return Site(transforms.loads(settings.COURSE_EXPLORER_SETTINGS.value))
+    try:
+        return Site(transforms.loads(settings.COURSE_EXPLORER_SETTINGS.value))
+    except ValueError:
+        return Site({})
 
 
 def resolve_start_date(gql_course, args, info):
