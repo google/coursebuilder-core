@@ -18,6 +18,7 @@ __author__ = [
     'nretallack@google.com (Nick Retallack)',
 ]
 
+import appengine_config
 from modules.explorer import constants
 from controllers import utils
 from common import jinja_utils
@@ -44,6 +45,8 @@ class ExplorerHandler(utils.ApplicationHandler, utils.QueryableRouteMixin):
         self.response.write(jinja_utils.get_template(
             'explorer.html', [constants.TEMPLATE_DIR], handler=self).render({
                 'institution_name': get_institution_name(),
+                'use_flattened_html_imports': (
+                    appengine_config.USE_FLATTENED_HTML_IMPORTS),
             }))
 
 global_routes = utils.map_handler_urls([

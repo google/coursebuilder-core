@@ -20,7 +20,10 @@
     </style>
 
     <script src="/static/polymer-1.2.0/webcomponentsjs/webcomponents-lite.js"></script>
-    <link rel="import" href="/modules/explorer/_static/components/course-explorer.html">
+    {% if use_flattened_html_imports %}
+      <link rel="import" href="/static/html-imports/explorer-imports.html">
+    {% endif %}
+    <link rel="import" href="/modules/explorer/_static/components/course-explorer/course-explorer.html">
   </head>
   <body>
     <course-explorer></course-explorer>

@@ -74,6 +74,11 @@ if [ "$ALLOW_STATIC_SERV" = true ] ; then
     STATIC_YAML_TEXT+=$"  static_dir: lib/_static/$KEY"$'\n'
     STATIC_YAML_TEXT+=$"  expiration: 10m"$'\n'
   done
+
+  # Also serve a directory for html imports
+  STATIC_YAML_TEXT+=$"- url: /static/html-imports"$'\n'
+  STATIC_YAML_TEXT+=$"  static_dir: lib/_static/html-imports"$'\n'
+  STATIC_YAML_TEXT+=$"  expiration: 10m"$'\n'
 fi
 
 # '\n' at EOF is truncated, unless followed by another character, like ' '

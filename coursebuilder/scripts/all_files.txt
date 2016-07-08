@@ -177,6 +177,8 @@ scripts/common.sh
 scripts/config.sh
 scripts/deploy.sh
 scripts/etl.sh
+scripts/flatten_polymer_imports.py
+scripts/flatten_polymer_imports.sh
 scripts/modules.py
 scripts/modules.sh
 scripts/parse_start_args.sh

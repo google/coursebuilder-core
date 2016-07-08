@@ -18,6 +18,7 @@ __author__ = [
     'davyrisso@google.com (Davy Risso)',
 ]
 
+import appengine_config
 from common import jinja_utils
 from common.crypto import XsrfTokenManager
 from controllers import utils
@@ -49,6 +50,8 @@ class GuideHandler(utils.ApplicationHandler, utils.QueryableRouteMixin):
                 'event_xsrf_token': get_event_xsrf_token(),
                 'can_record_student_events': (
                     get_can_record_student_events(self)),
+                'use_flattened_html_imports': (
+                    appengine_config.USE_FLATTENED_HTML_IMPORTS),
             }))
 
 

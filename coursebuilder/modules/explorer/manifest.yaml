@@ -21,7 +21,7 @@ files:
   - modules/explorer/_static/components/top-bar/top-bar.html
   - modules/explorer/_static/components/utility/unsafe-html.html
   - modules/explorer/_static/components/utility/floating-sidebar.html
-  - modules/explorer/_static/components/course-explorer.html
+  - modules/explorer/_static/components/course-explorer/course-explorer.html
   - modules/explorer/constants.py
   - modules/explorer/course_settings.py
   - modules/explorer/explorer.py

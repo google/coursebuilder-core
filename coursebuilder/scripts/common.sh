@@ -370,5 +370,8 @@ fi
 # Prepare files for static serving
 . "$(dirname "$0")/static.sh"
 
+# Generate flattened import files for polymer apps
+. "$(dirname "$0")/flatten_polymer_imports.sh"
+
 # Delete existing files: *.pyc
 find "$SOURCE_DIR" -iname "*.pyc" -exec rm -f {} \;

@@ -25,6 +25,9 @@
     <script src="/static/polymer-1.2.0/webcomponentsjs/webcomponents-lite.js"></script>
 
     <!-- Guide web app. -->
+    {% if use_flattened_html_imports %}
+      <link rel="import" href="/static/html-imports/guide-imports.html">
+    {% endif %}
     <link rel="import" href="/modules/guide/_static/guide/guide-app/guide-app.html">
   </head>
   <body>

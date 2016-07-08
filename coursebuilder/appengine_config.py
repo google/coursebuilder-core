@@ -35,6 +35,10 @@ PRODUCTION_MODE = not os.environ.get(
 BUNDLE_LIB_FILES = not os.environ.get(
     'GCB_STATIC_SERV_ENABLED', 'false').upper() == 'TRUE'
 
+# Set this flag to true if you can generate flattened polymer import files
+USE_FLATTENED_HTML_IMPORTS = os.environ.get(
+    'GCB_STATIC_SERV_ENABLED', 'false').upper() == 'TRUE'
+
 # this is the official location of this app for computing of all relative paths
 BUNDLE_ROOT = os.path.dirname(__file__)
 
