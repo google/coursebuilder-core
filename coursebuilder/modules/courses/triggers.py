@@ -344,7 +344,7 @@ class DateTimeTrigger(object):
         appear in the same order that they occurred in the original supplied
         encoded_triggers list.
 
-        "Decoded" triggers are objects of some DateTimeTriggersubclass.
+        "Decoded" triggers are objects of some DateTimeTrigger subclass.
 
         "Encoded" triggers result from JSON-decoding by transforms.loads().
 
@@ -1145,7 +1145,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     triggers as well.
     """
 
-    SETTINGS_NAME = 'milestone_triggers'
+    SETTINGS_NAME = 'course_triggers'
 
     # Explicitly does *not* include the AVAILABILITY_NONE_SELECTED <option>
     # value ('none', '--- none selected ---') from the form, even though that

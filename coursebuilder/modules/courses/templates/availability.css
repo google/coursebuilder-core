@@ -121,12 +121,12 @@
  * Styling for Course Start/End Availability Change Triggers subsections.
  */
 /* Align the labels from the first row with the section label. */
-.availability-manager .milestone-trigger .inputEx-ListField-childContainer
+.availability-manager .course-trigger .inputEx-ListField-childContainer
     > div:first-child .inputEx-label {
   margin: 0 0 5px 0;
   min-height: 20px;
 }
-.availability-manager .milestone-triggers .inputEx-ListField-childContainer
+.availability-manager .course-triggers .inputEx-ListField-childContainer
     .inputEx-label label {
   font-weight: bold !important;
   font-style: normal;
@@ -134,18 +134,18 @@
   margin-top: 2px;
 }
 /* Remove margin and padding from milestone trigger singleton "list" item. */
-.form .availability-manager > fieldset > .milestone-triggers {
+.form .availability-manager > fieldset > .course-triggers {
   padding-bottom: 0;
 }
-.availability-manager .milestone-triggers .milestone-trigger > fieldset {
+.availability-manager .course-triggers .course-trigger > fieldset {
   margin-top: 0 !important;
   padding-top: 0;
 }
-.availability-manager .milestone-trigger > fieldset {
+.availability-manager .course-trigger > fieldset {
   padding-left: 0;
 }
 /* Style the field value div (just after the label) inside a field wrapper. */
-.availability-manager > fieldset > .milestone-triggers > .inputEx-label
+.availability-manager > fieldset > .course-triggers > .inputEx-label
     + div {
   display: inline-block;
   background-color: #f9f9f9;
@@ -154,11 +154,11 @@
   margin: 0;
 }
 /* Cap width of "Change course availability to:" field. */
-.availability-manager .milestone-trigger .availability {
+.availability-manager .course-trigger .availability {
   width: 200px;
 }
 /* Cap width of "...on this date & UTC hour:" field. */
-.availability-manager .milestone-trigger .when {
+.availability-manager .course-trigger .when {
   width: 300px;
 }
 

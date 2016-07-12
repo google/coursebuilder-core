@@ -110,18 +110,18 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             extra_js_files=['availability.js'])
 
     @classmethod
-    def get_milestone_trigger_schema(cls, milestone, avail_select=None):
-        tmt = triggers.MilestoneTrigger
+    def get_milestone_trigger_schema(cls, milestone,
+                                     avail_select, trigger_cls):
         title = '{} Availability'.format(
             availability_options.option_to_title(milestone))
         desc = messages.MILESTONE_TRIGGER_DESCRIPTION_FMT.format(milestone)
         milestone_trigger = schema_fields.FieldRegistry(title,
             description=desc, extra_schema_dict_values={
-                'className': tmt.registry_css()})
+                'className': trigger_cls.registry_css()})
         milestone_trigger.add_property(schema_fields.SchemaField(
             'milestone', '', 'string', i18n=False, hidden=True,
             extra_schema_dict_values={
-                'className': tmt.milestone_css()}))
+                'className': trigger_cls.milestone_css()}))
 
         ms_text = availability_options.option_to_text(milestone)
         title = 'At {}, on this date & UTC hour:'.format(ms_text)
@@ -130,31 +130,35 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         milestone_trigger.add_property(schema_fields.SchemaField(
             'when', title, 'datetime', description=desc, i18n=False,
             optional=True, extra_schema_dict_values={
-                'className': tmt.when_css()}))
+                'className': trigger_cls.when_css()}))
 
-        if avail_select is None:
-            avail_select = availability_options.COURSE_WITH_NONE_SELECT_DATA
         title = 'Change {} availability to:'.format(milestone.split('_')[0])
         desc = messages.MILESTONE_TRIGGER_AVAIL_DESC_FMT.format(
             ms_text, availability_options.NONE_SELECTED_TITLE, ms_text)
         milestone_trigger.add_property(schema_fields.SchemaField(
             'availability', title, 'string', description=desc, i18n=False,
             optional=True, select_data=avail_select, extra_schema_dict_values={
-                'className': tmt.availability_css()}))
+                'className': trigger_cls.availability_css()}))
         return milestone_trigger
 
     @classmethod
-    def get_milestone_array_schema(cls, milestone,
+    def get_milestone_array_schema(cls, milestone, trigger_cls=None,
                                    scope_css=None, avail_select=None):
+        title = availability_options.option_to_title(milestone)
+
+        if trigger_cls is None:
+            trigger_cls = triggers.MilestoneTrigger
+        if avail_select is None:
+            avail_select = availability_options.COURSE_WITH_NONE_SELECT_DATA
+        item_type = cls.get_milestone_trigger_schema(
+            milestone, avail_select, trigger_cls)
+
         if scope_css is None:
             scope_css = cls._COURSE_WIDE_SCOPE_CSS
-        title = availability_options.option_to_title(milestone)
-        item_type = cls.get_milestone_trigger_schema(
-            milestone, avail_select=avail_select)
         extra_css = (scope_css + ' ' +
                      availability_options.option_to_css(milestone))
-        classname = triggers.MilestoneTrigger.array_css(extra_css=extra_css)
-        wrapper_classname = triggers.MilestoneTrigger.array_wrapper_css(
+        classname = trigger_cls.array_css(extra_css=extra_css)
+        wrapper_classname = trigger_cls.array_wrapper_css(
             extra_css=extra_css)
         return schema_fields.FieldArray(
             milestone, title, item_type=item_type, optional=True,

@@ -103,32 +103,51 @@ class StudentGroupsTestBase(actions.TestBase):
         self.assertEquals(200, response.status_int)
         return transforms.loads(response.body)
 
-    def _put_availability(self, key, members, course_availability=None,
-                          content_availability=None, xsrf_token=None):
+    def _settings_with_defaults(self, default_availability,
+                                course_availability, course_triggers,
+                                element_settings, content_triggers):
         if not course_availability:
-            course_availability = (
-                student_groups.AVAILABILITY_NO_OVERRIDE)
-        if not content_availability:
-            content_availability = []
+            course_availability = default_availability
+        if course_triggers is None:
+            course_triggers = []
+        if element_settings is None:
+            element_settings = []
+        if content_triggers is None:
+            content_triggers = []
+        return {
+            AvailabilityRestHandler.COURSE_AVAILABILITY:
+                course_availability,
+            student_groups.StudentGroupDTO.COURSE_TRIGGERS_PROPERTY:
+                course_triggers,
+            AvailabilityRestHandler._ELEMENT_SETTINGS:
+                element_settings,
+            student_groups.StudentGroupDTO.CONTENT_TRIGGERS_PROPERTY:
+                content_triggers,
+        }
+
+    def _put_availability(self, key, members, xsrf_token=None,
+        course_availability=None, course_triggers=None,
+        element_settings=None, content_triggers=None):
 
         if not xsrf_token:
             xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
                 AvailabilityRestHandler.ACTION)
+
+        group_settings = self._settings_with_defaults(
+            student_groups.AVAILABILITY_NO_OVERRIDE,
+            course_availability, course_triggers,
+            element_settings, content_triggers)
+        group_settings[AvailabilityRestHandler._MEMBERS] = '\n'.join(members)
+
         payload = {
             AvailabilityRestHandler._STUDENT_GROUP: key,
-            AvailabilityRestHandler._STUDENT_GROUP_SETTINGS: {
-                AvailabilityRestHandler._COURSE_AVAILABILITY:
-                    course_availability,
-                AvailabilityRestHandler._ELEMENT_SETTINGS:
-                    content_availability,
-                AvailabilityRestHandler._MEMBERS: '\n'.join(members),
-                }
-            }
+            AvailabilityRestHandler._STUDENT_GROUP_SETTINGS: group_settings,
+        }
         request = {
             'xsrf_token': xsrf_token,
             'key': str(key),
             'payload': transforms.dumps(payload),
-            }
+        }
         response = self.put(
             AvailabilityRestHandler.URL.lstrip('/'),
             {'request': transforms.dumps(request)})
@@ -140,14 +159,18 @@ class StudentGroupsTestBase(actions.TestBase):
     # group level settings on the same page.  Verify that we pass through
     # and affect course level settings when we don't send a student_group
     # ID as part of the parameters.
-    def _put_course_availability(self, course_availability, element_settings):
+    def _put_course_availability(self,
+        course_availability=None, course_triggers=None,
+        element_settings=None, content_triggers=None):
+
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
             AvailabilityRestHandler.ACTION)
-        payload = {
-            AvailabilityRestHandler._STUDENT_GROUP: '',
-            'course_availability': course_availability,
-            'element_settings': element_settings,
-            }
+        payload = self._settings_with_defaults(
+            # This default is most common test value.
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
+            course_availability, course_triggers,
+            element_settings, content_triggers)
+        payload[AvailabilityRestHandler._STUDENT_GROUP] = ''
         request = {
             'xsrf_token': xsrf_token,
             'payload': transforms.dumps(payload),
@@ -583,12 +606,13 @@ class UserIdentityTests(StudentGroupsTestBase):
 
     def test_in_group_user_signup_to_otherwise_private_course(self):
         actions.login(self.ADMIN_EMAIL)
-        self._put_course_availability(courses.COURSE_AVAILABILITY_PRIVATE, [])
+        self._put_course_availability(
+            course_availability=courses.COURSE_AVAILABILITY_PRIVATE)
         response = self._put_group(None, 'My New Group', 'this is my group')
         group_id = transforms.loads(response['payload'])['key']
         self._put_availability(
-            group_id, [self.STUDENT_EMAIL],
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+            group_id, [self.STUDENT_EMAIL], course_availability=(
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED))
 
         actions.login(self.STUDENT_EMAIL)
         response = self.get('register')
@@ -623,8 +647,8 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
 
         response = self._put_group(None, 'My New Group', 'this is my group')
         group_id = transforms.loads(response['payload'])['key']
-        self._put_availability(group_id,
-                               [self.STUDENT_EMAIL, self.ADMIN_EMAIL])
+        self._put_availability(
+            group_id, [self.STUDENT_EMAIL, self.ADMIN_EMAIL])
 
         # Verify REST response
         response = self._get_availability(group_id)
@@ -769,13 +793,13 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         self.assertEquals('OK.', response['message'])
         payload = transforms.loads(response['payload'])
         availability = payload[AvailabilityRestHandler._STUDENT_GROUP_SETTINGS][
-            AvailabilityRestHandler._COURSE_AVAILABILITY]
+            AvailabilityRestHandler.COURSE_AVAILABILITY]
         self.assertEquals(
             student_groups.AVAILABILITY_NO_OVERRIDE, availability)
 
         # Set availability to something non-default; verify.
-        response = self._put_availability(
-            group_id, [], courses.AVAILABILITY_UNAVAILABLE)
+        response = self._put_availability(group_id, [],
+            course_availability=courses.AVAILABILITY_UNAVAILABLE)
         self.assertEquals(200, response['status'])
         self.assertEquals('Saved', response['message'])
         response = self._get_availability(group_id)
@@ -783,7 +807,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         self.assertEquals('OK.', response['message'])
         payload = transforms.loads(response['payload'])
         availability = payload[AvailabilityRestHandler._STUDENT_GROUP_SETTINGS][
-            AvailabilityRestHandler._COURSE_AVAILABILITY]
+            AvailabilityRestHandler.COURSE_AVAILABILITY]
         self.assertEquals(courses.AVAILABILITY_UNAVAILABLE, availability)
 
         # Delete group; verify availability API responds with 404.
@@ -869,8 +893,8 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         # Set overrides at the group level to be opposite of the settings on
         # the base unit and lesson.
         response = self._put_availability(
-            group_id, [], student_groups.AVAILABILITY_NO_OVERRIDE,
-            [{'id': str(unit.unit_id),
+            group_id, [], element_settings=[
+             {'id': str(unit.unit_id),
               'type': 'unit',
               'availability': courses.AVAILABILITY_UNAVAILABLE},
              {'id': str(lesson.lesson_id),
@@ -933,8 +957,8 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
 
         # Set to non-default; verify.
         self._put_course_availability(
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
-            [{'id': str(unit.unit_id),
+            element_settings=[
+             {'id': str(unit.unit_id),
               'type': 'unit',
               'availability': courses.AVAILABILITY_UNAVAILABLE},
              {'id': str(lesson.lesson_id),
@@ -963,8 +987,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         response = self._put_group(None, 'Group One', 'this is my group')
         group_id = transforms.loads(response['payload'])['key']
         response = self._put_availability(
-            group_id, [], student_groups.AVAILABILITY_NO_OVERRIDE, [],
-            'not a valid XSRF token')
+            group_id, [], xsrf_token='not a valid XSRF token')
         self.assertEquals(403, response['status'])
         self.assertEquals(
             'Bad XSRF token. Please reload the page and try again',
@@ -976,8 +999,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         group_id = transforms.loads(response['payload'])['key']
 
         actions.login(self.ADMIN_ASSISTANT_EMAIL)
-        response = self._put_availability(
-            group_id, [], student_groups.AVAILABILITY_NO_OVERRIDE, [])
+        response = self._put_availability(group_id, [])
         self.assertEquals(401, response['status'])
         self.assertEquals('Access denied.', response['message'])
 
@@ -988,8 +1010,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         self._grant_student_groups_permission_to_assistant()
 
         actions.login(self.ADMIN_ASSISTANT_EMAIL)
-        response = self._put_availability(
-            group_id, [], student_groups.AVAILABILITY_NO_OVERRIDE, [])
+        response = self._put_availability(group_id, [])
         self.assertEquals(200, response['status'])
         self.assertEquals('Saved', response['message'])
 
@@ -1036,8 +1057,7 @@ class AvailabilityTests(StudentGroupsTestBase):
         # still show through.
         # Set to non-default; verify.
         actions.login(self.ADMIN_EMAIL)
-        self._put_course_availability(
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED, [])
+        self._put_course_availability()
         actions.login(self.IN_GROUP_STUDENT_EMAIL)
         response = self.get(self.SYLLABUS_URL)
         self.assertEquals(response.status_int, 200)
@@ -1060,8 +1080,8 @@ class AvailabilityTests(StudentGroupsTestBase):
         # Set course-level access on unit two, lesson two to private.
         actions.login(self.ADMIN_EMAIL)
         self._put_course_availability(
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
-            [{'id': str(self.unit_two.unit_id),
+            element_settings=[
+             {'id': str(self.unit_two.unit_id),
               'type': 'unit',
               'availability': courses.AVAILABILITY_UNAVAILABLE},
              {'id': str(self.lesson_two.lesson_id),
@@ -1083,8 +1103,8 @@ class AvailabilityTests(StudentGroupsTestBase):
         # exhaustively verifying override properties: Make unit two generally
         # unavailable, but available to group members.
         self._put_course_availability(
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
-            [{'id': str(self.unit_two.unit_id),
+            element_settings=[
+             {'id': str(self.unit_two.unit_id),
               'type': 'unit',
               'availability': courses.AVAILABILITY_UNAVAILABLE},
              {'id': str(self.lesson_two.lesson_id),
@@ -1092,8 +1112,8 @@ class AvailabilityTests(StudentGroupsTestBase):
               'availability': courses.AVAILABILITY_UNAVAILABLE}])
         self._put_availability(
             self.group_id, [self.IN_GROUP_STUDENT_EMAIL],
-            student_groups.AVAILABILITY_NO_OVERRIDE,
-            [{'id': str(self.unit_two.unit_id),
+            element_settings=[
+             {'id': str(self.unit_two.unit_id),
               'type': 'unit',
               'availability': courses.AVAILABILITY_AVAILABLE},
              {'id': str(self.lesson_two.lesson_id),
@@ -1122,7 +1142,7 @@ class AvailabilityTests(StudentGroupsTestBase):
         # Make course setting say absolutely no-one can see anything.
         actions.login(self.ADMIN_EMAIL)
         self._put_course_availability(
-            courses.COURSE_AVAILABILITY_PRIVATE, [])
+            course_availability=courses.COURSE_AVAILABILITY_PRIVATE)
 
         # Verify that a logged-in, registered (how?) student can not even
         # see the syllabus.
@@ -1136,9 +1156,9 @@ class AvailabilityTests(StudentGroupsTestBase):
         actions.login(self.ADMIN_EMAIL)
         response = self._put_group(None, 'My New Group', 'this is my group')
         group_id = transforms.loads(response['payload'])['key']
-        self._put_availability(
-            group_id, [self.STUDENT_EMAIL],
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+        self._put_availability(group_id, [self.STUDENT_EMAIL],
+            course_availability=(
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED))
 
         # As student in group, login.  Should be able to see syllabus, but
         # not lesson since not yet registered.
@@ -1156,8 +1176,8 @@ class AvailabilityTests(StudentGroupsTestBase):
 
     def test_unit_and_lesson_availability_overrides(self):
         self._put_course_availability(
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
-            [{'id': str(self.unit_one.unit_id),
+            element_settings=[
+             {'id': str(self.unit_one.unit_id),
               'type': 'unit',
               'availability': courses.AVAILABILITY_UNAVAILABLE},
              {'id': str(self.lesson_one.lesson_id),
@@ -1174,8 +1194,8 @@ class AvailabilityTests(StudentGroupsTestBase):
         group_id = transforms.loads(response['payload'])['key']
         self._put_availability(
             group_id, [self.STUDENT_EMAIL],
-            student_groups.AVAILABILITY_NO_OVERRIDE,
-            [{'id': str(self.unit_one.unit_id),
+            element_settings=[
+             {'id': str(self.unit_one.unit_id),
               'type': 'unit',
               'availability': courses.AVAILABILITY_COURSE},
              {'id': str(self.lesson_one.lesson_id),
@@ -1207,8 +1227,8 @@ class AvailabilityTests(StudentGroupsTestBase):
 
     def test_course_and_element_overrides_combined(self):
         self._put_course_availability(
-            courses.COURSE_AVAILABILITY_PRIVATE,
-            [{'id': str(self.unit_one.unit_id),
+            course_availability=courses.COURSE_AVAILABILITY_PRIVATE,
+            element_settings=[{'id': str(self.unit_one.unit_id),
               'type': 'unit',
               'availability': courses.AVAILABILITY_UNAVAILABLE},
              {'id': str(self.lesson_one.lesson_id),
@@ -1224,9 +1244,10 @@ class AvailabilityTests(StudentGroupsTestBase):
         response = self._put_group(None, 'My New Group', 'this is my group')
         group_id = transforms.loads(response['payload'])['key']
         self._put_availability(
-            group_id, [self.STUDENT_EMAIL],
-            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
-            [{'id': str(self.unit_one.unit_id),
+            group_id, [self.STUDENT_EMAIL], course_availability=(
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED),
+            element_settings=[
+             {'id': str(self.unit_one.unit_id),
               'type': 'unit',
               'availability': courses.AVAILABILITY_COURSE},
              {'id': str(self.lesson_one.lesson_id),
