@@ -107,6 +107,9 @@ _ALL = [
     ('course:welcome_notifications_sender',
      '/prepare-for-students/registration.html'
      '#email-sender'),
+    ('course:send_welcome_notifications',
+     '/prepare-for-students/registration.html'
+     '#welcome-emails'),
     ('dashboard:gift_questions:questions',
      '/create-a-course/add-elements/questions/formats.html'
      '#gift-questions'),

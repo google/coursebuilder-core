@@ -386,8 +386,9 @@ This text or question is shown below the default registration question.
 
 REGISTRATION_SEND_WELCOME_EMAIL = """
 If checked, welcome emails will be sent when new students register for the
-course. You must also leave notifications and unsubscribe modules active (this
-is the default). An email sender must also be specified.
+course. You must also leave notifications and unsubscribe modules active
+(this is the default). An email sender must also be specified.
+Do not enable if you expect more than 25 registrations per day.
 """
 
 ROLES_PERMISSION_ALL_LOCALES_DESCRIPTION = """
