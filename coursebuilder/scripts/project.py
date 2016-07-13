@@ -163,6 +163,10 @@ def make_default_parser():
         help='Whether to skip functional and unit tests',
         action='store_true')
     parser.add_argument(
+        '--skip_integration_setup',
+        help='Skip integration server pre-test test.',
+        action='store_true')
+    parser.add_argument(
         '--skip_pylint', help='Whether to skip pylint tests',
         action='store_true')
     parser.add_argument(
@@ -1033,7 +1037,7 @@ def _run_all_tests(config):
             assert_gcb_allow_static_serv_is_disabled()
 
     with WithReleaseConfiguration(with_server, True, config):
-        if with_server:
+        if with_server and not config.parsed_args.skip_integration_setup:
             if test_static_serv:
                 assert_gcb_allow_static_serv_is_enabled()
             _run_tests(

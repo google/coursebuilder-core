@@ -437,7 +437,15 @@ class RootPage(PageObject):
         return WelcomePage(self._tester)
 
     def click_login(self):
-        self.click_link('Login', wait_for_page_load_after=False)
+        try:
+            # We may actually already be _on_ the login page, if the
+            # pre-integration test has not been run (--skip_integration_setup
+            # in project.py).
+            login_button = self.find_element_by_css_selector(
+                'input#submit-login', pre_wait=False)
+        except exceptions.NoSuchElementException:
+            # If we are not already on the login page, go there.
+            self.click_link('Login', wait_for_page_load_after=False)
         return LoginPage(self._tester)
 
     def click_logout(self):
