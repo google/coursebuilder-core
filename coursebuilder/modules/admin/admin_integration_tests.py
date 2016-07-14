@@ -333,6 +333,32 @@ class CourseMultiEditTests(_CoursesListTestBase):
         actual_avail = self._get_courses_availability()
         self.assertEquals(expected_avail, actual_avail)
 
+    def _get_category(self, namespace):
+        return self.load_dashboard(
+            re.sub('^ns_', '', namespace)
+        ).click_settings(
+        ).get_text_field_by_name(
+            'course:category_name'
+        )
+
+    def test_multi_edit_course_category(self):
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_category()
+        multi_edit.set_category('Frumious Bandersnatch')
+        multi_edit.click_save()
+
+        self.assertEquals(
+            'Frumious Bandersnatch',
+            self._get_category(self.course_namespaces[0]))
+        self.assertEquals(
+            'Frumious Bandersnatch',
+            self._get_category(self.course_namespaces[1]))
+        self.assertEquals(
+            '',
+            self._get_category(self.course_namespaces[2]))
+
 
 class CoursesEnrollmentsTests(_CoursesListTestBase):
 

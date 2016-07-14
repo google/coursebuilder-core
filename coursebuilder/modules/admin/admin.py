@@ -49,6 +49,7 @@ from modules.admin import enrollments
 from modules.admin.config import ConfigPropertyEditor
 from modules.admin.config import CourseDeleteHandler
 from modules.courses import availability
+from modules.courses import settings
 from modules.dashboard import dashboard
 from modules.dashboard import utils as dashboard_utils
 from common import menus
@@ -829,6 +830,9 @@ class BaseAdminHandler(ConfigPropertyEditor):
         edit_course_availability_xsrf_token = (
             crypto.XsrfTokenManager.create_xsrf_token(
                 availability.AvailabilityRESTHandler.ACTION))
+        edit_course_settings_xsrf_token = (
+            crypto.XsrfTokenManager.create_xsrf_token(
+                settings.CourseSettingsRESTHandler.XSRF_ACTION))
         course_availability_options = transforms.dumps(
             [{'value': k, 'title': v['title']}
              for k, v in courses.COURSE_AVAILABILITY_POLICIES.iteritems()])
@@ -840,6 +844,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
                  'delete_course_link': CourseDeleteHandler.URI,
                  'delete_course_xsrf_token': delete_course_xsrf_token,
                  'add_course_xsrf_token': add_course_xsrf_token,
+                 'edit_course_settings_xsrf_token':
+                     edit_course_settings_xsrf_token,
                  'edit_course_availability_xsrf_token':
                      edit_course_availability_xsrf_token,
                  'course_availability_options': course_availability_options,

@@ -232,33 +232,38 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
     def put(self):
         """Handles REST PUT verb with JSON payload."""
         assert self.app_context.is_editable_fs()
-
+        response_payload = {'key': self.app_context.get_namespace_name()}
         request_param = self.request.get('request')
         if not request_param:
             transforms.send_json_response(
-                self, 400, 'Missing "request" parameter.')
+                self, 400, 'Missing "request" parameter.',
+                payload_dict=response_payload)
             return
         try:
             request = transforms.loads(request_param)
         except ValueError:
             transforms.send_json_response(
-                self, 400, 'Malformed "request" parameter.')
+                self, 400, 'Malformed "request" parameter.',
+                payload_dict=response_payload)
             return
         key = request.get('key')
         if not key:
             transforms.send_json_response(
-                self, 400, 'Request missing "key" parameter.')
+                self, 400, 'Request missing "key" parameter.',
+                payload_dict=response_payload)
             return
         payload_param = request.get('payload')
         if not payload_param:
             transforms.send_json_response(
-                self, 400, 'Request missing "payload" parameter.')
+                self, 400, 'Request missing "payload" parameter.',
+                payload_dict=response_payload)
             return
         try:
             payload = transforms.loads(payload_param)
         except ValueError:
             transforms.send_json_response(
-                self, 400, 'Malformed "payload" parameter.')
+                self, 400, 'Malformed "payload" parameter.',
+                payload_dict=response_payload)
             return
         if not self.assert_xsrf_token_or_fail(
                 request, self.XSRF_ACTION, {'key': key}):
@@ -266,7 +271,8 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
         if not permissions.can_edit(self.app_context,
                                     constants.SCOPE_COURSE_SETTINGS):
             transforms.send_json_response(
-                self, 401, 'Access denied.', {'key': key})
+                self, 401, 'Access denied.',
+                payload_dict=response_payload)
             return
 
         request_data = self.process_put(request, payload)
@@ -282,8 +288,10 @@ class CourseYamlRESTHandler(controllers_utils.BaseRESTHandler):
             self.postprocess_put(course_settings, request)
 
             if not self.get_course().save_settings(course_settings):
-                transforms.send_json_response(self, 412, 'Validation error.')
-            transforms.send_json_response(self, 200, 'Saved.')
+                transforms.send_json_response(self, 412, 'Validation error.',
+                                              payload_dict=response_payload)
+            transforms.send_json_response(self, 200, 'Saved.',
+                payload_dict=response_payload)
 
     def postprocess_put(self, course_settings, request):
         pass

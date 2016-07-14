@@ -246,6 +246,9 @@ class CoursesListPage(pageobjects.CoursesListPage):
     def click_edit_end_date(self):
         return self._open_multicourse_popup('edit_multi_course_end_date')
 
+    def click_edit_category(self):
+        return self._open_multicourse_popup('edit_multi_course_category')
+
     def _col_hdr_id_sel(self, column):
         sel = '#{}_column'.format(column)
         return sel
@@ -428,6 +431,10 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
                 return True
         self.wait().until(spinner_not_visible)
         return self
+
+    def set_category(self, value):
+        category = self.find_element_by_id('multi-course-category')
+        category.send_keys(value)
 
     def set_availability(self, value):
         select_elt = self.find_element_by_id('multi-course-select-availability')

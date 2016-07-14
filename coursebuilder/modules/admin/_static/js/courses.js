@@ -504,6 +504,53 @@ $(function() {
     gcb_multi_edit_dialog.open();
   };
 
+
+  // ---------------------------------------------------------------------------
+  // For editing category name on multiple courses.
+  //
+  EditMultiCourseCategoryPanel = function () {
+    EditMultiCoursePanel.call(this);
+  };
+  EditMultiCourseCategoryPanel.prototype = new EditMultiCoursePanel();
+  EditMultiCourseCategoryPanel.prototype._getTitle = function() {
+    return 'Set Course Category';
+  };
+  EditMultiCourseCategoryPanel.prototype._getXsrfToken = function() {
+    return $('#edit_multi_course_category').data('xsrfToken');
+  };
+  EditMultiCourseCategoryPanel.prototype._getFormFields = function() {
+    ret = $(
+        '<div class="form-row">' +
+        '  <label>Category</label>' +
+        '  <input ' +
+        '      type="text" ' +
+        '      id="multi-course-category" ' +
+        '      name="category">' +
+        '</div>'
+        );
+    this._category = ret.find('#multi-course-category');
+    return ret;
+  };
+  EditMultiCourseCategoryPanel.prototype._getSaveUrl = function() {
+    return '/rest/course/settings';
+  };
+  EditMultiCourseCategoryPanel.prototype._getSavePayload = function() {
+    var category = this._category.val();
+    return {
+      'homepage': {
+        'course:category_name': category
+      }
+    };
+  };
+  EditMultiCourseCategoryPanel.prototype._settingSaved = function(payload) {
+  };
+  function editMultiCourseCategory() {
+    // Var name intentionally in global namespace as hook for tests to modify.
+    gcb_multi_edit_dialog = new EditMultiCourseCategoryPanel();
+    gcb_multi_edit_dialog.init();
+    gcb_multi_edit_dialog.open();
+  };
+
   var _sortBySequence = {
     // The key is the element #id of the primary "clicked on" sortable table
     // column header.
@@ -718,6 +765,7 @@ $(function() {
     $('#edit_multi_course_availability').click(editMultiCourseAvailability);
     $('#edit_multi_course_start_date').click(editMultiCourseStartDate);
     $('#edit_multi_course_end_date').click(editMultiCourseEndDate);
+    $('#edit_multi_course_category').click(editMultiCourseCategory);
     $('.gcb-course-checkbox').click(selectCourse);
     $('div.gcb-list > table > thead > tr > th:not(.gcb-not-sortable)').click(
         sortCourseRows);
