@@ -54,6 +54,9 @@ handlers:
   static_files: modules/\1/_static/\2
   expiration: 10m
   application_readable: true # TODO(nretallack): deprecate this
+- url: .*/favicon\.ico
+  static_files: assets/img/favicon.ico
+  upload: assets/img/favicon\.ico
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   secure: always
