@@ -18,6 +18,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
 import logging
+import re
 import urllib
 
 import appengine_config
@@ -242,15 +243,28 @@ class CoursesItemRESTHandler(utils.BaseRESTHandler):
         payload = request.get('payload')
         json_object = transforms.loads(payload)
         name = json_object.get('name')
+        namespace = 'ns_' + name
         title = json_object.get('title')
         admin_email = json_object.get('admin_email')
         template_course = json_object.get('template_course')
 
-        # Add the new course entry.
         errors = []
-        entry = sites.add_new_course_entry(name, title, admin_email, errors)
-        if not entry and not errors:
-            errors.append('Error adding a new course entry.')
+        with common_utils.Namespace(namespace):
+            if CourseDeleteHandler.get_any_undeleted_kind_name():
+                errors.append(
+                    'Unable to add new entry "%s": the corresponding '
+                    'namespace "%s" is not empty.  If you removed a '
+                    'course with that name in the last few minutes, the '
+                    'background cleanup job may still be running.  '
+                    'You can use the App Engine Dashboard to manually '
+                    'remove all database entities from this namespace.' %
+                    (name, namespace))
+
+        # Add the new course entry.
+        if not errors:
+            entry = sites.add_new_course_entry(name, title, admin_email, errors)
+            if not entry and not errors:
+                errors.append('Error adding a new course entry.')
         if errors:
             self._send_json_error_response(412, errors)
             return
@@ -304,7 +318,7 @@ class CoursesItemRESTHandler(utils.BaseRESTHandler):
 class Model(object):
     """Mock of App Engine db.Model class; helps build keys-only .all() queries.
 
-    CourseDeletionHandler, below, needs to delete all entries for all model
+    CourseDeleteHandler, below, needs to delete all entries for all model
     types in the datastore.  In theory, we could call db.class_for_kind(),
     but it turns out that in practice, a) the entity type may be an old
     leftover and the code for that class is gone, b) the entity type is for
@@ -349,6 +363,7 @@ class CourseDeleteHandler(utils.BaseHandler):
     URI = '/course/delete'
     XSRF_ACTION = 'course_delete'
     DELETE_BATCH_SIZE = 1000
+    IGNORE_KINDS = re.compile(r'__.*__$|_ah_SESSION$|__unapplied_write')
 
     def post(self):
         user = users.get_current_user()
@@ -372,11 +387,19 @@ class CourseDeleteHandler(utils.BaseHandler):
             self.redirect(self.request.referer)
 
     @classmethod
+    def get_any_undeleted_kind_name(cls):
+        for kind in common_utils.iter_all(metadata.Kind.all()):
+            kind_name = kind.kind_name
+            if not cls.IGNORE_KINDS.match(kind_name):
+                return kind_name
+        return None
+
+    @classmethod
     def delete_course(cls):
         """Called back repeatedly from deferred queue dispatcher."""
         try:
-            kind = metadata.Kind.all().get()
-            if not kind:
+            kind_name = cls.get_any_undeleted_kind_name()
+            if not kind_name:
                 # No entity types remain to be deleted from the Datastore for
                 # this course (i.e. namespace), so call (in no particular
                 # order) callbacks waiting to be informed of course deletion.
@@ -388,7 +411,6 @@ class CourseDeleteHandler(utils.BaseHandler):
                     'namespace %s; deletion complete.', ns_name)
                 return
 
-            kind_name = kind.kind_name
             model = Model(kind_name)
             keys = list(db.Query(Model(kind_name), keys_only=True).run(
                 batch_size=cls.DELETE_BATCH_SIZE))

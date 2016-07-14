@@ -2068,6 +2068,27 @@ class CourseAuthorCourseCreationTest(actions.TestBase):
         self.assertNotIn('/course_three', response.body)
 
 
+class Foo(db.Model):
+
+    data = db.TextProperty()
+
+
+class __ModelMatchingAppEngineInternalNamingConvention__(db.Model):
+    """Class to verify correct ignoring of App Engine internal class names.
+
+    __LikeThis__ is the naming convention for App Engine internal classes that
+    should be ignored on course deletion and creation.  Ignore on delete is
+    necessary because application code trying to remove these items will
+    result in an exception.  Ignore on create is necessary since these are not
+    deletable.  (For the most part, these items are meta-data and rows
+    representing compound indices.  Leaving them dangling to be cleaned up
+    later is fine).  App Engine enforces our non-ability to take
+    responsibility for them, so it must cope with its own cleanup.
+    """
+
+    data = db.TextProperty(indexed=False)
+
+
 class CourseAuthorCourseDeletionTest(actions.TestBase):
 
     ADMIN_EMAIL = 'admin@foo.com'
@@ -2083,9 +2104,9 @@ class CourseAuthorCourseDeletionTest(actions.TestBase):
             modules.admin.config.CourseDeleteHandler.XSRF_ACTION)
         self._add_course()
 
-    def _add_course(self):
+    def _add_course(self, course_name=COURSE_NAME):
         payload = {
-            'name': self.COURSE_NAME,
+            'name': course_name,
             'title': 'A Course',
             'admin_email': self.ADMIN_EMAIL,
         }
@@ -2138,16 +2159,17 @@ class CourseAuthorCourseDeletionTest(actions.TestBase):
             self.assertEqual(400, response.status_int)
 
     def test_deletion(self):
-        class Foo(db.Model):
-            data = db.TextProperty()
         with Namespace(self.NAMESPACE):
             Foo(data='123123123').put()
+            __ModelMatchingAppEngineInternalNamingConvention__(data='x').put()
 
         self.post(self.DELETE_URI, {'xsrf_token': self.xsrf_token,
                                     'is_selected_course': 'True'})
         self.execute_all_deferred_tasks(iteration_limit=10)
         with Namespace(self.NAMESPACE):
             self.assertIsNone(Foo.all().get())
+            self.assertIsNotNone(
+                __ModelMatchingAppEngineInternalNamingConvention__.all().get())
 
     def test_cannot_add_course_while_deletion_not_complete(self):
 
@@ -2162,6 +2184,42 @@ class CourseAuthorCourseDeletionTest(actions.TestBase):
         # Can't add course with same namespace.
         response = transforms.loads(self._add_course().body)
         self.assertEqual(412, response['status'])
+        self.assertEquals(
+            'Unable to add new entry "course_one": the corresponding namespace '
+            '"ns_course_one" is not empty.  If you removed a course with that '
+            'name in the last few minutes, the background cleanup job may '
+            'still be running.  You can use the App Engine Dashboard to '
+            'manually remove all database entities from this namespace.',
+            response['message'])
+
+    def test_cannot_add_course_while_namespace_is_not_empty(self):
+        name = 'foobarbaz'
+        namespace = 'ns_' + name
+        with Namespace(namespace):
+            Foo(data='123123123').put()
+
+        # Course not named in any config, but namespace is not empty,
+        # so we should still fail.
+        response = transforms.loads(self._add_course(name).body)
+        self.assertEqual(412, response['status'])
+        self.assertEquals(
+            'Unable to add new entry "foobarbaz": the corresponding '
+            'namespace "ns_foobarbaz" is not empty.  If you removed a course '
+            'with that name in the last few minutes, the background cleanup '
+            'job may still be running.  You can use the App Engine Dashboard '
+            'to manually remove all database entities from this namespace.',
+            response['message'])
+
+    def test_can_add_course_with_only_ignored_kinds_present_in_namespace(self):
+        name = 'foobarbaz'
+        namespace = 'ns_' + name
+        with Namespace(namespace):
+            __ModelMatchingAppEngineInternalNamingConvention__(data='x').put()
+
+        response = transforms.loads(self._add_course(namespace).body)
+        self.assertEqual(200, response['status'])
+        self.assertEqual('{"entry": "course:/ns_foobarbaz::ns_ns_foobarbaz"}',
+                         response['payload'])
 
 
 class StudentKeyNameTest(actions.TestBase):

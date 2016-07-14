@@ -143,7 +143,6 @@ from models.vfs import LocalReadOnlyFileSystem
 
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
-from google.appengine.ext.db import metadata
 from google.appengine.ext import zipserve
 
 
@@ -1182,15 +1181,6 @@ def add_new_course_entry(unique_name, title, admin_email, errors):
         errors.append('Failed to add entry: %s.\n%s' % (raw, e))
     if errors:
         return
-
-    with common_utils.Namespace(namespace):
-        if metadata.Kind.all().get():
-            errors.append(
-                'Unable to add new entry "%s": the corresponding namespace, '
-                '"%s" is not empty.  If you are certain it should be, you '
-                'can use the App Engine Dashboard to manually remove all '
-                'database entities from it.' % (unique_name, namespace))
-            return
 
     # Add new entry to persistence.
     if not _add_new_course_entry_to_persistent_configuration(raw):
