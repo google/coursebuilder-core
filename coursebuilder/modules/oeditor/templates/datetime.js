@@ -40,6 +40,10 @@ function bindDatetimeField(Y) {
         $(dateField.divEl).addClass('inputEx-invalid');
         return false;
       }
+      if (this.options.required && dateField.isEmpty()) {
+        $(dateField.divEl).addClass('inputEx-invalid');
+        return false;
+      }
       $(dateField.divEl).removeClass('inputEx-invalid');
       return true;
     },

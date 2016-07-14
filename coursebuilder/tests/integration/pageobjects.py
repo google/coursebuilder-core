@@ -323,6 +323,10 @@ class EditorPageObject(PageObject):
         field.send_keys(value)
         return self
 
+    def get_text_field_by_name(self, name):
+        field = self.find_element_by_css_selector('[name="{}"]'.format(name))
+        return field.get_attribute('value')
+
     def _find_text_field_by_title(self, title):
         label = self._find_setting_by_title(title)
         field = label.find_element_by_xpath(
@@ -362,6 +366,11 @@ class EditorPageObject(PageObject):
         field = self._find_textearea_field_by_title(title)
         self._tester.assertEquals(value, field.get_attribute('value'))
         return self
+
+    def get_selected_value_by_css(self, selector):
+        """Locate a <select> tag by CSS selector; return selected value."""
+        select_item = select.Select(self.find_element_by_css_selector(selector))
+        return select_item.all_selected_options[0].get_attribute('value')
 
 
 class CourseAvailabilityPage(EditorPageObject):

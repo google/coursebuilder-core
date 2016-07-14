@@ -136,7 +136,8 @@ class OverrideTriggerMixin(object):
                 else student_group.get_triggers(cls.SETTINGS_NAME))
 
     @classmethod
-    def set_into_settings(cls, encoded_triggers, unused_course, student_group):
+    def set_into_settings(cls, encoded_triggers, unused_course, student_group,
+                          action=triggers.DateTimeTrigger.ACTION_OVERWRITE):
         """Sets encoded availability override triggers into a student group.
 
         Args:
@@ -147,6 +148,9 @@ class OverrideTriggerMixin(object):
             student_group: a StudentGroupDTO into which the encoded_triggers
                 will be stored in the content_triggers property.
         """
+        if action != triggers.DateTimeTrigger.ACTION_OVERWRITE:
+            raise ValueError('Student Groups settings do not currently support '
+                             'merge semantics, only overwrite.')
         student_group.set_triggers(cls.SETTINGS_NAME, encoded_triggers)
 
 

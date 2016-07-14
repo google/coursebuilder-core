@@ -108,11 +108,30 @@
   cursor: default !important;
 }
 
+/*
+ * Buttons for multi-course-edit shown as dropdown list on hover.
+ */
 .edit-multi-course-list {
   max-height: 200px;
   overflow-y: scroll;
   margin-top: 15px;
   margin-bottom: 15px;
+}
+div.dropdown-container {
+  display: inline-block;
+  position: relative;
+}
+div.dropdown-member {
+  margin: 2px;
+}
+div.dropdown-actions-container {
+  position: absolute;
+}
+div.dropdown-container div.dropdown-actions-container {
+  display: none;
+}
+div.dropdown-container:hover div.dropdown-actions-container {
+  display: block;
 }
 
 /*

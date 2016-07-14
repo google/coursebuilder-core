@@ -20,7 +20,9 @@ __author__ = [
 
 from modules.courses import availability
 
+from tests import suite
 from tests.integration import pageobjects
+
 
 class CourseAvailabilityPage(pageobjects.CourseAvailabilityPage):
 
@@ -39,6 +41,52 @@ class CourseAvailabilityPage(pageobjects.CourseAvailabilityPage):
     EMPTY_TRIGGERS_MSG = (
         'Create course content (units, lessons, assessments) before defining' +
         ' any date/time availability change triggers.')
+
+    def load(self, name):
+        def load_page():
+            super(CourseAvailabilityPage, self).load(
+                suite.TestBase.INTEGRATION_SERVER_BASE_URL,
+                suffix='/%s/dashboard?action=availability' % name)
+        self.wait_for_page_load_after(load_page)
+        return self
+
+    def get_settings(self):
+        course_avail = self.get_selected_value_by_css(
+            'select[name="course_availability"]')
+
+        start_avail = self.get_selected_value_by_css(
+            'select[name="course_start[0]availability"]')
+        start_date = self.get_text_field_by_name(
+            'course_start[0]group-1[0]')
+        start_hour = self.get_selected_value_by_css(
+            'select[name="course_start[0]group-1[1][0]"]')
+
+        end_avail = self.get_selected_value_by_css(
+            'select[name="course_end[0]availability"]')
+        end_date = self.get_text_field_by_name(
+            'course_end[0]group-1[0]')
+        end_hour = self.get_selected_value_by_css(
+            'select[name="course_end[0]group-1[1][0]"]')
+
+        # TODO(mgainer): Could also grab other settings for
+        # course-level contents on this page.  Do as necessary.
+
+        # Returning as a plain dict instead of namedtuple; this substantially
+        # decreases the amount of repetetive creation of expected results in
+        # tests that do incremental changes to settings.
+        return {
+            'availability': str(course_avail),
+            'start_trigger': {
+                'availability': str(start_avail),
+                'date': str(start_date),
+                'hour': str(start_hour),
+            },
+            'end_trigger': {
+                'availability': str(end_avail),
+                'date': str(end_date),
+                'hour': str(end_hour),
+            },
+        }
 
     def verify_empty_content_msgs(self):
         """Verifies that two sections on the Publish > Availability page

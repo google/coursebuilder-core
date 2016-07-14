@@ -10,7 +10,8 @@ tests:
     - modules.admin.enrollments_tests.GraphTests = 5
   integration:
     - modules.admin.admin_integration_tests.CourseAdministrationTests = 1
-    - modules.admin.admin_integration_tests.CourseMultiEditTests = 3
+    - modules.admin.admin_integration_tests.CourseMultiEditSimpleTests = 2
+    - modules.admin.admin_integration_tests.CourseMultiEditTests = 2
     - modules.admin.admin_integration_tests.CoursesEnrollmentsTests = 2
     - modules.admin.admin_integration_tests.CoursesListSortingTests = 2
 

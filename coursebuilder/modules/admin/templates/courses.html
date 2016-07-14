@@ -13,13 +13,40 @@
      role="button">
     Add Sample Course...
   </a>
-  <a id="edit_multi_course_availability"
-     class="gcb-button multi-course-actions"
-     data-xsrf-token="{{ edit_course_availability_xsrf_token }}"
-     data-options="{{ course_availability_options }}"
-     role="button">
-    Set Course Availability...
-  </a>
+  <div class="dropdown-container">
+    <div class="gcb-button multi-course-actions dropdown-leader">
+      Multi-Course Actions
+    </div>
+    <div class="dropdown-actions-container">
+      <div class="dropdown-member">
+        <a id="edit_multi_course_availability"
+           class="gcb-button multi-course-actions"
+           data-xsrf-token="{{ edit_course_availability_xsrf_token }}"
+           data-options="{{ course_availability_options }}"
+           role="button">
+          Set Course Availability...
+        </a>
+      </div>
+      <div class="dropdown-member">
+        <a id="edit_multi_course_start_date"
+           class="gcb-button multi-course-actions"
+           data-xsrf-token="{{ edit_course_availability_xsrf_token }}"
+           data-options="{{ course_availability_options }}"
+           role="button">
+          Set Course Start Date...
+        </a>
+      </div>
+      <div class="dropdown-member">
+        <a id="edit_multi_course_end_date"
+           class="gcb-button multi-course-actions"
+           data-xsrf-token="{{ edit_course_availability_xsrf_token }}"
+           data-options="{{ course_availability_options }}"
+           role="button">
+          Set Course End Date...
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
 <div style="clear: both; padding-top: 2px;">
 </div>
@@ -158,5 +185,20 @@
     </div>
   {% endif %}
 </div>
-
 <script src="/modules/admin/_static/js/courses.js"></script>
+
+<!-- Support for OEditor look-and-feel date/time picker. -->
+<link rel="stylesheet" href="/modules/oeditor/_static/css/oeditor.css"/>
+<script src="/static/yui_3.6.0/yui/build/yui/yui.js"></script>
+<script src="/static/inputex-3.1.0/src/loader.js"></script>
+<script>
+  // Pull in datetime and oeditor to allow us to set up use of date/time
+  // chooser fields in non-oeditor contexts.  datetime.js is needed in its
+  // entirety; oeditor.js is only needed for getYuiConfig().  We rely on
+  // oeditor.js to not get too creative at page-load time, which is OK.
+  // The oeditor page-load-time setup is taken care of in oeditor.html
+  // instead.
+  {% include 'datetime.js' %}
+  {% include 'oeditor.js' %}
+  cb_global = { bundle_lib_files: {{bundle_lib_files}} };
+</script>

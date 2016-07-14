@@ -39,6 +39,29 @@ TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'courses', 'templates')
 
 
+def _authorize_put(handler):
+    """Common function for handlers.  Verifies user, gets common settings."""
+
+    request = transforms.loads(handler.request.get('request'))
+    response_payload = {
+        'key': handler.app_context.get_namespace_name(),
+    }
+    if not handler.assert_xsrf_token_or_fail(request, handler.ACTION,
+                                             response_payload):
+        return None, None, None, None
+    if not roles.Roles.is_user_allowed(
+        handler.app_context, custom_module,
+        constants.MODIFY_AVAILABILITY_PERMISSION):
+        transforms.send_json_response(handler, 401, 'Access denied.',
+                                      payload_dict=response_payload)
+        return None, None, None, None
+
+    course = handler.get_course()
+    settings = handler.app_context.get_environ()
+    payload = transforms.loads(request.get('payload', '{}'))
+    return course, settings, payload, response_payload
+
+
 class AvailabilityRESTHandler(utils.BaseRESTHandler):
 
     ACTION = 'availability'
@@ -425,26 +448,9 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
     def classmethod_put(cls, handler):
         """Expose as function for convenience in wrapping this hander."""
 
-        request = transforms.loads(handler.request.get('request'))
-        response_payload = {
-            'key': handler.app_context.get_namespace_name(),
-        }
-
-        # Check access permissions.  Not coming through dashboard, so must
-        # do these for ourselves.
-        if not handler.assert_xsrf_token_or_fail(request, handler.ACTION,
-                                                 response_payload):
+        course, settings, payload, response_payload = _authorize_put(handler)
+        if not course:
             return
-        if not roles.Roles.is_user_allowed(
-            handler.app_context, custom_module,
-            constants.MODIFY_AVAILABILITY_PERMISSION):
-            transforms.send_json_response(handler, 401, 'Access denied.',
-                                          payload_dict=response_payload)
-            return
-
-        course = handler.get_course()
-        settings = handler.app_context.get_environ()
-        payload = transforms.loads(request.get('payload', '{}'))
 
         # Date/Time triggers:
         #   unit and lesson availability, course-wide availability
@@ -489,8 +495,90 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             handler, 200, 'Saved.', payload_dict=response_payload)
 
 
+class MultiCourseAvailabilityRESTHandler(utils.BaseRESTHandler):
+    """Support multi-course for availability.
+
+    MultiCourseAvailabilityRESTHandler is responsible for coping with the
+    entire availability page submissions.  It's not a good fit for one-off
+    changes to single fields, so we add a separate handler for the UX
+    controls for changing one item across multiple courses.
+    """
+
+    URL = 'rest/multi_availability'
+    ACTION = AvailabilityRESTHandler.ACTION
+
+    def put(self):
+        course, settings, payload, response_payload = _authorize_put(self)
+        if not course:
+            return
+
+        course_availability = payload.get('course_availability')
+        if course_availability:
+            course.set_course_availability(course_availability)
+        transforms.send_json_response(
+            self, 200, 'Saved.', payload_dict=response_payload)
+
+
+class MultiCourseSetStartEndRESTHandler(utils.BaseRESTHandler):
+    """Support multi-course for availability.
+
+    MultiCourseAvailabilityRESTHandler is responsible for coping with the
+    entire availability page submissions.  It's not a good fit for one-off
+    changes to single fields, so we add a separate handler for the UX
+    controls for changing one item across multiple courses.
+    """
+
+    URL = 'rest/multi_set_start_end'
+    ACTION = AvailabilityRESTHandler.ACTION
+
+    def put(self):
+        course, settings, payload, response_payload = _authorize_put(self)
+        if not course:
+            return
+
+        triggers.MilestoneTrigger.payload_into_settings(
+            payload, course, settings,
+            action=triggers.DateTimeTrigger.ACTION_MERGE)
+        course.save_settings(settings)
+        transforms.send_json_response(
+            self, 200, 'Saved.', payload_dict=response_payload)
+
+
+class MultiCourseClearStartEndRESTHandler(utils.BaseRESTHandler):
+    """Support multi-course for availability.
+
+    MultiCourseAvailabilityRESTHandler is responsible for coping with the
+    entire availability page submissions.  It's not a good fit for one-off
+    changes to single fields, so we add a separate handler for the UX
+    controls for changing one item across multiple courses.
+    """
+
+    URL = 'rest/multi_clear_start_end'
+    ACTION = AvailabilityRESTHandler.ACTION
+
+    def put(self):
+        course, settings, payload, response_payload = _authorize_put(self)
+        if not course:
+            return
+
+        milestone = payload.get('milestone')
+        triggers.MilestoneTrigger.clear_from_settings(
+            course, settings, milestone)
+        course.save_settings(settings)
+        transforms.send_json_response(
+            self, 200, 'Saved.', payload_dict=response_payload)
+
+
 def get_namespaced_handlers():
-    return [('/' + AvailabilityRESTHandler.URL, AvailabilityRESTHandler)]
+    return [
+        ('/' + AvailabilityRESTHandler.URL, AvailabilityRESTHandler),
+        ('/' + MultiCourseAvailabilityRESTHandler.URL,
+         MultiCourseAvailabilityRESTHandler),
+        ('/' + MultiCourseSetStartEndRESTHandler.URL,
+         MultiCourseSetStartEndRESTHandler),
+        ('/' + MultiCourseClearStartEndRESTHandler.URL,
+         MultiCourseClearStartEndRESTHandler),
+    ]
 
 
 def on_module_enabled(courses_custom_module, module_permissions):

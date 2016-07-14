@@ -18,11 +18,15 @@ __author__ = [
     'Mike Gainer (mgainer@google.com)'
 ]
 
+import copy
+import re
+
 from selenium.common import exceptions
 
 from models import courses
 from modules.admin import admin_pageobjects
 from modules.admin import enrollments
+from modules.courses import courses_pageobjects
 from tests.integration import integration
 
 
@@ -103,7 +107,8 @@ class CourseAdministrationTests(_CoursesListTestBase):
         course_list.verify_course_checkbox_checked(course_namespace_two, True)
 
 
-class CourseMultiEditTests(_CoursesListTestBase):
+class CourseMultiEditSimpleTests(_CoursesListTestBase):
+    """Multi-edit tests that don't require multiple courses."""
 
     def test_multi_edit_cancel(self):
         course_name = self.create_new_course(login=False)[0]
@@ -148,32 +153,49 @@ class CourseMultiEditTests(_CoursesListTestBase):
             course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_PUBLIC]['title'])
 
-    def test_multi_edit_multiple_courses(self):
-        NUM_COURSES = 3
-        course_namespaces = []
-        for x in xrange(NUM_COURSES):
-            course_namespaces.append(
+
+class CourseMultiEditTests(_CoursesListTestBase):
+
+    NUM_COURSES = 3
+
+    def setUp(self):
+        super(CourseMultiEditTests, self).setUp()
+        self.course_namespaces = []
+        for x in xrange(self.NUM_COURSES):
+            self.course_namespaces.append(
                 'ns_' + self.create_new_course(login=False)[0])
+        self.course_list = self.load_courses_list()
+        self.maxDiff = None
 
-        course_list = self.load_courses_list()
-        for course_namespace in course_namespaces:
-            course_list.toggle_course_checkbox(course_namespace)
+    def _get_courses_availability(self):
+        ret = {}
+        page = courses_pageobjects.CourseAvailabilityPage(self)
+        for course_namespace in self.course_namespaces:
+            stub = re.sub('^ns_', '', course_namespace)
+            page.load(stub)
+            ret[course_namespace] = page.get_settings()
+        return ret
 
-        multi_edit = course_list.click_edit_availability()
+    def test_multi_edit_multiple_courses(self):
+
+        for course_namespace in self.course_namespaces:
+            self.course_list.toggle_course_checkbox(course_namespace)
+
+        multi_edit = self.course_list.click_edit_availability()
         multi_edit.set_availability(
             courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
 
         multi_edit.click_save()
-        for course_namespace in course_namespaces:
+        for course_namespace in self.course_namespaces:
             multi_edit.assert_status(course_namespace, 'Saved.')
-            course_list.verify_availability(
+            self.course_list.verify_availability(
                 course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
 
         multi_edit.expect_status_message_to_be(
             'Updated settings in %d courses.' %
-            NUM_COURSES)
+            self.NUM_COURSES)
 
         # Attempt to set courses to Private, but with an error that
         # will prevent that from actually happening.
@@ -183,16 +205,133 @@ class CourseMultiEditTests(_CoursesListTestBase):
 
         multi_edit.set_availability_xsrf_token('not a valid token')
         multi_edit.click_save()
-        for course_namespace in course_namespaces:
+        for course_namespace in self.course_namespaces:
             multi_edit.assert_status(
                 course_namespace,
                 'Bad XSRF token. Please reload the page and try again')
-            course_list.verify_availability(
+            self.course_list.verify_availability(
                 course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
         multi_edit.expect_status_message_to_be(
             'Updated settings in 0 courses and had %d errors.' %
-            NUM_COURSES)
+            self.NUM_COURSES)
+
+    def test_multi_edit_course_start_end(self):
+        # ----------------------------------------------------------------------
+        # Before any changes, course settings for availability are blank.
+        expected_c0 = {
+            'availability': 'private',
+            'start_trigger': {
+                'availability': 'none',
+                'date': '',
+                'hour': '00',
+            },
+            'end_trigger': {
+                'availability': 'none',
+                'date': '',
+                'hour': '00',
+            }
+        }
+        expected_c1 = copy.deepcopy(expected_c0)
+        expected_c2 = copy.deepcopy(expected_c0)
+        expected_avail = {
+            self.course_namespaces[0]: expected_c0,
+            self.course_namespaces[1]: expected_c1,
+            self.course_namespaces[2]: expected_c2,
+        }
+
+        # ----------------------------------------------------------------------
+        # Set start date on two of three courses.
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_start_date()
+        multi_edit.set_availability(
+            courses.COURSE_AVAILABILITY_POLICIES[
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
+        multi_edit.set_date_time('07/12/2100', '22')
+        multi_edit.click_save()
+
+        expected_c0['start_trigger'] = expected_c1['start_trigger'] = {
+            'availability': 'registration_required',
+            'date': '07/12/2100',
+            'hour': '22'
+        }
+        actual_avail = self._get_courses_availability()
+        self.assertEquals(expected_avail, actual_avail)
+
+        # ----------------------------------------------------------------------
+        # End date on two of three courses; one course from the set with
+        # the start date set, and one with no start date set.
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[1:]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_end_date()
+        multi_edit.set_availability(
+            courses.COURSE_AVAILABILITY_POLICIES[
+                courses.COURSE_AVAILABILITY_PUBLIC]['title'])
+        multi_edit.set_date_time('07/31/2100', '05')
+        multi_edit.click_save()
+
+        expected_c1['end_trigger'] = expected_c2['end_trigger'] = {
+            'availability': 'public',
+            'date': '07/31/2100',
+            'hour': '05',
+        }
+        actual_avail = self._get_courses_availability()
+        self.assertEquals(expected_avail, actual_avail)
+
+        # ----------------------------------------------------------------------
+        # Set current availability for all courses; verify that this does
+        # not clobber start/end triggers.
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_availability()
+        multi_edit.set_availability(
+            courses.COURSE_AVAILABILITY_POLICIES[
+                courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL]['title'])
+        multi_edit.click_save()
+
+        expected_c0['availability'] = 'registration_optional'
+        expected_c1['availability'] = 'registration_optional'
+        expected_c2['availability'] = 'registration_optional'
+        actual_avail = self._get_courses_availability()
+        self.assertEquals(expected_avail, actual_avail)
+
+        # ----------------------------------------------------------------------
+        # Clear start dates for all courses; verify change.
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_start_date()
+        multi_edit.set_date_time('', '00')
+        multi_edit.click_save()
+
+        expected_c0['start_trigger'] = expected_c1['start_trigger'] = {
+            'availability': 'none',
+            'date': '',
+            'hour': '00'
+        }
+        actual_avail = self._get_courses_availability()
+        self.assertEquals(expected_avail, actual_avail)
+
+        # ----------------------------------------------------------------------
+        # Clear end dates for all courses; verify change.
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_end_date()
+        multi_edit.set_date_time('', '00')
+        multi_edit.click_save()
+
+        expected_c1['end_trigger'] = expected_c2['end_trigger'] = {
+            'availability': 'none',
+            'date': '',
+            'hour': '00'
+        }
+        actual_avail = self._get_courses_availability()
+        self.assertEquals(expected_avail, actual_avail)
 
 
 class CoursesEnrollmentsTests(_CoursesListTestBase):

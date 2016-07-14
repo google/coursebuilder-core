@@ -171,11 +171,12 @@ $(function() {
   // - _getTitle(): Returns a string for titling the popup window.
   // - _getXsrfToken(): Returns a string containing the xsrf token authorizing
   //       changes to course settings.
-  // - _getFormFieldHtml(): Returns a string containing HTML that is added to
+  // - _getFormFields(): Returns HTML elements that are added to
   //       the popup window.  Typically contains form fields for settings.
-  // - _configureFormFields(): After the page HTML has been incorporated into
-  //       the page DOM, the derived class may wish to configure fields,
-  //       look up and cache handles to fields, and so on.
+  // - _validate(): Return true/false.  On false, you should highlight
+  //       incorrect fields and/or set a butterbar message to indicate
+  //       problems.  If this returns false, the Save button does not
+  //       save the current settings.
   // - _getSaveUrl(): Return the URL component (e.g., "/rest/assessment")
   //       without the course slug prefix that will accept an HTTP PUT.
   //       This handler *must* return a payload dict with an item named
@@ -215,13 +216,9 @@ $(function() {
           };
         });
 
-    var title = this._getTitle();
-    var formFields = this._getFormFieldHtml();
-
     this._form = $(
         '<div class="add-course-panel" id="multi-course-edit-panel">' +
-        '  <h2 class="title">' + title + '</h2>' +
-        formFields +
+        '  <h2 class="title"></h2>' +
         '  <div class="edit-multi-course-list">' +
         '    <table>' +
         '      <thead>' +
@@ -245,7 +242,9 @@ $(function() {
         '    <span class="icon spinner md md-settings md-spin"></span>' +
         '  </div>' +
         '</div>');
-    this._configureFormFields();
+    var titleElement = this._form.find('.title');
+    titleElement.text(this._getTitle());
+    titleElement.after(this._getFormFields());
     var courseList = this._form.find('#course_list');
     $(this._courses).each(function(index, course) {
       courseList.append(
@@ -262,7 +261,13 @@ $(function() {
       .setContent(this._form)
       .show();
   };
+  EditMultiCoursePanel.prototype._validate = function() {
+    return true;
+  };
   EditMultiCoursePanel.prototype._save = function() {
+    if (!this._validate()) {
+      return;
+    }
     this._showSpinner();
     var errorHandler = this._saveError.bind(this);
     var successHandler = this._saveSuccess.bind(this);
@@ -364,8 +369,8 @@ $(function() {
   EditMultiCourseAvailabilityPanel.prototype._getXsrfToken = function() {
     return $('#edit_multi_course_availability').data('xsrfToken');
   };
-  EditMultiCourseAvailabilityPanel.prototype._getFormFieldHtml = function() {
-    return (
+  EditMultiCourseAvailabilityPanel.prototype._getFormFields = function() {
+    ret = $(
         '<div class="form-row">' +
         '  <label>Availability</label>' +
         '  <select ' +
@@ -374,23 +379,22 @@ $(function() {
         '  </select>' +
         '</div>'
         );
-  };
-  EditMultiCourseAvailabilityPanel.prototype._configureFormFields = function() {
-    var availabilitySelect = this._form.find(
-        '#multi-course-select-availability');
+    var availabilitySelect = ret.find('#multi-course-select-availability');
     this._availabilitySelect = availabilitySelect;
     var options = $('#edit_multi_course_availability').data('options');
     $(options).each(function(index, opt) {
       availabilitySelect.append(
           $('<option value=' + opt.value + '>' + opt.title + '</option>'));
     });
+    return ret
   };
   EditMultiCourseAvailabilityPanel.prototype._getSaveUrl = function() {
-    return '/rest/availability';
+    return '/rest/multi_availability';
   };
   EditMultiCourseAvailabilityPanel.prototype._getSavePayload = function() {
     var availability = this._availabilitySelect.val();
     return {
+      trigger_action: 'merge',
       course_availability: availability
     };
   };
@@ -399,13 +403,106 @@ $(function() {
     var availabilityField = $('#availability_' + courseNamespace);
     var availability = this._availabilitySelect[0].selectedOptions[0].text;
     availabilityField.text(availability);
-  }
+  };
   function editMultiCourseAvailability() {
     // Var name intentionally in global namespace as hook for tests to modify.
     gcb_multi_edit_dialog = new EditMultiCourseAvailabilityPanel();
     gcb_multi_edit_dialog.init();
     gcb_multi_edit_dialog.open();
+  };
+
+  // ---------------------------------------------------------------------------
+  // Edit courses' start or end date and new availability on that date.
+  EditMultiCourseDatePanel = function () {
+    EditMultiCourseAvailabilityPanel.call(this);
   }
+  EditMultiCourseDatePanel.prototype = new EditMultiCourseAvailabilityPanel();
+  EditMultiCourseDatePanel.prototype.init = function(start_or_end) {
+    this._start_or_end = start_or_end;  // "start" or "end".
+    this._start_or_end_title = (
+        start_or_end[0].toUpperCase() + start_or_end.substring(1));
+    EditMultiCourseAvailabilityPanel.prototype.init.call(this);
+  };
+  EditMultiCourseDatePanel.prototype._getTitle = function() {
+    return 'Set Course ' + this._start_or_end_title + ' Date and Availability';
+  };
+  EditMultiCourseDatePanel.prototype._getFormFields = function() {
+    // Tack on all the .class names required for parent/child CSS class
+    // matching in this one datetime-container div.
+    var fields = $(
+        '<div class="form-row">' +
+        '  <label></label>' +
+        '  <div id="datetime-container" ' +
+        '       class="new-form-layout yui3-skin-sam yui-skin-sam"></div>' +
+        '</div>'
+        );
+    fields.find('label').text(this._start_or_end_title + ' Date')
+    fields.append(
+        EditMultiCourseAvailabilityPanel.prototype._getFormFields.call(this));
+
+    YUI.add('gcb-datetime', bindDatetimeField, '3.1.0', {
+      requires: ['inputex-datetime']
+    });
+    var self = this;
+    var yuiConf = getYuiConfig(cb_global.bundle_lib_files);
+    YUI(yuiConf).use('gcb-datetime', function(Y) {
+      self._datetime_field = new Y.inputEx.typeClasses.datetime(
+          {parentEl: 'datetime-container'});
+      // Mark minutes field in date picker as not editable.  Date/time
+      // picker looks odd with just the hours field, so leave minutes
+      // field there with default value of :00, which is what we want,
+      // since the do-trigger cron job fires ~hourly.
+      $(self._datetime_field.divEl).find(
+          '.inputEx-CombineField-separator + .inputEx-fieldWrapper select'
+          ).prop('disabled', 'true');
+    });
+
+    return fields;
+  };
+  EditMultiCourseDatePanel.prototype._validate = function() {
+    return this._datetime_field.validate();
+  };
+  EditMultiCourseDatePanel.prototype._getSaveUrl = function() {
+    // Decide whether to call set... or clear... depending on whether
+    // the date field is blank or not.  It's substantially more convenient
+    // to do this at this layer rather than in the server because of the
+    // tight integration of parsing + setting code, which will just ignore
+    // items which appear malformed (e.g., which have a blank date field. :-> )
+    var when = this._datetime_field.getValue();
+    if (when) {
+      return '/rest/multi_set_start_end';
+    } else {
+      return '/rest/multi_clear_start_end';
+    }
+  };
+  EditMultiCourseDatePanel.prototype._getSavePayload = function() {
+    var availability = this._availabilitySelect.val();
+    var when = this._datetime_field.getValue();
+    var setting_name = 'course_' + this._start_or_end;
+    ret = {}
+    if (when) {
+      ret[setting_name] = [{
+        'availability': availability,
+        'milestone': setting_name,
+        'when': when
+      }];
+    } else {
+      ret = {
+        'milestone': setting_name,
+      };
+    }
+    return ret;
+  };
+  function editMultiCourseStartDate() {
+    gcb_multi_edit_dialog = new EditMultiCourseDatePanel();
+    gcb_multi_edit_dialog.init('start');
+    gcb_multi_edit_dialog.open();
+  };
+  function editMultiCourseEndDate() {
+    gcb_multi_edit_dialog = new EditMultiCourseDatePanel();
+    gcb_multi_edit_dialog.init('end');
+    gcb_multi_edit_dialog.open();
+  };
 
   var _sortBySequence = {
     // The key is the element #id of the primary "clicked on" sortable table
@@ -619,6 +716,8 @@ $(function() {
     $('#add_sample_course').click(addSampleCourse);
     $('#all_courses_select').click(selectAll);
     $('#edit_multi_course_availability').click(editMultiCourseAvailability);
+    $('#edit_multi_course_start_date').click(editMultiCourseStartDate);
+    $('#edit_multi_course_end_date').click(editMultiCourseEndDate);
     $('.gcb-course-checkbox').click(selectCourse);
     $('div.gcb-list > table > thead > tr > th:not(.gcb-not-sortable)').click(
         sortCourseRows);

@@ -230,9 +230,21 @@ class CoursesListPage(pageobjects.CoursesListPage):
         self._tester.assertEqual(expected, a_href.text.strip())
         return self
 
-    def click_edit_availability(self):
-        self.find_element_by_id('edit_multi_course_availability').click()
+    def _open_multicourse_popup(self, item_id):
+        field = self.find_element_by_css_selector('.dropdown-container')
+        action_chains.ActionChains(self._tester.driver).move_to_element(
+            field).perform()
+        self.find_element_by_id(item_id).click()
         return MultiEditModalDialog(self._tester)
+
+    def click_edit_availability(self):
+        return self._open_multicourse_popup('edit_multi_course_availability')
+
+    def click_edit_start_date(self):
+        return self._open_multicourse_popup('edit_multi_course_start_date')
+
+    def click_edit_end_date(self):
+        return self._open_multicourse_popup('edit_multi_course_end_date')
 
     def _col_hdr_id_sel(self, column):
         sel = '#{}_column'.format(column)
@@ -420,6 +432,23 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
     def set_availability(self, value):
         select_elt = self.find_element_by_id('multi-course-select-availability')
         select.Select(select_elt).select_by_visible_text(value)
+        return self
+
+    def set_date_time(self, the_date, the_time):
+        """Set date/time field.
+
+        Args:
+          the_date: A string of the form mm/dd/yyyy
+          the_time: A string of the form hh.  E.g., "03", "22", etc.
+        """
+        date_element = self.find_element_by_css_selector(
+            '#datetime-container input[type="text"]')
+        self._tester.driver.execute_script(
+            'arguments[0].setAttribute("value", "' + the_date +'")',
+            date_element)
+        time_element = self.find_element_by_css_selector(
+            '#datetime-container select')
+        select.Select(time_element).select_by_visible_text(the_time)
         return self
 
     def assert_status(self, namespace, text):

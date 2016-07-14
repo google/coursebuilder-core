@@ -56,8 +56,12 @@ from common import menus
 import google.appengine.api.app_identity as app
 from google.appengine.ext import db
 
-TEMPLATE_DIR = os.path.join(
-    appengine_config.BUNDLE_ROOT, 'modules', 'admin', 'templates')
+_TEMPLATE_DIRS = [
+    os.path.join(
+        appengine_config.BUNDLE_ROOT, 'modules', 'admin', 'templates'),
+    os.path.join(
+        appengine_config.BUNDLE_ROOT, 'modules', 'oeditor', 'templates'),
+]
 
 DIRECT_CODE_EXECUTION_UI_ENABLED = False
 GLOBAL_SITE_SETTINGS_LINK_ENABLED = False
@@ -115,7 +119,7 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
     POST_HOOKS = []
 
     def get_template(self, template_name):
-        return jinja_utils.get_template(template_name, [TEMPLATE_DIR])
+        return jinja_utils.get_template(template_name, _TEMPLATE_DIRS)
 
     def can_view(self):
         """Checks if current user has viewing rights."""
@@ -832,20 +836,19 @@ class BaseAdminHandler(ConfigPropertyEditor):
         template_values = {
             'page_title': self.format_title('Courses'),
             'main_content': self.render_template_to_html(
-                {
-                    'add_course_link': '%s?action=add_course' % self.LINK_URL,
-                    'delete_course_link': CourseDeleteHandler.URI,
-                    'delete_course_xsrf_token': delete_course_xsrf_token,
-                    'add_course_xsrf_token': add_course_xsrf_token,
-                    'edit_course_availability_xsrf_token':
-                        edit_course_availability_xsrf_token,
-                    'course_availability_options': course_availability_options,
-                    'courses': all_courses,
-                    'total_students': total_students,
-                    'email': users.get_current_user().email(),
-                },
-                'courses.html', [TEMPLATE_DIR]
-            )
+                {'add_course_link': '%s?action=add_course' % self.LINK_URL,
+                 'delete_course_link': CourseDeleteHandler.URI,
+                 'delete_course_xsrf_token': delete_course_xsrf_token,
+                 'add_course_xsrf_token': add_course_xsrf_token,
+                 'edit_course_availability_xsrf_token':
+                     edit_course_availability_xsrf_token,
+                 'course_availability_options': course_availability_options,
+                 'courses': all_courses,
+                 'total_students': total_students,
+                 'email': users.get_current_user().email(),
+                 'bundle_lib_files':
+                     'true' if appengine_config.BUNDLE_LIB_FILES else 'false',
+               }, 'courses.html', _TEMPLATE_DIRS)
         }
         self.render_page(template_values, in_action='courses')
 
@@ -965,7 +968,7 @@ class AdminHandler(BaseAdminHandler, dashboard.DashboardHandler):
 
     def get_template(self, template_name, dirs=None):
         return super(AdminHandler, self).get_template(
-            template_name, [TEMPLATE_DIR] + (dirs or []))
+            template_name, _TEMPLATE_DIRS + (dirs or []))
 
     def get_course_picker(self, destination=None, in_action=None):
         return super(AdminHandler, self).get_course_picker(
