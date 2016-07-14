@@ -2146,7 +2146,9 @@ class QuestionImporter(object):
 
     @classmethod
     def _gen_description(cls, unit, lesson_title, question_number):
-        return 'Question #%s' % (question_number)
+        return (
+            'Unit "%s", lesson "%s" (question #%s)' % (
+                unit.title, lesson_title, question_number))
 
     @classmethod
     def import_freetext(cls, question, description, task):
@@ -2236,7 +2238,8 @@ class QuestionImporter(object):
         question_list = []
         for index, question in enumerate(group['questionsList']):
             description = (
-                'Question #%s, part #%s'% (question_number, index + 1))
+                'Unit "%s", lesson "%s" (question #%s, part #%s)'
+                % (unit.title, lesson_title, question_number, index + 1))
             question_dict = cls.import_multiple_choice_group_question(
                 question, description)
             question = QuestionDTO(None, question_dict)
