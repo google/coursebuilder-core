@@ -417,7 +417,7 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
             return True
 
     def click_cancel(self):
-        self.find_element_by_id('multi-course-cancel').click()
+        self.find_element_by_id('multi-course-close').click()
         self.wait().until(self._dialog_not_visible)
         return CoursesListPage(self._tester)
 

@@ -99,7 +99,7 @@
 }
 
 .gcb-list-select-course {
-  width: 20px
+  width: 20px;
 }
 
 .inactive {
@@ -112,8 +112,10 @@
  * Buttons for multi-course-edit shown as dropdown list on hover.
  */
 .edit-multi-course-list {
-  max-height: 200px;
+  width: 500px;
+  max-height: 500px;
   overflow-y: scroll;
+  overflow-x: hidden;
   margin-top: 15px;
   margin-bottom: 15px;
 }
@@ -132,6 +134,16 @@ div.dropdown-container div.dropdown-actions-container {
 }
 div.dropdown-container:hover div.dropdown-actions-container {
   display: block;
+}
+
+.edit-multi-course-status {
+  min-width: 10em;
+}
+.edit-multi-course-coursename {
+  max-width: 20em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-x: hidden;
 }
 
 /*

@@ -217,14 +217,15 @@ $(function() {
         });
 
     this._form = $(
-        '<div class="add-course-panel" id="multi-course-edit-panel">' +
+        '<div class="add-course-panel multi-course-panel" ' +
+        '     id="multi-course-edit-panel">' +
         '  <h2 class="title"></h2>' +
         '  <div class="edit-multi-course-list">' +
         '    <table>' +
         '      <thead>' +
         '        <tr id="multi_edit_header_row">' +
-        '          <th>Course Name</th>' +
-        '          <th>Status</th>' +
+        '          <th class="edit-multi-course-coursename">Course Name</th>' +
+        '          <th class="edit-multi-course-status">Status</th>' +
         '        </tr>' +
         '      </thead>' +
         '      <tbody id="course_list">' +
@@ -234,8 +235,8 @@ $(function() {
         '  <div class="controls">' +
         '    <button id="multi-course-save" ' +
         '            class="gcb-button save-button">Save</button>' +
-        '    <button id="multi-course-cancel" ' +
-        '            class="gcb-button cancel-button">Cancel</button>' +
+        '    <button id="multi-course-close" ' +
+        '            class="gcb-button cancel-button">Close</button>' +
         '  </div>' +
         '  <div id="multi-course-spinner" class="spinner hidden">' +
         '    <div class="background"></div>' +
@@ -248,11 +249,12 @@ $(function() {
     var courseList = this._form.find('#course_list');
     $(this._courses).each(function(index, course) {
       courseList.append(
-          $('<tr><td>' + course.title + '</td>' +
+          $('<tr><td class="edit-multi-course-coursename">' +
+              course.title + '</td>' +
             '<td id="course_status_' + course.namespace + '"> - </td></tr>'));
     });
     this._form.find('#multi-course-save').click(this._save.bind(this));
-    this._form.find('#multi-course-cancel').click(this._close.bind(this));
+    this._form.find('#multi-course-close').click(this._close.bind(this));
     this._spinner = this._form.find('.spinner');
   };
   EditMultiCoursePanel.prototype.open = function() {
@@ -266,6 +268,10 @@ $(function() {
   };
   EditMultiCoursePanel.prototype._save = function() {
     if (!this._validate()) {
+      return;
+    }
+    if (!confirm('You are about to change settings in ' +
+        this._courses.length + ' courses.  Continue?')) {
       return;
     }
     this._showSpinner();
@@ -325,7 +331,7 @@ $(function() {
       this._numFailureResponses++;
     } else {
       this._settingSaved(payload);
-      message = 'Saved.';
+      message = 'Saved';
       this._numSuccessResponses++;
     }
     statusField.text(message);
