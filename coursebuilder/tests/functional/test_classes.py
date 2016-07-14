@@ -6195,7 +6195,7 @@ var activity = [
         self.assertEqual(question.dict['version'], '1.5')
         self.assertEqual(
             question.dict['description'],
-            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
+            'Unit "New Unit", lesson "New Lesson" (question #1)')
         self.assertEqual(question.dict['question'], 'task')
         self.assertEqual(question.dict['hint'], 'A hint.')
         self.assertEqual(question.dict['defaultFeedback'], 'Try again.')
@@ -6232,7 +6232,7 @@ var activity = [
         self.assertEqual(question.dict['version'], '1.5')
         self.assertEqual(
             question.dict['description'],
-            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
+            'Unit "New Unit", lesson "New Lesson" (question #1)')
         self.assertEqual(question.dict['question'], 'task')
         self.assertEqual(question.dict['hint'], 'A hint.')
         self.assertEqual(question.dict['defaultFeedback'], '')
@@ -6278,7 +6278,7 @@ var activity = [
         self.assertEqual(question.dict['version'], '1.5')
         self.assertEqual(
             question.dict['description'],
-            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
+            'Unit "New Unit", lesson "New Lesson" (question #1)')
         self.assertEqual(question.dict['question'], 'task')
         self.assertEqual(question.dict['multiple_selections'], False)
         self.assertEqual(len(question.dict['choices']), 4)
@@ -6309,7 +6309,7 @@ var activity = [
         self.assertEqual(question_group.dict['version'], '1.5')
         self.assertEqual(
             question_group.dict['description'],
-            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
+            'Unit "New Unit", lesson "New Lesson" (question #1)')
         self.assertEqual(len(question_group.dict['items']), 2)
 
         items = question_group.dict['items']
@@ -6324,7 +6324,7 @@ var activity = [
         self.assertEqual(
             question.dict['description'],
             (
-                'Imported from unit "New Unit", lesson "New Lesson" '
+                'Unit "New Unit", lesson "New Lesson" '
                 '(question #1, part #1)'))
         self.assertEqual(question.dict['question'], 'choose a')
         self.assertEqual(question.dict['multiple_selections'], False)
@@ -6344,7 +6344,7 @@ var activity = [
         self.assertEqual(
             question.dict['description'],
             (
-                'Imported from unit "New Unit", lesson "New Lesson" '
+                'Unit "New Unit", lesson "New Lesson" '
                 '(question #1, part #2)'))
         self.assertEqual(question.dict['question'], 'choose b or c')
         self.assertEqual(question.dict['multiple_selections'], True)
