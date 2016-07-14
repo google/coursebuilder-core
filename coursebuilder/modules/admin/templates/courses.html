@@ -13,7 +13,7 @@
      role="button">
     Add Sample Course...
   </a>
-  <div class="dropdown-container">
+  <div class="dropdown-container" id="multi_course_actions">
     <div class="gcb-button multi-course-actions dropdown-leader">
       Multi-Course Actions
     </div>
@@ -56,11 +56,9 @@
     </div>
   </div>
 </div>
-<div style="clear: both; padding-top: 2px;">
-</div>
-
-<div class="gcb-list gcb-list--autostripe">
-  <table>
+<div class="clearfix"></div>
+<div class="gcb-list gcb-list--autostripe fixed-table">
+  <table id="courses_list">
     <thead>
       <tr>
         {# Checkbox and trash-can icon delete columns cannot be sorted by. #}
@@ -159,7 +157,8 @@
         <td>
           {{ courses|length }} course(s)
         </td>
-        <td colspan="2">&nbsp;</td>
+        <td></td>
+        <td></td>
         <td>
           {{ total_students }} student(s)
         </td>

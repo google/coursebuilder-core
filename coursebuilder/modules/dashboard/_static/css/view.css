@@ -51,13 +51,13 @@ table {
   border-color: #e0e0e0;
   border-collapse: collapse;
 }
-table th {
+th {
   border-width: 1px;
   padding: 4px;
   border-style: solid;
   border-color: #e0e0e0;
 }
-table td {
+td {
   border-width: 1px;
   padding: 8px;
   border-style: solid;
@@ -634,4 +634,16 @@ label.settings.gcb-toggle-button {
 
 .icon-draft-status.public:before {
   content: 'lock_open';
+}
+
+/* Recommended clear for floats etc. It's heightless.
+   Use like <div class="clearfix"></div> */
+.clearfix:before,
+.clearfix:after {
+    content: " "; /* 1 */
+    display: table; /* 2 */
+}
+
+.clearfix:after {
+    clear: both;
 }

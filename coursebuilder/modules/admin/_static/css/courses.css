@@ -99,7 +99,7 @@
 }
 
 .gcb-list-select-course {
-  width: 20px;
+  width: 28px;
 }
 
 .inactive {
@@ -107,7 +107,9 @@
   pointer-events: none;
   cursor: default !important;
 }
-
+/*
+ * Buttons for multi-course-edit shown as dropdown list on hover.
+ */
 /*
  * Buttons for multi-course-edit shown as dropdown list on hover.
  */
@@ -122,6 +124,7 @@
 div.dropdown-container {
   display: inline-block;
   position: relative;
+  z-index: 2;
 }
 div.dropdown-member {
   margin: 2px;
@@ -132,7 +135,7 @@ div.dropdown-actions-container {
 div.dropdown-container div.dropdown-actions-container {
   display: none;
 }
-div.dropdown-container:hover div.dropdown-actions-container {
+div.dropdown-container:hover:not(.inactive-container) div.dropdown-actions-container {
   display: block;
 }
 
@@ -156,4 +159,46 @@ i.gcb-sorted-icon {
 
 i.gcb-sorted-hover {
   color: rgba(0, 0, 0, 0.26);
+}
+
+/*
+ *  Calculate a scrolling fixed-height table for courses.
+ *
+ */
+.table-container, .table-container * {
+  box-sizing: border-box;
+}
+.table-container, .table-scroller {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+.table-scroller {
+  overflow: auto;
+  max-height: 400px;
+}
+.table-container table {
+  height: 100%;
+  overflow: auto;
+}
+.table-container table.fixed {
+  position: absolute;
+  left: 0;
+  width: 100%;
+}
+.table-container table.fixed.thead {
+  top: 0;
+}
+.table-container table.fixed.tfoot {
+  bottom: 0;
+}
+
+.gcb-list table > tbody > tr > td:last-child, .gcb-list table > thead > tr > th:last-child {
+  padding-right: 24px;
+}
+
+.gcb-list__cell--header, .gcb-list table > thead > tr > th, .gcb-list tr > th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

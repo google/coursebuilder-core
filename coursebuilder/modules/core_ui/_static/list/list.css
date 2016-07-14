@@ -26,7 +26,7 @@
   margin-top: 16px;
 }
 
-.gcb-list > table {
+.gcb-list table {
   border: 0;
   width: 100%;
   table-layout: fixed;
@@ -52,7 +52,7 @@ ul.gcb-list, ol.gcb-list {
 /*** Row ***/
 
 .gcb-list__row,
-.gcb-list > table > tbody > tr {
+.gcb-list table > tbody > tr {
   transition: background-color 200ms;
   height: 36px;
   background-color: white;
@@ -66,7 +66,7 @@ ul.gcb-list, ol.gcb-list {
  */
 .gcb-list__row--dark-stripe,
 .gcb-list--autostripe .gcb-list__row:nth-child(even),
-.gcb-list--autostripe > table > tbody > tr:nth-child(even) {
+.gcb-list--autostripe table > tbody > tr:nth-child(even) {
   background-color:#f9f9f9;
 }
 
@@ -105,7 +105,8 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
 /*** Header Row ***/
 
 .gcb-list__header-row,
-.gcb-list > table > thead > tr {
+.gcb-list table > thead > tr,
+.gcb-list thead > tr {
   background-color: #f9f9f9;
   border-bottom: solid 1px #e0e0e0;
   font-weight: bold;
@@ -115,7 +116,8 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
 
 /*** Footer Row ***/
 
-.gcb-list > table > tfoot > tr {
+.gcb-list table > tfoot > tr,
+.gcb-list tfoot > tr {
   background-color: #f9f9f9;
   text-align: left;
   font-style: italic;
@@ -126,7 +128,7 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
 /*** Row ***/
 
 .gcb-list__row,
-.gcb-list > table > tbody > tr {
+.gcb-list table > tbody > tr {
   border-bottom: solid 1px #e0e0e0;
 }
 
@@ -164,7 +166,8 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
 /*** Header Cell ***/
 
 .gcb-list__cell--header,
-.gcb-list > table > thead > tr > th {
+.gcb-list table > thead > tr > th,
+.gcb-list tr > th {
   padding: 0;
   padding-left: 8px;
   vertical-align: middle;
@@ -193,7 +196,7 @@ table > tbody > tr > td.gcb-list__cell--word-wrap  {
 }
 
 .gcb-list__row:hover .gcb-list__icon--rowhover,
-.gcb-list > table > tbody > tr:hover .gcb-list__icon--rowhover {
+.gcb-list table > tbody > tr:hover .gcb-list__icon--rowhover {
   color: #555;
 }
 

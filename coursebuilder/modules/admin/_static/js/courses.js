@@ -118,9 +118,11 @@ $(function() {
 
   function setMultiCourseActionAllowed(isAvailable) {
     if (isAvailable) {
-      $('.multi-course-actions').removeClass('inactive');
+      $('#multi_course_actions').removeClass('inactive-container').
+          find(".multi-course-actions").removeClass('inactive');
     } else {
-      $('.multi-course-actions').addClass('inactive');
+      $('#multi_course_actions').addClass('inactive-container').
+          find(".multi-course-actions").addClass('inactive');
     }
   }
 
@@ -714,6 +716,11 @@ $(function() {
     var next = _nextFromHeader($th);
     var $table = $th.closest('table');
 
+    // Repointer for fixed header tables
+    if ($table.hasClass("thead")){
+      $table = $table.siblings(".tableScroller").find("table");
+    }
+
     // Only some of the table columns can be used to sort the table rows.
     var hdrs = $table.find('thead > tr > th:not(.gcb-not-sortable)').get();
     _clearHeadersSorted(hdrs, $th.index(), next);
@@ -804,4 +811,80 @@ $(function() {
   }
 
   init();
+
+  /* New jQuery plugin/method for recalculating the table height.  A
+     bit more work could make this reusable across page tables. */
+  (function($) {
+    $.fn.recalculateCourseTableHeight = function() {
+      return this.each(function() {
+        var $this = $(this), $titleRowFixed, $footerRowFixed;
+
+        function init() {
+          // wrap tables with relative positioned div
+          $this.wrap(
+              '<div class="table-container">' +
+              '  <div class="table-scroller">' +
+              '  </div>' +
+              '</div>');
+          // cloned header elem, keep event bindings
+          $titleRowFixed = $this.clone(true);
+          // cloned footer elem, keep event bindings
+          $footerRowFixed = $this.clone(true);
+          $titleRowFixed.find("tbody")
+              .remove().end().find("tfoot")
+              .remove().end().addClass("fixed thead")
+              .appendTo($this.closest(".table-container"));
+          $footerRowFixed.find("tbody")
+              .remove().end().find("thead")
+              .remove().end().addClass("fixed tfoot")
+              .appendTo($this.closest(".table-container"));
+          fixSizing();
+        }
+
+        function fixSizing(){
+          // Evaluate necessity of a fixed height table.
+          var tableHeight = $this.height();
+          var contentAreaHeight = $("#gcb-main-area").
+              closest(".mdl-layout__content").
+              outerHeight();
+          var buttonAreaHeight = $("#gcb-main-area").
+              find(".gcb-button-toolbar").
+              outerHeight();
+          var footerAreaHeight = $("#gcb-footer").outerHeight();
+          var paddingAdjustment = $("#gcb-main-content").outerHeight() -
+              $("#gcb-main-content").height();
+          var scrollerMaxHeight = contentAreaHeight - buttonAreaHeight -
+              footerAreaHeight - paddingAdjustment - 12;
+          if (tableHeight > scrollerMaxHeight){
+            $this.closest(".table-container").addClass("limit-table-height")
+                .find(".table-scroller").css(
+                    "max-height", (scrollerMaxHeight) + "px");
+          } else {
+            $this.closest(".table-container")
+                .removeClass("limit-table-height")
+                .find(".table-scroller")
+                .css("max-height", "");
+          }
+
+          // Reset widths in case table sizing changed based on tbody
+          $titleRowFixed.width( $this.width() );
+          $titleRowFixed.find("th").each(function(index) {
+            $(this).css("width", $this.find("th").eq(index).outerWidth()+"px");
+          });
+
+          $footerRowFixed.width( $this.width() );
+          $footerRowFixed.find("td").each(function(index) {
+            $(this).css("width", $this.find("th").eq(index).outerWidth()+"px");
+          });
+        }
+        init();
+        $(window).resize(fixSizing);
+      });
+    };
+  })(jQuery);
+
+  /* run plugin after window load so that we're confident layout is calc. */
+  $(window).load(function(){
+    $("#courses_list").recalculateCourseTableHeight();
+  });
 });

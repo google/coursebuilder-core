@@ -66,7 +66,7 @@ form label, form p, form input, form textarea, form select {
   margin: 0 0 5px;
 }
 
-th, td {
+th, td, .th, .td {
   border: 1px solid #ebebeb;
   padding: 4px 12px;
   vertical-align: top;
