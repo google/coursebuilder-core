@@ -37,7 +37,9 @@
       gapi.auth2.init({
         client_id: GOOGLE_CLIENT_ID,
         scope: DRIVE_SCOPE,
-        fetch_basic_profile: false,
+
+        // TODO(nretallack): set to false when b/29221567 is resolved
+        fetch_basic_profile: true,
       }).then(function() {
         authLoaded.resolve()
       });
