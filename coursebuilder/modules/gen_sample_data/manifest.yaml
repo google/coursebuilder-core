@@ -1,0 +1,14 @@
+registration:
+  main_module: modules.gen_sample_data.gen_sample_data
+
+tests:
+    functional:
+        - modules.gen_sample_data.gen_sample_data_tests.GenerateSampleQuizTestCase = 1
+        - modules.gen_sample_data.gen_sample_data_tests.GenerateSampleStudentsTestCase = 1
+        - modules.gen_sample_data.gen_sample_data_tests.GenerateSampleScoresTestCase = 1
+files:
+  - modules/gen_sample_data/__init__.py
+  - modules/gen_sample_data/gen_sample_data.py
+  - modules/gen_sample_data/gen_sample_data_tests.py
+  - modules/gen_sample_data/manifest.yaml
+  - modules/gen_sample_data/templates/sample_data.html

@@ -1,0 +1,225 @@
+# Copyright 2016 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Tests for modules/gen_sample_data/."""
+
+__author__ = 'Timothy Johnson (tujohnson@google.com)'
+
+import collections
+
+from common import utils as common_utils
+from controllers import sites
+from models import courses
+from models import event_transforms
+from models import models
+from models import transforms
+from modules.gen_sample_data import gen_sample_data
+from tests.functional import actions
+from google.appengine.api import namespace_manager
+
+# This email and course name are used for every test in this file
+ADMIN_EMAIL = 'admin@foo.com'
+COURSE_NAME = 'sample_data_course'
+
+
+class BaseSampleDataTestCase(actions.TestBase):
+    """Base class for all test cases in this file.
+
+    Each test uses similar setUp and tearDown methods, so we put that code in
+    this class and inherit from it.
+    """
+    def setUp(self):
+        super(BaseSampleDataTestCase, self).setUp()
+        self.base = '/' + COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            COURSE_NAME, ADMIN_EMAIL, 'Sample Data Course')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % COURSE_NAME)
+        self.course = courses.Course(None, self.app_context)
+
+    def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        namespace_manager.set_namespace(self.old_namespace)
+        super(BaseSampleDataTestCase, self).tearDown()
+
+
+class GenerateSampleQuizTestCase(BaseSampleDataTestCase):
+    """Tests the handler that generates an assessment."""
+
+    def test_add_assessment(self):
+        """Tests that we can successfully add an assessment."""
+
+        actions.login(ADMIN_EMAIL)
+        # Get the current number of assessments
+        assessment_ids_before = self._get_assessment_ids()
+
+        # Send a post request to generate a new assessment. The handler
+        # expects to redirect back to the referer.
+        response = self.post('generate-quiz', params={},
+                             headers={'Referer': '/course'})
+
+        # Test that we are redirected back to the main page
+        self.assertEquals(302, response.status_code)
+
+        # Test that we have added one more assessment
+        assessment_ids_after = self._get_assessment_ids()
+        self.assertEquals(len(assessment_ids_before) + 1,
+                          len(assessment_ids_after))
+
+    def _get_assessment_ids(self):
+        questions_by_usage_id = event_transforms.get_questions_by_usage_id(
+            self.app_context)
+        assessment_ids = set()
+        for question_id in questions_by_usage_id:
+            assessment_ids.add(questions_by_usage_id[question_id]['unit'])
+        return assessment_ids
+
+
+class GenerateSampleStudentsTestCase(BaseSampleDataTestCase):
+    """Tests the handler that generates a new batch of students."""
+
+    def test_add_students(self):
+        """Checks that we can successfully add a batch of students."""
+
+        actions.login(ADMIN_EMAIL)
+        student_ids_before = self._get_student_ids()
+        response = self.post('generate-students', params={},
+                             headers={'Referer': '/course'})
+        self.assertEquals(302, response.status_code)
+
+        student_ids_after = self._get_student_ids()
+        self.assertEquals(
+            (len(student_ids_before) +
+             gen_sample_data.GenerateSampleStudentsHandler.NUM_STUDENTS),
+            len(student_ids_after))
+
+    def _get_student_ids(self):
+        students = common_utils.iter_all(models.Student.all())
+        return [student.user_id for student in students]
+
+
+class GenerateSampleScoresTestCase(BaseSampleDataTestCase):
+    """Tests handler that generates scores for students."""
+
+    def setUp(self):
+        super(GenerateSampleScoresTestCase, self).setUp()
+
+        # Add students and an assessment so that we have scores to create
+        response = self.post('generate-quiz', params={},
+                             headers={'Referer': '/course'})
+        response = self.post('generate-students', params={},
+                             headers={'Referer': '/course'})
+
+        # For this to be a strong test, there should be some students that look
+        # like real users and some questions that look like real questions
+        # (i.e., not generated by gen_sample_data).
+        self._generate_real_questions()
+        self._generate_real_students()
+
+    def _generate_real_questions(self):
+        # This looks similar to the post function in GenerateSampleQuizHandler,
+        # but we call _generate_question_data_internal directly, without adding
+        # the prefix for automatically generated questions.
+        quiz_handler = gen_sample_data.GenerateSampleQuizHandler()
+        quiz_handler.app_context = self.app_context
+        num_questions = quiz_handler.NUM_QUESTIONS
+        questions = [quiz_handler._generate_question_data_internal(
+            i, 'Question: %s' % i) for i in xrange(num_questions)]
+
+        quiz_handler._create_assessment(questions)
+
+    def _generate_real_students(self):
+        # This looks similar to the post function in
+        # GenerateSampleStudentsHandler, but we generate the emails without the
+        # prefix marking these students as automatically generated.
+        students_handler = gen_sample_data.GenerateSampleStudentsHandler()
+        students_handler.app_context = self.app_context
+        student_emails = students_handler._generate_emails('')
+        students_handler._generate_students(student_emails)
+
+    def test_add_scores_for_generated_students(self):
+        """Checks that new scores are generated correctly.
+
+        Each automatically generated student should have one new score for each
+        question that was automatically generated.
+        """
+
+        actions.login(ADMIN_EMAIL)
+        answers_before = self._get_answers()
+        self.post('generate-scores', params={},
+                  headers={'Referer': '/course'})
+
+        answers_after = self._get_answers()
+        self._compare_answers(answers_before, answers_after)
+
+    def _get_answers(self):
+        """Generates a dictionary of answer counts.
+
+        For each student in the course, we create a dictionary in which the
+        key is the question instance id and the value is a list of answers that
+        student has given. Then we put all of those dictionaries as entries into
+        a new dictionary indexed by the student ID.
+        """
+
+        answer_dict = {}
+        for event in common_utils.iter_all(models.EventEntity.all()):
+            if event.source == 'submit-assessment':
+                if event.user_id not in answer_dict:
+                    # If we attempt to get a question count when a user has
+                    # not answered a question, this will automatically create
+                    # a new entry that is equal to zero, instead of raising a
+                    # KeyError.
+                    answer_dict[event.user_id] = collections.defaultdict(int)
+
+                data = transforms.loads(event.data)
+                for question_id in data['values']['containedTypes']:
+                    answer_dict[event.user_id][question_id] += 1
+
+        return answer_dict
+
+    def _compare_answers(self, answers_before, answers_after):
+        # We don't care about the values for the dictionary of questions,only
+        # that the keys are the usage ID's that we need to check.
+        all_questions = event_transforms.get_questions_by_usage_id(
+            self.app_context)
+        for student in common_utils.iter_all(models.Student.all()):
+            user_id = str(student.user_id)
+            if not self._is_generated_student(student):
+                # If a student has not been automatically generated, then
+                # either they should not exist in either dictionary, or
+                # their number of answers provided should be the same for
+                # every question that they have answered
+                if user_id not in answers_before:
+                    self.assertEquals(True, user_id not in answers_after)
+                else:
+                    for question_id in all_questions:
+                        before = answers_before[user_id][question_id]
+                        after = answers_after[user_id][question_id]
+                        self.assertEquals(before, after)
+            else:
+                # If a student has been automatically generated, then their
+                # number of answers should have increased by one for every
+                # question.
+                for question_id in all_questions:
+                    countBefore = 0
+                    countAfter = 0
+                    if user_id in answers_before:
+                        countBefore = answers_before[user_id][question_id]
+                    if user_id in answers_after:
+                        countAfter = answers_after[user_id][question_id]
+                    self.assertEquals(countBefore + 1, countAfter)
+
+    def _is_generated_student(self, student):
+        return student.email.startswith(
+            gen_sample_data.GenerateSampleStudentsHandler.EMAIL_PREFIX)
