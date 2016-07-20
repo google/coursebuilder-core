@@ -32,8 +32,10 @@ removed from the course settings.
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
-from google.appengine.api import namespace_manager
+import datetime
+import logging
 
+import appengine_config
 from common import utils as common_utils
 from common import utc
 from controllers import sites
@@ -41,6 +43,10 @@ from controllers import utils
 from models import courses
 from models import jobs
 from modules.courses import triggers
+
+from google.appengine.api import namespace_manager
+from google.appengine.ext import db
+from google.appengine.ext import deferred
 
 
 class UpdateAvailability(jobs.DurableJob):
@@ -100,21 +106,79 @@ class UpdateAvailability(jobs.DurableJob):
         common_utils.run_hooks(self.RUN_HOOKS.itervalues(), course)
 
 
-class StartAvailabilityJobs(utils.AbstractAllCoursesCronHandler):
-    """Handle callback from cron by launching availability jobs."""
+class StartAvailabilityJobsStatus(db.Model):
+
+    SINGLETON_KEY = 'singleton'
+
+    last_run = db.DateTimeProperty(indexed=False)
+
+    @classmethod
+    def get_singleton(cls):
+        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            entity = cls.get_by_key_name(cls.SINGLETON_KEY)
+            if not entity:
+                entity = cls(key_name=cls.SINGLETON_KEY)
+                entity.last_run = datetime.datetime(1970, 1, 1)
+            return entity
+
+    @classmethod
+    def update_singleton(cls, entity):
+        with common_utils.Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            entity.put()
+
+
+class StartAvailabilityJobs(utils.CronHandler):
+    """Handle callback from cron by launching availability jobs.
+
+    NOTE: This is pretty seriously hacktastic.  App Engine enforces a limit of
+    a max of 20 entries in cron.yaml, and does not provide a clean way to
+    express "hourly, at the top of the hour".  It does support "hourly", but
+    this just starts a timer whenever the instance starts, and does a call
+    ever 3600 seconds, at whatever position in the hour that happens to be.
+    Here, we do some ridiculous stuff with the deferred queue to get a timer
+    that operates as we wish.
+
+    Operation: get() is called approximately twice/hour, via the good offices
+    of cron.yaml.  This adds adds an item on the deferred queue with an ETA at
+    the top of the next hour.  When that hour rolls around, we run
+    maybe_start_jobs().  If this is the first time within this hour that
+    the deferred queue has called us, we start jobs.  If it is not the first
+    time, we just drop the request on the floor.  In all cases, we simply
+    return normally, indicating to the queue manager that the task can be
+    dropped.  We don't need to re-enqueue work for ourselves, since we are
+    guaranteed to be tickled by cron anyhow.
+    """
 
     URL = '/cron/availability/update'
 
-    @classmethod
-    def is_globally_enabled(cls):
-        return True
+    def get(self):
+        eta_timestamp = utc.hour_end(utc.now_as_timestamp()) + 1
+        eta = utc.timestamp_to_datetime(eta_timestamp)
+        deferred.defer(self.maybe_start_jobs, _eta=eta)
+        logging.info(
+            'StartAvailabilityJobs - scheduling deferred task at %s', eta)
 
     @classmethod
-    def is_enabled_for_course(cls, app_context):
-        return True
+    def maybe_start_jobs(cls):
+        # Current time, rounded to top of hour.
+        @db.transactional(xg=True)
+        def should_start_jobs():
+            now_timestamp = utc.hour_start(utc.now_as_timestamp())
+            status = StartAvailabilityJobsStatus.get_singleton()
+            last_run = utc.hour_start(
+                utc.datetime_to_timestamp(status.last_run))
+            if now_timestamp > last_run:
+                status.last_run = utc.timestamp_to_datetime(now_timestamp)
+                StartAvailabilityJobsStatus.update_singleton(status)
+                return True
+            return False
 
-    def cron_action(self, app_context, global_state):
-        job = UpdateAvailability(app_context)
-        if job.is_active():
-            job.cancel()
-        job.submit()
+        if should_start_jobs():
+            logging.info('StartAvailabilityJobs: running jobs')
+            for app_context in sites.get_all_courses():
+                job = UpdateAvailability(app_context)
+                if job.is_active():
+                    job.cancel()
+                job.submit()
+        else:
+            logging.info('StartAvailabilityJobs: skipping jobs')

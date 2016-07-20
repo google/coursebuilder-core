@@ -12,6 +12,7 @@ tests:
     - modules.courses.courses_tests.ReorderAccess = 2
     - modules.courses.courses_tests.UnitLessonEditorAccess = 3
     - modules.courses.triggers_tests.ContentTriggerTests = 21
+    - modules.courses.triggers_tests.CronHackTests = 5
     - modules.courses.triggers_tests.DateTimeTriggerFunctionalTests = 1
     - modules.courses.triggers_tests.MilestoneTriggerTests = 18
   integration:

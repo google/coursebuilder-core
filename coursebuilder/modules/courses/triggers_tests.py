@@ -20,12 +20,14 @@ import datetime
 import logging
 import random
 import re
+import time
 import unittest
 
 from common import resource
 from common import utc
 from controllers import sites
 from models import courses
+
 from models import resources_display
 from modules.courses import availability_cron
 from modules.courses import availability_options
@@ -1198,3 +1200,122 @@ class MilestoneTriggerTests(MilestoneTriggerTestBase):
 
     def test_typename(self):
         self.assertEquals('triggers.MilestoneTrigger', self.TMT.typename())
+
+
+class CronHackTests(actions.TestBase):
+
+    COURSE_NAME = 'cron_hack_test'
+    ADMIN_EMAIL = 'admin@example.com'
+
+    def setUp(self):
+        super(CronHackTests, self).setUp()
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Cron Hack Test')
+        self.save_seconds_per_hour = utc._SECONDS_PER_HOUR
+        utc._SECONDS_PER_HOUR = 10
+
+        # Avoid test flakes: If we are in a second that is at the end of
+        # an hour, walk time forward until we are cleanly in the next
+        # hour, so that we do not accidentally slip across the hour
+        # boundary during the run of the test.  This is particularly
+        # important, since we are redefining "hours" to be 10 seconds
+        # so tests finish in reasonable amounts of time.
+        now_ts = utc.now_as_timestamp()
+        hour_end_ts = utc.hour_end(now_ts)
+        if now_ts == hour_end_ts:
+            time.sleep(1)
+
+    def tearDown(self):
+        sites.reset_courses()
+        utc._SECONDS_PER_HOUR = self.save_seconds_per_hour
+        super(CronHackTests, self).tearDown()
+
+    def _assert_job_state(self, is_active):
+        job = availability_cron.UpdateAvailability(self.app_context)
+        self.assertEquals(is_active, job.is_active())
+
+    def _assert_status_time_is_top_of_current_hour(self):
+        now_ts = utc.hour_start(utc.now_as_timestamp())
+        status = availability_cron.StartAvailabilityJobsStatus.get_singleton()
+        last_run_ts = utc.datetime_to_timestamp(status.last_run)
+        self.assertEqual(now_ts, last_run_ts)
+
+    def test_start_jobs_with_no_existing_status_row(self):
+        availability_cron.StartAvailabilityJobs.maybe_start_jobs()
+        self._assert_job_state(is_active=True)
+        self._assert_status_time_is_top_of_current_hour()
+
+    def test_start_jobs_with_existing_status_in_past(self):
+        status = availability_cron.StartAvailabilityJobsStatus.get_singleton()
+        old_timestamp = utc.now_as_timestamp() - utc._SECONDS_PER_HOUR
+        status.last_run = utc.timestamp_to_datetime(old_timestamp)
+        availability_cron.StartAvailabilityJobsStatus.update_singleton(status)
+
+        availability_cron.StartAvailabilityJobs.maybe_start_jobs()
+        self._assert_job_state(is_active=True)
+        self._assert_status_time_is_top_of_current_hour()
+
+    def test_start_jobs_with_existing_status_current(self):
+        status = availability_cron.StartAvailabilityJobsStatus.get_singleton()
+        old_timestamp = utc.now_as_timestamp()
+        status.last_run = utc.timestamp_to_datetime(old_timestamp)
+        availability_cron.StartAvailabilityJobsStatus.update_singleton(status)
+
+        availability_cron.StartAvailabilityJobs.maybe_start_jobs()
+        self._assert_job_state(is_active=None)  # None => never run.
+
+    def test_get_of_cron_url_starts_deferred_job(self):
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+
+        # Execute only one step, so only the StartAvailabilityJobs callback
+        # runs; we don't want UpdateAvailability to also run.
+        self.execute_all_deferred_tasks(iteration_limit=1)
+
+        # Verify we requested job start and updated status.
+        self._assert_job_state(is_active=True)
+        self._assert_status_time_is_top_of_current_hour()
+
+    def test_many_gets_to_cron_url_are_harmless(self):
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+
+        # We should really have five items on the deferred queue; one for
+        # each GET.
+        tasks = self.taskq.GetTasks('default')
+        self.assertEquals(5, len(tasks))
+
+        # Start 1st availability job; it should enqueue the UpdateAvailability.
+        self.execute_all_deferred_tasks(iteration_limit=1)
+        self._assert_job_state(is_active=True)
+        self._assert_status_time_is_top_of_current_hour()
+
+        # Run one more task; we now expect to see is_active=False, meaning
+        # done.
+        self.execute_all_deferred_tasks(iteration_limit=1)
+        self._assert_job_state(is_active=False)
+
+        # This is weird; looks like deferred queue is smart enough to
+        # deduplicate our extra items - we now have _no_ items pending.
+        tasks = self.taskq.GetTasks('default')
+        self.assertEquals(0, len(tasks))
+
+        # Let's throw some more wood on that fire - pretend cron goes nuts
+        # and drops many more to-do items in.
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+        self.get(availability_cron.StartAvailabilityJobs.URL)
+
+        # Since we have already run the UpdateAvailability job once this
+        # hour, we expect that calling maybe_start_jobs from the deferred
+        # handler will not start UpdateAvailability again.
+        self.execute_all_deferred_tasks(iteration_limit=1)
+        self._assert_job_state(is_active=False)
+
+        # And again, we're deduped.
+        tasks = self.taskq.GetTasks('default')
+        self.assertEquals(0, len(tasks))
