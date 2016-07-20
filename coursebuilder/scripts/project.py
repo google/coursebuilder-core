@@ -944,10 +944,11 @@ def _setup_all_dependencies():
     for line in output.split('\n'):
         if not line:
             continue
-        # ignore garbage produced by the script; it proven impossible to fix the
-        # script to avoid garbage from being produced
+        # ignore garbage produced by the script; it proven impossible to
+        # fix the script to avoid garbage from being produced
         if 'grep: write error' in line or 'grep: writing output' in line:
             continue
+
         log(line)
 
 
@@ -997,7 +998,7 @@ def assert_gcb_allow_static_serv_is_enabled():
         assert_handler(url, None)
 
 
-def _run_all_tests(config, setup_deps=True):
+def _run_all_tests(config):
     _all_tests, integration_tests, non_integration_tests = (
         config.tests.group_tests())
 
@@ -1016,19 +1017,17 @@ def _run_all_tests(config, setup_deps=True):
                 {
                   'tests.integration.test_classes.'
                   'IntegrationServerInitializationTask': 1},
-                False, setup_deps=False, chunk_size=1, hint='setup')
+                False, chunk_size=1, hint='setup')
         if _all_tests:
             try:
                 chunk_size = 2 * multiprocessing.cpu_count()
             except:  # pylint: disable=bare-except
                 chunk_size = 8
             _run_tests(
-                _all_tests, config.parsed_args.verbose,
-                setup_deps=setup_deps, chunk_size=chunk_size)
+                _all_tests, config.parsed_args.verbose, chunk_size=chunk_size)
 
 
-def _run_tests(
-    test_classes, verbose, setup_deps=True, chunk_size=16, hint='generic'):
+def _run_tests(test_classes, verbose, chunk_size=16, hint='generic'):
     start = time.time()
     task_to_test = {}
     tasks = []
@@ -1046,10 +1045,6 @@ def _run_tests(
         tasks,
         key=lambda task: test_classes.get(task_to_test[task].test_class_name),
         reverse=True)
-
-    # setup dependencies
-    if setup_deps:
-        _setup_all_dependencies()
 
     # execute all tasks
     log('Executing %s "%s" test suites' % (len(tasks), hint))
@@ -1105,8 +1100,7 @@ def _run_lint():
 
 def _dry_run(parsed_args):
     _run_tests(
-        all_tests.INTERNAL_TEST_CLASSES,
-        parsed_args.verbose, setup_deps=False, hint="dry run")
+        all_tests.INTERNAL_TEST_CLASSES, parsed_args.verbose, hint="dry run")
 
 
 def _lint(parsed_args):
@@ -1283,7 +1277,7 @@ def _do_a_release(source_dir, target_dir, release_label):
     _assert_no_disallowed_imports(build_dir())
     _test_developer_workflow(config)
     _enforce_file_count(config)
-    _run_all_tests(config, setup_deps=False)
+    _run_all_tests(config)
     _enforce_file_count(config)
     _zip_all_files(target_dir, release_label)
     remove_dir(build_dir())
