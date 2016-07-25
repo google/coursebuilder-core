@@ -2,9 +2,8 @@ registration:
   main_module: modules.guide.guide
 
 tests:
-  functional:
-    - modules.guide.guide_tests.GuideTests = 5
-
+  integration:
+    - modules.guide.guide_integration_tests.PolymerTests = 1
 files:
   - modules/guide/__init__.py
   - modules/guide/_static/coursebuilder/cb-data/cb-data.html
