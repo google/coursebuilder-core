@@ -172,6 +172,8 @@ modules/__init__.py
 scripts/__init__.py
 scripts/all_files.txt
 scripts/all_tests.py
+scripts/bower.json
+scripts/bower.sh
 scripts/common.sh
 scripts/config.sh
 scripts/deploy.sh

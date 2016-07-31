@@ -1,0 +1,13 @@
+{
+  "name": "cb-polymer",
+  "dependencies": {
+    "carbon-route": "0.8.4",
+    "gold-elements": "1.0.1",
+    "google-web-components": "1.0.1",
+    "iron-elements": "1.0.10",
+    "molecules": "1.0.0",
+    "neon-elements": "1.0.0",
+    "paper-elements": "1.0.7",
+    "platinum-elements": "2.0.0"
+  }
+}

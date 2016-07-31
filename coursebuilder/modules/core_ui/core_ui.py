@@ -96,6 +96,8 @@ def register_module():
                 'material-design-iconic-font-1.1.1.zip'))),
         ('/static/underscore-1.4.3/(underscore.min.js)', underscore_js_handler),
         ('/static/dependo-0.1.4/(.*)', dep_graph_handler),
+        ('/static/polymer-1.2.0/(.*)', sites.make_zip_handler(os.path.join(
+            appengine_config.BUNDLE_ROOT, 'lib', 'polymer-1.2.0.zip'))),
     ]
     namespaced_routes = []
 

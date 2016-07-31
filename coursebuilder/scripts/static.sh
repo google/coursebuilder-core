@@ -21,7 +21,8 @@ STATIC_SERV=( \
     "polymer-guide-1.2.0:/modules/guide/resources/polymer"
     "underscore-1.4.3:/static/underscore-1.4.3"
     "yui_2in3-2.9.0:/static/2in3"
-    "yui_3.6.0:/static/yui_3.6.0" \
+    "yui_3.6.0:/static/yui_3.6.0"
+    "polymer-1.2.0:/static/polymer-1.2.0" \
 )
 
 # Prepare files for static serving
