@@ -47,6 +47,7 @@ class BaseSampleDataTestCase(actions.TestBase):
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace('ns_%s' % COURSE_NAME)
         self.course = courses.Course(None, self.app_context)
+        actions.login(ADMIN_EMAIL)
 
     def tearDown(self):
         del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
@@ -60,7 +61,6 @@ class GenerateSampleQuizTestCase(BaseSampleDataTestCase):
     def test_add_assessment(self):
         """Tests that we can successfully add an assessment."""
 
-        actions.login(ADMIN_EMAIL)
         # Get the current number of assessments
         assessment_ids_before = self._get_assessment_ids()
 
@@ -81,8 +81,8 @@ class GenerateSampleQuizTestCase(BaseSampleDataTestCase):
         questions_by_usage_id = event_transforms.get_questions_by_usage_id(
             self.app_context)
         assessment_ids = set()
-        for question_id in questions_by_usage_id:
-            assessment_ids.add(questions_by_usage_id[question_id]['unit'])
+        for instance_id in questions_by_usage_id:
+            assessment_ids.add(questions_by_usage_id[instance_id]['unit'])
         return assessment_ids
 
 
@@ -92,7 +92,6 @@ class GenerateSampleStudentsTestCase(BaseSampleDataTestCase):
     def test_add_students(self):
         """Checks that we can successfully add a batch of students."""
 
-        actions.login(ADMIN_EMAIL)
         student_ids_before = self._get_student_ids()
         response = self.post('generate-students', params={},
                              headers={'Referer': '/course'})
@@ -155,7 +154,6 @@ class GenerateSampleScoresTestCase(BaseSampleDataTestCase):
         question that was automatically generated.
         """
 
-        actions.login(ADMIN_EMAIL)
         answers_before = self._get_answers()
         self.post('generate-scores', params={},
                   headers={'Referer': '/course'})
@@ -183,16 +181,28 @@ class GenerateSampleScoresTestCase(BaseSampleDataTestCase):
                     answer_dict[event.user_id] = collections.defaultdict(int)
 
                 data = transforms.loads(event.data)
-                for question_id in data['values']['containedTypes']:
-                    answer_dict[event.user_id][question_id] += 1
+                for instance_id in data['values']['containedTypes']:
+                    answer_dict[event.user_id][instance_id] += 1
 
         return answer_dict
 
+    def _get_question_texts(self):
+        """Returns a dictionary with the question text for each question ID."""
+        question_texts = {}
+        for question in common_utils.iter_all(models.QuestionEntity.all()):
+            question_id = str(question.key().id())
+            question_data = transforms.loads(question.data)
+            question_texts[question_id] = question_data['question']
+
+        return question_texts
+
     def _compare_answers(self, answers_before, answers_after):
-        # We don't care about the values for the dictionary of questions,only
-        # that the keys are the usage ID's that we need to check.
+        # We need a dictionary of the text for each question ID, so we can check
+        # whether a question has been marked as automatically generated.
+        question_names = self._get_question_texts()
         all_questions = event_transforms.get_questions_by_usage_id(
             self.app_context)
+
         for student in common_utils.iter_all(models.Student.all()):
             user_id = str(student.user_id)
             if not self._is_generated_student(student):
@@ -203,22 +213,27 @@ class GenerateSampleScoresTestCase(BaseSampleDataTestCase):
                 if user_id not in answers_before:
                     self.assertEquals(True, user_id not in answers_after)
                 else:
-                    for question_id in all_questions:
-                        before = answers_before[user_id][question_id]
-                        after = answers_after[user_id][question_id]
+                    for instance_id in all_questions:
+                        before = answers_before[user_id][instance_id]
+                        after = answers_after[user_id][instance_id]
                         self.assertEquals(before, after)
             else:
                 # If a student has been automatically generated, then their
                 # number of answers should have increased by one for every
-                # question.
-                for question_id in all_questions:
+                # automatically generated question.
+                for instance_id in all_questions:
                     countBefore = 0
                     countAfter = 0
                     if user_id in answers_before:
-                        countBefore = answers_before[user_id][question_id]
+                        countBefore = answers_before[user_id][instance_id]
                     if user_id in answers_after:
-                        countAfter = answers_after[user_id][question_id]
-                    self.assertEquals(countBefore + 1, countAfter)
+                        countAfter = answers_after[user_id][instance_id]
+
+                    question_id = all_questions[instance_id]['id']
+                    if question_names[question_id].startswith('gen_sample:'):
+                        self.assertEquals(countBefore + 1, countAfter)
+                    else:
+                        self.assertEquals(countBefore, countAfter)
 
     def _is_generated_student(self, student):
         return student.email.startswith(
