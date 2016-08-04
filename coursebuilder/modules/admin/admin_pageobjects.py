@@ -250,7 +250,11 @@ class CoursesListPage(pageobjects.CoursesListPage):
         return self._open_multicourse_popup('edit_multi_course_category')
 
     def _col_hdr_id_sel(self, column):
-        sel = '#{}_column'.format(column)
+        sel = 'table:not(.fixed) > thead > tr > th#{}_column'.format(column)
+        return sel
+
+    def _fixed_col_hdr_id_sel(self, column):
+        sel = 'table.fixed.thead > thead > tr > th#{}_column'.format(column)
         return sel
 
     def _sorted_class(self, sort_dir):
@@ -276,32 +280,43 @@ class CoursesListPage(pageobjects.CoursesListPage):
             arrow_text = ''
         return arrow_text
 
-    def verify_sorted_arrow(self, column, sort_dir, arrow):
-        col_hdr_selector = self._col_hdr_id_sel(column)
-        col_hdr_th = self.find_element_by_css_selector(col_hdr_selector)
+    def _check_sorted_arrow_state(self, th_sel, sort_dir, arrow):
+        th = self.find_element_by_css_selector(th_sel)
         self._tester.assertIn(
-            self._sorted_class(sort_dir), col_hdr_th.get_attribute('class'))
-        icon_selector = col_hdr_selector + ' i.gcb-sorted-icon'
+            self._sorted_class(sort_dir), th.get_attribute('class'))
+        icon_selector = th_sel + ' i.gcb-sorted-icon'
         icon_i = self.find_element_by_css_selector(
             icon_selector, pre_wait=False)
         self._tester.assertEquals(self._md_arrow(arrow), icon_i.text.strip())
+
+    def verify_sorted_arrow(self, column, sort_dir, arrow):
+        col_hdr_selector = self._col_hdr_id_sel(column)
+        fixed_hdr_selector = self._fixed_col_hdr_id_sel(column)
+        self._check_sorted_arrow_state(col_hdr_selector, sort_dir, arrow)
+        self._check_sorted_arrow_state(fixed_hdr_selector, sort_dir, arrow)
         return self
 
     def verify_no_sorted_arrow(self, column):
         return self.verify_sorted_arrow(column, 'none', '')
 
-    def verify_hover_arrow(self, column, sort_dir, arrow):
-        col_hdr_selector = self._col_hdr_id_sel(column)
-        col_hdr_th = self.find_element_by_css_selector(col_hdr_selector)
+    def _check_hover_arrow_state(self, th_sel, sort_dir, arrow):
+        th = self.find_element_by_css_selector(th_sel)
         self._tester.assertIn(
-            self._sorted_class(sort_dir), col_hdr_th.get_attribute('class'))
-        action_chains.ActionChains(self._tester.driver).move_to_element(
-            col_hdr_th).perform()
-        icon_selector = col_hdr_selector + ' i.gcb-sorted-icon'
+            self._sorted_class(sort_dir), th.get_attribute('class'))
+        icon_selector = th_sel + ' i.gcb-sorted-icon'
         icon_i = self.find_element_by_css_selector(icon_selector)
         self._tester.assertIn(
             'gcb-sorted-hover', icon_i.get_attribute('class'))
         self._tester.assertEquals(self._md_arrow(arrow), icon_i.text.strip())
+
+    def verify_hover_arrow(self, column, sort_dir, arrow):
+        col_hdr_selector = self._col_hdr_id_sel(column)
+        fixed_hdr_selector = self._fixed_col_hdr_id_sel(column)
+        col_hdr_th = self.find_element_by_css_selector(col_hdr_selector)
+        action_chains.ActionChains(self._tester.driver).move_to_element(
+            col_hdr_th).perform()
+        self._check_hover_arrow_state(col_hdr_selector, sort_dir, arrow)
+        self._check_hover_arrow_state(fixed_hdr_selector, sort_dir, arrow)
         return self
 
     def verify_sorted_by_arrows(self, column, sort_dir):
@@ -346,7 +361,7 @@ class CoursesListPage(pageobjects.CoursesListPage):
         # Course URLs are by definition unique, so save a set of known URLs.
         known = set([_norm_url(c.url) for c in courses])
         table_rows = self.find_elements_by_css_selector(
-            'div.gcb-list > table > tbody > tr')
+            'div.gcb-list table > tbody > tr')
         logging.info('%s by %s:', sort_dir.upper(), column)
 
         sorted_courses = sorted(

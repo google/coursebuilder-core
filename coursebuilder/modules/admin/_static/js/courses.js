@@ -628,6 +628,10 @@ $(function() {
         'gcb-sorted-none';
   }
   function _nextFromHeader($th) {
+    // _nextFromHeader() examines the current CSS classes of the <th> to
+    // decide the order by which the column would be sorted *next* if the
+    // column header were clicked.
+    //
     // If gcb-sorted order is already ascending, return descending. Otherwise,
     // (for descending or no sorted order at all), return ascending.
     return $th.hasClass('gcb-sorted-ascending') ?
@@ -710,34 +714,103 @@ $(function() {
     $th.addClass(sorted);
     _setIconFromSorted($th, sorted);
   }
-  function sortCourseRows() {
-    // Sorts rows in the table containing the clicked table header (this).
-    var $th = $(this);
-    var next = _nextFromHeader($th);
-    var $table = $th.closest('table');
+  function _allColHdrsSel() {
+    return 'thead > tr > th';
+  }
+  function _someColHdrsSel(extra) {
+    return _allColHdrsSel() + extra;
+  }
+  function _sortableColHdrsSel() {
+    return _someColHdrsSel(':not(.gcb-not-sortable)');
+  }
+  function _colHdrSelById(id) {
+    return _someColHdrsSel('#' + id);
+  }
+  function _coursesListTableSel() {
+    return '.gcb-list table#courses_list';
+  }
+  function _coursesListColHdrsSel(extra) {
+    return _coursesListTableSel() + ' > ' + _someColHdrsSel(extra);
+  }
+  function _coursesListColHdrSelById(id) {
+    return _coursesListTableSel() + ' > ' + _colHdrSelById(id);
+  }
+  function _coursesListSortableColHdrsSel() {
+    return _coursesListTableSel() + ' > ' + _sortableColHdrsSel();
+  }
+  function _sortableTableParts($someTh) {
+    // _sortableTableParts(), given some <th> in the <thead> of either:
+    //   * the non-scrolling 'table.fixed.thead', or
+    //   * the actual <table> containing the <tbody> rows to be sorted,
+    // returns an object containing these jQuery objects:
+    //   $table: the "real" <table> containing the <tbody> rows to be sorted.
+    //   $th: <th> in the <thead> of $table indicating the column to sort by.
+    //   $theadTable: the '.fixed.thead' <table> with only column headers.
+    //   $theadTh: the <th> in $theadTable corresponding to $th.
+    //
+    // Since CSS classes on <th> elements actually store the "sorted by"
+    // clicked  (and "hinted at" hover) states, both the original and
+    // "cloned" <th> elements representing sortable columens need to contain
+    // the same state at all times.
+    //
+    // This function is necessary because sortCourseRows() is invoked when
+    // the <th> of some sortable column in the courses list table is clicked.
+    // However, this <th> may be in the 'table.fixed.thead' clone or it
+    // might be in the "real" <table> that contains the <tbody> to be sorted.
+    // _sortableTableParts() determines which of the two was actually
+    // clicked and returns both. (hintNextSort() and unhintSort() suffer the
+    // same dilemma when they are hovered over.)
+    var idx = $someTh.index();
+    var hdrsSel = _allColHdrsSel();
+    var parts = {};
 
-    // Repointer for fixed header tables
-    if ($table.hasClass("thead")){
-      $table = $table.siblings(".tableScroller").find("table");
+    var $someTable = $someTh.closest('table');
+
+    if ($someTable.hasClass('thead')) {
+      // Supplied <th> is inside the '.table-container > table.fixed.thead'.
+      parts.$table = $($someTable.siblings('.table-scroller')
+          .find('table:not(.fixed)').get()[0]);
+      parts.$th = $(parts.$table.find(hdrsSel).get()[idx]);
+      parts.$theadTable = $someTable;
+      parts.$theadTh = $someTh;
+    } else {
+      // Supplied <th> is inside the "real" '.table-scroller > table'.
+      parts.$table = $someTable;
+      parts.$th = $someTh;
+      parts.$theadTable = $($someTable.closest('.table-container')
+          .find('table.thead').get()[0]);
+      parts.$theadTh = $(parts.$theadTable.find(hdrsSel).get()[idx]);
     }
-
+    return parts;
+  }
+  function _sortableHeaders($table) {
     // Only some of the table columns can be used to sort the table rows.
-    var hdrs = $table.find('thead > tr > th:not(.gcb-not-sortable)').get();
-    _clearHeadersSorted(hdrs, $th.index(), next);
+    return $table.find(_sortableColHdrsSel()).get();
+  }
+  function sortCourseRows() {
+    // sortCourseRows() sorts rows in the <tbody> of the courses list table
+    // by the column corresponding to the clicked <thead> <th> (this)
+    var parts = _sortableTableParts($(this));
+    var next = _nextFromHeader(parts.$th);
+
+    // Clear any Material Design sort direction arrows from all sortable
+    // column headers, in both the "real" <table> and the ".fixed.thead" one.
+    _clearHeadersSorted(_sortableHeaders(parts.$table));
+    _clearHeadersSorted(_sortableHeaders(parts.$theadTable));
 
     // Make a slice copy of the _sortBySequence selected by id.
-    var ids = _sortBySequence[$th.attr('id')].slice(0);
+    var ids = _sortBySequence[parts.$th.attr('id')].slice(0);
 
     // The "compare" multiplier that sets sorted direction by altering the
     // sort comparison return value sign.
     var dir = (next == 'gcb-sorted-descending') ? -1 : 1;
 
     // Only the rows in the table body (not thead or tfoot) are to be sorted.
-    var rows =  $table.find('tbody > tr').get();
+    var rows =  parts.$table.find('tbody > tr').get();
     rows.sort(function(trA, trB) {
       for (var i in ids) {
         var id = ids[i];
-        var hdr = $table.find('thead > tr > th#' + id).get()[0];
+        var hdr = parts.$table.find(_colHdrSelById(id)).get()[0];
         var cmp = _compareSortByText(trA, trB, id, $(hdr).index(), dir);
         if (cmp != 0) {
           // Element text values are different, so no more column checking.
@@ -749,26 +822,33 @@ $(function() {
 
     // Update the table rows.
     $.each(rows, function(unused, tr) {
-      $table.children('tbody').append(tr);
+      parts.$table.children('tbody').append(tr);
     });
 
     // Indicate in the clicked table header that the table is now sorted by it.
-    _setHeaderSorted($th, next);
+    _setHeaderSorted(parts.$th, next);
+    _setHeaderSorted(parts.$theadTh, next);
   }
   function hintNextSort() {
     // Change the displayed Material Design arrow icon to what *would* be the
     // next sorted state, but do not change the CSS style (which is used to
     // save current sorted state of the table).
-    var $th = $(this);
-    _setIconFromSorted($th, _nextFromHeader($th));
-    _sortedIcon($th).addClass('gcb-sorted-hover');
+    var parts = _sortableTableParts($(this));
+    var next = _nextFromHeader(parts.$th);
+    _setIconFromSorted(parts.$th, next);
+    _sortedIcon(parts.$th).addClass('gcb-sorted-hover');
+    _setIconFromSorted(parts.$theadTh, next);
+    _sortedIcon(parts.$theadTh).addClass('gcb-sorted-hover');
   }
   function unhintSort() {
     // Restore the displayed Material Design arrow icon (if any) to the current
     // sorted state of the table.
-    var $th = $(this);
-    _setIconFromSorted($th, _sortedFromHeader($th));
-    _sortedIcon($th).removeClass('gcb-sorted-hover');
+    var parts = _sortableTableParts($(this));
+    var sorted = _sortedFromHeader(parts.$th);
+    _setIconFromSorted(parts.$th, sorted);
+    _sortedIcon(parts.$th).removeClass('gcb-sorted-hover');
+    _setIconFromSorted(parts.$theadTh, sorted);
+    _sortedIcon(parts.$theadTh).removeClass('gcb-sorted-hover');
   }
 
   function bind() {
@@ -780,10 +860,9 @@ $(function() {
     $('#edit_multi_course_end_date').click(editMultiCourseEndDate);
     $('#edit_multi_course_category').click(editMultiCourseCategory);
     $('.gcb-course-checkbox').click(selectCourse);
-    $('div.gcb-list > table > thead > tr > th:not(.gcb-not-sortable)').click(
-        sortCourseRows);
-    $('div.gcb-list > table > thead > tr > th:not(.gcb-not-sortable)').hover(
-        hintNextSort, unhintSort);
+
+    $(_coursesListSortableColHdrsSel()).click(sortCourseRows);
+    $(_coursesListSortableColHdrsSel()).hover(hintNextSort, unhintSort);
 
     // Forms have no submit control unless this JS runs successfully to
     // add the are-you-sure safety check.
@@ -807,7 +886,7 @@ $(function() {
     setMultiCourseActionAllowed(anyChecked);
 
     // Click on the Title column header to force an initial ascending sort.
-    $('div.gcb-list > table > thead > tr > th#title_column').click();
+    $(_coursesListColHdrSelById('title_column')).click();
   }
 
   init();
@@ -833,7 +912,7 @@ $(function() {
           $titleRowFixed.find("tbody")
               .remove().end().find("tfoot")
               .remove().end().addClass("fixed thead")
-              .appendTo($this.closest(".table-container"));
+              .prependTo($this.closest(".table-container"));
           $footerRowFixed.find("tbody")
               .remove().end().find("thead")
               .remove().end().addClass("fixed tfoot")

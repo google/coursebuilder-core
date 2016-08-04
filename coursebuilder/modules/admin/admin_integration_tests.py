@@ -491,6 +491,10 @@ class CoursesListSortingTests(_CoursesListTestBase):
     COLUMNS_TO_CHECK = COLUMNS_ORDER + ['title']
 
     def test_material_design_sorted_by_arrows(self):
+        # Create an empty course, which will not actually be used for
+        # anything, in case --skip_integration_setup was supplied (and thus
+        # the sample course was not created already).
+        self.create_new_course(login=False)
         initial = True  # Skip first click on initial sorted-by 'Title' column.
         courses_page = self.load_courses_list()
 
