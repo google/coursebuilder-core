@@ -30,12 +30,30 @@ unset GCB_ALLOW_STATIC_SERV
 
 . "$(dirname "$0")/common.sh"
 
-if [[ $# == 1 && $1 != -* ]]; then
-  application="--application=$1"
-  shift
-fi
+# -----------------------------------------------------------------------------
+# Argument parsing helper: If there is a command line argument that does
+# not start with a hyphen, treat that as the name of the App Engine instance
+# to which to deploy.  Pass through any arguments to appcfg.py
+# (Here, we cannot use getopt since we do not know the universe of all legal
+# arguments.)
+#
+declare -a args=( $@ )
+declare -a passthrough_args
+# Loop over command line arguments, as copied into 'args'.
+for i in $( seq 0 $(( ${#args[@]} - 1)) ); do
+  if [[ ${args[$i]:0:1} != '-' ]] ; then
+    # If first character of the $i'th argument is not a hyphen, treat it as
+    # the name of the App Engine instance.
+    application="--application=${args[$i]}"
+  else
+    # First char is a hyphen; append to a list of arguments passed through to
+    # appcfg.py
+    passthrough_args+=(${args[$i]})
+  fi
+done
 
 python "$GOOGLE_APP_ENGINE_HOME/appcfg.py" \
   $application \
-  "$@" update \
+  "${passthrough_args[@]}" \
+  update \
   "$SOURCE_DIR"
