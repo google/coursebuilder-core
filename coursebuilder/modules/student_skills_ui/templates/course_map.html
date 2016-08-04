@@ -1,0 +1,42 @@
+{% extends 'base_course.html' %}
+
+{% block gcb_page_info %}
+  if ('gcbSetPageInfo' in window) {
+    gcbSetPageInfo({
+      'page_type': 'course',
+    });
+  }
+{% endblock %}
+
+{%block top_content %}
+{% endblock %}
+
+{% block main_content %}
+<div class="control-zoom">
+    <a class="control-zoom-in" href="#" title="Zoom in"></a>
+    <a class="control-zoom-out" href="#" title="Zoom out"></a>
+</div>
+
+<div class="graph" data-nodes="{{ nodes }}" data-links="{{ links }}">
+</div>
+
+<link rel="stylesheet" href="/static/dependo-0.1.4/cb/dependency_graph.css">
+<link rel="stylesheet" href="/modules/skill_map/_static/css/skill_map.css">
+
+<script src="/static/d3-3.4.3/d3.js" charset="utf-8"></script>
+<script src="/static/underscore-1.4.3/underscore.min.js"></script>
+<script src="/modules/student_skills_ui/_static/js/viz.js"></script>
+<script>
+  var getGraphData = function () {
+    return {
+      'directed': true,
+      'multigraph': false,
+      'graph': [],
+      'nodes': $.extend(true, [], $('div.graph').data('nodes')),
+      'links': $.extend(true, [], $('div.graph').data('links'))
+    };
+  };
+
+  GcbStudentSkillsUiModule.setupGraph({{ x }}, {{ y }}, {{ scale }});
+</script>
+{% endblock %}

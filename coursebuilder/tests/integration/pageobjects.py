@@ -164,6 +164,15 @@ class PageObject(object):
                 (by.By.NAME, name)))
         return self._tester.driver.find_element_by_name(name)
 
+    def find_element_by_class_name(self, name, index=None, pre_wait=True):
+        if pre_wait:
+            self.wait().until(ec.visibility_of_element_located(
+                (by.By.CLASS_NAME, name)))
+        if index is None:
+            return self._tester.driver.find_element_by_class_name(name)
+        else:
+            return self._tester.driver.find_element_by_class_name(name)[index]
+
     def find_element_by_tag_name(self, tag_name, index=None, pre_wait=True):
         if pre_wait:
             self.wait().until(ec.visibility_of_element_located(

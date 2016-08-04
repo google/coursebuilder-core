@@ -1,0 +1,16 @@
+registration:
+    main_module: modules.student_skills_ui.student_skills_ui
+    enabled: False
+
+tests:
+    functional:
+      - modules.student_skills_ui.student_skills_ui_tests.CourseMapArgsTestCase = 2
+    integration:
+      - modules.student_skills_ui.student_skills_ui_tests.CourseMapLayoutTestCase = 1
+files:
+    - modules/student_skills_ui/__init__.py
+    - modules/student_skills_ui/manifest.yaml
+    - modules/student_skills_ui/student_skills_ui.py
+    - modules/student_skills_ui/student_skills_ui_tests.py
+    - modules/student_skills_ui/_static/js/viz.js
+    - modules/student_skills_ui/templates/course_map_navbar.html
