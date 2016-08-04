@@ -126,40 +126,169 @@ $(function() {
     }
   }
 
+  function _allColHdrsSel() {
+    return 'thead > tr > th';
+  }
+  function _someColHdrsSel(extra) {
+    return _allColHdrsSel() + extra;
+  }
+  function _colHdrSelById(id) {
+    return _someColHdrsSel('#' + id);
+  }
+  function _fixedHdrTableSel() {
+    return '.gcb-list .table-container > table#courses_list.fixed.thead';
+  }
+  function _coursesListTableSel() {
+    return '.gcb-list table#courses_list:not(.fixed)';
+  }
+  function _coursesListColHdrsSel(extra) {
+    return _coursesListTableSel() + ' > ' + _someColHdrsSel(extra);
+  }
+  function _coursesListColHdrSelById(id) {
+    return _coursesListTableSel() + ' > ' + _colHdrSelById(id);
+  }
+  function _fixedAndScrolled($someTh) {
+    // _fixedAndScrolled(), given some <th> in the <thead> of either:
+    //   * the non-scrolling 'table.fixed.thead', or
+    //   * the actual <table> containing the <tbody> rows to be sorted,
+    // returns an object containing these jQuery objects:
+    //   $table: the "real" <table> containing the <tbody> rows that scroll
+    //     (those to be sorted, course checkboxes checked, etc.).
+    //   $th: <th> of interest in the <thead> of $table (indicating the column
+    //     to sort by, the "all courses" checkbox, etc.).
+    //   $theadTable: the '.fixed.thead' <table> with only column headers.
+    //   $theadTh: the <th> in $theadTable corresponding to $th.
+    //
+    // Since CSS classes on <th> elements actually store the "sorted by"
+    // clicked and "hinted at" hover states, both the original and "cloned"
+    // <th> elements representing sortable columens need to contain the same
+    // state at all times. Similarly, the original #all_courses_select checkbox
+    // and its clone should both contain the same checked state.
+    //
+    // This function is necessary because sortCourseRows() is invoked when
+    // the <th> of some sortable column in the courses list table is clicked.
+    // However, this <th> may be in the 'table.fixed.thead' clone or it
+    // might be in the "real" <table> that contains the <tbody> to be sorted.
+    // _fixedAndScrolled() determines which of the two was actually
+    // clicked and returns both.
+    //
+    // hintNextSort() and unhintSort() suffer the same dilemma when they are
+    // hovered over, as does the #all_courses_select checkbox when it is
+    // clicked.
+    var idx = $someTh.index();
+    var hdrsSel = _allColHdrsSel();
+    var parts = {};
+
+    var $someTable = $someTh.closest('table');
+
+    if ($someTable.hasClass('thead')) {
+      // Supplied <th> is inside the '.table-container > table.fixed.thead'.
+      parts.$table = $($someTable.siblings('.table-scroller')
+          .find('table:not(.fixed)').get()[0]);
+      parts.$th = $(parts.$table.find(hdrsSel).get()[idx]);
+      parts.$theadTable = $someTable;
+      parts.$theadTh = $someTh;
+    } else {
+      // Supplied <th> is inside the "real" '.table-scroller > table'.
+      parts.$table = $someTable;
+      parts.$th = $someTh;
+      parts.$theadTable = $($someTable.closest('.table-container')
+          .find('table.thead').get()[0]);
+      parts.$theadTh = $(parts.$theadTable.find(hdrsSel).get()[idx]);
+    }
+    return parts;
+  }
+  function _allCourseSelectSel() {
+    if (typeof(gcbAllCourseSelectSel) == 'undefined') {
+      gcbAllCourseSelectSel = _someColHdrsSel(
+          '.gcb-list-select-course #all_courses_select');
+    }
+    return gcbAllCourseSelectSel;
+  }
+  function _fixedHdrAllCourseSelectSel() {
+    if (typeof(gcbFixedHdrAllCourseSelectSel) == 'undefined') {
+      gcbFixedHdrAllCourseSelectSel =_fixedHdrTableSel() +
+          ' > ' + _allCourseSelectSel();
+    }
+    return gcbFixedHdrAllCourseSelectSel;
+  }
+  function _coursesListAllCourseSelectSel() {
+    if (typeof(gcbCoursesListAllCourseSelectSel) == 'undefined') {
+      gcbCoursesListAllCourseSelectSel = _coursesListTableSel() +
+          ' > ' + _allCourseSelectSel();
+    }
+    return gcbCoursesListAllCourseSelectSel;
+  }
+  function _scrolledCourseCheckboxesSel() {
+    if (typeof(gcbCoursesListScrolledCheckboxesSel) == 'undefined') {
+      gcbCoursesListScrolledCheckboxesSel = _coursesListTableSel() +
+          ' > tbody > tr > td.gcb-list-select-course .gcb-course-checkbox';
+    }
+    return gcbCoursesListScrolledCheckboxesSel;
+  }
   function selectAll() {
     // This gets called _after_ checkbox is checked, so 'indeterminate' has
-    // been cleared.  Thus we have to look at the rest of the course
-    // checkboxes to determine what we should do.  If any is unchecked, we
-    // check all; if all are checked, we uncheck all.
+    // been cleared for *one* of the #all_courses_select checkboxes (either
+    // the "real" checkbox in '.table-scroller > table' or its "clone" in
+    // table.fixed.thead. Rather than try to determine which one was clicked,
+    // just clear 'indeterminate' on both.
+    $(_coursesListAllCourseSelectSel()).prop('indeterminate', false);
+    $(_fixedHdrAllCourseSelectSel()).prop('indeterminate', false);
 
+    // Now examine the rest of the course checkboxes to determine how to
+    // update those. If any is unchecked, check all of them; if all are
+    // checked, uncheck them all instead.
     var newState = false;
-    $('.gcb-course-checkbox').each(function(_, checkbox){
+
+    // NOTE: The .gcb-course-checkbox checkboxes do not suffer the same
+    // "cloned" issues as the #all_courses_select checkbox, since the <tbody>
+    // containing them was deleted from all of the table.fixed clones.
+    $(_scrolledCourseCheckboxesSel()).each(function(_, checkbox){
       newState |= !checkbox.checked;
     });
-    $('.gcb-course-checkbox').prop('checked', newState);
-    $('#all_courses_select').prop('checked', newState);
+    $(_scrolledCourseCheckboxesSel()).prop('checked', newState);
+
+    // Now update both the "real" checkbox in '.table-scroller > table' and
+    // its "clone" in table.fixed.thead. Only 'checked' is updated.
+    // 'indeterminate' is left cleared, since all of the course checkboxes
+    // now have an identical state.
+    $(_coursesListAllCourseSelectSel()).prop('checked', newState);
+    $(_fixedHdrAllCourseSelectSel()).prop('checked', newState);
+
     setMultiCourseActionAllowed(newState);
     gcbAdminOperationCount++;
   }
-
   function selectCourse() {
     // Having clicked the selection checkbox for a single course, set the state
     // of the all-courses selection checkbox accordingly.  All-on -> on;
     // all-off -> off; mixed -> indeterminate.
-
     var anyChecked = false;
     var anyUnchecked = false;
-    $('.gcb-course-checkbox').each(function(_, checkbox){
+
+    // (see selectAll() about .gcb-course-checkbox checkboxes not being cloned)
+    $(_scrolledCourseCheckboxesSel()).each(function(_, checkbox){
       anyChecked |= checkbox.checked;
       anyUnchecked |= !checkbox.checked;
     });
+
+    console.log(anyChecked);
+    console.log(anyUnchecked);
+
+    // (see selectAll() about #all_courses_select checkbox clones)
     if (anyChecked && anyUnchecked) {
-      $('#all_courses_select').prop('indeterminate', true);
+      $(_coursesListAllCourseSelectSel()).prop('indeterminate', true);
+      $(_fixedHdrAllCourseSelectSel()).prop('indeterminate', true);
     } else {
-      $('#all_courses_select')
+      $(_coursesListAllCourseSelectSel())
+          .prop('indeterminate', false)
+          .prop('checked', anyChecked);
+      $(_fixedHdrAllCourseSelectSel())
           .prop('indeterminate', false)
           .prop('checked', anyChecked);
     }
+    console.log($(_coursesListAllCourseSelectSel()).prop('indeterminate'));
+    console.log($(_fixedHdrAllCourseSelectSel()).prop('indeterminate'));
+
     setMultiCourseActionAllowed(anyChecked);
     gcbAdminOperationCount++;
   }
@@ -209,7 +338,7 @@ $(function() {
     this._lightbox = new window.gcb.Lightbox();
     this._numSuccessResponses = 0;
     this._numFailureResponses = 0;
-    this._courses = $('.gcb-course-checkbox:checked').map(
+    this._courses = $(_scrolledCourseCheckboxesSel() + ':checked').map(
         function(index, item){
           return {
             namespace: $(item).data('course-namespace'),
@@ -333,7 +462,7 @@ $(function() {
       this._numFailureResponses++;
     } else {
       this._settingSaved(payload);
-      message = 'Saved';
+      message = 'Saved.';
       this._numSuccessResponses++;
     }
     statusField.text(message);
@@ -714,74 +843,11 @@ $(function() {
     $th.addClass(sorted);
     _setIconFromSorted($th, sorted);
   }
-  function _allColHdrsSel() {
-    return 'thead > tr > th';
-  }
-  function _someColHdrsSel(extra) {
-    return _allColHdrsSel() + extra;
-  }
   function _sortableColHdrsSel() {
     return _someColHdrsSel(':not(.gcb-not-sortable)');
   }
-  function _colHdrSelById(id) {
-    return _someColHdrsSel('#' + id);
-  }
-  function _coursesListTableSel() {
-    return '.gcb-list table#courses_list';
-  }
-  function _coursesListColHdrsSel(extra) {
-    return _coursesListTableSel() + ' > ' + _someColHdrsSel(extra);
-  }
-  function _coursesListColHdrSelById(id) {
-    return _coursesListTableSel() + ' > ' + _colHdrSelById(id);
-  }
   function _coursesListSortableColHdrsSel() {
     return _coursesListTableSel() + ' > ' + _sortableColHdrsSel();
-  }
-  function _sortableTableParts($someTh) {
-    // _sortableTableParts(), given some <th> in the <thead> of either:
-    //   * the non-scrolling 'table.fixed.thead', or
-    //   * the actual <table> containing the <tbody> rows to be sorted,
-    // returns an object containing these jQuery objects:
-    //   $table: the "real" <table> containing the <tbody> rows to be sorted.
-    //   $th: <th> in the <thead> of $table indicating the column to sort by.
-    //   $theadTable: the '.fixed.thead' <table> with only column headers.
-    //   $theadTh: the <th> in $theadTable corresponding to $th.
-    //
-    // Since CSS classes on <th> elements actually store the "sorted by"
-    // clicked  (and "hinted at" hover) states, both the original and
-    // "cloned" <th> elements representing sortable columens need to contain
-    // the same state at all times.
-    //
-    // This function is necessary because sortCourseRows() is invoked when
-    // the <th> of some sortable column in the courses list table is clicked.
-    // However, this <th> may be in the 'table.fixed.thead' clone or it
-    // might be in the "real" <table> that contains the <tbody> to be sorted.
-    // _sortableTableParts() determines which of the two was actually
-    // clicked and returns both. (hintNextSort() and unhintSort() suffer the
-    // same dilemma when they are hovered over.)
-    var idx = $someTh.index();
-    var hdrsSel = _allColHdrsSel();
-    var parts = {};
-
-    var $someTable = $someTh.closest('table');
-
-    if ($someTable.hasClass('thead')) {
-      // Supplied <th> is inside the '.table-container > table.fixed.thead'.
-      parts.$table = $($someTable.siblings('.table-scroller')
-          .find('table:not(.fixed)').get()[0]);
-      parts.$th = $(parts.$table.find(hdrsSel).get()[idx]);
-      parts.$theadTable = $someTable;
-      parts.$theadTh = $someTh;
-    } else {
-      // Supplied <th> is inside the "real" '.table-scroller > table'.
-      parts.$table = $someTable;
-      parts.$th = $someTh;
-      parts.$theadTable = $($someTable.closest('.table-container')
-          .find('table.thead').get()[0]);
-      parts.$theadTh = $(parts.$theadTable.find(hdrsSel).get()[idx]);
-    }
-    return parts;
   }
   function _sortableHeaders($table) {
     // Only some of the table columns can be used to sort the table rows.
@@ -790,7 +856,7 @@ $(function() {
   function sortCourseRows() {
     // sortCourseRows() sorts rows in the <tbody> of the courses list table
     // by the column corresponding to the clicked <thead> <th> (this)
-    var parts = _sortableTableParts($(this));
+    var parts = _fixedAndScrolled($(this));
     var next = _nextFromHeader(parts.$th);
 
     // Clear any Material Design sort direction arrows from all sortable
@@ -833,7 +899,7 @@ $(function() {
     // Change the displayed Material Design arrow icon to what *would* be the
     // next sorted state, but do not change the CSS style (which is used to
     // save current sorted state of the table).
-    var parts = _sortableTableParts($(this));
+    var parts = _fixedAndScrolled($(this));
     var next = _nextFromHeader(parts.$th);
     _setIconFromSorted(parts.$th, next);
     _sortedIcon(parts.$th).addClass('gcb-sorted-hover');
@@ -843,7 +909,7 @@ $(function() {
   function unhintSort() {
     // Restore the displayed Material Design arrow icon (if any) to the current
     // sorted state of the table.
-    var parts = _sortableTableParts($(this));
+    var parts = _fixedAndScrolled($(this));
     var sorted = _sortedFromHeader(parts.$th);
     _setIconFromSorted(parts.$th, sorted);
     _sortedIcon(parts.$th).removeClass('gcb-sorted-hover');
@@ -854,12 +920,12 @@ $(function() {
   function bind() {
     $('#add_course').click(addCourse);
     $('#add_sample_course').click(addSampleCourse);
-    $('#all_courses_select').click(selectAll);
+    $(_coursesListAllCourseSelectSel()).click(selectAll);
     $('#edit_multi_course_availability').click(editMultiCourseAvailability);
     $('#edit_multi_course_start_date').click(editMultiCourseStartDate);
     $('#edit_multi_course_end_date').click(editMultiCourseEndDate);
     $('#edit_multi_course_category').click(editMultiCourseCategory);
-    $('.gcb-course-checkbox').click(selectCourse);
+    $(_scrolledCourseCheckboxesSel()).click(selectCourse);
 
     $(_coursesListSortableColHdrsSel()).click(sortCourseRows);
     $(_coursesListSortableColHdrsSel()).hover(hintNextSort, unhintSort);
@@ -880,7 +946,7 @@ $(function() {
     bind();
 
     var anyChecked = false;
-    $('.gcb-course-checkbox').each(function(_, checkbox){
+    $(_scrolledCourseCheckboxesSel()).each(function(_, checkbox){
       anyChecked |= checkbox.checked;
     });
     setMultiCourseActionAllowed(anyChecked);

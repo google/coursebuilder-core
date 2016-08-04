@@ -32,6 +32,8 @@ from tests.integration import integration
 
 class _CoursesListTestBase(integration.TestBase):
 
+    SAVED_STATUS = 'Saved.'
+
     def load_courses_list(self, cls=admin_pageobjects.CoursesListPage):
         return super(_CoursesListTestBase, self).load_courses_list(cls=cls)
 
@@ -45,9 +47,20 @@ class CourseAdministrationTests(_CoursesListTestBase):
     def test_course_selection_checkboxes(self):
         """Verify select-all and course-select checkboxes affect one other."""
 
+        # If --skip_integration_setup was supplied to scripts/project.py,
+        # the 'Power Searching with Google' sample course will not be present.
+        root_page = self.load_root_page()
+        base_url = integration.TestBase.INTEGRATION_SERVER_BASE_URL
+
+        if root_page.is_default_course_deployed(base_url):
+            course_namespace_one = ''  # Blank namespace Power Searching course.
+        else:
+            course_name_one = self.create_new_course(login=False)[0]
+            course_namespace_one = 'ns_' + course_name_one
+
         # ----------------------------------------------------------------
         # Verify operation with multiple courses.
-        course_namespace_one = ''  # Power Searching course w/ blank namespace.
+
         course_name_two = self.create_new_course(login=False)[0]
         course_namespace_two = 'ns_' + course_name_two
         course_list = self.load_courses_list()
@@ -134,7 +147,7 @@ class CourseMultiEditSimpleTests(_CoursesListTestBase):
             courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_PUBLIC]['title'])
         multi_edit.click_save()
-        multi_edit.assert_status(course_namespace, 'Saved.')
+        multi_edit.assert_status(course_namespace, self.SAVED_STATUS)
         multi_edit.expect_status_message_to_be(
             'Updated settings in 1 course.')
         course_list = multi_edit.click_cancel()
@@ -177,7 +190,6 @@ class CourseMultiEditTests(_CoursesListTestBase):
         return ret
 
     def test_multi_edit_multiple_courses(self):
-
         for course_namespace in self.course_namespaces:
             self.course_list.toggle_course_checkbox(course_namespace)
 
@@ -188,7 +200,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
 
         multi_edit.click_save()
         for course_namespace in self.course_namespaces:
-            multi_edit.assert_status(course_namespace, 'Saved.')
+            multi_edit.assert_status(course_namespace, self.SAVED_STATUS)
             self.course_list.verify_availability(
                 course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])

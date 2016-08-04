@@ -27,6 +27,7 @@ from modules.admin import admin
 from selenium.common import exceptions
 from selenium.webdriver.common import action_chains
 from selenium.webdriver.support import select
+from selenium.webdriver.support import expected_conditions
 
 from tests.integration import pageobjects
 
@@ -99,7 +100,29 @@ def _cmp_by_enrolled_then_title_then_url(a, b):
 
 
 class CoursesListPage(pageobjects.CoursesListPage):
+    _FIXED_TABLE_CSS_SEL = 'div.gcb-list .table-container > table.fixed.thead'
+    _SCROLLED_TABLE_CSS_SEL = 'div.gcb-list .table-scroller > table:not(.fixed)'
+
+    _FIXED_COL_HDR_CSS_SEL = _FIXED_TABLE_CSS_SEL + ' > thead > tr > th'
+    _SCROLLED_COL_HDR_CSS_SEL = _SCROLLED_TABLE_CSS_SEL + ' > thead > tr > th'
+
+    _SELECT_COURSE_CELL_CLASS = 'gcb-list-select-course'
     _SELECT_ALL_COURSES_CHECKBOX_ID = 'all_courses_select'
+
+    _SELECT_ALL_COURSES_CHECKBOX_SEL = '.{} input#{}'.format(
+        _SELECT_COURSE_CELL_CLASS, _SELECT_ALL_COURSES_CHECKBOX_ID)
+
+    _FIXED_SELECT_ALL_CHECKBOX_CSS_SEL = '{}{}'.format(
+        _FIXED_COL_HDR_CSS_SEL, _SELECT_ALL_COURSES_CHECKBOX_SEL)
+    _SCROLLED_SELECT_ALL_CHECKBOX_CSS_SEL = '{}{}'.format(
+        _SCROLLED_COL_HDR_CSS_SEL, _SELECT_ALL_COURSES_CHECKBOX_SEL)
+
+    _SCROLLED_ROWS_CSS_SEL = _SCROLLED_TABLE_CSS_SEL + ' > tbody > tr'
+
+    _COURSE_CHECKBOX_CSS_CLASS = 'gcb-course-checkbox'
+    _COURSE_CHECKBOX_SEL_FMT = '{} > td.{} input#select_{{}}.{}'.format(
+        _SCROLLED_ROWS_CSS_SEL, _SELECT_COURSE_CELL_CLASS,
+        _COURSE_CHECKBOX_CSS_CLASS)
 
     CMP_SORTABLE_COLUMNS = collections.OrderedDict([
         ('title', _cmp_by_title_then_url),
@@ -112,64 +135,68 @@ class CoursesListPage(pageobjects.CoursesListPage):
 
     LOG_LEVEL = logging.INFO
 
+    def _get_admin_operation_count(self, driver=None):
+        if driver is None:
+            driver = self._tester.driver
+        count = driver.execute_script('return gcbAdminOperationCount;')
+        return count
+
     def _click_checkbox_and_wait_for_effects_to_propagate(self, checkbox):
-        prev_counter = self._tester.driver.execute_script(
-            'return gcbAdminOperationCount;')
+        prev_counter = self._get_admin_operation_count()
         checkbox.click()
         def effects_have_propagated(driver):
-            current_counter = driver.execute_script(
-                'return gcbAdminOperationCount;')
+            current_counter = self._get_admin_operation_count(driver=driver)
             return current_counter > prev_counter
         self.wait().until(effects_have_propagated)
 
-    def _toggle_checkbox(self, checkbox_id):
-        checkbox = self.find_element_by_id(checkbox_id)
+    def _toggle_checkbox(self, checkbox_css_sel):
+        checkbox = self.find_element_by_css_selector(checkbox_css_sel)
         self._click_checkbox_and_wait_for_effects_to_propagate(checkbox)
 
-    def _set_checkbox(self, checkbox_id, value=True):
-        checkbox = self.find_element_by_id(checkbox_id)
-        checked = checkbox.get_attribute('checked')
-        if (not checked and value) or (checked and not value):
-            self._click_checkbox_and_wait_for_effects_to_propagate(checkbox)
-
-    def _get_checkbox_state(self, checkbox_id):
-        return self.find_element_by_id(
-            checkbox_id).get_attribute('checked') == 'true'
+    def _get_checkbox_state(self, checkbox_css_sel):
+        return self.find_element_by_css_selector(
+            checkbox_css_sel).get_attribute('checked') == 'true'
 
     def toggle_course_checkbox(self, course_namespace):
-        self._toggle_checkbox('select_' + course_namespace)
+        cbox_sel = self._COURSE_CHECKBOX_SEL_FMT.format(course_namespace)
+        self._toggle_checkbox(cbox_sel)
         return self
 
     def toggle_all_courses_checkbox(self):
-        self._toggle_checkbox(self._SELECT_ALL_COURSES_CHECKBOX_ID)
+        self._toggle_checkbox(self._SCROLLED_SELECT_ALL_CHECKBOX_CSS_SEL)
         return self
 
-    def set_all_courses_checkbox(self, value):
-        self._set_checkbox(self._SELECT_ALL_COURSES_CHECKBOX_ID)
-        return self
+    def _check_checkbox_state(self, checkbox_css_sel, expected_state):
+        actual_state = self._get_checkbox_state(checkbox_css_sel)
+        self._tester.assertEqual(expected_state, actual_state)
 
     def verify_course_checkbox_checked(self, course_namespace, expected_state):
-        actual_state = self._get_checkbox_state('select_' + course_namespace)
-        self._tester.assertEqual(expected_state, actual_state)
+        cbox_sel = self._COURSE_CHECKBOX_SEL_FMT.format(course_namespace)
+        self._check_checkbox_state(cbox_sel, expected_state)
         return self
 
     def verify_all_courses_checkbox_checked(self, expected_state):
-        actual_state = self._get_checkbox_state(
-            self._SELECT_ALL_COURSES_CHECKBOX_ID)
-        self._tester.assertEqual(expected_state, actual_state)
+        self._check_checkbox_state(
+            self._SCROLLED_SELECT_ALL_CHECKBOX_CSS_SEL, expected_state)
+        self._check_checkbox_state(
+            self._FIXED_SELECT_ALL_CHECKBOX_CSS_SEL, expected_state)
         return self
 
     def verify_all_courses_checkbox_indeterminate(self, expected_state):
-        actual_state = self.find_element_by_id(
-            self._SELECT_ALL_COURSES_CHECKBOX_ID).get_attribute(
-                'indeterminate') == 'true'
-        self._tester.assertEqual(expected_state, actual_state)
+        scrolled_state = self.find_element_by_css_selector(
+            self._SCROLLED_SELECT_ALL_CHECKBOX_CSS_SEL
+        ).get_attribute('indeterminate') == 'true'
+        self._tester.assertEqual(expected_state, scrolled_state)
+        fixed_state = self.find_element_by_css_selector(
+            self._FIXED_SELECT_ALL_CHECKBOX_CSS_SEL
+        ).get_attribute('indeterminate') == 'true'
+        self._tester.assertEqual(expected_state, fixed_state)
         return self
 
     def _match_enrolled_count_and_tooltip(self, namespace, count, tooltip,
                                           delay_scale_factor):
-        count_div_selector = '#enrolled_{}'.format(namespace)
-        tooltip_selector = '#activity_{}'.format(namespace)
+        count_div_selector = '#enrolled_' + namespace
+        tooltip_selector = '#activity_'+ namespace
         wait_timeout = pageobjects.DEFAULT_TIMEOUT
 
         if delay_scale_factor >= 1:
@@ -250,15 +277,23 @@ class CoursesListPage(pageobjects.CoursesListPage):
         return self._open_multicourse_popup('edit_multi_course_category')
 
     def _col_hdr_id_sel(self, column):
-        sel = 'table:not(.fixed) > thead > tr > th#{}_column'.format(column)
+        sel = '#{}_column'.format(column)
+        return sel
+
+    def _scrolled_col_hdr_id_sel(self, column):
+        sel = self._SCROLLED_COL_HDR_CSS_SEL + self._col_hdr_id_sel(column)
         return sel
 
     def _fixed_col_hdr_id_sel(self, column):
-        sel = 'table.fixed.thead > thead > tr > th#{}_column'.format(column)
+        sel = self._FIXED_COL_HDR_CSS_SEL + self._col_hdr_id_sel(column)
+        return sel
+
+    def _sorted_th_icon_sel(self, th_sel):
+        sel = th_sel + ' i.gcb-sorted-icon'
         return sel
 
     def _sorted_class(self, sort_dir):
-        cls = 'gcb-sorted-{}'.format(sort_dir)
+        cls = 'gcb-sorted-' + sort_dir
         return cls
 
     def _sorted_arrow(self, sort_dir):
@@ -275,7 +310,7 @@ class CoursesListPage(pageobjects.CoursesListPage):
 
     def _md_arrow(self, arrow):
         if arrow:
-            arrow_text = 'arrow_{}'.format(arrow)
+            arrow_text = 'arrow_' + arrow
         else:
             arrow_text = ''
         return arrow_text
@@ -284,13 +319,13 @@ class CoursesListPage(pageobjects.CoursesListPage):
         th = self.find_element_by_css_selector(th_sel)
         self._tester.assertIn(
             self._sorted_class(sort_dir), th.get_attribute('class'))
-        icon_selector = th_sel + ' i.gcb-sorted-icon'
+        icon_selector = self._sorted_th_icon_sel(th_sel)
         icon_i = self.find_element_by_css_selector(
             icon_selector, pre_wait=False)
         self._tester.assertEquals(self._md_arrow(arrow), icon_i.text.strip())
 
     def verify_sorted_arrow(self, column, sort_dir, arrow):
-        col_hdr_selector = self._col_hdr_id_sel(column)
+        col_hdr_selector = self._scrolled_col_hdr_id_sel(column)
         fixed_hdr_selector = self._fixed_col_hdr_id_sel(column)
         self._check_sorted_arrow_state(col_hdr_selector, sort_dir, arrow)
         self._check_sorted_arrow_state(fixed_hdr_selector, sort_dir, arrow)
@@ -303,14 +338,14 @@ class CoursesListPage(pageobjects.CoursesListPage):
         th = self.find_element_by_css_selector(th_sel)
         self._tester.assertIn(
             self._sorted_class(sort_dir), th.get_attribute('class'))
-        icon_selector = th_sel + ' i.gcb-sorted-icon'
+        icon_selector = self._sorted_th_icon_sel(th_sel)
         icon_i = self.find_element_by_css_selector(icon_selector)
         self._tester.assertIn(
             'gcb-sorted-hover', icon_i.get_attribute('class'))
         self._tester.assertEquals(self._md_arrow(arrow), icon_i.text.strip())
 
     def verify_hover_arrow(self, column, sort_dir, arrow):
-        col_hdr_selector = self._col_hdr_id_sel(column)
+        col_hdr_selector = self._scrolled_col_hdr_id_sel(column)
         fixed_hdr_selector = self._fixed_col_hdr_id_sel(column)
         col_hdr_th = self.find_element_by_css_selector(col_hdr_selector)
         action_chains.ActionChains(self._tester.driver).move_to_element(
@@ -344,7 +379,8 @@ class CoursesListPage(pageobjects.CoursesListPage):
         return self
 
     def click_sortable_column(self, column):
-        self.find_element_by_css_selector(self._col_hdr_id_sel(column)).click()
+        self.find_element_by_css_selector(
+            self._scrolled_col_hdr_id_sel(column)).click()
         return self
 
     def click_if_not_initial(self, column, initial):
@@ -361,7 +397,7 @@ class CoursesListPage(pageobjects.CoursesListPage):
         # Course URLs are by definition unique, so save a set of known URLs.
         known = set([_norm_url(c.url) for c in courses])
         table_rows = self.find_elements_by_css_selector(
-            'div.gcb-list table > tbody > tr')
+            self._SCROLLED_ROWS_CSS_SEL)
         logging.info('%s by %s:', sort_dir.upper(), column)
 
         sorted_courses = sorted(
@@ -436,8 +472,10 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
         self.wait().until(self._dialog_not_visible)
         return CoursesListPage(self._tester)
 
-    def click_save(self):
+    def click_save(self, alert_ok=True):
         self.find_element_by_id('multi-course-save').click()
+        if alert_ok:
+            self.accept_alert()
         spinner = self.find_element_by_id('multi-course-spinner')
         def spinner_not_visible(driver):
             try:
@@ -445,6 +483,11 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
             except exceptions.StaleElementReferenceException:
                 return True
         self.wait().until(spinner_not_visible)
+        return self
+
+    def accept_alert(self):
+        self.wait().until(expected_conditions.alert_is_present())
+        self._tester.driver.switch_to_alert().accept()
         return self
 
     def set_category(self, value):
