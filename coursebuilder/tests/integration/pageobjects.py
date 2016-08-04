@@ -221,6 +221,93 @@ class PageObject(object):
             return self._tester.driver.current_url.split('/')[-1]
         return None
 
+    def click_link(self, link_text, wait_for_page_load_after=True):
+        link = self.find_element_by_link_text(link_text)
+        if wait_for_page_load_after:
+            self.wait_for_page_load_after(link.click)
+        else:
+            link.click()
+        return self
+
+    CB_LOGIN_LINK_TEXTS = [
+        # The login link text found on most Course Builder pages is first.
+        'Login',
+    ]
+
+    ERROR_LOGIN_LINK_TEXTS = [
+        # The following login link texts are from the 404.html page.
+        'Log in',
+        'Log in as another user',
+    ]
+
+    ALL_LOGIN_LINK_TEXTS = CB_LOGIN_LINK_TEXTS + ERROR_LOGIN_LINK_TEXTS
+
+    def _find_login_link_text(self, link_texts_to_try, timeout=None):
+        link_text = {}
+
+        def is_login_link_text_on_page(driver):
+            for lt in link_texts_to_try:
+                try:
+                    self._tester.driver.find_element_by_link_text(lt)
+                    # Pass login link text found on page back out of callback.
+                    link_text['found'] = lt
+                    return True
+                except exceptions.NoSuchElementException:
+                    pass  # Try the next link text string in the list.
+            # Page not yet fully loaded; this is an expected condition.
+            return False
+
+        self.wait(timeout=timeout).until(is_login_link_text_on_page)
+        return link_text.pop('found', None)
+
+    def _click_through_to_login_page(self, login_link_texts_to_try):
+        link_text = self._find_login_link_text(login_link_texts_to_try)
+        self.click_link(link_text, wait_for_page_load_after=False)
+        return self
+
+    def click_login(self, login_link_texts_to_try=None):
+        if login_link_texts_to_try is None:
+            login_link_texts_to_try = self.ALL_LOGIN_LINK_TEXTS
+        try:
+            # We may actually already be _on_ the login page, if the
+            # pre-integration test has not been run (--skip_integration_setup
+            # in project.py).
+            self.find_element_by_css_selector(
+                'input#submit-login', pre_wait=False)
+        except exceptions.NoSuchElementException:
+            # If we are not already on the login page, go there.
+            self._click_through_to_login_page(login_link_texts_to_try)
+        return LoginPage(self._tester)
+
+    def click_logout(self, login_link_texts_to_try=None):
+        if login_link_texts_to_try is None:
+            login_link_texts_to_try = self.ALL_LOGIN_LINK_TEXTS
+        try:
+            # Attempt a standard 'Logout' found on all Course Builder pages.
+            logout_button = self.find_element_by_link_text('Logout')
+        except exceptions.TimeoutException as original_error:
+            if not login_link_texts_to_try:
+                raise original_error
+
+            # Any failure in this workaround indicates that test was *not*
+            # stuck on a 404 or /_ah/login page; fail test anyway as expected.
+            try:
+                self._click_through_to_login_page(login_link_texts_to_try)
+            except exceptions.NoSuchElementException:
+                pass  # Not on a 404 page, so maybe already on /_ah/login page?
+
+            logout_button = self.find_element_by_css_selector(
+               'input#submit-logout')
+
+        try:
+            self.find_element_by_id('page_uuid', pre_wait=False)
+            # On some Course Builder page, so invoke page_uuid logic.
+            self.wait_for_page_load_after(logout_button.click)
+        except exceptions.NoSuchElementException:
+            logout_button.click()  # Page has no page_uuid (/_ah/login page?).
+
+        return self
+
 
 class EditorPageObject(PageObject):
     """Page object for pages which wait for the editor to finish loading."""
@@ -412,12 +499,15 @@ class DashboardEditor(EditorPageObject):
 class RootPage(PageObject):
     """Page object to model the interactions with the root page."""
 
+    def is_default_course_deployed(self, base_url):
+        self.load(base_url)
+        return 'Power Searching with Google' in self._tester.driver.page_source
+
     def _add_default_course_if_needed(self, base_url):
         """Setup default read-only course if not yet setup."""
 
         # check default course is deployed
-        self.load(base_url)
-        if 'Power Searching with Google' in self._tester.driver.page_source:
+        if self.is_default_course_deployed(base_url):
             return
 
         # deploy it
@@ -445,23 +535,6 @@ class RootPage(PageObject):
         self.load(base_url, suffix='/admin/welcome')
         return WelcomePage(self._tester)
 
-    def click_login(self):
-        try:
-            # We may actually already be _on_ the login page, if the
-            # pre-integration test has not been run (--skip_integration_setup
-            # in project.py).
-            login_button = self.find_element_by_css_selector(
-                'input#submit-login', pre_wait=False)
-        except exceptions.NoSuchElementException:
-            # If we are not already on the login page, go there.
-            self.click_link('Login', wait_for_page_load_after=False)
-        return LoginPage(self._tester)
-
-    def click_logout(self):
-        logout_button = self.find_element_by_link_text('Logout')
-        self.wait_for_page_load_after(logout_button.click)
-        return self
-
     def click_dashboard(self):
         self.click_link('Dashboard')
         return DashboardPage(self._tester)
@@ -477,14 +550,6 @@ class RootPage(PageObject):
     def click_register(self):
         self.find_element_by_id('register-button').click()
         return RegisterPage(self._tester, continue_page=self.__class__)
-
-    def click_link(self, link_text, wait_for_page_load_after=True):
-        link = self.find_element_by_link_text(link_text)
-        if wait_for_page_load_after:
-            self.wait_for_page_load_after(link.click)
-        else:
-            link.click()
-        return self
 
 
 class WelcomePage(PageObject):

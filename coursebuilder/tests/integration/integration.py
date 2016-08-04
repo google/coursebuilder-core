@@ -149,14 +149,24 @@ class TestBase(suite.TestBase):
         return pageobjects.AppengineCronPage(self).load(
             suite.TestBase.ADMIN_SERVER_BASE_URL, suffix='/cron')
 
-    def login(self, email, admin=True, logout_first=False):
-        root_page = self.load_root_page()
+    def login(self, email, admin=True, logout_first=False,
+              login_page=None, logout_page=None):
         if logout_first:
-            root_page.click_logout()
-        return root_page.click_login().login(email, admin=admin)
+            if not logout_page:
+                logout_page = self.load_root_page()
+                if login_page is None:
+                    # Avoid loading the root page repeatedly.
+                    login_page = logout_page
+            logout_page.click_logout()
 
-    def logout(self):
-        return self.load_root_page().click_logout()
+        if login_page is None:
+            login_page = self.load_root_page()
+        return login_page.click_login().login(email, admin=admin)
+
+    def logout(self, logout_page=None):
+        if not logout_page:
+            logout_page = self.load_root_page()
+        return logout_page.click_logout()
 
     def load_sample_course(self):
         # Be careful using this method. The sample class is a singleton and
@@ -319,9 +329,12 @@ class TestBase(suite.TestBase):
         if not self._check_availability_vs_person_count(avail, len(persons)):
             return
 
+        course_page = None
+
         for p in persons:
-            self.login(p.email, admin=p.admin, logout_first=True)
-            self.load_course(
+            self.login(p.email, admin=p.admin, logout_first=True,
+                       logout_page=course_page)  # Log out from current page.
+            course_page = self.load_course(
                 course_name
             ).click_register(
             ).enroll(

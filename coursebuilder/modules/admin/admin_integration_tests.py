@@ -505,37 +505,52 @@ class CoursesListSortingTests(_CoursesListTestBase):
                 column, 'descending',
             )
 
-    COURSES = [
+    COURSES_TO_CREATE = [
+        # Always create at least one *Public* course first, and make it have
+        # the sorted-first URL as well, to give non-admin pupils somewhere to
+        # land other than the 'Log in as another user' 404 page. (This matters
+        # if --skip_integration_setup was supplied to scripts/project.py and
+        # the public course from the usual setup does not exist.)
         admin_pageobjects.CoursesListPage.Course(
-            '     ', 'all_whitespace_title_test_sort_url', 'Private', 0),
+            '     ', 'all_whitespace_title', 'Public - No Registration', 0),
         admin_pageobjects.CoursesListPage.Course(
-            'wHITESPACE', 'b_test_sort_url', 'Public - No Registration', 0),
+            'wHITESPACE', 'b_1st_stripped_no_case', 'Private', 0),
         admin_pageobjects.CoursesListPage.Course(
-            '  Whitespace', 'c_test_sort_url', 'Private', 0),
+            '  Whitespace', 'c_2nd_stripped_no_case', 'Private', 0),
         admin_pageobjects.CoursesListPage.Course(
-            'NAME DUPE', 'd_test_sort_url', 'Registration Required', 1),
+            'TITLE DUPE', 'd_1st_title_url', 'Registration Required', 1),
         admin_pageobjects.CoursesListPage.Course(
-            'NAME DUPE', 'e_test_sort_url', 'Private', 0),
+            'TITLE DUPE', 'e_2nd_title_url', 'Private', 0),
         admin_pageobjects.CoursesListPage.Course(
-            '4 ENROLL dupe', 'g_test_sort_url', 'Registration Optional', 2),
+            '4 ENROLL dupe', 'g_1st_enroll_url', 'Registration Optional', 2),
         admin_pageobjects.CoursesListPage.Course(
-            '3 enroll DUPE', 'p_test_sort_url', 'Registration Required', 2),
+            '3 enroll DUPE', 'p_2nd_enroll_url', 'Registration Required', 2),
         admin_pageobjects.CoursesListPage.Course(
-            '2 reg dupe', 't_test_sort_url', 'Registration Optional', 4),
+            '2 reg dupe', 't_1st_reg_url', 'Registration Optional', 4),
         admin_pageobjects.CoursesListPage.Course(
-            '1 REG DUPE', 'v_test_sort_url', 'Registration Optional', 3),
+            '1 REG DUPE', 'v_2nd_reg_url', 'Registration Optional', 3),
         admin_pageobjects.CoursesListPage.Course(
-            '0 Last URL', 'zzzz_test_sort_url', 'Public - No Registration', 0),
+            '0 Last URL', 'zzzz_last_by_url', 'Public - No Registration', 0),
     ]
 
     SAMPLE = admin_pageobjects.CoursesListPage.Course(
         'Power Searching with Google', '', 'Registration Optional', 1)
 
-    ALL_COURSES = COURSES + [SAMPLE]
-
     def test_sort_courses(self):
+
+        # If --skip_integration_setup was supplied to scripts/project.py,
+        # the 'Power Searching with Google' sample course will not be present.
+        root_page = self.load_root_page()
+        base_url = integration.TestBase.INTEGRATION_SERVER_BASE_URL
+
+        if root_page.is_default_course_deployed(base_url):
+            all_courses = list(self.COURSES_TO_CREATE)
+            all_courses.append(self.SAMPLE)
+        else:
+            all_courses = self.COURSES_TO_CREATE
+
         # Create several courses with specific names and titles.
-        for c in self.COURSES:
+        for c in self.COURSES_TO_CREATE:
             self.create_course(c.title, c.url, login=False)
             persons = [p for p in self.some_persons(c.enroll, avail=c.avail)]
             emails = [p.email for p in persons]
@@ -556,10 +571,10 @@ class CoursesListSortingTests(_CoursesListTestBase):
         for cl in self.COLUMNS_TO_CHECK:
             initial = courses_page.click_if_not_initial(cl, initial)
             courses_page.verify_rows_sorted_by_column(
-                cl, 'ascending', self.ALL_COURSES,
+                cl, 'ascending', all_courses
             # Clicking ascending-sorted column sorts it again, descending.
             ).click_sortable_column(
                 cl
             ).verify_rows_sorted_by_column(
-                cl, 'descending', self.ALL_COURSES,
+                cl, 'descending', all_courses
             )

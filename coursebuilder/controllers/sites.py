@@ -113,6 +113,7 @@ import threading
 import traceback
 import urllib
 import urlparse
+import uuid
 import zipfile
 
 import utils
@@ -1564,6 +1565,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             'course_title': app_context.get_title(),
             'course_slug': app_context.get_slug(),
         }
+        if not appengine_config.PRODUCTION_MODE:
+            template_values['page_uuid'] = str(uuid.uuid1())
 
         course = courses.Course.get(app_context)
         courses.Course.set_current(course)
