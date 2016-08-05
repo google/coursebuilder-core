@@ -44,6 +44,9 @@ def _qualified_typename(cls, num_package_path_parts_to_keep=1):
 class DateTimeTrigger(object):
     """Trigger some side-effect at a specified date and time."""
 
+    FIELD_NAME = 'when'
+    FIELDS = [FIELD_NAME]
+
     MISSING_TRIGGER_FMT = "'{}' trigger is missing."
     UNEXPECTED_TRIGGER_FMT = 'is_valid ({}) is_future ({}) is_ready ({})'
     LOG_ISSUE_FMT = '%s %s in namespace %s encoded: "%s" cause: "%s"'
@@ -117,7 +120,7 @@ class DateTimeTrigger(object):
     def when_css(cls, extra_css=None):
         """Returns 'className' value for a 'when' SchemaField."""
         extra_css = [] if not extra_css else [extra_css]
-        classes = ['when', cls.DATETIME_CSS] + extra_css
+        classes = [DateTimeTrigger.FIELD_NAME, cls.DATETIME_CSS] + extra_css
         return ' '.join(classes)
 
     @property
@@ -137,7 +140,8 @@ class DateTimeTrigger(object):
             return utc.text_to_datetime(when)
         except (ValueError, TypeError) as err:
             logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.WHEN_TYPENAME,
-                namespace_manager.get_namespace(), {'when': when}, repr(err))
+                namespace_manager.get_namespace(),
+                {DateTimeTrigger.FIELD_NAME: when}, repr(err))
             return None
 
     @classmethod
@@ -154,6 +158,10 @@ class DateTimeTrigger(object):
 
     ValidOrNot = collections.namedtuple('ValidOrNot',
         ['valid', 'invalid', 'missing', 'unused'])
+
+    @classmethod
+    def validation_failed(cls, valid_or_not):
+        return valid_or_not.invalid or valid_or_not.missing
 
     @classmethod
     def validate_property(cls, prop_name, validator, encoded, valid_or_not):
@@ -183,23 +191,36 @@ class DateTimeTrigger(object):
 
         valid_or_not.unused.pop(prop_name, None)  # No KeyError if missing.
 
-    VALIDATES = ['when']
+    VALIDATES = [FIELD_NAME]
 
     @classmethod
-    def validate(cls, encoded):
+    def validate(cls, encoded, fail_fast=None):
         """Extracts, validates, and decodes properties from an encoded dict.
 
         Args:
             encoded: a dict of property names to their encoded values.
+            fail_fast: if True, stop validating at the first validation failure.
 
         Returns:
           A ValidOrNot namedtuple updated by one or more calls to
           validate_property().
         """
         valid_or_not = cls.ValidOrNot({}, {}, set(), encoded.copy())
-        cls.validate_property('when',
+        cls.validate_property(DateTimeTrigger.FIELD_NAME,
             cls.validate_when, encoded, valid_or_not)
         return valid_or_not
+
+    DEFAULT_FAIL_FAST = True
+
+    @classmethod
+    def abort_validation(cls, fail_fast, valid_or_not):
+        if fail_fast:
+            return cls.validation_failed(valid_or_not)
+
+        if (fail_fast is None) and cls.DEFAULT_FAIL_FAST:
+            return cls.validation_failed(valid_or_not)
+
+        return False
 
     @classmethod
     def decode(cls, encoded, **kwargs):
@@ -218,7 +239,7 @@ class DateTimeTrigger(object):
         """Returns the DateTimeTrigger as a dict of *decoded* properties."""
         present = {}
         if self.when:
-            present['when'] = self.when
+            present[DateTimeTrigger.FIELD_NAME] = self.when
         return present
 
     @classmethod
@@ -227,7 +248,7 @@ class DateTimeTrigger(object):
         encoded = {}
         encoded_when = cls.encode_when(when)
         if encoded_when:
-            encoded['when'] = encoded_when
+            encoded[DateTimeTrigger.FIELD_NAME] = encoded_when
         return encoded
 
     @property
@@ -251,6 +272,14 @@ class DateTimeTrigger(object):
         return self.is_valid and (now > self.when)
 
     @classmethod
+    def is_complete(cls, encoded_trigger):
+        """True if encoded_trigger contains values for all expected FIELDS."""
+        for field in cls.FIELDS:
+            if not encoded_trigger.get(field):
+                return False
+        return True
+
+    @classmethod
     def encoded_defaults(cls, **unused):
         """Creates an encoded trigger initialized to any possible defaults.
 
@@ -263,6 +292,11 @@ class DateTimeTrigger(object):
           possible to encode a default trigger of the class type.
         """
         return {}
+
+    @classmethod
+    def is_defaults(cls, encoded_trigger):
+        """True if encoded_trigger contains only encoded_defaults() values."""
+        return encoded_trigger == cls.encoded_defaults()
 
     @classmethod
     def from_settings(cls, course, settings):
@@ -331,9 +365,10 @@ class DateTimeTrigger(object):
             # should not be affected.  In this case, we want to merge with
             # existing settings, rather than drop milestone types that are not
             # explicitly named.
-            current = {t['milestone']: t
+            current = {t[MilestoneTrigger.FIELD_NAME]: t
                        for t in publish.get(cls.SETTINGS_NAME, [])}
-            changes = {t['milestone']: t for t in encoded_triggers}
+            changes = {t[MilestoneTrigger.FIELD_NAME]: t
+                       for t in encoded_triggers}
             current.update(changes)
             if current:
                 publish[cls.SETTINGS_NAME] = current.values()
@@ -347,7 +382,8 @@ class DateTimeTrigger(object):
     def clear_from_settings(cls, course, settings, milestone):
         publish = settings.setdefault('publish', {})
         triggers = publish.get(cls.SETTINGS_NAME, [])
-        triggers = [t for t in triggers if t['milestone'] != milestone]
+        triggers = [t for t in triggers
+                    if t[MilestoneTrigger.FIELD_NAME] != milestone]
         if triggers:
             publish[cls.SETTINGS_NAME] = triggers
         else:
@@ -676,6 +712,9 @@ class DateTimeTrigger(object):
 class AvailabilityTrigger(DateTimeTrigger):
     """Availability change to be applied at the specified date/time."""
 
+    FIELD_NAME = 'availability'
+    FIELDS = DateTimeTrigger.FIELDS + [FIELD_NAME]
+
     UNEXPECTED_AVAIL_FMT = "Availability '{}' not in {}."
 
     def __init__(self, availability=None, **super_kwargs):
@@ -700,7 +739,7 @@ class AvailabilityTrigger(DateTimeTrigger):
     def availability_css(cls, extra_css=None):
         """Returns 'className' value for an 'availability' SchemaField."""
         extra_css = [] if not extra_css else [extra_css]
-        classes = ['availability', cls.SELECT_CSS] + extra_css
+        classes = [AvailabilityTrigger.FIELD_NAME, cls.SELECT_CSS] + extra_css
         return ' '.join(classes)
 
     @property
@@ -714,8 +753,10 @@ class AvailabilityTrigger(DateTimeTrigger):
         if availability in cls.AVAILABILITY_VALUES:
             return availability
 
-        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', 'availability',
-            namespace_manager.get_namespace(), {'availability': availability},
+        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID',
+            AvailabilityTrigger.FIELD_NAME,
+            namespace_manager.get_namespace(),
+            {AvailabilityTrigger.FIELD_NAME: availability},
             cls.UNEXPECTED_AVAIL_FMT.format(
                 availability, cls.AVAILABILITY_VALUES))
         return None
@@ -729,12 +770,15 @@ class AvailabilityTrigger(DateTimeTrigger):
     def encoded_availability(self):
         return self.encode_availability(self.availability)
 
-    VALIDATES = ['availability']
+    VALIDATES = [FIELD_NAME]
 
     @classmethod
-    def validate(cls, encoded):
-        valid_or_not = super(AvailabilityTrigger, cls).validate(encoded)
-        cls.validate_property('availability',
+    def validate(cls, encoded, fail_fast=None):
+        valid_or_not = super(AvailabilityTrigger, cls).validate(
+            encoded, fail_fast=fail_fast)
+        if cls.abort_validation(fail_fast, valid_or_not):
+            return valid_or_not
+        cls.validate_property(AvailabilityTrigger.FIELD_NAME,
             cls.validate_availability, encoded, valid_or_not)
         return valid_or_not
 
@@ -743,7 +787,7 @@ class AvailabilityTrigger(DateTimeTrigger):
         """Returns the AvailabilityTrigger as dict of *decoded* properties."""
         present = super(AvailabilityTrigger, self).decoded
         if self.availability:
-            present['availability'] = self.availability
+            present[AvailabilityTrigger.FIELD_NAME] = self.availability
         return present
 
     @classmethod
@@ -752,7 +796,7 @@ class AvailabilityTrigger(DateTimeTrigger):
         encoded = super(AvailabilityTrigger, cls).encode(**super_kwargs)
         encoded_availability = cls.encode_availability(availability)
         if encoded_availability:
-            encoded['availability'] = encoded_availability
+            encoded[AvailabilityTrigger.FIELD_NAME] = encoded_availability
         return encoded
 
     @property
@@ -780,12 +824,15 @@ class AvailabilityTrigger(DateTimeTrigger):
         if availability is None:
             availability = cls.DEFAULT_AVAILABILITY
 
-        defaults['availability'] = availability
+        defaults[AvailabilityTrigger.FIELD_NAME] = availability
         return defaults
 
 
 class ContentTrigger(AvailabilityTrigger):
     """A course content availability change applied at specified date/time."""
+
+    FIELD_NAME = 'content'
+    FIELDS = AvailabilityTrigger.FIELDS + [FIELD_NAME]
 
     SETTINGS_NAME = 'content_triggers'
 
@@ -833,7 +880,7 @@ class ContentTrigger(AvailabilityTrigger):
     def content_css(cls, extra_css=None):
         """Returns 'className' value for a 'content' SchemaField."""
         extra_css = [] if not extra_css else [extra_css]
-        classes = ['content', cls.SELECT_CSS] + extra_css
+        classes = [ContentTrigger.FIELD_NAME, cls.SELECT_CSS] + extra_css
         return ' '.join(classes)
 
     @property
@@ -901,7 +948,8 @@ class ContentTrigger(AvailabilityTrigger):
                 content = resource.Key.fromstring(content)
             except (AssertionError, AttributeError, ValueError) as err:
                 logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
-                    namespace, {'content': str(content)}, repr(err))
+                    namespace, {ContentTrigger.FIELD_NAME: str(content)},
+                    repr(err))
                 return None
         # else:
         # `content` is already a resource.Key (such as when the ContentTrigger
@@ -914,7 +962,7 @@ class ContentTrigger(AvailabilityTrigger):
         # `content` is now a valid resource.Key, but resource.Key.type is not
         # one of the ALLOWED_CONTENT_TYPES.
         logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
-            namespace, {'content': str(content)},
+            namespace, {ContentTrigger.FIELD_NAME: str(content)},
             cls.UNEXPECTED_CONTENT_FMT.format(
                 content.type, cls.ALLOWED_CONTENT_TYPES))
         return None
@@ -952,18 +1000,21 @@ class ContentTrigger(AvailabilityTrigger):
         """Encodes `content` into form payload (stored settings) form."""
         return self.encode_content(content=self.content)
 
-    VALIDATES = ['content', 'content_type', 'content_id']
+    VALIDATES = [FIELD_NAME, 'content_type', 'content_id']
 
     @classmethod
-    def validate(cls, encoded):
-        valid_or_not = super(ContentTrigger, cls).validate(encoded)
+    def validate(cls, encoded, fail_fast=None):
+        valid_or_not = super(ContentTrigger, cls).validate(
+            encoded, fail_fast=fail_fast)
+        if cls.abort_validation(fail_fast, valid_or_not):
+            return valid_or_not
 
         validate_content_kwargs = dict(
             [(k, encoded[k]) for k in cls.VALIDATES if k in encoded])
         valid_content = cls.validate_content(**validate_content_kwargs)
 
         if valid_content:
-            valid_or_not.valid['content'] = valid_content
+            valid_or_not.valid[ContentTrigger.FIELD_NAME] = valid_content
             valid_or_not.valid['content_type'] = valid_content.type
             valid_or_not.valid['content_id'] = valid_content.key
         else:
@@ -984,7 +1035,7 @@ class ContentTrigger(AvailabilityTrigger):
         """Returns the Trigger as a dict of present, *decoded* properties."""
         present = super(ContentTrigger, self).decoded
         if self.content:
-            present['content'] = self.content
+            present[ContentTrigger.FIELD_NAME] = self.content
         return present
 
     @classmethod
@@ -995,7 +1046,7 @@ class ContentTrigger(AvailabilityTrigger):
             content_type=content_type, content_id=content_id)
         encoded_content = cls.encode_content(content=valid_content)
         if encoded_content:
-            encoded['content'] = encoded_content
+            encoded[ContentTrigger.FIELD_NAME] = encoded_content
         return encoded
 
     @property
@@ -1054,7 +1105,7 @@ class ContentTrigger(AvailabilityTrigger):
         namespace = namespace_manager.get_namespace()
         if not content:
             logging.warning(cls.LOG_ISSUE_FMT, 'UNSPECIFIED', cls.KEY_TYPENAME,
-                namespace, {'content': content},
+                namespace, {ContentTrigger.FIELD_NAME: content},
                 '"{}" has no content finder function.'.format(content))
             return None
 
@@ -1063,7 +1114,7 @@ class ContentTrigger(AvailabilityTrigger):
             return find_func
 
         logging.warning(cls.LOG_ISSUE_FMT, 'UNEXPECTED', cls.KEY_TYPENAME,
-            namespace, {'content': str(content)},
+            namespace, {ContentTrigger.FIELD_NAME: str(content)},
             cls.UNEXPECTED_CONTENT_FMT.format(
                 content.type, cls.ALLOWED_CONTENT_TYPES))
         return None
@@ -1073,7 +1124,7 @@ class ContentTrigger(AvailabilityTrigger):
         namespace = namespace_manager.get_namespace()
         if not course:
             logging.warning(cls.LOG_ISSUE_FMT, 'ABSENT', 'course',
-                namespace, {'content': str(content)},
+                namespace, {ContentTrigger.FIELD_NAME: str(content)},
                 'CANNOT find content in "{}" course.'.format(course))
             return None
 
@@ -1088,7 +1139,7 @@ class ContentTrigger(AvailabilityTrigger):
             return found
 
         logging.warning(cls.LOG_ISSUE_FMT, 'OBSOLETE', cls.KEY_TYPENAME,
-            namespace, {'content': str(content)},
+            namespace, {ContentTrigger.FIELD_NAME: str(content)},
             cls.MISSING_CONTENT_FMT.format(content))
         return None
 
@@ -1122,7 +1173,7 @@ class ContentTrigger(AvailabilityTrigger):
         # triggers and discards them as well.
         triggers_with_content = []
         for encoded in encoded_triggers:
-            encoded_content = encoded.get('content')
+            encoded_content = encoded.get(ContentTrigger.FIELD_NAME)
             if encoded_content in selectable_content:
                 triggers_with_content.append(encoded)
             else:
@@ -1185,6 +1236,9 @@ class MilestoneTrigger(AvailabilityTrigger):
     triggers as well.
     """
 
+    FIELD_NAME = 'milestone'
+    FIELDS = AvailabilityTrigger.FIELDS + [FIELD_NAME]
+
     SETTINGS_NAME = 'course_triggers'
 
     # Explicitly does *not* include the AVAILABILITY_NONE_SELECTED <option>
@@ -1221,7 +1275,8 @@ class MilestoneTrigger(AvailabilityTrigger):
         """Validates when (encoded or decoded); returns datetime or None."""
         if when is None:
             logging.info(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
-                namespace_manager.get_namespace(), {'when': when},
+                namespace_manager.get_namespace(),
+                {DateTimeTrigger.FIELD_NAME: when},
                 cls.UNSPECIFIED_FMT.format(cls.WHEN_TYPENAME))
             return None
         return super(MilestoneTrigger, cls).validate_when(when)
@@ -1232,7 +1287,8 @@ class MilestoneTrigger(AvailabilityTrigger):
         if (not availability) or (availability == cls.NONE_SELECTED):
             logging.info(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
                 namespace_manager.get_namespace(),
-                {'availability': availability}, 'No availability selected.')
+                {AvailabilityTrigger.FIELD_NAME: availability},
+                'No availability selected.')
             return None
         return super(MilestoneTrigger, cls).validate_availability(availability)
 
@@ -1243,7 +1299,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     def milestone_css(cls, extra_css=None):
         """Returns 'className' value for a 'milestone' SchemaField."""
         extra_css = [] if not extra_css else [extra_css]
-        classes = ['milestone'] + extra_css
+        classes = [MilestoneTrigger.FIELD_NAME] + extra_css
         return ' '.join(classes)
 
     @property
@@ -1263,8 +1319,9 @@ class MilestoneTrigger(AvailabilityTrigger):
         """Returns milestone if in KNOWN_MILESTONES, otherwise None."""
         if milestone in cls.KNOWN_MILESTONES:
             return milestone
-        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID' 'milestone',
-            namespace_manager.get_namespace(), {'milestone': milestone},
+        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID',
+            MilestoneTrigger.FIELD_NAME, namespace_manager.get_namespace(),
+            {MilestoneTrigger.FIELD_NAME: milestone},
             cls.UNEXPECTED_MILESTONE_FMT.format(
                 milestone, cls.KNOWN_MILESTONES))
         return None
@@ -1278,12 +1335,15 @@ class MilestoneTrigger(AvailabilityTrigger):
     def encoded_milestone(self):
         return self.encode_milestone(self.milestone)
 
-    DECODES = ['milestone']
+    VALIDATES = [FIELD_NAME]
 
     @classmethod
-    def validate(cls, encoded):
-        valid_or_not = super(MilestoneTrigger, cls).validate(encoded)
-        cls.validate_property('milestone',
+    def validate(cls, encoded, fail_fast=None):
+        valid_or_not = super(MilestoneTrigger, cls).validate(
+            encoded, fail_fast=fail_fast)
+        if cls.abort_validation(fail_fast, valid_or_not):
+            return valid_or_not
+        cls.validate_property(MilestoneTrigger.FIELD_NAME,
             cls.validate_milestone, encoded, valid_or_not)
         return valid_or_not
 
@@ -1292,7 +1352,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         """Returns the MilestoneTrigger as dict of *decoded* properties."""
         present = super(MilestoneTrigger, self).decoded
         if self.milestone:
-            present['milestone'] = self.milestone
+            present[MilestoneTrigger.FIELD_NAME] = self.milestone
         return present
 
     @classmethod
@@ -1301,7 +1361,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         encoded = super(MilestoneTrigger, cls).encode(**super_kwargs)
         encoded_milestone = cls.encode_milestone(milestone)
         if encoded_milestone:
-            encoded['milestone'] = encoded_milestone
+            encoded[MilestoneTrigger.FIELD_NAME] = encoded_milestone
         return encoded
 
     @property
@@ -1326,15 +1386,43 @@ class MilestoneTrigger(AvailabilityTrigger):
 
         defaults = super(MilestoneTrigger, cls).encoded_defaults(
             **super_kwargs)
-        defaults['milestone'] = milestone
+        defaults[MilestoneTrigger.FIELD_NAME] = milestone
         return defaults
+
+    @classmethod
+    def is_defaults(cls, encoded_trigger):
+        """True if encoded_trigger contains only encoded_defaults() values.
+
+        There is no *default* value for the `milestone` property, but the
+        property typically must be present in a MilestoneTrigger. If the
+        'milestone' key itself is not present in the supplied encoded_trigger
+        dict, this method defers to the super is_defaults().
+
+        Similarly, since there is no default value for the `milestone`
+        property, whatever value is present in the supplied encoded_trigger
+        dict (valid with respect to validate_milestone() or not) is also placed
+        into the dict returned by MilestoneTrigger.encoded_defaults(), to
+        effectively eliminate that property from the comparison.
+        """
+        if MilestoneTrigger.FIELD_NAME not in encoded_trigger:
+            return super(MilestoneTrigger, cls).is_defaults(encoded_trigger)
+
+        # Any valid milestone parameter value will do, because it is simply
+        # going to be overwritten by whatever is in the encoded_trigger dict,
+        # whether that value is valid or not. is_defaults() intentionally does
+        # not compare the 'milestone' values because there is no default for
+        # that property.
+        defaults = cls.encoded_defaults(milestone=cls.KNOWN_MILESTONES[0])
+        defaults[MilestoneTrigger.FIELD_NAME] = (
+            encoded_trigger[MilestoneTrigger.FIELD_NAME])
+        return encoded_trigger == defaults
 
     @classmethod
     def for_form(cls, course, settings, **super_kwargs):
         """Groups milestone triggers; provides defaults for absent triggers.
 
         Milestone triggers are stored as a single list that is the value of
-        the SETTINGS_NAME key in the 'publish' dict within the settings.
+        the SETTINGS_NAME key in a dict or a property in a DTO.
 
         Args:
             course: a Course from which to obtain encoded content triggers
@@ -1357,8 +1445,8 @@ class MilestoneTrigger(AvailabilityTrigger):
         lists_of_encoded_triggers = super(MilestoneTrigger, cls).for_form(
             course, settings, **super_kwargs).itervalues()
         flattened = [et for ets in lists_of_encoded_triggers for et in ets]
-        deduped = dict([(et['milestone'], et)
-                        for et in cls.separate(flattened, course).encoded])
+        deduped = {et[MilestoneTrigger.FIELD_NAME]: et
+                   for et in cls.separate(flattened, course).encoded}
         return dict([(m, [deduped[m]]) if m in deduped
                      else (m, [cls.encoded_defaults(milestone=m)])
                      for m in cls.KNOWN_MILESTONES])
@@ -1395,7 +1483,8 @@ class MilestoneTrigger(AvailabilityTrigger):
             settings: passed, untouched, through to the base class.
         """
         valid_triggers = cls.separate(encoded_triggers, course).encoded
-        deduped = dict([(et['milestone'], et) for et in valid_triggers])
+        deduped = {et[MilestoneTrigger.FIELD_NAME]: et
+                   for et in valid_triggers}
         super(MilestoneTrigger, cls).set_into_settings(
             deduped.values(), course, settings, action)
 
@@ -1417,9 +1506,15 @@ class MilestoneTrigger(AvailabilityTrigger):
 
         from_paylaod() iterates through all of the KNOWN_MILESTONES, to get()
         for each of those milestones a single-value list containing the
-        milestone trigger (or possibly just an empty list).
+        milestone trigger (or possibly just an empty list). Any encoded
+        triggers that contain "clear this trigger" values (e.g. an empty
+        'when' or a value of '--- none selected ---' for 'availability') are
+        discarded to avoid extraneous logging noise when saving and later
+        loading stored settings.
         """
-        return [et for m in cls.KNOWN_MILESTONES for et in payload.get(m, [])]
+        raw = [et for m in cls.KNOWN_MILESTONES for et in payload.get(m, [])]
+        return [rt for rt in raw
+                if cls.is_complete(rt) and not cls.is_defaults(rt)]
 
     def act(self, course, unused_settings):
         """Updates course-wide availability as indicated by the trigger."""

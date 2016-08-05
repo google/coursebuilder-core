@@ -86,6 +86,21 @@ COURSE_AVAILABILITY_WITH_NONE_SELECT_DATA = [
     availability_options.NONE_SELECTED_OPTION,
 ] + COURSE_AVAILABILITY_SELECT_DATA
 
+COURSE_AVAILABILITY_SETTING = (
+    availability.AvailabilityRESTHandler.COURSE_AVAILABILITY_SETTING)
+
+def course_availability_key():
+    """Returns a copy of the singleton course availability override key."""
+    return [COURSE_AVAILABILITY_SETTING]
+
+
+CONTENT_AVAILABILITY_FIELD = (
+    availability.AvailabilityRESTHandler.AVAILABILITY_FIELD)
+
+def content_availability_key(content_type, content_id):
+    """Returns a content availability override key from type and ID."""
+    return [content_type, str(content_id), CONTENT_AVAILABILITY_FIELD]
+
 
 class OverrideTriggerMixin(object):
 
@@ -165,8 +180,10 @@ class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
     def kind(cls):
         return super(ContentOverrideTrigger, cls).kind() + cls.KIND_SUFFIX
 
+    KEY_KIND = CONTENT_AVAILABILITY_FIELD
+
     def key(self):
-        return [self.type, self.id, 'availability']
+        return content_availability_key(self.type, self.id)
 
 
 class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
@@ -180,8 +197,10 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
     def kind(cls):
         return super(CourseOverrideTrigger, cls).kind() + cls.KIND_SUFFIX
 
+    KEY_KIND = COURSE_AVAILABILITY_SETTING
+
     def key(self):
-        return [StudentGroupAvailabilityRestHandler.COURSE_AVAILABILITY]
+        return course_availability_key()
 
 
 class EmailToObfuscatedUserId(models.BaseEntity):
@@ -903,7 +922,8 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
     _STUDENT_GROUP = 'student_group'
     _STUDENT_GROUP_SETTINGS = 'student_group_settings'
     _ELEMENT_SETTINGS = _arh.ELEMENT_SETTINGS
-    COURSE_AVAILABILITY = _arh.COURSE_AVAILABILITY_SETTING
+    CONTENT_AVAILABILITY = CONTENT_AVAILABILITY_FIELD
+    COURSE_AVAILABILITY = COURSE_AVAILABILITY_SETTING
     _DEFAULT_COURSE_AVAILABILITY = 'default_course_availability'
     _DEFAULT_AVAILABILITY = 'default_availability'
 
@@ -948,7 +968,7 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             extra_schema_dict_values={
                 'className': cls._arh.ELEM_AVAILABILITY_CSS}))
         element_settings.add_property(schema_fields.SchemaField(
-            'availability', 'Availability', 'string',
+            cls.CONTENT_AVAILABILITY, 'Availability', 'string',
             description=services.help_urls.make_learn_more_message(
                 messages.AVAILABILITY_OVERRIDDEN_AVAILABILITY_DESCRIPTION,
                 'course:availability:availability'), i18n=False, optional=True,
@@ -1032,7 +1052,7 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
     @classmethod
     def _add_unit(cls, unit, elements, student_group, indent=False):
         overridden_availability = student_group.get_override(
-            ['unit', str(unit.unit_id), 'availability'],
+            content_availability_key('unit', unit.unit_id),
             AVAILABILITY_NO_OVERRIDE)
         elements.append({
             'type': 'unit',
@@ -1040,13 +1060,13 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             'indent': indent,
             'name': unit.title,
             cls._DEFAULT_AVAILABILITY: unit.availability.title(),
-            'availability': overridden_availability,
+            cls.CONTENT_AVAILABILITY: overridden_availability,
             })
 
     @classmethod
     def _add_lesson(cls, lesson, elements, student_group):
         overridden_availability = student_group.get_override(
-            ['lesson', str(lesson.lesson_id), 'availability'],
+            content_availability_key('lesson', lesson.lesson_id),
             AVAILABILITY_NO_OVERRIDE)
         elements.append({
             'type': 'lesson',
@@ -1054,19 +1074,19 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             'indent': True,
             'name': lesson.title,
             cls._DEFAULT_AVAILABILITY: lesson.availability.title(),
-            'availability': overridden_availability,
+            cls.CONTENT_AVAILABILITY: overridden_availability,
             })
 
     @classmethod
     def _traverse_course(cls, course, student_group):
         elements = cls._arh.traverse_course(course)
         for element in elements:
-            default_availability = element['availability'].title()
+            default_availability = element[cls.CONTENT_AVAILABILITY].title()
             element[cls._DEFAULT_AVAILABILITY] = default_availability
             overridden_availability = student_group.get_override(
-                [element['type'], str(element['id']), 'availability'],
+                content_availability_key(element['type'], element['id']),
                 AVAILABILITY_NO_OVERRIDE)
-            element['availability'] = overridden_availability
+            element[cls.CONTENT_AVAILABILITY] = overridden_availability
         return elements
 
     @classmethod
@@ -1108,7 +1128,7 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
                 self._DEFAULT_COURSE_AVAILABILITY:
                     course.get_course_availability().title().replace('_', ' '),
                 self.COURSE_AVAILABILITY: student_group.get_override(
-                    [self.COURSE_AVAILABILITY], AVAILABILITY_NO_OVERRIDE),
+                    course_availability_key(), AVAILABILITY_NO_OVERRIDE),
             }
             student_group_settings.update(
                 CourseOverrideTrigger.for_form(course, student_group))
@@ -1147,7 +1167,7 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             transforms.send_json_response(self, 404, 'Not found.')
             return
 
-        student_group.remove_override([self.COURSE_AVAILABILITY])
+        student_group.remove_override(course_availability_key())
         student_group.remove_override(['unit'])
         student_group.remove_override(['lesson'])
         group_settings = payload.get(self._STUDENT_GROUP_SETTINGS)
@@ -1155,13 +1175,12 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
         CourseOverrideTrigger.payload_into_settings(
             group_settings, course, student_group)
         for item in group_settings.get(self._ELEMENT_SETTINGS, []):
-            if item['availability'] != AVAILABILITY_NO_OVERRIDE:
+            if item[self.CONTENT_AVAILABILITY] != AVAILABILITY_NO_OVERRIDE:
                 student_group.set_override(
-                    [item['type'], item['id'], 'availability'],
-                    item['availability'])
+                    content_availability_key(item['type'], item['id']),
+                    item[self.CONTENT_AVAILABILITY])
         if group_settings.get(self.COURSE_AVAILABILITY):
-            student_group.set_override(
-                [self.COURSE_AVAILABILITY],
+            student_group.set_override(course_availability_key(),
                 group_settings[self.COURSE_AVAILABILITY])
         ContentOverrideTrigger.payload_into_settings(
             group_settings, course, student_group)
@@ -1280,8 +1299,7 @@ def modify_course_environment(app_context, env):
 
     # Apply overrides as applicable.
     # pylint: disable=protected-access
-    course_availability = student_group.get_override(
-        [StudentGroupAvailabilityRestHandler.COURSE_AVAILABILITY])
+    course_availability = student_group.get_override(course_availability_key())
     if (course_availability and
         (course_availability != AVAILABILITY_NO_OVERRIDE)):
         setting = courses.COURSE_AVAILABILITY_POLICIES[course_availability]
@@ -1304,13 +1322,13 @@ def modify_unit_and_lesson_attributes(course, units, lessons):
     # pylint: disable=protected-access
     for unit in units:
         unit_availability = student_group.get_override(
-            ['unit', str(unit.unit_id), 'availability'])
+            content_availability_key('unit', unit.unit_id))
         if (unit_availability and
             (unit_availability != AVAILABILITY_NO_OVERRIDE)):
             unit.availability = unit_availability
     for lesson in lessons:
         lesson_availability = student_group.get_override(
-            ['lesson', str(lesson.lesson_id), 'availability'])
+            content_availability_key('lesson', lesson.lesson_id))
         if (lesson_availability and
             (lesson_availability != AVAILABILITY_NO_OVERRIDE)):
             lesson.availability = lesson_availability

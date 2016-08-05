@@ -2457,6 +2457,8 @@ class AvailabilityTests(actions.TestBase):
         tct = triggers.ContentTrigger
         tmt = triggers.MilestoneTrigger
 
+        tdtt.DEFAULT_FAIL_FAST = False  # Force complete validation.
+
         self.assertNotIn(
             self._VALID_BUT_NOT_OUTLINE, tct.ALLOWED_CONTENT_TYPES)
 

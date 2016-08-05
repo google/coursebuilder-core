@@ -84,6 +84,10 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
     ELEMENT_SETTINGS = 'element_settings'
     WHITELIST_SETTING = 'whitelist'
 
+    AVAILABILITY_FIELD = triggers.AvailabilityTrigger.FIELD_NAME
+    DATETIME_FIELD = triggers.DateTimeTrigger.FIELD_NAME
+    CONTENT_FIELD = triggers.ContentTrigger.FIELD_NAME
+
     # Match the "Content Availability" element <select> to that of triggers.
     AVAILABILITY_CSS = triggers.AvailabilityTrigger.availability_css()
     SELECT_WRAPPER_CSS = 'gcb-select inputEx-fieldWrapper'
@@ -151,16 +155,17 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         desc = messages.MILESTONE_TRIGGER_WHEN_DESC_FMT.format(
             ms_text, ms_text)
         milestone_trigger.add_property(schema_fields.SchemaField(
-            'when', title, 'datetime', description=desc, i18n=False,
-            optional=True, extra_schema_dict_values={
+            cls.DATETIME_FIELD, title, 'datetime', description=desc,
+            i18n=False, optional=True, extra_schema_dict_values={
                 'className': trigger_cls.when_css()}))
 
         title = 'Change {} availability to:'.format(milestone.split('_')[0])
         desc = messages.MILESTONE_TRIGGER_AVAIL_DESC_FMT.format(
             ms_text, availability_options.NONE_SELECTED_TITLE, ms_text)
         milestone_trigger.add_property(schema_fields.SchemaField(
-            'availability', title, 'string', description=desc, i18n=False,
-            optional=True, select_data=avail_select, extra_schema_dict_values={
+            cls.AVAILABILITY_FIELD, title, 'string', description=desc,
+            i18n=False, optional=True,
+            select_data=avail_select, extra_schema_dict_values={
                 'className': trigger_cls.availability_css()}))
         return milestone_trigger
 
@@ -222,7 +227,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             i18n=False, optional=True, extra_schema_dict_values={
                 'className': 'shown inputEx-Field inputEx-CheckBox'}))
         element_settings.add_property(schema_fields.SchemaField(
-            'availability', 'Availability', 'string',
+            cls.AVAILABILITY_FIELD, 'Availability', 'string',
             description=services.help_urls.make_learn_more_message(
                 messages.AVAILABILITY_AVAILABILITY_DESCRIPTION,
                 'course:availability:availability'),
@@ -250,22 +255,21 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             extra_schema_dict_values={
                 'className': tct.registry_css()})
         content_trigger.add_property(schema_fields.SchemaField(
-            'content', 'For course content:', 'string',
+            cls.CONTENT_FIELD, 'For course content:', 'string',
             description=messages.CONTENT_TRIGGER_RESOURCE_DESCRIPTION,
             i18n=False, select_data=cls.content_select(course).items(),
             extra_schema_dict_values={
                 'className': tct.content_css()}))
         content_trigger.add_property(schema_fields.SchemaField(
-            'when', 'At this date & UTC hour:', 'datetime',
-            i18n=False,
+            cls.DATETIME_FIELD, 'At this date & UTC hour:', 'datetime',
             description=messages.CONTENT_TRIGGER_WHEN_DESCRIPTION,
-            extra_schema_dict_values={
+            i18n=False, extra_schema_dict_values={
                 'className': tct.when_css()}))
         if avail_select is None:
             avail_select = availability_options.ELEMENT_SELECT_DATA
         title = 'Change {} to:'.format(tct.kind())
         content_trigger.add_property(schema_fields.SchemaField(
-            'availability', title, 'string',
+            cls.AVAILABILITY_FIELD, title, 'string',
             description=messages.CONTENT_TRIGGER_AVAIL_DESCRIPTION,
             i18n=False, select_data=avail_select,
             extra_schema_dict_values={
@@ -333,7 +337,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'id': unit.unit_id,
             'indent': indent,
             'name': unit.title,
-            'availability': unit.availability,
+            cls.AVAILABILITY_FIELD: unit.availability,
             'shown_when_unavailable': unit.shown_when_unavailable,
             })
 
@@ -344,7 +348,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'id': lesson.lesson_id,
             'indent': True,
             'name': lesson.title,
-            'availability': lesson.availability,
+            cls.AVAILABILITY_FIELD: lesson.availability,
             'shown_when_unavailable': lesson.shown_when_unavailable,
             })
 
@@ -485,8 +489,8 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
                     tct.UNEXPECTED_CONTENT_FMT.format(
                         item['type'], tct.ALLOWED_CONTENT_TYPES))
             if element:
-                if 'availability' in item:
-                    element.availability = item['availability']
+                if cls.AVAILABILITY_FIELD in item:
+                    element.availability = item[cls.AVAILABILITY_FIELD]
                 if 'shown_when_unavailable' in item:
                     element.shown_when_unavailable = (
                         item['shown_when_unavailable'])
