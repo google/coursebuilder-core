@@ -17,12 +17,9 @@
 __author__ = 'Timothy Johnson (tujohnson@google.com)'
 
 import math
-import os
 import urllib
 
-import appengine_config
 from controllers import sites
-from models import transforms
 from modules.student_skills_ui import student_skills_ui
 from tests.functional import actions
 from tests.integration import integration
@@ -30,8 +27,6 @@ from tests.integration import integration
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
-
-from google.appengine.api import namespace_manager
 
 
 def _create_url(base='', x_value=None, y_value=None, scale_value=None):
