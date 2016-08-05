@@ -49,6 +49,14 @@ def _create_url(base='', x_value=None, y_value=None, scale_value=None):
     return url
 
 
+class DummyTestCase(actions.TestBase):
+    """A placeholder test until our module is ready to be enabled."""
+
+    # TODO(tujohnson): Remove this and add the actual tests to manifest.yaml.
+    def test_dummy(self):
+        self.assertTrue(True)
+
+
 class CourseMapArgsTestCase(actions.TestBase):
     """Tests that URL parameters for our course map are validated."""
 
