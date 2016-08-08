@@ -49,14 +49,6 @@ def _create_url(base='', x_value=None, y_value=None, scale_value=None):
     return url
 
 
-class DummyTestCase(actions.TestBase):
-    """A placeholder test until our module is ready to be enabled."""
-
-    # TODO(tujohnson): Remove this and add the actual tests to manifest.yaml.
-    def test_dummy(self):
-        self.assertTrue(True)
-
-
 class CourseMapArgsTestCase(actions.TestBase):
     """Tests that URL parameters for our course map are validated."""
 
@@ -66,6 +58,10 @@ class CourseMapArgsTestCase(actions.TestBase):
 
     def setUp(self):
         super(CourseMapArgsTestCase, self).setUp()
+
+        if not student_skills_ui.custom_module.enabled:
+            self.skipTest('Module not enabled')
+
         self.base = '/' + self.COURSE_NAME
         self.app_context = actions.simple_add_course(
             self.COURSE_NAME, self.ADMIN_EMAIL, 'Title')
@@ -76,6 +72,10 @@ class CourseMapArgsTestCase(actions.TestBase):
 
     def test_valid_args_returns_200(self):
         """Pass valid arguments and check for a 200 response."""
+        url = _create_url()
+        response = self.get(url)
+        self.assertEqual(200, response.status_int)
+
         url = _create_url(x_value=100, y_value=100, scale_value=2.0)
         response = self.get(url)
         self.assertEqual(200, response.status_int)
@@ -90,7 +90,7 @@ class CourseMapArgsTestCase(actions.TestBase):
         response = self.get(url2, expect_errors=True)
         self.assertEqual(400, response.status_int)
 
-        url3 = _create_url(base=self.base, scale_value='a')
+        url3 = _create_url(scale_value='a')
         response = self.get(url3, expect_errors=True)
         self.assertEqual(400, response.status_int)
 
@@ -105,6 +105,10 @@ class CourseMapLayoutTestCase(integration.TestBase):
 
     def setUp(self):
         super(CourseMapLayoutTestCase, self).setUp()
+
+        if not student_skills_ui.custom_module.enabled:
+            self.skipTest('Module not enabled')
+
         self.course_name, self.course_title = self.create_new_course()
         self.base = '/' + self.course_name
 

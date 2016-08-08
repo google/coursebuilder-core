@@ -4,8 +4,10 @@ registration:
 
 tests:
     functional:
-        - modules.student_skills_ui.student_skills_ui_tests.DummyTestCase = 1
+        - modules.student_skills_ui.student_skills_ui_tests.CourseMapArgsTestCase = 2
 
+    integration:
+        - modules.student_skills_ui.student_skills_ui_tests.CourseMapLayoutTestCase = 1
 
 files:
     - modules/student_skills_ui/__init__.py
