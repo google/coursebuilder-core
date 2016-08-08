@@ -542,7 +542,7 @@ class MultiCourseSetStartEndRESTHandler(utils.BaseRESTHandler):
 
         triggers.MilestoneTrigger.payload_into_settings(
             payload, course, settings,
-            action=triggers.DateTimeTrigger.ACTION_MERGE)
+            semantics=triggers.DateTimeTrigger.SET_WILL_MERGE)
         course.save_settings(settings)
         transforms.send_json_response(
             self, 200, 'Saved.', payload_dict=response_payload)

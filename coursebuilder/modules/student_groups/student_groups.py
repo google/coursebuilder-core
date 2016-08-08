@@ -150,9 +150,11 @@ class OverrideTriggerMixin(object):
         return ([] if student_group is None
                 else student_group.get_triggers(cls.SETTINGS_NAME))
 
+    IMPLEMENTED_SET_SEMANTICS = triggers.DateTimeTrigger.SET_ONLY_OVERWRITES
+
     @classmethod
     def set_into_settings(cls, encoded_triggers, unused_course, student_group,
-                          action=triggers.DateTimeTrigger.ACTION_OVERWRITE):
+                          semantics=None):
         """Sets encoded availability override triggers into a student group.
 
         Args:
@@ -162,11 +164,15 @@ class OverrideTriggerMixin(object):
                 student_group properties, so the Course is unused here.
             student_group: a StudentGroupDTO into which the encoded_triggers
                 will be stored in the content_triggers property.
+            semantics: Student Groups settings currently only support the
+                default SET_WILL_OVERWRITE semantics.
         """
-        if action != triggers.DateTimeTrigger.ACTION_OVERWRITE:
-            raise ValueError('Student Groups settings do not currently support '
-                             'merge semantics, only overwrite.')
+        cls.check_set_semantics(semantics)
         student_group.set_triggers(cls.SETTINGS_NAME, encoded_triggers)
+
+    @classmethod
+    def clear_from_settings(cls, course, student_group, **unused_kwargs):
+        student_group.clear_triggers(cls.SETTINGS_NAME)
 
 
 class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
@@ -622,6 +628,10 @@ class StudentGroupDTO(object):
     def set_triggers(self, triggers_name, value):
         if self.is_triggers_property(triggers_name):
             self.dict[triggers_name] = value
+
+    def clear_triggers(self, triggers_name):
+        if self.is_triggers_property(triggers_name):
+            self.dict.pop(triggers_name, None)  # No KeyError if missing.
 
     @property
     def course_triggers(self):

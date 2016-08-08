@@ -51,8 +51,12 @@ class DateTimeTrigger(object):
     UNEXPECTED_TRIGGER_FMT = 'is_valid ({}) is_future ({}) is_ready ({})'
     LOG_ISSUE_FMT = '%s %s in namespace %s encoded: "%s" cause: "%s"'
 
-    ACTION_OVERWRITE = 'overwrite'
-    ACTION_MERGE = 'merge'
+    SET_WILL_OVERWRITE = 'overwrite'
+    SET_WILL_MERGE = 'merge'
+    # By default, most trigger classes only implement 'overwrite' semantics
+    # for set_into_settings().
+    SET_ONLY_OVERWRITES = frozenset([SET_WILL_OVERWRITE])
+    IMPLEMENTED_SET_SEMANTICS = SET_ONLY_OVERWRITES
 
     def __init__(self, when=None, **unused):
         """Validates and sets a `when` datetime property."""
@@ -334,60 +338,59 @@ class DateTimeTrigger(object):
         }
 
     @classmethod
+    def check_set_semantics(cls, semantics):
+        if semantics is None:
+            return cls.SET_WILL_OVERWRITE
+
+        if semantics in cls.IMPLEMENTED_SET_SEMANTICS:
+            return semantics
+
+        raise ValueError(
+            'set_into_settings() semantics "{}" must be one of: {}'.format(
+                semantics, cls.IMPLEMENTED_SET_SEMANTICS))
+
+    @classmethod
     def set_into_settings(cls, encoded_triggers, course, settings,
-                          action=ACTION_OVERWRITE):
+                          semantics=None):
         """Sets encoded availability triggers into the supplied settings.
 
         If a non-empty encoded_triggers list was supplied, it is set as the
-        value of the SETTINGS_NAME key in the 'publish' dict within the
-        settings.
+        value of the SETTINGS_NAME key in a dict or property in a DTO.
 
         Args:
             encoded_triggers: a list of encoded triggers, marshaled for
                 storing as settings values.
             course: a Course used by some encoded_triggers during validation.
-            settings: course settings containing the 'publish' dict.
+            settings: subclass-specific settings containing encoded triggers.
+            semantics: one of the IMPLEMENTED_SET_SEMANTICS, defaulting to
+                the SET_WILL_OVERWRITE semantics (supported by all triggers)
+                if None.
+              SET_WILL_OVERWRITE -- When called from the per-course
+                  availability settings page, this parameter specifies that
+                  overwrite semantics are applied. In this settings page
+                  case, all settings are present on that form, and so any
+                  existing SETTINGS_NAME values are completely overwritten
+                  (by encoded_triggers, when they are provided) or deleted
+                  (when encoded_triggers is empty or None).
+              SET_WILL_MERGE -- See subclass set_into_settings() methods for
+                  discussion of how merge semantics are implemented by that
+                  subclass.
         """
-        publish = settings.setdefault('publish', {})
-        if action == cls.ACTION_OVERWRITE:
-            # Overwrite semantics apply when we are called from the per-course
-            # availability settings page.  In this case, all settings are on
-            # the form, and so an absent setting means that that milestone was
-            # either left blank or explicitly cleared.  Either way, we want to
-            # completely overwrite this class of setting, rather than merging.
-            if encoded_triggers:
-                publish[cls.SETTINGS_NAME] = encoded_triggers
-            else:
-                publish.pop(cls.SETTINGS_NAME, None)  # No KeyError if missing.
-        elif action == cls.ACTION_MERGE:
-            # When calling to set settings for multiple courses all at once,
-            # only one item at a time is sent, and other milestone types
-            # should not be affected.  In this case, we want to merge with
-            # existing settings, rather than drop milestone types that are not
-            # explicitly named.
-            current = {t[MilestoneTrigger.FIELD_NAME]: t
-                       for t in publish.get(cls.SETTINGS_NAME, [])}
-            changes = {t[MilestoneTrigger.FIELD_NAME]: t
-                       for t in encoded_triggers}
-            current.update(changes)
-            if current:
-                publish[cls.SETTINGS_NAME] = current.values()
-            else:
-                publish.pop(cls.SETTINGS_NAME, None)  # No KeyError if missing.
+        # ValueError is raised if an unsupported set semantics value was
+        # supplied (but otherwise this base class implementation ignores the
+        # actual parameter value, as most triggers classes only implement the
+        # default 'overwrite' semantics).
+        cls.check_set_semantics(semantics)
+        if encoded_triggers:
+            publish = settings.setdefault('publish', {})
+            publish[cls.SETTINGS_NAME] = encoded_triggers
         else:
-            raise ValueError('Action must be one of "%s" or "%s"' % (
-                cls.ACTION_OVERWRITE, cls.ACTION_MERGE))
+            cls.clear_from_settings(course, settings)
 
     @classmethod
-    def clear_from_settings(cls, course, settings, milestone):
+    def clear_from_settings(cls, course, settings, **unused_kwargs):
         publish = settings.setdefault('publish', {})
-        triggers = publish.get(cls.SETTINGS_NAME, [])
-        triggers = [t for t in triggers
-                    if t[MilestoneTrigger.FIELD_NAME] != milestone]
-        if triggers:
-            publish[cls.SETTINGS_NAME] = triggers
-        else:
-            publish.pop(cls.SETTINGS_NAME, None)  # No KeyError if missing.
+        publish.pop(cls.SETTINGS_NAME, None)  # No KeyError if missing.
 
     @classmethod
     def from_payload(cls, payload):
@@ -395,11 +398,10 @@ class DateTimeTrigger(object):
         return payload.get(cls.SETTINGS_NAME, [])
 
     @classmethod
-    def payload_into_settings(cls, payload, course, settings,
-                              action=ACTION_OVERWRITE):
+    def payload_into_settings(cls, payload, course, settings, semantics=None):
         """Sets triggers from form payload in settings for a course."""
         cls.set_into_settings(cls.from_payload(payload), course, settings,
-                              action)
+                              semantics=semantics)
 
     @classmethod
     def sort(cls, triggers):
@@ -661,8 +663,7 @@ class DateTimeTrigger(object):
             # Update the triggers stored in the settings with the remaining
             # future triggers.  (These settings are not yet saved, as that is
             # the responsibility of the caller.)
-            cls.set_into_settings(future_encoded, course, settings,
-                                  cls.ACTION_OVERWRITE)
+            cls.set_into_settings(future_encoded, course, settings)
 
         return cls.SettingsActs(num_consumed, separated, num_changed, acts)
 
@@ -1259,6 +1260,11 @@ class MilestoneTrigger(AvailabilityTrigger):
     UNEXPECTED_MILESTONE_FMT = "Milestone '{}' not in {}."
     UNSPECIFIED_FMT = '{} not specified.'
 
+    IMPLEMENTED_SET_SEMANTICS = frozenset([
+        DateTimeTrigger.SET_WILL_OVERWRITE,
+        DateTimeTrigger.SET_WILL_MERGE,
+    ])
+
     def __init__(self, milestone=None, **super_kwargs):
         """Validates and sets `milestone` and super class properties."""
         super(MilestoneTrigger, self).__init__(**super_kwargs)
@@ -1453,7 +1459,7 @@ class MilestoneTrigger(AvailabilityTrigger):
 
     @classmethod
     def set_into_settings(cls, encoded_triggers, course, settings,
-                          action=DateTimeTrigger.ACTION_OVERWRITE):
+                          semantics=None):
         """Sets encoded course start/end triggers into the supplied settings.
 
         Sets the value of the SETTINGS_NAME key in the 'publish' dict
@@ -1481,12 +1487,58 @@ class MilestoneTrigger(AvailabilityTrigger):
                 no 'when' date/time, etc.); any invalid triggers are omitted.
             course: passed, untouched, through to the base class.
             settings: passed, untouched, through to the base class.
+            semantics: one of
+                SET_WILL_OVERWITE -- De-duped, valid course milestone triggers
+                    extracted from encoded_triggers are supplied to the base
+                    class set_into_settings() unchanged.
+                SET_WILL_MERGE -- When called to set settings for multiple
+                    courses all at once, only one item at a time is sent, so
+                    encoded_triggers is instead merged with the existing
+                    SETTINGS_NAME values.
         """
+        semantics = cls.check_set_semantics(semantics)
         valid_triggers = cls.separate(encoded_triggers, course).encoded
         deduped = {et[MilestoneTrigger.FIELD_NAME]: et
                    for et in valid_triggers}
+
+        if semantics == cls.SET_WILL_MERGE:
+            # When calling to set settings for multiple courses all at once,
+            # only one item at a time is sent, and other milestone types
+            # should not be affected.  In this case, we want to merge with
+            # existing settings, rather than drop milestone types that are not
+            # explicitly named.
+            current = {t[MilestoneTrigger.FIELD_NAME]: t
+                       for t in cls.from_settings(course, settings)}
+            current.update(deduped)
+            # Any valid, de-duped triggers have now replaced their counterparts
+            # in the triggers currently present in the supplied settings (or
+            # been added if they were not already present in those settings).
+            # This merged dict of course milestone triggers can now actually
+            # *overwrite* the existing SETTINGS_NAME list. If no triggers
+            # remain after merging (current is an empty dict), the super
+            # set_into_settings() will call clear_from_settings() as expected.
+            deduped = current
+
         super(MilestoneTrigger, cls).set_into_settings(
-            deduped.values(), course, settings, action)
+            deduped.values(), course, settings)  # Default to 'overwrite'.
+
+    @classmethod
+    def clear_from_settings(cls, course, settings, milestone=None):
+        if milestone is None:
+            # Original "remove entire SETTINGS_NAME list" if not pruning out
+            # the trigger(s) for a specific course milestone.
+            super(MilestoneTrigger, cls).clear_from_settings(course, settings)
+            return
+
+        publish = settings.setdefault('publish', {})
+        triggers = publish.get(cls.SETTINGS_NAME, [])
+        kept = [t for t in triggers
+                if t.get(MilestoneTrigger.FIELD_NAME) != milestone]
+        # If any triggers remain after pruning out the milestone ones,
+        # the kept list needs to actually *overwrite* the existing
+        # SETTINGS_NAME list. If no triggers remain after pruning (kept is an
+        # empty list), super set_into_settings() calls clear_from_settings().
+        super(MilestoneTrigger, cls).set_into_settings(kept, course, settings)
 
     @classmethod
     def from_payload(cls, payload):
