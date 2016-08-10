@@ -1,5 +1,6 @@
 registration:
   main_module: modules.news.news
+  enabled: False
 
 tests:
   functional:

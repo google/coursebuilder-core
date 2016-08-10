@@ -437,6 +437,7 @@ class AnnouncementsTests(actions.TestBase):
             ctx.set_current_locale(save_locale)
             sites.unset_path_info()
 
+    @news_tests_lib.force_news_enabled
     def test_announcement_news(self):
         actions.login('student@sample.com')
         actions.register(self, 'John Doe')

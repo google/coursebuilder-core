@@ -47,6 +47,7 @@ from common import schema_fields
 from common import users
 from common import utc
 from common import utils as common_utils
+from controllers import sites
 from controllers import utils
 from models import courses
 from models import custom_modules
@@ -78,6 +79,24 @@ MIN_NEWS_ITEMS_TO_DISPLAY = 5
 
 custom_module = None
 
+
+def is_enabled():
+    # TODO(mgainer): Add tests to verify that this does the right thing
+    # when this module is re-enabled in manifest.yaml.
+
+    # Enabled/disabled in manifest.yaml
+    if not custom_module.enabled:
+        return False
+
+    # If we don't have a course, we can't reasonably expect to have course news.
+    app_context = sites.get_app_context_for_current_request()
+    if not app_context:
+        return False
+
+    # Enabled at course level?
+    settings = app_context.get_environ()
+    news_settings = settings.get(NEWS_SETTINGS_SECTION, {})
+    return news_settings.get(IS_NEWS_ENABLED_SETTING, True)  # True if unset.
 
 class SerializableList(object):
     """Convenience functions to marshal/unmarshal objects from JSON."""
@@ -232,12 +251,18 @@ class BaseNewsDao(models.BaseJsonDao):
     @classmethod
     def add_news_item(cls, news_item, overwrite_existing=True):
         """Convenience method when only one operation is needed on DTO."""
+        if not is_enabled():
+            return
+
         dto = cls.load_or_default()
         dto.add_news_item(news_item, overwrite_existing)
         cls.save(dto)
 
     @classmethod
     def remove_news_item(cls, resource_key):
+        if not is_enabled():
+            return
+
         dto = cls.load_or_default()
         if dto.remove_news_item(resource_key):
             cls.save(dto)
@@ -245,6 +270,9 @@ class BaseNewsDao(models.BaseJsonDao):
     @classmethod
     def get_news_items(cls):
         """Convenience method when only one operation is needed on DTO."""
+        if not is_enabled():
+            return []
+
         dto = cls.load_or_default()
         return dto.get_news_items()
 

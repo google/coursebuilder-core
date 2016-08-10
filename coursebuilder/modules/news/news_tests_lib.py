@@ -20,6 +20,8 @@ __author__ = [
 
 import collections
 
+from modules.news import news
+
 
 NewsItem = collections.namedtuple('NewsItem', ['desc', 'url', 'is_new'])
 
@@ -42,3 +44,18 @@ def extract_news_items_from_soup(soup):
         text = link.text.strip()
         ret.append(NewsItem(text, href, is_new))
     return ret
+
+
+def force_news_enabled(wrapped_func):
+    """Decorator that forces news module to be enabled for individual tests."""
+
+    def wrapper_func(*args, **kwargs):
+        if not news.custom_module.enabled:
+            news.custom_module.enable()
+        save_is_enabled = news.is_enabled
+        news.is_enabled = lambda: True
+        ret = wrapped_func(*args, **kwargs)
+        news.is_enabled = save_is_enabled
+        return ret
+
+    return wrapper_func

@@ -260,6 +260,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
         self.assertEquals(200, response.status_code)
         self._run_analytic_and_expect(1, 1, 1)  # 1 student, 1 active, 1 cert
 
+    @news_tests_lib.force_news_enabled
     def test_news_notification(self):
         assessment = self.course.add_assessment()
         assessment.title = 'Assessment'

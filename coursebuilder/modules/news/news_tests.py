@@ -30,6 +30,7 @@ from tests.functional import actions
 
 from google.appengine.api import namespace_manager
 
+
 class NewsTestBase(actions.TestBase):
 
     ADMIN_EMAIL = 'admin@foo.com'
@@ -64,7 +65,16 @@ class NewsTestBase(actions.TestBase):
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace(self.NAMESPACE)
 
+        # News is always enabled during own-module tests so that we do not
+        # accumulate any regressions within ourselves.  Other modules are
+        # free to simply disable if they wish.
+        self.save_is_enabled = news.is_enabled
+        news.is_enabled = lambda: True
+        if not news.custom_module.enabled:
+            news.custom_module.enable()
+
     def tearDown(self):
+        news.is_enabled = self.save_is_enabled
         del news.NewsItem.__eq__
         del news.NewsItem.__repr__
         del news.SeenItem.__eq__
