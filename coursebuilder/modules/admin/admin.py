@@ -17,8 +17,10 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
+import collections
 import cStringIO
 import datetime
+import logging
 import os
 import sys
 import time
@@ -301,61 +303,64 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
         dashboard.DashboardHandler.register_courses_menu_item(menu_item)
 
+
+    @classmethod
+    def add_menu_item(cls, group_name, item_name, label, action=None,
+                      can_view=None, contents=None, href=None, **kwargs):
+        if href:
+            target = '_blank'
+        else:
+            target = None
+            href = "{}?action={}".format(cls.LINK_URL, action)
+
+        def combined_can_view(app_context):
+            if can_view and not can_view(app_context):
+                return False
+
+            if action:
+                return can_view_admin_action(action)
+
+            return True
+
+        no_app_context = True
+
+        # The Site settings page can be used in the global admin (no app
+        # context) and in fact it is still reachable by guessing its URL,
+        # since many tests depend on its existence. However, product has
+        # requested that it appear greyed out in the global admin so that
+        # only Courses and Help are available there.
+        if action == 'settings' and not GLOBAL_SITE_SETTINGS_LINK_ENABLED:
+            no_app_context = False
+
+        dashboard.DashboardHandler.add_sub_nav_mapping(
+            group_name, item_name, label, action=action,
+            can_view=combined_can_view, contents=contents, href=href,
+            no_app_context=no_app_context, target=target, **kwargs)
+
     @classmethod
     def install_menu(cls):
-
-        def bind(group_name, item_name, label, action=None, can_view=None,
-                contents=None, href=None, **kwargs):
-            if href:
-                target = '_blank'
-            else:
-                target = None
-                href = "{}?action={}".format(cls.LINK_URL, action)
-
-            def combined_can_view(app_context):
-                if can_view and not can_view(app_context):
-                    return False
-
-                if action:
-                    return can_view_admin_action(action)
-
-                return True
-
-            no_app_context = True
-
-            # The Site settings page can be used in the global admin (no app
-            # context) and in fact it is still reachable by guessing its URL,
-            # since many tests depend on its existence. However, product has
-            # requested that it appear greyed out in the global admin so that
-            # only Courses and Help are available there.
-            if action == 'settings' and not GLOBAL_SITE_SETTINGS_LINK_ENABLED:
-                no_app_context = False
-
-            dashboard.DashboardHandler.add_sub_nav_mapping(
-                group_name, item_name, label, action=action,
-                can_view=combined_can_view, contents=contents, href=href,
-                no_app_context=no_app_context, target=target, **kwargs)
-
         cls.install_courses_menu_item()
 
-        bind('settings', 'site', 'Advanced site settings', action='settings',
-            contents=cls.get_settings, sub_group_name='advanced')
+        cls.add_menu_item('settings', 'site', 'Advanced site settings', action='settings',
+                          contents=cls.get_settings, sub_group_name='advanced')
 
-        bind('help', 'welcome', 'Welcome', action='welcome',
-            href='/admin/welcome', is_external=True, placement=1000)
+        cls.add_menu_item('help', 'welcome', 'Welcome', action='welcome',
+                          href='/admin/welcome', is_external=True,
+                          placement=1000)
 
-        bind('help', 'deployment', 'About', action='deployment',
-            contents=cls.get_deployment,
-            sub_group_name='advanced')
+        cls.add_menu_item('help', 'deployment', 'About', action='deployment',
+                          contents=cls.get_deployment,
+                          sub_group_name='advanced')
 
-        bind('analytics', 'console', 'Console', action='console',
-            contents=cls.get_console, sub_group_name='advanced')
+        cls.add_menu_item('analytics', 'console', 'Console', action='console',
+                          contents=cls.get_console, sub_group_name='advanced')
 
         def can_view_appstats(app_context):
             return appengine_config.gcb_appstats_enabled()
 
-        bind('analytics', 'stats', 'Appstats', can_view=can_view_appstats,
-            href='/admin/stats/', sub_group_name='advanced')
+        cls.add_menu_item('analytics', 'stats', 'Appstats',
+                          can_view=can_view_appstats, href='/admin/stats/',
+                          sub_group_name='advanced')
 
     @classmethod
     def can_view(cls, action):
@@ -996,6 +1001,10 @@ class GlobalAdminHandler(
     # Node or NodeList, or a jinja2.Markup).
     PAGE_HEADER_HOOKS = []
 
+    GetAction = collections.namedtuple('GetAction', ['handler', 'in_action'])
+    _custom_get_actions = {}  # Map of name to GetAction
+    _custom_post_actions = {}  # Map of name to handler callback.
+
     default_action = 'courses'
 
     actions_to_menu_items = dashboard.DashboardHandler.actions_to_menu_items
@@ -1028,16 +1037,98 @@ class GlobalAdminHandler(
                     users.create_login_url(destination), normalize=False)
             return
 
-        # Force reload of properties. It's expensive, but admin deserves it!
-        config.Registry.get_overrides(force_update=True)
+        if action not in self._custom_get_actions:
+            config.Registry.get_overrides(force_update=True)
+            super(GlobalAdminHandler, self).get()
+            return
 
-        super(GlobalAdminHandler, self).get()
+        result = self._custom_get_actions[action].handler(self)
+        if result is None:
+            return
+
+        # The following code handles pages for actions that do not write out
+        # their responses.
+
+        template_values = {
+            'page_title': self.format_title(self.get_nav_title(action)),
+        }
+        if isinstance(result, dict):
+            template_values.update(result)
+        else:
+            template_values['main_content'] = result
+
+        self.render_page(template_values)
+        return
 
     def post(self):
-        if not self.can_edit(self.request.get('action')):
+        action = self.request.get('action')
+        if not self.can_edit(action):
             self.redirect('/', normalize=False)
             return
-        return super(GlobalAdminHandler, self).post()
+
+        if action not in self._custom_post_actions:
+            return super(GlobalAdminHandler, self).post()
+
+        # Each POST request must have valid XSRF token.
+        xsrf_token = self.request.get('xsrf_token')
+        if not crypto.XsrfTokenManager.is_xsrf_token_valid(
+            xsrf_token, action):
+            self.error(403)
+            return
+        self._custom_post_actions[action](self)
+        return
+
+
+    @classmethod
+    def add_custom_get_action(cls, action, handler, in_action=None,
+                              overwrite=False):
+        if not action or not handler:
+            logging.critical('Action or handler can not be null.')
+            return False
+
+        if ((action in cls._custom_get_actions or action in cls.get_actions)
+            and not overwrite):
+            logging.critical(
+                'action : %s already exists. Ignoring the custom get action.',
+                action)
+            return False
+
+        if dashboard.DashboardHandler.add_custom_get_action(
+            action, handler=handler, in_action=in_action, overwrite=overwrite):
+            cls._custom_get_actions[action] = cls.GetAction(handler, in_action)
+            return True
+        return False
+
+    @classmethod
+    def remove_custom_get_action(cls, action):
+        if action in cls._custom_get_actions:
+            cls._custom_get_actions.pop(action)
+            dashboard.DashboardHandler.remove_custom_get_action(action)
+
+    @classmethod
+    def add_custom_post_action(cls, action, handler, overwrite=False):
+        if not handler or not action:
+            logging.critical('Action or handler can not be null.')
+            return False
+
+        if ((action in cls._custom_post_actions or action in cls.post_actions)
+            and not overwrite):
+            logging.critical(
+                'action : %s already exists. Ignoring the custom post action.',
+                action)
+            return False
+
+        if dashboard.DashboardHandler.add_custom_post_action(
+            action, handler=handler, overwrite=overwrite):
+            cls._custom_post_actions[action] = handler
+            return True
+        return False
+
+    @classmethod
+    def remove_custom_post_action(cls, action):
+        if action in cls._custom_post_actions:
+            cls._custom_post_actions.pop(action)
+            dashboard.DashboardHandler.remove_custom_post_action(action)
 
     def get_template(self, template_name, dirs=None):
         """Sets up an environment and Gets jinja template."""

@@ -252,21 +252,22 @@ class DashboardHandler(
                               overwrite=False):
         if not action:
             logging.critical('Action not specified. Ignoring.')
-            return
+            return False
 
         if not handler:
             logging.critical(
                 'For action : %s handler can not be null.', action)
-            return
+            return False
 
         if ((action in cls._custom_get_actions or action in cls.get_actions)
             and not overwrite):
             logging.critical(
                 'action : %s already exists. Ignoring the custom get action.',
                 action)
-            return
+            return False
 
         cls._custom_get_actions[action] = cls.GetAction(handler, in_action)
+        return True
 
     @classmethod
     def remove_custom_get_action(cls, action):
@@ -277,16 +278,17 @@ class DashboardHandler(
     def add_custom_post_action(cls, action, handler, overwrite=False):
         if not handler or not action:
             logging.critical('Action or handler can not be null.')
-            return
+            return False
 
         if ((action in cls._custom_post_actions or action in cls.post_actions)
             and not overwrite):
             logging.critical(
                 'action : %s already exists. Ignoring the custom post action.',
                 action)
-            return
+            return False
 
         cls._custom_post_actions[action] = handler
+        return True
 
     @classmethod
     def remove_custom_post_action(cls, action):
