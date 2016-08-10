@@ -60,7 +60,8 @@ class GlobalAdminHandlerTests(unittest.TestCase):
             self.CUSTOM_ACTION_NAME))
         self.assertEqual(
             self.custom_handler,
-            admin.GlobalAdminHandler._custom_get_actions[self.CUSTOM_ACTION_NAME].handler)
+            admin.GlobalAdminHandler
+            ._custom_get_actions[self.CUSTOM_ACTION_NAME].handler)
 
         # Force overwrite existing entry
         self.assertTrue(admin.GlobalAdminHandler.add_custom_get_action(
@@ -70,10 +71,12 @@ class GlobalAdminHandlerTests(unittest.TestCase):
             self.CUSTOM_ACTION_NAME))
         self.assertEqual(
             self.custom_handler2,
-            admin.GlobalAdminHandler._custom_get_actions[self.CUSTOM_ACTION_NAME].handler)
+            admin.GlobalAdminHandler
+            ._custom_get_actions[self.CUSTOM_ACTION_NAME].handler)
 
         # Remove the action
-        admin.GlobalAdminHandler.remove_custom_get_action(self.CUSTOM_ACTION_NAME)
+        admin.GlobalAdminHandler.remove_custom_get_action(
+            self.CUSTOM_ACTION_NAME)
         self.assertFalse(admin.GlobalAdminHandler._custom_get_actions.has_key(
             self.CUSTOM_ACTION_NAME))
 
@@ -90,7 +93,8 @@ class GlobalAdminHandlerTests(unittest.TestCase):
     def test_custom_post_actions(self):
         """Tests the all_bases method."""
         # Action not specified
-        self.assertFalse(admin.GlobalAdminHandler.add_custom_post_action("", None))
+        self.assertFalse(admin.GlobalAdminHandler.add_custom_post_action(
+            "", None))
         self.assertFalse(admin.GlobalAdminHandler._custom_post_actions.has_key(
             self.CUSTOM_ACTION_NAME))
 
@@ -113,7 +117,8 @@ class GlobalAdminHandlerTests(unittest.TestCase):
             self.CUSTOM_ACTION_NAME))
         self.assertEqual(
             self.custom_handler,
-            admin.GlobalAdminHandler._custom_post_actions[self.CUSTOM_ACTION_NAME])
+            admin.GlobalAdminHandler
+            ._custom_post_actions[self.CUSTOM_ACTION_NAME])
 
         # Force overwrite existing entry
         self.assertTrue(admin.GlobalAdminHandler.add_custom_post_action(
@@ -123,10 +128,12 @@ class GlobalAdminHandlerTests(unittest.TestCase):
             self.CUSTOM_ACTION_NAME))
         self.assertEqual(
             self.custom_handler2,
-            admin.GlobalAdminHandler._custom_post_actions[self.CUSTOM_ACTION_NAME])
+            admin.GlobalAdminHandler
+            ._custom_post_actions[self.CUSTOM_ACTION_NAME])
 
         # Remove the action
-        admin.GlobalAdminHandler.remove_custom_post_action(self.CUSTOM_ACTION_NAME)
+        admin.GlobalAdminHandler.remove_custom_post_action(
+            self.CUSTOM_ACTION_NAME)
         self.assertFalse(admin.GlobalAdminHandler._custom_post_actions.has_key(
             self.CUSTOM_ACTION_NAME))
 
