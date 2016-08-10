@@ -36,6 +36,8 @@ if [[ $OSTYPE == linux* ]] ; then
 elif [[ $OSTYPE == darwin* ]] ; then
   NODE_DOWNLOAD_FOLDER=node-v0.12.4-darwin-x64
   CHROMEDRIVER_ZIP=chromedriver_mac32.zip
+elif [[ $OSTYPE == "cygwin" ]] ; then
+  echo "Windows install; skipping test-related downloads."
 else
   echo "Target OS '$TARGET_OS' must start with 'linux' or 'darwin'."
   exit -1
@@ -110,7 +112,7 @@ if [ -s "$GOOGLE_APP_ENGINE_HOME/VERSION" ]; then
     tr -d '"')
   echo Using GAE SDK $GAE_SDK_VERSION from $GOOGLE_APP_ENGINE_HOME
 else
-  echo Installing GAE SDK
+  echo "Installing App Engine developer toolkit.  This may take a few minutes."
 
   if [ -d "$GOOGLE_APP_ENGINE_HOME" ]; then
     rm -r $GOOGLE_APP_ENGINE_HOME
@@ -149,6 +151,14 @@ function need_install() {
   local version_file=$RUNTIME_HOME/$package_name/$1 && shift
   local version_finder=$1 && shift
   local expected_version=$1 && shift
+  local purpose=$1 && shift
+  # The "purpose" parameter should be one of 'test' or 'product' to indicate
+  # whether the item is needed only for tests or for the actual product itself.
+  # For problematic platforms (Windows), we skip fetch/install of test packages.
+  if [[ $OSTYPE == "cygwin" && $purpose == "test" ]] ; then
+    return 1
+  fi
+
   local package_dir=$RUNTIME_HOME/$package_name
 
   if [ ! -d $package_dir ] ; then
@@ -173,9 +183,23 @@ function need_install() {
 # Probe for file not present in the archive, but present in the folder we make
 # *from* the archive.
 if [ ! -f $RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded ]; then
+  if [[ $OSTYPE == "cygwin" ]] ; then
+    # The Cygwin python headers claim that BSD is available, but when building
+    # the PyCrypto package, it is not.  Comment out this line.  Note that we
+    # are leaving it commented out: We download a copy of Cygwin specifically
+    # for Course Builder so we're in 100% control of which items are and aren't
+    # fetched as well as insulation from any hackery the end-user may have
+    # performed.
+    PYCFG=/usr/include/python2.7/pyconfig.h
+    sed -e 's,^#define __BSD_VISIBLE 1,/* #define __BSD_VISIBLE 1 */,' \
+        $PYCFG > $PYCFG.tmp
+    mv $PYCFG.tmp $PYCFG
+  fi
+
   # PyCrypto is included in the prod bundle, but we need to supply it in dev
   # mode. It contains native code and must be built on the user's platform.
-  echo Installing PyCrypto '(a crypto library needed in dev mode)'
+  echo 'Installing PyCrypto (This needs to be compiled so it matches '
+  echo '   your operating system)'
 
   # Clean up any old artifacts (for example, from failed builds).
   if [ -d $RUNTIME_HOME/pycrypto-2.6.1 ]; then
@@ -199,34 +223,35 @@ if [ ! -f $RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded ]; then
   popd > /dev/null
 fi
 
-if need_install webtest PKG-INFO Version: 2.0.14 ; then
+if need_install webtest PKG-INFO Version: 2.0.14 test ; then
   download_and_unpack $PYPI_URL/W/WebTest/WebTest-2.0.14.zip
   mv $RUNTIME_HOME/WebTest-2.0.14 $RUNTIME_HOME/webtest
 fi
 
-if need_install six PKG-INFO Version: 1.5.2 ; then
+if need_install six PKG-INFO Version: 1.5.2 product ; then
   echo Installing six '(a Python 2.x/3.x compatibility bridge)'
   download_and_unpack $PYPI_URL/s/six/six-1.5.2.tar.gz
   mv $RUNTIME_HOME/six-1.5.2 $RUNTIME_HOME/six
 fi
 
-if need_install beautifulsoup4 PKG-INFO Version: 4.4.1 ; then
+if need_install beautifulsoup4 PKG-INFO Version: 4.4.1 product ; then
+  # Beautiful Soup is 'product', since it's used in flattening Polymer imports
   echo Installing Beautiful Soup HTML processing library
   download_and_unpack $PYPI_URL/b/beautifulsoup4/beautifulsoup4-4.4.1.tar.gz
   mv $RUNTIME_HOME/beautifulsoup4-4.4.1 $RUNTIME_HOME/beautifulsoup4
 fi
 
-if need_install selenium PKG-INFO Version: 2.46.1 ; then
+if need_install selenium PKG-INFO Version: 2.46.1 test ; then
   download_and_unpack $PYPI_URL/s/selenium/selenium-2.46.1.tar.gz
   mv $RUNTIME_HOME/selenium-2.46.1 $RUNTIME_HOME/selenium
 fi
 
-if [ ! -x $CHROMEDRIVER_DIR/chromedriver ] ; then
+if [ ! -x $CHROMEDRIVER_DIR/chromedriver -a $OSTYPE != "cygwin" ] ; then
   download_and_unpack $CHROMEDRIVER_URL $CHROMEDRIVER_DIR
   chmod a+x $CHROMEDRIVER_DIR/chromedriver
 fi
 
-if need_install node ChangeLog Version 0.12.4 ; then
+if need_install node ChangeLog Version 0.12.4 test ; then
   download_and_unpack \
     http://nodejs.org/dist/v0.12.4/$NODE_DOWNLOAD_FOLDER.tar.gz
   mv $RUNTIME_HOME/$NODE_DOWNLOAD_FOLDER $RUNTIME_HOME/node
@@ -243,7 +268,7 @@ if need_install node ChangeLog Version 0.12.4 ; then
   popd > /dev/null
 fi
 
-if need_install phantomjs ChangeLog Version 1.9.0 ; then
+if need_install phantomjs ChangeLog Version 1.9.0 test ; then
   echo Installing PhantomJs
   if [[ $OSTYPE == linux* ]] ; then
     download_and_unpack \
@@ -259,7 +284,7 @@ if need_install phantomjs ChangeLog Version 1.9.0 ; then
   fi
 fi
 
-if need_install logilab/pylint ChangeLog " -- " 1.4.0 ; then
+if need_install logilab/pylint ChangeLog " -- " 1.4.0 test ; then
   mkdir -p $RUNTIME_HOME/logilab
   rm -rf $RUNTIME_HOME/logilab/pylint
   download_and_unpack \
@@ -269,7 +294,7 @@ if need_install logilab/pylint ChangeLog " -- " 1.4.0 ; then
     $RUNTIME_HOME/logilab/pylint
 fi
 
-if need_install logilab/astroid ChangeLog " -- " 1.3.2 ; then
+if need_install logilab/astroid ChangeLog " -- " 1.3.2 test ; then
   mkdir -p $RUNTIME_HOME/logilab
   rm -rf $RUNTIME_HOME/logilab/astroid
   download_and_unpack \
@@ -279,7 +304,7 @@ if need_install logilab/astroid ChangeLog " -- " 1.3.2 ; then
     $RUNTIME_HOME/logilab/astroid
 fi
 
-if need_install logilab/logilab/common ChangeLog " -- " 0.62.0 ; then
+if need_install logilab/logilab/common ChangeLog " -- " 0.62.0 test ; then
   mkdir -p $RUNTIME_HOME/logilab/logilab
   rm -rf $RUNTIME_HOME/logilab/logilab/common
   download_and_unpack \
@@ -362,7 +387,7 @@ for lib in $DISTRIBUTED_LIBS ; do
   fi
 done
 
-if need_install yui build/yui/yui.js YUI 3.6.0 ; then
+if need_install yui build/yui/yui.js YUI 3.6.0 product ; then
   echo Installing YUI
   unzip -q "$DISTRIBUTED_LIBS_DIR/yui_3.6.0.zip" -d $RUNTIME_HOME
 fi
@@ -374,4 +399,4 @@ fi
 . "$(dirname "$0")/flatten_polymer_imports.sh"
 
 # Delete existing files: *.pyc
-find "$SOURCE_DIR" -iname "*.pyc" -exec rm -f {} \;
+find "$SOURCE_DIR" -name "*.pyc" -exec rm -f {} \;

@@ -122,9 +122,10 @@ class Sender(object):
     @classmethod
     def _emit_message(cls, message):
         """Emit message if allowed, not if not, or raise exception."""
+        if is_disabled:
+            return
         cls._refresh_report_settings()
-        if cls._report_settings[cls._REPORT_ENABLED] and not is_disabled():
-
+        if cls._report_settings[cls._REPORT_ENABLED]:
             try:
                 payload = urllib.urlencode(
                     {cls._report_settings[cls._REPORT_FORM_FIELD]: message})

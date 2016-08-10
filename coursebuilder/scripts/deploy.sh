@@ -23,6 +23,11 @@
 
 set -e
 
+# Add Cygwin install to path before script uses any utilities.
+if [[ $OSTYPE == cygwin* ]] ; then
+  export PATH="$COURSE_BUILDER_CYGWIN_ROOT:/usr/bin:$PATH"
+fi
+
 # local environment may contain non-default value for GCB_ALLOW_STATIC_SERV;
 # remove it here, so the proper default is picked up from script/config.sh
 echo "Removing GCB_ALLOW_STATIC_SERV set to '"$GCB_ALLOW_STATIC_SERV"'"
@@ -57,3 +62,8 @@ python "$GOOGLE_APP_ENGINE_HOME/appcfg.py" \
   "${passthrough_args[@]}" \
   update \
   "$SOURCE_DIR"
+
+echo ""
+echo ""
+echo ""
+echo "Deployment complete."

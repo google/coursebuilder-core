@@ -15,6 +15,11 @@
 # Force shell to fail on any errors.
 set -e
 
+# Add Cygwin install to path before script uses any utilities.
+if [[ $OSTYPE == cygwin* ]] ; then
+  export PATH="$COURSE_BUILDER_CYGWIN_ROOT:/usr/bin:$PATH"
+fi
+
 . "$(dirname "$0")/parse_start_args.sh"
 
 echo Starting GAE development server
