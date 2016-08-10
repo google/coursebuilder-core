@@ -14,7 +14,7 @@
 
 """Unit tests for modules/admin."""
 
-__author__ = [ 'Abhinav Khandelwal (abhinavk@google.com)' ]
+__author__ = ['Abhinav Khandelwal (abhinavk@google.com)']
 
 import unittest
 

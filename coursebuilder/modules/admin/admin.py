@@ -341,19 +341,21 @@ class BaseAdminHandler(ConfigPropertyEditor):
     def install_menu(cls):
         cls.install_courses_menu_item()
 
-        cls.add_menu_item('settings', 'site', 'Advanced site settings', action='settings',
-                          contents=cls.get_settings, sub_group_name='advanced')
-
-        cls.add_menu_item('help', 'welcome', 'Welcome', action='welcome',
-                          href='/admin/welcome', is_external=True,
-                          placement=1000)
-
-        cls.add_menu_item('help', 'deployment', 'About', action='deployment',
-                          contents=cls.get_deployment,
-                          sub_group_name='advanced')
-
-        cls.add_menu_item('analytics', 'console', 'Console', action='console',
-                          contents=cls.get_console, sub_group_name='advanced')
+        cls.add_menu_item(
+            'settings', 'site', 'Advanced site settings',
+            action='settings',
+            contents=cls.get_settings, sub_group_name='advanced')
+        cls.add_menu_item(
+            'help', 'welcome', 'Welcome', action='welcome',
+            href='/admin/welcome', is_external=True,
+            placement=1000)
+        cls.add_menu_item(
+            'help', 'deployment', 'About', action='deployment',
+            contents=cls.get_deployment,
+            sub_group_name='advanced')
+        cls.add_menu_item(
+            'analytics', 'console', 'Console', action='console',
+            contents=cls.get_console, sub_group_name='advanced')
 
         def can_view_appstats(app_context):
             return appengine_config.gcb_appstats_enabled()
