@@ -25,8 +25,19 @@ set -e
 
 shopt -s nullglob
 
+# Determining the path of this script depends on how it was used.
+if [ "$(basename "$0")" != "common.sh" ]; then
+  # Script was "sourced", e.g. `. scripts/common.sh`
+  common_script="${BASH_ARGV[0]}"
+  echo "Sourced as: '${common_script}'"
+else
+  # Script was invoked, e.g. `sh scripts/common.sh`
+  common_script="$0"
+  echo "Sourced as: '${common_script}'"
+fi
+
 # Set shell variables common to CB scripts.
-. "$(dirname "$0")/config.sh"
+. "$(dirname "${common_script}")/config.sh"
 
 CHROMEDRIVER_VERSION=2.16
 CHROMEDRIVER_DIR=$RUNTIME_HOME/chromedriver-$CHROMEDRIVER_VERSION
@@ -393,10 +404,10 @@ if need_install yui build/yui/yui.js YUI 3.6.0 product ; then
 fi
 
 # Prepare files for static serving
-. "$(dirname "$0")/static.sh"
+. "$(dirname "${common_script}")/static.sh"
 
 # Generate flattened import files for polymer apps
-. "$(dirname "$0")/flatten_polymer_imports.sh"
+. "$(dirname "${common_script}")/flatten_polymer_imports.sh"
 
 # Delete existing files: *.pyc
 find "$SOURCE_DIR" -name "*.pyc" -exec rm -f {} \;

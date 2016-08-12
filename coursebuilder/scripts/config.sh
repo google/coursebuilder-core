@@ -6,8 +6,12 @@
 # from environment variables.  Do not add any non-idempotent side-effects
 # to this script.
 
+# Don't invoke config.sh directly.
+# common.sh (and others) must source it instead.
+config_script="${BASH_ARGV[0]}"
+
 # Paths for project source and Google App Engine SDK
-export SOURCE_DIR="$( cd "$( dirname "${BASH_ARGV[0]}" )" && cd .. && pwd )"
+export SOURCE_DIR="$( cd "$( dirname "${config_script}" )" && cd .. && pwd )"
 export PRODUCT_VERSION=`cat $SOURCE_DIR/app.yaml | \
     grep GCB_PRODUCT_VERSION | \
     awk -F ':' '{print $2}' | \
