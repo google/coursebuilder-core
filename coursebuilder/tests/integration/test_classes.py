@@ -473,16 +473,16 @@ class QuestionsTest(integration.TestBase):
 
     def test_add_question_and_solve_it(self):
         name = self.create_new_course()[0]
-
-        # Note the occasional breaks in the fluent structure of the code in this
-        # test are because Pylint has stack overflow problems with very long
-        # chained expressions
-
-        page = self.load_dashboard(
+        root_page = self.load_root_page(
+        ).register_for_course(
             name
-        ).click_course(
-        ).click_register_expecting_no_survey(
-        ).click_dashboard(
+        )
+
+        # Note the occasional breaks in the fluent structure of the code in
+        # this test are because Pylint has stack overflow problems with very
+        # long chained expressions.
+
+        page = root_page.click_dashboard(
 
         #---------------------------------------------- Question
         ).click_edit(

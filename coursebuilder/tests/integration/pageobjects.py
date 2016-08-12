@@ -560,6 +560,37 @@ class RootPage(PageObject):
         self.find_element_by_id('register-button').click()
         return RegisterPage(self._tester, continue_page=self.__class__)
 
+    def register_for_course(self, course_name, enroll_name="Test Admin",
+                            base_url=None):
+        """Attempts to register for course_name, with enroll_name if needed.
+
+        Returns:
+          The RootPage that results from registration.
+        """
+        if base_url is None:
+            base_url = suite.TestBase.INTEGRATION_SERVER_BASE_URL
+
+        dashboard_page = DashboardPage(self._tester).load(
+            base_url, course_name)
+        course_page = dashboard_page.click_course()
+        register_btn = course_page.find_element_by_id('register-button')
+
+        if register_btn.get_attribute('type') == 'submit':
+            # The [Register] button will POST the registration without the
+            # interstitial RegisterPage, so no [Enroll] button or name field.
+            return course_page.click_register_expecting_no_survey()
+        elif register_btn.get_attribute('href').split('/')[-1] == 'register':
+            # The [Register] button is a link to the interstitial
+            # RegisterPage, asking for a name, with an [Enroll] button.
+            return course_page.click_register(
+            ).enroll(
+                enroll_name
+            ).click_course()
+        else:
+            raise ValueError('Unexpected registration button configuration.')
+
+        return self  # Should never be reached, actually.
+
 
 class WelcomePage(PageObject):
 

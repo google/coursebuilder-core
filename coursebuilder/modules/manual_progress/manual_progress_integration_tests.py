@@ -83,11 +83,17 @@ class ManualProgressTest(integration.TestBase):
             'Course'
         ).verify_no_manual_completion_unit(
         ).verify_no_manual_completion_lesson(
-        ).verify_no_manual_completion_course(
+        ).verify_no_manual_completion_course()
 
         # Now register; manual completion items for unit, lesson should
         # now be present.
-        ).click_register_expecting_no_survey(
+        self.load_root_page(
+        ).register_for_course(
+            name
+        )
+
+        manual_progress_pageobjects.ManualCompletionPage(
+            self
         ).verify_no_manual_completion_unit(
         ).verify_no_manual_completion_lesson(
         ).click_link(
