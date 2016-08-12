@@ -90,6 +90,19 @@ PY_FILE_SUFFIX = '.py'
 LOG_LINES = []
 LOG_LOCK = threading.Lock()
 
+# Path to a log file, set if --also_log_to_file is supplied.
+LOG_PATH = None
+
+def _log_file(also_log_to_file):
+    """Generates a log file path if also_log_to_file is *exactly* True."""
+    if also_log_to_file is not True:
+        return also_log_to_file
+
+    script_name = os.path.basename(sys.argv[0]).replace('.', '_')
+    log_now = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
+    return '/tmp/{}_{}.log'.format(script_name, log_now)
+
+
 # exact count of compiled .mo catalog files included in release; change this
 # when new files are added. NOTE: common.locales.LOCALES_DISPLAY_NAMES must
 # be kept in sync with the locales supported.
@@ -182,6 +195,12 @@ def make_default_parser():
         '--verbose',
         help='Print more verbose output to help diagnose problems',
         action='store_true')
+    parser.add_argument(
+        '--also_log_to_file',
+        metavar='LOG_FILE', nargs='?', default=False, const=True,
+        help='If option is present, log to a file in addition to the console. '
+        'If supplied *without* a log file path (i.e. simply a a flag), a file '
+        'path of the following form is used: {}'.format(_log_file(True)))
     parser.add_argument(
         '--server_log_file',
         help='If present, capture stdout and stderr from integration server '
@@ -337,6 +356,9 @@ def log(message):
             datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'), message)
         LOG_LINES.append(line)
         print line
+        if LOG_PATH:
+            with open(LOG_PATH, 'a', 0) as also_log_to_file:
+                also_log_to_file.write('{}\n'.format(line))
 
 
 def run(exe, strict=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -1235,9 +1257,9 @@ def _prepare_filesystem(
 
 
 def _save_log(target_dir, release_label):
-    log_file = os.path.join(target_dir, 'log_%s.txt' % release_label)
-    log('Saving log to: %s' % log_file)
-    write_text_file(log_file, '%s' % '\n'.join(LOG_LINES))
+    log_path = os.path.join(target_dir, 'log_%s.txt' % release_label)
+    log('Saving log to: %s' % log_path)
+    write_text_file(log_path, '%s' % '\n'.join(LOG_LINES))
 
 
 def _test_developer_workflow(config):
@@ -1366,8 +1388,26 @@ def _get_coursebuilder_resources_path(shell_env):
     return coursebuilder_resources_path
 
 
+def _also_log_to_file(parsed_args):
+    if parsed_args.also_log_to_file:
+        global LOG_PATH  # pylint: disable=global-statement
+        LOG_PATH = _log_file(parsed_args.also_log_to_file)
+        root_logger = logging.getLogger()
+        file_handler = logging.FileHandler(LOG_PATH)
+        root_logger.addHandler(file_handler)
+        console_handler = logging.StreamHandler()
+        root_logger.addHandler(console_handler)
+        curent_level = root_logger.getEffectiveLevel()
+        root_logger.setLevel(logging.INFO)
+        logging.info("%s\tLogging to both console *and* '%s'",
+            datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'), LOG_PATH)
+        root_logger.setLevel(curent_level)
+
+
 def main():
     parsed_args = make_default_parser().parse_args()
+    _also_log_to_file(parsed_args)
+
     if parsed_args.release:
         return _test_and_release(parsed_args)
     if parsed_args.test:
