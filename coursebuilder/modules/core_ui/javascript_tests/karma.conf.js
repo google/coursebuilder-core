@@ -2,7 +2,7 @@ module.exports = function(config) {
   config.set({
     basePath: '../../..',
     files: [
-      'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
+      'lib/_static/jquery-2.2.4/jquery.min.js',
       'tests/unit/javascript_tests/lib/common.js',
       'modules/core_ui/javascript_tests/*.js',
       {

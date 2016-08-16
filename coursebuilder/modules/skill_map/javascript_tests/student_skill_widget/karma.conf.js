@@ -2,8 +2,8 @@ module.exports = function(config) {
   config.set({
     basePath: '../../../..',
     files: [
-      'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
-      'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js',
+      'lib/_static/jquery-2.2.4/jquery.min.js',
+      'lib/_static/jqueryui-1.11.4/jquery-ui.min.js',
       'modules/skill_map/javascript_tests/student_skill_widget/*.js',
       {
         pattern: 'modules/skill_map/javascript_tests/student_skill_widget/' +

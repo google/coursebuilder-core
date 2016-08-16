@@ -40,7 +40,7 @@ module.exports = function(config) {
       YUI_BASE + '/event-delegate/event-delegate.js',
       YUI_BASE + '/node-event-delegate/node-event-delegate.js',
       YUI_BASE + '/dom-style/dom-style.js',
-      'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
+      'lib/_static/jquery-2.2.4/jquery.min.js',
       'modules/dashboard/javascript_tests/*.js',
       {
         pattern: 'modules/dashboard/javascript_tests/*.html',

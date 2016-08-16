@@ -348,6 +348,8 @@ DISTRIBUTED_LIBS="\
   identity-toolkit-python-client-0.1.6.zip \
   inputex-3.1.0.zip \
   isodate-0.5.5.zip \
+  jquery-2.2.4.zip \
+  jqueryui-1.11.4.zip \
   markdown-2.5.zip \
   material-design-iconic-font-1.1.1.zip \
   mathjax-2.3.0.zip \

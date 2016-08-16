@@ -17,6 +17,8 @@ STATIC_SERV=( \
     "dc.js-1.6.0:/static/dc.js-1.6.0"
     "dependo-0.1.4:/static/dependo-0.1.4"
     "inputex-3.1.0:/static/inputex-3.1.0"
+    "jquery-2.2.4:/static/jquery"
+    "jqueryui-1.11.4:/static/jqueryui"
     "material-design-iconic-font-1.1.1:/static/material-design-icons"
     "underscore-1.4.3:/static/underscore-1.4.3"
     "yui_2in3-2.9.0:/static/2in3"
