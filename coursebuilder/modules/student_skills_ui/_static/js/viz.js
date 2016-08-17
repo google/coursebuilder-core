@@ -146,6 +146,12 @@ window.GcbStudentSkillsUiModule = (function($) {
 
       // Controllers
       $('.control-zoom a').on('click', onControlZoomClicked);
+
+      //colors
+      nodes.attr('style', function (d) {
+        findElementByNode('circle', d)
+            .style('fill', d.default_color)
+      });
     }
 
     function resize() {
@@ -178,7 +184,6 @@ window.GcbStudentSkillsUiModule = (function($) {
     }
 
     function renderGraph(data) {
-      console.log('Entering renderGraph()');
       // markers
       graph.append('svg:defs').selectAll('marker')
         .data(['regular'])
@@ -264,20 +269,10 @@ window.GcbStudentSkillsUiModule = (function($) {
       layout.nodes(data.nodes);
       layout.links(data.links);
       layout.on('tick', onTick);
-      layout.on('end', createFinalElement);
+      layout.on('end', function() {
+        $('div.graph').trigger('graph-loaded')
+      });
       layout.start();
-    }
-
-    // Create a new hidden element so that a test can tell when the graph layout
-    // is finished.
-    function createFinalElement() {
-      var endLayoutId = $('#cb-student-skills-module-end-layout');
-      if (endLayoutId.size() > 0) {
-        console.log('Error: end-layout div already exists.');
-      } else {
-        $('body').append('<div id="cb-student-skills-module-end-layout">' +
-            '</div>');
-      }
     }
 
     function onNodeMouseOver(nodes, links, d) {
@@ -292,7 +287,7 @@ window.GcbStudentSkillsUiModule = (function($) {
     function onNodeMouseOut(nodes, links, d) {
       // highlight circle
       var elm = findElementByNode('circle', d);
-      elm.style('fill', '#ccc');
+      elm.style('fill', d.default_color);
 
       // highlight related nodes
       fadeRelatedNodes(d, 1, nodes, links);

@@ -399,7 +399,6 @@ class SkillGraph(caching.RequestScopedSingleton):
     def validate_distinct(self, sid, pid, errors=None):
         """Check that the skill and the prerequisite exist and that they
         are distinct."""
-
         _assert(
             sid in self._skills, 'Skill does not exist', errors, 'skill-id')
         _assert(pid in self._skills,
@@ -832,6 +831,26 @@ class SkillMap(caching.RequestScopedSingleton):
             skill_map.add_competency_measures(user_id)
         return skill_map
 
+    @classmethod
+    def get_nodes_and_links(cls, course):
+        skill_data = cls.load(course).skills()
+        nodes = []
+        n2i = {}
+        for ind, skill in enumerate(skill_data):
+            # TODO(tujohnson): What we return in the 'id' field is actually the
+            # name. That should be fixed someday, but the skill map
+            # visualization depends on the current value.
+            nodes.append({'id': skill.name, 'id_num': skill.id})
+            n2i[skill.name] = ind
+
+        links = []
+        for tgt in skill_data:
+            for src in tgt.prerequisites:
+                links.append({'source': n2i[src.name],
+                              'target': n2i[tgt.name]})
+
+        return (nodes, links)
+
     def get_lessons_for_skill(self, skill):
         return self._lessons_by_skill.get(skill.id, [])
 
@@ -1255,21 +1274,9 @@ class SkillMapHandler(dashboard.DashboardHandler):
             self.render_read_only()
             return
 
-        skill_map = SkillMap.load(self.course)
-
-        nodes = []
-        n2i = {}
-        for ind, skill in enumerate(skill_map.skills()):
-            nodes.append({'id': skill.name})
-            n2i[skill.name] = ind
-
-        links = []
-        for tgt in skill_map.skills():
-            for src in tgt.prerequisites:
-                links.append({'source': n2i[src.name], 'target': n2i[tgt.name]})
-
-        template_values = {
-            'nodes': json.dumps(nodes), 'links': json.dumps(links)}
+        nodes, links = SkillMap.get_nodes_and_links(self.course)
+        template_values = {'nodes': transforms.dumps(nodes),
+                           'links': transforms.dumps(links)}
 
         main_content = self.get_template(
             'dependency_graph.html', [TEMPLATES_DIR]).render(template_values)

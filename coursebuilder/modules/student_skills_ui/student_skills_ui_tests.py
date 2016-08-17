@@ -16,17 +16,22 @@
 
 __author__ = 'Timothy Johnson (tujohnson@google.com)'
 
-import math
 import urllib
+import time
 
 from controllers import sites
+from models import courses
+from models import models
+from models import transforms
 from modules.student_skills_ui import student_skills_ui
+from modules.skill_map import skill_map
 from tests.functional import actions
-from tests.integration import integration
 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions
+from google.appengine.api import namespace_manager
+
+
+ADMIN_EMAIL = 'admin@foo.com'
+COURSE_NAME = 'course_map_test'
 
 
 def _create_url(base='', x_value=None, y_value=None, scale_value=None):
@@ -52,128 +57,142 @@ def _create_url(base='', x_value=None, y_value=None, scale_value=None):
 class CourseMapArgsTestCase(actions.TestBase):
     """Tests that URL parameters for our course map are validated."""
 
-    ADMIN_EMAIL = 'admin@foo.com'
-    COURSE_NAME = 'course_map_test'
-    NAMESPACE = 'ns_%s' % COURSE_NAME
-
     def setUp(self):
         super(CourseMapArgsTestCase, self).setUp()
 
         if not student_skills_ui.custom_module.enabled:
             self.skipTest('Module not enabled')
 
-        self.base = '/' + self.COURSE_NAME
+        self.base = '/' + COURSE_NAME
         self.app_context = actions.simple_add_course(
-            self.COURSE_NAME, self.ADMIN_EMAIL, 'Title')
+            COURSE_NAME, ADMIN_EMAIL, 'Title')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % COURSE_NAME)
+        self.course = courses.Course(None, self.app_context)
 
     def tearDown(self):
-        sites.reset_courses()
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        namespace_manager.set_namespace(self.old_namespace)
         super(CourseMapArgsTestCase, self).tearDown()
 
     def test_valid_args_returns_200(self):
         """Pass valid arguments and check for a 200 response."""
-        url = _create_url()
+        actions.login(ADMIN_EMAIL)
+        url = _create_url(base=self.base)
         response = self.get(url)
         self.assertEqual(200, response.status_int)
 
-        url = _create_url(x_value=100, y_value=100, scale_value=2.0)
+        url = _create_url(base=self.base, x_value=100, y_value=100,
+                          scale_value=2.0)
         response = self.get(url)
         self.assertEqual(200, response.status_int)
 
     def test_invalid_args_returns_400_error(self):
         """Check for a 400 response for invalid arguments for each parameter."""
-        url1 = _create_url(x_value=-400.0)
+        actions.login(ADMIN_EMAIL)
+        url1 = _create_url(base=self.base, x_value=-400.0)
         response = self.get(url1, expect_errors=True)
         self.assertEqual(400, response.status_int)
 
-        url2 = _create_url(y_value=200.0)
+        url2 = _create_url(base=self.base, y_value=200.0)
         response = self.get(url2, expect_errors=True)
         self.assertEqual(400, response.status_int)
 
-        url3 = _create_url(scale_value='a')
+        url3 = _create_url(base=self.base, scale_value='a')
         response = self.get(url3, expect_errors=True)
         self.assertEqual(400, response.status_int)
 
+class CourseMapColorsTestCase(actions.TestBase):
+    """Tests the colors that appear in our HTML."""
 
-class CourseMapLayoutTestCase(integration.TestBase):
-    """Tests for the layout locations of nodes in the course map page."""
-
-    # Since our force-directed drawing is nondeterministic, we set an allowed
-    # deviation of 5% between the location at which a graph is drawn and its
-    # expected location.
-    PERCENT_ERROR = 0.05
+    STUDENT_EMAIL = 'student@example.com'
+    STUDENT_NAME = 'John Smith'
 
     def setUp(self):
-        super(CourseMapLayoutTestCase, self).setUp()
+        super(CourseMapColorsTestCase, self).setUp()
 
         if not student_skills_ui.custom_module.enabled:
             self.skipTest('Module not enabled')
 
-        self.course_name, self.course_title = self.create_new_course()
-        self.base = '/' + self.course_name
+        self.base = '/' + COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            COURSE_NAME, ADMIN_EMAIL, 'Title')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % COURSE_NAME)
+        self.course = courses.Course(None, self.app_context)
+        self.course.set_course_availability(
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED)
+
+        self._add_graph()
+        self._get_colors()
 
     def tearDown(self):
-        sites.reset_courses()
-        super(CourseMapLayoutTestCase, self).tearDown()
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        namespace_manager.set_namespace(self.old_namespace)
+        super(CourseMapColorsTestCase, self).tearDown()
 
-    def _render_graph(self, x=0, y=0, scale=1):
-        host = self.INTEGRATION_SERVER_BASE_URL
-        url = _create_url(base=host+self.base, x_value=x, y_value=y,
-                          scale_value=scale)
-        self.driver.get(url)
-        self._wait_for_graph()
+    def _add_graph(self):
+        skill_graph = skill_map.SkillGraph.load()
+        self.skill_node = skill_graph.add(skill_map.Skill.build('a', ''))
 
-        # Find the center of our graph, i.e., the average location of the nodes
-        nodes = student_skills_ui.StudentSkillsUIHandler.FAKE_NODES
-        avg_x = 0.0
-        avg_y = 0.0
-        for node in nodes:
-            page_node = self.driver.find_element_by_class_name(
-                'circle-%s' % node['id'])
-            avg_x += page_node.location['x']
-            avg_y += page_node.location['y']
-        avg_x /= len(nodes)
-        avg_y /= len(nodes)
+    def _get_colors(self):
+        self.gray = student_skills_ui.StudentSkillsUIHandler.GRAY
+        self.yellow = student_skills_ui.StudentSkillsUIHandler.YELLOW
+        self.green = student_skills_ui.StudentSkillsUIHandler.GREEN
 
-        # Get window size
-        window_size = self.driver.get_window_size()
-        width = window_size['width']
-        height = window_size['height']
+    def _login_and_register(self):
+        user = actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_NAME)
+        self.student = models.Student.get_enrolled_student_by_user(user)
 
-        # Compare the average location of our nodes to the expected location
-        expected_x = width / 2 + x
-        expected_y = height / 2 + y
-        x_diff_frac = math.fabs(expected_x - avg_x) / width
-        y_diff_frac = math.fabs(expected_y - avg_y) / height
+    def _mark_skill_in_progress(self):
+        progress = models.StudentPropertyEntity.create(
+            student=self.student,
+            property_name=skill_map.SkillCompletionTracker.PROPERTY_KEY)
+        skill_in_progress = {self.skill_node.id: {
+            skill_map.SkillCompletionTracker.IN_PROGRESS: time.time() - 100}}
+        progress.value = transforms.dumps(skill_in_progress)
+        progress.put()
 
-        self.assertLess(x_diff_frac, self.PERCENT_ERROR)
-        self.assertLess(y_diff_frac, self.PERCENT_ERROR)
+    def _mark_skill_completed(self):
+        progress = models.StudentPropertyEntity.create(
+            student=self.student,
+            property_name=skill_map.SkillCompletionTracker.PROPERTY_KEY)
+        skill_completed = {self.skill_node.id: {
+            skill_map.SkillCompletionTracker.COMPLETED: time.time() - 100}}
+        progress.value = transforms.dumps(skill_completed)
+        progress.put()
 
-    def _wait_for_graph(self):
-        # Our Javascript inserts a div with
-        # id="cb-student-skills-nodule-end-layout" after the D3 layout sends an
-        # end event. So we'll look for it until we time out.
-        seconds_to_wait = 10
-        element = WebDriverWait(self.driver, seconds_to_wait).until(
-            expected_conditions.presence_of_element_located(
-                (By.ID, 'cb-student-skills-module-end-layout')))
+    def test_gray_appears_for_transient_student(self):
+        url = _create_url(base=self.base)
+        response = self.get(url)
+        self._check_div_color(response, self.skill_node, self.gray)
 
-    def test_layout_locations(self):
-        # Test that layout is centered when no arguments are given.
-        self._render_graph()
+    def test_gray_appears_for_skill_not_started(self):
+        self._login_and_register()
+        url = _create_url(base=self.base)
+        response = self.get(url)
+        self._check_div_color(response, self.skill_node, self.gray)
 
-        # Test shifting layout to the left and right.
-        self._render_graph(x=200)
+    def test_yellow_appears_for_skill_in_progress(self):
+        self._login_and_register()
+        self._mark_skill_in_progress()
+        url = _create_url(base=self.base)
+        response = self.get(url)
+        self._check_div_color(response, self.skill_node, self.yellow)
 
-        # Test shifting layout by both coordinates simultaneously.
-        self._render_graph(x=200, y=100)
+    def test_green_appears_for_completed_skill(self):
+        self._login_and_register()
+        self._mark_skill_completed()
+        url = _create_url(base=self.base)
+        response = self.get(url)
+        self._check_div_color(response, self.skill_node, self.green)
 
-        # Test that graph is still centered after being scaled.
-        self._render_graph(scale=2)
-
-        # Test that graph is shifted by the right distance when also scaled up.
-        self._render_graph(x=200, y=-200, scale=3)
-
-        # Test that graph is shifted by the right distance when also scaled
-        # down.
-        self._render_graph(x=-200, y=200, scale=0.5)
+    def _check_div_color(self, response, skill_node, color):
+        html_soup = self.parse_html_string_to_soup(str(response.html))
+        node_div = html_soup.find('div', {'class': 'graph'})
+        node_attrs = transforms.loads(node_div.attrs['data-nodes'])
+        color_field = student_skills_ui.StudentSkillsUIHandler.DEFAULT_COLOR
+        self.assertEquals(1, len(node_attrs))
+        self.assertEquals(skill_node.name, node_attrs[0]['id'])
+        self.assertEquals(color, node_attrs[0][color_field])

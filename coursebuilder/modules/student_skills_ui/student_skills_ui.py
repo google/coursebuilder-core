@@ -25,6 +25,7 @@ from common import jinja_utils
 from controllers import utils
 from models import custom_modules
 from models import transforms
+from modules.skill_map import skill_map
 
 TEMPLATE_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'student_skills_ui', 'templates')
@@ -38,13 +39,14 @@ class StudentSkillsUIHandler(utils.BaseHandler):
     """Handles the visualization of the course map."""
 
     COURSE_MAP_PATH = 'course_map'
-    USE_FAKE_DATA_IN_COURSE_MAP = True
-    FAKE_NODES = [{'id': 'Skill_1'}, {'id': 'Skill_2'}]
-    FAKE_LINKS = [{'source': 0, 'target': 1}]
     X_NAME = 'x'
     Y_NAME = 'y'
     SCALE_NAME = 'scale'
     DEFAULT_PARAMS = {X_NAME: 0, Y_NAME: 0, SCALE_NAME: 1}
+    DEFAULT_COLOR = 'default_color'
+    GREEN = '#00cc00'
+    YELLOW = '#cccc00'
+    GRAY = '#ccc'
 
     def get(self):
         try:
@@ -55,16 +57,40 @@ class StudentSkillsUIHandler(utils.BaseHandler):
 
         self.personalize_page_and_get_user()
         self._set_required_template_values()
-        self._load_graph_data()
+
+        nodes, links = self._load_graph_data(self.get_course())
+        self.template_value['nodes'] = transforms.dumps(nodes)
+        self.template_value['links'] = transforms.dumps(links)
+
         self.render('course_map.html', [TEMPLATE_DIR])
 
-    def _load_graph_data(self):
-        if self.USE_FAKE_DATA_IN_COURSE_MAP:
-            self.template_value['nodes'] = transforms.dumps(self.FAKE_NODES)
-            self.template_value['links'] = transforms.dumps(self.FAKE_LINKS)
+    @classmethod
+    def _load_graph_data(cls, course):
+        nodes, links = skill_map.SkillMap.get_nodes_and_links(course)
+        cls._set_node_colors(nodes, course)
+        return nodes, links
+
+    @classmethod
+    def _set_node_colors(cls, nodes, course):
+        student = cls.get_student()
+        if not student:
+            for n in nodes:
+                n[cls.DEFAULT_COLOR] = cls.GRAY
         else:
-            # TODO(tujohnson): Acquire actual course skill map
-            pass
+            tracker = skill_map.SkillCompletionTracker(course)
+            skill_progress_list = tracker.get_skills_progress(
+                student, [node['id_num'] for node in nodes])
+            for node in nodes:
+                # skill_progress_list is a dictionary in which the keys are
+                # skill id's, and the values are tuples containing the progress
+                # status and the timestamp of the most recent update
+                progress = skill_progress_list[node['id_num']][0]
+                if progress == skill_map.SkillCompletionTracker.COMPLETED:
+                    node[cls.DEFAULT_COLOR] = cls.GREEN
+                elif progress == skill_map.SkillCompletionTracker.IN_PROGRESS:
+                    node[cls.DEFAULT_COLOR] = cls.YELLOW
+                else:
+                    node[cls.DEFAULT_COLOR] = cls.GRAY
 
     def _parse_params(self):
         """Parses the URL parameters for x, y, and scale values.

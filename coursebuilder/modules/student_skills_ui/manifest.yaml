@@ -5,15 +5,20 @@ registration:
 tests:
     functional:
         - modules.student_skills_ui.student_skills_ui_tests.CourseMapArgsTestCase = 2
+        - modules.student_skills_ui.student_skills_ui_tests.CourseMapColorsTestCase = 4
 
-    integration:
-        - modules.student_skills_ui.student_skills_ui_tests.CourseMapLayoutTestCase = 1
+    unit:
+        - modules.student_skills_ui.student_skills_ui_unit_tests.JavaScriptTests = 1
 
 files:
     - modules/student_skills_ui/__init__.py
+    - modules/student_skills_ui/javascript_tests/fixture.html
+    - modules/student_skills_ui/javascript_tests/karma.conf.js
+    - modules/student_skills_ui/javascript_tests/tests.js
     - modules/student_skills_ui/manifest.yaml
     - modules/student_skills_ui/student_skills_ui.py
     - modules/student_skills_ui/student_skills_ui_tests.py
+    - modules/student_skills_ui/student_skills_ui_unit_tests.py
     - modules/student_skills_ui/_static/js/viz.js
     - modules/student_skills_ui/templates/course_map.html
     - modules/student_skills_ui/templates/course_map_navbar.html
