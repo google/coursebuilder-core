@@ -666,7 +666,7 @@ class StartComputeCounts(_BaseCronHandler):
             elif total_dto.is_pending:
                 logging.warning(
                     'INTERRUPTING "%s" initialization started on %s.', ns,
-                    utc.to_text(dt=total_dto.last_modified))
+                    utc.to_text(seconds=total_dto.last_modified))
             job.cancel()
         job.submit()
 
