@@ -68,6 +68,7 @@ __author__ = 'Todd Larsen (tlarsen@google.com)'
 
 
 import copy
+import datetime
 import logging
 
 import appengine_config
@@ -129,23 +130,42 @@ class EnrollmentsDTO(object):
     def last_modified(self):
         return self.dict.get('_last_modified') or 0
 
+    def _force_last_modified(self, timestamp):
+        """Sets last_modified to a POSIX timestamp, seconds since UTC epoch."""
+        self.dict['_last_modified'] = timestamp
+
     def set_last_modified_to_now(self):
         """Sets the last_modified property to the current UTC time."""
-        self.dict['_last_modified'] = utc.now_as_timestamp()
+        self._force_last_modified(utc.now_as_timestamp())
+
+    def seconds_since_last_modified(self, now=None):
+        lm = self.last_modified  # Copy to lessen races with other modifiers.
+        if not lm:
+            return 0  # Last modified not recorded, so no elapsed time since.
+
+        now = now if now is not None else utc.now_as_timestamp()
+        return now - lm
 
     @property
     def is_empty(self):
-        """Returns True if no count is present (but may still be pending)."""
+        """True if no count is present (but may still be pending)."""
         return not self.binned
 
     @property
     def is_pending(self):
-        """Returns True if some background job is initializing the counter."""
+        """True if some background job is initializing the counter."""
         return self.is_empty and self.last_modified
+
+    MAX_PENDING_SEC = 60 * 60  # 1 hour
+
+    @property
+    def is_stalled(self):
+        """True if pending but since last modified exceeds MAX_PENDING_SEC."""
+        return self.seconds_since_last_modified() > self.MAX_PENDING_SEC
 
     @property
     def is_missing(self):
-        """Returns True for uninitialized counters (empty and not pending)."""
+        """True for uninitialized counters (empty and not pending)."""
         return self.is_empty and (not self.last_modified)
 
     @property
@@ -654,44 +674,69 @@ class StartComputeCounts(_BaseCronHandler):
 
     def cron_action(self, app_context, global_state):
         job = ComputeCounts(app_context)
+        ns = app_context.get_namespace_name()
+        dto = TotalEnrollmentDAO.load_or_default(ns)
+
         if job.is_active():
             # Weekly re-computation of enrollments counters, so forcibly stop
             # any already-running job and start over.
-            ns = app_context.get_namespace_name()
-            total_dto = TotalEnrollmentDAO.load_or_default(ns)
-            if not total_dto.is_empty:
+            if not dto.is_empty:
                 logging.warning(
-                    'CANCELING periodic "%s" recomputation unexpectedly'
-                    ' unexpectedly still running.', ns)
-            elif total_dto.is_pending:
+                    'CANCELING periodic "%s" enrollments total refresh found'
+                    ' unexpectedly still running.', dto.id)
+            elif dto.is_pending:
                 logging.warning(
-                    'INTERRUPTING "%s" initialization started on %s.', ns,
-                    utc.to_text(seconds=total_dto.last_modified))
+                    'INTERRUPTING missing "%s" enrollments total'
+                    ' initialization started on %s.', dto.id,
+                    utc.to_text(seconds=dto.last_modified))
             job.cancel()
+        else:
+            when = dto.last_modified
+            if not dto.is_empty:
+                logging.info(
+                    'REFRESHING existing "%s" enrollments total, %d as of %s.',
+                    dto.id, dto.get(), utc.to_text(seconds=when))
+            elif dto.is_pending:
+                since = dto.seconds_since_last_modified()
+                logging.warning(
+                    'COMPLETING "%s" enrollments total initialization started '
+                    'on %s stalled for %s.', dto.id, utc.to_text(seconds=when),
+                    datetime.timedelta(seconds=since))
+
         job.submit()
 
 
 def init_missing_total(enrolled_total_dto, app_context):
     """Returns True if a ComputeCounts MapReduceJob was submitted."""
+    name = enrolled_total_dto.id
+    when = enrolled_total_dto.last_modified
+
     if not enrolled_total_dto.is_empty:
-        StartInitMissingCounts.log_skipping(
-            enrolled_total_dto, logging.warning)
+        logging.warning(StartInitMissingCounts.LOG_SKIPPING_FMT,
+            name, enrolled_total_dto.get(), utc.to_text(seconds=when))
         return False
 
+    delta = enrolled_total_dto.seconds_since_last_modified()
     if enrolled_total_dto.is_pending:
-        logging.info(
-            'PENDING initialization of "%s" at %s.', enrolled_total_dto.id,
-            utc.to_text(seconds=enrolled_total_dto.last_modified))
-        return False
+        if not enrolled_total_dto.is_stalled:
+            logging.info(
+                'PENDING "%s" enrollments total initialization in progress'
+                ' for %s, since %s.', name, datetime.timedelta(seconds=delta),
+                utc.to_text(seconds=when))
+            return False
+        logging.warning(
+            'STALLED "%s" enrollments total initialization for %s, since %s.',
+            name, datetime.timedelta(seconds=delta), utc.to_text(seconds=when))
 
-    # enrolled_total_dto is *completely* missing, not *just* lacking its
-    # counter property (and thus not indicating initialization of that count
-    # is in progress), so store "now" as a last_modified value to indicate
-    # that a MapReduce update has been requested.
+    # enrolled_total_dto is either *completely* missing (not *just* lacking its
+    # counter property, and thus not indicating initialization of that count
+    # is in progress), or pending initialization has stalled (taken more than
+    # MAX_PENDING_SEC to complete), so store "now" as a last_modified value to
+    # indicate that a MapReduce update has been requested.
     marked_dto = TotalEnrollmentDAO.mark_pending(dto=enrolled_total_dto,
         namespace_name=app_context.get_namespace_name())
-    logging.info('SCHEDULING "%s" update at %s.', marked_dto.id,
-                 utc.to_text(seconds=marked_dto.last_modified))
+    logging.info('SCHEDULING "%s" enrollments total update at %s.',
+                 marked_dto.id, utc.to_text(seconds=marked_dto.last_modified))
     ComputeCounts(app_context).submit()
     return True
 
@@ -702,22 +747,19 @@ class StartInitMissingCounts(_BaseCronHandler):
     # /cron/site_admin_enrollments/missing
     URL = _BaseCronHandler.URL_FMT % 'missing'
 
+    LOG_SKIPPING_FMT = (
+        'SKIPPING existing "%s" enrollments total recomputation, %d as of %s.')
+
     def cron_action(self, app_context, global_state):
         total_dto = TotalEnrollmentDAO.load_or_default(
             app_context.get_namespace_name())
-        if total_dto.is_missing:
+        if total_dto.is_missing or total_dto.is_stalled:
             init_missing_total(total_dto, app_context)
         else:
             # Debug-level log message only for tests examining logs.
-            self.log_skipping(total_dto, logging.debug)
-
-    @classmethod
-    def log_skipping(cls, total_dto, logger):
-        logger(
-            'SKIPPING recomputation of existing "%s" total, %d since %s.',
-            total_dto.id, total_dto.get(),
-            utc.to_text(seconds=total_dto.last_modified))
-
+            logging.debug(self.LOG_SKIPPING_FMT,
+                total_dto.id, total_dto.get(),
+                utc.to_text(seconds=total_dto.last_modified))
 
 
 def delete_counters(namespace_name):

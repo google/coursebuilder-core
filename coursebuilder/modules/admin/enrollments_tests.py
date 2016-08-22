@@ -59,8 +59,14 @@ class EnrollmentsTests(actions.TestBase):
             # DTO.get() does not save a zero-value 'count' in the DTO.
             self.assertEquals(load_dto.get(), 0)
             self.assertTrue(load_dto.is_empty)
+            self.assertTrue(load_dto.is_missing)
+            self.assertFalse(load_dto.is_pending)
+            self.assertFalse(load_dto.is_stalled)
             self.assertEquals(new_dto.get(), 0)
             self.assertTrue(new_dto.is_empty)
+            self.assertTrue(new_dto.is_missing)
+            self.assertFalse(new_dto.is_pending)
+            self.assertFalse(new_dto.is_stalled)
 
             # Increment the missing total enrollment count for ns_single
             # (which should also initially create the DTO and store it,
@@ -107,6 +113,9 @@ class EnrollmentsTests(actions.TestBase):
             expected_count = 5  # Forces to fixed value, ignoring old value.
             set_dto = enrollments.TotalEnrollmentDAO.set(ns_name, 5)
             self.assertFalse(set_dto.is_empty)
+            self.assertFalse(set_dto.is_missing)
+            self.assertFalse(set_dto.is_pending)
+            self.assertFalse(set_dto.is_stalled)
             self.assertEquals(set_dto.get(), expected_count)
             self.assertEquals(
                 enrollments.TotalEnrollmentDAO.get(ns_name), set_dto.get())
@@ -127,6 +136,9 @@ class EnrollmentsTests(actions.TestBase):
             load_dto = enrollments.TotalEnrollmentDAO.load_or_default(ns_name)
             self.assertEquals(load_dto.get(), 0)
             self.assertTrue(load_dto.is_empty)
+            self.assertTrue(load_dto.is_missing)
+            self.assertFalse(load_dto.is_pending)
+            self.assertFalse(load_dto.is_stalled)
             self.assertEquals(
                 enrollments.TotalEnrollmentDAO.get(ns_name), 0)
 
@@ -154,9 +166,15 @@ class EnrollmentsTests(actions.TestBase):
             # DTO.get() does not create zero-value bins for missing bins.
             self.assertEquals(new_dto.get(now), 0)
             self.assertTrue(new_dto.is_empty)
+            self.assertTrue(new_dto.is_missing)
+            self.assertFalse(new_dto.is_pending)
+            self.assertFalse(new_dto.is_stalled)
             self.assertEquals(len(new_dto.binned), 0)
             self.assertEquals(load_dto.get(now), 0)
             self.assertTrue(load_dto.is_empty)
+            self.assertTrue(load_dto.is_missing)
+            self.assertFalse(load_dto.is_pending)
+            self.assertFalse(load_dto.is_stalled)
             self.assertEquals(len(load_dto.binned), 0)
 
             # Increment a missing ns_single:adds enrollment count for the
@@ -265,7 +283,13 @@ class EnrollmentsTests(actions.TestBase):
                 if ns_name in bad_ns_names:
                     ns_total = 0
                     self.assertTrue(mapped[ns_name].is_empty)
+                    self.assertTrue(mapped[ns_name].is_missing)
+                    self.assertFalse(mapped[ns_name].is_pending)
+                    self.assertFalse(mapped[ns_name].is_stalled)
                     self.assertTrue(popped.is_empty)
+                    self.assertTrue(popped.is_missing)
+                    self.assertFalse(popped.is_pending)
+                    self.assertFalse(popped.is_stalled)
                 else:
                     ns_total = course_totals[ns_name]
 
@@ -301,27 +325,162 @@ class EnrollmentsTests(actions.TestBase):
             self.assertEquals(len(all_totals), 0)
 
 
-class EventHandlersTests(actions.TestBase):
+class LogsExaminer(actions.TestBase):
 
-    COURSE = 'enrollments_events'
-    NAMESPACE = 'ns_' + COURSE
+    CHARS_IN_ISO_8601_DATETIME = '[0-9T:.Z-]+'
+    CHARS_IN_TIME_DELTA = '[0-9:]+'
+    CHARS_IN_TOTAL = '[0-9]+'
+
+    ## Log messages emitted by StartComputeCounts.cron_action().
+
+    CANCELING_PATTERN_FMT = (
+        '.*CANCELING periodic "{}" enrollments total refresh found'
+        ' unexpectedly still running.')
+
+    def expect_canceling_in_logs(self, logs, dto):
+        self.assertRegexpMatches(logs,
+            self.CANCELING_PATTERN_FMT.format(dto.id))
+
+    def expect_no_canceling_in_logs(self, logs, dto):
+        self.assertNotRegexpMatches(logs,
+            self.CANCELING_PATTERN_FMT.format(dto.id))
+
+    INTERRUPTING_PATTERN_FMT = (
+        '.*INTERRUPTING missing "{{}}" enrollments total initialization'
+            ' started on {}.'.format(CHARS_IN_ISO_8601_DATETIME))
+
+    def expect_interrupting_in_logs(self, logs, dto):
+        self.assertRegexpMatches(logs,
+            self.INTERRUPTING_PATTERN_FMT.format(dto.id))
+
+    def expect_no_interrupting_in_logs(self, logs, dto):
+        self.assertNotRegexpMatches(logs,
+            self.INTERRUPTING_PATTERN_FMT.format(dto.id))
+
+    REFRESHING_PATTERN_FMT = (
+        '.*REFRESHING existing "{{}}" enrollments total, {{}}'
+        ' as of {}.'.format(CHARS_IN_ISO_8601_DATETIME))
+
+    def expect_refreshing_in_logs(self, logs, dto):
+        self.assertRegexpMatches(logs,
+            self.REFRESHING_PATTERN_FMT.format(dto.id, dto.get()))
+
+    def expect_no_refreshing_in_logs(self, logs, dto):
+        self.assertNotRegexpMatches(logs,
+            self.REFRESHING_PATTERN_FMT.format(dto.id, self.CHARS_IN_TOTAL))
+
+    COMPLETING_PATTERN_FMT = (
+        '.*COMPLETING "{{}}" enrollments total initialization'
+        ' started on {} stalled for {}.'.format(
+            CHARS_IN_ISO_8601_DATETIME, CHARS_IN_TIME_DELTA))
+
+    def expect_completing_in_logs(self, logs, dto):
+        self.assertRegexpMatches(logs,
+            self.COMPLETING_PATTERN_FMT.format(dto.id))
+
+    def expect_no_completing_in_logs(self, logs, dto):
+        self.assertNotRegexpMatches(logs,
+            self.COMPLETING_PATTERN_FMT.format(dto.id))
+
+    ## Log messages emitted by init_missing_total().
+
+    SKIPPING_PATTERN_FMT = (
+        '.*SKIPPING existing "{{}}" enrollments total recomputation,'
+        ' {{}} as of {}.'.format(CHARS_IN_ISO_8601_DATETIME))
+
+    def expect_skipping_in_logs(self, logs, dto):
+        self.assertRegexpMatches(logs,
+            self.SKIPPING_PATTERN_FMT.format(dto.id, dto.get()))
+
+    def expect_no_skipping_in_logs(self, logs, dto):
+        self.assertNotRegexpMatches(logs,
+            self.SKIPPING_PATTERN_FMT.format(dto.id, self.CHARS_IN_TOTAL))
+
+    PENDING_PATTERN_FMT = (
+        '.*PENDING "{{}}" enrollments total initialization in progress for'
+        ' {}, since {}.'.format(
+            CHARS_IN_TIME_DELTA, CHARS_IN_ISO_8601_DATETIME))
+
+    def expect_pending_in_logs(self, logs, dto):
+        self.assertRegexpMatches(logs,
+            self.PENDING_PATTERN_FMT.format(dto.id))
+
+    def expect_no_pending_in_logs(self, logs, dto):
+        self.assertNotRegexpMatches(logs,
+            self.PENDING_PATTERN_FMT.format(dto.id))
+
+    STALLED_PATTERN_FMT = (
+        '.*STALLED "{{}}" enrollments total initialization for'
+        ' {}, since {}.'.format(
+            CHARS_IN_TIME_DELTA, CHARS_IN_ISO_8601_DATETIME))
+
+    def expect_stalled_in_logs(self, logs, dto):
+        self.assertRegexpMatches(logs,
+            self.STALLED_PATTERN_FMT.format(dto.id))
+
+    def expect_no_stalled_in_logs(self, logs, dto):
+        self.assertNotRegexpMatches(logs,
+            self.STALLED_PATTERN_FMT.format(dto.id))
+
+    SCHEDULING_PATTERN_FMT = (
+        '.*SCHEDULING "{{}}" enrollments total update at {}.'.format(
+            CHARS_IN_ISO_8601_DATETIME))
+
+    def expect_scheduling_in_logs(self, logs, dto):
+        self.assertRegexpMatches(logs,
+            self.SCHEDULING_PATTERN_FMT.format(dto.id))
+
+    def expect_no_scheduling_in_logs(self, logs, dto):
+        self.assertNotRegexpMatches(logs,
+            self.SCHEDULING_PATTERN_FMT.format(dto.id))
+
+    def check_no_exceptional_states_in_logs(self, logs, dto, ignore=None):
+        if ignore is None:
+            ignore = frozenset()
+
+        if 'CANCELING' not in ignore:
+            self.expect_no_canceling_in_logs(logs, dto)
+        if 'INTERRUPTING' not in ignore:
+            self.expect_no_interrupting_in_logs(logs, dto)
+        if 'COMPLETING' not in ignore:
+            self.expect_no_completing_in_logs(logs, dto)
+        if 'SKIPPING' not in ignore:
+            self.expect_no_skipping_in_logs(logs, dto)
+        if 'PENDING' not in ignore:
+            self.expect_no_pending_in_logs(logs, dto)
+        if 'STALLED' not in ignore:
+            self.expect_no_stalled_in_logs(logs, dto)
+
+    def get_new_logs(self, previous_logs):
+        """Get log lines since previous all_logs, plus new all_logs lines."""
+        num_previous_log_lines = len(previous_logs)
+        all_logs = self.get_log()
+        return all_logs[num_previous_log_lines:], all_logs
+
+
+class EventHandlersTests(LogsExaminer):
+
     ADMIN_EMAIL = 'admin@example.com'
     STUDENT_EMAIL = 'student@example.com'
     STUDENT_NAME = 'Test Student'
-
-    def setUp(self):
-        super(EventHandlersTests, self).setUp()
-        # These tests rely on the fact that simple_add_course() does *not*
-        # execute the CoursesItemRESTHandler.NEW_COURSE_ADDED_HOOKS, to
-        # simulate "legacy" courses existing prior to enrollments counters.
-        self.app_ctxt = actions.simple_add_course(
-            self.COURSE, self.ADMIN_EMAIL, 'Enrollments Events')
+    LOG_LEVEL = logging.DEBUG
 
     def tearDown(self):
         sites.reset_courses()
 
     def test_counters(self):
-        with utils.Namespace(self.NAMESPACE):
+        # pylint: disable=too-many-statements
+        COURSE = 'test_counters_event_handlers'
+        NAMESPACE = 'ns_' + COURSE
+        all_logs = []  # No log lines yet obtained via get_log().
+
+        # This test relies on the fact that simple_add_course() does *not*
+        # execute the CoursesItemRESTHandler.NEW_COURSE_ADDED_HOOKS, to
+        # simulate "legacy" courses existing prior to enrollments counters.
+        self.app_ctxt = actions.simple_add_course(
+            COURSE, self.ADMIN_EMAIL, 'Enrollments Events')
+
+        with utils.Namespace(NAMESPACE):
             start = utc.day_start(utc.now_as_timestamp())
             start_dt = datetime.datetime.utcfromtimestamp(start)
             user = actions.login(self.STUDENT_EMAIL)
@@ -331,27 +490,58 @@ class EventHandlersTests(actions.TestBase):
             # simply starting out with zero values (as is the case when
             # courses are created via the actual web UI.
             self.assertEquals(enrollments.TotalEnrollmentDAO.get(
-                self.NAMESPACE), 0)
+                NAMESPACE), 0)
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertTrue(total_dto.is_empty)
+            self.assertTrue(total_dto.is_missing)
+            self.assertFalse(total_dto.is_pending)
+            self.assertFalse(total_dto.is_stalled)
 
             self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
-                self.NAMESPACE, start_dt), 0)
+                NAMESPACE, start_dt), 0)
             added_dto = enrollments.EnrollmentsAddedDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertTrue(added_dto.is_empty)
+            self.assertTrue(added_dto.is_missing)
+            self.assertFalse(added_dto.is_pending)
+            self.assertFalse(added_dto.is_stalled)
 
             self.assertEquals(enrollments.EnrollmentsDroppedDAO.get(
-                self.NAMESPACE, start_dt), 0)
+                NAMESPACE, start_dt), 0)
             dropped_dto = enrollments.EnrollmentsDroppedDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertTrue(dropped_dto.is_empty)
+            self.assertTrue(dropped_dto.is_missing)
+            self.assertFalse(dropped_dto.is_pending)
+            self.assertFalse(dropped_dto.is_stalled)
 
             actions.login(self.STUDENT_EMAIL)
-            actions.register(self, self.STUDENT_NAME, course=self.COURSE)
+            actions.register(self, self.STUDENT_NAME, course=COURSE)
             self.execute_all_deferred_tasks(
                 models.StudentLifecycleObserver.QUEUE_NAME)
+
+            # The enrollments._count_add() callback is triggered by the above
+            # StudentLifecycleObserver.EVENT_ADD action. That callback will
+            # call init_missing_total() because the counter was "missing"
+            # (did not exist *at all*).
+            pending_add_dto = enrollments.TotalEnrollmentDAO.load_or_default(
+                NAMESPACE)
+            # Still no count value, since the MapReduce has not run (and will
+            # not, because execute_all_deferred_tasks() is being called by
+            # this test *only* for the StudentLifecycleObserver.QUEUE_NAME).
+            self.assertTrue(pending_add_dto.is_empty)
+            self.assertTrue(pending_add_dto.is_pending)
+            # Now "pending" instead of "missing" because last_modified has
+            # been set by init_missing_total() via mark_pending().
+            self.assertFalse(pending_add_dto.is_missing)
+            self.assertFalse(pending_add_dto.is_stalled)
+
+            # init_missing_total() will have logged that it is "SCHEDULING"
+            # a ComputeCounts MapReduce (that will never be run by this test).
+            logs, all_logs = self.get_new_logs(all_logs)
+            self.check_no_exceptional_states_in_logs(logs, pending_add_dto)
+            self.expect_scheduling_in_logs(logs, pending_add_dto)
 
             # Confirm executing deferred tasks did not cross day boundary.
             registered = utc.now_as_timestamp()
@@ -367,64 +557,91 @@ class EventHandlersTests(actions.TestBase):
             # site_admin_enrollments cron jobs).
 
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertTrue(total_dto.is_empty)  # No inc for a missing total.
+            self.assertFalse(total_dto.is_missing)
+            self.assertTrue(total_dto.is_pending)
+            self.assertFalse(total_dto.is_stalled)
             self.assertEquals(enrollments.TotalEnrollmentDAO.get(
-                self.NAMESPACE), 0)
+                NAMESPACE), 0)
 
             added_dto = enrollments.EnrollmentsAddedDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             # Always count today's 'adds', since ComputeCounts will not.
             self.assertFalse(added_dto.is_empty)
+            self.assertFalse(added_dto.is_missing)
+            self.assertFalse(added_dto.is_pending)
+            self.assertFalse(added_dto.is_stalled)
             self.assertEquals(1, added_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
-                self.NAMESPACE, start_dt), 1)
+                NAMESPACE, start_dt), 1)
 
             dropped_dto = enrollments.EnrollmentsDroppedDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertTrue(dropped_dto.is_empty)  # No 'drops' to count yet.
+            self.assertTrue(dropped_dto.is_missing)
+            self.assertFalse(dropped_dto.is_pending)
+            self.assertFalse(dropped_dto.is_stalled)
             self.assertEquals(enrollments.EnrollmentsDroppedDAO.get(
-                self.NAMESPACE, start_dt), 0)
+                NAMESPACE, start_dt), 0)
 
-            actions.unregister(self, course=self.COURSE)
+            actions.unregister(self, course=COURSE)
             self.execute_all_deferred_tasks(
                 models.StudentLifecycleObserver.QUEUE_NAME)
+
+            # The enrollments._count_drop() callback is triggered by the above
+            # StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED action. That
+            # callback will *not* call init_missing_total() because this time,
+            # while the counter is "empty" (contains no count), it *does* have
+            # a last modified time, so is "pending" and no longer "missing".
 
             # Confirm executing deferred tasks did not cross day boundary.
             unregistered = utc.now_as_timestamp()
             self.assertEquals(utc.day_start(unregistered), start)
 
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertTrue(total_dto.is_empty)  # Still does not exist.
+            self.assertFalse(total_dto.is_missing)
+            self.assertTrue(total_dto.is_pending)  # Still pending.
+            self.assertFalse(total_dto.is_stalled)
             self.assertEquals(enrollments.TotalEnrollmentDAO.get(
-                self.NAMESPACE), 0)
+                NAMESPACE), 0)
 
             added_dto = enrollments.EnrollmentsAddedDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertFalse(added_dto.is_empty)  # Unchanged by a drop event.
+            self.assertFalse(added_dto.is_missing)
+            self.assertFalse(added_dto.is_pending)
+            self.assertFalse(added_dto.is_stalled)
             self.assertEquals(1, added_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
-                self.NAMESPACE, start_dt), 1)
+                NAMESPACE, start_dt), 1)
 
             dropped_dto = enrollments.EnrollmentsDroppedDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             # Always count today's 'drops', since ComputeCounts will not.
             self.assertFalse(dropped_dto.is_empty)
+            self.assertFalse(dropped_dto.is_missing)
+            self.assertFalse(dropped_dto.is_pending)
+            self.assertFalse(dropped_dto.is_stalled)
             self.assertEquals(1, dropped_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsDroppedDAO.get(
-                self.NAMESPACE, start_dt), 1)
+                NAMESPACE, start_dt), 1)
 
             # Run the MapReduceJob to recover the missing 'total' and 'adds'.
             enrollments.init_missing_total(total_dto, self.app_ctxt)
             self.execute_all_deferred_tasks()
 
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertFalse(total_dto.is_empty)  # Finally exists.
+            self.assertFalse(total_dto.is_missing)
+            self.assertFalse(total_dto.is_pending)
+            self.assertFalse(total_dto.is_stalled)
             self.assertEquals(0, total_dto.get())  # Add and then drop is 0.
             self.assertEquals(enrollments.TotalEnrollmentDAO.get(
-                self.NAMESPACE), 0)
+                NAMESPACE), 0)
 
             models.StudentProfileDAO.update(
                 user.user_id(), self.STUDENT_EMAIL, is_enrolled=True)
@@ -436,28 +653,37 @@ class EventHandlersTests(actions.TestBase):
             self.assertEquals(utc.day_start(updated), start)
 
             total_dto = enrollments.TotalEnrollmentDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertFalse(total_dto.is_empty)
+            self.assertFalse(total_dto.is_missing)
+            self.assertFalse(total_dto.is_pending)
+            self.assertFalse(total_dto.is_stalled)
             self.assertEquals(1, total_dto.get())
             self.assertEquals(enrollments.TotalEnrollmentDAO.get(
-                self.NAMESPACE), 1)
+                NAMESPACE), 1)
 
             added_dto = enrollments.EnrollmentsAddedDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertFalse(added_dto.is_empty)
+            self.assertFalse(added_dto.is_missing)
+            self.assertFalse(added_dto.is_pending)
+            self.assertFalse(added_dto.is_stalled)
             self.assertEquals(2, added_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
-                self.NAMESPACE, start_dt), 2)
+                NAMESPACE, start_dt), 2)
 
             dropped_dto = enrollments.EnrollmentsDroppedDAO.load_or_default(
-                self.NAMESPACE)
+                NAMESPACE)
             self.assertFalse(dropped_dto.is_empty)
+            self.assertFalse(dropped_dto.is_missing)
+            self.assertFalse(dropped_dto.is_pending)
+            self.assertFalse(dropped_dto.is_stalled)
             self.assertEquals(1, dropped_dto.get(start))
             self.assertEquals(enrollments.EnrollmentsDroppedDAO.get(
-                self.NAMESPACE, start_dt), 1)
+                NAMESPACE, start_dt), 1)
 
 
-class MapReduceTests(actions.TestBase):
+class MapReduceTests(LogsExaminer):
 
     ADMIN1_EMAIL = 'admin1@example.com'
     STUDENT2_EMAIL = 'student2@example.com'
@@ -512,11 +738,11 @@ class MapReduceTests(actions.TestBase):
             models.StudentLifecycleObserver.EVENT_UNENROLL_COMMANDED][
                 enrollments.MODULE_NAME] = enrollments._count_drop
 
-    _CHARS_IN_ISO_8601_DATETIME = '[0-9T:.Z-]+'
-
     def test_total_enrollment_map_reduce_job(self):
+        # pylint: disable=too-many-statements
         COURSE = 'test_total_enrollment_map_reduce_job'
         NAMESPACE = 'ns_' + COURSE
+        all_logs = []  # No log lines yet obtained via get_log().
 
         # This test relies on the fact that simple_add_course() does *not*
         # execute the CoursesItemRESTHandler.NEW_COURSE_ADDED_HOOKS, to
@@ -534,12 +760,18 @@ class MapReduceTests(actions.TestBase):
             empty_total = enrollments.TotalEnrollmentDAO.load_or_default(
                 NAMESPACE)
             self.assertTrue(empty_total.is_empty)
+            self.assertTrue(empty_total.is_missing)
+            self.assertFalse(empty_total.is_pending)
+            self.assertFalse(empty_total.is_stalled)
 
             self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
                 NAMESPACE, start_dt), 0)
             empty_adds = enrollments.EnrollmentsAddedDAO.load_or_default(
                 NAMESPACE)
             self.assertTrue(empty_adds.is_empty)
+            self.assertTrue(empty_adds.is_missing)
+            self.assertFalse(empty_adds.is_pending)
+            self.assertFalse(empty_adds.is_stalled)
 
             admin1 = actions.login(self.ADMIN1_EMAIL)
             actions.register(self, self.ADMIN1_EMAIL, course=COURSE)
@@ -592,46 +824,44 @@ class MapReduceTests(actions.TestBase):
         after_queue_total = enrollments.TotalEnrollmentDAO.load_or_default(
             NAMESPACE)
         self.assertTrue(after_queue_total.is_empty)
+        self.assertTrue(after_queue_total.is_missing)
+        self.assertFalse(after_queue_total.is_pending)
+        self.assertFalse(after_queue_total.is_stalled)
 
         self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
             NAMESPACE, start_dt), 0)
         after_queue_adds = enrollments.EnrollmentsAddedDAO.load_or_default(
             NAMESPACE)
         self.assertTrue(after_queue_adds.is_empty)
+        self.assertTrue(after_queue_adds.is_missing)
+        self.assertFalse(after_queue_adds.is_pending)
+        self.assertFalse(after_queue_adds.is_stalled)
 
         enrollments.init_missing_total(after_queue_total, app_context)
-        logs = self.get_log()
-        self.assertNotRegexpMatches(logs,
-            '.*SKIPPING recomputation of existing "%s" total,'
-            ' [0-9]+ since %s.*' % (
-                after_queue_total.id, self._CHARS_IN_ISO_8601_DATETIME))
-        self.assertNotRegexpMatches(logs,
-            '.*PENDING initialization of "%s" at %s.*' % (
-                after_queue_total.id, self._CHARS_IN_ISO_8601_DATETIME))
-        self.assertRegexpMatches(logs,
-            '.*SCHEDULING "%s" update at %s.*'%  (
-                after_queue_total.id, self._CHARS_IN_ISO_8601_DATETIME))
+        logs, all_logs = self.get_new_logs(all_logs)
+        self.check_no_exceptional_states_in_logs(logs, after_queue_total)
+        self.expect_scheduling_in_logs(logs, after_queue_total)
 
         self.execute_all_deferred_tasks()
-        logs = self.get_log()
-        self.assertNotRegexpMatches(logs,
-            '.*CANCELING periodic "%s" recomputation unexpectedly'
-            ' unexpectedly still running.*' % NAMESPACE)
-        self.assertNotRegexpMatches(logs,
-            '.*INTERRUPTING "%s" initialization started on %s.*' % (
-                NAMESPACE, self._CHARS_IN_ISO_8601_DATETIME))
-
+        logs, all_logs = self.get_new_logs(all_logs)
+        self.check_no_exceptional_states_in_logs(logs, after_queue_total)
         self.assertEquals(enrollments.TotalEnrollmentDAO.get(
             NAMESPACE), 4)  # ADMIN1, STUDENT2, STUDENT3, STUDENT4
         after_mr_dto = enrollments.TotalEnrollmentDAO.load_or_default(
             NAMESPACE)
         self.assertFalse(after_mr_dto.is_empty)
+        self.assertFalse(after_mr_dto.is_missing)
+        self.assertFalse(after_mr_dto.is_pending)
+        self.assertFalse(after_mr_dto.is_stalled)
 
         # The 'adds' DTO will not be empty, because some of the enrollments
         # occurred on days other than "today".
         after_mr_adds = enrollments.EnrollmentsAddedDAO.load_or_default(
             NAMESPACE)
         self.assertFalse(after_mr_adds.is_empty)
+        self.assertFalse(after_mr_adds.is_missing)
+        self.assertFalse(after_mr_adds.is_pending)
+        self.assertFalse(after_mr_adds.is_stalled)
 
         self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
             NAMESPACE, last_month_dt), 1)  # ADMIN1
@@ -655,14 +885,99 @@ class MapReduceTests(actions.TestBase):
         self.assertEquals(enrollments.EnrollmentsAddedDAO.get(
             NAMESPACE, start_dt), 0)  # STUDENT4
 
+        # Log in as an admin and cause the /cron/site_admin_enrollments/total
+        # MapReduce to be enqueued, but do this *twice*.  This should produce
+        # both a "REFRESHING" log message for the existing enrollments total
+        # counter *and* a "CANCELING" log message when one of the calls to
+        # StartComputeCounts.cron_action() cancels the job just started by the
+        # previous call.
+        actions.login(self.ADMIN1_EMAIL, is_admin=True)
+        response = self.get(enrollments.StartComputeCounts.URL)
+        self.assertEquals(200, response.status_int)
+        response = self.get(enrollments.StartComputeCounts.URL)
+        self.assertEquals(200, response.status_int)
+        self.execute_all_deferred_tasks()
+
+        self.assertEquals(enrollments.TotalEnrollmentDAO.get(
+            NAMESPACE), 4)  # Refreshed value still includes all enrollees.
+        after_refresh_total = enrollments.TotalEnrollmentDAO.load_or_default(
+            NAMESPACE)
+        self.assertFalse(after_refresh_total.is_empty)
+        self.assertFalse(after_refresh_total.is_missing)
+        self.assertFalse(after_refresh_total.is_pending)
+        self.assertFalse(after_refresh_total.is_stalled)
+
+        # No other "exceptional" states are expected other than 'CANCELING'.
+        logs, all_logs = self.get_new_logs(all_logs)
+        self.check_no_exceptional_states_in_logs(logs, after_refresh_total,
+            ignore=frozenset(['CANCELING']))
+        self.expect_canceling_in_logs(logs, after_refresh_total)
+        self.expect_refreshing_in_logs(logs, after_refresh_total)
+
+        # Inject some "exceptional" states and confirm that the corresponding
+        # condition is detected and logged.
+
+        # Put the DTO for the NAMESPACE course into the "pending" state, having
+        # a last_modified time but no count.
+        marked_dto = enrollments.TotalEnrollmentDAO.mark_pending(
+            namespace_name=NAMESPACE)
+        # A DTO in the "pending" state contains no count value.
+        self.assertTrue(marked_dto.is_empty)
+        # DTO *does* have a last modified time, even though it is empty.
+        self.assertTrue(marked_dto.is_pending)
+        # DTO has not be in the "pending" state for longer than the maximum
+        # pending time (MAX_PENDING_SEC), so is not yet "stalled".
+        self.assertFalse(marked_dto.is_stalled)
+        # DTO is not "missing" because, even though it is "empty", it is in
+        # the "pending" state (waiting for a MapReduce started by
+        # init_missing_total() MapReduce to complete.
+        self.assertFalse(marked_dto.is_missing)
+        self.assertEquals(enrollments.TotalEnrollmentDAO.get(
+            NAMESPACE), 0)  # mark_pending() sets last_modified but not count.
+
+        # Now cause the /cron/site_admin_enrollments/total cron job to run,
+        # but schedule *two* of them, so that one will be "COMPLETING" because
+        # the DTO is marked "pending", and the other will be "INTERRUPTING"
+        # because the DTO is "pending" *and* another ComputeCounts MapReduce
+        # job appears to already be running.
+        response = self.get(enrollments.StartComputeCounts.URL)
+        self.assertEquals(200, response.status_int)
+        response = self.get(enrollments.StartComputeCounts.URL)
+        self.assertEquals(200, response.status_int)
+        self.execute_all_deferred_tasks()
+
+        # Correct total should have been computed and stored despite one
+        # StartComputeCounts.cron_action() canceling the other.
+        self.assertEquals(enrollments.TotalEnrollmentDAO.get(
+            NAMESPACE), 4)  # Computed value still includes all enrollees.
+        exceptional_dto = enrollments.TotalEnrollmentDAO.load_or_default(
+            NAMESPACE)
+        self.assertFalse(exceptional_dto.is_empty)
+        self.assertFalse(exceptional_dto.is_missing)
+        self.assertFalse(exceptional_dto.is_pending)
+        self.assertFalse(exceptional_dto.is_stalled)
+
+        # No other "exceptional" states are expected other than the two below.
+        logs, all_logs = self.get_new_logs(all_logs)
+        self.check_no_exceptional_states_in_logs(logs, marked_dto,
+            ignore=frozenset(['COMPLETING', 'INTERRUPTING']))
+        self.expect_completing_in_logs(logs, marked_dto)
+        self.expect_interrupting_in_logs(logs, marked_dto)
+
+        # No existing count value (since DTO is "empty"), so no "REFRESHING"
+        # of an existing enrollments total.
+        self.expect_no_refreshing_in_logs(logs, marked_dto)
+        self.expect_no_scheduling_in_logs(logs, marked_dto)
+
     def test_start_init_missing_counts(self):
         COURSE = 'test_start_init_missing_counts'
         NAMESPACE = 'ns_' + COURSE
+        all_logs = []  # No log lines yet obtained via get_log().
 
         # This test relies on the fact that simple_add_course() does *not*
         # execute the CoursesItemRESTHandler.NEW_COURSE_ADDED_HOOKS, to
         # simulate "legacy" courses existing prior to enrollments counters.
-        actions.simple_add_course(
+        app_context = actions.simple_add_course(
             COURSE, self.ADMIN1_EMAIL, 'Init Missing Counts')
 
         admin1 = actions.login(self.ADMIN1_EMAIL, is_admin=True)
@@ -678,8 +993,10 @@ class MapReduceTests(actions.TestBase):
         # be "pending" (last_modified value should be zero).
         before = enrollments.TotalEnrollmentDAO.load_or_default(NAMESPACE)
         self.assertTrue(before.is_empty)
+        self.assertTrue(before.is_missing)
         self.assertNotIn('count', before.dict)
         self.assertFalse(before.is_pending)
+        self.assertFalse(before.is_stalled)
         self.assertFalse(before.last_modified)
 
         # Confirm that the StartInitMissingCounts cron job will find the
@@ -689,23 +1006,12 @@ class MapReduceTests(actions.TestBase):
         self.assertEquals(200, response.status_int)
         self.execute_all_deferred_tasks()
 
-        logs = self.get_log()
-        self.assertNotRegexpMatches(logs,
-            '.*SKIPPING recomputation of existing "%s" total,'
-            ' [0-9]+ since %s.*' % (
-                before.id, self._CHARS_IN_ISO_8601_DATETIME))
-        self.assertNotRegexpMatches(logs,
-            'PENDING initialization of "%s" at %s.' % (
-                before.id, self._CHARS_IN_ISO_8601_DATETIME))
-        self.assertRegexpMatches(logs,
-            'SCHEDULING "%s" update at %s.'%  (
-                before.id, self._CHARS_IN_ISO_8601_DATETIME))
-        self.assertNotRegexpMatches(logs,
-            'CANCELING periodic "%s" recomputation unexpectedly'
-            ' unexpectedly still running.' % NAMESPACE)
-        self.assertNotRegexpMatches(logs,
-            'INTERRUPTING "%s" initialization started on %s.' % (
-                NAMESPACE, self._CHARS_IN_ISO_8601_DATETIME))
+        logs, all_logs = self.get_new_logs(all_logs)
+        self.check_no_exceptional_states_in_logs(logs, before)
+        self.expect_scheduling_in_logs(logs, before)
+        # init_missing_total() does not use StartComputeCounts, but instead
+        # invokes ComputeCounts.submit() directly.
+        self.expect_no_refreshing_in_logs(logs, before)
 
         # Load the courses page again, now getting 0 for number of students.
         response = self.get('/admin?action=courses')
@@ -728,11 +1034,93 @@ class MapReduceTests(actions.TestBase):
         self.assertEquals(200, response.status_int)
         self.execute_all_deferred_tasks()
 
-        logs = self.get_log()
-        self.assertRegexpMatches(logs,
-            '.*SKIPPING recomputation of existing "%s" total,'
-            ' %d since %s.*' % (after.id, after.get(),
-                                utc.to_text(seconds=after.last_modified)))
+        logs, all_logs = self.get_new_logs(all_logs)
+        self.check_no_exceptional_states_in_logs(logs, after,
+            ignore=frozenset(['SKIPPING']))
+        self.expect_skipping_in_logs(logs, after)
+        self.expect_no_scheduling_in_logs(logs, after)
+        self.expect_no_refreshing_in_logs(logs, after)
+
+        # Inject some "exceptional" states and confirm that the corresponding
+        # condition is detected and logged.
+
+        # Put the DTO for the NAMESPACE course into the "pending" state, having
+        # a last_modified time but no count.
+        marked_dto = enrollments.TotalEnrollmentDAO.mark_pending(
+            namespace_name=NAMESPACE)
+        self.assertTrue(marked_dto.is_empty)
+        self.assertTrue(marked_dto.is_pending)
+        self.assertFalse(marked_dto.is_stalled)
+        self.assertFalse(marked_dto.is_missing)
+        self.assertEquals(enrollments.TotalEnrollmentDAO.get(
+            NAMESPACE), 0)  # mark_pending() sets last_modified but not count.
+
+        # Run the cron job again, which should find a "pending" but not
+        # "stalled" count, 'SKIPPING' it to allow a previously deferred
+        # MapReduce to initialize it.
+        response = self.get(enrollments.StartInitMissingCounts.URL)
+        self.assertEquals(200, response.status_int)
+        self.execute_all_deferred_tasks()
+
+        # No other "exceptional" states are expected other than 'SKIPPING'.
+        logs, all_logs = self.get_new_logs(all_logs)
+        self.check_no_exceptional_states_in_logs(logs, marked_dto,
+            ignore=frozenset(['SKIPPING']))
+        self.expect_skipping_in_logs(logs, marked_dto)
+
+        # StartInitMissingCounts.cron_action() deferred enrollments totals
+        # that are not "stalled" to be initialized by previously scheduled
+        # MapReduce jobs.
+        self.expect_no_scheduling_in_logs(logs, marked_dto)
+        self.expect_no_refreshing_in_logs(logs, marked_dto)
+
+        # Now call init_missing_total() directly, which logs a 'PENDING'
+        # messages instead. (StartInitMissingCounts.cron_action() did not even
+        # invoke init_missing_total() in the above get().)
+        enrollments.init_missing_total(marked_dto, app_context)
+
+        # No other "exceptional" states are expected other than 'PENDING'.
+        logs, all_logs = self.get_new_logs(all_logs)
+        self.check_no_exceptional_states_in_logs(logs, marked_dto,
+            ignore=frozenset(['PENDING']))
+        self.expect_pending_in_logs(logs, marked_dto)
+
+        # init_missing_total() leaves "pending" but not "stalled" deferred
+        # enrollments totals to be initialized by previously scheduled
+        # MapReduce jobs.
+        self.expect_no_scheduling_in_logs(logs, marked_dto)
+        self.expect_no_refreshing_in_logs(logs, marked_dto)
+
+        # Force the "pending" DTO into the "stalled" state by setting its
+        # last modified value into the past by more than MAX_PENDING_SEC.
+        past = 2 * enrollments.EnrollmentsDTO.MAX_PENDING_SEC
+        marked_dto._force_last_modified(marked_dto.last_modified - past)
+        enrollments.TotalEnrollmentDAO._save(marked_dto)
+        past_dto = enrollments.TotalEnrollmentDAO.load_or_default(NAMESPACE)
+        self.assertTrue(past_dto.is_empty)
+        self.assertTrue(past_dto.is_pending)
+        self.assertTrue(past_dto.is_stalled)
+        self.assertFalse(past_dto.is_missing)
+
+        # Run the cron job again, which should find a "stalled" count.
+        # StartInitMissingCounts.cron_action() calls init_missing_total() for
+        # a "stalled" count. init_missing_total() should then log that the
+        # count is 'STALLED'.
+        response = self.get(enrollments.StartInitMissingCounts.URL)
+        self.assertEquals(200, response.status_int)
+        self.execute_all_deferred_tasks()
+
+        # No other "exceptional" states are expected other than 'STALLED'.
+        logs, all_logs = self.get_new_logs(all_logs)
+        self.check_no_exceptional_states_in_logs(logs, marked_dto,
+            ignore=frozenset(['STALLED']))
+        self.expect_stalled_in_logs(logs, marked_dto)
+
+        # init_missing_total() should be 'SCHEDULING' a new MapReduce, via a
+        # direct invocation of ComputeCounts.submit(), to replace the
+        # stalled total.
+        self.expect_scheduling_in_logs(logs, marked_dto)
+        self.expect_no_refreshing_in_logs(logs, marked_dto)
 
 
 class GraphTests(actions.TestBase):
