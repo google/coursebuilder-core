@@ -185,6 +185,7 @@ scripts/parse_start_args.sh
 scripts/project.py
 scripts/pylint.rc
 scripts/pylint.sh
+scripts/rerun_failures.sh
 scripts/run_javascript_test_server.sh
 scripts/start.sh
 scripts/start_in_shell.sh
