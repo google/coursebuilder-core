@@ -213,6 +213,9 @@ runs=( )
 # Accumulates list of tests that failed.
 failures=( )
 
+# Accumulates list of tests that succeeded.
+sucesses=( )
+
 runTest() {
   # Runs one test method of the supplied test class.
   local method="$1" ; local class="$2" ; local dir="$3"
@@ -259,6 +262,7 @@ runTest() {
     echo "TO RE-RUN ONLY THIS FAILED TEST:" ; echo ; echo "$run"
   else
     echo "SUCCESS: $final"
+    successes+=( "$test" )
   fi
 }
 
@@ -306,45 +310,66 @@ rerunTests() {
 
 main() {
   local -a test_args=( "$@" )
-  local log_filename="$(basename "${opt_error_log}")"
+  local -i num_args="${#test_args[@]}"
 
   readAllErrorLines "${opt_error_log}"
+  local -i num_errors="${#error_lines[@]}"
+
+  if [ ${num_errors} -eq 0 ]; then
+    echo
+    echo "WARNING: No 'ERROR:' or 'FAIL:' tests found in:"
+    echo "${opt_error_log}"
+    displayUsage 1
+  fi
 
   echo
   echo "${HORIZONTAL_RULING_LINE}"
-  echo "${#error_lines[@]} 'ERROR:' or 'FAIL:' test(s) found in:"
-  echo "  ${log_filename}"
+  echo -n "Found     *** ${num_errors} ***     "
+  echo "'ERROR:' or 'FAIL:' test failure(s) in:"
+  echo "  ${opt_error_log}"
   echo
 
   if [ ${opt_list_errors_only} -eq 0 ]; then
-    echo "Serially re-running each --test with an 'ERROR:' or 'FAIL:' in:"
-    echo "  ${log_filename}"
 
     if [ -n "${opt_server_log_dir}" ]; then
-      echo
-      echo "--test runs save a --server_log_file in this --server_log_dir:"
+      echo -n "${num_errors} --test runs"
+      echo " will save a unique --server_log_file in this --server_log_dir:"
       echo "  ${opt_server_log_dir}"
-    fi
-
-    if [ -n "${test_args[@]}" ]; then
       echo
-      echo "--test runs are supplied these additional arguments:"
-      for arg in "${test_args[@]}"; do
-        echo " ${arg}"
-      done
     fi
 
-    echo
+    if [ ${num_args} -ne 0 ]; then
+      echo -n "${num_errors} --test runs"
+      echo " will be supplied these additional arguments:"
+      for arg in "${test_args[@]}"; do
+        echo "  ${arg}"
+      done
+      echo
+    fi
+
+    echo -n "${num_errors} --test failures"
+    echo " ('ERROR:' or 'FAIL:') being re-run serially now:"
+
     rerunTests "${opt_server_log_dir}" "${test_args[@]}"
     echo "${HORIZONTAL_RULING_LINE}"
+    echo "TESTS RUN:   ${#runs[@]}"
     echo
-    echo "TESTS:     ${#runs[@]}"
-    echo "FAILURES:  ${#failures[@]}"
+    echo "PASSED:      ${#successes[@]}"
+    echo
+
+    for success in "${successes[@]}" ; do
+      echo "$success"
+    done
+    echo
+
+    echo "FAILED:      ${#failures[@]}"
     echo
     for failure in "${failures[@]}" ; do
       echo "$failure"
     done
   else
+    echo "${num_errors} --test runs disabled by --list_errors_only (-l):"
+    echo
     for line in "${error_lines[@]}" ; do
       local error="$(errorType "$line")"
       local method="$(testMethod "$line")"
