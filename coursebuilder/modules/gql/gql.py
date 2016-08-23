@@ -96,6 +96,7 @@ from controllers import utils
 from models import config
 from models import courses
 from models import custom_modules
+from models import roles
 from models import transforms
 from modules.courses import unit_outline
 
@@ -363,8 +364,10 @@ class CurrentUser(graphene.ObjectType):
         return users.create_logout_url(dest_url=args['dest_url'])
 
     def resolve_can_view_dashboard(self, args, info):
-        # TODO(nretallack): Determine this more accurately.
-        return users.is_current_user_admin()
+        # TODO(nretallack): Ideally this would return true if you have the right
+        # to see any dashboard feature in any course. How can we determine that
+        # quickly?
+        return roles.Roles.is_super_admin()
 
 
 class Course(CourseAwareObjectType, graphene.relay.Node):
