@@ -207,6 +207,11 @@ def make_default_parser():
         'to the named file.  This is helpful when diagnosing a problem with '
         'the server that does not manifest when the server is started outside '
         'tests.')
+    parser.add_argument(
+        '--concurrent_tests',
+        type=int,
+        help='Number of tests to run concurrently.  Defaults to two for each '
+        'processor on your computer.')
     return parser
 
 
@@ -1067,13 +1072,20 @@ def _run_all_tests(config):
                   'tests.integration.test_classes.'
                   'IntegrationServerInitializationTask': 1},
                 False, chunk_size=1, hint='setup')
+
         if _all_tests:
-            try:
-                chunk_size = 2 * multiprocessing.cpu_count()
-            except:  # pylint: disable=bare-except
-                chunk_size = 8
             _run_tests(
-                _all_tests, config.parsed_args.verbose, chunk_size=chunk_size)
+                _all_tests, config.parsed_args.verbose,
+                chunk_size=_get_concurrent_test_count(config))
+
+
+def _get_concurrent_test_count(config):
+    if config.parsed_args.concurrent_tests is not None:
+        return config.parsed_args.concurrent_tests
+    try:
+        return 2 * multiprocessing.cpu_count()
+    except:  # pylint: disable=bare-except
+        return 8
 
 
 def _run_tests(test_classes, verbose, chunk_size=16, hint='generic'):
