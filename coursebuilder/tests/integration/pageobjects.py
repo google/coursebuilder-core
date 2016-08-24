@@ -215,8 +215,20 @@ class PageObject(object):
             ec.text_to_be_present_in_element(
                 (by.By.ID, 'gcb-butterbar-message'), value))
 
-    def go_back(self):
-        self._tester.driver.back()
+    def expect_exception(self, fun, expect_exception):
+        try:
+            fun()
+            assert not expect_exception, 'Expected an exception'
+        except exceptions.WebDriverException:
+            assert expect_exception, 'Unexpected Exception'
+
+    def go_back(self, expect_exception=False):
+        # If navigating causes an alert, webdriver will raise an exception.
+        # This is ok because it will continue navigating after the alert is
+        # dealt with.  This behavior may change in the future.  If this causes
+        # intermittent failures, remove the assertions.
+        # https://bugs.chromium.org/p/chromedriver/issues/detail?id=1362
+        self.expect_exception(self._tester.driver.back, expect_exception)
         return self
 
     def switch_to_alert(self):
@@ -1869,7 +1881,7 @@ class DatastorePage(PageObject):
                         else:
                             value = value_blocks[0].text.strip()
                         item[name] = value
-            self._tester.driver.back()
+            self.go_back()
 
         return data
 

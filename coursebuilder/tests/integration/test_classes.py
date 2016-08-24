@@ -208,7 +208,7 @@ class AdminTests(integration.TestBase):
                            ' you leave.')
         # Test back arrow
         browser = self.load_dashboard(name).click_add_unit(
-        ).set_contents_on_one_page(True).go_back()
+        ).set_contents_on_one_page(True).go_back(expect_exception=True)
         alert = browser.switch_to_alert()
         self.assertEqual(confirm_message, alert.text)
         alert.accept()
@@ -233,7 +233,7 @@ class AdminTests(integration.TestBase):
 
         # Test cancel the alert
         browser = self.load_dashboard(name).click_add_unit(
-        ).set_contents_on_one_page(True).go_back()
+        ).set_contents_on_one_page(True).go_back(expect_exception=True)
         browser.switch_to_alert().dismiss()
         self.assertNotEqual(browser.where_am_i(), 'dashboard')
 

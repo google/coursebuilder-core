@@ -39,7 +39,7 @@ fi
 # Set shell variables common to CB scripts.
 . "$(dirname "${common_script}")/config.sh"
 
-CHROMEDRIVER_VERSION=2.16
+CHROMEDRIVER_VERSION=2.23
 CHROMEDRIVER_DIR=$RUNTIME_HOME/chromedriver-$CHROMEDRIVER_VERSION
 if [[ $OSTYPE == linux* ]] ; then
   NODE_DOWNLOAD_FOLDER=node-v0.12.4-linux-x64
