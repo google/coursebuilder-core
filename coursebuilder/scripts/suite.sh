@@ -12,4 +12,4 @@ fi
 . "$(dirname "$0")/test_config.sh"
 
 python "$SOURCE_DIR/tests/suite.py" \
-  --test_class_name "$1"
+  --test_class_name "$1" "${@:2}"

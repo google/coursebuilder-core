@@ -36,6 +36,7 @@ import argparse
 import cStringIO
 import logging
 import os
+import pdb
 import shutil
 import sys
 import unittest
@@ -55,6 +56,10 @@ _PARSER = argparse.ArgumentParser()
 _PARSER.add_argument(
     '--test_class_name',
     help='optional dotted module name of the test(s) to run', type=str)
+_PARSER.add_argument(
+    '--pdb',
+    action='store_true',
+    help='Automatically enter a debugger when an error occurs.')
 
 # Direct key access so we'll throw if os.environ is misconfigured.
 TEST_DATA_BASE = os.path.join(
@@ -290,6 +295,17 @@ def fix_sys_path():
     sys.path.insert(0, appengine_config.BUNDLE_ROOT)
 
 
+class DebugTestResult(unittest.TextTestResult):
+
+    def addError(self, test, err):
+        pdb.post_mortem(err[2])
+        super(DebugTestResult, self).addError(test, err)
+
+    def addFailure(self, test, err):
+        pdb.post_mortem(err[2])
+        super(DebugTestResult, self).addFailure(test, err)
+
+
 def main():
     """Starts in-process server and runs all test cases in this module."""
     fix_sys_path()
@@ -298,7 +314,14 @@ def main():
     parsed_args = _PARSER.parse_args()
     test_suite = create_test_suite(parsed_args)
 
-    result = unittest.TextTestRunner(verbosity=2).run(test_suite)
+    kwargs = {
+        'verbosity': 2,
+    }
+
+    if parsed_args.pdb:
+        kwargs['resultclass'] = DebugTestResult
+
+    result = unittest.TextTestRunner(**kwargs).run(test_suite)
     if result.errors or result.failures:
         raise Exception(
             'Test suite failed: %s errors, %s failures of '

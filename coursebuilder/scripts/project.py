@@ -212,6 +212,10 @@ def make_default_parser():
         type=int,
         help='Number of tests to run concurrently.  Defaults to two for each '
         'processor on your computer.')
+    parser.add_argument(
+        '--pdb',
+        action='store_true',
+        help='Automatically enter a debugger when a test fails or errors.')
     return parser
 
 
@@ -492,17 +496,19 @@ class TaskThread(threading.Thread):
 class FunctionalTestTask(object):
     """Executes a set of tests given a test class name."""
 
-    def __init__(self, test_class_name, verbose):
+    def __init__(self, test_class_name, verbose, debugger=False):
         self.test_class_name = test_class_name
         self.verbose = verbose
+        self.debugger = debugger
 
     def run(self):
         if self.verbose:
             log('Running all tests in: %s.' % (self.test_class_name))
         suite_sh = os.path.join(build_dir(), 'scripts', 'suite.sh')
-        result, self.output = run(
-            ['sh', suite_sh, self.test_class_name], stdout=None,
-            verbose=self.verbose)
+        command = ['sh', suite_sh, self.test_class_name]
+        if self.debugger:
+            command.append('--pdb')
+        result, self.output = run(command, stdout=None, verbose=self.verbose)
         if result != 0:
             raise Exception()
 
@@ -1076,7 +1082,8 @@ def _run_all_tests(config):
         if _all_tests:
             _run_tests(
                 _all_tests, config.parsed_args.verbose,
-                chunk_size=_get_concurrent_test_count(config))
+                chunk_size=_get_concurrent_test_count(config),
+                debugger=config.parsed_args.pdb)
 
 
 def _get_concurrent_test_count(config):
@@ -1088,7 +1095,8 @@ def _get_concurrent_test_count(config):
         return 8
 
 
-def _run_tests(test_classes, verbose, chunk_size=16, hint='generic'):
+def _run_tests(
+        test_classes, verbose, chunk_size=16, hint='generic', debugger=False):
     start = time.time()
     task_to_test = {}
     tasks = []
@@ -1096,7 +1104,7 @@ def _run_tests(test_classes, verbose, chunk_size=16, hint='generic'):
 
     # Prepare tasks
     for test_class_name in test_classes:
-        test = FunctionalTestTask(test_class_name, verbose)
+        test = FunctionalTestTask(test_class_name, verbose, debugger=debugger)
         task = TaskThread(test.run, name='testing %s' % test_class_name)
         task_to_test[task] = test
         tasks.append(task)
