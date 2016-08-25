@@ -1008,7 +1008,7 @@ $(function() {
             $this.closest(".table-container")
                 .removeClass("limit-table-height")
                 .find(".table-scroller")
-                .css("max-height", "");
+                .css("max-height", "none");
           }
 
           // Reset widths in case table sizing changed based on tbody
