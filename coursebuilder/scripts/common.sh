@@ -279,16 +279,21 @@ if need_install node ChangeLog Version 0.12.4 test ; then
   popd > /dev/null
 fi
 
-if need_install phantomjs ChangeLog Version 1.9.0 test ; then
+# NOTE: Yes, we are looking for 2.1.0, having installed 2.1.1.  Because
+# PhantomJS' ChangeLog file only mentions 2.1.0, not 2.1.1.  Grr.
+if need_install phantomjs ChangeLog Version 2.1.0 test ; then
   echo Installing PhantomJs
   if [[ $OSTYPE == linux* ]] ; then
     download_and_unpack \
-      https://phantomjs.googlecode.com/files/phantomjs-1.9.0-linux-x86_64.tar.bz2
-    mv $RUNTIME_HOME/phantomjs-1.9.0-linux-x86_64 $RUNTIME_HOME/phantomjs
+      $CB_ARCHIVE_LIB_URL/phantomjs-2.1.1-linux-x86_64.tar.bz2 $RUNTIME_HOME
+    rm -rf $RUNTIME_HOME/phantomjs
+    mv $RUNTIME_HOME/phantomjs-2.1.1-linux-x86_64 $RUNTIME_HOME/phantomjs
   elif [[ $OSTYPE == darwin* ]] ; then
     download_and_unpack \
-      https://phantomjs.googlecode.com/files/phantomjs-1.9.0-macosx.zip
-    mv $RUNTIME_HOME/phantomjs-1.9.0-macosx $RUNTIME_HOME/phantomjs
+      $CB_ARCHIVE_LIB_URL/phantomjs-2.1.1-macosx.zip \
+      $RUNTIME_HOME/phantomjs
+    rm -rf $RUNTIME_HOME/phantomjs
+    mv $RUNTIME_HOME/phantomjs-2.1.1-macos $RUNTIME_HOME/phantomjs
   else
     echo "Target OS '$OSTYPE' must start with 'linux' or 'darwin'."
     exit -1
