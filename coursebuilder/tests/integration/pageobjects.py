@@ -340,8 +340,9 @@ class EditorPageObject(PageObject):
             try:
                 butter_bar_message = self.find_element_by_id(
                     'gcb-butterbar-message', pre_wait=False)
-                return 'Success' in butter_bar_message.text or (
-                    not butter_bar_message.is_displayed())
+                return not (
+                    butter_bar_message.is_displayed() and
+                    butter_bar_message.text == 'Loading...')
             except exceptions.StaleElementReferenceException:
                 return False
 
