@@ -484,7 +484,7 @@ def get_components_from_html(html, use_lxml=_LXML_AVAILABLE):
         - instanceid: the instance id of the component
         - cpt_name: the name of the component tag (e.g. gcb-googlegroup)
     """
-    if use_lxml:
+    if use_lxml and _LXML_AVAILABLE:
         return get_components_using_lxml(html)
     else:
         return get_components_using_html5lib(html)
