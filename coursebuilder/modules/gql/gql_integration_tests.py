@@ -97,29 +97,6 @@ class QueryApp(pageobjects.PageObject):
 
 class QueryAppTests(integration.TestBase):
 
-    def setUp(self):
-        super(QueryAppTests, self).setUp()
-        self.set_gql_service_enabled(True)
-
-    def tearDown(self):
-        self.set_gql_service_enabled(False)
-        super(QueryAppTests, self).tearDown()
-
-    def set_gql_service_enabled(self, enabled):
-        self.load_root_page(
-        ).click_login(
-        ).login(
-            self.LOGIN, admin=True
-        ).click_dashboard(
-        ).click_site_settings(
-        ).click_override(
-            'gcb_gql_service_enabled'
-        ).set_value(
-            enabled
-        ).click_save()
-
-        self.load_root_page().click_logout()
-
     def test_login_logout(self):
         QueryApp(self).load(
         ).assert_logged_out(
