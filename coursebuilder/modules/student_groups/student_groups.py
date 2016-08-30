@@ -1593,8 +1593,8 @@ def register_module():
             StudentGroupMembership)
 
         # Add ourselves to the callbacks for the hourly cron job for buffing
-        # up course availability.
-        availability_cron.UpdateCourseAvailability.RUN_HOOKS[
+        # up course and content availabilities.
+        availability_cron.UpdateAvailability.RUN_HOOKS[
             MODULE_NAME] = act_on_all_triggers
 
     custom_module = custom_modules.Module(

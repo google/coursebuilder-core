@@ -43,14 +43,14 @@ from models import jobs
 from modules.courses import triggers
 
 
-class UpdateCourseAvailability(jobs.DurableJob):
-    """Examines date/time triggers and updates content availability.
+class UpdateAvailability(jobs.DurableJob):
+    """Examines date/time triggers and updates course and content availability.
 
     Modules can register to be called back when run() is called. These are
     called strictly after course-level triggers have been applied and saved.
     Callbacks are registered like this:
 
-        availability_cron.UpdateCourseAvailability.RUN_HOOKS[
+        availability_cron.UpdateAvailability.RUN_HOOKS[
             'my_module'] = my_handler
 
     RUN_HOOKS callbacks are called a single time, and in no particular order,
@@ -65,7 +65,7 @@ class UpdateCourseAvailability(jobs.DurableJob):
 
     @classmethod
     def get_description(cls):
-        return "Update content availability based on date/time triggers."
+        return "Update course and content availability via date/time triggers."
 
     def run(self):
         now = utc.now_as_datetime()
@@ -113,7 +113,7 @@ class StartAvailabilityJobs(utils.AbstractAllCoursesCronHandler):
         return True
 
     def cron_action(self, app_context, global_state):
-        job = UpdateCourseAvailability(app_context)
+        job = UpdateAvailability(app_context)
         if job.is_active():
             job.cancel()
         job.submit()

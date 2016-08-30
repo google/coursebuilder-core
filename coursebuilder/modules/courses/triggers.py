@@ -1170,8 +1170,8 @@ class ContentTrigger(AvailabilityTrigger):
         # content key value is non longer present in the <select>.
         #
         # Saving the resulting form will then omit the obsolete triggers.
-        # The UpdateCourseAvailability cron job also detects these obsolete
-        # triggers and discards them as well.
+        # The UpdateAvailability cron job also detects these obsolete triggers
+        # and discards them as well.
         triggers_with_content = []
         for encoded in encoded_triggers:
             encoded_content = encoded.get(ContentTrigger.FIELD_NAME)

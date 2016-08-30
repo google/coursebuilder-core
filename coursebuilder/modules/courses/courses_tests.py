@@ -2369,7 +2369,7 @@ class AvailabilityTests(actions.TestBase):
         return (empty, bad, unexpected, missing, unchanged)
 
     def _run_availability_jobs(self, app_context):
-        cron_job = availability_cron.UpdateCourseAvailability(app_context)
+        cron_job = availability_cron.UpdateAvailability(app_context)
         self.assertFalse(cron_job.is_active())
         cron_job.submit()
         self.execute_all_deferred_tasks()
