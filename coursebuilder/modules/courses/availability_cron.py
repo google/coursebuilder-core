@@ -102,7 +102,7 @@ class UpdateCourseAvailability(jobs.DurableJob):
 class StartAvailabilityJobs(utils.AbstractAllCoursesCronHandler):
     """Handle callback from cron by launching availability jobs."""
 
-    URL = '/cron/course_availability/update'
+    URL = '/cron/availability/update'
 
     @classmethod
     def is_globally_enabled(cls):
