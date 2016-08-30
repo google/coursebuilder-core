@@ -384,7 +384,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             content_type, content_id)
         text = title
         if note:
-            text = '{} ({})'.format(text, note)
+            text = u'{} ({})'.format(text, note)
         if indent:
             text = ('&emsp;' * indent) + text
         select[value] = text
