@@ -452,25 +452,20 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
     def classmethod_put(cls, handler):
         """Expose as function for convenience in wrapping this hander."""
 
-        course, settings, payload, response_payload = _authorize_put(handler)
+        course, env, payload, response_payload = _authorize_put(handler)
         if not course:
             return
 
         # Date/Time triggers:
         #   unit and lesson availability, course-wide availability
-        triggers.MilestoneTrigger.payload_into_settings(
-            payload, course, settings)
-        triggers.ContentTrigger.payload_into_settings(
-            payload, course, settings)
+        triggers.MilestoneTrigger.payload_into_settings(payload, course, env)
+        triggers.ContentTrigger.payload_into_settings(payload, course, env)
 
         # Course-level settings:
         #   user whitelist, available/browsable/registerable
-        whitelist = payload.get('whitelist')
-        if whitelist is not None:
-            reg_form = settings.setdefault('reg_form', {})
-            reg_form['whitelist'] = whitelist
+        course.set_whitelist_into_environ(payload.get('whitelist'), env)
 
-        course.save_settings(settings)
+        course.save_settings(env)
 
         # Course-level changes: course-wide availability
         course_availability = payload.get('course_availability')
