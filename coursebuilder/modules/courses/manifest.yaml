@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.courses.courses_tests.AvailabilityTests = 37
+    - modules.courses.courses_tests.AvailabilityTests = 38
     - modules.courses.courses_tests.BackgroundImportTests = 7
     - modules.courses.courses_tests.CourseAccessPermissionsTests = 7
     - modules.courses.courses_tests.CourseSettingsRESTHandlerTests = 1

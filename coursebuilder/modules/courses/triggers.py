@@ -788,7 +788,12 @@ class DateTimeTrigger(object):
 
 
 class AvailabilityTrigger(DateTimeTrigger):
-    """Availability change to be applied at the specified date/time."""
+    """Availability change to be applied at the specified date/time.
+
+    AvailabilityTrigger is very much an abstract base class, as many of its
+    methods rely on a class-scoped AVAILABILITY_VALUES collection that is only
+    defined by subclasses.
+    """
 
     FIELD_NAME = 'availability'
     FIELDS = DateTimeTrigger.FIELDS + [FIELD_NAME]
@@ -1636,13 +1641,13 @@ class MilestoneTrigger(AvailabilityTrigger):
         the payload dict like:
           {
             'course_start': [{'milestone': 'course_start', 'when': ...}],
-            'course_end':  [{'milestone': 'course_start', 'when': ...}],
+            'course_end':  [{'milestone': 'course_end', 'when': ...}],
             ...
           }
         The callers of from_payload() expect the triggers to be returned in
         a single list of all triggers for that SETTINGS_NAME.
 
-        from_paylaod() iterates through all of the KNOWN_MILESTONES, to get()
+        from_payload() iterates through all of the KNOWN_MILESTONES, to get()
         for each of those milestones a single-value list containing the
         milestone trigger (or possibly just an empty list). Any encoded
         triggers that contain "clear this trigger" values (e.g. an empty
