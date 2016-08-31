@@ -135,18 +135,22 @@ with open(yaml_path) as course_template_yaml:
         course_template_yaml.read().decode('utf-8'))
 
 # Here are the defaults for a new course.
+DEFAULT_BROWSABLE = False
+DEFAULT_COURSE_NOW_AVAILABLE = False
+DEFAULT_CAN_REGISTER = True
+
 DEFAULT_COURSE_YAML_DICT = {
     'course': {
         'title': 'UNTITLED COURSE',
         'locale': 'en_US',
         'main_image': {},
-        'browsable': False,
-        'now_available': False},
+        'browsable': DEFAULT_BROWSABLE,
+        'now_available': DEFAULT_COURSE_NOW_AVAILABLE},
     'html_hooks': {},
     'preview': {},
     'unit': {},
     'reg_form': {
-        'can_register': True,
+        'can_register': DEFAULT_CAN_REGISTER,
         'whitelist': '',
         'additional_registration_fields': '',
         },
@@ -3541,6 +3545,65 @@ course:
         return self.get_course_availability_from_app_context(self.app_context)
 
     @classmethod
+    def course_settings_in_environ(cls, env):
+        """Retrieves from or creates 'course' dict in supplied env dict."""
+        return env.setdefault('course', {})
+
+    @classmethod
+    def get_course_settings_from_environ(cls, env):
+        """Like course_settings_in_environ(), but do not create if missing."""
+        return env.get('course', {})
+
+    @classmethod
+    def publish_in_environ(cls, env):
+        """Retrieves from or creates 'publish' dict in supplied env dict."""
+        return env.setdefault('publish', {})
+
+    @classmethod
+    def get_publish_from_environ(cls, env):
+        """Like publish_in_environ(), but do not create if missing."""
+        return env.get('publish', {})
+
+    @classmethod
+    def reg_form_in_environ(cls, env):
+        """Retrieves from or creates 'reg_form' dict in supplied env dict."""
+        return env.setdefault('reg_form', {})
+
+    @classmethod
+    def get_reg_form_from_environ(cls, env):
+        """Like reg_form_in_environ(), but do not create if missing."""
+        return env.get('reg_form', {})
+
+    @classmethod
+    def get_course_availability_from_environ(cls, env):
+        """Derive course availability policy based on other supplied env dict.
+
+        Args:
+          env: an environ dict such as that returned by the get_environ()
+            method of an app_context.
+
+        Returns:
+          A string indicating the availability policy; one of the keys from
+          COURSE_AVAILABILITY_POLICIES, or None if no policy matches the
+          course state found in the supplied env dict.
+        """
+        details = cls.get_course_settings_from_environ(env)
+        now_available = details.get(
+            'now_available', DEFAULT_COURSE_NOW_AVAILABLE)
+        if not now_available:
+            return COURSE_AVAILABILITY_PRIVATE
+
+        browsable = details.get('browsable', DEFAULT_BROWSABLE)
+        reg_form = cls.get_reg_form_from_environ(env)
+        can_register = reg_form.get('can_register', DEFAULT_CAN_REGISTER)
+        for name, setting in COURSE_AVAILABILITY_POLICIES.iteritems():
+            if (setting['now_available'] == now_available and
+                setting['browsable'] == browsable and
+                setting['can_register'] == can_register):
+                return name
+        return None
+
+    @classmethod
     def get_course_availability_from_app_context(cls, app_context):
         """Get derived course availability policy based on other settings.
 
@@ -3555,20 +3618,9 @@ course:
           A string indicating the availability policy; one of the keys from
           COURSE_AVAILABILITY_POLICIES, or None if no policy matches the
           current course state.
-
         """
-        settings = app_context.get_environ()
-        now_available = settings['course'].get('now_available', False)
-        browsable = settings['course'].get('browsable', False)
-        can_register = settings['reg_form'].get('can_register', True)
-        for name, setting in COURSE_AVAILABILITY_POLICIES.iteritems():
-            if not now_available:
-                return COURSE_AVAILABILITY_PRIVATE
-            if (setting['now_available'] == now_available and
-                setting['browsable'] == browsable and
-                setting['can_register'] == can_register):
-                return name
-        return None
+        env = app_context.get_environ()
+        return cls.get_course_availability_from_environ(env)
 
     @classmethod
     def get_element_displayability(
@@ -3675,42 +3727,101 @@ course:
 
     @classmethod
     def is_course_browsable(cls, app_context):
-        return app_context.get_environ()['course'].get('browsable', False)
+        return cls.get_course_settings_from_environ(
+            app_context.get_environ()).get('browsable', False)
 
     @classmethod
     def is_course_available(cls, app_context):
-        return app_context.get_environ()['course'].get('now_available', False)
+        return cls.get_course_settings_from_environ(
+            app_context.get_environ()).get('now_available', False)
 
     @classmethod
     def get_whitelist(cls, app_context):
-        settings = app_context.get_environ()
-        reg_form_whitelist = settings['reg_form'].get('whitelist', '')
+        env = app_context.get_environ()
+        reg_form_whitelist = cls.get_reg_form_from_environ(
+            env).get('whitelist', '')
         if reg_form_whitelist:
             return reg_form_whitelist
-        legacy_whitelist = settings['course'].get('whitelist', '')
+        legacy_whitelist = cls.get_course_settings_from_environ(
+            env).get('whitelist', '')
         return legacy_whitelist
 
-    def set_course_availability(self, name):
-        """Configure course availability policy into settings.
-
-        Note that this is class-static, so as to be symmetric with
-        get_course_availability(), above.
+    @classmethod
+    def set_whitelist_into_environ(cls, whitelist, env):
+        """Sets the supplied whitelist into the supplied env dict.
 
         Args:
-          name: A string naming the availability policy.  Must be one of the
-              keys from COURSE_AVAILABILITY_POLICIES.
+          whitelist: this value is set into the supplied settings as the new
+            registration whitelist (an empty string is used if None).
+          env: an environ dict, altered in-place, such as that returned by
+            the get_environ() method of an app_context.
         """
+        reg_form = cls.reg_form_in_environ(env)
+        reg_form['whitelist'] = '' if whitelist is None else whitelist
+
+    @classmethod
+    def _get_course_availability_policy_from_name(cls, name):
         if name not in COURSE_AVAILABILITY_POLICIES:
             raise ValueError(
                 'Expected course availability policy name to be one '
                 'of: %s, but was "%s"' %
                 (' '.join(COURSE_AVAILABILITY_POLICIES.keys()), name))
-        setting = COURSE_AVAILABILITY_POLICIES[name]
-        settings = self.app_context.get_environ()
-        settings['course']['now_available'] = setting['now_available']
-        settings['course']['browsable'] = setting['browsable']
-        settings['reg_form']['can_register'] = setting['can_register']
-        self.save_settings(settings)
+
+        return COURSE_AVAILABILITY_POLICIES[name]
+
+    @classmethod
+    def _apply_course_availability_policy_to_environ(cls, policy, env):
+        """Expand a course availability policy into the supplied environ.
+
+        Multiple values within the supplied environ are altered in-place to
+        implement overall course availability policy.
+
+        Args:
+          policy: one of the COURSE_AVAILABILITY_POLICIES values.
+          env: an environ dict, altered in-place, such as that returned by
+            the get_environ() method of an app_context.
+        """
+        details = cls.course_settings_in_environ(env)
+        reg_form = cls.reg_form_in_environ(env)
+
+        # If, for some odd reason, policy is missing a policy property,
+        # the get_course_availability() default value is used.
+        details['now_available'] = policy.get(
+            'now_available', DEFAULT_COURSE_NOW_AVAILABLE)
+        details['browsable'] = policy.get(
+            'browsable', DEFAULT_BROWSABLE)
+        reg_form['can_register'] = policy.get(
+            'can_register', DEFAULT_CAN_REGISTER)
+
+    @classmethod
+    def set_course_availability_into_environ(cls, name, env):
+        """Set policies in supplied settings for a named course availability.
+
+        Args:
+          name: A string naming the availability policy.  Must be one of the
+            keys from COURSE_AVAILABILITY_POLICIES.  (If name is any value
+            that evaluates to False, e.g. None or the empty string, this
+            method silently returns, leaving settings unaltered.)
+          env: an environ dict, altered in-place, such as that returned by
+            the get_environ() method of an app_context.
+        """
+        if name:
+            cls._apply_course_availability_policy_to_environ(
+                cls._get_course_availability_policy_from_name(name), env)
+
+    def set_course_availability(self, name):
+        """Configure course availability policy into course settings and save.
+
+        Args:
+          name: A string naming the availability policy.  Must be one of the
+              keys from COURSE_AVAILABILITY_POLICIES.
+        """
+        # Check that named course availability policy exists before getting
+        # the app_context environment.
+        policy = self._get_course_availability_policy_from_name(name)
+        env = self.app_context.get_environ()
+        self._apply_course_availability_policy_to_environ(policy, env)
+        self.save_settings(env)
 
     def is_unit_available(self, unit):
         unit = copy.deepcopy(unit)
