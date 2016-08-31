@@ -461,16 +461,15 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         triggers.MilestoneTrigger.payload_into_settings(payload, course, env)
         triggers.ContentTrigger.payload_into_settings(payload, course, env)
 
-        # Course-level settings:
-        #   user whitelist, available/browsable/registerable
+        # Course-level settings: user whitelist
         course.set_whitelist_into_environ(payload.get('whitelist'), env)
 
-        course.save_settings(env)
+        # Course-level changes:
+        #   course-wide availability (available/browsable/registerable)
+        course.set_course_availability_into_environ(
+            payload.get('course_availability'), env)
 
-        # Course-level changes: course-wide availability
-        course_availability = payload.get('course_availability')
-        if course_availability:
-            course.set_course_availability(course_availability)
+        course.save_settings(env)
 
         # Unit and lesson availability, visibility from syllabus list
         for item in payload.get(cls.ELEMENT_SETTINGS, []):
@@ -562,7 +561,7 @@ class MultiCourseClearStartEndRESTHandler(utils.BaseRESTHandler):
 
         milestone = payload.get('milestone')
         triggers.MilestoneTrigger.clear_from_settings(
-            course, settings, milestone)
+            course, settings, milestone=milestone)
         course.save_settings(settings)
         transforms.send_json_response(
             self, 200, 'Saved.', payload_dict=response_payload)

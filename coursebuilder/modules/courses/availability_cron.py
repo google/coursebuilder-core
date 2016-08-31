@@ -72,18 +72,19 @@ class UpdateAvailability(jobs.DurableJob):
         namespace = namespace_manager.get_namespace()
         app_context = sites.get_app_context_for_namespace(namespace)
         course = courses.Course.get(app_context)
-        settings = app_context.get_environ()
+        env = app_context.get_environ()
 
         tct = triggers.ContentTrigger
-        content_acts = tct.act_on_settings(course, settings, now)
+        content_acts = tct.act_on_settings(course, env, now)
 
         tmt = triggers.MilestoneTrigger
-        course_acts = tmt.act_on_settings(course, settings, now)
+        course_acts = tmt.act_on_settings(course, env, now)
 
-        if content_acts.num_consumed or course_acts.num_consumed:
+        save_settings = content_acts.num_consumed or course_acts.num_consumed
+        if save_settings:
             # At least one of the settings['publish'] triggers was consumed
             # or discarded, so save changes to triggers into the settings.
-            settings_saved = course.save_settings(settings)
+            settings_saved = course.save_settings(env)
         else:
             settings_saved = False
 

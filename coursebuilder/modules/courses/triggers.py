@@ -12,7 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Triggers to change course and content availability."""
+"""Trigger changes to course or content availability at given dates and times.
+
+HOW DATE/TIME TRIGGERS RELATE TO "SETTINGS"
+
+Triggers are stored in "settings" until they are acted on and then discarded.
+Triggers can also have side-effects *on* these "settings". What constitutes
+"settings" depends on the actual trigger class.
+
+For the modules.courses trigger classes (here in triggers.py), "settings" are
+an environ dict such as one returned by a get_environ() call on the
+app_context of a course.
+
+For the modules.student_groups trigger classes, "settings" are contained in a
+StudentGroupDTO object for each student group.
+
+TRIGGERS STORED IN "SETTINGS"
+
+The modules.courses triggers are stored in fields in a 'publish' dict inside
+the environ dict. The SETTINGS_NAME (e.g. content_triggers or course_triggers)
+of a trigger class corresponds to the key in the 'publish' dict for a given
+list of triggers (e.g. "element" content or course start/end "milestone").
+
+The modules.student_groups triggers are stored in StudentGroupDTO properties.
+The SETTINGS_NAME (e.g. content_triggers or course_triggers) of a trigger
+class corresponds to an identical property name in that DTO object for a
+given list of triggers (e.g. content or course start/end).
+
+"SETTINGS" ALTERED BY TRIGGERS
+
+The trigger classes in modules.courses update "settings" values in a supplied
+environ dict (availability changes due to course start/end "milestones")
+*and* a supplied Course (and the various Unit, Lesson, etc. resources that make
+up the Course content, to change content "element" availability). The act()
+methods of these trigger classes do *not* call Course.save_settings() or
+Course.save(). Persisting the changes made by triggered act() methods is the
+responsibility of the caller of the act_on_settings() method, after all such
+triggered changes are applied.
+
+the modules.student_groups trigger classes update "settings" values in a
+supplied StudentGroupDTO object. Both course-wide and content "element"
+availability overrides are stored in the same DTO. The act() methods update
+(or remove, for transitions to the 'no_override' state) these overrides from
+the DTO, but do *not* call StudentGroupDAO.save(). Like other triggers,
+persisting the changes made by the act() methods is the responsibility of the
+act_on_settings() caller.
+"""
 
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
@@ -303,8 +348,13 @@ class DateTimeTrigger(object):
         return encoded_trigger == cls.encoded_defaults()
 
     @classmethod
-    def from_settings(cls, course, settings):
-        """Gets encoded availability triggers from course and/or settings.
+    def triggers_in(cls, settings):
+        """Retrieves from or creates triggers list in supplied settings."""
+        return settings.setdefault(cls.SETTINGS_NAME, [])
+
+    @classmethod
+    def in_settings(cls, course, settings):
+        """Actual encoded availability triggers in course and/or settings.
 
         Args:
             course: a Course from which some settings may be obtained; also
@@ -312,29 +362,55 @@ class DateTimeTrigger(object):
             settings: subclass-specific settings containing encoded triggers.
 
         Returns:
-            A list of encoded triggers (dicts with JSON encode-able values).
+            The *mutable* list of the encoded triggers (dicts with JSON
+            encode-able values) actually in the supplied settings (including
+            possibly a newly-created empty list into which triggers can be
+            inserted).
+        """
+        return cls.triggers_in(course.publish_in_environ(settings))
+
+    @classmethod
+    def copy_triggers_from(cls, settings):
+        """Like triggers_in(), but return a copy and no creation if missing."""
+        return ([]
+                if ((not settings) or (cls.SETTINGS_NAME not in settings))
+                else list(settings[cls.SETTINGS_NAME]))
+
+    @classmethod
+    def copy_from_settings(cls, course, settings):
+        """Copies encoded availability triggers from course and/or settings.
+
+        Args:
+            course: a Course from which some settings may be obtained; also
+                used in validation of some encoded triggers.
+            settings: subclass-specific settings containing encoded triggers.
+
+        Returns:
+            A *shallow copy* of the list of encoded triggers (dicts with JSON
+            encode-able values) present in the supplied settings, or an
+            empty list if settings is None or the SETTINGS_NAME values were
+            not present.
         """
         return ([] if settings is None
-                else settings.setdefault('publish', {}).setdefault(
-                    cls.SETTINGS_NAME, []))
+                else cls.copy_triggers_from(
+                    course.get_publish_from_environ(settings)))
 
     @classmethod
     def for_form(cls, course, settings, **kwargs):
         """Returns encoded availability triggers from settings as form values.
 
         Args:
-            course: passed, untouched, through to from_settings().
-            settings: passed, untouched, through to from_settings().
+            course: passed, untouched, through to copy_from_settings().
+            settings: passed, untouched, through to copy_from_settings().
             kwargs: subclass-specific keyword arguments.
 
         Returns:
           The base class implementation simply returns a dict containing a
           single key/value pair, with SETTINGS_NAME as the key and the
-          unaltered results of from_settings() as the value.
+          unaltered results of copy_from_settings() as the value.
         """
         return {
-            cls.SETTINGS_NAME: ([] if settings is None
-                                else cls.from_settings(course, settings)),
+            cls.SETTINGS_NAME: cls.copy_from_settings(course, settings),
         }
 
     @classmethod
@@ -382,20 +458,20 @@ class DateTimeTrigger(object):
         # default 'overwrite' semantics).
         cls.check_set_semantics(semantics)
         if encoded_triggers:
-            publish = settings.setdefault('publish', {})
+            publish = course.publish_in_environ(settings)
             publish[cls.SETTINGS_NAME] = encoded_triggers
         else:
             cls.clear_from_settings(course, settings)
 
     @classmethod
     def clear_from_settings(cls, course, settings, **unused_kwargs):
-        publish = settings.setdefault('publish', {})
+        publish = course.publish_in_environ(settings)
         publish.pop(cls.SETTINGS_NAME, None)  # No KeyError if missing.
 
     @classmethod
     def from_payload(cls, payload):
         """Gets just encoded triggers from the availability form payload."""
-        return payload.get(cls.SETTINGS_NAME, [])
+        return cls.copy_triggers_from(payload)
 
     @classmethod
     def payload_into_settings(cls, payload, course, settings, semantics=None):
@@ -624,11 +700,12 @@ class DateTimeTrigger(object):
         set_into_settings() to retain them for future separating and acting.
 
         Args:
-            course: a Course, passed to from_settings() to obtain triggers,
-                that may also be used or altered by subclass act() methods.
-            settings: subclass-specific settings, passed to from_settings() to
-                obtain triggers, that may also be used or altered by subclass
+            course: a Course, passed to copy_from_settings() to obtain
+                triggers, that may also be used or altered by subclass
                 act() methods.
+            settings: subclass-specific settings, passed to
+                copy_from_settings() to obtain triggers, that may also be
+                used or altered by subclass act() methods.
             now: current UTC time as a datetime, used to decide if a valid
                 trigger is ready to be acted on.
 
@@ -643,7 +720,7 @@ class DateTimeTrigger(object):
                 act_on_triggers() applied to the "ready" triggers.
         """
         # Extract all cls type triggers from supplied settings.
-        encoded_triggers = cls.from_settings(course, settings)
+        encoded_triggers = cls.copy_from_settings(course, settings)
 
         # Separate triggers into "ready to apply" and future triggers.
         separated = cls.separate(encoded_triggers, course, now=now)
@@ -865,8 +942,8 @@ class ContentTrigger(AvailabilityTrigger):
         self._content = self.validate_content(content=content,
             content_type=content_type, content_id=content_id)
 
-        if (not found) and course and self._content:
-            found = self.find_content_in_course(self._content, course)
+        if (not found) and course and self.content:
+            found = self.find_content_in_course(self.content, course)
 
         self._found = found
 
@@ -1063,7 +1140,7 @@ class ContentTrigger(AvailabilityTrigger):
     @property
     def id(self):
         """Returns an associated course content ID if one exists, or None."""
-        return self.content.key if self.content else None
+        return str(self.content.key) if self.content else None
 
     @property
     def is_valid(self):
@@ -1085,7 +1162,7 @@ class ContentTrigger(AvailabilityTrigger):
             super_kwargs: remaining keyword arguments passed to the base class.
 
         Returns:
-          A list of the ContentTriggers from the encoded from_settings()
+          A list of the ContentTriggers from the encoded copy_from_settings()
           triggers whose associated 'content' exists (that is, the encoded
           key of the unit, lessong, et.c, was found in selectable_content).
         """
@@ -1184,13 +1261,22 @@ class ContentTrigger(AvailabilityTrigger):
 
         return triggers_with_content
 
-    def act(self, unused_course, unused_settings):
-        """Updates course content availability as indicated by the trigger."""
+    def act(self, course, unused_settings):
+        """Updates course content availability as indicated by the trigger.
+
+        The supplied parameters are not directly used, but any alteration to
+        self.found will not be persistent until the caller (eventually) calls
+        save() for the Course of which self.found is a content element.
+        """
         current = self.found.availability
         new = self.availability
 
         if current == new:
             return None
+
+        logging.info('APPLIED %s from "%s" to "%s" for %s in %s: %s',
+            self.kind(), current, new, self.encoded_content,
+            course.app_context.get_namespace_name(), self.logged)
 
         self.found.availability = new
         return self.ChangedByAct(current, new)
@@ -1244,7 +1330,7 @@ class MilestoneTrigger(AvailabilityTrigger):
 
     # Explicitly does *not* include the AVAILABILITY_NONE_SELECTED <option>
     # value ('none', '--- none selected ---') from the form, even though that
-    # is the DEFAULT_AVAILABLITY value used in the form <select>.
+    # is the DEFAULT_AVAILABILITY value used in the form <select>.
     AVAILABILITY_VALUES = availability_options.COURSE_VALUES
 
     # ('none', '--- none selected ---') is the default form <option> in the
@@ -1508,7 +1594,7 @@ class MilestoneTrigger(AvailabilityTrigger):
             # existing settings, rather than drop milestone types that are not
             # explicitly named.
             current = {t[MilestoneTrigger.FIELD_NAME]: t
-                       for t in cls.from_settings(course, settings)}
+                       for t in cls.copy_from_settings(course, settings)}
             current.update(deduped)
             # Any valid, de-duped triggers have now replaced their counterparts
             # in the triggers currently present in the supplied settings (or
@@ -1530,8 +1616,8 @@ class MilestoneTrigger(AvailabilityTrigger):
             super(MilestoneTrigger, cls).clear_from_settings(course, settings)
             return
 
-        publish = settings.setdefault('publish', {})
-        triggers = publish.get(cls.SETTINGS_NAME, [])
+        publish = course.get_publish_from_environ(settings)
+        triggers = cls.copy_triggers_from(publish)
         kept = [t for t in triggers
                 if t.get(MilestoneTrigger.FIELD_NAME) != milestone]
         # If any triggers remain after pruning out the milestone ones,
@@ -1568,12 +1654,17 @@ class MilestoneTrigger(AvailabilityTrigger):
         return [rt for rt in raw
                 if cls.is_complete(rt) and not cls.is_defaults(rt)]
 
-    def act(self, course, unused_settings):
+    def act(self, course, env):
         """Updates course-wide availability as indicated by the trigger."""
-        previous = course.get_course_availability()
-
-        if previous == self.availability:
+        current = course.get_course_availability_from_environ(env)
+        new = self.availability
+        if current == new:
             return None
 
-        course.set_course_availability(self.availability)
-        return self.ChangedByAct(previous, self.availability)
+        logging.info('APPLIED %s from "%s" to "%s" at %s in %s: %s',
+                     self.kind(), current, new,
+                     availability_options.option_to_title(self.milestone),
+                     course.app_context.get_namespace_name(), self.logged)
+
+        course.set_course_availability_into_environ(new, env)
+        return self.ChangedByAct(current, new)

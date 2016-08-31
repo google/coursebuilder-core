@@ -86,6 +86,7 @@ COURSE_AVAILABILITY_WITH_NONE_SELECT_DATA = [
     availability_options.NONE_SELECTED_OPTION,
 ] + COURSE_AVAILABILITY_SELECT_DATA
 
+
 COURSE_AVAILABILITY_SETTING = (
     availability.AvailabilityRESTHandler.COURSE_AVAILABILITY_SETTING)
 
@@ -131,8 +132,25 @@ class OverrideTriggerMixin(object):
         return changed
 
     @classmethod
-    def from_settings(cls, unused_course, student_group):
-        """Gets encoded availability override triggers from a student group.
+    def in_settings(cls, unused_course, student_group):
+        """Actual encoded availability override triggers in a student group.
+
+        Args:
+            unused_course: all triggers for student groups are stored in the
+                student_group properties, so the Course is unused here.
+            student_group: a StudentGroupDTO, which must not be None.
+
+        Returns:
+            The *mutable* list of the encoded triggers (dicts with JSON
+            encode-able values) actually in the supplied student_group
+            (including possibly a newly-created empty list property into which
+            triggers can be inserted and will be part of the DTO, etc.).
+        """
+        return student_group.setdefault_triggers(cls.SETTINGS_NAME)
+
+    @classmethod
+    def copy_from_settings(cls, unused_course, student_group):
+        """Copies encoded availability override triggers from a student group.
 
         Args:
             unused_course: all triggers for student groups are stored in the
@@ -143,9 +161,9 @@ class OverrideTriggerMixin(object):
                 course.
 
         Returns:
-            An empty list if student_group is None, otherwise the already
-            JSON-decoded student_group.dict[cls.SETTINGS_NAME] list (which may
-            itself be empty).
+            An empty list if student_group is None, otherwise a *shallow copy*
+            of the already JSON-decoded student_group.dict[cls.SETTINGS_NAME]
+            list (which may itself be empty).
         """
         return ([] if student_group is None
                 else student_group.get_triggers(cls.SETTINGS_NAME))
@@ -619,8 +637,19 @@ class StudentGroupDTO(object):
         return None if not callable(ctor) else ctor()
 
     def get_triggers(self, triggers_name):
-        return self.dict.get(
-            triggers_name, self.triggers_default(triggers_name))
+        default = self.triggers_default(triggers_name)
+        if default is None:
+            return None  # Not a known trigger property name.
+        if triggers_name not in self.dict:
+            return default  # Valid trigger property name, but not present.
+        return list(self.dict[triggers_name])  # Return a copy when present.
+
+    def setdefault_triggers(self, triggers_name):
+        default = self.triggers_default(triggers_name)
+        if default is None:
+            return None  # Not a known trigger property name.
+        # Only create properties in self.dict for *known* trigger properties.
+        return self.dict.setdefault(triggers_name, default)
 
     def is_triggers_property(self, triggers_name):
         return triggers_name in self.TRIGGERS_DEFAULT_TYPES
@@ -1354,18 +1383,18 @@ def act_on_all_triggers(course):
             course, group, now)
         content_acts = ContentOverrideTrigger.act_on_settings(
             course, group, now)
-        settings_saved = content_acts.num_consumed or course_acts.num_consumed
 
-        if settings_saved:
+        save_settings = content_acts.num_consumed or course_acts.num_consumed
+        if save_settings:
             # At least one of the override triggers was consumed or discarded,
             # so save the changes into the student group settings.
             StudentGroupDAO.save(group)
 
-        save_course = content_acts.num_changed or course_acts.num_changed
+        overrides_changed = content_acts.num_changed or course_acts.num_changed
         CourseOverrideTrigger.log_acted_on(
-            namespace, course_acts, save_course, settings_saved)
+            namespace, course_acts, overrides_changed, save_settings)
         ContentOverrideTrigger.log_acted_on(
-            namespace, content_acts, save_course, settings_saved)
+            namespace, content_acts, overrides_changed, save_settings)
 
 
 class AddToStudentAggregate(
