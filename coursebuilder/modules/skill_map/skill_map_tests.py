@@ -40,6 +40,7 @@ from models.progress import UnitLessonCompletionTracker
 from modules.i18n_dashboard import i18n_dashboard
 from modules.skill_map import competency
 from modules.skill_map.constants import SKILLS_KEY
+from modules.skill_map.skill_map import HEADER_CALLBACKS
 from modules.skill_map.skill_map import CountSkillCompletion
 from modules.skill_map.skill_map import ResourceSkill
 from modules.skill_map.skill_map import Skill
@@ -2567,3 +2568,71 @@ class EventListenerTests(BaseSkillMapTests):
         measure = competency.SuccessRateCompetencyMeasure.load(
             self.user.user_id(), self.sb.id)
         self.assertEqual(0.0, measure.score)
+
+
+class LessonHeaderTests(BaseSkillMapTests):
+    def setUp(self):
+        super(BaseSkillMapTests, self).setUp()
+
+        self.base = '/' + COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            COURSE_NAME, ADMIN_EMAIL, 'Skills Map Course')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % COURSE_NAME)
+
+        self.course = courses.Course(None, self.app_context)
+        self.setSkillWidgetSetting(on=True)
+
+    def tearDown(self):
+        self.setSkillWidgetSetting(on=False)
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        namespace_manager.set_namespace(self.old_namespace)
+        super(BaseSkillMapTests, self).tearDown()
+
+    def _create_lessons_with_skills(self):
+        # Create skills
+        self.skill_graph = SkillGraph.load()
+        self.sa = self.skill_graph.add(Skill.build('a', ''))
+        self.sb = self.skill_graph.add(Skill.build('b', ''))
+        self.skill_graph.add_prerequisite(self.sa.id, self.sb.id)
+
+        # Create lessons
+        self.unit = self.course.add_unit()
+        self.unit.title = 'Test Unit'
+        self.lesson1 = self.course.add_lesson(self.unit)
+        self.lesson1.title = 'Test Lesson 1'
+        self.lesson2 = self.course.add_lesson(self.unit)
+        self.lesson2.title = 'Test Lesson 2'
+
+        # Assign skills to lessons
+        # lesson 1 has one skill
+        self.lesson1.properties[SKILLS_KEY] = [self.sa.id]
+        # lesson 2 has both skills
+        self.lesson2.properties[SKILLS_KEY] = [
+                self.sa.id, self.sb.id]
+
+    def test_lesson_header_callbacks(self):
+        """Happy path test for lesson header callback."""
+
+        # Create lessons and skills for course. The header only appears if our
+        # lessons actually have skills associated with them.
+        self._create_lessons_with_skills()
+        self.course.save()
+        actions.login(ADMIN_EMAIL)
+
+        # Create and add new callback to lesson header
+        title = 'Hello title'
+        content = 'Hello world!'
+        def dummy_callback(handler, app_context, unit, lesson, student):
+            return {'title': title, 'content': content}
+
+        HEADER_CALLBACKS['dummy'] = dummy_callback
+
+        # Request a unit page in the sample course
+        unit_url = self.base + '/unit?unit=1&lesson=2'
+        response = self.get(unit_url)
+
+        # Check that the response contains the given title and content
+        body = response.body
+        self.assertIn(title, body)
+        self.assertIn(content, body)

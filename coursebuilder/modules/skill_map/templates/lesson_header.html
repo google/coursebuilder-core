@@ -75,6 +75,10 @@
             {% endfor %}
           </ol>
         {% endif %}
+        {% for item in extra_headers %}
+          <div><span class="section-title">{{ item.title }}</span></div>
+          {{ item.content }}
+        {% endfor %}
       </div>
     </div>
     <div class="open-control">

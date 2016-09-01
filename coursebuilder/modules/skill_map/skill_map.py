@@ -79,6 +79,18 @@ MODULE_TITLE = 'Skills'
 # Flag turning faker on
 _USE_FAKE_DATA_IN_SKILL_COMPETENCY_ANALYTICS = False
 
+# Dict of callbacks for adding to expandable section of skills header
+# Each callback will receive the same arguments as the lesson title provider:
+# - Handler
+# - Application context
+# - Current unit
+# - Current lesson
+# - Current student
+#
+# The expected return value is a dictionary containing two strings, 'title' and
+# 'content'.
+HEADER_CALLBACKS = {}
+
 def _assert(condition, message, errors, target_field):
     """Assert a condition and either log exceptions or raise AssertionError."""
     if not condition:
@@ -1935,6 +1947,12 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
         'display_skill_level_legend': (
             False if isinstance(student, models.TransientStudent) else True)
     }
+
+    # Get content from lesson header callbacks
+    template_values['extra_headers'] = [
+        callback(handler, app_context, unit, lesson, student)
+        for callback in HEADER_CALLBACKS.itervalues()]
+
     return jinja2.Markup(
         handler.get_template('lesson_header.html', [TEMPLATES_DIR]
     ).render(template_values))

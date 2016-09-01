@@ -19,6 +19,7 @@ tests:
     - modules.skill_map.skill_map_tests.SkillMapTests = 7
     - modules.skill_map.skill_map_tests.SkillRestHandlerTests = 18
     - modules.skill_map.skill_map_tests.StudentSkillViewWidgetTests = 6
+    - modules.skill_map.skill_map_tests.LessonHeaderTests = 1
   unit:
     - modules.skill_map.skill_map_unit_tests.JavaScriptTests = 2
 
