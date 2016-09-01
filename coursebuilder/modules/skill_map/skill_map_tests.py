@@ -2572,7 +2572,7 @@ class EventListenerTests(BaseSkillMapTests):
 
 class LessonHeaderTests(BaseSkillMapTests):
     def setUp(self):
-        super(BaseSkillMapTests, self).setUp()
+        super(LessonHeaderTests, self).setUp()
 
         self.base = '/' + COURSE_NAME
         self.app_context = actions.simple_add_course(
@@ -2587,7 +2587,7 @@ class LessonHeaderTests(BaseSkillMapTests):
         self.setSkillWidgetSetting(on=False)
         del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         namespace_manager.set_namespace(self.old_namespace)
-        super(BaseSkillMapTests, self).tearDown()
+        super(LessonHeaderTests, self).tearDown()
 
     def _create_lessons_with_skills(self):
         # Create skills

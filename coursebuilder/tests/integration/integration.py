@@ -36,7 +36,6 @@ from selenium.common import exceptions
 from selenium.webdriver.common import desired_capabilities
 from selenium.webdriver.chrome import options
 from selenium.webdriver.remote import webelement
-from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support import wait
 
 from models import courses
