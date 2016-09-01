@@ -722,8 +722,9 @@ class LoginPage(PageObject):
         email = self.find_element_by_id('email')
         email.clear()
         email.send_keys(login)
-        if admin:
-            self.find_element_by_id('admin').click()
+        admin_checkbox = self.find_element_by_id('admin')
+        if admin_checkbox.is_selected() != admin:
+            admin_checkbox.click()
         login_button = self.find_element_by_id('submit-login')
         login_button.click()
         if post_wait:

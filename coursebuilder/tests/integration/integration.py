@@ -20,7 +20,9 @@ __author__ = [
 ]
 
 import collections
+import copy
 import datetime
+import logging
 import os
 import random
 import time
@@ -34,6 +36,7 @@ from selenium.common import exceptions
 from selenium.webdriver.common import desired_capabilities
 from selenium.webdriver.chrome import options
 from selenium.webdriver.remote import webelement
+from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support import wait
 
 from models import courses
@@ -114,7 +117,14 @@ class TestBase(suite.TestBase):
                 Snapshot.WHEN_WAIT_TIMEOUT: Snapshot.WHAT_ALL,
             })
 
+        # Records courses the test creates so they can be removed in teardown.
+        self.course_namespaces = []
+
     def tearDown(self):
+        if self.course_namespaces:
+            self.force_admin_login(self.LOGIN)
+            for namespace in copy.copy(self.course_namespaces):
+                self.delete_course(namespace, login=False)
         time.sleep(1)  # avoid broken sockets on the server
         self.driver.quit()
         if self._snapshot:
@@ -148,6 +158,39 @@ class TestBase(suite.TestBase):
     def load_appengine_cron(self):
         return pageobjects.AppengineCronPage(self).load(
             suite.TestBase.ADMIN_SERVER_BASE_URL, suffix='/cron')
+
+    COURSE_LIST_LOGIN_URL = '/_ah/login?continue=/modules/admin'
+
+    def _course_list_login_page(self):
+        return pageobjects.LoginPage(
+            self, continue_page=pageobjects.CoursesListPage).load(
+                suite.TestBase.INTEGRATION_SERVER_BASE_URL,
+                suffix=self.COURSE_LIST_LOGIN_URL)
+
+    def _dismiss_alerts(self, action, tries=3):
+        """Some pages have more than one alert when you try to leave."""
+        for _ in xrange(tries):
+            try:
+                return action()
+            except exceptions.UnexpectedAlertPresentException:
+                self.driver.switch_to_alert().accept()
+        raise Exception('Too many alerts.')
+
+    def _try_to_navigate(self, action, expected_url, tries=3):
+        """Sometimes webdriver decides not to navigate, so we try again."""
+        failure_message = 'Failed to navigate to {}.'.format(expected_url)
+        for _ in xrange(tries):
+            result = self._dismiss_alerts(action)
+            if self.driver.current_url.endswith(expected_url):
+                return result
+            logging.warn(failure_message)
+            time.sleep(0.5)
+        raise Exception(failure_message)
+
+    def force_admin_login(self, email):
+        return self._try_to_navigate(
+            self._course_list_login_page, self.COURSE_LIST_LOGIN_URL).login(
+                email, True)
 
     def login(self, email, admin=True, logout_first=False,
               login_page=None, logout_page=None):
@@ -217,6 +260,22 @@ class TestBase(suite.TestBase):
         ).set_fields(
             name=name, title=title, email='admin@example.com'
         ).click_ok()
+
+        # Create a record of courses we have created so they can be deleted
+        # in teardown.
+        self.course_namespaces.append('ns_{}'.format(name))
+
+    def delete_course(self, namespace, login=True):
+        if login:
+            self.login(self.LOGIN, admin=True)
+
+        page = self.load_courses_list()
+        element = page.find_element_by_css_selector(
+            '[data-course-namespace={}] [delete_course] button'.format(
+                namespace))
+        element.click()
+        page.switch_to_alert().accept()
+        self.course_namespaces.remove(namespace)
 
     def set_admin_setting(self, setting_name, state):
         """Configure a property on Admin setting page."""

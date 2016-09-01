@@ -47,22 +47,12 @@ class CourseAdministrationTests(_CoursesListTestBase):
     def test_course_selection_checkboxes(self):
         """Verify select-all and course-select checkboxes affect one other."""
 
-        # If --skip_integration_setup was supplied to scripts/project.py,
-        # the 'Power Searching with Google' sample course will not be present.
-        root_page = self.load_root_page()
-        base_url = integration.TestBase.INTEGRATION_SERVER_BASE_URL
-
-        if root_page.is_default_course_deployed(base_url):
-            course_namespace_one = ''  # Blank namespace Power Searching course.
-        else:
-            course_name_one = self.create_new_course(login=False)[0]
-            course_namespace_one = 'ns_' + course_name_one
-
-        # ----------------------------------------------------------------
-        # Verify operation with multiple courses.
+        course_name_one = self.create_new_course(login=False)[0]
+        course_namespace_one = 'ns_' + course_name_one
 
         course_name_two = self.create_new_course(login=False)[0]
         course_namespace_two = 'ns_' + course_name_two
+
         course_list = self.load_courses_list()
 
         # On page load, all selections off.
@@ -173,11 +163,8 @@ class CourseMultiEditTests(_CoursesListTestBase):
 
     def setUp(self):
         super(CourseMultiEditTests, self).setUp()
-        self.course_namespaces = []
         for x in xrange(self.NUM_COURSES):
-            self.course_namespaces.append(
-                'ns_' + self.create_new_course(login=False)[0])
-        self.course_list = self.load_courses_list()
+            self.create_new_course(login=False)
         self.maxDiff = None
 
     def _get_courses_availability(self):
@@ -190,10 +177,11 @@ class CourseMultiEditTests(_CoursesListTestBase):
         return ret
 
     def test_multi_edit_multiple_courses(self):
+        course_list = self.load_courses_list()
         for course_namespace in self.course_namespaces:
-            self.course_list.toggle_course_checkbox(course_namespace)
+            course_list.toggle_course_checkbox(course_namespace)
 
-        multi_edit = self.course_list.click_edit_availability()
+        multi_edit = course_list.click_edit_availability()
         multi_edit.set_availability(
             courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
@@ -201,7 +189,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         multi_edit.click_save()
         for course_namespace in self.course_namespaces:
             multi_edit.assert_status(course_namespace, self.SAVED_STATUS)
-            self.course_list.verify_availability(
+            course_list.verify_availability(
                 course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
 
@@ -221,7 +209,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
             multi_edit.assert_status(
                 course_namespace,
                 'Bad XSRF token. Please reload the page and try again')
-            self.course_list.verify_availability(
+            course_list.verify_availability(
                 course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
         multi_edit.expect_status_message_to_be(
@@ -503,10 +491,6 @@ class CoursesListSortingTests(_CoursesListTestBase):
     COLUMNS_TO_CHECK = COLUMNS_ORDER + ['title']
 
     def test_material_design_sorted_by_arrows(self):
-        # Create an empty course, which will not actually be used for
-        # anything, in case --skip_integration_setup was supplied (and thus
-        # the sample course was not created already).
-        self.create_new_course(login=False)
         initial = True  # Skip first click on initial sorted-by 'Title' column.
         courses_page = self.load_courses_list()
 
@@ -549,22 +533,7 @@ class CoursesListSortingTests(_CoursesListTestBase):
             '0 Last URL', 'zzzz_last_by_url', 'Public - No Registration', 0),
     ]
 
-    SAMPLE = admin_pageobjects.CoursesListPage.Course(
-        'Power Searching with Google', '', 'Registration Optional', 1)
-
     def test_sort_courses(self):
-
-        # If --skip_integration_setup was supplied to scripts/project.py,
-        # the 'Power Searching with Google' sample course will not be present.
-        root_page = self.load_root_page()
-        base_url = integration.TestBase.INTEGRATION_SERVER_BASE_URL
-
-        if root_page.is_default_course_deployed(base_url):
-            all_courses = list(self.COURSES_TO_CREATE)
-            all_courses.append(self.SAMPLE)
-        else:
-            all_courses = self.COURSES_TO_CREATE
-
         # Create several courses with specific names and titles.
         for c in self.COURSES_TO_CREATE:
             self.create_course(c.title, c.url, login=False)
@@ -587,10 +556,10 @@ class CoursesListSortingTests(_CoursesListTestBase):
         for cl in self.COLUMNS_TO_CHECK:
             initial = courses_page.click_if_not_initial(cl, initial)
             courses_page.verify_rows_sorted_by_column(
-                cl, 'ascending', all_courses
+                cl, 'ascending', self.COURSES_TO_CREATE
             # Clicking ascending-sorted column sorts it again, descending.
             ).click_sortable_column(
                 cl
             ).verify_rows_sorted_by_column(
-                cl, 'descending', all_courses
+                cl, 'descending', self.COURSES_TO_CREATE
             )

@@ -86,7 +86,7 @@
     </thead>
     <tbody>
       {% for course in courses %}
-      <tr>
+      <tr data-course-namespace="{{ course.namespace_name }}">
         <td class="gcb-list-select-course">
           <input
              type="checkbox"
