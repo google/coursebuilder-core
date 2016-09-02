@@ -303,6 +303,12 @@ function renderAsset(Y, uri) {
   return div;
 }
 
+function renderImage(Y, url) {
+  var img = document.createElement('img');
+  img.src = url;
+  return img;
+}
+
 /**
  * Expose a method to disable the save button by means of an annotation in the
  * schema. Use the 'uneditable' schema type with visuType=funcName and
@@ -423,6 +429,7 @@ function onPageLoad(env) {
   env.inputEx = env.inputEx || {};
   env.inputEx.visus = env.inputEx.visus || {};
   env.inputEx.visus.renderAsset = renderAsset;
+  env.inputEx.visus.renderImage = renderImage;
   env.inputEx.visus.disableSave = disableSave;
 
   // set initial UI state

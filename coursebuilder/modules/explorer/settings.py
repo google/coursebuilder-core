@@ -45,6 +45,17 @@ COURSE_EXPLORER_SETTINGS = config.ConfigProperty(
     label='Course explorer settings', show_in_site_settings=False)
 
 
+def make_logo_url(mime_type, bytes_base64):
+    return 'data:{};base64,{}'.format(mime_type, bytes_base64)
+
+
+def get_course_explorer_settings_data():
+    try:
+        return transforms.loads(COURSE_EXPLORER_SETTINGS.value)
+    except ValueError:
+        return {'title': ''}
+
+
 def schema_provider(unused_course):
     group = schema_fields.FieldRegistry(
         COURSE_EXPLORER_SETTINGS.label, extra_schema_dict_values={
@@ -57,10 +68,22 @@ def schema_provider(unused_course):
     ))
 
     group.add_property(schema_fields.SchemaField(
-        'logo', 'Site Logo', 'file',
-        description=models_messages.SITE_LOGO_DESCRIPTION,
+        'logo_url', 'Site Logo', 'string',
+        description=messages.SITE_LOGO_DESCRIPTION,
+        editable=False,
+        extra_schema_dict_values={'visu': {
+            'visuType': 'funcName',
+            'funcName': 'renderImage',
+        }},
         optional=True,
     ))
+
+
+    group.add_property(schema_fields.SchemaField(
+        'logo', 'Change Site Logo', 'file',
+        optional=True,
+    ))
+
     group.add_property(schema_fields.SchemaField(
         'logo_alt_text', 'Site Logo Description', 'string',
         description=models_messages.SITE_LOGO_DESCRIPTION_DESCRIPTION,
@@ -119,13 +142,13 @@ class SettingsEditorRest(utils.BaseRESTHandler):
                 self, 401, 'Access denied.', {})
             return
 
-        data = COURSE_EXPLORER_SETTINGS.value
-        payload_dict = {'title':''}
-        if data:
-            try:
-                payload_dict = transforms.loads(data)
-            except ValueError:
-                pass
+        payload_dict = get_course_explorer_settings_data()
+
+        logo_mime_type = payload_dict.pop('logo_mime_type', None)
+        logo_bytes_base64 = payload_dict.pop('logo_bytes_base64', None)
+        if logo_mime_type and logo_bytes_base64:
+            payload_dict['logo_url'] = make_logo_url(
+                logo_mime_type, logo_bytes_base64)
 
         transforms.send_json_response(
             self, 200, 'Success',

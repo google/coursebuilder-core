@@ -17,7 +17,6 @@
 
 import graphene
 from modules.gql import gql
-from models import transforms
 from modules.explorer import settings
 
 
@@ -57,10 +56,10 @@ class Site(graphene.ObjectType):
         try:
             return Image(
                 alt_text=self.data.get('logo_alt_text', ''),
-                url='data:{};base64,{}'.format(
+                url=settings.make_logo_url(
                     self.data['logo_mime_type'],
-                    self.data['logo_bytes_base64'],
-                ))
+                    self.data['logo_bytes_base64']),
+                )
         except KeyError:
             return None
 
@@ -82,7 +81,7 @@ class CourseCategory(graphene.ObjectType):
 
 def resolve_site(gql_root, args, info):
     try:
-        return Site(transforms.loads(settings.COURSE_EXPLORER_SETTINGS.value))
+        return Site(settings.get_course_explorer_settings_data())
     except ValueError:
         return Site({})
 

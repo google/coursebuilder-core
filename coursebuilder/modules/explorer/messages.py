@@ -43,3 +43,8 @@ displayed in the course explorer.
 COURSE_CATEGORY_DESCRIPTION = """
 Course subject area, shown in the Course Explorer.  For example, "Biology".
 """
+
+SITE_LOGO_DESCRIPTION = """
+This logo is displayed in the upper left corner of the Course Explorer, next to
+the Site Name.
+"""
