@@ -87,13 +87,19 @@ def _qualified_typename(cls, num_package_path_parts_to_keep=1):
 
 
 class DateTimeTrigger(object):
-    """Trigger some side-effect at a specified date and time."""
+    """Trigger some side-effect at a specified date and time.
+
+    DateTimeTrigger is very much an abstract base class, as many of its
+    methods rely on a class-scoped SETTINGS_NAME constant that is only
+    defined by concrete subclasses (e.g. ContentTrigger, MilestoneTrigger,
+    but *not* AvailabilityTrigger, which is also an abstract base class).
+    """
 
     FIELD_NAME = 'when'
     FIELDS = [FIELD_NAME]
 
     MISSING_TRIGGER_FMT = "'{}' trigger is missing."
-    UNEXPECTED_TRIGGER_FMT = 'is_valid ({}) is_future ({}) is_ready ({})'
+    IMPOSSIBLE_TRIGGER_FMT = 'is_valid ({}) is_future ({}) is_ready ({})'
     LOG_ISSUE_FMT = '%s %s in namespace %s encoded: "%s" cause: "%s"'
 
     SET_WILL_OVERWRITE = 'overwrite'
@@ -574,8 +580,8 @@ class DateTimeTrigger(object):
                 ready.append(dt)
                 continue
 
-            logging.warning(cls.LOG_ISSUE_FMT, 'UNEXPECTED', cls.typename(),
-                namespace, et, cls.UNEXPECTED_TRIGGER_FMT.format(
+            logging.warning(cls.LOG_ISSUE_FMT, 'IMPOSSIBLE', cls.typename(),
+                namespace, et, cls.IMPOSSIBLE_TRIGGER_FMT.format(
                     is_valid, is_future, is_ready))
 
         cls.sort(ready)
@@ -792,7 +798,7 @@ class AvailabilityTrigger(DateTimeTrigger):
 
     AvailabilityTrigger is very much an abstract base class, as many of its
     methods rely on a class-scoped AVAILABILITY_VALUES collection that is only
-    defined by subclasses.
+    defined by concrete subclasses (e.g. ContentTrigger, MilestoneTrigger).
     """
 
     FIELD_NAME = 'availability'
@@ -836,8 +842,7 @@ class AvailabilityTrigger(DateTimeTrigger):
         if availability in cls.AVAILABILITY_VALUES:
             return availability
 
-        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID',
-            AvailabilityTrigger.FIELD_NAME,
+        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.kind(),
             namespace_manager.get_namespace(),
             {AvailabilityTrigger.FIELD_NAME: availability},
             cls.UNEXPECTED_AVAIL_FMT.format(
