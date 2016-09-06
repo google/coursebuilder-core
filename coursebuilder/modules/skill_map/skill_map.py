@@ -2103,8 +2103,7 @@ def notify_module_enabled():
         widget_display_flag_schema_provider)
     courses.Course.OPTIONS_SCHEMA_PROVIDER_TITLES[
         MODULE_NAME] = MODULE_TITLE
-    settings.CourseSettingsHandler.register_settings_section(
-        MODULE_NAME, title=MODULE_TITLE)
+    settings.CourseSettingsHandler.register_settings_section(MODULE_NAME)
 
     progress.UnitLessonCompletionTracker.POST_UPDATE_PROGRESS_HOOK.append(
         post_update_progress)

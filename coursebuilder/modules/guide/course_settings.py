@@ -20,7 +20,6 @@ from common import schema_fields
 from models import courses
 from modules.courses import settings
 
-from modules.guide import constants
 from modules.guide import messages
 
 
@@ -61,5 +60,5 @@ def register():
             ]
 
     settings.CourseSettingsHandler.register_settings_section(
-        GUIDE_SETTINGS_SCHEMA_SECTION, title=constants.MODULE_TITLE)
+        GUIDE_SETTINGS_SCHEMA_SECTION)
 

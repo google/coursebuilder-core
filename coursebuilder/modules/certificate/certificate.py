@@ -522,8 +522,7 @@ def register_module():
             get_criteria_editor_schema)
         courses.Course.OPTIONS_SCHEMA_PROVIDER_TITLES[
             MODULE_NAME] = MODULE_TITLE
-        settings.CourseSettingsHandler.register_settings_section(
-            MODULE_NAME, title=MODULE_TITLE)
+        settings.CourseSettingsHandler.register_settings_section(MODULE_NAME)
         settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
             os.path.dirname(__file__))
         settings.CourseSettingsHandler.EXTRA_CSS_FILES.append(

@@ -76,11 +76,6 @@ class CourseSettingsHandler(object):
         handler.redirect('/dashboard')
 
     @staticmethod
-    def get_schema_title(name):
-        return courses.Course.create_base_settings_schema().\
-            get_sub_registry(name).title
-
-    @staticmethod
     def _show_edit_settings_section(
             handler, template_values, key, section_names, exit_url=''):
         # The editor for all course settings is getting rather large.  Here,
@@ -147,7 +142,7 @@ class CourseSettingsHandler(object):
         if name is None:
             name = settings[0]
         if title is None:
-            title = cls.get_schema_title(settings[0])
+            title = courses.Course.get_schema_section_title(settings[0])
         if sub_group_name is None:
             sub_group_name = 'default'
 

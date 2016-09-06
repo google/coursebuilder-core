@@ -68,7 +68,7 @@ def drive_settings_schema_provider(unused_course):
 
 def make_drive_settings_section():
     settings.CourseSettingsHandler.register_settings_section(
-        constants.MODULE_NAME, title=constants.MODULE_TITLE,
+        constants.MODULE_NAME,
         schema_provider=drive_settings_schema_provider)
 
 

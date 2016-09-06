@@ -499,8 +499,10 @@ def register_module():
     def notify_module_enabled():
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             WEBSERV_SETTINGS_SCHEMA_SECTION] += get_schema_fields()
+        courses.Course.OPTIONS_SCHEMA_PROVIDER_TITLES[
+            WEBSERV_SETTINGS_SCHEMA_SECTION] = 'Web server'
         settings.CourseSettingsHandler.register_settings_section(
-            WEBSERV_SETTINGS_SCHEMA_SECTION, title='Web server ')
+            WEBSERV_SETTINGS_SCHEMA_SECTION)
 
     global_routes = [('/', RootHandler)]
     namespaced_routes = [('/', WebServer)]

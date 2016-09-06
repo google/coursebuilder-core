@@ -2337,7 +2337,20 @@ class Course(object):
     # Use this to set a human-readable name for a schema provider in the dict
     # above.  Otherwise the name will be derived from the key.  This dict uses
     # the same keys as above.
-    OPTIONS_SCHEMA_PROVIDER_TITLES = {}
+    SCHEMA_SECTION_COURSE = 'homepage'
+    SCHEMA_SECTION_REGISTRATION = 'registration'
+    SCHEMA_SECTION_UNITS_AND_LESSONS = 'unit'
+    SCHEMA_SECTION_ASSESSMENT = 'assessment'
+    SCHEMA_SECTION_I18N = 'i18n'
+    SCHEMA_SECTION_FORUMS = 'forums'
+    OPTIONS_SCHEMA_PROVIDER_TITLES = {
+        SCHEMA_SECTION_COURSE: 'Course',
+        SCHEMA_SECTION_REGISTRATION: 'Registration',
+        SCHEMA_SECTION_UNITS_AND_LESSONS: 'Units & lessons',
+        SCHEMA_SECTION_ASSESSMENT: 'Assessments',
+        SCHEMA_SECTION_I18N: 'Translations',
+        SCHEMA_SECTION_FORUMS: 'Forums',
+    }
 
     # Holds callback functions which are passed the course object after it it
     # loaded, to perform any further processing on loaded course data. An
@@ -2384,13 +2397,6 @@ class Course(object):
     # modifications are allowed, since these do not affect the official cached
     # or stored copies.
     COURSE_ELEMENT_STUDENT_VIEW_HOOKS = []
-
-    SCHEMA_SECTION_COURSE = 'homepage'
-    SCHEMA_SECTION_REGISTRATION = 'registration'
-    SCHEMA_SECTION_UNITS_AND_LESSONS = 'unit'
-    SCHEMA_SECTION_ASSESSMENT = 'assessment'
-    SCHEMA_SECTION_I18N = 'i18n'
-    SCHEMA_SECTION_FORUMS = 'forums'
 
     SCHEMA_LOCALE_AVAILABILITY = 'availability'
     SCHEMA_LOCALE_AVAILABILITY_AVAILABLE = 'available'
@@ -2508,7 +2514,8 @@ class Course(object):
     @classmethod
     def create_forum_settings_schema(cls, reg):
         opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_FORUMS, 'Forums',
+            Course.SCHEMA_SECTION_FORUMS,
+            Course.get_schema_section_title(Course.SCHEMA_SECTION_FORUMS),
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
@@ -2523,7 +2530,8 @@ class Course(object):
     @classmethod
     def create_course_settings_schema(cls, reg):
         opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_COURSE, 'Course',
+            Course.SCHEMA_SECTION_COURSE,
+            Course.get_schema_section_title(Course.SCHEMA_SECTION_COURSE),
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
@@ -2648,7 +2656,8 @@ class Course(object):
     @classmethod
     def create_registration_settings_schema(cls, reg):
         opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_REGISTRATION, 'Registration',
+            Course.SCHEMA_SECTION_REGISTRATION,
+            Course.get_schema_section_title(Course.SCHEMA_SECTION_REGISTRATION),
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
@@ -2703,7 +2712,9 @@ class Course(object):
     def create_unit_settings_schema(cls, reg):
         # Unit level settings.
         opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_UNITS_AND_LESSONS, 'Units & lessons',
+            Course.SCHEMA_SECTION_UNITS_AND_LESSONS,
+            Course.get_schema_section_title(
+                Course.SCHEMA_SECTION_UNITS_AND_LESSONS),
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
@@ -2735,7 +2746,10 @@ class Course(object):
                     'marker "%s".')
 
         opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_ASSESSMENT, 'Assessments')
+            Course.SCHEMA_SECTION_ASSESSMENT,
+            Course.get_schema_section_title(
+                Course.SCHEMA_SECTION_ASSESSMENT),
+        )
         opts.add_property(schema_fields.SchemaField(
             'assessment_confirmations:result_text:pass',
             'Final Assessment Passing Text', 'string',
@@ -2756,7 +2770,8 @@ class Course(object):
     @classmethod
     def create_translation_settings_schema(cls, reg):
         opts = reg.add_sub_registry(
-            Course.SCHEMA_SECTION_I18N, 'Translations',
+            Course.SCHEMA_SECTION_I18N,
+            Course.get_schema_section_title(Course.SCHEMA_SECTION_I18N),
             extra_schema_dict_values={
                 'className': 'inputEx-Group hidden-header'
             })
@@ -2819,13 +2834,17 @@ class Course(object):
         return reg
 
     @classmethod
+    def get_schema_section_title(cls, schema_section):
+        return cls.OPTIONS_SCHEMA_PROVIDER_TITLES.get(
+            schema_section, schema_section.replace('_', ' ').title())
+
+    @classmethod
     def create_common_settings_schema(cls, course):
         reg = cls.create_base_settings_schema()
         for schema_section in cls.OPTIONS_SCHEMA_PROVIDERS:
             sub_registry = reg.get_sub_registry(schema_section)
             if not sub_registry:
-                schema_title = cls.OPTIONS_SCHEMA_PROVIDER_TITLES.get(
-                    schema_section, schema_section.replace('_', ' ').title())
+                schema_title = cls.get_schema_section_title(schema_section)
                 sub_registry = reg.add_sub_registry(
                     schema_section, schema_title,
                     extra_schema_dict_values={

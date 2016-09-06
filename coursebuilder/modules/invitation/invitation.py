@@ -431,8 +431,7 @@ def register_module():
             MODULE_NAME] += course_settings_fields
         courses.Course.OPTIONS_SCHEMA_PROVIDER_TITLES[
             MODULE_NAME] = MODULE_TITLE
-        settings.CourseSettingsHandler.register_settings_section(
-            MODULE_NAME, title=MODULE_TITLE)
+        settings.CourseSettingsHandler.register_settings_section(MODULE_NAME)
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS += [
             get_student_profile_invitation_link,
             get_student_profile_sub_unsub_link]

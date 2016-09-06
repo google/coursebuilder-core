@@ -1240,7 +1240,7 @@ def register_module():
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[
             DATA_PUMP_SETTINGS_SCHEMA_SECTION] += course_settings_fields
         settings.CourseSettingsHandler.register_settings_section(
-            DATA_PUMP_SETTINGS_SCHEMA_SECTION, title=MODULE_TITLE)
+            DATA_PUMP_SETTINGS_SCHEMA_SECTION)
         DashboardExtension.register()
 
     def on_module_disabled():

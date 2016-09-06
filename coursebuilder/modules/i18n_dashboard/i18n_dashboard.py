@@ -3331,8 +3331,7 @@ def notify_module_enabled():
         I18nProgressDeferredUpdater.on_question_groups_changed)
     courses.Course.COURSE_ENV_POST_SAVE_HOOKS.append(
         I18nProgressDeferredUpdater.on_course_settings_changed)
-    settings.CourseSettingsHandler.register_settings_section(
-        'i18n', title=MODULE_TITLE)
+    settings.CourseSettingsHandler.register_settings_section('i18n')
 
     # Implementation in Babel 0.9.6 is buggy; replace with corrected version.
     pofile.denormalize = denormalize
