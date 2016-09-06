@@ -337,6 +337,8 @@ DISTRIBUTED_LIBS="\
   babel-0.9.6.zip \
   codemirror-4.5.0.zip \
   crossfilter-1.3.7.zip \
+  dagre-0.7.4.zip \
+  dagre-d3-0.4.17p.zip \
   d3-3.4.3.zip \
   dc.js-1.6.0.zip \
   decorator-3.4.0.zip \

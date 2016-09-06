@@ -1,314 +1,135 @@
-// Most of this code is copied from dependency_graph.js in the dependo library.
 window.GcbStudentSkillsUiModule = (function($) {
   var module = {}
 
-  module.setupGraph = function(argX, argY, argScale) {
-    var radius = 7;
-    var graph, layout, zoom, nodes, links, data;
-    var linkedByIndex = {};
-    var graphWidth, graphHeight;
-    var centerFactor = 1;
+  // TODO(tujohnson): If no scale argument is given, scale initial drawing
+  //                  so that all nodes are visible
+  // TODO(tujohnson): Fix line breaking for labels
+  // TODO(tujohnson): Add actual links to side panel
+  // TODO(tujohnson): Add recentering button
+  // TODO(tujohnson): Add node dragging
+  // TODO(tujohnson): Add node fading on mouseover
+  // TODO(tujohnson): Change node opacity so that edges can be seen behind them
+  // TODO(tujohnson): Show path(s) to selected node
+  // TODO(tujohnson): Add separate colors for mouseover vs. click
+  module.setupGraph = function(data, argX, argY, argScale) {
+    var graphContainer, svg, inner, panel, zoom;
+    var graph, nodes;
+    var defaultColors = {};
+    var selectedNode, selectionColor = '#b94431';
+    var graphContainerWidth, graphContainerHeight, panelWidth;
 
     // helpers
-    function formatClassName(prefix, object) {
-      return prefix + '-' + object.id.replace(/[^_0-9a-zA-Z\-]/g, '-');
+    function formatClassName(str) {
+      return str.replace(/[^_0-9a-zA-Z\-]/g, '-');
     }
 
-    function findElementByNode(prefix, node) {
-      var selector = '.' + formatClassName(prefix, node);
-      return graph.select(selector);
+    function findElementByNodeLabel(nodeLabel) {
+      // Select all nodes with the given id
+      var selector = '.node.' + formatClassName(nodeLabel);
+      return $(selector);
     }
 
-    function isConnected(a, b) {
-      return linkedByIndex[a.index + ',' + b.index] ||
-          linkedByIndex[b.index + ',' + a.index] ||
-          a.index == b.index;
+    function setColor(node, color) {
+      var rect = $(node).find('rect')[0];
+      rect.style.fill = color;
     }
 
-    function fadeRelatedNodes(dst, opacity, nodes, links) {
-      nodes.style('stroke-opacity', function (o) {
-        if (isConnected(dst, o)) {
-          var thisOpacity = 1;
-        } else {
-          var thisOpacity = opacity;
-        }
-
-        this.setAttribute('fill-opacity', thisOpacity);
-        this.setAttribute('stroke-opacity', thisOpacity);
-
-        if (thisOpacity == 1) {
-          this.classList.remove('dimmed');
-        } else {
-          this.classList.add('dimmed');
-        }
-
-        return thisOpacity;
-      });
-
-      links.style('stroke-opacity', function (o) {
-        var flag = false;
-
-        if (o.target === dst) {
-          // Highlight target/sources of the link
-          var elmNodes = graph.selectAll('.' + formatClassName(
-              'node', o.source));
-          var selector = 'path.link' +
-              '[data-source=' + o.source_index + ']' +
-              '[data-target=' + o.target.index + ']';
-          flag = true;
-        }
-        else if (o.source === dst) {
-          var elmNodes = graph.selectAll('.' + formatClassName(
-              'node', o.target));
-          var selector = 'path.link' +
-              '[data-source=' + o.source_index + ']';
-          flag = true;
-        }
-
-        if (flag) {
-          setOpacityAttributes(elmNodes)
-          var elmCurrentLink = $(selector)
-          elmCurrentLink.attr('data-show', true);
-
-          // In d3, arrows are implemented as markers, and in SVG markers are
-          // referenced using relative URLs. The base tag changes the default
-          // links and breaks them. The base tag is set to point to the
-          // course base in view.html. To restore the references, we use
-          // window.location.href to override the base tag href value.
-          elmCurrentLink.attr('marker-end',
-              'url(' + window.location.href + '#regular)');
-
-          // If our link doesn't go to or from the node that our mouse is
-          // currently over, set the link to normal.
-          if (opacity == 1) {
-            elmCurrentLink.attr('class', 'link');
-            //If the link is incoming or outgoing, set it that way.
-          } else if (o.target === dst) {
-            elmCurrentLink.attr('class', 'link incoming');
-          }
-            else if (o.source == dst) {
-            elmCurrentLink.attr('class', 'link outgoing');
-          }
-
-          return 1;
-        }
-        else {
-          var elmAllLinks = $('path.link:not([data-show])');
-
-          if (opacity == 1) {
-            elmAllLinks.attr('marker-end',
-                'url(' + window.location.href + '#regular)');
-          } else {
-            elmAllLinks.attr('marker-end', '');
-          }
-          return opacity;
-        }
-      });
+    function getLabelForNode(node) {
+      return node.textContent.replace('\n', ' ');
     }
 
-    function setOpacityAttributes(elmNodes) {
-      elmNodes.attr('fill-opacity', 1);
-      elmNodes.attr('stroke-opacity', 1);
-      elmNodes.style('stroke-opacity', 1);
-      elmNodes.classed('dimmed', false);
-    }
+    function runRender() {
+      graph = new dagreD3.graphlib.Graph().setGraph({});
+      graphContainer = d3.select('.graph-container')
+          .on('dblclick.zoom', null);
+      svg = graphContainer.append('svg:svg')
+          .attr('class', 'graph')
+          .on('click', onBackgroundClicked)
+          .on('dblclick.zoom', null);
+      panel = d3.select('.panel');
+      inner = svg.append('g');
 
-    function render() {
+      // Set up zoom support
       zoom = d3.behavior.zoom();
       zoom.on('zoom', onZoomChanged);
-
-      // Setup layout
-      layout = d3.layout
-        .force()
-        .gravity(.05)
-        .charge(-300)
-        .linkDistance(100);
-
-      // Setup graph
-      graph = d3.select('.graph')
-        .append('svg:svg')
-          .attr('pointer-events', 'all')
-        .call(zoom)
-        .append('svg:g')
-        .attr('width', graphWidth)
-        .attr('height', graphHeight);
-
+      graphContainer.call(zoom);
       d3.select(window).on("resize", resize);
-
-      // Load graph data
-      var graphData = window.getGraphData();
-      renderGraph(graphData);
-
-      data = graphData;
-
-      // Resize
-      resize();
 
       // Controllers
       $('.control-zoom a').on('click', onControlZoomClicked);
 
-      //colors
-      nodes.attr('style', function (d) {
-        findElementByNode('circle', d)
-            .style('fill', d.default_color)
-      });
+      // Parse data to create graph
+      for (var index = 0; index < data.nodes.length; index++) {
+        var label = data.nodes[index].id;
+        var color = data.nodes[index].default_color;
+        defaultColors[label] = color;
+        var labelWithBreaks = label.replace(' ', '\n');
+        graph.setNode(label, { shape: "rect",
+                               'class': formatClassName(labelWithBreaks),
+                               'style': 'fill: ' + color});
+      }
+
+      for (var index = 0; index < data.links.length; index++) {
+        var source = data.nodes[data.links[index].source];
+        var target = data.nodes[data.links[index].target];
+        graph.setEdge(source.id, target.id, { shape: "normal" });
+      }
+
+      var render = new dagreD3.render();
+      render(inner, graph);
+
+      addNodeInteractivity();
     }
 
     function resize() {
-      graphWidth = window.innerWidth;
-      graphHeight = window.innerHeight - 200;
-      $('div.graph').height(graphHeight).width(graphWidth - 64);
-      graph.attr('width', graphWidth).attr('height', graphHeight);
-      layout.size([graphWidth, graphHeight]).resume();
+      // Leave space of 100px for margins
+      panelWidth = (window.innerWidth - 100) * 0.2;
+      graphContainerWidth = (window.innerWidth - 100) * 0.8;
+      graphContainerHeight = window.innerHeight - 200;
+      $('div.graph-container').height(graphContainerHeight)
+          .width(graphContainerWidth);
+
+      $('div.panel').width(panelWidth);
     }
 
     function shiftGraphAndZoom(x, y, scale) {
-      // Scale the graph and shift it so that it is still centered.
-      // Then shift it again based on the given parameters.
-      var newScale = Math.max(scale, 0);
-      zoom.scale(newScale)
-      var centerTranslate = [
-          (graphWidth / 2) - (graphWidth * newScale / 2) + x,
-          (graphHeight / 2) - (graphHeight * newScale / 2) + y
-      ];
-      zoom.translate(centerTranslate);
+      // Center and scale the graph
+      // If the graph does not fit in the window, we scale it down so that it's
+      // visible
+      if (scale < 0) {
+        scale = Math.min(1, graphContainerWidth / graph.graph().width,
+            graphContainerHeight / graph.graph().height);
+      }
+      var translateWidth = (graphContainerWidth -
+          graph.graph().width * scale) / 2 + x;
+      var translateHeight = (graphContainerHeight -
+          graph.graph().height * scale) / 2 + y;
 
-      graph.transition()
-        .attr('transform',
-          'translate(' +
-          zoom.translate() +
-          ')' +
-          ' scale(' +
-          zoom.scale() +
-          ')');
+      translateAndScale([translateWidth, translateHeight], scale);
     }
 
-    function renderGraph(data) {
-      // markers
-      graph.append('svg:defs').selectAll('marker')
-        .data(['regular'])
-        .enter().append('svg:marker')
-        .attr('id', String)
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 15)
-        .attr('refY', -1.5)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
-        .attr('orient', 'auto')
-        .append('svg:path')
-        .attr('d', 'M0,-5L10,0L0,5');
-
-      // lines
-      links = graph.append('svg:g').selectAll("line")
-        .data(data.links)
-        .enter().append("svg:path")
-        .attr('class', 'link')
-        .attr("data-target", function (o) {
-          return o.target
-        })
-        .attr('data-source', function (o) {
-          return o.source
-        })
-        .attr('marker-end', function (d) {
-          return 'url(' + window.location.href + '#regular)';
-        });
-
-      var drag = layout.drag()
-          .on("dragstart", dragStart);
-
+    function addNodeInteractivity() {
       // nodes
-      nodes = graph.append('svg:g').selectAll('node')
-        .data(data.nodes)
-        .enter()
-        .append('svg:g')
-        .attr('class', 'node')
-        .on('mousedown', function() { d3.event.stopPropagation(); })
-        .call(drag);
-
-      // circles
-      nodes.attr('class', function (d) {
-        return formatClassName('node', d)
-      });
-
-      nodes.append("svg:circle")
-        .attr('class', function (d) {
-          return formatClassName('circle', d)
-        })
-        .attr('r', radius)
-        .on('mouseover', _.bind(onNodeMouseOver, this, nodes, links))
-        .on('mouseout', _.bind(onNodeMouseOut, this, nodes, links));
-
-
-      // A copy of the text with a thick white stroke for legibility.
-      nodes.append('svg:text')
-        .attr('x', 15)
-        .attr('y', '.31em')
-        .attr('class', function (d) {
-          return 'shadow ' + formatClassName('text', d)
-        })
-        .text(function (d) {
-          return d.id;
-        });
-
-      nodes.append('svg:text')
-        .attr('class', function (d) {
-          return formatClassName('text', d)
-        })
-        .attr('x', 15)
-        .attr('y', '.31em')
-        .text(function (d) {
-          return d.id;
-        });
-
-      // build linked index
-      data.links.forEach(function (d) {
-        linkedByIndex[d.source.index + ',' + d.target.index] = 1;
-      });
-
-      // draw the
-      layout.nodes(data.nodes);
-      layout.links(data.links);
-      layout.on('tick', onTick);
-      layout.on('end', function() {
-        $('div.graph').trigger('graph-loaded')
-      });
-      layout.start();
+      nodes = $('.node');
+      nodes.on('mouseover', _.bind(onNodeMouseOver, this))
+        .on('mouseout', _.bind(onNodeMouseOut, this))
+        .on('click', _.bind(onNodeClicked, this));
     }
 
-    function onNodeMouseOver(nodes, links, d) {
-      // highlight circle
-      var elm = findElementByNode('circle', d);
-      elm.style('fill', '#b94431');
-
-      // highlight related nodes
-      fadeRelatedNodes(d, .05, nodes, links);
+    function onNodeMouseOver(d) {
+      // highlight node
+      var node = d.currentTarget;
+      setColor(node, selectionColor);
     }
 
-    function onNodeMouseOut(nodes, links, d) {
-      // highlight circle
-      var elm = findElementByNode('circle', d);
-      elm.style('fill', d.default_color);
-
-      // highlight related nodes
-      fadeRelatedNodes(d, 1, nodes, links);
-    }
-
-    function onTick(e) {
-      links.attr('d', function (d) {
-        var dx = d.target.x - d.source.x,
-          dy = d.target.y - d.source.y,
-          dr = Math.sqrt(dx * dx + dy * dy);
-        return 'M' + d.source.x + ',' + d.source.y + 'A' + dr + ',' + dr +
-          ' 0 0,1 ' + d.target.x + ',' + d.target.y;
-      });
-
-      nodes.attr('cx', function (d) {
-        return d.x;
-      }).attr('cy', function (d) {
-        return d.y;
-      }).attr('transform', function (d) {
-        return 'translate(' + d.x + ',' + d.y + ')';
-      });
+    function onNodeMouseOut(d) {
+      // highlight node
+      var node = d.currentTarget;
+      if(node != selectedNode)
+      {
+        var label = getLabelForNode(node);
+        setColor(node, defaultColors[label]);
+      }
     }
 
     function onControlZoomClicked(e) {
@@ -326,45 +147,91 @@ window.GcbStudentSkillsUiModule = (function($) {
       newScale = Math.max(newScale, 0);
 
       // translate
-      var centerTranslate = [
-          (graphWidth / 2) - (graphWidth * newScale / 2),
-          (graphHeight / 2) - (graphHeight * newScale / 2)
-      ];
+      var currTranslate = zoom.translate();
 
-      // store values
-      zoom.translate(centerTranslate).scale(newScale);
-
-      // Render transition
-      graph.transition()
-          .attr('transform',
-          'translate(' +
-          zoom.translate() +
-          ')' +
-          ' scale(' +
-          zoom.scale() +
-          ')')
+      // We compute how much the width of the graph changes, and shift it so
+      // that we remain centered on the same location.
+      var scaleDiff = newScale - currentScale;
+      var translateShift = [scaleDiff * graph.graph().width / 2,
+                            scaleDiff * graph.graph().height / 2];
+      var newTranslate = [currTranslate[0] - translateShift[0],
+                          currTranslate[1] - translateShift[1]];
+      translateAndScale(newTranslate, newScale);
 
       // suppress navigating to CB home
       return false;
     }
 
     function onZoomChanged() {
-      graph.attr('transform',
+      translateAndScale(d3.event.translate, d3.event.scale);
+    }
+
+    function translateAndScale(translate, scale) {
+      zoom.translate(translate).scale(scale);
+      inner.attr('transform',
           'translate(' +
-          d3.event.translate +
+          zoom.translate() +
           ')' +
           ' scale(' +
-          d3.event.scale +
-          ')');
+          zoom.scale() +
+          ')')
     }
 
-    function dragStart(d) {
-      d3.select(this).classed("fixed", d.fixed = true);
+    function onNodeClicked(d) {
+      // Prevent the click from propagating to the background
+      d.stopPropagation();
+      var node = d.currentTarget;
+      processNodeClick(node);
     }
 
-    render();
+    function processNodeClick(node) {
+      // This is separated into its own function for ease of testing.
+      // If we click on the currently selected node, it is deselected.
+      // Otherwise, we replace the currently selected node (if there is one)
+      // with the one that has just been clicked on.
+      if(node != selectedNode) {
+        if(selectedNode != null)
+        {
+          var label = getLabelForNode(selectedNode);
+          setColor(selectedNode, defaultColors[label]);
+        }
+        setColor(node, selectionColor);
+        selectedNode = node;
+      } else {
+        var label = getLabelForNode(node);
+        setColor(node, defaultColors[label]);
+        selectedNode = null;
+      }
 
-    // shift according to the given parameters
+      redrawPanel();
+    }
+
+    function onBackgroundClicked() {
+      // If there is a node selected, we deselect it.
+      if(selectedNode)
+      {
+        var label = getLabelForNode(selectedNode);
+        setColor(selectedNode, defaultColors[label]);
+        selectedNode = null;
+      }
+      redrawPanel();
+    }
+
+    function redrawPanel() {
+      // Sets the info displayed in the side panel.
+      // TODO(tujohnson): Put actual links in this panel.
+      if (selectedNode == null) {
+        d3.select('.panel-links').html('');
+      } else {
+        d3.select('.panel-links').html('Selected node: ' +
+            getLabelForNode(selectedNode));
+      }
+    }
+
+    runRender();
+    resize();
+
+    // Shift according to the given parameters
     shiftGraphAndZoom(argX, argY, argScale);
   };
 

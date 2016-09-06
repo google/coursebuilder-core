@@ -19,6 +19,7 @@ files:
     - modules/student_skills_ui/student_skills_ui.py
     - modules/student_skills_ui/student_skills_ui_tests.py
     - modules/student_skills_ui/student_skills_ui_unit_tests.py
+    - modules/student_skills_ui/_static/css/dependency_graph.css
     - modules/student_skills_ui/_static/js/viz.js
     - modules/student_skills_ui/templates/course_map.html
     - modules/student_skills_ui/templates/course_map_navbar.html

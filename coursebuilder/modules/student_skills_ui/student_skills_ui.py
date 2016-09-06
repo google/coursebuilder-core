@@ -42,7 +42,9 @@ class StudentSkillsUIHandler(utils.BaseHandler):
     X_NAME = 'x'
     Y_NAME = 'y'
     SCALE_NAME = 'scale'
-    DEFAULT_PARAMS = {X_NAME: 0, Y_NAME: 0, SCALE_NAME: 1}
+    # We pass -1 as the default scale value so that the renderer knows to scale
+    # the graph to fit in the window.
+    DEFAULT_PARAMS = {X_NAME: 0, Y_NAME: 0, SCALE_NAME: -1}
     DEFAULT_COLOR = 'default_color'
     GREEN = '#00cc00'
     YELLOW = '#cccc00'
@@ -59,8 +61,11 @@ class StudentSkillsUIHandler(utils.BaseHandler):
         self._set_required_template_values()
 
         nodes, links = self._load_graph_data(self.get_course())
-        self.template_value['nodes'] = transforms.dumps(nodes)
-        self.template_value['links'] = transforms.dumps(links)
+        # If there are no nodes, we choose not to set these values, so that the
+        # HTML page will display an error message instead of the usual graph.
+        if len(nodes) > 0:
+            self.template_value['nodes'] = transforms.dumps(nodes)
+            self.template_value['links'] = transforms.dumps(links)
 
         self.render('course_map.html', [TEMPLATE_DIR])
 

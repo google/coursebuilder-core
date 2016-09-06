@@ -104,6 +104,8 @@ lib/babel-0.9.6.zip
 lib/codemirror-4.5.0.zip
 lib/crossfilter-1.3.7.zip
 lib/d3-3.4.3.zip
+lib/dagre-0.7.4.zip
+lib/dagre-d3-0.4.17p.zip
 lib/dc.js-1.6.0.zip
 lib/decorator-3.4.0.zip
 lib/dependo-0.1.4.zip

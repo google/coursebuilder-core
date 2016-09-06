@@ -2,8 +2,22 @@
   <head>
   </head>
   <body>
-    <div class="graph" data-nodes='[{"id": "a"}, {"id": "b"}]'
-      data-links='[{"source": 0, "target": 1}]'>
+    <div class="control-zoom">
+      <a class="control-zoom-in" href="#" title="Zoom in"></a>
+      <a class="control-zoom-out" href="#" title="Zoom out"></a>
+    </div>
+
+    <div class="container">
+      <div class="graph-container"
+        data-nodes='[{"id": "a", "default_color": "#ccc"},
+                     {"id": "b", "default_color": "green"}]'
+        data-links='[{"source": 0, "target": 1}]'>
+      </div>
+      <div class="panel">
+        <h2>Units for selected nodes:</h2>
+        <div class="panel-links">
+        </div>
+      </div>
     </div>
   </body>
 </html>

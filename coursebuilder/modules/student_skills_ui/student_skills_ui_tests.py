@@ -190,7 +190,7 @@ class CourseMapColorsTestCase(actions.TestBase):
 
     def _check_div_color(self, response, skill_node, color):
         html_soup = self.parse_html_string_to_soup(str(response.html))
-        node_div = html_soup.find('div', {'class': 'graph'})
+        node_div = html_soup.find('div', {'class': 'graph-container'})
         node_attrs = transforms.loads(node_div.attrs['data-nodes'])
         color_field = student_skills_ui.StudentSkillsUIHandler.DEFAULT_COLOR
         self.assertEquals(1, len(node_attrs))

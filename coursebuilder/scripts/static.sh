@@ -14,6 +14,8 @@ STATIC_SERV=( \
     "codemirror-4.5.0:/static/codemirror"
     "crossfilter-1.3.7:/static/crossfilter-1.3.7"
     "d3-3.4.3:/static/d3-3.4.3"
+    "dagre-0.7.4:/static/dagre-0.7.4"
+    "dagre-d3-0.4.17p:/static/dagre-d3-0.4.17p"
     "dc.js-1.6.0:/static/dc.js-1.6.0"
     "dependo-0.1.4:/static/dependo-0.1.4"
     "inputex-3.1.0:/static/inputex-3.1.0"
