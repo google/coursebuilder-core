@@ -253,6 +253,12 @@ function renderAsset(Y, uri) {
   var desc = document.createElement('div');
   desc.setAttribute('class', 'inputEx-description');
 
+  // Normally the description would not be created inside a visualization, and
+  // it would get a similar ID to the other parts of the field.  However, that
+  // ID is not passed down here.  We need a unique ID to display a tooltip
+  // though, so we make up a new one.
+  desc.setAttribute('id', Y.guid() + '-desc');
+
   // Compare the tail end of the uri to allowed image asset file extensions.
   imageExts = ['.png', '.jpg', '.jpeg', '.gif'];
   for (i in imageExts) {
