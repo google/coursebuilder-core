@@ -279,6 +279,7 @@ class EnsureSessionTest(integration.TestBase):
         server_thread.start()
 
     def tearDown(self):
+        self.driver.close()
         self._server.shutdown()
         self._server.server_close()
         os.chdir(self._original_directory)
