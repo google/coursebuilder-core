@@ -203,7 +203,7 @@ class ObjectEditor(object):
             'save_url': post_url,
             'save_args': transforms.dumps(post_args),
             'exit_button_caption': exit_button_caption,
-            'exit_url': exit_url,
+            'exit_url': exit_url or '',
             'required_modules': COMMON_REQUIRED_MODULES + required_modules,
             'extra_css_files': extra_css_files or [],
             'extra_js_files': extra_js_files or [],
