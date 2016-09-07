@@ -86,6 +86,9 @@ _ALL = [
     ('course:google:client_id',
      '/create-a-course/add-content/google-drive.html'
      '#get-credentials'),
+    ('course:google:client_secret',
+     '/create-a-course/add-content/google-drive.html'
+     '#get-credentials'),
     ('course:google_analytics_id',
      '/create-a-course/course-settings.html'
      '#analytics-id'),
