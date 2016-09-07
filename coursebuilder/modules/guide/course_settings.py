@@ -21,7 +21,7 @@ from models import courses
 from modules.courses import settings
 
 from modules.guide import messages
-
+from modules.guide import constants
 
 GUIDE_SETTINGS_SCHEMA_SECTION = 'modules:guide'
 
@@ -59,6 +59,8 @@ def register():
                     messages.COURSE_SETTINGS_LESSON_DURATION_DESCRIPTION))
             ]
 
+    courses.Course.OPTIONS_SCHEMA_PROVIDER_TITLES[
+        GUIDE_SETTINGS_SCHEMA_SECTION] = constants.MODULE_TITLE
     settings.CourseSettingsHandler.register_settings_section(
         GUIDE_SETTINGS_SCHEMA_SECTION)
 
