@@ -16,6 +16,7 @@
 
 
 import graphene
+from models import courses
 from modules.gql import gql
 from modules.explorer import settings
 
@@ -89,34 +90,26 @@ def resolve_site(gql_root, args, info):
 def resolve_start_date(gql_course, args, info):
     # Dates should be returned in UTC ISO8601 Zulu format
     # (eg "2016-05-01T07:00:00.000Z")
-    try:
-        return gql_course.course_settings['course']['start_date']
-    except KeyError:
-        return None
+    return courses.Course.get_named_course_setting_from_environ(
+        'start_date', gql_course.course_environ)
 
 
 def resolve_end_date(gql_course, args, info):
     # Dates should be returned in UTC ISO8601 Zulu format
     # (eg "2016-05-01T07:00:00.000Z")
-    try:
-        return gql_course.course_settings['course']['end_date']
-    except KeyError:
-        return None
+    return courses.Course.get_named_course_setting_from_environ(
+        'end_date', gql_course.course_environ)
 
 
 def resolve_estimated_workload(gql_course, args, info):
-    try:
-        return gql_course.course_settings['course']['estimated_workload']
-    except KeyError:
-        return None
+    return courses.Course.get_named_course_setting_from_environ(
+        'estimated_workload', gql_course.course_environ)
 
 
 def resolve_category(gql_course, args, info):
-    try:
-        return CourseCategory(
-            name=gql_course.course_settings['course']['category_name'])
-    except KeyError:
-        return None
+    name = courses.Course.get_named_course_setting_from_environ(
+        'category_name', gql_course.course_environ)
+    return None if name is None else CourseCategory(name=name)
 
 
 def register():

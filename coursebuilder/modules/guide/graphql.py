@@ -28,13 +28,13 @@ class Guide(graphene.ObjectType):
 
     def resolve_color(self, args, info):
         try:
-            return self.course.course_settings['modules']['guide']['color']
+            return self.course.course_environ['modules']['guide']['color']
         except KeyError:
             return None
 
     def resolve_duration_minutes(self, args, info):
         try:
-            return self.course.course_settings['modules']['guide']['duration']
+            return self.course.course_environ['modules']['guide']['duration']
         except KeyError:
             return None
 

@@ -2854,11 +2854,21 @@ class Course(object):
                 sub_registry.add_property(schema_provider(course))
         return reg
 
-    def get_course_setting(self, name):
-        course_settings = self.get_environ(self._app_context).get('course')
-        if not course_settings:
-            return None
-        return course_settings.get(name)
+    def get_course_setting(self, name, default=None):
+        return self.get_named_course_setting_from_environ(
+            name, self.get_environ(self._app_context), default=default)
+
+    @classmethod
+    def get_named_course_setting_from_environ(cls, name, env, default=None):
+        return cls.get_course_settings_from_environ(env).get(name, default)
+
+    @classmethod
+    def set_named_course_setting_in_environ(cls, name, env, value):
+        cls.course_settings_in_environ(env)[name] = value
+
+    @classmethod
+    def clear_named_course_setting_in_environ(cls, name, env):
+        cls.course_settings_in_environ(env).pop(name, None)
 
     @classmethod
     def validate_course_yaml(cls, raw_string, course):
@@ -3594,6 +3604,10 @@ course:
         return env.get('reg_form', {})
 
     @classmethod
+    def get_named_reg_setting_from_environ(cls, name, env, default=None):
+        return cls.get_reg_form_from_environ(env).get(name, default)
+
+    @classmethod
     def get_course_availability_from_environ(cls, env):
         """Derive course availability policy based on other supplied env dict.
 
@@ -3746,24 +3760,37 @@ course:
 
     @classmethod
     def is_course_browsable(cls, app_context):
-        return cls.get_course_settings_from_environ(
-            app_context.get_environ()).get('browsable', False)
+        return cls.get_named_course_setting_from_environ(
+            'browsable', app_context.get_environ(), default=False)
 
     @classmethod
     def is_course_available(cls, app_context):
-        return cls.get_course_settings_from_environ(
-            app_context.get_environ()).get('now_available', False)
+        return cls.get_named_course_setting_from_environ(
+            'now_available', app_context.get_environ(), default=False)
 
     @classmethod
     def get_whitelist(cls, app_context):
-        env = app_context.get_environ()
-        reg_form_whitelist = cls.get_reg_form_from_environ(
-            env).get('whitelist', '')
+        return cls.get_whitelist_from_environ(app_context.get_environ())
+
+    @classmethod
+    def get_whitelist_from_environ(cls, env, default=''):
+        reg_form_whitelist = cls.get_whitelist_from_reg_form(
+            env, default=default)
         if reg_form_whitelist:
             return reg_form_whitelist
-        legacy_whitelist = cls.get_course_settings_from_environ(
-            env).get('whitelist', '')
+        legacy_whitelist = cls.get_whitelist_from_settings(
+            env, default=default)
         return legacy_whitelist
+
+    @classmethod
+    def get_whitelist_from_settings(cls, env, default=''):
+        return cls.get_named_course_setting_from_environ(
+            'whitelist', env, default=default)
+
+    @classmethod
+    def get_whitelist_from_reg_form(cls, env, default=''):
+        return cls.get_named_reg_setting_from_environ(
+            'whitelist', env, default=default)
 
     @classmethod
     def set_whitelist_into_environ(cls, whitelist, env):

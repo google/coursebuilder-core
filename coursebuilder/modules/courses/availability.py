@@ -418,20 +418,22 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
     @classmethod
     def construct_entity(cls, course):
         """Expose as function for convenience in wrapping this handler."""
-        settings = course.app_context.get_environ()
-        reg_form = settings.setdefault('reg_form', {})
+        env = course.app_context.get_environ()
+        entity = {
+            cls.COURSE_AVAILABILITY_SETTING:
+                course.get_course_availability_from_environ(env),
+            cls.WHITELIST_SETTING:
+                course.get_whitelist_from_environ(env),
+            cls.ELEMENT_SETTINGS:
+                cls.traverse_course(course),
+        }
 
         course_triggers = triggers.MilestoneTrigger.for_form(
-            course, settings)
-        content_triggers = triggers.ContentTrigger.for_form(
-            course, settings, selectable_content=cls.content_select(course))
-
-        entity = {
-            cls.COURSE_AVAILABILITY_SETTING: course.get_course_availability(),
-            cls.WHITELIST_SETTING: reg_form.get('whitelist', ''),
-            cls.ELEMENT_SETTINGS: cls.traverse_course(course)
-        }
+            course, env)
         entity.update(course_triggers)
+
+        content_triggers = triggers.ContentTrigger.for_form(
+            course, env, selectable_content=cls.content_select(course))
         entity.update(content_triggers)
         return entity
 

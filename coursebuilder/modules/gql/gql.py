@@ -384,7 +384,7 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
     open_for_registration = graphene.Boolean()
 
     @property
-    def course_settings(self):
+    def course_environ(self):
         return courses.Course.get_environ(self.app_context)
 
     @classmethod
@@ -419,7 +419,8 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
         return all_courses
 
     def resolve_title(self, args, info):
-        return self.course_settings['course']['title']
+        return courses.Course.get_named_course_setting_from_environ(
+            'title', self.course_environ)
 
     def resolve_all_units(self, args, info):
         return Unit.get_all_units(self.course, self.course_view)
@@ -436,25 +437,19 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
         return Enrollment(self.get_student(self.app_context))
 
     def resolve_abstract(self, args, info):
-        try:
-            return self.course_settings['course']['blurb']
-        except KeyError:
-            return None
+        return courses.Course.get_named_course_setting_from_environ(
+            'blurb', self.course_environ)
 
     def resolve_instructor_details(self, args, info):
-        try:
-            return self.course_settings['course']['instructor_details']
-        except KeyError:
-            return None
+        return courses.Course.get_named_course_setting_from_environ(
+            'instructor_details', self.course_environ)
 
     def resolve_url(self, args, info):
         return self.app_context.get_slug()
 
     def resolve_open_for_registration(self, args, info):
-        try:
-            return bool(self.course_settings['reg_form']['can_register'])
-        except KeyError:
-            return False
+        return bool(courses.Course.get_named_reg_setting_from_environ(
+            'can_register', self.course_environ, default=False))
 
 
 class Query(graphene.ObjectType):
