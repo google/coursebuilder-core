@@ -39,6 +39,8 @@ Date and time of the {}, as well as the overall availability of any course
 resources marked with "Course" availability.
 """
 
+MILESTONE_TRIGGERS_LEARN_MORE = 'course:availability:milestones'
+
 MILESTONE_TRIGGER_WHEN_DESC_FMT = """
 The date and hour (UTC) at {} when overall course availability will be changed.
 

@@ -143,7 +143,9 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             availability_options.option_to_title(milestone))
         desc = messages.MILESTONE_TRIGGER_DESCRIPTION_FMT.format(milestone)
         milestone_trigger = schema_fields.FieldRegistry(title,
-            description=desc, extra_schema_dict_values={
+            description=services.help_urls.make_learn_more_message(
+                desc, messages.MILESTONE_TRIGGERS_LEARN_MORE),
+            extra_schema_dict_values={
                 'className': trigger_cls.registry_css()})
         milestone_trigger.add_property(schema_fields.SchemaField(
             'milestone', '', 'string', i18n=False, hidden=True,
