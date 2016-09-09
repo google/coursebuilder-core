@@ -472,7 +472,7 @@ class YouTube(CoreTag):
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(YouTube.name())
         reg.add_property(schema_fields.SchemaField(
-            'videoid', 'Video ID', 'string',
+            'videoid', 'Video URL', 'string',
             description=messages.VIDEO_ID_DESCRIPTION))
         return reg
 

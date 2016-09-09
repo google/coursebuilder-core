@@ -344,6 +344,8 @@ class ValidateYoutubeVideoRecognizer(unittest.TestCase):
             'source=gmail&amp;ust=1465506905750000&amp;'
             'usg=AFQjCNELKJqzhBDZku-v0uUapICQMZCGGg">'))
         self.assertEquals(VIDEO_ID, utils.find_youtube_video_id(VIDEO_ID))
+        self.assertEquals(VIDEO_ID, utils.find_youtube_video_id(
+            'https://www.youtube.com/v/MRc_tS-cw8Q'))
 
         self.assertIsNone(utils.find_youtube_video_id(''))
         self.assertIsNone(utils.find_youtube_video_id(VIDEO_ID[1:]))

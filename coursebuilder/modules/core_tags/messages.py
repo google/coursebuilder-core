@@ -67,7 +67,7 @@ chooser.
 """
 
 VIDEO_ID_DESCRIPTION = """
-This is the YouTube video ID (e.g., Kdg2drcUjYI) to embed.
+This is the YouTube video URL to embed.
 """
 
 HTML5_VIDEO_URL_DESCRIPTION = """

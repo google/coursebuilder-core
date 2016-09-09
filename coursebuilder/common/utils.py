@@ -282,6 +282,7 @@ YOUTUBE_RECOGNIZERS = [re.compile(p) for p in (
     r'https?://(?:www\.)?youtube\.[a-z]+/watch\?v=([A-Za-z0-9_-]{11,})',
     r'https?://(?:www\.)?youtube\.[a-z]+/watch/([A-Za-z0-9_-]{11,})',
     r'https?://(?:www\.)?youtube\.[a-z]+/embed/([A-Za-z0-9_-]{11,})',
+    r'https?://(?:www\.)?youtube\.[a-z]+/v/([A-Za-z0-9_-]{11,})',
     r'https?://(?:www\.)?youtube\.[a-z]+/attribution_link.*' +
         r'u=/watch%3Fv%3D([A-Za-z0-9_-]{11,})',
     r'^([A-Za-z0-9_-]{11,})$',

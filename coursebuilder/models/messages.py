@@ -523,8 +523,7 @@ or "https".
 """
 
 IMAGE_OR_VIDEO_DESCRIPTION = """
-URL for the preview image or YouTube video shown on the course homepage. Videos
-must use the YouTube embed URL.
+URL for the preview image or YouTube video shown on the course homepage.
 """
 
 IMAGE_DESCRIPTION_DESCRIPTION = """
