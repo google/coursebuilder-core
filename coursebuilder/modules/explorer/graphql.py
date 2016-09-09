@@ -87,20 +87,6 @@ def resolve_site(gql_root, args, info):
         return Site({})
 
 
-def resolve_start_date(gql_course, args, info):
-    # Dates should be returned in UTC ISO8601 Zulu format
-    # (eg "2016-05-01T07:00:00.000Z")
-    return courses.Course.get_named_course_setting_from_environ(
-        'start_date', gql_course.course_environ)
-
-
-def resolve_end_date(gql_course, args, info):
-    # Dates should be returned in UTC ISO8601 Zulu format
-    # (eg "2016-05-01T07:00:00.000Z")
-    return courses.Course.get_named_course_setting_from_environ(
-        'end_date', gql_course.course_environ)
-
-
 def resolve_estimated_workload(gql_course, args, info):
     return courses.Course.get_named_course_setting_from_environ(
         'estimated_workload', gql_course.course_environ)
@@ -116,11 +102,6 @@ def register():
     gql.Query.add_to_class(
         'site', graphene.Field(Site, resolver=resolve_site))
 
-    # TODO(nretallack): When calendars is ready, write new resolvers.
-    gql.Course.add_to_class(
-        'start_date', graphene.String(resolver=resolve_start_date))
-    gql.Course.add_to_class(
-        'end_date', graphene.String(resolver=resolve_end_date))
     gql.Course.add_to_class(
         'estimated_workload', graphene.String(
             resolver=resolve_estimated_workload))

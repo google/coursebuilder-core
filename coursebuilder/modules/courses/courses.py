@@ -27,6 +27,7 @@ from modules.courses import admin_preferences_editor
 from modules.courses import assets
 from modules.courses import availability
 from modules.courses import availability_cron
+from modules.courses import graphql
 from modules.courses import lessons
 from modules.courses import outline
 from modules.courses import roles as course_roles
@@ -63,6 +64,7 @@ def register_module():
         admin_preferences_editor.on_module_enabled()
         availability.on_module_enabled(custom_module, permissions)
         course_roles.on_module_enabled(custom_module, permissions)
+        graphql.register()
         lessons.on_module_enabled(custom_module)
         settings.on_module_enabled(custom_module, permissions)
         unit_lesson_editor.on_module_enabled(custom_module, permissions)

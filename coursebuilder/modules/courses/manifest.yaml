@@ -26,6 +26,7 @@ files:
   - modules/courses/courses_pageobjects.py
   - modules/courses/courses_integration_tests.py
   - modules/courses/courses_tests.py
+  - modules/courses/graphql.py
   - modules/courses/import_running.html
   - modules/courses/lessons.py
   - modules/courses/manifest.yaml
