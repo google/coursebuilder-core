@@ -2667,7 +2667,7 @@ class AvailabilityTests(actions.TestBase):
         flat_all_mts = [mt for mts in all_mts.itervalues() for mt in mts]
         num_all_mts = len(flat_all_mts)
 
-        # In the case of MilestoneTrigger.from_form(), any triggers where
+        # In the case of MilestoneTrigger.for_form(), any triggers where
         # is_complete is False are discarded:
         #   empty, no_when, and no_avail
         # (course_start, course_end) * (empty, no_when, no_avail)

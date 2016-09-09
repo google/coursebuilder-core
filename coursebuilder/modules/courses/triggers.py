@@ -68,8 +68,8 @@ import logging
 
 from common import resource
 from common import utc
-from models import courses
 from common import utils
+from models import courses
 from modules.courses import availability_options
 
 
@@ -355,7 +355,7 @@ class DateTimeTrigger(object):
 
     @classmethod
     def triggers_in(cls, settings):
-        """Retrieves from or creates triggers list in supplied settings."""
+        """Retrieves (or creates empty) triggers list in supplied settings."""
         return settings.setdefault(cls.SETTINGS_NAME, [])
 
     @classmethod
@@ -363,7 +363,9 @@ class DateTimeTrigger(object):
         """Actual encoded availability triggers in course and/or settings.
 
         Args:
-            settings: subclass-specific settings containing encoded triggers.
+            settings: subclass-specific settings (which may be altered
+                *in place*, see the triggers_in() method, called by this
+                one), containing the encoded triggers.
 
         Returns:
             The *mutable* list of the encoded triggers (dicts with JSON
@@ -385,7 +387,9 @@ class DateTimeTrigger(object):
         """Copies encoded availability triggers from course and/or settings.
 
         Args:
-            settings: subclass-specific settings containing encoded triggers.
+            settings: subclass-specific settings containing the encoded
+                triggers, simply copied from and thus not altered by this
+                method.
 
         Returns:
             A *shallow copy* of the list of encoded triggers (dicts with JSON
@@ -402,7 +406,10 @@ class DateTimeTrigger(object):
         """Returns encoded availability triggers from settings as form values.
 
         Args:
-            settings: passed, untouched, through to copy_from_settings().
+            settings: passed, untouched, through to copy_from_settings(),
+                and thus works with all types of settings, e.g. a Course
+                get_environ() dict, or StudentGroupDTO for student_groups
+                trigger subclasses.
             kwargs: subclass-specific keyword arguments.
 
         Returns:
@@ -437,7 +444,8 @@ class DateTimeTrigger(object):
         Args:
             encoded_triggers: a list of encoded triggers, marshaled for
                 storing as settings values.
-            settings: subclass-specific settings containing encoded triggers.
+            settings: subclass-specific settings, updated *in place* by this
+                method with new encoded_triggers.
             semantics: one of the IMPLEMENTED_SET_SEMANTICS, defaulting to
                 the SET_WILL_OVERWRITE semantics (supported by all triggers)
                 if None.
@@ -474,7 +482,8 @@ class DateTimeTrigger(object):
         of the supplied course settings.
 
         Args:
-            settings: subclass-specific settings containing encoded triggers.
+            settings: subclass-specific settings, updated *in place* by this
+                method removing existing encoded triggers.
             kwargs: subclass-specific keyword arguments.
         """
         publish = courses.Course.publish_in_environ(settings)
@@ -493,7 +502,8 @@ class DateTimeTrigger(object):
             payload: POST form payload dict
             course: a Course passed through to set_into_settings(), used by
                 some trigger subclasses.
-            settings: subclass-specific settings containing encoded triggers.
+            settings: subclass-specific settings, updated *in place* by this
+                method with new encoded_triggers, via set_into_settings().
             semantics: see set_into_settings().
         """
         cls.set_into_settings(cls.from_payload(payload), settings,
@@ -610,14 +620,15 @@ class DateTimeTrigger(object):
 
         The base class (DateTimeTrigger) implementation of act() is a no-op.
         It simply logs that it was called and returns None. This is all that
-        can be reasponably expected, given that it has no specific course
+        can be reasponably expected, given that it has no specific details
         about what to do or update (unlike more-specific subclasses).
 
         Args:
             course: a Course that can be used or altered by subclass act()
                 methods.
             settings: subclass-specific settings that can be used or altered
-                by subclass act() methods.
+                by subclass act() methods (e.g. a Course get_environ() dict,
+                or StudentGroupDTO for student_groups trigger subclasses).
 
         Returns:
             A ChangedByAct namedtuple is returned if acting on the trigger
@@ -664,8 +675,8 @@ class DateTimeTrigger(object):
                 order of application.
             course: a Course that can be used or altered by subclass act()
                 methods.
-            settings: subclass-specific settings that can be used or altered
-                by subclass act() methods.
+            settings: subclass-specific settings that can be read or even
+                altered by subclass act() methods.
 
         Returns:
             An TriggeredActs namedtuple containing:
@@ -724,8 +735,9 @@ class DateTimeTrigger(object):
                 triggers, that may also be used or altered by subclass
                 act() methods.
             settings: subclass-specific settings, passed to
-                copy_from_settings() to obtain triggers, that may also be
-                used or altered by subclass act() methods.
+                copy_from_settings() to obtain any encoded triggers, then
+                read or even potentially altered by subclass act() methods,
+                and finally updated *in place* by set_into_settings().
             now: current UTC time as a datetime, used to decide if a valid
                 trigger is ready to be acted on.
 
@@ -1559,10 +1571,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         the SETTINGS_NAME key in a dict or a property in a DTO.
 
         Args:
-            settings: passed, untouched, through to the base class for_form(),
-                and thus works with all types of settings, e.g. a Course
-                get_environ() dict, or StudentGroupDTO for student_groups
-                trigger subclasses.
+            settings: passed, untouched, through to the base class.
             course: (optional) passed, untouched, through to separate().
 
         Returns:
@@ -1614,7 +1623,9 @@ class MilestoneTrigger(AvailabilityTrigger):
                 form payload), in no particular order, and possibly including
                 invalid triggers (e.g. '--- none selected ---' availability,
                 no 'when' date/time, etc.); any invalid triggers are omitted.
-            settings: passed, untouched, through to the base class.
+            settings: passed, untouched, through to the base class, where
+                the settings are then updated *in place* with new
+                encoded_triggers.
             semantics: one of
                 SET_WILL_OVERWITE -- De-duped, valid course milestone triggers
                     extracted from encoded_triggers are supplied to the base
@@ -1713,7 +1724,18 @@ class MilestoneTrigger(AvailabilityTrigger):
                 if cls.is_complete(rt) and not cls.is_defaults(rt)]
 
     def act(self, course, env):
-        """Updates course-wide availability as indicated by the trigger."""
+        """Updates course-wide availability as indicated by the trigger.
+
+        Note: this act() method specifically does *not* deal with receiving
+        a student_groups.StudentGroupDTO instead of a Course get_environ()
+        dict as its "settings" parameter. Any student_groups subclass of
+        MilestoneTrigger is expected to supply its own act() method.
+
+        Args:
+            course: a Course, currently unused.
+            env: a Course get_environ() dict containing settings that are
+                potentially updated *in-place* by act().
+        """
         current = courses.Course.get_course_availability_from_environ(env)
         new = self.availability
         if current == new:
