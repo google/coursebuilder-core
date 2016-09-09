@@ -66,10 +66,9 @@ import collections
 import datetime
 import logging
 
-from google.appengine.api import namespace_manager
-
 from common import resource
 from common import utc
+from common import utils
 from modules.courses import availability_options
 
 
@@ -195,7 +194,7 @@ class DateTimeTrigger(object):
             return utc.text_to_datetime(when)
         except (ValueError, TypeError) as err:
             logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.WHEN_TYPENAME,
-                namespace_manager.get_namespace(),
+                utils.get_ns_name_for_logging(),
                 {DateTimeTrigger.FIELD_NAME: when}, repr(err))
             return None
 
@@ -532,10 +531,10 @@ class DateTimeTrigger(object):
             # Nothing to do, so don't waste time logging, etc.
             return cls.Separated([], [], [], [], [], encoded_triggers)
 
-        namespace = course.app_context.get_namespace_name()
+        logged_ns = utils.get_ns_name_for_logging(course=course)
         logging.info(
             'SEPARATING %d encoded %s(s) in %s.', len(encoded_triggers),
-            cls.typename(), namespace)
+            cls.typename(), logged_ns)
 
         encoded = []
         decoded = []
@@ -546,7 +545,7 @@ class DateTimeTrigger(object):
         for et in encoded_triggers:
             if et is None:
                 logging.warning(cls.LOG_ISSUE_FMT, 'MISSING', cls.typename(),
-                    namespace, et, cls.MISSING_TRIGGER_FMT.format(None))
+                    logged_ns, et, cls.MISSING_TRIGGER_FMT.format(None))
                 # Nothing at all to do, and do not keep the None values.
                 continue
 
@@ -581,7 +580,7 @@ class DateTimeTrigger(object):
                 continue
 
             logging.warning(cls.LOG_ISSUE_FMT, 'IMPOSSIBLE', cls.typename(),
-                namespace, et, cls.IMPOSSIBLE_TRIGGER_FMT.format(
+                logged_ns, et, cls.IMPOSSIBLE_TRIGGER_FMT.format(
                     is_valid, is_future, is_ready))
 
         cls.sort(ready)
@@ -614,7 +613,7 @@ class DateTimeTrigger(object):
             change of any course or settings state.
         """
         logging.warning('UNIMPLEMENTED %s.act(%s, %s): %s',
-            self.typename(), course.app_context.get_namespace_name(),
+            self.typename(), utils.get_ns_name_for_logging(course=course),
             settings, self.logged)
         return None
 
@@ -669,27 +668,27 @@ class DateTimeTrigger(object):
             # Nothing to do, so don't waste time logging, etc.
             return cls.TriggeredActs(acted, ignored)
 
-        namespace = course.app_context.get_namespace_name()
+        logged_ns = utils.get_ns_name_for_logging(course=course)
 
         for dt in decoded_triggers:
             changed = dt.act(course, settings)
             if changed:
                 acted.append(cls.Acted(dt, changed))
                 logging.info('TRIGGERED %s %s from "%s" to "%s": %s',
-                             namespace, dt.kind(), changed.previous,
+                             logged_ns, dt.kind(), changed.previous,
                              changed.next, dt.logged)
             else:
                 ignored.append(dt)
                 logging.info('UNCHANGED %s %s: %s',
-                             namespace, dt.kind(), dt.logged)
+                             logged_ns, dt.kind(), dt.logged)
 
         if acted:
             logging.info('ACTED on %d %s %s(s).',
-                         len(acted), namespace, cls.typename())
+                         len(acted), logged_ns, cls.typename())
 
         if ignored:
             logging.info('IGNORED %d %s %s(s).',
-                         len(ignored), namespace, cls.typename())
+                         len(ignored), logged_ns, cls.typename())
 
         return cls.TriggeredActs(acted, ignored)
 
@@ -751,36 +750,36 @@ class DateTimeTrigger(object):
         return cls.SettingsActs(num_consumed, separated, num_changed, acts)
 
     @classmethod
-    def log_acted_on(cls, namespace, settings_acts,
+    def log_acted_on(cls, logged_ns, settings_acts,
                      course_saved, settings_saved):
         num_invalid = len(settings_acts.separated.invalid)
         if num_invalid:
             logging.warning('DISCARDED %d invalid %s(s) in %s.',
-                            num_invalid, cls.typename(), namespace)
+                            num_invalid, cls.typename(), logged_ns)
 
         num_consumed = settings_acts.num_consumed
         num_remaining = len(settings_acts.separated.future)
         if num_consumed:
             if settings_saved:
                 logging.info('KEPT %d future %s(s) in %s.',
-                    num_remaining, cls.typename(), namespace)
+                    num_remaining, cls.typename(), logged_ns)
             else:
                 logging.warning('FAILED to keep %d future %s(s) in %s.',
-                    num_remaining, cls.typename(), namespace)
+                    num_remaining, cls.typename(), logged_ns)
         elif num_remaining:
             logging.info('AWAITING %d future %s(s) in %s.',
-                num_remaining, cls.typename(), namespace)
+                num_remaining, cls.typename(), logged_ns)
 
         num_changed = settings_acts.num_changed
         if num_changed:
             if course_saved:
                 logging.info('SAVED %d change(s) to %s %s.',
-                    num_changed, namespace, cls.kind())
+                    num_changed, logged_ns, cls.kind())
             else:
                 logging.info('FAILED to save %d change(s) to %s %s.',
-                    num_changed, namespace, cls.kind())
+                    num_changed, logged_ns, cls.kind())
         else:
-            logging.info('UNTOUCHED %s %s.', namespace, cls.kind())
+            logging.info('UNTOUCHED %s %s.', logged_ns, cls.kind())
 
     @classmethod
     def typename(cls):
@@ -843,7 +842,7 @@ class AvailabilityTrigger(DateTimeTrigger):
             return availability
 
         logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.kind(),
-            namespace_manager.get_namespace(),
+            utils.get_ns_name_for_logging(),
             {AvailabilityTrigger.FIELD_NAME: availability},
             cls.UNEXPECTED_AVAIL_FMT.format(
                 availability, cls.AVAILABILITY_VALUES))
@@ -982,7 +981,7 @@ class ContentTrigger(AvailabilityTrigger):
             return content_type
 
         logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
-            namespace_manager.get_namespace(), {'content_type': content_type},
+            utils.get_ns_name_for_logging(), {'content_type': content_type},
             cls.UNEXPECTED_CONTENT_FMT.format(
                 content_type, cls.ALLOWED_CONTENT_TYPES))
         return None
@@ -1001,7 +1000,7 @@ class ContentTrigger(AvailabilityTrigger):
         except (AssertionError, AttributeError, ValueError) as err:
             encoded = {'content_type': content_type, 'content_id': content_id}
             logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
-                namespace_manager.get_namespace(), encoded, repr(err))
+                utils.get_ns_name_for_logging(), encoded, repr(err))
             return None
 
     @classmethod
@@ -1022,7 +1021,7 @@ class ContentTrigger(AvailabilityTrigger):
             Either a valid content resource.Key obtained from one or more of
             the supplied keyword arguments, or None.
         """
-        namespace = namespace_manager.get_namespace()
+        logged_ns = utils.get_ns_name_for_logging()
 
         # If `content` was not provided, validate content type and ID instead.
         if not content:
@@ -1036,7 +1035,7 @@ class ContentTrigger(AvailabilityTrigger):
                 content = resource.Key.fromstring(content)
             except (AssertionError, AttributeError, ValueError) as err:
                 logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
-                    namespace, {ContentTrigger.FIELD_NAME: str(content)},
+                    logged_ns, {ContentTrigger.FIELD_NAME: str(content)},
                     repr(err))
                 return None
         # else:
@@ -1050,7 +1049,7 @@ class ContentTrigger(AvailabilityTrigger):
         # `content` is now a valid resource.Key, but resource.Key.type is not
         # one of the ALLOWED_CONTENT_TYPES.
         logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.KEY_TYPENAME,
-            namespace, {ContentTrigger.FIELD_NAME: str(content)},
+            logged_ns, {ContentTrigger.FIELD_NAME: str(content)},
             cls.UNEXPECTED_CONTENT_FMT.format(
                 content.type, cls.ALLOWED_CONTENT_TYPES))
         return None
@@ -1190,10 +1189,10 @@ class ContentTrigger(AvailabilityTrigger):
 
     @classmethod
     def get_content_finder(cls, content):
-        namespace = namespace_manager.get_namespace()
+        logged_ns = utils.get_ns_name_for_logging()
         if not content:
             logging.warning(cls.LOG_ISSUE_FMT, 'UNSPECIFIED', cls.KEY_TYPENAME,
-                namespace, {ContentTrigger.FIELD_NAME: content},
+                logged_ns, {ContentTrigger.FIELD_NAME: content},
                 '"{}" has no content finder function.'.format(content))
             return None
 
@@ -1202,17 +1201,17 @@ class ContentTrigger(AvailabilityTrigger):
             return find_func
 
         logging.warning(cls.LOG_ISSUE_FMT, 'UNEXPECTED', cls.KEY_TYPENAME,
-            namespace, {ContentTrigger.FIELD_NAME: str(content)},
+            logged_ns, {ContentTrigger.FIELD_NAME: str(content)},
             cls.UNEXPECTED_CONTENT_FMT.format(
                 content.type, cls.ALLOWED_CONTENT_TYPES))
         return None
 
     @classmethod
     def find_content_in_course(cls, content, course, find_func=None):
-        namespace = namespace_manager.get_namespace()
+        logged_ns = utils.get_ns_name_for_logging(course=course)
         if not course:
             logging.warning(cls.LOG_ISSUE_FMT, 'ABSENT', 'course',
-                namespace, {ContentTrigger.FIELD_NAME: str(content)},
+                logged_ns, {ContentTrigger.FIELD_NAME: str(content)},
                 'CANNOT find content in "{}" course.'.format(course))
             return None
 
@@ -1227,7 +1226,7 @@ class ContentTrigger(AvailabilityTrigger):
             return found
 
         logging.warning(cls.LOG_ISSUE_FMT, 'OBSOLETE', cls.KEY_TYPENAME,
-            namespace, {ContentTrigger.FIELD_NAME: str(content)},
+            logged_ns, {ContentTrigger.FIELD_NAME: str(content)},
             cls.MISSING_CONTENT_FMT.format(content))
         return None
 
@@ -1246,7 +1245,7 @@ class ContentTrigger(AvailabilityTrigger):
             A list of the remaining content triggers (encoded in form payload
             and stored settings form) whose associated content still exist.
         """
-        namespace = namespace_manager.get_namespace()
+        logged_ns = utils.get_ns_name_for_logging()
 
         # Course content associated with existing availability triggers could
         # have been deleted since the trigger itself was created. If the
@@ -1266,7 +1265,7 @@ class ContentTrigger(AvailabilityTrigger):
                 triggers_with_content.append(encoded)
             else:
                 logging.warning(cls.LOG_ISSUE_FMT, 'OBSOLETE',
-                    cls.KEY_TYPENAME, namespace, encoded,
+                    cls.KEY_TYPENAME, logged_ns, encoded,
                     cls.MISSING_CONTENT_FMT.format(encoded_content))
 
         return triggers_with_content
@@ -1286,7 +1285,7 @@ class ContentTrigger(AvailabilityTrigger):
 
         logging.info('APPLIED %s from "%s" to "%s" for %s in %s: %s',
             self.kind(), current, new, self.encoded_content,
-            course.app_context.get_namespace_name(), self.logged)
+            utils.get_ns_name_for_logging(course=course), self.logged)
 
         self.found.availability = new
         return self.ChangedByAct(current, new)
@@ -1377,7 +1376,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         """Validates when (encoded or decoded); returns datetime or None."""
         if when is None:
             logging.info(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
-                namespace_manager.get_namespace(),
+                utils.get_ns_name_for_logging(),
                 {DateTimeTrigger.FIELD_NAME: when},
                 cls.UNSPECIFIED_FMT.format(cls.WHEN_TYPENAME))
             return None
@@ -1388,7 +1387,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         """Returns availability if in AVAILABILITY_VALUES, otherwise None."""
         if (not availability) or (availability == cls.NONE_SELECTED):
             logging.info(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
-                namespace_manager.get_namespace(),
+                utils.get_ns_name_for_logging(),
                 {AvailabilityTrigger.FIELD_NAME: availability},
                 'No availability selected.')
             return None
@@ -1422,7 +1421,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         if milestone in cls.KNOWN_MILESTONES:
             return milestone
         logging.warning(cls.LOG_ISSUE_FMT, 'INVALID',
-            MilestoneTrigger.FIELD_NAME, namespace_manager.get_namespace(),
+            MilestoneTrigger.FIELD_NAME, utils.get_ns_name_for_logging(),
             {MilestoneTrigger.FIELD_NAME: milestone},
             cls.UNEXPECTED_MILESTONE_FMT.format(
                 milestone, cls.KNOWN_MILESTONES))
@@ -1672,9 +1671,9 @@ class MilestoneTrigger(AvailabilityTrigger):
             return None
 
         logging.info('APPLIED %s from "%s" to "%s" at %s in %s: %s',
-                     self.kind(), current, new,
-                     availability_options.option_to_title(self.milestone),
-                     course.app_context.get_namespace_name(), self.logged)
+            self.kind(), current, new,
+            availability_options.option_to_title(self.milestone),
+            utils.get_ns_name_for_logging(course=course), self.logged)
 
         course.set_course_availability_into_environ(new, env)
         return self.ChangedByAct(current, new)

@@ -2592,14 +2592,20 @@ class AvailabilityTests(actions.TestBase):
         trigger_type = unimplemented_trigger.typename()
 
         unimplemented_trigger.act(any_course, settings)
+        unimplemented_trigger.act(None, settings)  # Default '' namespace.
 
         logs = self.get_log()
         self._unimplemented_act_logged(logs)
 
-        escaped = re.escape('UNIMPLEMENTED {}.act({}, {}): {}('.format(
+        with_ns = re.escape('UNIMPLEMENTED {}.act({}, {}): {}('.format(
             trigger_type, self.NAMESPACE, settings, trigger_type))
-        ua_re = '{}{}\\)'.format(escaped, self._CHARS_IN_ISO_8601_DATETIME)
-        self.assertRegexpMatches(logs, ua_re)
+        ns_re = '{}{}\\)'.format(with_ns, self._CHARS_IN_ISO_8601_DATETIME)
+        self.assertRegexpMatches(logs, ns_re)
+
+        no_ns = re.escape('UNIMPLEMENTED {}.act({}, {}): {}('.format(
+            trigger_type, "''", settings, trigger_type))
+        no_ns_re = '{}{}\\)'.format(no_ns, self._CHARS_IN_ISO_8601_DATETIME)
+        self.assertRegexpMatches(logs, no_ns_re)
 
     def _when_value_error_regexp(self, when):
         with_when = "ValueError(\"time data '{}' does not match".format(when)

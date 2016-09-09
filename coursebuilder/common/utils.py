@@ -121,6 +121,50 @@ class Namespace(object):
         return False  # Don't suppress exceptions
 
 
+DEFAULT_NS_NAME_FOR_LOGGING = "''"
+
+def get_ns_name_for_logging(app_context=None, course=None):
+    """Obtains a namespace name string suitable for logging.
+
+    NOTE: Do not use the namespace name string returned by this function for
+    purposes other than generating log messages. If the namespace name string
+    retrieved via any of the methods described in "Returns:" below represents
+    the default namespace (e.g. the empty "" string, or None), a string
+    containing exactly two single quotes, i.e. "''", (which also does not
+    accidentally match the valid ^[0-9A-Za-z._-]{0,%s}$ namespace name regexp)
+    is returned instead, making it more easily distinguished in log messages.
+
+    Args:
+        app_context: (optional) get_namespace_name() is called on this if
+            supplied by caller.
+        course: (optional) used to obtain an app_context if supplied by caller
+            but app_context was not (and then get_namespace_name() is called
+            on that course.app_context).
+
+    Returns:
+        0) DEFAULT_NS_NAME_FOR_LOGGING, "''", if return value would be empty
+           or None for any reason, otherwise:
+        1) app_context.get_namespace_name() if app_context was supplied.
+        2) course.app_context.get_namespace_name() if course was supplied but
+           app_context was not.
+        3) namespace_manager.get_namespace() if an app_context cannot be
+           determined from any supplied optional parameters.
+    """
+    if not app_context:
+        app_context = None if not course else course.app_context
+
+    if app_context:
+        logged_ns = app_context.get_namespace_name()
+    else:
+        logged_ns = namespace_manager.get_namespace()
+
+    if not logged_ns:
+        # Make the "default" namespace (an empty string) visible in logs.
+        logged_ns = DEFAULT_NS_NAME_FOR_LOGGING
+
+    return logged_ns
+
+
 def log_exception_origin():
     """Log the traceback of the origin of an exception as a critical error.
 

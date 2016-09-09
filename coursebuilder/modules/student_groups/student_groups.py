@@ -115,17 +115,17 @@ class OverrideTriggerMixin(object):
         override = student_group.get_override(key, AVAILABILITY_NO_OVERRIDE)
 
         if override != new_override:
-            namespace = course.app_context.get_namespace_name()
+            logged_ns = common_utils.get_ns_name_for_logging(course=course)
             if new_override == AVAILABILITY_NO_OVERRIDE:
                 logging.info(
                     'REMOVED %s %s %s "%s" from %s (due to "%s" trigger): %s',
-                    student_group.name, key, self.kind(), override, namespace,
+                    student_group.name, key, self.kind(), override, logged_ns,
                     new_override, self.logged)
                 student_group.remove_override(key)
             else:
                 logging.info('APPLIED %s %s %s from "%s" to "%s" in %s: %s',
                     student_group.name, key, self.kind(), override,
-                    new_override, namespace, self.logged)
+                    new_override, logged_ns, self.logged)
                 student_group.set_override(key, new_override)
             changed = self.ChangedByAct(override, new_override)
 
@@ -1375,7 +1375,7 @@ def modify_unit_and_lesson_attributes(course, units, lessons):
 
 def act_on_all_triggers(course):
     """Hourly cron callback that updates availability based on triggers."""
-    namespace = course.app_context.get_namespace_name()
+    logged_ns = common_utils.get_ns_name_for_logging(course=course)
 
     for group in StudentGroupDAO.get_all_iter():  # Not cache-affecting.
         now = utc.now_as_datetime()
@@ -1392,9 +1392,9 @@ def act_on_all_triggers(course):
 
         overrides_changed = content_acts.num_changed or course_acts.num_changed
         CourseOverrideTrigger.log_acted_on(
-            namespace, course_acts, overrides_changed, save_settings)
+            logged_ns, course_acts, overrides_changed, save_settings)
         ContentOverrideTrigger.log_acted_on(
-            namespace, content_acts, overrides_changed, save_settings)
+            logged_ns, content_acts, overrides_changed, save_settings)
 
 
 class AddToStudentAggregate(
