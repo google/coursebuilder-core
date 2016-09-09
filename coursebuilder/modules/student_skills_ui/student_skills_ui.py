@@ -21,8 +21,10 @@ import os
 import jinja2
 
 import appengine_config
+from common import schema_fields
 from common import jinja_utils
 from controllers import utils
+from models import courses
 from models import custom_modules
 from models import transforms
 from modules.skill_map import skill_map
@@ -33,7 +35,8 @@ TEMPLATE_DIR = os.path.join(
 
 MODULE_NAME = 'student_skills_ui'
 MODULE_TITLE = 'Student Skills UI'
-
+SETTINGS_SCHEMA_SECTION_NAME = 'student_skills_ui'
+SETTING_LOCAL_GRAPH_ENABLED = 'local_graph'
 
 class StudentSkillsUIHandler(utils.BaseHandler):
     """Handles the visualization of the course map."""
@@ -131,8 +134,15 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
     def on_module_enabled():
-        # Register "Skill map" element on navbar.
-        utils.CourseHandler.LEFT_LINKS.append(course_page_navbar_callback)
+      enable_graph_setting = schema_fields.SchemaField(
+          SETTINGS_SCHEMA_SECTION_NAME + ':' + SETTING_LOCAL_GRAPH_ENABLED,
+          'Skill Graph in Course Content', 'boolean', optional=True,
+          i18n=None)
+      course_settings_fields = (
+          lambda c: enable_graph_setting,
+      )
+      courses.Course.OPTIONS_SCHEMA_PROVIDERS[
+          skill_map.MODULE_NAME] += course_settings_fields
 
     global custom_module   # pylint: disable=global-statement
 
