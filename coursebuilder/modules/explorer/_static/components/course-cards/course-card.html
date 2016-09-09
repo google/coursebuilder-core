@@ -112,15 +112,32 @@
           <div body style="display: flex">
             <div id="enrollment-info">
               <div id="enrollment-status">[[_getEnrollmentStatus(course.*)]]</div>
-              <template is="dom-if" if="[[_hasDates(course)]]">
-                <div class="date-range">[[_formatDate(course.startDate)]] -
-                [[_formatDate(course.endDate)]]</div>
-                <div class="duration-description">
-                [[_differenceInWeeks(course.startDate, course.endDate)]]
-                week course<template is="dom-if"
-                if="[[course.estimatedWorkload]]">,
-                [[course.estimatedWorkload]]</template>
-                </div>
+              <template is="dom-if" if="[[_hasAtLeastOneDate(course)]]">
+                <template is="dom-if" if="[[_hasOnlyStartDate(course)]]">
+                  <div class="date-range">
+                    Start[[_onlySuffix(course.startDate)]]
+                    [[_formatDate(course.startDate)]]
+                  </div>
+                </template>
+                <template is="dom-if" if="[[_hasOnlyEndDate(course)]]">
+                  <div class="date-range">
+                    End[[_onlySuffix(course.endDate)]]
+                    [[_formatDate(course.endDate)]]
+                  </div>
+                </template>
+                <template is="dom-if" if="[[_hasBothDates(course)]]">
+                  <div class="date-range">
+                    [[_formatDate(course.startDate)]] -
+                    [[_formatDate(course.endDate)]]
+                  </div>
+                  <div class="duration-description">
+                    [[_differenceInWeeks(course.startDate, course.endDate)]]
+                    week course<template is="dom-if"
+                                         if="[[course.estimatedWorkload]]">,
+                      [[course.estimatedWorkload]]
+                    </template>
+                  </div>
+                </template>
               </template>
             </div>
           </div>
@@ -143,8 +160,11 @@
         var course = course.base;
         if (course.enrollment.enrolled) {
           return 'Registered';
-        } else if (!course.openForRegistration) {
+        } else if (
+            course.endDate && new Date() > new Date(course.endDate)) {
           return 'Ended';
+        } else if (!course.openForRegistration) {
+          return 'Closed';
         } else if (
             course.startDate && new Date() < new Date(course.startDate)) {
           return 'Pre-registration';
@@ -159,18 +179,33 @@
           "December"];
         var result = monthNames[date.getMonth()] + ' ' + date.getDate();
         if (date.getFullYear() != new Date().getFullYear()) {
-          result += ', ' + date.getFullYear()
+          result += ', ' + date.getFullYear();
         }
         return result;
       },
-      _hasDates: function(course) {
+      _hasAtLeastOneDate: function(course) {
+        return course.startDate || course.endDate;
+      },
+      _hasBothDates: function(course) {
         return course.startDate && course.endDate;
       },
       _differenceInWeeks: function(startDate, endDate) {
         return Math.ceil(
           (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-          1000 / 60 / 60 / 24 / 7)
-      }
+          1000 / 60 / 60 / 24 / 7);
+      },
+      _hasOnlyStartDate: function(course) {
+        return course.startDate && !course.endDate;
+      },
+      _hasOnlyEndDate: function(course) {
+        return course.endDate && !course.startDate;
+      },
+      _onlySuffix: function(someDate) {
+        if (someDate && new Date() > new Date(someDate)) {
+          return 'ed';  /* "Started" or "Ended" */
+        }
+        return 's';  /* "Starts" or "Ends" */
+      },
     })
   </script>
 </dom-module>
