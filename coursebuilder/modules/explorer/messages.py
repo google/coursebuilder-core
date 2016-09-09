@@ -25,16 +25,6 @@ explorer page. Otherwise, it redirects to the preview page for the default
 course.
 """
 
-COURSE_START_DATE_DESCRIPTION = """
-This date is shown in the course explorer.  It doesn't actually cause the course
-to start.
-"""
-
-COURSE_END_DATE_DESCRIPTION = """
-This date is shown in the course explorer.  It doesn't actually cause the course
-to end.
-"""
-
 COURSE_ESTIMATED_WORKLOAD_DESCRIPTION = """
 Estimate the amount of work this course will take, e.g. "10hrs".  This is
 displayed in the course explorer.
