@@ -139,9 +139,15 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
         user = users.get_current_user()
         if not user:
             self.redirect(
-                users.create_login_url('/admin/welcome'), normalize=False)
+                users.create_login_url('/modules/admin'), normalize=False)
             return
         if not self.can_view():
+            login_url = users.create_login_url('/modules/admin')
+            message = """The current user has insufficient rights to access
+                this page.<br> Go to the <a href="{login_url}">Login page</a>
+                to log in as an administrator, or go back to the
+                <a href="/">Home page</a>""".format(login_url=login_url)
+            self.response.write(safe_dom.escape(message))
             return
         super(WelcomeHandler, self).get()
 

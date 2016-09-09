@@ -84,6 +84,17 @@ class AdminDashboardTabTests(actions.TestBase):
         courses_item = dom.find('.//*[@id="menu-item__courses"]')
         self.assertIsNotNone(courses_item)
 
+    def test_admin_welcome_shows_redirects_for_non_admin(self):
+        actions.login(self.ADMIN_EMAIL, is_admin=False)
+
+        response = self.get('/admin/welcome')
+
+        self.assertIsNotNone(
+            re.search('&lt;a.*&gt;Login page&lt;/a&gt;', response.text))
+        self.assertIsNotNone(
+            re.search('&lt;a href=&quot;/&quot;&gt;Home page&lt;/a&gt;',
+                      response.text))
+
     def test_debug_info_not_present_for_non_admin(self):
         # NOTE: the is_admin=True version of this test is
         # functional.test_classes.AdminAspectTest.test_access_to_admin_pages
