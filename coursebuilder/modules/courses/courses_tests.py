@@ -2630,8 +2630,7 @@ class AvailabilityTests(actions.TestBase):
 
         # Expect no triggers to be present in course settings initially.
         empty_settings = app_context.get_environ()
-        self.assertEquals(tct.in_settings(
-            course_for_elements, empty_settings), [])
+        self.assertEquals(tct.in_settings(empty_settings), [])
 
         # Cron job should log that there were triggers no waiting.
         self._run_availability_jobs(app_context)
@@ -2688,8 +2687,7 @@ class AvailabilityTests(actions.TestBase):
         response = self._post(all_triggers)
         self.assertEquals(200, response.status_int)
         posted_settings = app_context.get_environ()
-        self.assertEquals(all_cts, tct.in_settings(
-            course_for_elements, posted_settings))
+        self.assertEquals(all_cts, tct.in_settings(posted_settings))
 
         # The bad milestone (course start/end) triggers are 'SKIPPED' and
         # discarded before ever being written into the course settings. Only
@@ -2707,7 +2705,7 @@ class AvailabilityTests(actions.TestBase):
         num_good_mts = len(flat_good_mts)
         self.assertEquals(num_good_mts, num_known_milestones)
         self.assertEquals(good_mts, tmt.for_form(
-            course_for_elements, posted_settings))
+            posted_settings, course=course_for_elements))
 
         # All of the "exceptional" course start/end milestone triggers should
         # have been logged by the POST handler. They would not even be written
@@ -2807,8 +2805,7 @@ class AvailabilityTests(actions.TestBase):
         # Confirm that only valid future content triggers remain (faulty
         # content triggers were dropped and past content triggers applied.
         after_settings = app_context.get_environ()
-        self.assertEquals(future_cts, tct.in_settings(
-            course_for_elements, after_settings))
+        self.assertEquals(future_cts, tct.in_settings(after_settings))
 
         # TODO(tlarsen):
         # Confirm that only valid future course milestone triggers (i.e.

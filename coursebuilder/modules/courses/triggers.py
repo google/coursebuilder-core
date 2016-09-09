@@ -68,6 +68,7 @@ import logging
 
 from common import resource
 from common import utc
+from models import courses
 from common import utils
 from modules.courses import availability_options
 
@@ -358,12 +359,10 @@ class DateTimeTrigger(object):
         return settings.setdefault(cls.SETTINGS_NAME, [])
 
     @classmethod
-    def in_settings(cls, course, settings):
+    def in_settings(cls, settings):
         """Actual encoded availability triggers in course and/or settings.
 
         Args:
-            course: a Course from which some settings may be obtained; also
-                used in validation of some encoded triggers.
             settings: subclass-specific settings containing encoded triggers.
 
         Returns:
@@ -372,7 +371,7 @@ class DateTimeTrigger(object):
             possibly a newly-created empty list into which triggers can be
             inserted).
         """
-        return cls.triggers_in(course.publish_in_environ(settings))
+        return cls.triggers_in(courses.Course.publish_in_environ(settings))
 
     @classmethod
     def copy_triggers_from(cls, settings):
@@ -382,12 +381,10 @@ class DateTimeTrigger(object):
                 else list(settings[cls.SETTINGS_NAME]))
 
     @classmethod
-    def copy_from_settings(cls, course, settings):
+    def copy_from_settings(cls, settings):
         """Copies encoded availability triggers from course and/or settings.
 
         Args:
-            course: a Course from which some settings may be obtained; also
-                used in validation of some encoded triggers.
             settings: subclass-specific settings containing encoded triggers.
 
         Returns:
@@ -398,14 +395,13 @@ class DateTimeTrigger(object):
         """
         return ([] if settings is None
                 else cls.copy_triggers_from(
-                    course.get_publish_from_environ(settings)))
+                    courses.Course.get_publish_from_environ(settings)))
 
     @classmethod
-    def for_form(cls, course, settings, **kwargs):
+    def for_form(cls, settings, **kwargs):
         """Returns encoded availability triggers from settings as form values.
 
         Args:
-            course: passed, untouched, through to copy_from_settings().
             settings: passed, untouched, through to copy_from_settings().
             kwargs: subclass-specific keyword arguments.
 
@@ -415,7 +411,7 @@ class DateTimeTrigger(object):
           unaltered results of copy_from_settings() as the value.
         """
         return {
-            cls.SETTINGS_NAME: cls.copy_from_settings(course, settings),
+            cls.SETTINGS_NAME: cls.copy_from_settings(settings),
         }
 
     @classmethod
@@ -431,8 +427,8 @@ class DateTimeTrigger(object):
                 semantics, cls.IMPLEMENTED_SET_SEMANTICS))
 
     @classmethod
-    def set_into_settings(cls, encoded_triggers, course, settings,
-                          semantics=None):
+    def set_into_settings(cls, encoded_triggers, settings,
+                          semantics=None, **kwargs):
         """Sets encoded availability triggers into the supplied settings.
 
         If a non-empty encoded_triggers list was supplied, it is set as the
@@ -441,7 +437,6 @@ class DateTimeTrigger(object):
         Args:
             encoded_triggers: a list of encoded triggers, marshaled for
                 storing as settings values.
-            course: a Course used by some encoded_triggers during validation.
             settings: subclass-specific settings containing encoded triggers.
             semantics: one of the IMPLEMENTED_SET_SEMANTICS, defaulting to
                 the SET_WILL_OVERWRITE semantics (supported by all triggers)
@@ -456,6 +451,8 @@ class DateTimeTrigger(object):
               SET_WILL_MERGE -- See subclass set_into_settings() methods for
                   discussion of how merge semantics are implemented by that
                   subclass.
+            kwargs: subclass-specific keyword arguments passed through to
+                clear_from_settings() if it is called.
         """
         # ValueError is raised if an unsupported set semantics value was
         # supplied (but otherwise this base class implementation ignores the
@@ -463,14 +460,24 @@ class DateTimeTrigger(object):
         # default 'overwrite' semantics).
         cls.check_set_semantics(semantics)
         if encoded_triggers:
-            publish = course.publish_in_environ(settings)
+            publish = courses.Course.publish_in_environ(settings)
             publish[cls.SETTINGS_NAME] = encoded_triggers
         else:
-            cls.clear_from_settings(course, settings)
+            cls.clear_from_settings(settings, **kwargs)
 
     @classmethod
-    def clear_from_settings(cls, course, settings, **unused_kwargs):
-        publish = course.publish_in_environ(settings)
+    def clear_from_settings(cls, settings, **kwargs):
+        """Removes class triggers from the supplied settings.
+
+        The default behavior of this method is to remove the all of the
+        subclass triggers (the SETTINGS_NAME list) from the 'publish' part
+        of the supplied course settings.
+
+        Args:
+            settings: subclass-specific settings containing encoded triggers.
+            kwargs: subclass-specific keyword arguments.
+        """
+        publish = courses.Course.publish_in_environ(settings)
         publish.pop(cls.SETTINGS_NAME, None)  # No KeyError if missing.
 
     @classmethod
@@ -480,9 +487,17 @@ class DateTimeTrigger(object):
 
     @classmethod
     def payload_into_settings(cls, payload, course, settings, semantics=None):
-        """Sets triggers from form payload in settings for a course."""
-        cls.set_into_settings(cls.from_payload(payload), course, settings,
-                              semantics=semantics)
+        """Sets triggers from form payload in settings for a course.
+
+        Args:
+            payload: POST form payload dict
+            course: a Course passed through to set_into_settings(), used by
+                some trigger subclasses.
+            settings: subclass-specific settings containing encoded triggers.
+            semantics: see set_into_settings().
+        """
+        cls.set_into_settings(cls.from_payload(payload), settings,
+                              semantics=semantics, course=course)
 
     @classmethod
     def sort(cls, triggers):
@@ -725,7 +740,7 @@ class DateTimeTrigger(object):
                 act_on_triggers() applied to the "ready" triggers.
         """
         # Extract all cls type triggers from supplied settings.
-        encoded_triggers = cls.copy_from_settings(course, settings)
+        encoded_triggers = cls.copy_from_settings(settings)
 
         # Separate triggers into "ready to apply" and future triggers.
         separated = cls.separate(encoded_triggers, course, now=now)
@@ -745,7 +760,7 @@ class DateTimeTrigger(object):
             # Update the triggers stored in the settings with the remaining
             # future triggers.  (These settings are not yet saved, as that is
             # the responsibility of the caller.)
-            cls.set_into_settings(future_encoded, course, settings)
+            cls.set_into_settings(future_encoded, settings, course=course)
 
         return cls.SettingsActs(num_consumed, separated, num_changed, acts)
 
@@ -1158,25 +1173,21 @@ class ContentTrigger(AvailabilityTrigger):
                 super(ContentTrigger, self).is_valid)
 
     @classmethod
-    def for_form(cls, course, settings, selectable_content=None,
-                 **super_kwargs):
+    def for_form(cls, settings, selectable_content=None):
         """Returns encoded availability triggers from settings as form values.
 
         Args:
-            course: passed, untouched, through to the base class.
             settings: passed, untouched, through to the base class.
             selectable_content:  a collection (typically a select_data dict)
                 containing the encoded 'content' resource.Key strings of
                 existing Course units, lessons, etc.
-            super_kwargs: remaining keyword arguments passed to the base class.
 
         Returns:
           A list of the ContentTriggers from the encoded copy_from_settings()
           triggers whose associated 'content' exists (that is, the encoded
           key of the unit, lessong, et.c, was found in selectable_content).
         """
-        form_fields = super(ContentTrigger, cls).for_form(
-            course, settings, **super_kwargs)
+        form_fields = super(ContentTrigger, cls).for_form(settings)
 
         if not selectable_content:
             # Without knowledge of valid content, there is no way to discard
@@ -1479,8 +1490,8 @@ class MilestoneTrigger(AvailabilityTrigger):
         Args:
             milestone: an explicitly specified milestone "name"; there are
                 no "unnamed" MilestoneTriggers, so some valid milestone value
-                from the class KNOWN_MILESTONES *must* be supplied
-            super_kwargs: keyword arguments passed on to base class
+                from the class KNOWN_MILESTONES *must* be supplied.
+            super_kwargs: keyword arguments passed on to base class.
         """
         if not cls.validate_milestone(milestone):
             return None
@@ -1519,17 +1530,40 @@ class MilestoneTrigger(AvailabilityTrigger):
         return encoded_trigger == defaults
 
     @classmethod
-    def for_form(cls, course, settings, **super_kwargs):
+    def copy_milestone_from_environ(cls, milestone, env):
+        """Copies the specified milestone from a supplied get_environ() dict.
+
+        Args:
+            milestone: one of the KNOWN_MILESTONE strings.
+            env: a Course get_environ() dict.
+
+        Returns the specified milestone trigger in "encoded" form (a dict of
+        JSON-encoded string key/value pairs) if that trigger is present in
+        the supplied Course get_environ() dict. Otherwise, an empty dict is
+        returned.
+        """
+        # len(KNOWN_MILESTONES) is the upper bound of the length of the list
+        # returned by copy_from_settings(). The current length of that list
+        # is *2*, so just traverse it, instead of calling for_form() to
+        # transform it into a milestone-keyed dict of single value lists.
+        for mt in cls.copy_from_settings(env):
+            if mt.get('milestone') == milestone:
+                return mt.copy()  # Just string values, so shallow copy OK.
+        return {}
+
+    @classmethod
+    def for_form(cls, settings, course=None):
         """Groups milestone triggers; provides defaults for absent triggers.
 
         Milestone triggers are stored as a single list that is the value of
         the SETTINGS_NAME key in a dict or a property in a DTO.
 
         Args:
-            course: a Course from which to obtain encoded content triggers
-                from the course settings.
-            settings: passed, untouched, through to the base class.
-            super_kwargs: keyword arguments passed to the base class.
+            settings: passed, untouched, through to the base class for_form(),
+                and thus works with all types of settings, e.g. a Course
+                get_environ() dict, or StudentGroupDTO for student_groups
+                trigger subclasses.
+            course: (optional) passed, untouched, through to separate().
 
         Returns:
             A dict with all KNOWN_MILESTONES as keys, and single-value
@@ -1544,7 +1578,7 @@ class MilestoneTrigger(AvailabilityTrigger):
             the returned dict).
         """
         lists_of_encoded_triggers = super(MilestoneTrigger, cls).for_form(
-            course, settings, **super_kwargs).itervalues()
+            settings).itervalues()
         flattened = [et for ets in lists_of_encoded_triggers for et in ets]
         deduped = {et[MilestoneTrigger.FIELD_NAME]: et
                    for et in cls.separate(flattened, course).encoded}
@@ -1553,8 +1587,8 @@ class MilestoneTrigger(AvailabilityTrigger):
                      for m in cls.KNOWN_MILESTONES])
 
     @classmethod
-    def set_into_settings(cls, encoded_triggers, course, settings,
-                          semantics=None):
+    def set_into_settings(cls, encoded_triggers, settings,
+                          semantics=None, course=None):
         """Sets encoded course start/end triggers into the supplied settings.
 
         Sets the value of the SETTINGS_NAME key in the 'publish' dict
@@ -1580,7 +1614,6 @@ class MilestoneTrigger(AvailabilityTrigger):
                 form payload), in no particular order, and possibly including
                 invalid triggers (e.g. '--- none selected ---' availability,
                 no 'when' date/time, etc.); any invalid triggers are omitted.
-            course: passed, untouched, through to the base class.
             settings: passed, untouched, through to the base class.
             semantics: one of
                 SET_WILL_OVERWITE -- De-duped, valid course milestone triggers
@@ -1590,6 +1623,8 @@ class MilestoneTrigger(AvailabilityTrigger):
                     courses all at once, only one item at a time is sent, so
                     encoded_triggers is instead merged with the existing
                     SETTINGS_NAME values.
+            course: (optional) passed, untouched, through to separate() and
+                set_into_settings().
         """
         semantics = cls.check_set_semantics(semantics)
         valid_triggers = cls.separate(encoded_triggers, course).encoded
@@ -1603,7 +1638,7 @@ class MilestoneTrigger(AvailabilityTrigger):
             # existing settings, rather than drop milestone types that are not
             # explicitly named.
             current = {t[MilestoneTrigger.FIELD_NAME]: t
-                       for t in cls.copy_from_settings(course, settings)}
+                       for t in cls.copy_from_settings(settings)}
             current.update(deduped)
             # Any valid, de-duped triggers have now replaced their counterparts
             # in the triggers currently present in the supplied settings (or
@@ -1614,18 +1649,31 @@ class MilestoneTrigger(AvailabilityTrigger):
             # set_into_settings() will call clear_from_settings() as expected.
             deduped = current
 
-        super(MilestoneTrigger, cls).set_into_settings(
-            deduped.values(), course, settings)  # Default to 'overwrite'.
+        # Default to 'overwrite' by explicitly *not* passing the `semantics`
+        # keyword argument.
+        super(MilestoneTrigger, cls).set_into_settings(deduped.values(),
+            settings, course=course)
 
     @classmethod
-    def clear_from_settings(cls, course, settings, milestone=None):
+    def clear_from_settings(cls, env, milestone=None, course=None):
+        """Removes one or all 'milestone' triggers from a get_environ() dict.
+
+        Args:
+            env: subclass-specific settings containing encoded triggers
+                that is updated *in-place* by clear_from_settings().
+            milestone: if unspecified, the entire SETTINGS_NAME list
+                ('course_triggers') is removed (the base class behavior of this
+                method); otherwise only the specified 'milestone' trigger is
+                pruned from that list.
+            course: (optional) passed to set_into_settings() if called.
+        """
         if milestone is None:
             # Original "remove entire SETTINGS_NAME list" if not pruning out
             # the trigger(s) for a specific course milestone.
-            super(MilestoneTrigger, cls).clear_from_settings(course, settings)
+            super(MilestoneTrigger, cls).clear_from_settings(env)
             return
 
-        publish = course.get_publish_from_environ(settings)
+        publish = courses.Course.get_publish_from_environ(env)
         triggers = cls.copy_triggers_from(publish)
         kept = [t for t in triggers
                 if t.get(MilestoneTrigger.FIELD_NAME) != milestone]
@@ -1633,7 +1681,8 @@ class MilestoneTrigger(AvailabilityTrigger):
         # the kept list needs to actually *overwrite* the existing
         # SETTINGS_NAME list. If no triggers remain after pruning (kept is an
         # empty list), super set_into_settings() calls clear_from_settings().
-        super(MilestoneTrigger, cls).set_into_settings(kept, course, settings)
+        super(MilestoneTrigger, cls).set_into_settings(
+            kept, env, course=course)
 
     @classmethod
     def from_payload(cls, payload):
@@ -1665,7 +1714,7 @@ class MilestoneTrigger(AvailabilityTrigger):
 
     def act(self, course, env):
         """Updates course-wide availability as indicated by the trigger."""
-        current = course.get_course_availability_from_environ(env)
+        current = courses.Course.get_course_availability_from_environ(env)
         new = self.availability
         if current == new:
             return None
@@ -1675,5 +1724,5 @@ class MilestoneTrigger(AvailabilityTrigger):
             availability_options.option_to_title(self.milestone),
             utils.get_ns_name_for_logging(course=course), self.logged)
 
-        course.set_course_availability_into_environ(new, env)
+        courses.Course.set_course_availability_into_environ(new, env)
         return self.ChangedByAct(current, new)

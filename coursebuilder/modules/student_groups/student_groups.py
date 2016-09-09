@@ -132,12 +132,10 @@ class OverrideTriggerMixin(object):
         return changed
 
     @classmethod
-    def in_settings(cls, unused_course, student_group):
+    def in_settings(cls, student_group):
         """Actual encoded availability override triggers in a student group.
 
         Args:
-            unused_course: all triggers for student groups are stored in the
-                student_group properties, so the Course is unused here.
             student_group: a StudentGroupDTO, which must not be None.
 
         Returns:
@@ -149,12 +147,10 @@ class OverrideTriggerMixin(object):
         return student_group.setdefault_triggers(cls.SETTINGS_NAME)
 
     @classmethod
-    def copy_from_settings(cls, unused_course, student_group):
+    def copy_from_settings(cls, student_group):
         """Copies encoded availability override triggers from a student group.
 
         Args:
-            unused_course: all triggers for student groups are stored in the
-                student_group properties, so the Course is unused here.
             student_group: a StudentGroupDTO, which can be None in the case
                 where the "Publish > Availability" form entity is being
                 initialized but no student groups have been defined for the
@@ -171,15 +167,13 @@ class OverrideTriggerMixin(object):
     IMPLEMENTED_SET_SEMANTICS = triggers.DateTimeTrigger.SET_ONLY_OVERWRITES
 
     @classmethod
-    def set_into_settings(cls, encoded_triggers, unused_course, student_group,
-                          semantics=None):
+    def set_into_settings(cls, encoded_triggers, student_group,
+                          semantics=None, **unused_kwargs):
         """Sets encoded availability override triggers into a student group.
 
         Args:
             encoded_triggers: a list of encoded content triggers, marshaled
                 for storing as student group settings values.
-            unused_course: all triggers for student groups are stored in the
-                student_group properties, so the Course is unused here.
             student_group: a StudentGroupDTO into which the encoded_triggers
                 will be stored in the content_triggers property.
             semantics: Student Groups settings currently only support the
@@ -189,7 +183,8 @@ class OverrideTriggerMixin(object):
         student_group.set_triggers(cls.SETTINGS_NAME, encoded_triggers)
 
     @classmethod
-    def clear_from_settings(cls, course, student_group, **unused_kwargs):
+    def clear_from_settings(cls, student_group, **unused_kwargs):
+        """Remove all SETTINGS_NAME triggers from the student_group DTO."""
         student_group.clear_triggers(cls.SETTINGS_NAME)
 
 
@@ -1146,9 +1141,9 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
                 self._MEMBERS: [],
                 }
             student_group_settings.update(
-                CourseOverrideTrigger.for_form(course, None))
+                CourseOverrideTrigger.for_form(None, course=course))
             student_group_settings.update(
-                ContentOverrideTrigger.for_form(course, None))
+                ContentOverrideTrigger.for_form(None))
         else:
             if not roles.Roles.is_user_allowed(self.app_context, custom_module,
                                                EDIT_STUDENT_GROUPS_PERMISSION):
@@ -1170,9 +1165,9 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
                     course_availability_key(), AVAILABILITY_NO_OVERRIDE),
             }
             student_group_settings.update(
-                CourseOverrideTrigger.for_form(course, student_group))
+                CourseOverrideTrigger.for_form(student_group, course=course))
             student_group_settings.update(
-                ContentOverrideTrigger.for_form(course, student_group))
+                ContentOverrideTrigger.for_form(student_group))
 
         entity = self._arh.construct_entity(course)
         entity[self._STUDENT_GROUP] = student_group_id

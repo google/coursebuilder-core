@@ -429,11 +429,11 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         }
 
         course_triggers = triggers.MilestoneTrigger.for_form(
-            course, env)
+            env, course=course)
         entity.update(course_triggers)
 
         content_triggers = triggers.ContentTrigger.for_form(
-            course, env, selectable_content=cls.content_select(course))
+            env, selectable_content=cls.content_select(course))
         entity.update(content_triggers)
         return entity
 
@@ -565,7 +565,7 @@ class MultiCourseClearStartEndRESTHandler(utils.BaseRESTHandler):
 
         milestone = payload.get('milestone')
         triggers.MilestoneTrigger.clear_from_settings(
-            course, settings, milestone=milestone)
+            settings, milestone=milestone, course=course)
         course.save_settings(settings)
         transforms.send_json_response(
             self, 200, 'Saved.', payload_dict=response_payload)
