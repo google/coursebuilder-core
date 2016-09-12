@@ -143,11 +143,21 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
             return
         if not self.can_view():
             login_url = users.create_login_url('/modules/admin')
-            message = """The current user has insufficient rights to access
-                this page.<br> Go to the <a href="{login_url}">Login page</a>
-                to log in as an administrator, or go back to the
-                <a href="/">Home page</a>""".format(login_url=login_url)
-            self.response.write(safe_dom.escape(message))
+
+            node_list = safe_dom.NodeList().append(
+                safe_dom.Element('p').add_text(
+                   'The current user has insufficient rights ' +
+                    'to access this page.'))
+
+            paragraph = safe_dom.Element('p').add_text('Go to the ')
+            paragraph.append(safe_dom.A(href=login_url).add_text('Login page'))
+            paragraph.add_text(
+                ' to log in as an administrator, or go back to the ')
+            paragraph.append(safe_dom.A(href='/').add_text('Home page'))
+            paragraph.add_text('.')
+            node_list.append(paragraph)
+
+            self.response.write(node_list.sanitized)
             return
         super(WelcomeHandler, self).get()
 

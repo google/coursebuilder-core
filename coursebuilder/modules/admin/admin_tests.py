@@ -90,10 +90,9 @@ class AdminDashboardTabTests(actions.TestBase):
         response = self.get('/admin/welcome')
 
         self.assertIsNotNone(
-            re.search('&lt;a.*&gt;Login page&lt;/a&gt;', response.text))
+            re.search('<a.*>Login page</a>', response.text))
         self.assertIsNotNone(
-            re.search('&lt;a href=&quot;/&quot;&gt;Home page&lt;/a&gt;',
-                      response.text))
+            re.search('<a href="/">Home page</a>', response.text))
 
     def test_debug_info_not_present_for_non_admin(self):
         # NOTE: the is_admin=True version of this test is
