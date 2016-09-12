@@ -87,28 +87,18 @@ def get_client_email(app_context):
     return get_secrets(app_context)['client_email']
 
 
-def get_setting_value(app_context, constant):
-    obj = app_context.get_environ()
-    try:
-        for segment in constant.split(':'):
-            obj = obj[segment]
-        return obj
-    except KeyError:
-        return None
-
-
 def get_google_client_secret(app_context):
-    return get_setting_value(
+    return courses.get_setting_value(
         app_context, courses.CONFIG_KEY_GOOGLE_CLIENT_SECRET)
 
 
 def get_google_client_id(app_context):
-    return get_setting_value(
+    return courses.get_setting_value(
         app_context, courses.CONFIG_KEY_GOOGLE_CLIENT_ID)
 
 
 def get_google_api_key(app_context):
-    return get_setting_value(
+    return courses.get_setting_value(
         app_context, courses.CONFIG_KEY_GOOGLE_API_KEY)
 
 

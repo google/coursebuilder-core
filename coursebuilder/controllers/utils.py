@@ -566,6 +566,7 @@ class ApplicationHandler(webapp2.RequestHandler):
     LEFT_LINKS = []
     RIGHT_LINKS = []
     AUTH_LINKS = []
+    SITE_INFO = []
 
     EXTRA_GLOBAL_CSS_URLS = []
     EXTRA_GLOBAL_JS_URLS = []
@@ -875,6 +876,9 @@ class CourseHandler(ApplicationHandler):
     def init_template_values(self, environ, prefs=None):
         """Initializes template variables with common values."""
         self.template_value[COURSE_INFO_KEY] = environ
+        self.template_value['site_info'] = {}
+        for func in self.SITE_INFO:
+            self.template_value['site_info'].update(func(self.app_context))
         self.template_value[
             'page_locale'] = self.app_context.get_current_locale()
         self.template_value['html_hooks'] = HtmlHooks(

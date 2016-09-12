@@ -42,7 +42,7 @@ GCB_ENABLE_COURSE_EXPLORER_PAGE = config.ConfigProperty(
 
 COURSE_EXPLORER_SETTINGS = config.ConfigProperty(
     'course_explorer_settings', str, '',
-    label='Course explorer settings', show_in_site_settings=False)
+    label='Site settings', show_in_site_settings=False)
 
 
 def make_logo_url(mime_type, bytes_base64):
@@ -64,6 +64,7 @@ def schema_provider(unused_course):
     group.add_property(schema_fields.SchemaField(
         'title', 'Site Name', 'string',
         description=models_messages.SITE_NAME_DESCRIPTION,
+        i18n=False,
         optional=True,
     ))
 
@@ -75,37 +76,43 @@ def schema_provider(unused_course):
             'visuType': 'funcName',
             'funcName': 'renderImage',
         }},
+        i18n=False,
         optional=True,
     ))
 
 
     group.add_property(schema_fields.SchemaField(
         'logo', 'Change Site Logo', 'file',
+        i18n=False,
         optional=True,
     ))
 
     group.add_property(schema_fields.SchemaField(
         'logo_alt_text', 'Site Logo Description', 'string',
         description=models_messages.SITE_LOGO_DESCRIPTION_DESCRIPTION,
+        i18n=False,
         optional=True,
     ))
 
     group.add_property(schema_fields.SchemaField(
         'extra_content', 'Extra Content', 'html',
-        optional=True,
         description=
             'HTML content that will be added to the course explorer page',
+        i18n=False,
+        optional=True,
     ))
 
     group.add_property(schema_fields.SchemaField(
         'institution_name', 'Organization Name', 'string',
         description=models_messages.ORGANIZATION_NAME_DESCRIPTION,
+        i18n=False,
         optional=True,
     ))
     group.add_property(schema_fields.SchemaField(
         'institution_url', 'Organization URL', 'string',
         description=models_messages.ORGANIZATION_URL_DESCRIPTION,
         extra_schema_dict_values={'_type': 'url', 'showMsg': True},
+        i18n=False,
         optional=True,
     ))
 
@@ -113,6 +120,7 @@ def schema_provider(unused_course):
         'privacy_terms_url', 'Privacy & Terms URL', 'string',
         description=models_messages.HOMEPAGE_PRIVACY_URL_DESCRIPTION,
         extra_schema_dict_values={'_type': 'url', 'showMsg': True},
+        i18n=False,
         optional=True,
     ))
 

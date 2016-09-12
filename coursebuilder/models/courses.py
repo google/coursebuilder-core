@@ -298,6 +298,31 @@ Displayability = collections.namedtuple(
         ],
     )
 
+BLANK_VALUES = ('', None)
+INSTITUTION_NAME_BLANK_VALUES = BLANK_VALUES + ('Add Your Institution Here',)
+INSTITUTION_URL_BLANK_VALUES = BLANK_VALUES + ('LINK_TO_YOUR_INSTITUTION_HERE',)
+PRIVACY_TERM_URL_BLANK_VALUES = (
+    BLANK_VALUES + ('PRIVACY_POLICY_AND_TERMS_OF_SERVICE',))
+SITE_NAME_BLANK_VALUES = BLANK_VALUES
+SITE_LOGO_BLANK_VALUES = BLANK_VALUES + ('assets/img/your_logo_here.png',)
+
+
+def get_setting_value(app_context, constant):
+    obj = app_context.get_environ()
+    try:
+        for segment in constant.split(':'):
+            obj = obj[segment]
+        return obj
+    except KeyError:
+        return None
+
+
+def add_deprecated_field(
+        course, group, path, title, type_, blank_values=BLANK_VALUES, **kwargs):
+    if get_setting_value(course.app_context, path) not in blank_values:
+        group.add_property(schema_fields.SchemaField(
+            path, title, type_, **kwargs))
+
 
 def copy_attributes(source, target, converter):
     """Copies source object attributes into a target using a converter."""
@@ -2530,7 +2555,7 @@ class Course(object):
         return opts
 
     @classmethod
-    def create_course_settings_schema(cls, reg):
+    def create_course_settings_schema(cls, reg, course):
         opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_COURSE,
             Course.get_schema_section_title(Course.SCHEMA_SECTION_COURSE),
@@ -2538,34 +2563,41 @@ class Course(object):
                 'className': 'inputEx-Group hidden-header'
             })
 
-        opts.add_property(schema_fields.SchemaField(
-            'institution:name', 'Organization Name', 'string',
-            description=messages.ORGANIZATION_NAME_DESCRIPTION, optional=True))
-        opts.add_property(schema_fields.SchemaField(
-            'institution:url', 'Organization URL', 'string',
+        add_deprecated_field(
+            course, opts, 'institution:name', 'Organization Name', 'string',
+            blank_values=INSTITUTION_NAME_BLANK_VALUES,
+            description=messages.ORGANIZATION_NAME_DESCRIPTION,
+            optional=True)
+        add_deprecated_field(
+            course, opts, 'institution:url', 'Organization URL', 'string',
+            blank_values=INSTITUTION_URL_BLANK_VALUES,
             description=messages.ORGANIZATION_URL_DESCRIPTION,
             extra_schema_dict_values={'_type': 'url', 'showMsg': True},
-            optional=True))
+            optional=True)
 
-        opts.add_property(schema_fields.SchemaField(
-            'base:privacy_terms_url', 'Privacy & Terms URL', 'string',
+        add_deprecated_field(
+            course, opts, 'base:privacy_terms_url', 'Privacy & Terms URL',
+            'string',
             description=messages.HOMEPAGE_PRIVACY_URL_DESCRIPTION,
             extra_schema_dict_values={'_type': 'url', 'showMsg': True},
-            optional=True))
+            optional=True)
 
-        opts.add_property(schema_fields.SchemaField(
-            'base:nav_header', 'Site Name', 'string',
+        add_deprecated_field(
+            course, opts, 'base:nav_header', 'Site Name', 'string',
+            blank_values=SITE_NAME_BLANK_VALUES,
             description=messages.SITE_NAME_DESCRIPTION,
-            optional=True))
-        opts.add_property(schema_fields.SchemaField(
-            'institution:logo:url', 'Site Logo', 'string',
+            optional=True)
+        add_deprecated_field(
+            course, opts, 'institution:logo:url', 'Site Logo', 'string',
+            blank_values=SITE_LOGO_BLANK_VALUES,
             description=messages.SITE_LOGO_DESCRIPTION,
             extra_schema_dict_values={'_type': 'url', 'showMsg': True},
-            optional=True))
-        opts.add_property(schema_fields.SchemaField(
-            'institution:logo:alt_text', 'Site Logo Description', 'string',
+            optional=True)
+        add_deprecated_field(
+            course, opts, 'institution:logo:alt_text', 'Site Logo Description',
+            'string',
             description=messages.SITE_LOGO_DESCRIPTION_DESCRIPTION,
-            optional=True))
+            optional=True)
 
         opts.add_property(schema_fields.SchemaField(
             'course:title', 'Title', 'string',
@@ -2820,7 +2852,7 @@ class Course(object):
         return opts
 
     @classmethod
-    def create_base_settings_schema(cls):
+    def create_base_settings_schema(cls, course):
         """Create the registry for course properties."""
 
         reg = schema_fields.FieldRegistry('Settings',
@@ -2828,7 +2860,7 @@ class Course(object):
                 'className': 'inputEx-Group new-form-layout hidden-header'})
 
         cls.create_forum_settings_schema(reg)
-        cls.create_course_settings_schema(reg)
+        cls.create_course_settings_schema(reg, course)
         cls.create_registration_settings_schema(reg)
         cls.create_unit_settings_schema(reg)
         cls.create_assessment_settings_schema(reg)
@@ -2842,7 +2874,7 @@ class Course(object):
 
     @classmethod
     def create_common_settings_schema(cls, course):
-        reg = cls.create_base_settings_schema()
+        reg = cls.create_base_settings_schema(course)
         for schema_section in cls.OPTIONS_SCHEMA_PROVIDERS:
             sub_registry = reg.get_sub_registry(schema_section)
             if not sub_registry:

@@ -400,7 +400,7 @@ class RoundTripTest(_JobTestBase):
         course.save()
 
         self.run_translate_job()
-        self.run_download_job('--job_args=%s --max_entries_per_file=6' %
+        self.run_download_job('--job_args=%s --max_entries_per_file=3' %
                               self.zipfile_name)
         paths = self.extract_zipfile()
         actual = sorted([os.path.basename(path) for path in paths])
@@ -420,15 +420,15 @@ class RoundTripTest(_JobTestBase):
 
         self.run_translate_job()
         self.run_download_job(
-            '--job_args=%s --separate_files_by_type --max_entries_per_file=2' %
+            '--job_args=%s --separate_files_by_type --max_entries_per_file=1' %
             self.zipfile_name)
         paths = self.extract_zipfile()
         actual = sorted([os.path.basename(path) for path in paths])
         expected = [
             'course_settings_001.po',
-            'course_settings_002.po',
             'html_hook_001.po',
             'lesson_2_001.po',
+            'lesson_2_002.po',
             'unit_1_001.po']
         self.assertEquals(expected, actual)
 

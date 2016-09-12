@@ -25,22 +25,6 @@ course:
   can_student_change_locale: true
   can_record_student_events: true
 
-####################################
-# Information about your institution
-####################################
-
-institution:
-  # Name of your institution
-  name:
-
-  # URL of your institution's webpage
-  url:
-
-  # Link and alt text for the logo of the course or your institution
-  logo:
-    url: 'assets/img/your_logo_here.png'
-    alt_text:
-
 
 ####################
 # Base page template
@@ -78,9 +62,3 @@ html_hooks:
 base:
   # Whether to show a G+ button on the header of all pages.
   show_gplus_button: True
-
-  # Header phrase for the main navigation bar
-  nav_header: 'Search Education'
-
-  # Link to your privacy policy and terms of service
-  privacy_terms_url:
