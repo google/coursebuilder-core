@@ -8,7 +8,12 @@
         {% else %}
             {# I18N: Shown to tell the user an error occurred during submission. #}
             {{ gettext('An error occurred.') }}
+            {% if error_detail %}
+              {{ error_detail }}
+            {% endif %}
         {% endif %}
+    </p>
+    <p class='gcb-top-content'>
         <a href='javascript:window.history.back();'>
             {% if success %}
                 {# I18N: Text of the link to take the user back to the previous page. #}

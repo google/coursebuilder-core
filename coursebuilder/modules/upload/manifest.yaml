@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.upload.upload_tests.TextFileUploadHandlerTestCase = 9
+    - modules.upload.upload_tests.TextFileUploadHandlerTestCase = 10
     - modules.upload.upload_tests.TextFileUploadTagTestCase = 3
 
 files:

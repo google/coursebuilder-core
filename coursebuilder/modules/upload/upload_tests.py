@@ -184,7 +184,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         self.assertEquals('b', student_work.Submission.get_contents(
             self.unit_id, self.student.get_key(), instance_id='instance_b'))
 
-    def test_unsavable_contents_returns_400(self):
+    def test_contents_too_large_returns_400(self):
         self.configure_environ_for_current_user()
         # Allow protected access for tests. pylint: disable=protected-access
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
@@ -200,6 +200,52 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
             upload._POST_ACTION_SUFFIX, params, self.headers,
             expect_errors=True)
         self.assertEqual(400, response.status_int)
+        self.assertIn('File too large', response)
+
+    def test_empty_contents_returns_400(self):
+        self.configure_environ_for_current_user()
+        # Allow protected access for tests. pylint: disable=protected-access
+        user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
+            upload._XSRF_TOKEN_NAME)
+        params = {
+            'contents': '',
+            'form_xsrf_token': user_xsrf_token,
+            'unit_id': self.unit_id,
+        }
+
+        response = self.testapp.post(
+            upload._POST_ACTION_SUFFIX, params, self.headers,
+            expect_errors=True)
+        self.assertEqual(400, response.status_int)
+        self.assertIn('File is empty', response)
+
+    def test_invalid_contents_returns_400(self):
+        self.configure_environ_for_current_user()
+        # Allow protected access for tests. pylint: disable=protected-access
+        user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
+            upload._XSRF_TOKEN_NAME)
+        params = {
+            # Contents will be replaced by invalid unicode below.
+            'contents': 'not_empty',
+            'form_xsrf_token': user_xsrf_token,
+            'unit_id': self.unit_id,
+        }
+
+        # We use a mock validate_contents() method to inject invalid unicode.
+        validate_contents = upload.TextFileUploadHandler.validate_contents
+        def mock_validate_contents(self, contents):
+            # Force raise UnicodeDecodeException.
+            return chr(128)
+        upload.TextFileUploadHandler.validate_contents = mock_validate_contents
+
+        try:
+            response = self.post(
+                upload._POST_ACTION_SUFFIX, params, self.headers)
+        finally:
+            upload.TextFileUploadHandler.validate_contents = validate_contents
+
+        self.assertEqual(400, response.status_int)
+        self.assertIn('Wrong file format', response)
 
 
 class TextFileUploadTagTestCase(actions.TestBase):

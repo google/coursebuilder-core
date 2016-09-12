@@ -23,6 +23,8 @@ import os
 
 import jinja2
 
+from google.appengine.runtime.apiproxy_errors import RequestTooLargeError
+
 from common import jinja_utils
 from common import schema_fields
 from common import tags
@@ -48,6 +50,10 @@ class TextFileUploadHandler(utils.BaseHandler):
         return super(TextFileUploadHandler, self).get_template(
             template_file, additional_dirs=dirs, prefs=prefs)
 
+    def validate_contents(self, contents):
+      """Convert 'contents' to ASCII or raise UnicodeDecodeError."""
+      return contents.decode()
+
     def post(self):
         """Creates or updates a student submission."""
         token = self.request.get('form_xsrf_token')
@@ -62,27 +68,50 @@ class TextFileUploadHandler(utils.BaseHandler):
             return
 
         success = False
+        error_detail = None
         unit_id = self.request.get('unit_id')
         instance_id = self.request.get('instance_id')
 
         contents = self.request.get('contents')
+
         if not contents:
+            # I18N: Error message for failed student file upload.
+            # The selected file was empty.
+            error_detail  = self.gettext('File is empty.')
+            logging.warn(error_detail)
             self.error(400)
         else:
-
             try:
+                contents = self.validate_contents(contents)
                 success = bool(student_work.Submission.write(
                     unit_id, student.get_key(), contents,
                     instance_id=instance_id))
-            # All write errors are treated equivalently.
+            except UnicodeDecodeError, e:
+                # I18N: Error message for failed student file upload.
+                # The selected file was not a text file.
+                error_detail = self.gettext(
+                    'Wrong file format, only text files (.txt) ' +
+                    'with unicode contents are allowed.')
+                logging.warn(error_detail)
+                self.error(400)
+            except RequestTooLargeError, e:
+                # I18N: Error message for failed student file upload.
+                # The selected file was too large.
+                error_detail = self.gettext(
+                    'File too large, only files smaller than 1MB are allowed.')
+                logging.warn(error_detail)
+                self.error(400)
             # pylint: disable=broad-except
             except Exception as e:
-                self.error(400)
-                logging.warn(
+                # I18N: Error message for failed student file upload.
+                # Generic upload error.
+                error_detail = self.gettext(
                     'Unable to save student submission; error was: "%s"', e)
-
+                logging.warn(error_detail)
+                self.error(400)
         self.template_value['navbar'] = {'course': True}
         self.template_value['success'] = success
+        self.template_value['error_detail'] = error_detail
         self.template_value['unit_id'] = unit_id
         self.render('result.html')
 
