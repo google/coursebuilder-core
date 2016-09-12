@@ -39,7 +39,6 @@ from modules.courses import availability
 from modules.courses import availability_cron
 from modules.courses import availability_options
 from modules.courses import constants
-from modules.courses import courses as modules_courses
 from modules.courses import lessons
 from modules.courses import triggers
 from modules.courses import unit_lesson_editor
@@ -84,7 +83,7 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
 
     def test_course_structure_reorder_permission(self):
         self._add_role_with_permissions(
-            modules_courses.MODULE_NAME,
+            constants.MODULE_NAME,
             [constants.COURSE_OUTLINE_REORDER_PERMISSION])
         response = self.get('dashboard?action=outline')
         self.assertEquals(200, response.status_int)
@@ -112,7 +111,7 @@ class CourseAccessPermissionsTests(actions.CourseOutlineTest):
     def test_course_edit_settings_link(self):
         # Add role permission so we can see the course outline page at all.
         self._add_role_with_permissions(
-            modules_courses.MODULE_NAME,
+            constants.MODULE_NAME,
             [constants.COURSE_OUTLINE_REORDER_PERMISSION])
 
         # Give this user permission to *edit* some random course property that's
@@ -423,7 +422,7 @@ class ReorderAccess(actions.TestBase):
                 'name': self.ROLE,
                 'users': [self.USER_EMAIL],
                 'permissions': {
-                    modules_courses.MODULE_NAME: [
+                    constants.MODULE_NAME: [
                         constants.COURSE_OUTLINE_REORDER_PERMISSION]
                     }
                 })
@@ -868,7 +867,7 @@ class AvailabilityTests(actions.TestBase):
                 'name': self.ROLE,
                 'users': [self.USER_EMAIL],
                 'permissions': {
-                    modules_courses.MODULE_NAME: [
+                    constants.MODULE_NAME: [
                         constants.MODIFY_AVAILABILITY_PERMISSION]
                     }
                 })

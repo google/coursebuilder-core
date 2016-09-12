@@ -17,6 +17,8 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 
+MODULE_NAME = 'Course'
+
 # Name of permission allowing admin to modify order of course outline (but not
 # add/delete units/assessments/links)
 COURSE_OUTLINE_REORDER_PERMISSION = 'course_outline_reorder'

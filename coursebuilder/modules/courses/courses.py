@@ -27,6 +27,7 @@ from modules.courses import admin_preferences_editor
 from modules.courses import assets
 from modules.courses import availability
 from modules.courses import availability_cron
+from modules.courses import constants
 from modules.courses import graphql
 from modules.courses import lessons
 from modules.courses import outline
@@ -35,7 +36,6 @@ from modules.courses import settings
 from modules.courses import unit_lesson_editor
 from tools import verify
 
-MODULE_NAME = 'Course'
 
 custom_module = None
 
@@ -98,7 +98,7 @@ def register_module():
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
-        MODULE_NAME,
+        constants.MODULE_NAME,
         'A set of pages for delivering an online course.',
         global_handlers, courses_routes,
         notify_module_enabled=on_module_enabled)
