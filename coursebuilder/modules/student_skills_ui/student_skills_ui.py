@@ -134,15 +134,15 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
     def on_module_enabled():
-      enable_graph_setting = schema_fields.SchemaField(
-          SETTINGS_SCHEMA_SECTION_NAME + ':' + SETTING_LOCAL_GRAPH_ENABLED,
-          'Skill Graph in Course Content', 'boolean', optional=True,
-          i18n=None)
-      course_settings_fields = (
-          lambda c: enable_graph_setting,
-      )
-      courses.Course.OPTIONS_SCHEMA_PROVIDERS[
-          skill_map.MODULE_NAME] += course_settings_fields
+        enable_graph_setting = schema_fields.SchemaField(
+            SETTINGS_SCHEMA_SECTION_NAME + ':' + SETTING_LOCAL_GRAPH_ENABLED,
+            'Skill Graph in Course Content', 'boolean', optional=True,
+            i18n=None)
+        course_settings_fields = (
+            lambda c: enable_graph_setting,
+        )
+        courses.Course.OPTIONS_SCHEMA_PROVIDERS[
+            skill_map.MODULE_NAME] += course_settings_fields
 
     global custom_module   # pylint: disable=global-statement
 
