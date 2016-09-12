@@ -2470,6 +2470,8 @@ class Course(object):
         env = models.MemcacheManager.get(
             _key, namespace=app_context.get_namespace_name())
         if env:
+            # put into local cache
+            app_context._cached_environ = env
             return cls._run_env_post_copy_hooks(app_context, env)
 
         models.MemcacheManager.begin_readonly()

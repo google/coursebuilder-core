@@ -4540,6 +4540,8 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             def assert_cached(url, assert_text, cache_miss_allowed=0):
                 """Checks that specific URL supports caching."""
                 memcache.flush_all()
+                models.MemcacheManager.clear_readonly_cache()
+                sites.ApplicationContext.clear_per_process_cache()
 
                 # Expect cache misses first time we load page.
                 cache_miss_before = self.count

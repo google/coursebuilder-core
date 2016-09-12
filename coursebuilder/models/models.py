@@ -181,6 +181,7 @@ class MemcacheManager(object):
         if cls._IS_READONLY:
             assert cls._is_same_app_context_if_set()
             _dict = cls._LOCAL_CACHE.get(namespace)
+            # TODO(nretallack): change to: if _dict is None
             if not _dict:
                 _dict = {}
                 cls._LOCAL_CACHE[namespace] = _dict
@@ -197,6 +198,7 @@ class MemcacheManager(object):
         if cls._IS_READONLY:
             assert cls._is_same_app_context_if_set()
             _dict = cls._LOCAL_CACHE.get(namespace)
+            # TODO(nretallack): change to: if _dict is None
             if not _dict:
                 _dict = {}
                 cls._LOCAL_CACHE[namespace] = _dict
