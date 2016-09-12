@@ -93,7 +93,7 @@ window.DriveTagControls = (function(
   };
 
   module._authorize = function(callback) {
-    top.gapi.auth.authorize({
+    parent.gapi.auth.authorize({
       client_id: module._getClientId(),
       scope: module._scopes,
       immediate: false
@@ -378,7 +378,7 @@ window.DriveTagControls = (function(
 
   module._processDownload = function(context, documentId) {
     // Runs a files.get request for the item with the given documentId string.
-    var request = top.gapi.client.drive.files.get({fileId: documentId});
+    var request = parent.gapi.client.drive.files.get({fileId: documentId});
     request.execute(function(file) {
       module._onFileGet(context, file);
     });

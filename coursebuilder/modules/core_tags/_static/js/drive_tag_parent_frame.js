@@ -167,12 +167,12 @@ window.GcbGoogleDriveTagParent = (function(
   module._PICKER_PICKED = 'picked'
 
   module.onApiLoad = function() {
-    top.gapi.load('auth', module._onApiApiLoaded);
-    top.gapi.load('picker', module._onPickerApiLoaded);
+    parent.gapi.load('auth', module._onApiApiLoaded);
+    parent.gapi.load('picker', module._onPickerApiLoaded);
   };
 
   module.onClientLoad = function() {
-    top.gapi.client.load('drive', 'v2', module._onDriveApiLoaded);
+    parent.gapi.client.load('drive', 'v2', module._onDriveApiLoaded);
   };
 
   module._addDispatcherBindings = function () {
@@ -195,8 +195,8 @@ window.GcbGoogleDriveTagParent = (function(
     // attribute of the <script> tags that include them. That onload argument
     // cannot dereference dots, so we must expose a dotless toplevel symbol for
     // it.
-    top.gcbGoogleClientOnApiLoad = module.onApiLoad;
-    top.gcbGoogleClientOnClientLoad = module.onClientLoad;
+    parent.gcbGoogleClientOnApiLoad = module.onApiLoad;
+    parent.gcbGoogleClientOnClientLoad = module.onClientLoad;
   };
 
   module._allApisLoaded = function() {
@@ -208,7 +208,7 @@ window.GcbGoogleDriveTagParent = (function(
   }
 
   module._authorize = function(callback) {
-    top.gapi.auth.authorize({
+    parent.gapi.auth.authorize({
       client_id: module._getClientId(),
       scope: module._scopes,
       immediate: false
@@ -429,7 +429,7 @@ window.GcbGoogleDriveTagParent = (function(
 
   module._processDownload = function(documentId) {
     // Runs a files.get request for the item with the given documentId string.
-    var request = top.gapi.client.drive.files.get({fileId: documentId});
+    var request = parent.gapi.client.drive.files.get({fileId: documentId});
     request.execute(module._onFileGet);
   };
 
@@ -450,9 +450,9 @@ window.GcbGoogleDriveTagParent = (function(
   };
 
   module._showPicker = function() {
-    var picker = new top.google.picker.PickerBuilder()
-      .addView(new top.google.picker.View(top.google.picker.ViewId.DOCUMENTS))
-      .enableFeature(top.google.picker.Feature.NAV_HIDDEN)
+    var picker = new parent.google.picker.PickerBuilder()
+      .addView(new parent.google.picker.View(parent.google.picker.ViewId.DOCUMENTS))
+      .enableFeature(parent.google.picker.Feature.NAV_HIDDEN)
       .setAppId(module._getClientId())
       .setCallback(module._onPick)
       .setDeveloperKey(module._getApiKey())
@@ -463,8 +463,8 @@ window.GcbGoogleDriveTagParent = (function(
   };
 
   module._setUpParentFrame = function() {
-    top.GcbGoogleDriveTagParent._addDispatcherBindings();
-    top.GcbGoogleDriveTagParent._addScriptCallbackBindings();
+    parent.GcbGoogleDriveTagParent._addDispatcherBindings();
+    parent.GcbGoogleDriveTagParent._addScriptCallbackBindings();
     $(window).on(
       window.Dispatcher.EVENT_NAME, window.Dispatcher.handlePostMessage);
   };

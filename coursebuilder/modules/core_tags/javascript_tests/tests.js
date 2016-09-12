@@ -1,7 +1,7 @@
 // GoogleDriveTagParent refers to top, but karma tests run inside of an iframe.
-// Bind top to window so this difference doesn't cause breakage.
-// TODO(johncox): get rid of this when we write real tests using iframs.
-top = window;
+// Bind parent to window so this difference doesn't cause breakage.
+// TODO(johncox): get rid of this when we write real tests using iframes.
+parent = window
 
 describe('core tags module', function() {
 

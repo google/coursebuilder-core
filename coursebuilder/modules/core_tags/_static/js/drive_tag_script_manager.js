@@ -17,7 +17,7 @@ window.GoogleApiClientTools = (function(JSON) {
   };
 
   module.getAuthToken = function() {
-    var token = top.gapi.auth.getToken();
+    var token = parent.gapi.auth.getToken();
     if (token) {
       return token.access_token;
     }
