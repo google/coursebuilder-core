@@ -52,6 +52,7 @@ from modules.analytics import student_aggregate
 from modules.courses import availability
 from modules.courses import availability_cron
 from modules.courses import availability_options
+from modules.courses import constants as courses_constants
 from modules.courses import triggers
 from modules.dashboard import dashboard
 from modules.i18n_dashboard import i18n_dashboard
@@ -1038,7 +1039,7 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
                 'className': cls._AVAILABILITY_CSS,
                 'wrapperClassName': cls._AVAILABILITY_WRAPPER_CSS}))
 
-        for milestone in CourseOverrideTrigger.COURSE_MILESTONES:
+        for milestone in courses_constants.COURSE_MILESTONES:
             group_settings.add_property(cls._arh.get_milestone_array_schema(
                 milestone, trigger_cls=CourseOverrideTrigger,
                 scope_css=cls._STUDENT_GROUP_SCOPE_CSS,

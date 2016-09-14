@@ -2393,7 +2393,7 @@ class AvailabilityTests(actions.TestBase):
         # Define a "course start" milestone trigger somewhat in the past, to
         # insure that that a cron job will apply it at test time.
         return {
-            'milestone': 'course_start',
+            'milestone': constants.START_DATE_MILESTONE,
             'availability': self._COURSE_START_AVAIL,
             'when': when,
         }
@@ -2405,7 +2405,7 @@ class AvailabilityTests(actions.TestBase):
         # there is no chance that a cron task will act on it and remove it from
         # the course settings prematurely.
         return {
-            'milestone': 'course_end',
+            'milestone': constants.END_DATE_MILESTONE,
             'availability': self._COURSE_END_AVAIL,
             'when': when,
         }
@@ -2413,8 +2413,8 @@ class AvailabilityTests(actions.TestBase):
     def _specific_bad_milestone_triggers(self, now):
         past = self._utc_past_text(now)
         when = {
-            'course_start': past,
-            'course_end': self._utc_future_text(now),
+            constants.START_DATE_MILESTONE: past,
+            constants.END_DATE_MILESTONE: self._utc_future_text(now),
         }
 
         bad_triggers = {}
@@ -2648,8 +2648,10 @@ class AvailabilityTests(actions.TestBase):
         course_start = self._past_course_start_trigger(now)
         course_end = self._future_course_end_trigger(now)
         all_mts = self._specific_bad_milestone_triggers(now)
-        all_mts.setdefault('course_start', []).append(course_start)
-        all_mts.setdefault('course_end', []).append(course_end)
+        all_mts.setdefault(
+            constants.START_DATE_MILESTONE, []).append(course_start)
+        all_mts.setdefault(
+            constants.END_DATE_MILESTONE, []).append(course_end)
 
         # all_mts should now contain a total of 12 triggers:
         #   "empty", "bad", "no_when", "no_avail", "none_selected", "good"
@@ -2697,8 +2699,8 @@ class AvailabilityTests(actions.TestBase):
         # comparison (in_settings() returns a list with the course_start and
         # course_end triggers in arbitrary order).
         good_mts = {
-            'course_start': [course_start],
-            'course_end': [course_end],
+            constants.START_DATE_MILESTONE: [course_start],
+            constants.END_DATE_MILESTONE: [course_end],
         }
         flat_good_mts = [mt for mts in good_mts.itervalues() for mt in mts]
         num_good_mts = len(flat_good_mts)

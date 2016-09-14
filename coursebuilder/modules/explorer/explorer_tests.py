@@ -21,6 +21,7 @@ import base64
 from common import crypto
 from models import config
 from models import transforms
+from modules.courses import constants as courses_constants
 from modules.explorer import settings
 from modules.gql import gql_tests
 from modules.gql import gql
@@ -96,8 +97,10 @@ class GraphQLTests(gql_tests.BaseGqlTests):
         app_context = actions.update_course_config_as_admin(
             self.COURSE_NAME, self.ADMIN_EMAIL, {
                 'course': {
-                    'start_date': '2016-05-11T07:00:00.000Z',
-                    'end_date': '2016-10-11T07:00:00.000Z',
+                    courses_constants.START_DATE_SETTING:
+                        '2016-05-11T07:00:00.000Z',
+                    courses_constants.END_DATE_SETTING:
+                        '2016-10-11T07:00:00.000Z',
                     'estimated_workload': '10hrs',
                     'category_name': 'Biology',
                 },

@@ -17,6 +17,7 @@
 
 import graphene
 from models import courses
+from modules.courses import constants
 from modules.courses import triggers
 from modules.gql import gql
 
@@ -25,52 +26,51 @@ def resolve_start_date(gql_course, args, info):
     """Get course card start date as a UTC ISO-8601 Zulu string.
 
     Returns:
-      The "encoded" `when` string of the course_start MilestoneTrigger, if
-      that milestone trigger exists in the 'publish' settings of the
+      The "encoded" `when` string of the constants.START_DATE_MILESTONE
+      MilestoneTrigger ('publish:course_triggers:course_start'), if that
+      milestone trigger exists in the 'publish' settings of the
       gql_course.course_environ.
 
-      Otherwise, the 'start_date' string, if it exists in the 'course'
-      settings of the gql_course.course_environ.
+      Otherwise, the constants.START_DATE_SETTING ('course:start_date')
+      string, if it exists in the 'course' settings of the
+      gql_course.course_environ.
 
       As a last resort, None is returned.
     """
-    # Dates should be returned in UTC ISO8601 Zulu format
-    # (eg "2016-05-01T07:00:00.000Z")
     start_when = triggers.MilestoneTrigger.copy_milestone_from_environ(
-        'course_start', gql_course.course_environ).get('when')
+        constants.START_DATE_MILESTONE, gql_course.course_environ).get('when')
     if start_when:
         return start_when
 
     return courses.Course.get_named_course_setting_from_environ(
-        'start_date', gql_course.course_environ)
+        constants.START_DATE_SETTING, gql_course.course_environ)
 
 
 def resolve_end_date(gql_course, args, info):
     """Get course card end date as a UTC ISO-8601 Zulu string.
 
     Returns:
-      The "encoded" `when` string of the course_end MilestoneTrigger, if
-      that milestone trigger exists in the 'publish' settings of the
+      The "encoded" `when` string of the constants.END_DATE_MILESTONE
+      MilestoneTrigger ('publish:course_triggers:course_end'), if that
+      milestone trigger exists in the 'publish' settings of the
       gql_course.course_environ.
 
-      Otherwise, the 'end_date' string, if it exists in the 'course'
-      settings of the gql_course.course_environ.
+      Otherwise, the constants.END_DATE_SETTING ('course:end_date') string,
+      if it exists in the 'course' settings of the gql_course.course_environ.
 
       As a last resort, None is returned.
     """
-    # Dates should be returned in UTC ISO8601 Zulu format
-    # (eg "2016-05-01T07:00:00.000Z")
     end_when = triggers.MilestoneTrigger.copy_milestone_from_environ(
-        'course_end', gql_course.course_environ).get('when')
+        constants.END_DATE_MILESTONE, gql_course.course_environ).get('when')
     if end_when:
         return end_when
 
     return courses.Course.get_named_course_setting_from_environ(
-        'end_date', gql_course.course_environ)
+        constants.END_DATE_SETTING, gql_course.course_environ)
 
 
 def register():
-    gql.Course.add_to_class(
-        'start_date', graphene.String(resolver=resolve_start_date))
-    gql.Course.add_to_class(
-        'end_date', graphene.String(resolver=resolve_end_date))
+    gql.Course.add_to_class(constants.START_DATE_SETTING,
+        graphene.String(resolver=resolve_start_date))
+    gql.Course.add_to_class(constants.END_DATE_SETTING,
+        graphene.String(resolver=resolve_end_date))

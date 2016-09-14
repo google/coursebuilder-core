@@ -312,7 +312,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
                 'className': cls._COURSE_AVAILABILITY_CSS,
                 'wrapperClassName': cls._COURSE_AVAILABILITY_WRAPPER_CSS}))
 
-        for milestone in triggers.MilestoneTrigger.COURSE_MILESTONES:
+        for milestone in constants.COURSE_MILESTONES:
             course_wide_settings.add_property(cls.get_milestone_array_schema(
                 milestone))
 

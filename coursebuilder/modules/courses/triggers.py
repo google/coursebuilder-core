@@ -71,6 +71,7 @@ from common import utc
 from common import utils
 from models import courses
 from modules.courses import availability_options
+from modules.courses import constants
 
 
 def _fully_qualified_typename(cls):
@@ -1372,8 +1373,8 @@ class MilestoneTrigger(AvailabilityTrigger):
     NONE_SELECTED = availability_options.AVAILABILITY_NONE_SELECTED
     DEFAULT_AVAILABILITY = NONE_SELECTED
 
-    COURSE_MILESTONES = ['course_start', 'course_end']
-    KNOWN_MILESTONES = COURSE_MILESTONES
+    # Course milestones are currently the only known milestones.
+    KNOWN_MILESTONES = list(constants.COURSE_MILESTONES)
 
     UNEXPECTED_MILESTONE_FMT = "Milestone '{}' not in {}."
     UNSPECIFIED_FMT = '{} not specified.'
