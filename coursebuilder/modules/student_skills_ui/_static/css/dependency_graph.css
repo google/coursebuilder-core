@@ -8,7 +8,7 @@
 }
 
 .panel {
-  float: right;
+  float: left;
   position: relative;
   margin-left: 10px;
   text-align: center;
@@ -25,12 +25,6 @@ svg.graph {
 
 .graph g.dimmed text.shadow {
   stroke-opacity: 0;
-}
-
-.graph circle {
-  fill: #ccc;
-  stroke: #333;
-  stroke-width: 1.5px;
 }
 
 .graph text {
@@ -66,8 +60,8 @@ svg.graph {
   border-radius: 7px;
   z-index: 100;
   position: absolute;
-  top: 160px;
-  left: 40px;
+  top: 10px;
+  left: 10px;
 }
 
 .control-zoom a {
@@ -98,17 +92,38 @@ svg.graph {
   margin-bottom: 5px;
 }
 
-.graph .node rect,
-.graph .node circle,
-.graph .node ellipse,
-.graph .node polygon {
+.graph .node rect {
   stroke: #333;
   fill: #fff;
   stroke-width: 1.5px;
+}
+
+.graph .node.highlight rect {
+  stroke-width: 3px;
 }
 
 .graph .edgePath path.path {
   stroke: #333;
   fill: none;
   stroke-width: 1.5px;
+}
+
+.edgePath path.path.ancestor {
+  stroke: blue;
+  fill: blue;
+  stroke-width: 2px;
+}
+
+.edgePath path.path.descendant {
+  stroke: blue;
+  fill: blue;
+  stroke-width: 2px;
+}
+
+.edgePath marker.ancestor {
+  fill: blue;
+}
+
+.edgePath marker.descendant {
+  fill: blue;
 }

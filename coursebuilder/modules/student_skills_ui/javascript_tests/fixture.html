@@ -6,16 +6,29 @@
       <a class="control-zoom-in" href="#" title="Zoom in"></a>
       <a class="control-zoom-out" href="#" title="Zoom out"></a>
     </div>
-
     <div class="container">
-      <div class="graph-container"
-        data-nodes='[{"id": "a", "default_color": "#ccc"},
-                     {"id": "b", "default_color": "green"}]'
-        data-links='[{"source": 0, "target": 1}]'>
-      </div>
+      <div class="graph-container"></div>
       <div class="panel">
-        <h2>Units for selected nodes:</h2>
+        <h2>Selected skills:</h2>
         <div class="panel-links">
+          <li class="skill-card" style="display:none">
+            <div class="name"></div>
+            <div class="description">
+              <div class="content"></div>
+              <div class="fade"></div>
+            </div>
+            <div class = "locations">
+              <div class="title"></div>
+                <!--TODO(tujohnson): It seems like translations aren't performed
+                  correctly in Karma tests.
+                  {# I18N: Header for list of links to lessons #}
+                  {{ gettext('Lessons') }}-->
+              <ol class="lessons">
+                <!--{# I18N: Text for empty list of lessons #}
+                <li class='empty'>{{ gettext('Not taught') }}</li>-->
+              </ol>
+            </div>
+          </li>
         </div>
       </div>
     </div>

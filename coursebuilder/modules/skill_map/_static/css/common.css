@@ -36,6 +36,9 @@ ol.skill-display-root > li.skill > button.close {
   color: inherit;
   border: none;
 }
+
+/* If you change the dimensions of skill cards here, please update the setting
+ * for panelWidth in modules/student_skills_ui/_static/js/viz.js. */
 .skill-card {
   display: inline-block;
   width: 160px;

@@ -9,13 +9,13 @@ module.exports = function(config) {
       'lib/_static/underscore-1.4.3/underscore.min.js',
       'tests/unit/javascript_tests/lib/common.js',
       'modules/student_skills_ui/javascript_tests/*.js',
+      'modules/student_skills_ui/_static/js/viz.js',
       {
         pattern: 'modules/student_skills_ui/javascript_tests/*.html',
         watched: true,
         included: false,
         served: true
       },
-      'modules/student_skills_ui/_static/js/viz.js',
       'modules/skill_map/_static/css/skill_map.css'
     ],
     exclude: ['**/karma.conf.js'],

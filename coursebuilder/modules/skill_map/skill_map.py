@@ -533,9 +533,7 @@ class LocationInfo(object):
         unit = self._course.find_unit_by_id(lesson.unit_id)
         self._unit_title = unit.title
         self._unit_id = unit.unit_id
-        # pylint: disable=protected-access
-        self._unit_index = unit._index
-        # pylint: enable=protected-access
+        self._unit_index = unit.index
         if lesson.index is None:
             self._label = '%s.' % unit.index
         else:
@@ -1933,16 +1931,20 @@ def lesson_title_provider(handler, app_context, unit, lesson, student):
             'leads_to': [s.id for s in successors]
         }
 
+    depends_on_skills = not_in_this_lesson(handler, lesson, student,
+                                           depends_on_skills)
+    leads_to_skills = not_in_this_lesson(handler, lesson, student,
+                                         leads_to_skills)
+
+
     template_values = {
         'lesson': lesson,
         'can_see_drafts': custom_modules.can_see_drafts(app_context),
         'is_course_admin': roles.Roles.is_course_admin(app_context),
         'is_read_write_course': app_context.fs.is_read_write(),
         'skills': skills,
-        'depends_on_skills': not_in_this_lesson(
-            handler, lesson, student, depends_on_skills),
-        'leads_to_skills': not_in_this_lesson(
-            handler, lesson, student, leads_to_skills),
+        'depends_on_skills': depends_on_skills,
+        'leads_to_skills': leads_to_skills,
         'dependency_map': transforms.dumps(dependency_map),
         'display_skill_level_legend': (
             False if isinstance(student, models.TransientStudent) else True)

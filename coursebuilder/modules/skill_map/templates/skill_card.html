@@ -1,3 +1,6 @@
+<!-- TODO(tujohnson): Please keep this macro in sync with the version in the
+  Javascript file viz.js in the student_skills_ui module. Eventually, they
+  should be handled by the same Javascript object. -->
 {% macro display(skill) -%}
   <li class="skill-card" data-skill-id="{{ skill.id }}">
     <div class="name {{ skill.score_level }}">

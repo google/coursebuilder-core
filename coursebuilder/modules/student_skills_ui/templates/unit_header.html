@@ -1,0 +1,57 @@
+<div class="container">
+  <div class="graph-container" data-nodes="{{ nodes }}" data-edges="{{ edges }}">
+  <div class="control-zoom">
+      <a class="control-zoom-in" href="#" title="Zoom in"></a>
+      <a class="control-zoom-out" href="#" title="Zoom out"></a>
+  </div>
+  </div>
+  <div class="panel">
+    <h2>Selected skill</h2>
+    <div class="panel-links">
+      <!-- TODO(tujohnson): This and the related macro in the skill_map template
+      skill_card.html should eventually be handled by the same Javascript
+      object. For now, this is filled dynamically with Jquery, in the
+      drawSkillCardInPanel function of viz.js. Please keep them consistent. -->
+      <ul>
+        <li class="skill-card" style="display:none">
+          <div class="name"></div>
+          <div class="description">
+            <div class="content"></div>
+            <div class = "fade"></div>
+          </div>
+          <div class="locations">
+            <div class="title">
+              {# I18N: Header for list of links to lessons #}
+              {{ gettext('Lessons') }}
+            </div>
+            <ol class="lessons">
+              {# I18N: Text for empty list of lessons #}
+              <li class='empty'>{{ gettext('Not taught') }}</li>
+            </ol>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" type="text/css"
+    href="/modules/student_skills_ui/_static/css/dependency_graph.css" />
+<script src="/static/d3-3.4.3/d3.js" charset="utf-8"></script>
+<script src="/static/dagre-0.7.4/dagre.min.js"></script>
+<script src="/static/dagre-d3-0.4.17p/dagre-d3.min.js"></script>
+<script src="/static/underscore-1.4.3/underscore.min.js"></script>
+<script src="/modules/student_skills_ui/_static/js/viz.js"></script>
+
+<script>
+  data = {
+    'directed': true,
+    'multigraph': false,
+    'graph': [],
+    'nodes': $('div.graph-container').data('nodes'),
+    'edges': $('div.graph-container').data('edges')
+  };
+
+  // No shift, and use automatic scaling
+  GcbStudentSkillsUiModule.setupGraph(data, 0, 0, -1);
+</script>
