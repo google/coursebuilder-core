@@ -2844,6 +2844,122 @@ class AvailabilityTests(actions.TestBase):
         logs = self.get_log()
         self._awaiting_logged(logs, len(future_cts), tct)
 
+    def test_act_hooks(self):
+        # modules.explorer.course_settings.register() registers some ACT_HOOKS
+        # callbacks that save the `when` date/time of course start and end
+        # triggers that are acted on into the course settings as UTC ISO-8601
+        # strings.
+        #
+        # This test confirms that the side effects of those callbacks occur.
+        tmt = triggers.MilestoneTrigger
+
+        now = utc.now_as_timestamp()
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        initial_env = app_context.get_environ()
+
+        # First, confirm there are no start_date or end_date values in the
+        # course settings.
+        self.assertEquals(
+            courses.Course.get_named_course_setting_from_environ(
+                constants.START_DATE_SETTING, initial_env), None)
+        self.assertEquals(
+            courses.Course.get_named_course_setting_from_environ(
+                constants.END_DATE_SETTING, initial_env), None)
+
+        course = courses.Course(None, app_context=app_context)
+
+        defaults_end = tmt.encoded_defaults(availability=tmt.NONE_SELECTED,
+            milestone=constants.END_DATE_MILESTONE)
+        course_start = self._past_course_start_trigger(now)
+        only_course_start = {
+            constants.START_DATE_MILESTONE: [course_start],
+            # No course_end specified, so use default placeholder.
+            constants.END_DATE_MILESTONE: [defaults_end],
+        }
+
+        response = self._post(only_course_start)
+        self.assertEquals(200, response.status_int)
+        start_posted_env = app_context.get_environ()
+
+        # Just the one course_start trigger was POSTed into course settings.
+        self.assertEquals(len(tmt.copy_from_settings(start_posted_env)), 1)
+        self.assertEquals(only_course_start, tmt.for_form(
+            start_posted_env, course=course))
+
+        # Start trigger is now in course settings, so act on it in cron job.
+        self._run_availability_jobs(app_context)
+
+        # Confirm that update_start_date_from_course_start_when() was run.
+        start_cron_env = app_context.get_environ()
+
+        # POSTed course_start `when` ended up as the 'start_date' in the
+        # course settings.
+        past_start_text = self._utc_past_text(now)
+        self.assertEquals(
+            courses.Course.get_named_course_setting_from_environ(
+                constants.START_DATE_SETTING, start_cron_env), past_start_text)
+
+        # All course start/end milestone triggers were acted on and consumed.
+        self.assertEquals(len(tmt.copy_from_settings(start_cron_env)), 0)
+
+        defaults_start = tmt.encoded_defaults(availability=tmt.NONE_SELECTED,
+            milestone=constants.START_DATE_MILESTONE)
+        defaults_only = {
+            # Neither course_start nor course_end specified (placeholders).
+            constants.START_DATE_MILESTONE: [defaults_start],
+            constants.END_DATE_MILESTONE: [defaults_end],
+        }
+        self.assertEquals(defaults_only, tmt.for_form(
+            start_cron_env, course=course))
+
+        # No change in availability (setting course_end['availability'] to the
+        # same as course_start['availability']) should still invoke ACT_HOOKS.
+        an_earlier_end_hour = utc.to_text(
+            seconds=utc.hour_start(now - (2 * 60 * 60)))
+        course_end = {
+            'availability': course_start['availability'],
+            'milestone': constants.END_DATE_MILESTONE,
+            'when': an_earlier_end_hour,
+        }
+        only_course_end = {
+            # No course_start specified, so use default placeholder.
+            constants.START_DATE_MILESTONE: [defaults_start],
+            constants.END_DATE_MILESTONE: [course_end],
+        }
+
+        response = self._post(only_course_end)
+        self.assertEquals(200, response.status_int)
+        end_posted_env = app_context.get_environ()
+
+        # Just the one course_end trigger was POSTed into course settings.
+        self.assertEquals(len(tmt.copy_from_settings(end_posted_env)), 1)
+        self.assertEquals(only_course_end, tmt.for_form(
+            end_posted_env, course=course))
+
+        # End trigger is now in course settings, so act on it in cron job.
+        self._run_availability_jobs(app_context)
+
+        # Confirm that update_end_date_from_course_end_when() was run.
+        end_cron_env = app_context.get_environ()
+
+        # All course start/end milestone triggers were acted on and consumed.
+        self.assertEquals(len(tmt.copy_from_settings(end_cron_env)), 0)
+        self.assertEquals(defaults_only, tmt.for_form(
+            end_cron_env, course=course))
+
+        # A different end_date value should now be present in the course
+        # settings.
+        self.assertEquals(
+            courses.Course.get_named_course_setting_from_environ(
+                constants.END_DATE_SETTING, end_cron_env), an_earlier_end_hour)
+
+        # Previously-saved start_date should be unchanged.
+        self.assertEquals(
+            courses.Course.get_named_course_setting_from_environ(
+                constants.START_DATE_SETTING, end_cron_env), past_start_text)
+
 
 class CourseSettingsRESTHandlerTests(actions.TestBase):
     _ADMIN_EMAIL = 'admin@foo.com'

@@ -95,7 +95,6 @@ class DateTimeTrigger(object):
     defined by concrete subclasses (e.g. ContentTrigger, MilestoneTrigger,
     but *not* AvailabilityTrigger, which is also an abstract base class).
     """
-
     FIELD_NAME = 'when'
     FIELDS = [FIELD_NAME]
 
@@ -944,7 +943,33 @@ class AvailabilityTrigger(DateTimeTrigger):
 
 
 class ContentTrigger(AvailabilityTrigger):
-    """A course content availability change applied at specified date/time."""
+    """A course content availability change applied at specified date/time.
+
+    Modules can register to be called back when a content date/time trigger is
+    "acted-on", that is, the act() method of a ContentTrigger has been
+    invoked (this happens when a valid trigger is now in the past and thus
+    "triggered"). Callbacks are registered like this:
+
+        triggers.ContentTrigger.ACT_HOOKS['my_module'] = my_handler
+
+    Trigger callbacks are called a single time for a given acted-on trigger,
+    since the act() method for a given trigger is called only once, and then
+    that "expended" trigger is, by definition, discarded. The callbacks are
+    called in no particular order, via common.utils.run_hooks().
+
+    Acted-on trigger callbacks must accept these paramters:
+      trigger - the specific ContentTrigger instance invoking the callbacks.
+      changed - a ChangedByAct namedtuple containing 'previous' and 'next'
+        content availability changed by act(), or None if no change.
+      course - the Course that has been potentially altered by the act()
+        method prior to any callbacks being called.
+      env - the Course get_environ() dict containing settings changes made by
+        the act() method that *have not yet been saved* to the Course.
+        Changes to this env dict by the callback *will* affect what is
+        eventually saved back into the Course environment and settings.
+    """
+
+    ACT_HOOKS = {}
 
     FIELD_NAME = 'content'
     FIELDS = AvailabilityTrigger.FIELDS + [FIELD_NAME]
@@ -1294,25 +1319,33 @@ class ContentTrigger(AvailabilityTrigger):
 
         return triggers_with_content
 
-    def act(self, course, unused_settings):
+    def act(self, course, settings):
         """Updates course content availability as indicated by the trigger.
 
         The supplied parameters are not directly used, but any alteration to
         self.found will not be persistent until the caller (eventually) calls
         save() for the Course of which self.found is a content element.
+
+        Args:
+            course: a Course passed through, unaltered, to ACT_HOOKS callbacks.
+            settings: a Course get_environ() dict passed through, unaltered, to
+                ACT_HOOKS callbacks.
         """
         current = self.found.availability
         new = self.availability
 
-        if current == new:
-            return None
+        if current != new:
+            self.found.availability = new
+            changed = self.ChangedByAct(current, new)
+            logging.info('APPLIED %s from "%s" to "%s" for %s in %s: %s',
+                self.kind(), current, new, self.encoded_content,
+                utils.get_ns_name_for_logging(course=course), self.logged)
+        else:
+            changed = None
 
-        logging.info('APPLIED %s from "%s" to "%s" for %s in %s: %s',
-            self.kind(), current, new, self.encoded_content,
-            utils.get_ns_name_for_logging(course=course), self.logged)
-
-        self.found.availability = new
-        return self.ChangedByAct(current, new)
+        utils.run_hooks(self.ACT_HOOKS.itervalues(),
+                        self, changed, course, settings)
+        return changed
 
 
 class MilestoneTrigger(AvailabilityTrigger):
@@ -1354,7 +1387,42 @@ class MilestoneTrigger(AvailabilityTrigger):
     milestone triggers are stored is that the same super @classmethods that
     operate on lists of content triggers can be used with the milestone
     triggers as well.
+
+    Modules can register to be called back when a course-wide milestone
+    date/time trigger is "acted-on", that is, the act() method of a
+    MilestoneTrigger has been invoked (this happens when a valid trigger is
+    now in the past and thus "triggered"). Callbacks can be registered for
+    each of the KNOWN_MILESTONES like this:
+
+        triggers.MilestoneTrigger.ACT_HOOKS[constants.START_DATE_MILESTONE][
+            'my_module'] = my_course_start_handler
+
+        triggers.MilestoneTrigger.ACT_HOOKS[constants.END_DATE_MILESTONE][
+            'my_module'] = my_course_end_handler
+
+    Trigger callbacks are called a single time for a given acted-on trigger,
+    since the act() method for a given trigger is called only once, and then
+    that "expended" trigger is, by definition, discarded. The callbacks are
+    called in no particular order, via common.utils.run_hooks().
+
+    Acted-on trigger callbacks must accept these paramters:
+      trigger - the specific MilestoneTrigger instance invoking the callbacks.
+      changed - a ChangedByAct namedtuple containing 'previous' and 'next'
+        course-wide availability changed by act(), or None if no change.
+        (If there is no change, the current availability is still accessible
+        to the callback via trigger.availability.)
+      course - the Course that has been potentially altered by the act()
+        method prior to any callbacks being called.
+      env - the Course get_environ() dict containing settings changes made by
+        the act() method that *have not yet been saved* to the Course.
+        Changes to this env dict by the callback *will* affect what is
+        eventually saved back into the Course environment and settings.
     """
+
+    # Course milestones are currently the only known milestones.
+    KNOWN_MILESTONES = list(constants.COURSE_MILESTONES)
+
+    ACT_HOOKS = {km: {} for km in KNOWN_MILESTONES}
 
     FIELD_NAME = 'milestone'
     FIELDS = AvailabilityTrigger.FIELDS + [FIELD_NAME]
@@ -1372,9 +1440,6 @@ class MilestoneTrigger(AvailabilityTrigger):
     # selected will be discarded and not saved in the course settings.
     NONE_SELECTED = availability_options.AVAILABILITY_NONE_SELECTED
     DEFAULT_AVAILABILITY = NONE_SELECTED
-
-    # Course milestones are currently the only known milestones.
-    KNOWN_MILESTONES = list(constants.COURSE_MILESTONES)
 
     UNEXPECTED_MILESTONE_FMT = "Milestone '{}' not in {}."
     UNSPECIFIED_FMT = '{} not specified.'
@@ -1733,19 +1798,24 @@ class MilestoneTrigger(AvailabilityTrigger):
         MilestoneTrigger is expected to supply its own act() method.
 
         Args:
-            course: a Course, currently unused.
+            course: a Course passed through, unaltered, to ACT_HOOKS callbacks.
             env: a Course get_environ() dict containing settings that are
-                potentially updated *in-place* by act().
+                potentially updated *in-place* by act() and then passed to
+                ACT_HOOKS callbacks.
         """
         current = courses.Course.get_course_availability_from_environ(env)
         new = self.availability
-        if current == new:
-            return None
 
-        logging.info('APPLIED %s from "%s" to "%s" at %s in %s: %s',
-            self.kind(), current, new,
-            availability_options.option_to_title(self.milestone),
-            utils.get_ns_name_for_logging(course=course), self.logged)
+        if current != new:
+            courses.Course.set_course_availability_into_environ(new, env)
+            changed = self.ChangedByAct(current, new)
+            logging.info('APPLIED %s from "%s" to "%s" at %s in %s: %s',
+                self.kind(), current, new,
+                availability_options.option_to_title(self.milestone),
+                utils.get_ns_name_for_logging(course=course), self.logged)
+        else:
+            changed = None
 
-        courses.Course.set_course_availability_into_environ(new, env)
-        return self.ChangedByAct(current, new)
+        utils.run_hooks(self.ACT_HOOKS.get(self.milestone, {}).itervalues(),
+                        self, changed, course, env)
+        return changed

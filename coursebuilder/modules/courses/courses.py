@@ -64,7 +64,7 @@ def register_module():
         admin_preferences_editor.on_module_enabled()
         availability.on_module_enabled(custom_module, permissions)
         course_roles.on_module_enabled(custom_module, permissions)
-        graphql.register()
+        graphql.notify_module_enabled()
         lessons.on_module_enabled(custom_module)
         settings.on_module_enabled(custom_module, permissions)
         unit_lesson_editor.on_module_enabled(custom_module, permissions)
