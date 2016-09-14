@@ -42,6 +42,9 @@ _RESOURCES_PATH = os.path.join(os.path.sep, 'modules', 'upload', 'resources')
 _XSRF_TOKEN_NAME = 'user-upload-form-xsrf'
 
 
+# TODO(tujohnson): This belongs on line 107 instead of here, but I'm trying to
+# satisfy the linter.
+# pylint: disable=broad-except
 class TextFileUploadHandler(utils.BaseHandler):
 
     def get_template(self, template_file, additional_dirs=None, prefs=None):
@@ -51,8 +54,8 @@ class TextFileUploadHandler(utils.BaseHandler):
             template_file, additional_dirs=dirs, prefs=prefs)
 
     def validate_contents(self, contents):
-      """Convert 'contents' to ASCII or raise UnicodeDecodeError."""
-      return contents.decode()
+        """Convert 'contents' to ASCII or raise UnicodeDecodeError."""
+        return contents.decode()
 
     def post(self):
         """Creates or updates a student submission."""
@@ -77,7 +80,7 @@ class TextFileUploadHandler(utils.BaseHandler):
         if not contents:
             # I18N: Error message for failed student file upload.
             # The selected file was empty.
-            error_detail  = self.gettext('File is empty.')
+            error_detail = self.gettext('File is empty.')
             logging.warn(error_detail)
             self.error(400)
         else:
@@ -101,7 +104,6 @@ class TextFileUploadHandler(utils.BaseHandler):
                     'File too large, only files smaller than 1MB are allowed.')
                 logging.warn(error_detail)
                 self.error(400)
-            # pylint: disable=broad-except
             except Exception as e:
                 # I18N: Error message for failed student file upload.
                 # Generic upload error.

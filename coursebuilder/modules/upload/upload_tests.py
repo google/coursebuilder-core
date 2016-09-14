@@ -84,22 +84,6 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         self.assertEqual(1, len(submissions))
         self.assertEqual(u'"%s"' % self.contents, submissions[0].contents)
 
-    def test_empty_contents_returns_400(self):
-        self.configure_environ_for_current_user()
-        # Allow protected access for tests. pylint: disable=protected-access
-        user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
-            upload._XSRF_TOKEN_NAME)
-        params = {
-            'contents': '',
-            'form_xsrf_token': user_xsrf_token,
-            'unit_id': self.unit_id,
-        }
-
-        response = self.testapp.post(
-            upload._POST_ACTION_SUFFIX, params, self.headers,
-            expect_errors=True)
-        self.assertEqual(400, response.status_int)
-
     def test_missing_contents_returns_400(self):
         self.configure_environ_for_current_user()
         # Allow protected access for tests. pylint: disable=protected-access
