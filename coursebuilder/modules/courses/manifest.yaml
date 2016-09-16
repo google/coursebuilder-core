@@ -10,8 +10,14 @@ tests:
     - modules.courses.courses_tests.EventRecordingRestHandlerTests = 3
     - modules.courses.courses_tests.ReorderAccess = 2
     - modules.courses.courses_tests.UnitLessonEditorAccess = 3
+    - modules.courses.triggers_tests.ContentTriggerTests = 21
+    - modules.courses.triggers_tests.MilestoneTriggerTests = 18
   integration:
     - modules.courses.courses_integration_tests.AvailabilityTests = 1
+  unit:
+    - modules.courses.triggers_tests.AvailabilityTriggerTests = 2
+    - modules.courses.triggers_tests.DateTimeTriggerTests = 7
+    - modules.courses.triggers_tests.FunctionsTests = 1
 
 files:
   - modules/courses/__init__.py
@@ -42,5 +48,6 @@ files:
   - modules/courses/templates/question_list.html
   - modules/courses/templates/question_location_macros.html
   - modules/courses/triggers.py
+  - modules/courses/triggers_tests.py
   - modules/courses/unit_lesson_editor.py
   - modules/courses/unit_outline.py
