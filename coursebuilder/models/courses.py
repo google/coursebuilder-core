@@ -3642,6 +3642,10 @@ course:
         return cls.get_reg_form_from_environ(env).get(name, default)
 
     @classmethod
+    def set_named_reg_setting_in_environ(cls, name, env, value):
+        cls.reg_form_in_environ(env)[name] = value
+
+    @classmethod
     def get_course_availability_from_environ(cls, env):
         """Derive course availability policy based on other supplied env dict.
 

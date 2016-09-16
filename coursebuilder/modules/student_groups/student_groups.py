@@ -1338,13 +1338,17 @@ def modify_course_environment(app_context, env):
     if (course_availability and
         (course_availability != AVAILABILITY_NO_OVERRIDE)):
         setting = courses.COURSE_AVAILABILITY_POLICIES[course_availability]
-        env['course']['now_available'] = setting['now_available']
-        env['course']['browsable'] = setting['browsable']
-        env['reg_form']['can_register'] = setting['can_register']
+        courses.Course.set_named_course_setting_in_environ(
+            'now_available', env, setting['now_available'])
+        courses.Course.set_named_course_setting_in_environ(
+            'browsable', env, setting['browsable'])
+        courses.Course.set_named_reg_setting_in_environ(
+            'can_register', env, setting['can_register'])
 
     # Users named by email into groups are implicitly also whitelisted into
     # the course.
-    env['reg_form']['whitelist'] = users.get_current_user().email()
+    courses.Course.set_whitelist_into_environ(
+        users.get_current_user().email(), env)
 
 
 def modify_unit_and_lesson_attributes(course, units, lessons):
