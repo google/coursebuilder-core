@@ -40,7 +40,7 @@ fi
 . "$(dirname "${common_script}")/config.sh"
 
 CHROMEDRIVER_VERSION=2.23
-CHROMEDRIVER_DIR=$RUNTIME_HOME/chromedriver-$CHROMEDRIVER_VERSION
+CHROMEDRIVER_DIR="$RUNTIME_HOME/chromedriver-$CHROMEDRIVER_VERSION"
 if [[ $OSTYPE == linux* ]] ; then
   NODE_DOWNLOAD_FOLDER=node-v0.12.4-linux-x64
   CHROMEDRIVER_ZIP=chromedriver_linux64.zip
@@ -57,10 +57,11 @@ CHROMEDRIVER_URL=http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSIO
 PYPI_URL=https://pypi.python.org/packages/source
 
 # Ensure that $COURSEBUILDER_RESOURCES is available to write
-if [[ -e $COURSEBUILDER_RESOURCES && \
-    ( ! -d $COURSEBUILDER_RESOURCES || ! -w $COURSEBUILDER_RESOURCES ) ]]; then
+if [[ -e "$COURSEBUILDER_RESOURCES" && \
+    ( ! -d "$COURSEBUILDER_RESOURCES" || \
+      ! -w "$COURSEBUILDER_RESOURCES" ) ]]; then
   echo ERROR: These scripts need to be able to create or write to a folder
-  echo called $COURSEBUILDER_RESOURCES.
+  echo called "'$COURSEBUILDER_RESOURCES'."
   echo Exiting...
   exit 1
 fi
@@ -72,17 +73,17 @@ if [ ! -x "$SOURCE_DIR/scripts/start_in_shell.sh" ]; then
 fi
 
 # Configures the runtime environment.
-export PYTHONPATH=$SOURCE_DIR\
+export PYTHONPATH="$SOURCE_DIR\
 :$GOOGLE_APP_ENGINE_HOME\
 :$RUNTIME_HOME/oauth2client\
-:$RUNTIME_HOME/pycrypto-2.6.1
-PATH=$RUNTIME_HOME/node/node_modules/karma/bin\
+:$RUNTIME_HOME/pycrypto-2.6.1"
+PATH="$RUNTIME_HOME/node/node_modules/karma/bin\
 :$RUNTIME_HOME/node/bin\
 :$RUNTIME_HOME/phantomjs/bin\
 :$CHROMEDRIVER_DIR\
-:$PATH
-export YUI_BASE=$RUNTIME_HOME/yui/build
-export KARMA_LIB=$RUNTIME_HOME/karma_lib
+:$PATH"
+export YUI_BASE="$RUNTIME_HOME/yui/build"
+export KARMA_LIB="$RUNTIME_HOME/karma_lib"
 
 CB_ARCHIVE_URL=https://github.com/google/coursebuilder-resources/raw/master
 CB_ARCHIVE_CONFIG_URL=$CB_ARCHIVE_URL/config
@@ -95,8 +96,8 @@ if [ ! -d "$RUNTIME_HOME" ]; then
 fi
 
 function download_and_unpack() {
-  local source_url=$1 && shift
-  local dest_dir=$1 && shift || local dest_dir="$RUNTIME_HOME"
+  local source_url="$1" && shift
+  local dest_dir="$1" && shift || local dest_dir="$RUNTIME_HOME"
 
   local archive_type=$( \
     echo "$source_url" | \
@@ -117,7 +118,7 @@ function download_and_unpack() {
 }
 
 if [ -s "$GOOGLE_APP_ENGINE_HOME/VERSION" ]; then
-  GAE_SDK_VERSION=$(cat $GOOGLE_APP_ENGINE_HOME/VERSION | \
+  GAE_SDK_VERSION=$(cat "$GOOGLE_APP_ENGINE_HOME/VERSION" | \
     grep release | \
     sed 's/release: //g' | \
     tr -d '"')
@@ -129,12 +130,12 @@ else
     rm -r $GOOGLE_APP_ENGINE_HOME
   fi
 
-  mkdir -p $RUNTIME_HOME
+  mkdir -p "$RUNTIME_HOME"
   curl --location --silent $CB_ARCHIVE_GAE_SDK_URL -o gae_sdk_download_url
   GAE_SDK_URL=$(cat gae_sdk_download_url)
   download_and_unpack $GAE_SDK_URL
   rm gae_sdk_download_url
-  GAE_SDK_VERSION=$(cat $GOOGLE_APP_ENGINE_HOME/VERSION | \
+  GAE_SDK_VERSION=$(cat "$GOOGLE_APP_ENGINE_HOME/VERSION" | \
     grep release | \
     sed 's/release: //g' | \
     tr -d '"')
@@ -142,8 +143,8 @@ else
 fi
 
 function handle_build_error() {
-  local package_name=$1 && shift
-  local package_version=$1 && shift
+  local package_name="$1" && shift
+  local package_version="$1" && shift
 
   echo "
 Compilation error building $package_name-$package_version. Please ensure a C
@@ -158,11 +159,11 @@ and follow the instructions that appear, then re-run this command."
 }
 
 function need_install() {
-  local package_name=$1 && shift
-  local version_file=$RUNTIME_HOME/$package_name/$1 && shift
-  local version_finder=$1 && shift
-  local expected_version=$1 && shift
-  local purpose=$1 && shift
+  local package_name="$1" && shift
+  local version_file="$RUNTIME_HOME/$package_name/$1" && shift
+  local version_finder="$1" && shift
+  local expected_version="$1" && shift
+  local purpose="$1" && shift
   # The "purpose" parameter should be one of 'test' or 'product' to indicate
   # whether the item is needed only for tests or for the actual product itself.
   # For problematic platforms (Windows), we skip fetch/install of test packages.
@@ -170,21 +171,21 @@ function need_install() {
     return 1
   fi
 
-  local package_dir=$RUNTIME_HOME/$package_name
+  local package_dir="$RUNTIME_HOME/$package_name"
 
-  if [ ! -d $package_dir ] ; then
+  if [ ! -d "$package_dir" ] ; then
     echo "Installing $package_name-$expected_version to $package_dir"
     return 0
   fi
 
-  local version=$( grep "$version_finder" $version_file \
+  local version=$( grep "$version_finder" "$version_file" \
     | grep -v Meta \
     | head -1 \
     | sed -e "s/.*$version_finder* *//" -e 's/ .*//' )
   if [ "$version" != "$expected_version" ] ; then
     echo "Expected version '$expected_version' for $package_name, but" \
       "instead had '$version'.  Removing and reinstalling."
-    rm -rf $package_dir
+    rm -rf "$package_dir"
     return 0
   fi
   echo "Using $package_name-$expected_version from $package_dir"
@@ -193,7 +194,7 @@ function need_install() {
 
 # Probe for file not present in the archive, but present in the folder we make
 # *from* the archive.
-if [ ! -f $RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded ]; then
+if [ ! -f "$RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded" ]; then
   if [[ $OSTYPE == "cygwin" ]] ; then
     # The Cygwin python headers claim that BSD is available, but when building
     # the PyCrypto package, it is not.  Comment out this line.  Note that we
@@ -213,66 +214,67 @@ if [ ! -f $RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded ]; then
   echo '   your operating system)'
 
   # Clean up any old artifacts (for example, from failed builds).
-  if [ -d $RUNTIME_HOME/pycrypto-2.6.1 ]; then
-    rm -r $RUNTIME_HOME/pycrypto-2.6.1
+  if [ -d "$RUNTIME_HOME/pycrypto-2.6.1" ]; then
+    rm -r "$RUNTIME_HOME/pycrypto-2.6.1"
   fi
 
   download_and_unpack $PYPI_URL/p/pycrypto/pycrypto-2.6.1.tar.gz
   pushd . > /dev/null
-  cd $RUNTIME_HOME/pycrypto-2.6.1
+  cd "$RUNTIME_HOME/pycrypto-2.6.1"
   echo Building PyCrypto
   python setup.py build > /dev/null || handle_build_error pycrypto 2.6.1
   echo Installing PyCrypto
-  python setup.py install --home=$RUNTIME_HOME/pycrypto_build_tmp > /dev/null
-  rm -r $RUNTIME_HOME/pycrypto-2.6.1
-  mkdir $RUNTIME_HOME/pycrypto-2.6.1
-  touch $RUNTIME_HOME/pycrypto-2.6.1/__init__.py
-  mv $RUNTIME_HOME/pycrypto_build_tmp/lib/python/* $RUNTIME_HOME/pycrypto-2.6.1
-  rm -r $RUNTIME_HOME/pycrypto_build_tmp
+  python setup.py install --home="$RUNTIME_HOME/pycrypto_build_tmp" > /dev/null
+  rm -r "$RUNTIME_HOME/pycrypto-2.6.1"
+  mkdir "$RUNTIME_HOME/pycrypto-2.6.1"
+  touch "$RUNTIME_HOME/pycrypto-2.6.1/__init__.py"
+  mv "$RUNTIME_HOME/pycrypto_build_tmp/lib/python/"* \
+    "$RUNTIME_HOME/pycrypto-2.6.1"
+  rm -r "$RUNTIME_HOME/pycrypto_build_tmp"
   # Now that we know we've succeeded, create the needle for later probes.
-  touch $RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded
+  touch "$RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded"
   popd > /dev/null
 fi
 
 if need_install webtest PKG-INFO Version: 2.0.14 test ; then
   download_and_unpack $PYPI_URL/W/WebTest/WebTest-2.0.14.zip
-  mv $RUNTIME_HOME/WebTest-2.0.14 $RUNTIME_HOME/webtest
+  mv "$RUNTIME_HOME/WebTest-2.0.14" "$RUNTIME_HOME/webtest"
 fi
 
 if need_install six PKG-INFO Version: 1.5.2 product ; then
   echo Installing six '(a Python 2.x/3.x compatibility bridge)'
   download_and_unpack $PYPI_URL/s/six/six-1.5.2.tar.gz
-  mv $RUNTIME_HOME/six-1.5.2 $RUNTIME_HOME/six
+  mv "$RUNTIME_HOME/six-1.5.2" "$RUNTIME_HOME/six"
 fi
 
 if need_install beautifulsoup4 PKG-INFO Version: 4.4.1 product ; then
   # Beautiful Soup is 'product', since it's used in flattening Polymer imports
   echo Installing Beautiful Soup HTML processing library
   download_and_unpack $PYPI_URL/b/beautifulsoup4/beautifulsoup4-4.4.1.tar.gz
-  mv $RUNTIME_HOME/beautifulsoup4-4.4.1 $RUNTIME_HOME/beautifulsoup4
+  mv "$RUNTIME_HOME/beautifulsoup4-4.4.1" "$RUNTIME_HOME/beautifulsoup4"
 fi
 
 if need_install selenium PKG-INFO Version: 2.46.1 test ; then
   download_and_unpack $PYPI_URL/s/selenium/selenium-2.46.1.tar.gz
-  mv $RUNTIME_HOME/selenium-2.46.1 $RUNTIME_HOME/selenium
+  mv "$RUNTIME_HOME/selenium-2.46.1" "$RUNTIME_HOME/selenium"
 fi
 
-if [ ! -x $CHROMEDRIVER_DIR/chromedriver -a $OSTYPE != "cygwin" ] ; then
-  download_and_unpack $CHROMEDRIVER_URL $CHROMEDRIVER_DIR
-  chmod a+x $CHROMEDRIVER_DIR/chromedriver
+if [ ! -x "$CHROMEDRIVER_DIR/chromedriver" -a $OSTYPE != "cygwin" ] ; then
+  download_and_unpack $CHROMEDRIVER_URL "$CHROMEDRIVER_DIR"
+  chmod a+x "$CHROMEDRIVER_DIR/chromedriver"
 fi
 
 if need_install node ChangeLog Version 0.12.4 test ; then
   download_and_unpack \
     http://nodejs.org/dist/v0.12.4/$NODE_DOWNLOAD_FOLDER.tar.gz
-  mv $RUNTIME_HOME/$NODE_DOWNLOAD_FOLDER $RUNTIME_HOME/node
+  mv "$RUNTIME_HOME/$NODE_DOWNLOAD_FOLDER" "$RUNTIME_HOME/node"
 
   echo Installing Karma
-  pushd $RUNTIME_HOME/node > /dev/null
+  pushd "$RUNTIME_HOME/node" > /dev/null
   if [ ! -d node_modules ]; then
     mkdir node_modules
   fi
-  ./bin/npm --cache $RUNTIME_HOME/node/cache install \
+  ./bin/npm --cache "$RUNTIME_HOME/node/cache" install \
       jasmine-core@2.3.4 phantomjs@1.9.8 karma@0.12.36 \
       karma-jasmine@0.3.5 karma-phantomjs-launcher@0.2.0 karma-jasmine-jquery \
       --save-dev > /dev/null
@@ -285,15 +287,15 @@ if need_install phantomjs ChangeLog Version 2.1.0 test ; then
   echo Installing PhantomJs
   if [[ $OSTYPE == linux* ]] ; then
     download_and_unpack \
-      $CB_ARCHIVE_LIB_URL/phantomjs-2.1.1-linux-x86_64.tar.bz2 $RUNTIME_HOME
-    rm -rf $RUNTIME_HOME/phantomjs
-    mv $RUNTIME_HOME/phantomjs-2.1.1-linux-x86_64 $RUNTIME_HOME/phantomjs
+      $CB_ARCHIVE_LIB_URL/phantomjs-2.1.1-linux-x86_64.tar.bz2 "$RUNTIME_HOME"
+    rm -rf "$RUNTIME_HOME/phantomjs"
+    mv "$RUNTIME_HOME/phantomjs-2.1.1-linux-x86_64" "$RUNTIME_HOME/phantomjs"
   elif [[ $OSTYPE == darwin* ]] ; then
     download_and_unpack \
       $CB_ARCHIVE_LIB_URL/phantomjs-2.1.1-macosx.zip \
-      $RUNTIME_HOME/phantomjs
-    rm -rf $RUNTIME_HOME/phantomjs
-    mv $RUNTIME_HOME/phantomjs-2.1.1-macos $RUNTIME_HOME/phantomjs
+      "$RUNTIME_HOME/phantomjs"
+    rm -rf "$RUNTIME_HOME/phantomjs"
+    mv "$RUNTIME_HOME/phantomjs-2.1.1-macos" "$RUNTIME_HOME/phantomjs"
   else
     echo "Target OS '$OSTYPE' must start with 'linux' or 'darwin'."
     exit -1
@@ -301,35 +303,35 @@ if need_install phantomjs ChangeLog Version 2.1.0 test ; then
 fi
 
 if need_install logilab/pylint ChangeLog " -- " 1.4.0 test ; then
-  mkdir -p $RUNTIME_HOME/logilab
-  rm -rf $RUNTIME_HOME/logilab/pylint
+  mkdir -p "$RUNTIME_HOME/logilab"
+  rm -rf "$RUNTIME_HOME/logilab/pylint"
   download_and_unpack \
     https://bitbucket.org/logilab/pylint/get/pylint-1.4.tar.gz \
-    $RUNTIME_HOME/logilab
-  mv $RUNTIME_HOME/logilab/logilab-pylint-6224a61f7491 \
-    $RUNTIME_HOME/logilab/pylint
+    "$RUNTIME_HOME/logilab"
+  mv "$RUNTIME_HOME/logilab/logilab-pylint-6224a61f7491" \
+    "$RUNTIME_HOME/logilab/pylint"
 fi
 
 if need_install logilab/astroid ChangeLog " -- " 1.3.2 test ; then
-  mkdir -p $RUNTIME_HOME/logilab
-  rm -rf $RUNTIME_HOME/logilab/astroid
+  mkdir -p "$RUNTIME_HOME/logilab"
+  rm -rf "$RUNTIME_HOME/logilab/asteroid"
   download_and_unpack \
     https://bitbucket.org/logilab/astroid/get/astroid-1.3.2.tar.gz \
-    $RUNTIME_HOME/logilab
-  mv $RUNTIME_HOME/logilab/logilab-astroid-16369edfbc89 \
-    $RUNTIME_HOME/logilab/astroid
+    "$RUNTIME_HOME/logilab"
+  mv "$RUNTIME_HOME/logilab/logilab-astroid-16369edfbc89" \
+    "$RUNTIME_HOME/logilab/astroid"
 fi
 
 if need_install logilab/logilab/common ChangeLog " -- " 0.62.0 test ; then
-  mkdir -p $RUNTIME_HOME/logilab/logilab
-  rm -rf $RUNTIME_HOME/logilab/logilab/common
+  mkdir -p "$RUNTIME_HOME/logilab/logilab"
+  rm -rf "$RUNTIME_HOME/logilab/logilab/common"
   download_and_unpack \
     https://bitbucket.org/logilab/logilab-common/get/logilab-common-version-0.62.0.tar.gz \
-    $RUNTIME_HOME/logilab/logilab
+    "$RUNTIME_HOME/logilab/logilab"
 
-  mv $RUNTIME_HOME/logilab/logilab/logilab-logilab-common-4797b86b800e \
-    $RUNTIME_HOME/logilab/logilab/common
-  touch $RUNTIME_HOME/logilab/logilab/__init__.py
+  mv "$RUNTIME_HOME/logilab/logilab/logilab-logilab-common-4797b86b800e" \
+    "$RUNTIME_HOME/logilab/logilab/common"
+  touch "$RUNTIME_HOME/logilab/logilab/__init__.py"
 fi
 
 DISTRIBUTED_LIBS="\
@@ -409,7 +411,7 @@ done
 
 if need_install yui build/yui/yui.js YUI 3.6.0 product ; then
   echo Installing YUI
-  unzip -q "$DISTRIBUTED_LIBS_DIR/yui_3.6.0.zip" -d $RUNTIME_HOME
+  unzip -q "$DISTRIBUTED_LIBS_DIR/yui_3.6.0.zip" -d "$RUNTIME_HOME"
 fi
 
 # Prepare files for static serving

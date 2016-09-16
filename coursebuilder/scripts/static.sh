@@ -35,15 +35,15 @@ if [ "$ALLOW_STATIC_SERV" = true ] ; then
   # Prepare target directory for static files; use symlink to
   # $COURSEBUILDER_RESOURCES to avoid polluting current view
   if [ ! -d "$LN_TARGET/_static/" ]; then
-    mkdir $COURSEBUILDER_RESOURCES/_static/
+    mkdir "$COURSEBUILDER_RESOURCES/_static/"
   fi
   if [ ! -L "$LN_SOURCE/_static" -a ! -d "$LN_SOURCE/_static" ]; then
-    ln -s $COURSEBUILDER_RESOURCES/_static/ $LN_SOURCE/
+    ln -s "$COURSEBUILDER_RESOURCES/_static/" "$LN_SOURCE/"
   fi
 
   # Unzip required files
   for entry in "${STATIC_SERV[@]}"; do
-    KEY=${entry%%:*}
+    KEY="${entry%%:*}"
     if [ ! -f "$LN_SOURCE/_static/$KEY/.gcb_install_succeeded" ]; then
       echo "Unzipping $KEY.zip into $LN_SOURCE/_static/$KEY"
       unzip -o "$DISTRIBUTED_LIBS_DIR/$KEY.zip" \
@@ -56,10 +56,10 @@ else
 
   # Remove all static files
   if [ -d "$LN_TARGET/_static/" ]; then
-    rm -rf $LN_TARGET/_static/
+    rm -rf "$LN_TARGET/_static/"
   fi
   if [ -L "$LN_SOURCE/_static" ]; then
-    rm $LN_SOURCE/_static
+    rm "$LN_SOURCE/_static"
   fi
 fi
 
@@ -91,14 +91,14 @@ STATIC_YAML_TEXT+=$' '
 # Write out a new static.yaml, if content differs or file does not exist;
 # we do NOT want to override this file all the time as there maybe another
 # test running concurrently that uses it at this very moment
-STATIC_YAML=$SOURCE_DIR/static.yaml
+STATIC_YAML="$SOURCE_DIR/static.yaml"
 CURRENT_STATIC_YAML_TEXT=""
 if [ -f "$STATIC_YAML" ]; then
-  CURRENT_STATIC_YAML_TEXT="$(< $STATIC_YAML)"
+  CURRENT_STATIC_YAML_TEXT=$(< "$STATIC_YAML")
 fi
 if [ "$CURRENT_STATIC_YAML_TEXT" = "$STATIC_YAML_TEXT" ]; then
-  echo Using current $STATIC_YAML
+  echo Using current "$STATIC_YAML"
 else
-  echo Creating new $STATIC_YAML
-  echo "$STATIC_YAML_TEXT" > $STATIC_YAML
+  echo Creating new "$STATIC_YAML"
+  echo "$STATIC_YAML_TEXT" > "$STATIC_YAML"
 fi

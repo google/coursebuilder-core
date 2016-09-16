@@ -51,7 +51,7 @@ done
 # test, or that run_all_tests.sh shuts down gracefully at the end, since these
 # scripts make use of start_in_shell.sh.
 
-start_cb_server=( python $GOOGLE_APP_ENGINE_HOME/dev_appserver.py \
+start_cb_server=( python "$GOOGLE_APP_ENGINE_HOME/dev_appserver.py" \
     --admin_port=$ADMIN_PORT \
     --clear_datastore=$CLEAR_DATASTORE \
     --datastore_consistency_policy=consistent \
