@@ -190,6 +190,7 @@ class OverrideTriggerMixin(object):
 
 
 class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
+    """Course content availability override applied at specified date/time."""
 
     # Customize to add the 'no_override' value.
     AVAILABILITY_VALUES = [
@@ -207,6 +208,7 @@ class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
 
 
 class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
+    """Course availability override at the specified start/end date/times."""
 
     # Customize to add the 'no_override' value.
     AVAILABILITY_VALUES = [
@@ -599,6 +601,8 @@ class StudentGroupDTO(object):
     OVERRIDES_PROPERTY = 'overrides'
     COURSE_TRIGGERS_PROPERTY = CourseOverrideTrigger.SETTINGS_NAME
     CONTENT_TRIGGERS_PROPERTY = ContentOverrideTrigger.SETTINGS_NAME
+    START_DATE_PROPERTY = courses_constants.START_DATE_SETTING
+    END_DATE_PROPERTY = courses_constants.END_DATE_SETTING
 
     # Value must be a callable "constructor", e.g. `list` or `dict`, not
     # simply an instance, e.g. `[]` or '{}`, or that same instance would
@@ -673,6 +677,24 @@ class StudentGroupDTO(object):
     @content_triggers.setter
     def content_triggers(self, value):
         self.set_triggers(self.CONTENT_TRIGGERS_PROPERTY, value)
+
+    @property
+    def start_date(self):
+        """Course start date as a UTC ISO-8601 string."""
+        return self.dict.get(self.START_DATE_PROPERTY)
+
+    @start_date.setter
+    def start_date(self, value):
+        self.dict[self.START_DATE_PROPERTY] = value
+
+    @property
+    def end_date(self):
+        """Course end date as a UTC ISO-8601 string."""
+        return self.dict.get(self.END_DATE_PROPERTY)
+
+    @end_date.setter
+    def end_date(self, value):
+        self.dict[self.END_DATE_PROPERTY] = value
 
     def _overrides(self):
         return self.dict.setdefault(self.OVERRIDES_PROPERTY, {})
@@ -1344,6 +1366,15 @@ def modify_course_environment(app_context, env):
             'browsable', env, setting['browsable'])
         courses.Course.set_named_reg_setting_in_environ(
             'can_register', env, setting['can_register'])
+
+    # Override the course start/end dates displayed in the course explorer.
+    if student_group.start_date:
+        courses.Course.set_named_course_setting_in_environ(
+            courses_constants.START_DATE_SETTING, env, student_group.start_date)
+
+    if student_group.end_date:
+        courses.Course.set_named_course_setting_in_environ(
+            courses_constants.END_DATE_SETTING, env, student_group.end_date)
 
     # Users named by email into groups are implicitly also whitelisted into
     # the course.
