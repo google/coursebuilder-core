@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-06-20 07:55-0700\n"
+"POT-Creation-Date: 2016-09-19 07:54-0700\n"
 "PO-Revision-Date: 2016-06-20 07:55-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: zh_CN <LL@li.org>\n"
@@ -831,28 +831,32 @@ msgid "This lesson isn't a prerequisite for any other lesson."
 msgstr "本课程并非学习任何其他课程的先修课程。"
 
 #. Header for list of links to lessons
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:15
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:18
+#: experimental/coursebuilder/modules/student_skills_ui/javascript_tests/fixture.html:25
+#: experimental/coursebuilder/modules/student_skills_ui/templates/unit_header.html:25
 msgid "Lessons"
 msgstr "课程"
 
 #. Text for empty list of lessons
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:28
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:31
+#: experimental/coursebuilder/modules/student_skills_ui/javascript_tests/fixture.html:28
+#: experimental/coursebuilder/modules/student_skills_ui/templates/unit_header.html:29
 msgid "Not taught"
 msgstr "未开授课程"
 
 #. Header for skill proficiency legend
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:39
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:42
 msgid "Proficiency level"
 msgstr "熟练程度"
 
 #. Label for low skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:45
 #: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:48
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:51
 msgid "low"
 msgstr "低"
 
 #. Label for high skill proficiency
-#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:52
+#: experimental/coursebuilder/modules/skill_map/templates/skill_card.html:55
 msgid "high"
 msgstr "高"
 
@@ -909,6 +913,33 @@ msgstr "如果您希望继续接收通知，请点击下面的控件重新订阅
 msgid "Resubscribe"
 msgstr "重新订阅"
 
+#. Error message for failed student file upload.
+#. The selected file was empty.
+#: experimental/coursebuilder/modules/upload/upload.py:83
+msgid "File is empty."
+msgstr ""
+
+#. Error message for failed student file upload.
+#. The selected file was not a text file.
+#: experimental/coursebuilder/modules/upload/upload.py:95
+msgid ""
+"Wrong file format, only text files (.txt) with unicode contents are "
+"allowed."
+msgstr ""
+
+#. Error message for failed student file upload.
+#. The selected file was too large.
+#: experimental/coursebuilder/modules/upload/upload.py:103
+msgid "File too large, only files smaller than 1MB are allowed."
+msgstr ""
+
+#. Error message for failed student file upload.
+#. Generic upload error.
+#: experimental/coursebuilder/modules/upload/upload.py:110
+#, python-format
+msgid "Unable to save student submission; error was: \"%s\""
+msgstr ""
+
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
 #: experimental/coursebuilder/modules/upload/templates/form.html:18
@@ -932,13 +963,13 @@ msgid "An error occurred."
 msgstr "发生错误。"
 
 #. Text of the link to take the user back to the previous page.
-#: experimental/coursebuilder/modules/upload/templates/result.html:15
+#: experimental/coursebuilder/modules/upload/templates/result.html:20
 msgid "Return to the previous page."
 msgstr "返回上一页。"
 
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
-#: experimental/coursebuilder/modules/upload/templates/result.html:18
+#: experimental/coursebuilder/modules/upload/templates/result.html:23
 msgid ""
 "Go back and try again. If the problem persists, contact your "
 "administrator."
@@ -1076,28 +1107,28 @@ msgstr " 提交之后，您就无法再进行修改或删除了。 "
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:234
+#: experimental/coursebuilder/views/base.html:236
 msgid "Not registered"
 msgstr "未注册"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:243
+#: experimental/coursebuilder/views/base.html:245
 msgid "Logout"
 msgstr "退出"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:249
+#: experimental/coursebuilder/views/base.html:251
 msgid "Login"
 msgstr "登录"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:290
+#: experimental/coursebuilder/views/base.html:291
 msgid "Privacy & Terms"
 msgstr "隐私权和条款"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:297
+#: experimental/coursebuilder/views/base.html:298
 msgid "Language:"
 msgstr "语言："
 
@@ -1557,5 +1588,4 @@ msgstr "下一页"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "结束"
-
 
