@@ -6,7 +6,7 @@ tests:
     - modules.student_groups.student_groups_tests.AggregateEventTests = 1
     - modules.student_groups.student_groups_tests.AvailabilityLifecycleTests = 13
     - modules.student_groups.student_groups_tests.AvailabilityTests = 5
-    - modules.student_groups.student_groups_tests.CourseDatesTests = 1
+    - modules.student_groups.student_groups_tests.CourseStartEndDatesTests = 1
     - modules.student_groups.student_groups_tests.GradebookTests = 4
     - modules.student_groups.student_groups_tests.GroupLifecycleTests = 14
     - modules.student_groups.student_groups_tests.I18nTests = 4

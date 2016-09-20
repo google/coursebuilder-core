@@ -23,7 +23,6 @@ import zlib
 from common import crypto
 from common import resource
 from common import users
-from common import utc
 from common import utils as common_utils
 from controllers import sites
 from models import courses
@@ -32,7 +31,7 @@ from models import models
 from models import transforms
 from modules.analytics import gradebook
 from modules.analytics import student_aggregate
-from modules.courses import constants as courses_constants
+from modules.courses import triggers_tests
 from modules.i18n_dashboard import i18n_dashboard
 from modules.student_groups import messages
 from modules.student_groups import student_groups
@@ -1790,91 +1789,108 @@ class GradebookTests(StudentGroupsTestBase):
         self.assertEquals(self.IN_GROUP_STUDENT_EMAIL, data[0]['user_email'])
 
 
-class CourseDatesTests(StudentGroupsTestBase):
+class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
+                               StudentGroupsTestBase):
 
     COURSE_NAME = 'student_groups_course_dates_test'
     NAMESPACE = 'ns_%s' % COURSE_NAME
 
-    def test_date_modified_in_course_env(self):
-        last_century = utc.to_text(dt=datetime.datetime(1900, 1, 1, 0))
-        now = utc.now_as_timestamp()
-        past_hour = utc.to_text(seconds=utc.hour_start(now - (60 * 60)))
-        next_hour = utc.to_text(seconds=utc.hour_end(now + (60 * 60)) + 1)
-        far_future = utc.to_text(dt=datetime.datetime(9999, 12, 31, 23))
+    MTTM = triggers_tests.MilestoneTriggerTestsMixin
+    TEST_AVAIL = MTTM.COURSE_UNUSED_AVAIL
 
-        avail = courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL
+    def setUp(self):
+        StudentGroupsTestBase.setUp(self)
+        triggers_tests.MilestoneTriggerTestsMixin.setUp(self)
 
-        # Create a new student group, but initially containing now students.
+    def _create_group(self, name, description, student_email=None):
+        """Creates a new student group."""
+        students = [student_email] if student_email else []
+
         actions.login(self.ADMIN_EMAIL)
-        response = self._put_group(None, 'Date Group', 'start/end group')
+        response = self._put_group(None, name, description)
         group_id = transforms.loads(response['payload'])['key']
-        self._put_availability(group_id, [], course_availability=avail)
+        self._put_availability(
+            group_id, students, course_availability=self.TEST_AVAIL)
+
+        if student_email:
+            self._check_student_in_group(student_email, group_id)
+        return group_id
+
+    def _check_registered_student(self, student_email, group_id=None):
+        with common_utils.Namespace(self.NAMESPACE):
+            student = models.Student.all().get()
+            self.assertEquals(student_email, student.email)
+            if group_id is not None:
+                self.assertEquals(group_id, student.group_id)
+            else:
+                self.assertFalse(student.group_id)
+
+    def _check_no_students_registered(self):
+        with common_utils.Namespace(self.NAMESPACE):
+            self.assertIsNone(models.Student.all().get())
+
+    def _check_student_in_group(self, student_email, group_id):
+        with common_utils.Namespace(self.NAMESPACE):
+            membership = student_groups.StudentGroupMembership.all().get()
+            self.assertEquals(student_email, membership.key().name())
+            self.assertEquals(group_id, membership.group_id)
+
+    def _check_no_students_in_groups(self):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(
                 student_groups.StudentGroupMembership.all().get())
-            self.assertIsNone(models.Student.all().get())
 
-        pre_save_env = self.app_context.get_environ()
-        # start_date and end_date settings are initially not present *at all*
-        # in the Course 'course' dict.
-        self.assertEquals(
-            None, courses.Course.get_named_course_setting_from_environ(
-                courses_constants.START_DATE_SETTING, pre_save_env))
-        self.assertEquals(
-            None, courses.Course.get_named_course_setting_from_environ(
-                courses_constants.END_DATE_SETTING, pre_save_env))
-
-        # Add some "nearby" start_date and end_date to the Course 'course'
-        # settings dict and save the course environment.
-        courses.Course.set_named_course_setting_in_environ(
-            courses_constants.START_DATE_SETTING, pre_save_env, past_hour)
-        courses.Course.set_named_course_setting_in_environ(
-            courses_constants.END_DATE_SETTING, pre_save_env, next_hour)
-        course = courses.Course(None, app_context=self.app_context)
-        course.save_settings(pre_save_env)
-
-        # Set start_date and end_date values different for student group.
+    def _set_group_start_end_dates(self, start_date, end_date, group_id):
+        """Sets start/end dates for specified student group ID."""
         with common_utils.Namespace(self.NAMESPACE):
             dto_to_save = student_groups.StudentGroupDAO.load(group_id)
-            dto_to_save.start_date = last_century
-            dto_to_save.end_date = far_future
+            dto_to_save.start_date = start_date
+            dto_to_save.end_date = end_date
             student_groups.StudentGroupDAO.save(dto_to_save)
+
+    def _check_group_start_end_dates(self, start_date, end_date, group_id):
+        with common_utils.Namespace(self.NAMESPACE):
+            dto = student_groups.StudentGroupDAO.load(group_id)
+            self.assertEquals(start_date, dto.start_date)
+            self.assertEquals(end_date, dto.end_date)
+
+    def test_date_modified_in_course_env(self):
+        # Create a new student group, but initially containing no students.
+        group_id = self._create_group('Modified Group', 'modified group')
+        self._check_no_students_in_groups()
+        course = courses.Course(None, app_context=self.app_context)
+
+        pre_save_env = self.app_context.get_environ()
+        self.check_course_start_end_dates(None, None, pre_save_env)
+        self.set_course_start_end_dates(
+            self.past_hour_text, self.next_hour_text, pre_save_env, course)
+
+        # Set start_date and end_date values different for student group.
+        self._set_group_start_end_dates(
+            self.LAST_CENTURY, self.FAR_FUTURE, group_id)
 
         # _run_env_post_copy_hooks is run, but logged-in student is not in
         # a student group, so should see values in Course 'course' dict.
         actions.login(self.STUDENT_EMAIL)
         post_save_env = courses.Course.get_environ(self.app_context)
-        self.assertEquals(past_hour,
-            courses.Course.get_named_course_setting_from_environ(
-                courses_constants.START_DATE_SETTING, post_save_env))
-        self.assertEquals(next_hour,
-            courses.Course.get_named_course_setting_from_environ(
-                courses_constants.END_DATE_SETTING, post_save_env))
+        self.check_course_start_end_dates(
+            self.past_hour_text, self.next_hour_text, post_save_env)
 
         # Add student to previously created student group.
         actions.login(self.ADMIN_EMAIL)
         self._put_availability(
-            group_id, [self.STUDENT_EMAIL], course_availability=avail)
-
-        with common_utils.Namespace(self.NAMESPACE):
-            membership = student_groups.StudentGroupMembership.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, membership.key().name())
-            self.assertEquals(group_id, membership.group_id)
-            self.assertIsNone(models.Student.all().get())
+            group_id, [self.STUDENT_EMAIL], course_availability=self.TEST_AVAIL)
+        self._check_no_students_registered()
+        self._check_student_in_group(self.STUDENT_EMAIL, group_id)
 
         # Log in as student and register.
         actions.login(self.STUDENT_EMAIL)
         actions.register(self, 'John Smith')
+        self._check_registered_student(self.STUDENT_EMAIL, group_id=group_id)
 
-        with common_utils.Namespace(self.NAMESPACE):
-            self.assertIsNone(
-                student_groups.StudentGroupMembership.all().get())
-            student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
-            self.assertEquals(group_id, student.group_id)
-            student_dto = student_groups.StudentGroupDAO.load(student.group_id)
-            self.assertEquals(last_century, student_dto.start_date)
-            self.assertEquals(far_future, student_dto.end_date)
+        self._check_no_students_in_groups()  # Non-admin cannot see membership.
+        self._check_group_start_end_dates(
+            self.LAST_CENTURY, self.FAR_FUTURE, group_id)
 
         # Confirm that, once student is in the student group, start_date
         # and end_date values are used from the student group, not the
@@ -1882,9 +1898,6 @@ class CourseDatesTests(StudentGroupsTestBase):
         app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
         with common_utils.Namespace(self.NAMESPACE):
             in_group_env = courses.Course.get_environ(app_context)
-            self.assertEquals(last_century,
-                courses.Course.get_named_course_setting_from_environ(
-                    courses_constants.START_DATE_SETTING, in_group_env))
-            self.assertEquals(far_future,
-                courses.Course.get_named_course_setting_from_environ(
-                    courses_constants.END_DATE_SETTING, in_group_env))
+
+        self.check_course_start_end_dates(
+            self.LAST_CENTURY, self.FAR_FUTURE, in_group_env)
