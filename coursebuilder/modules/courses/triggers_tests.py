@@ -17,14 +17,19 @@
 __author__ = 'Todd Larsen (tlarsen@google.com)'
 
 import datetime
+import logging
 import random
+import re
 import unittest
 
 from common import resource
 from common import utc
+from controllers import sites
 from models import courses
 from models import resources_display
+from modules.courses import availability_cron
 from modules.courses import availability_options
+from modules.courses import constants
 from modules.courses import triggers
 from tests.functional import actions
 
@@ -53,10 +58,38 @@ class TriggerTestsMixin(object):
 
     NOT_DATE_AND_TIME = 'Not a valid ISO-8601 date and time.'
 
+    CHARS_IN_ISO_8601_DATETIME = '[0-9T:.Z-]+'
+    ENCODED_TRIGGER_RE = '{.+}'
+    UNEMPLEMENTED_ACT_RE = '.*UNIMPLEMENTED .+\\.act\\(.+, .+\\): .+'
+
+    LAST_CENTURY = utc.to_text(dt=datetime.datetime(1900, 1, 1, 0))
+    FAR_FUTURE = utc.to_text(dt=datetime.datetime(9999, 12, 31, 23))
+
+    NOW_DELTA = datetime.timedelta(seconds=1)
+
+    BAD_AVAIL = 'not a valid availability value'
+    BAD_WHEN = 'not a valid UTC date/time'
+
+    LOG_LEVEL = logging.INFO
+
     def setUp(self):
         self.dt_when = utc.now_as_datetime()
+        self.now = utc.to_timestamp(dt=self.dt_when)
         self.txt_when = utc.to_text(dt=self.dt_when)
         self.maxDiff = None
+
+        self.past_hour_text = utc.to_text(
+            seconds=utc.hour_start(self.now - (60 * 60)))
+        self.next_hour_text = utc.to_text(
+            seconds=utc.hour_end(self.now + (60 * 60)) + 1)
+
+    @classmethod
+    def utc_past_text(cls, now):
+        return utc.to_text(seconds=utc.hour_start(now - (60 * 60)))
+
+    @classmethod
+    def utc_future_text(cls, now):
+        return utc.to_text(seconds=utc.hour_end(now + (60 * 60)) + 1)
 
     def check_validate(self, encoded, props, validator):
         """Used by trigger test classes to test validate methods."""
@@ -72,8 +105,6 @@ class TriggerTestsMixin(object):
         self.assertFalse(invalid.is_future())
         self.assertFalse(invalid.is_ready())
 
-    NOW_DELTA = datetime.timedelta(seconds=1)
-
     def check_valid_is(self, valid):
         self.assertTrue(valid.is_valid)
 
@@ -84,6 +115,120 @@ class TriggerTestsMixin(object):
         now_in_future = self.dt_when + self.NOW_DELTA
         self.assertFalse(valid.is_future(now=now_in_future))
         self.assertTrue(valid.is_ready(now=now_in_future))
+
+    def separating_logged(self, logs, count, trigger_cls):
+        self.assertIn('SEPARATING %d encoded %s(s) in %s.' % (
+            count, trigger_cls.typename(), self.NAMESPACE), logs)
+
+    def awaiting_logged(self, logs, count, trigger_cls):
+        self.assertIn('AWAITING %d future %s(s) in %s.' % (
+            count, trigger_cls.typename(), self.NAMESPACE), logs)
+
+    def untouched_logged(self, logs, trigger_classes):
+        for trigger_cls in trigger_classes:
+            self.assertIn('UNTOUCHED {} {}.'.format(
+                self.NAMESPACE, trigger_cls.kind()), logs)
+
+    def kept_logged(self, logs, count, trigger_cls):
+        self.assertIn('KEPT %d future %s(s) in %s.' % (
+            count, trigger_cls.typename(), self.NAMESPACE), logs)
+
+    def saved_logged(self, logs, count, trigger_cls):
+        self.assertIn('SAVED %d change(s) to %s %s.' % (
+                count, self.NAMESPACE, trigger_cls.kind()), logs)
+
+    def error_logged(self, logs, trigger, what, why, cause):
+        self.assertRegexpMatches(logs,
+            '.*%s %s in namespace %s encoded: "%s" cause: "%s".*' % (
+                what, why, self.NAMESPACE, trigger, cause))
+
+    def error_not_logged(self, logs, trigger, what, why, cause):
+        self.assertNotRegexpMatches(logs,
+            '.*%s %s in namespace %s encoded: "%s" cause: "%s".*' % (
+                what, why, self.NAMESPACE, trigger, cause))
+
+    def unimplemented_act_logged(self, logs):
+        self.assertRegexpMatches(logs, self.UNEMPLEMENTED_ACT_RE)
+
+    def unimplemented_act_not_logged(self, logs):
+        self.assertNotRegexpMatches(logs, self.UNEMPLEMENTED_ACT_RE)
+
+    def unchanged_logged(self, logs, current, trigger, course, trigger_cls):
+        decoded = trigger_cls.decode(trigger, course=course)
+        self.assertIn('UNCHANGED %s %s: %s' % (
+            self.NAMESPACE, trigger_cls.kind(), decoded.logged), logs)
+
+    def content_act_logged(self, logs, ct, ns_name, old_avail, new_avail):
+        escaped = re.escape(
+            'APPLIED {} from "{}" to "{}" for {} in {}: {}('.format(
+                triggers.ContentTrigger.kind(), old_avail, new_avail,
+                ct['content'], ns_name, triggers.ContentTrigger.typename()))
+        applied_re = '.*' + escaped + '.+\\).*'
+        self.assertRegexpMatches(logs, applied_re)
+
+    def milestone_act_logged(self, logs, mt, ns_name, old_avail, new_avail):
+        escaped = re.escape(
+            'APPLIED {} from "{}" to "{}" at {} in {}: {}('.format(
+                triggers.MilestoneTrigger.kind(), old_avail, new_avail,
+                availability_options.option_to_title(mt['milestone']),
+                ns_name, triggers.MilestoneTrigger.typename()))
+        applied_re = '.*' + escaped + '.+\\).*'
+        self.assertRegexpMatches(logs, applied_re)
+
+    def triggers_logged(self, logs, logged, previous_avail, course,
+                         trigger_cls):
+        for lt in logged:
+            decoded = trigger_cls.decode(lt, course=course)
+            avail = lt.get('availability')
+            if avail != previous_avail:
+                self.assertIn('TRIGGERED %s %s from "%s" to "%s": %s' % (
+                    self.NAMESPACE, trigger_cls.kind(), previous_avail,
+                    avail, decoded.logged), logs)
+            else:
+                self.assertIn('UNCHANGED %s %s "%s": %s' % (
+                    self.NAMESPACE, trigger_cls.kind(), previous_avail,
+                    decoded.logged), logs)
+
+    def find_trigger_content(self, course, trigger):
+        content = resource.Key.fromstring(trigger['content'])
+        if content.type == 'lesson':
+            return course.find_lesson_by_id(None, content.key)
+        return course.find_unit_by_id(content.key)
+
+    def check_content_triggers_applied(self, logs, course, applied, old_avail):
+        for at in applied:
+            found = self.find_trigger_content(course, at)
+            new_avail = at['availability']
+            self.assertEquals(found.availability, new_avail)
+            if old_avail != new_avail:
+                # APPLIED message logged *only* if availability *changes*.
+                self.content_act_logged(
+                    logs, at, self.NAMESPACE, old_avail, new_avail)
+
+    def check_content_triggers_unapplied(self, course, old_avail, unapplied):
+        for ut in unapplied:
+            found = self.find_trigger_content(course, ut)
+            self.assertEquals(old_avail, found.availability)
+            # Assumes no "UNCHANGED" future test cases.
+            self.assertNotEquals(ut['availability'], found.availability)
+
+    def check_course_trigger_applied(self, logs, course, mt, old_avail):
+        course_avail = course.get_course_availability()
+        new_avail = mt['availability']
+        self.assertEquals(course_avail, new_avail)
+        if old_avail != new_avail:
+            # APPLIED message logged *only* if availability *changes*.
+            self.milestone_act_logged(
+                logs, mt, self.NAMESPACE, old_avail, new_avail)
+
+    def check_course_trigger_unapplied(self, course, mt, old_avail):
+        course_avail = course.get_course_availability()
+        self.assertEquals(course_avail, old_avail)
+        self.assertNotEquals(course_avail, mt['availability'])
+
+    def when_value_error_regexp(self, when):
+        with_when = "ValueError(\"time data '{}' does not match".format(when)
+        return re.escape(with_when + " format '%Y-%m-%dT%H:%M:%S.%fZ'\",)")
 
 
 class UnitTestBase(TriggerTestsMixin, unittest.TestCase):
@@ -273,7 +418,131 @@ class FunctionalTestBase(TriggerTestsMixin, actions.TestBase):
         self.assertFalse(settings['publish'].get(settings_name))
 
 
-class ContentTriggerTestBase(FunctionalTestBase):
+class DateTimeTriggerFunctionalTests(FunctionalTestBase):
+
+    COURSE_NAME = 'date_time_trigger_tests'
+    NAMESPACE = 'ns_%s' % COURSE_NAME
+
+    def test_unimplemented_act_regexp(self):
+        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
+        any_course = courses.Course(None, app_context=app_context)
+        settings = {}
+
+        unimplemented_trigger = self.TDTT(when=self.dt_when)
+        trigger_type = unimplemented_trigger.typename()
+
+        unimplemented_trigger.act(any_course, settings)
+        unimplemented_trigger.act(None, settings)  # Default '' namespace.
+
+        logs = self.get_log()
+        self.unimplemented_act_logged(logs)
+
+        with_ns = re.escape('UNIMPLEMENTED {}.act({}, {}): {}('.format(
+            trigger_type, self.NAMESPACE, settings, trigger_type))
+        ns_re = '{}{}\\)'.format(with_ns, self.CHARS_IN_ISO_8601_DATETIME)
+        self.assertRegexpMatches(logs, ns_re)
+
+        no_ns = re.escape('UNIMPLEMENTED {}.act({}, {}): {}('.format(
+            trigger_type, "''", settings, trigger_type))
+        no_ns_re = '{}{}\\)'.format(no_ns, self.CHARS_IN_ISO_8601_DATETIME)
+        self.assertRegexpMatches(logs, no_ns_re)
+
+
+class ContentTriggerTestsMixin(TriggerTestsMixin):
+
+    BAD_CONTENT_KEY = 'not a valid resource Key'
+    BAD_CONTENT_TRIGGER_SUFFIX = ' for a content trigger'
+
+    TTMIX = TriggerTestsMixin
+
+    BAD_CONTENT_WHEN = TTMIX.BAD_WHEN + BAD_CONTENT_TRIGGER_SUFFIX
+    BAD_CONTENT_AVAIL = TTMIX.BAD_AVAIL + BAD_CONTENT_TRIGGER_SUFFIX
+
+    # A valid resource.Key type
+    VALID_BUT_NOT_OUTLINE = resources_display.ResourceUnitBase.ASSESSMENT_TYPE
+
+    CONTENT_INITIAL_AVAIL = courses.AVAILABILITY_COURSE
+
+    def setUp(self):
+        super(ContentTriggerTestsMixin, self).setUp()
+
+    def some_past_content_triggers(self, now, unit_id, lesson_id):
+        when = self.utc_past_text(now)
+
+        # Define a unit trigger and a lesson trigger somewhat in the past, to
+        # insure that a cron job will act on them at test time.
+        return [{
+            'content': str(resource.Key('unit', unit_id)),
+            'availability': courses.AVAILABILITY_AVAILABLE,
+            'when': when,
+        }, {
+            'content': str(resource.Key('lesson', lesson_id)),
+            'availability': courses.AVAILABILITY_UNAVAILABLE,
+            'when': when,
+        }]
+
+    def some_future_content_triggers(self, now, unit_id, lesson_id):
+        when = self.utc_future_text(now)
+
+        # Define a unit trigger and a lesson trigger somewhat into the future,
+        # so there is no chance that a cron task will act on them and remove
+        # them from the course settings prematurely.
+        return [{
+            'content': str(resource.Key('unit', unit_id)),
+            'availability': courses.AVAILABILITY_AVAILABLE,
+            'when': when,
+        }, {
+            'content': str(resource.Key('lesson', lesson_id)),
+            'availability': courses.AVAILABILITY_UNAVAILABLE,
+            'when': when,
+        }]
+
+    def specific_bad_content_triggers(self, now, assessment_id, unit_id):
+        past = self.utc_past_text(now)
+        future = self.utc_future_text(now)
+
+        # An empty content trigger, missing all of the required fields.
+        empty = {}
+
+        # A content trigger with completely bogus required field values.
+        bad = {
+            'content': self.BAD_CONTENT_KEY,
+            'availability': self.BAD_CONTENT_AVAIL,
+            'when': self.BAD_CONTENT_WHEN,
+        }
+
+        # Make sure believed-to-be-invalid type still is.
+        self.assertNotIn(
+            self.VALID_BUT_NOT_OUTLINE, self.TCT.ALLOWED_CONTENT_TYPES)
+
+        # A content trigger with a valid, but not course outline, content type.
+        unexpected = {
+            'content': str(resource.Key(
+                self.VALID_BUT_NOT_OUTLINE, assessment_id)),
+            'availability': courses.AVAILABILITY_AVAILABLE,
+            'when': past,
+        }
+
+        # A valid content trigger missing its associated course content. Also
+        # checks that even a content trigger that is in the future is discarded
+        # if faulty.
+        missing = {
+            'content': str(resource.Key('unit', "9999")),
+            'availability': courses.AVAILABILITY_AVAILABLE,
+            'when': future,
+        }
+        # Not really a bad content trigger, per se, but simply a no-op trigger,
+        # because the result of acting on this trigger is no change in the
+        # existing content availability.
+        unchanged = {
+            'content': str(resource.Key('unit', unit_id)),
+            'availability': courses.AVAILABILITY_COURSE,
+            'when': past,
+        }
+        return (empty, bad, unexpected, missing, unchanged)
+
+
+class ContentTriggerTestBase(ContentTriggerTestsMixin, FunctionalTestBase):
     """Parameterized "test" methods with check_ names, used by subclasses.
 
     Many of the ContentTriggerTests test_ methods are delegated to the
@@ -288,6 +557,10 @@ class ContentTriggerTestBase(FunctionalTestBase):
         resources_display.ResourceUnit.TYPE,
         resources_display.ResourceLesson.TYPE,
     ]
+
+    def setUp(self):
+        FunctionalTestBase.setUp(self)
+        ContentTriggerTestsMixin.setUp(self)
 
     def default_test_args(self, cls, availabilities, content_types):
         """Common default values for modules/courses ContentTriggerTests."""
@@ -500,7 +773,157 @@ class ContentTriggerTests(ContentTriggerTestBase):
         self.assertEquals('triggers.ContentTrigger', self.TCT.typename())
 
 
-class MilestoneTriggerTestBase(FunctionalTestBase):
+class MilestoneTriggerTestsMixin(TriggerTestsMixin):
+
+    COURSE_INITIAL_AVAIL = courses.COURSE_AVAILABILITY_PRIVATE
+    COURSE_START_AVAIL = courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED
+    COURSE_END_AVAIL = courses.COURSE_AVAILABILITY_PUBLIC
+    COURSE_UNUSED_AVAIL = courses.COURSE_AVAILABILITY_REGISTRATION_OPTIONAL
+
+    TTMIX = TriggerTestsMixin
+
+    BAD_MILESTONE_TRIGGER_SUFFIX = ' for a course start/end trigger'
+
+    BAD_COURSE_WHEN = TTMIX.BAD_WHEN + BAD_MILESTONE_TRIGGER_SUFFIX
+    BAD_COURSE_AVAIL = TTMIX.BAD_AVAIL + BAD_MILESTONE_TRIGGER_SUFFIX
+
+    def setUp(self):
+        super(MilestoneTriggerTestsMixin, self).setUp()
+        self.past_start_text = self.utc_past_text(self.now)
+        self.future_end_text = self.utc_future_text(self.now)
+
+        self.defaults_start = self.TMT.encoded_defaults(
+            availability=self.TMT.NONE_SELECTED,
+            milestone=constants.START_DATE_MILESTONE)
+        self.defaults_end = self.TMT.encoded_defaults(
+            availability=self.TMT.NONE_SELECTED,
+            milestone=constants.END_DATE_MILESTONE)
+
+        self.course_start = self.past_course_start_trigger(self.now)
+        self.course_end = self.future_course_end_trigger(self.now)
+
+        # Some common expected course start/end pairs.
+        self.course_start_and_end = {
+            constants.START_DATE_MILESTONE: [self.course_start],
+            constants.END_DATE_MILESTONE: [self.course_end],
+        }
+        self.only_course_start = {
+            constants.START_DATE_MILESTONE: [self.course_start],
+            # No course_end specified, so use default placeholder.
+            constants.END_DATE_MILESTONE: [self.defaults_end],
+        }
+        self.only_course_end = {
+            # No course_start specified, so use default placeholder.
+            constants.START_DATE_MILESTONE: [self.defaults_start],
+            constants.END_DATE_MILESTONE: [self.course_end],
+        }
+        self.defaults_only = {
+            # Neither course_start nor course_end specified (placeholders).
+            constants.START_DATE_MILESTONE: [self.defaults_start],
+            constants.END_DATE_MILESTONE: [self.defaults_end],
+        }
+
+    @classmethod
+    def past_course_start_trigger(cls, now):
+        when = cls.utc_past_text(now)
+
+        # Define a "course start" milestone trigger somewhat in the past, to
+        # insure that that a cron job will apply it at test time.
+        return {
+            'milestone': constants.START_DATE_MILESTONE,
+            'availability': cls.COURSE_START_AVAIL,
+            'when': when,
+        }
+
+    @classmethod
+    def future_course_end_trigger(cls, now):
+        when = cls.utc_future_text(now)
+
+        # Define a "course end" milestone trigger somewhat into the future, so
+        # there is no chance that a cron task will act on it and remove it from
+        # the course settings prematurely.
+        return {
+            'milestone': constants.END_DATE_MILESTONE,
+            'availability': cls.COURSE_END_AVAIL,
+            'when': when,
+        }
+
+    @classmethod
+    def specific_bad_milestone_triggers(cls, now):
+        past = cls.utc_past_text(now)
+        when = {
+            constants.START_DATE_MILESTONE: past,
+            constants.END_DATE_MILESTONE: cls.utc_future_text(now),
+        }
+
+        bad_triggers = {}
+
+        for milestone in cls.TMT.KNOWN_MILESTONES:
+            # An empty milestone trigger, missing all of the required fields.
+            empty = {}
+            bad_triggers.setdefault(milestone, []).append(empty)
+
+            # A milestone trigger with completely bogus required field values.
+            bad = {
+                'milestone': milestone,
+                'availability': cls.BAD_COURSE_AVAIL,
+                'when': cls.BAD_COURSE_WHEN,
+            }
+            bad_triggers[milestone].append(bad)
+
+            # A milestone trigger with a valid 'availability' but no 'when',
+            # indicating that this milestone trigger is cleared by the user.
+            no_when = {
+                'milestone': milestone,
+                'availability': cls.COURSE_UNUSED_AVAIL,
+            }
+            bad_triggers[milestone].append(no_when)
+
+            # A milestone trigger with a valid 'when' but no 'availability',
+            # indicating that this milestone trigger is cleared by the user.
+            no_avail = {
+                'milestone': milestone,
+                'when': when[milestone],
+            }
+            bad_triggers[milestone].append(no_avail)
+
+            # A milestone trigger that results from selecting the 'none'
+            # <option> in the availability <select> ('--- none selected ---').
+            none_selected = {
+                'milestone': milestone,
+                'availability': triggers.MilestoneTrigger.NONE_SELECTED,
+                'when': when[milestone],
+            }
+            bad_triggers[milestone].append(none_selected)
+
+        return bad_triggers
+
+    def check_course_start_end_dates(self, start_date, end_date, env):
+        """Check start/end date settings are initially not present *at all*."""
+        self.assertEquals(
+            start_date, courses.Course.get_named_course_setting_from_environ(
+                constants.START_DATE_SETTING, env))
+        self.assertEquals(
+            end_date, courses.Course.get_named_course_setting_from_environ(
+                constants.END_DATE_SETTING, env))
+
+    @classmethod
+    def set_course_start_end_dates(cls, start_date, end_date, env, course):
+        """Sets start/end dates in in the env dict and save Course settings."""
+        courses.Course.set_named_course_setting_in_environ(
+            constants.START_DATE_SETTING, env, start_date)
+        courses.Course.set_named_course_setting_in_environ(
+            constants.END_DATE_SETTING, env, end_date)
+        course.save_settings(env)
+
+    def run_availability_jobs(self, app_context):
+        cron_job = availability_cron.UpdateAvailability(app_context)
+        self.assertFalse(cron_job.is_active())
+        cron_job.submit()
+        self.execute_all_deferred_tasks()
+
+
+class MilestoneTriggerTestBase(MilestoneTriggerTestsMixin, FunctionalTestBase):
     """Parameterized "test" methods with check_ names, used by subclasses.
 
     Many of the MilestoneTriggerTests test_ methods are delegated to the
@@ -510,6 +933,10 @@ class MilestoneTriggerTestBase(FunctionalTestBase):
     possible. The check_ methods are parameterized for the differences between
     the modules/courses and modules/student_groups trigger implementations.
     """
+
+    def setUp(self):
+        FunctionalTestBase.setUp(self)
+        MilestoneTriggerTestsMixin.setUp(self)
 
     def default_test_args(self, cls, availabilities, milestones):
         """Common default values for modules/courses MilestoneTriggerTests."""
