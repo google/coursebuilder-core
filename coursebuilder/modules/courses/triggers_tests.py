@@ -823,6 +823,20 @@ class MilestoneTriggerTestsMixin(TriggerTestsMixin):
             constants.END_DATE_MILESTONE: [self.defaults_end],
         }
 
+        # Multiple test_act_hooks tests use these "two hours earlier" course
+        # end POST parameters.
+        self.an_earlier_end_hour_text = utc.to_text(
+            seconds=utc.hour_start(self.now - (2 * 60 * 60)))
+        self.an_earlier_course_end = {
+            'availability': self.course_start['availability'],
+            'milestone': constants.END_DATE_MILESTONE,
+            'when': self.an_earlier_end_hour_text,
+        }
+        self.only_early_end = self.only_course_end.copy()
+        self.only_early_end[
+            constants.END_DATE_MILESTONE] = [self.an_earlier_course_end]
+
+
     @classmethod
     def past_course_start_trigger(cls, now):
         when = cls.utc_past_text(now)
@@ -909,11 +923,20 @@ class MilestoneTriggerTestsMixin(TriggerTestsMixin):
 
     @classmethod
     def set_course_start_end_dates(cls, start_date, end_date, env, course):
-        """Sets start/end dates in in the env dict and save Course settings."""
+        """Sets start/end dates in the env dict and save Course settings."""
         courses.Course.set_named_course_setting_in_environ(
             constants.START_DATE_SETTING, env, start_date)
         courses.Course.set_named_course_setting_in_environ(
             constants.END_DATE_SETTING, env, end_date)
+        course.save_settings(env)
+
+    @classmethod
+    def clear_course_start_end_dates(cls, env, course):
+        """Clears start/end dates in the env dict and save Course settings."""
+        courses.Course.clear_named_course_setting_in_environ(
+            constants.START_DATE_SETTING, env)
+        courses.Course.clear_named_course_setting_in_environ(
+            constants.END_DATE_SETTING, env)
         course.save_settings(env)
 
     def run_availability_jobs(self, app_context):

@@ -24,7 +24,6 @@ import urlparse
 from common import utils as common_utils
 from common import crypto
 from common import resource
-from common import utc
 from controllers import sites
 from controllers import utils
 from models import config
@@ -2513,19 +2512,30 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
         self.awaiting_logged(logs, len(future_cts), self.TCT)
 
 
-class CourseStartEndDatesTestBase(triggers_tests.MilestoneTriggerTestsMixin,
-                                  actions.TestBase):
+class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
+                               actions.TestBase):
 
     ADMIN_EMAIL = 'admin@example.com'
+
+    COURSE_NAME = 'course_start_end_dates_test'
+    COURSE_TITLE = 'Course Start End Dates Tests'
+    NAMESPACE = 'ns_%s' % COURSE_NAME
 
     def setUp(self):
         actions.TestBase.setUp(self)
         triggers_tests.MilestoneTriggerTestsMixin.setUp(self)
+        self.base = '/' + self.COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, self.COURSE_TITLE)
+
         self.rest_url = '/{}/{}'.format(
             self.COURSE_NAME, availability.AvailabilityRESTHandler.URL)
-        self.app_context = actions.simple_add_course(
-            self.COURSE_NAME, self.ADMIN_EMAIL, 'Course Dates Tests')
         self.course = courses.Course(None, app_context=self.app_context)
+
+    def tearDown(self):
+        self.clear_course_start_end_dates(
+            self.app_context.get_environ(), self.course)
+        actions.TestBase.tearDown(self)
 
     def _post(self, data):
         return self.put(self.rest_url, {
@@ -2536,14 +2546,8 @@ class CourseStartEndDatesTestBase(triggers_tests.MilestoneTriggerTestsMixin,
             })
         })
 
-
-class CourseStartEndDatesTests(CourseStartEndDatesTestBase):
-
-    COURSE_NAME = 'courses_dates_test'
-    NAMESPACE = 'ns_%s' % COURSE_NAME
-
     def test_act_hooks(self):
-        # modules.explorer.course_settings.register() registers some ACT_HOOKS
+        # modules.courses.graphql.register_callbacks() registers some ACT_HOOKS
         # callbacks that save the `when` date/time of course start and end
         # triggers that are acted on into the course settings as UTC ISO-8601
         # strings.
@@ -2576,11 +2580,9 @@ class CourseStartEndDatesTests(CourseStartEndDatesTestBase):
         start_cron_env = app_context.get_environ()
 
         # POSTed course_start `when` ended up as the 'start_date' in the
-        # course settings.
-        self.assertEquals(
-            courses.Course.get_named_course_setting_from_environ(
-                constants.START_DATE_SETTING, start_cron_env),
-            self.past_start_text)
+        # course settings. 'end_date' should still be undefined.
+        self.check_course_start_end_dates(
+            self.past_start_text, None, start_cron_env)
 
         # All course start/end milestone triggers were acted on and consumed.
         self.assertEquals(len(self.TMT.copy_from_settings(start_cron_env)), 0)
@@ -2589,23 +2591,13 @@ class CourseStartEndDatesTests(CourseStartEndDatesTestBase):
 
         # No change in availability (setting course_end['availability'] to the
         # same as course_start['availability']) should still invoke ACT_HOOKS.
-        an_earlier_end_hour = utc.to_text(
-            seconds=utc.hour_start(self.now - (2 * 60 * 60)))
-        course_end = {
-            'availability': self.course_start['availability'],
-            'milestone': constants.END_DATE_MILESTONE,
-            'when': an_earlier_end_hour,
-        }
-        only_course_end = self.only_course_end.copy()
-        only_course_end[constants.END_DATE_MILESTONE] = [course_end]
-
-        response = self._post(only_course_end)
+        response = self._post(self.only_early_end)
         self.assertEquals(200, response.status_int)
         end_posted_env = app_context.get_environ()
 
         # Just the one course_end trigger was POSTed into course settings.
         self.assertEquals(len(self.TMT.copy_from_settings(end_posted_env)), 1)
-        self.assertEquals(only_course_end, self.TMT.for_form(
+        self.assertEquals(self.only_early_end, self.TMT.for_form(
             end_posted_env, course=self.course))
 
         # End trigger is now in course settings, so act on it in cron job.
@@ -2622,7 +2614,7 @@ class CourseStartEndDatesTests(CourseStartEndDatesTestBase):
         # A different end_date value should now be present in the course
         # settings. Previously-saved start_date should be unchanged.
         self.check_course_start_end_dates(
-            self.past_start_text, an_earlier_end_hour, end_cron_env)
+            self.past_start_text, self.an_earlier_end_hour_text, end_cron_env)
 
 
 class CourseSettingsRESTHandlerTests(actions.TestBase):
