@@ -149,6 +149,12 @@ class UnsubscribeHandler(utils.BaseHandler):
         self.template_value['navbar'] = {}
         self.template_value['email'] = email
 
+        # Suppress use of Google Analytics on sub/unsub pages; URL may
+        # contain unencrypted user email.  We want to prevent GA from
+        # indadvertently collecting personally identifiable information
+        # as part of its usual trawling through URL parameters.
+        self.template_value['suppress_analytics'] = 'True'
+
         template = self.get_template(template_file, [TEMPLATES_DIR])
         self.response.out.write(template.render(self.template_value))
 

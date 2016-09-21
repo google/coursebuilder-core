@@ -179,3 +179,11 @@ class UnsubscribeHandlerTests(BaseUnsubscribeTests):
 
         # Confirm the user has now resubscribed
         self.assertSubscribed(self.email, self.namespace)
+
+    def test_analytics_are_suppressed_on_unsubscribe_page(self):
+        with actions.OverriddenEnvironment(
+            {'course': {'google_analytics_id': '12345',
+                        'google_tag_manager_id': '67890'}}):
+            response = self.get('modules/unsubscribe')
+            self.assertNotIn('GoogleAnalyticsObject', response.body)
+            self.assertNotIn('Google Tag Manager', response.body)
