@@ -142,6 +142,9 @@ class TestBase(unittest.TestCase):
     def assertLogContains(self, message):
         self.assertIn(message, self.get_log())
 
+    def assertLogDoesNotContain(self, message):
+        self.assertNotIn(message, self.get_log())
+
     def reset_filesystem(self, remove_only=False):
         if os.path.exists(self.test_tempdir):
             shutil.rmtree(self.test_tempdir)

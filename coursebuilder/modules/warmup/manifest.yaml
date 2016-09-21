@@ -1,0 +1,12 @@
+registration:
+  main_module: modules.warmup.warmup
+
+tests:
+  functional:
+    - modules.warmup.warmup_tests.WarmupTests = 3
+
+files:
+  - modules/warmup/__init__.py
+  - modules/warmup/manifest.yaml
+  - modules/warmup/warmup.py
+  - modules/warmup/warmup_tests.py
