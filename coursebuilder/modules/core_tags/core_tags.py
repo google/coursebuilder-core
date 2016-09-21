@@ -699,7 +699,7 @@ class Markdown(tags.ContextAwareTag, CoreTag):
     def rollup_header_footer(self, context):
         """Include markdown css only when markdown tag is present."""
         header = tags.html_string_to_element_tree(
-            '<link href="{}/css/markdown.css" rel="stylesheet">'.format(
+            '<link href="{}css/markdown.css" rel="stylesheet">'.format(
                 _STATIC_URL))
         footer = tags.html_string_to_element_tree('')
         return (header, footer)

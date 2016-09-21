@@ -461,6 +461,9 @@ This is [an example](http://example.com/ &quot;Title&quot;) inline link.
         self.assertIn(
             '<p>This is <a href="http://example.com/" title="Title">'
             'an example</a> inline link.</p>', response.body)
+        self.assertIn(
+            '<link href="/modules/core_tags/_static/css/markdown.css"',
+            response.body)
 
 
 class TagsInclude(actions.TestBase):
