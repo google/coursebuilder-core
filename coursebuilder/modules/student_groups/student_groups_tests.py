@@ -43,17 +43,19 @@ AvailabilityRestHandler = student_groups.StudentGroupAvailabilityRestHandler
 
 class StudentGroupsTestBase(actions.TestBase):
 
-    ADMIN_EMAIL = 'admin@foo.com'
+    ADMIN_EMAIL = 'admin@example.com'
     ADMIN_ASSISTANT_EMAIL = 'admin_assistant@foo.com'
     STUDENT_EMAIL = 'student@foo.com'
+
     COURSE_NAME = 'student_groups_test'
+    COURSE_TITLE = 'Title'
     NAMESPACE = 'ns_%s' % COURSE_NAME
 
     def setUp(self):
         super(StudentGroupsTestBase, self).setUp()
         self.base = '/' + self.COURSE_NAME
         self.app_context = actions.simple_add_course(
-            self.COURSE_NAME, self.ADMIN_EMAIL, 'Title')
+            self.COURSE_NAME, self.ADMIN_EMAIL, self.COURSE_TITLE)
 
     def _grant_student_groups_permission_to_assistant(self):
         with common_utils.Namespace(self.NAMESPACE):
@@ -110,21 +112,27 @@ class StudentGroupsTestBase(actions.TestBase):
         if not course_availability:
             course_availability = default_availability
         if course_triggers is None:
-            course_triggers = []
+            course_triggers = {}
         if element_settings is None:
             element_settings = []
         if content_triggers is None:
             content_triggers = []
-        return {
+        settings = {
             AvailabilityRestHandler.COURSE_AVAILABILITY:
                 course_availability,
-            student_groups.StudentGroupDTO.COURSE_TRIGGERS_PROPERTY:
-                course_triggers,
             AvailabilityRestHandler._ELEMENT_SETTINGS:
                 element_settings,
             student_groups.StudentGroupDTO.CONTENT_TRIGGERS_PROPERTY:
                 content_triggers,
         }
+        # course_triggers are merged into the `settings` dict because that
+        # is how 'course_start' and 'course_end' actually appear in the form
+        # data that this is simulating. This is in contrast to how the
+        # triggers eventually end up, being transformed by from_payload()
+        # into a single list value of a 'course_triggers' key for saving via
+        # set_into_settings().
+        settings.update(course_triggers)
+        return settings
 
     def _put_availability(self, key, members, xsrf_token=None,
         course_availability=None, course_triggers=None,
@@ -167,7 +175,7 @@ class StudentGroupsTestBase(actions.TestBase):
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
             AvailabilityRestHandler.ACTION)
         payload = self._settings_with_defaults(
-            # This default is most common test value.
+            # This default is the most common value to appear in test cases.
             courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED,
             course_availability, course_triggers,
             element_settings, content_triggers)
@@ -1503,7 +1511,7 @@ class I18nTests(StudentGroupsTestBase):
 
 class AggregateEventTests(actions.TestBase):
 
-    ADMIN_EMAIL = 'admin@foo.com'
+    ADMIN_EMAIL = 'admin@example.com'
     STUDENT_EMAIL = 'student@foo.com'
     COURSE_NAME = 'test_course'
     NAMESPACE = 'ns_%s' % COURSE_NAME
@@ -1793,14 +1801,24 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
                                StudentGroupsTestBase):
 
     COURSE_NAME = 'student_groups_course_dates_test'
+    COURSE_TITLE = 'Student Groups Course Dates Tests'
     NAMESPACE = 'ns_%s' % COURSE_NAME
 
-    MTTM = triggers_tests.MilestoneTriggerTestsMixin
-    TEST_AVAIL = MTTM.COURSE_UNUSED_AVAIL
+    # COURSE_UNUSED_AVAIL is an alias for REGISTRATION_OPTIONAL and is not
+    # used by other triggers tests (hence "UNUSED" in the name).
+    TEST_AVAIL = triggers_tests.MilestoneTriggerTestsMixin.COURSE_UNUSED_AVAIL
+
+    SGCOT = student_groups.CourseOverrideTrigger
 
     def setUp(self):
-        StudentGroupsTestBase.setUp(self)
         triggers_tests.MilestoneTriggerTestsMixin.setUp(self)
+        StudentGroupsTestBase.setUp(self)
+        self.course = courses.Course(None, app_context=self.app_context)
+
+    def tearDown(self):
+        self.clear_course_start_end_dates(
+            self.app_context.get_environ(), self.course)
+        StudentGroupsTestBase.tearDown(self)
 
     def _create_group(self, name, description, student_email=None):
         """Creates a new student group."""
@@ -1854,20 +1872,27 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
             self.assertEquals(start_date, dto.start_date)
             self.assertEquals(end_date, dto.end_date)
 
+    def _log_in_and_register_student(self, student_email, group_id,
+                                     student_name='John Smith'):
+        """ Logs in using student_email and registers."""
+        actions.login(student_email)
+        actions.register(self, student_name)
+        self._check_registered_student(student_email, group_id=group_id)
+
     def test_date_modified_in_course_env(self):
         # Create a new student group, but initially containing no students.
-        group_id = self._create_group('Modified Group', 'modified group')
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.group_id = self._create_group('Modified Group', 'modified group')
         self._check_no_students_in_groups()
-        course = courses.Course(None, app_context=self.app_context)
 
         pre_save_env = self.app_context.get_environ()
         self.check_course_start_end_dates(None, None, pre_save_env)
-        self.set_course_start_end_dates(
-            self.past_hour_text, self.next_hour_text, pre_save_env, course)
+        self.set_course_start_end_dates(self.past_hour_text,
+            self.next_hour_text, pre_save_env, self.course)
 
         # Set start_date and end_date values different for student group.
         self._set_group_start_end_dates(
-            self.LAST_CENTURY, self.FAR_FUTURE, group_id)
+            self.LAST_CENTURY, self.FAR_FUTURE, self.group_id)
 
         # _run_env_post_copy_hooks is run, but logged-in student is not in
         # a student group, so should see values in Course 'course' dict.
@@ -1876,28 +1901,158 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         self.check_course_start_end_dates(
             self.past_hour_text, self.next_hour_text, post_save_env)
 
-        # Add student to previously created student group.
-        actions.login(self.ADMIN_EMAIL)
-        self._put_availability(
-            group_id, [self.STUDENT_EMAIL], course_availability=self.TEST_AVAIL)
+        # Add student to previously created student group and make the course
+        # availability override non-private.
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self._put_availability(self.group_id,
+            [self.STUDENT_EMAIL], course_availability=self.TEST_AVAIL)
         self._check_no_students_registered()
-        self._check_student_in_group(self.STUDENT_EMAIL, group_id)
+        self._check_student_in_group(self.STUDENT_EMAIL, self.group_id)
 
-        # Log in as student and register.
-        actions.login(self.STUDENT_EMAIL)
-        actions.register(self, 'John Smith')
-        self._check_registered_student(self.STUDENT_EMAIL, group_id=group_id)
-
+        # Remains logged in as student after this call.
+        self._log_in_and_register_student(self.STUDENT_EMAIL, self.group_id)
         self._check_no_students_in_groups()  # Non-admin cannot see membership.
         self._check_group_start_end_dates(
-            self.LAST_CENTURY, self.FAR_FUTURE, group_id)
+            self.LAST_CENTURY, self.FAR_FUTURE, self.group_id)
 
         # Confirm that, once student is in the student group, start_date
         # and end_date values are used from the student group, not the
         # original Course 'course' settings values.
-        app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
         with common_utils.Namespace(self.NAMESPACE):
+            app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
             in_group_env = courses.Course.get_environ(app_context)
+            self.check_course_start_end_dates(
+                self.LAST_CENTURY, self.FAR_FUTURE, in_group_env)
 
-        self.check_course_start_end_dates(
-            self.LAST_CENTURY, self.FAR_FUTURE, in_group_env)
+    def test_act_hooks(self):
+        # modules.student_groups.student_groups.notify_module_enabled()
+        # registers some ACT_HOOKS callbacks that save the `when` date/time of
+        # course start and end override triggers that are acted on into the
+        # corresponding StudentGroupDTO, as UTC ISO-8601 strings.
+        #
+        # This test confirms that the side effects of those callbacks occur.
+
+        # Create a new student group, but initially containing no students.
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.group_id = self._create_group('Hooks Group', 'hooks group')
+        self._check_no_students_in_groups()
+
+        # Add student to previously created student group and make the course
+        # availability override non-private.
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self._put_availability(self.group_id,
+            [self.STUDENT_EMAIL], course_availability=self.TEST_AVAIL)
+        self._check_no_students_registered()
+        self._check_student_in_group(self.STUDENT_EMAIL, self.group_id)
+
+        initial_env = self.app_context.get_environ()
+
+        # First, confirm there are no start_date or end_date values in the
+        # course settings or the student group.
+        self.check_course_start_end_dates(None, None, initial_env)
+        self._check_group_start_end_dates(None, None, self.group_id)
+
+        # Remains logged in as student after this call.
+        self._log_in_and_register_student(self.STUDENT_EMAIL, self.group_id)
+
+        # Confirm that, once student is in the student group, start_date
+        # and end_date values are still not set by either student group or
+        # course settings.
+        with common_utils.Namespace(self.NAMESPACE):
+            in_group_ctx = sites.get_app_context_for_namespace(self.NAMESPACE)
+            in_group_env = courses.Course.get_environ(in_group_ctx)
+            self.check_course_start_end_dates(None, None, in_group_env)
+
+        # Set a course_start override trigger for the student group.
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self._put_availability(self.group_id,
+            [self.STUDENT_EMAIL], course_triggers=self.only_course_start)
+
+        # Just one course start override trigger was POSTed into student group.
+        with common_utils.Namespace(self.NAMESPACE):
+            start_dto = student_groups.StudentGroupDAO.load(self.group_id)
+            self.assertEquals(
+                len(self.SGCOT.copy_from_settings(start_dto)), 1)
+            self.assertEquals(self.only_course_start, self.SGCOT.for_form(
+                start_dto, course=self.course))
+
+        # Start override trigger is now in the student group DTO, so act on
+        # it in cron job.
+        self.run_availability_jobs(self.app_context)
+
+        # Confirm that update_start_date_from_start_override_when() was run,
+        # but that course settings were not affected (only student group
+        # properties should have changed).
+        with common_utils.Namespace(self.NAMESPACE):
+            after_run_ctx = sites.get_app_context_for_namespace(self.NAMESPACE)
+            after_run_env = courses.Course.get_environ(after_run_ctx)
+            self.check_course_start_end_dates(None, None, after_run_env)
+
+        # POSTed course_start `when` ended up as the 'start_date' in the
+        # course settings. 'end_date' should still be undefined.
+        self._check_group_start_end_dates(
+            self.past_start_text, None, self.group_id)
+
+        # All course start/end override triggers were acted on and consumed.
+        with common_utils.Namespace(self.NAMESPACE):
+            none_start_dto = student_groups.StudentGroupDAO.load(self.group_id)
+            self.assertEquals(
+                len(self.SGCOT.copy_from_settings(none_start_dto)), 0)
+            self.assertEquals(self.defaults_only, self.SGCOT.for_form(
+                none_start_dto, course=self.course))
+
+        # Confirm that, logged in as the student, the start_date visible to
+        # the student is the one updated by the ACT_HOOKS callback.
+        actions.login(self.STUDENT_EMAIL, is_admin=False)
+        with common_utils.Namespace(self.NAMESPACE):
+            new_start_ctx = sites.get_app_context_for_namespace(self.NAMESPACE)
+            new_start_env = courses.Course.get_environ(new_start_ctx)
+            self.check_course_start_end_dates(
+                self.past_start_text, None, new_start_env)
+
+        # No change in availability (setting course_end['availability'] to the
+        # same as course_start['availability']) should still invoke ACT_HOOKS.
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self._put_availability(self.group_id,
+            [self.STUDENT_EMAIL], course_triggers=self.only_early_end)
+
+        # Just the one course_end trigger was POSTed into the student group.
+        with common_utils.Namespace(self.NAMESPACE):
+            early_dto = student_groups.StudentGroupDAO.load(self.group_id)
+            self.assertEquals(
+                len(self.SGCOT.copy_from_settings(early_dto)), 1)
+            self.assertEquals(self.only_early_end, self.SGCOT.for_form(
+                early_dto, course=self.course))
+
+        # End trigger is now in course settings, so act on it in cron job.
+        self.run_availability_jobs(self.app_context)
+
+        # Confirm that update_end_date_from_end_override_when() was run, but
+        # that course settings were not affected (only student group
+        # properties should have changed).
+        with common_utils.Namespace(self.NAMESPACE):
+            after_end_ctx = sites.get_app_context_for_namespace(self.NAMESPACE)
+            after_end_env = courses.Course.get_environ(after_end_ctx)
+            self.check_course_start_end_dates(None, None, after_end_env)
+
+        # All course start/end override triggers were acted on and consumed.
+        with common_utils.Namespace(self.NAMESPACE):
+            none_end_dto = student_groups.StudentGroupDAO.load(self.group_id)
+            self.assertEquals(
+                len(self.SGCOT.copy_from_settings(none_end_dto)), 0)
+            self.assertEquals(self.defaults_only, self.SGCOT.for_form(
+                none_end_dto, course=self.course))
+
+        # A different end_date value should now be present in the student
+        # group. Previously-POSTed start_date should be unchanged.
+        self._check_group_start_end_dates(self.past_start_text,
+            self.an_earlier_end_hour_text, self.group_id)
+
+        # Confirm that, logged in as the student, the end_date visible to
+        # the student is the one updated by the ACT_HOOKS callback.
+        actions.login(self.STUDENT_EMAIL, is_admin=False)
+        with common_utils.Namespace(self.NAMESPACE):
+            new_end_ctx = sites.get_app_context_for_namespace(self.NAMESPACE)
+            new_end_env = courses.Course.get_environ(new_end_ctx)
+            self.check_course_start_end_dates(self.past_start_text,
+                self.an_earlier_end_hour_text, new_end_env)

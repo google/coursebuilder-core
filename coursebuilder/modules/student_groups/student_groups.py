@@ -57,6 +57,7 @@ from modules.courses import triggers
 from modules.dashboard import dashboard
 from modules.i18n_dashboard import i18n_dashboard
 from modules.oeditor import oeditor
+from modules.student_groups import graphql
 from modules.student_groups import messages
 
 from google.appengine.ext import db
@@ -190,7 +191,34 @@ class OverrideTriggerMixin(object):
 
 
 class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
-    """Course content availability override applied at specified date/time."""
+    """Course content availability override applied at specified date/time.
+
+    Modules can register to be called back when a content override trigger is
+    "acted-on", that is, the act() method of a ContentOverrideTrigger has been
+    invoked (this happens when a valid trigger is now in the past and thus
+    "triggered"). Callbacks are registered like this:
+
+        student_groups.ContentOverrideTrigger.ACT_HOOKS[
+            'my_module'] = my_handler
+
+    Trigger callbacks are called a single time for a given acted-on trigger,
+    since the act() method for a given trigger is called only once, and then
+    that "expended" trigger is, by definition, discarded. The callbacks are
+    called in no particular order, via common.utils.run_hooks().
+
+    Acted-on trigger callbacks must accept these paramters:
+      trigger - the ContentOverrideTrigger instance invoking the callbacks.
+      changed - a ChangedByAct namedtuple containing 'previous' and 'next'
+        content availability override changed by act(), or None if no change.
+      course - the Course, currently only used by act() for logging and thus
+        unaltered (all student group settings are stored in the DTO instead).
+      student_group - the StudentGroupDTO containing override changes made by
+        the act() method that *have not yet been saved* to the datastore.
+        Changes to this DTO by the callback *will* affect the student group
+        settings that are eventually saved to the datastore.
+    """
+
+    ACT_HOOKS = {}
 
     # Customize to add the 'no_override' value.
     AVAILABILITY_VALUES = [
@@ -206,9 +234,51 @@ class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
     def key(self):
         return content_availability_key(self.type, self.id)
 
+    def act(self, course, student_group):
+        """The base class act() followed by calling the ACT_HOOKS callbacks."""
+        changed = super(ContentOverrideTrigger, self).act(
+            course, student_group)
+        common_utils.run_hooks(
+            self.ACT_HOOKS.itervalues(),
+            self, changed, course, student_group)
+        return changed
+
 
 class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
-    """Course availability override at the specified start/end date/times."""
+    """Course availability override at the specified start/end date/times.
+
+    Modules can register to be called back when a course-wide milestone
+    override trigger is "acted-on", that is, the act() method of a
+    CourseOverrideTrigger has been invoked (this happens when a valid trigger
+    is now in the past and thus "triggered"). Callbacks can be registered for
+    each of the class KNOWN_MILESTONES like this:
+
+        student_groups.CourseOverrideTrigger.ACT_HOOKS[
+            constants.START_DATE_MILESTONE][
+            'my_module'] = my_course_start_handler
+
+        student_groups.CourseOverrideTrigger.ACT_HOOKS[
+            constants.END_DATE_MILESTONE][
+            'my_module'] = my_course_end_handler
+
+    Trigger callbacks are called a single time for a given acted-on trigger,
+    since the act() method for a given trigger is called only once, and then
+    that "expended" trigger is, by definition, discarded. The callbacks are
+    called in no particular order, via common.utils.run_hooks().
+
+    Acted-on trigger callbacks must accept these paramters:
+      trigger - the CourseOverrideTrigger instance invoking the callbacks.
+      changed - a ChangedByAct namedtuple containing 'previous' and 'next'
+        content availability override changed by act(), or None if no change.
+      course - the Course, currently only used by act() for logging and thus
+        unaltered (all student group settings are stored in the DTO instead).
+      student_group - the StudentGroupDTO containing override changes made by
+        the act() method that *have not yet been saved* to the datastore.
+        Changes to this DTO by the callback *will* affect the student group
+        settings that are eventually saved to the datastore.
+    """
+
+    ACT_HOOKS = {km: {} for km in triggers.MilestoneTrigger.KNOWN_MILESTONES}
 
     # Customize to add the 'no_override' value.
     AVAILABILITY_VALUES = [
@@ -223,6 +293,15 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
 
     def key(self):
         return course_availability_key()
+
+    def act(self, course, student_group):
+        """The base class act() followed by calling the ACT_HOOKS callbacks."""
+        changed = super(CourseOverrideTrigger, self).act(
+            course, student_group)
+        common_utils.run_hooks(
+            self.ACT_HOOKS.get(self.milestone, {}).itervalues(),
+            self, changed, course, student_group)
+        return changed
 
 
 class EmailToObfuscatedUserId(models.BaseEntity):
@@ -1368,13 +1447,7 @@ def modify_course_environment(app_context, env):
             'can_register', env, setting['can_register'])
 
     # Override the course start/end dates displayed in the course explorer.
-    if student_group.start_date:
-        courses.Course.set_named_course_setting_in_environ(
-            courses_constants.START_DATE_SETTING, env, student_group.start_date)
-
-    if student_group.end_date:
-        courses.Course.set_named_course_setting_in_environ(
-            courses_constants.END_DATE_SETTING, env, student_group.end_date)
+    graphql.apply_overrides_to_environ(student_group, env)
 
     # Users named by email into groups are implicitly also whitelisted into
     # the course.
@@ -1632,6 +1705,9 @@ def register_module():
         # fetched, we can submit overwrite items.
         courses.Course.COURSE_ENV_POST_COPY_HOOKS.append(
             modify_course_environment)
+
+        # Register callbacks that alter course explorer course cards.
+        graphql.notify_module_enabled(CourseOverrideTrigger, MODULE_NAME)
 
         # Register student group as a generically handle-able translatable
         # resource.
