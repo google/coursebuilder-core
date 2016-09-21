@@ -169,22 +169,6 @@ class OverrideTriggerMixin(object):
     IMPLEMENTED_SET_SEMANTICS = triggers.DateTimeTrigger.SET_ONLY_OVERWRITES
 
     @classmethod
-    def set_into_settings(cls, encoded_triggers, student_group,
-                          semantics=None, **unused_kwargs):
-        """Sets encoded availability override triggers into a student group.
-
-        Args:
-            encoded_triggers: a list of encoded content triggers, marshaled
-                for storing as student group settings values.
-            student_group: a StudentGroupDTO into which the encoded_triggers
-                will be stored in the content_triggers property.
-            semantics: Student Groups settings currently only support the
-                default SET_WILL_OVERWRITE semantics.
-        """
-        cls.check_set_semantics(semantics)
-        student_group.set_triggers(cls.SETTINGS_NAME, encoded_triggers)
-
-    @classmethod
     def clear_from_settings(cls, student_group, **unused_kwargs):
         """Remove all SETTINGS_NAME triggers from the student_group DTO."""
         student_group.clear_triggers(cls.SETTINGS_NAME)
@@ -233,6 +217,22 @@ class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
 
     def key(self):
         return content_availability_key(self.type, self.id)
+
+    @classmethod
+    def set_into_settings(cls, encoded_triggers, student_group,
+                          semantics=None, **unused_kwargs):
+        """Sets content availability override triggers into a student group.
+
+        Args:
+            encoded_triggers: a list of encoded content availability override
+                triggers, marshaled for storing in student group properties.
+            student_group: a StudentGroupDTO into which the encoded_triggers
+                will be stored in the content_triggers property.
+            semantics: (optional) only the default SET_WILL_OVERWRITE
+                semantics are supported.
+        """
+        cls.check_set_semantics(semantics)
+        student_group.set_triggers(cls.SETTINGS_NAME, encoded_triggers)
 
     def act(self, course, student_group):
         """The base class act() followed by calling the ACT_HOOKS callbacks."""
@@ -293,6 +293,26 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
 
     def key(self):
         return course_availability_key()
+
+    @classmethod
+    def set_into_settings(cls, encoded_triggers, student_group,
+                          semantics=None, course=None):
+        """Sets course availability override triggers into a student group.
+
+        Args:
+            encoded_triggers: a list of encoded course milestone override
+                triggers, marshaled for storing in student group properties.
+            student_group: a StudentGroupDTO into which the encoded_triggers
+                will be stored in the course_triggers property. Also passed
+                as settings to dedupe_for_settings().
+            semantics: (optional) only the default SET_WILL_OVERWRITE
+                semantics are supported.
+            course: (optional) passed, untouched, to dedupe_for_settings()
+                and through to separate().
+        """
+        deduped = cls.dedupe_for_settings(encoded_triggers,
+            semantics=semantics, settings=student_group, course=course)
+        student_group.set_triggers(cls.SETTINGS_NAME, deduped.values())
 
     def act(self, course, student_group):
         """The base class act() followed by calling the ACT_HOOKS callbacks."""

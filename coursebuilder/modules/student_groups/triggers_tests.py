@@ -56,16 +56,27 @@ class OverrideTriggerTestsMixin(object):
 
     def check_payload_into_student_group(self, cls, settings_name):
         """Checks payload_into_settings, from_payload, set_into_settings."""
-        payload, expected = self.create_payload_triggers(cls=cls,
+        payload, expected_triggers = self.create_payload_triggers(cls=cls,
             availabilities=cls.AVAILABILITY_VALUES)
         expected_group = student_groups.StudentGroupDTO(
-            self.COURSE_NAME, {settings_name: expected})
+            self.COURSE_NAME, {settings_name: expected_triggers})
         the_dict = {}
         sg = student_groups.StudentGroupDTO(self.COURSE_NAME, the_dict)
         cls.payload_into_settings(payload, self.course, sg)
+
+        # Order should not matter, but the way the expected_triggers values
+        # are generated, for some trigger test classes, they are in fact in
+        # a particular order (e.g. in KNOWN_MILESTONE order).
+        self.assertItemsEqual(expected_triggers, sg.get_triggers(settings_name))
+        self.assertItemsEqual(expected_triggers, the_dict[settings_name])
+
+        # So, place the potentially non-ordered results in that order before
+        # comparing nested structures that contain them.
+        not_in_order = sg.get_triggers(settings_name)
+        in_order = self.place_triggers_in_expected_order(not_in_order, cls)
+        sg.set_triggers(settings_name, in_order)
+
         self.assertEquals(expected_group.dict, sg.dict)
-        self.assertEquals(expected, sg.get_triggers(settings_name))
-        self.assertEquals(expected, the_dict[settings_name])
 
         # Absent from payload should remove from settings. Use student_group
         # created above, since it will have contents to be removed.

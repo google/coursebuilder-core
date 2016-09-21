@@ -70,6 +70,7 @@ from common import resource
 from common import utc
 from common import utils
 from models import courses
+from models import resources_display
 from modules.courses import availability_options
 from modules.courses import constants
 
@@ -985,8 +986,10 @@ class ContentTrigger(AvailabilityTrigger):
     # All types other than 'lesson' (e.g. 'unit', 'link', 'assessment') are
     # represented by 'unit' instead.
     CONTENT_TYPE_FINDERS = {
-        'unit': lambda course, id: course.find_unit_by_id(id),
-        'lesson': lambda course, id: course.find_lesson_by_id(None, id),
+        resources_display.ResourceUnit.TYPE:
+            lambda course, id: course.find_unit_by_id(id),
+        resources_display.ResourceLesson.TYPE:
+            lambda course, id: course.find_lesson_by_id(None, id),
     }
 
     ALLOWED_CONTENT_TYPES = CONTENT_TYPE_FINDERS.keys()
@@ -1655,60 +1658,51 @@ class MilestoneTrigger(AvailabilityTrigger):
         lists_of_encoded_triggers = super(MilestoneTrigger, cls).for_form(
             settings).itervalues()
         flattened = [et for ets in lists_of_encoded_triggers for et in ets]
-        deduped = {et[MilestoneTrigger.FIELD_NAME]: et
-                   for et in cls.separate(flattened, course).encoded}
+        deduped = cls.dedupe_for_settings(flattened, course=course,
+            semantics=cls.SET_WILL_OVERWRITE)
         return dict([(m, [deduped[m]]) if m in deduped
                      else (m, [cls.encoded_defaults(milestone=m)])
                      for m in cls.KNOWN_MILESTONES])
 
     @classmethod
-    def set_into_settings(cls, encoded_triggers, settings,
-                          semantics=None, course=None):
-        """Sets encoded course start/end triggers into the supplied settings.
+    def dedupe_for_settings(cls, encoded_triggers,
+                            semantics=None, settings=None, course=None):
+        """De-duplicates encoded triggers to prepare for updating settings.
 
-        Sets the value of the SETTINGS_NAME key in the 'publish' dict
-        within the settings to a list containing at most *one* trigger for
-        each of the KNOWN_MILESTONES, in no particular order.
-
-        separate() is used to obtain only the encoded_triggers that are valid
-        milestone triggers. For example, milestone triggers coming from form
-        payload that have no 'when' datetime (because the user pressed the
-        [Clear] button) or have 'none' availability (the user selected the
-        '--- none selected ---' value) are discarded and thus omitted from
-        the milestone triggers to be stored in the settings. Those two user
-        actions are perfectly valid ways to "deactivate" a milestone trigger.
-
-        The remaining valid, still-encoded triggers are then de-duped,
-        retaining only the last (in the order it occurred in the supplied
-        encoded_triggers list) valid trigger corresponding to each of the
-        KNOWN_MILESTONES. The result is stored as a single list in no
-        particular order.
+        separate() is used to obtain only the valid milestone triggers from the
+        supplied encoded_triggers. The resulting valid, still-encoded triggers
+        are then written (in the order they occurred in the supplied
+        encoded_triggers list) into a dict, thus retaining only the last valid
+        trigger corresponding to each of the KNOWN_MILESTONES.
 
         Args:
-            encoded_triggers: a list of course triggers (typically encoded
+            encoded_triggers: a list of course triggers (typically from encoded
                 form payload), in no particular order, and possibly including
                 invalid triggers (e.g. '--- none selected ---' availability,
-                no 'when' date/time, etc.); any invalid triggers are omitted.
-            settings: passed, untouched, through to the base class, where
-                the settings are then updated *in place* with new
-                encoded_triggers.
-            semantics: one of
-                SET_WILL_OVERWITE -- De-duped, valid course milestone triggers
-                    extracted from encoded_triggers are supplied to the base
-                    class set_into_settings() unchanged.
-                SET_WILL_MERGE -- When called to set settings for multiple
-                    courses all at once, only one item at a time is sent, so
-                    encoded_triggers is instead merged with the existing
-                    SETTINGS_NAME values.
-            course: (optional) passed, untouched, through to separate() and
-                set_into_settings().
+                no 'when' date/time, etc.); any invalid triggers are omitted
+                from the returned dict.
+            semantics: (optional) one of
+                SET_WILL_OVERWITE -- (default behavior) Only unique, valid
+                    course milestone triggers extracted from the supplied
+                    encoded_triggers are returned.
+                SET_WILL_MERGE -- Unique, valid course milestone triggers
+                    extracted from the supplied encoded_triggers are merged
+                    with any existing triggers found in the supplied settings.
+            settings: (optional) subclass-specific settings containing existing
+                encoded triggers, simply copied from and thus not altered by
+                this method. Needed only for SET_WILL_MERGE semantics.
+            course: (optional) passed, untouched, through to separate().
+
+        Returns:
+            A dict containing (by definition) *at most* one unique trigger
+            for each of the KNOWN_MILESTONES, mapping each milestone to the
+            corresponding valid, encoded trigger (if one exists).
         """
         semantics = cls.check_set_semantics(semantics)
-        valid_triggers = cls.separate(encoded_triggers, course).encoded
         deduped = {et[MilestoneTrigger.FIELD_NAME]: et
-                   for et in valid_triggers}
+                   for et in cls.separate(encoded_triggers, course).encoded}
 
-        if semantics == cls.SET_WILL_MERGE:
+        if settings and (semantics == cls.SET_WILL_MERGE):
             # When calling to set settings for multiple courses all at once,
             # only one item at a time is sent, and other milestone types
             # should not be affected.  In this case, we want to merge with
@@ -1726,10 +1720,59 @@ class MilestoneTrigger(AvailabilityTrigger):
             # set_into_settings() will call clear_from_settings() as expected.
             deduped = current
 
-        # Default to 'overwrite' by explicitly *not* passing the `semantics`
-        # keyword argument.
+        return deduped
+
+    @classmethod
+    def set_into_settings(cls, encoded_triggers, settings,
+                          semantics=None, course=None):
+        """Sets encoded course start/end triggers into the supplied settings.
+
+        Sets the value of the SETTINGS_NAME key in the 'publish' dict
+        within the settings to a list containing at most *one* trigger for
+        each of the KNOWN_MILESTONES, in no particular order.
+
+        dedupe_for_settings() is used to remove any "deactivated" or invalid
+        triggers, keeping only *at most* one unique encoded trigger for each of
+        the KNOWN_MILESTONES.
+
+        For example, milestone triggers coming from the form payload that have
+        no 'when' datetime (because the user pressed the [Clear] button) or
+        have 'none' availability (the user selected the '--- none selected ---'
+        value) are discarded and thus omitted from the milestone triggers to be
+        stored in the settings. Those two user actions are perfectly valid ways
+        to "deactivate" a milestone trigger.
+
+        The remaining valid, still-encoded triggers are then de-duped,
+        retaining only the last (in the order it occurred in the supplied
+        encoded_triggers list) valid trigger corresponding to each of the
+        KNOWN_MILESTONES. The result is stored as a single list in no
+        particular order.
+
+        Args:
+            encoded_triggers: a list of course triggers (typically encoded
+                form payload), in no particular order, and possibly including
+                invalid triggers (e.g. '--- none selected ---' availability,
+                no 'when' date/time, etc.); any invalid triggers are omitted.
+            settings: a Course get_environ() dict containing settings that
+                correspond to milestones (e.g. milestone 'course_start' to
+                'course:start_date', see constants.MILESTONE_TO_SETTING) and
+                are potentially updated *in-place*. The base class also updates
+                the dict *in place* with new encoded_triggers.
+            semantics: one of
+                SET_WILL_OVERWITE -- De-duped, valid course milestone triggers
+                    extracted from encoded_triggers are supplied to the base
+                    class set_into_settings() unchanged.
+                SET_WILL_MERGE -- When called to set settings for multiple
+                    courses all at once, only one item at a time is sent, so
+                    encoded_triggers is instead merged with the existing
+                    SETTINGS_NAME values.
+            course: (optional) passed, untouched, to dedupe_for_settings(),
+                base class set_into_settings(), and through to separate().
+        """
+        deduped = cls.dedupe_for_settings(encoded_triggers,
+            semantics=semantics, settings=settings, course=course)
         super(MilestoneTrigger, cls).set_into_settings(deduped.values(),
-            settings, course=course)
+            settings, semantics=cls.SET_WILL_OVERWRITE, course=course)
 
     @classmethod
     def clear_from_settings(cls, env, milestone=None, course=None):
@@ -1779,15 +1822,9 @@ class MilestoneTrigger(AvailabilityTrigger):
 
         from_payload() iterates through all of the KNOWN_MILESTONES, to get()
         for each of those milestones a single-value list containing the
-        milestone trigger (or possibly just an empty list). Any encoded
-        triggers that contain "clear this trigger" values (e.g. an empty
-        'when' or a value of '--- none selected ---' for 'availability') are
-        discarded to avoid extraneous logging noise when saving and later
-        loading stored settings.
+        milestone trigger (or possibly just an empty list).
         """
-        raw = [et for m in cls.KNOWN_MILESTONES for et in payload.get(m, [])]
-        return [rt for rt in raw
-                if cls.is_complete(rt) and not cls.is_defaults(rt)]
+        return [et for m in cls.KNOWN_MILESTONES for et in payload.get(m, [])]
 
     def act(self, course, env):
         """Updates course-wide availability as indicated by the trigger.

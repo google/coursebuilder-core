@@ -93,6 +93,16 @@ class TriggerTestsMixin(object):
     def utc_future_text(cls, now):
         return utc.to_text(seconds=utc.hour_end(now + (60 * 60)) + 1)
 
+    def default_availabilities(self, cls, availabilities):
+        cls = cls if cls is not None else self.TAT
+        return (availabilities if availabilities is not None
+                else cls.AVAILABILITY_VALUES)
+
+    @classmethod
+    def place_triggers_in_expected_order(cls, triggers_list,
+                                         unused_trigger_cls, **unused_kwargs):
+        return triggers_list
+
     def check_validate(self, encoded, props, validator):
         """Used by trigger test classes to test validate methods."""
         expected_unused = dict(
@@ -406,8 +416,8 @@ class FunctionalTestBase(TriggerTestsMixin, actions.TestBase):
 
     def check_payload_into_settings(self, cls, settings_name):
         """Checks payload_into_settings, from_payload, set_into_settings."""
-        payload, expected = self.create_payload_triggers()
-        expected_settings = {'publish': {settings_name: expected}}
+        payload, expected_triggers = self.create_payload_triggers()
+        expected_settings = {'publish': {settings_name: expected_triggers}}
         settings = {}
         cls.payload_into_settings(payload, self.course, settings)
         self.assertItemsEqual(expected_settings, settings)
@@ -464,6 +474,11 @@ class ContentTriggerTestsMixin(TriggerTestsMixin):
     VALID_BUT_NOT_OUTLINE = resources_display.ResourceUnitBase.ASSESSMENT_TYPE
 
     CONTENT_INITIAL_AVAIL = courses.AVAILABILITY_COURSE
+
+    CONTENT_TYPES = [
+        resources_display.ResourceUnit.TYPE,
+        resources_display.ResourceLesson.TYPE,
+    ]
 
     def setUp(self):
         super(ContentTriggerTestsMixin, self).setUp()
@@ -543,6 +558,31 @@ class ContentTriggerTestsMixin(TriggerTestsMixin):
         }
         return (empty, bad, unexpected, missing, unchanged)
 
+    def default_availabilities(self, cls, availabilities):
+        cls = cls if cls is not None else self.TCT
+        availabilities = super(ContentTriggerTestsMixin,
+            self).default_availabilities(cls, availabilities)
+        return (availabilities if availabilities is not None
+                else courses.AVAILABILITY_VALUES)  # Last resort.
+
+    def default_content_types(self, cls, content_types):
+        cls = cls if cls is not None else self.TCT
+
+        if content_types is None:
+            content_types = cls.ALLOWED_CONTENT_TYPES
+
+        if content_types is None:
+            content_types = self.CONTENT_TYPES
+
+        return content_types
+
+    def default_test_args(self, cls, availabilities, content_types):
+        """Common default values for modules/courses ContentTriggerTests."""
+        cls = cls if cls is not None else self.TCT
+        availabilities = self.default_availabilities(cls, availabilities)
+        content_types = self.default_content_types(cls, content_types)
+        return cls, availabilities, content_types
+
 
 class ContentTriggerTestBase(ContentTriggerTestsMixin, FunctionalTestBase):
     """Parameterized "test" methods with check_ names, used by subclasses.
@@ -555,27 +595,9 @@ class ContentTriggerTestBase(ContentTriggerTestsMixin, FunctionalTestBase):
     the modules/courses and modules/student_groups trigger implementations.
     """
 
-    CONTENT_TYPES = [
-        resources_display.ResourceUnit.TYPE,
-        resources_display.ResourceLesson.TYPE,
-    ]
-
     def setUp(self):
         FunctionalTestBase.setUp(self)
         ContentTriggerTestsMixin.setUp(self)
-
-    def default_test_args(self, cls, availabilities, content_types):
-        """Common default values for modules/courses ContentTriggerTests."""
-        if cls is None:
-            cls = self.TCT
-
-        if availabilities is None:
-            availabilities = courses.AVAILABILITY_VALUES
-
-        if content_types is None:
-            content_types = self.CONTENT_TYPES
-
-        return cls, availabilities, content_types
 
     def check_names(self, cls=None, availabilities=None, content_types=None):
         """Checks the name @property, logged @property, and __str__."""
@@ -838,7 +860,6 @@ class MilestoneTriggerTestsMixin(TriggerTestsMixin):
         self.only_early_end[
             constants.END_DATE_MILESTONE] = [self.an_earlier_course_end]
 
-
     @classmethod
     def past_course_start_trigger(cls, now):
         when = cls.utc_past_text(now)
@@ -947,6 +968,57 @@ class MilestoneTriggerTestsMixin(TriggerTestsMixin):
         cron_job.submit()
         self.execute_all_deferred_tasks()
 
+    def default_availabilities(self, cls, availabilities):
+        cls = cls if cls is not None else self.TMT
+        availabilities = super(MilestoneTriggerTestsMixin,
+            self).default_availabilities(cls, availabilities)
+        return (availabilities if availabilities is not None
+                else courses.COURSE_AVAILABILITY_VALUES)  # Last resort.
+
+    def default_milestones(self, cls, milestones):
+        cls = cls if cls is not None else self.TMT
+
+        if milestones is None:
+            milestones = cls.KNOWN_MILESTONES
+
+        if milestones is None:
+            milestones = constants.COURSE_MILESTONES  # Last resort.
+
+        return milestones
+
+    def default_test_args(self, cls, availabilities, milestones):
+        """Common default values for modules/courses MilestoneTriggerTests."""
+        cls = cls if cls is not None else self.TMT
+        availabilities = self.default_availabilities(cls, availabilities)
+        milestones = self.default_milestones(cls, milestones)
+        return cls, availabilities, milestones
+
+    def place_triggers_in_expected_order(self, triggers_list, cls,
+                                         milestones=None):
+        cls = cls if cls is not None else self.TMT
+        field_name = cls.FIELD_NAME
+        milestones = self.default_milestones(cls, milestones)
+        in_order = []
+        to_reorder = triggers_list  # Initially, no triggers are in order yet.
+
+        for m in milestones:
+            remaining = []
+            for t in to_reorder:
+                if t.get(field_name) == m:
+                    # Found a known milestone, so add it in milestones order.
+                    in_order.append(t)
+                    # Keep looking, though, to gather all duplicate triggers
+                    # matching the current milestone.
+                else:
+                    # This trigger does not match the current milestone.
+                    remaining.append(t)
+
+            to_reorder = remaining
+
+        # Append any unknown milestones in original triggers_list order.
+        in_order.extend(to_reorder)
+        return in_order
+
 
 class MilestoneTriggerTestBase(MilestoneTriggerTestsMixin, FunctionalTestBase):
     """Parameterized "test" methods with check_ names, used by subclasses.
@@ -962,19 +1034,6 @@ class MilestoneTriggerTestBase(MilestoneTriggerTestsMixin, FunctionalTestBase):
     def setUp(self):
         FunctionalTestBase.setUp(self)
         MilestoneTriggerTestsMixin.setUp(self)
-
-    def default_test_args(self, cls, availabilities, milestones):
-        """Common default values for modules/courses MilestoneTriggerTests."""
-        if cls is None:
-            cls = self.TMT
-
-        if availabilities is None:
-            availabilities = courses.COURSE_AVAILABILITY_VALUES
-
-        if milestones is None:
-            milestones = self.TMT.KNOWN_MILESTONES
-
-        return cls, availabilities, milestones
 
     def check_names(self, cls=None, availabilities=None, milestones=None):
         """Checks the name @property, logged @property, and __str__."""

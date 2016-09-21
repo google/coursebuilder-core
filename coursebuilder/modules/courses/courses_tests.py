@@ -2377,13 +2377,12 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
         # have been logged by the POST handler. They would not even be written
         # into the course settings.
         logs = self.get_log()
+        self.separating_logged(logs, num_all_mts, self.TMT)
 
-        # Triggers not is_complete were discarded before "separating".
-        self.separating_logged(
-            logs, num_all_mts - num_incomplete_mts, self.TMT)
-
-        # The "separating" will then only keep the one "good" trigger for each
-        # known milestone, discarding the bad and none_selected ones.
+        # The "separating" will only keep the one "good" trigger for each
+        # known milestone, discarding the bad, none_selected, and all
+        # incomplete ones.
+        #
         # One "good" course_start and one "good" course_end milestoe trigger
         # should have "survived" the removal of the various "exceptional"
         # triggers in all_mts.
