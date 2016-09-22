@@ -37,10 +37,7 @@ def resolve_start_date(gql_course, args, info):
 
       As a last resort, None is returned.
     """
-    # TODO(tlarsen): Stop accessing the course_start trigger and rely only
-    #   on course:start_date once the "Publish > Availability" form starts
-    #   updating that on successful course_start trigger save.
-    start_when = triggers.MilestoneTrigger.copy_milestone_from_environ(
+    start_when = triggers.MilestoneTrigger.copy_milestone_from_settings(
         constants.START_DATE_MILESTONE, gql_course.course_environ).get('when')
     if start_when:
         return start_when
@@ -63,10 +60,7 @@ def resolve_end_date(gql_course, args, info):
 
       As a last resort, None is returned.
     """
-    # TODO(tlarsen): Stop accessing the course_end trigger and rely only
-    #   on course:end_date once the "Publish > Availability" form starts
-    #   updating that on successful course_end trigger save.
-    end_when = triggers.MilestoneTrigger.copy_milestone_from_environ(
+    end_when = triggers.MilestoneTrigger.copy_milestone_from_settings(
         constants.END_DATE_MILESTONE, gql_course.course_environ).get('when')
     if end_when:
         return end_when

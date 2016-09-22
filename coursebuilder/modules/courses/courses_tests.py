@@ -2316,10 +2316,8 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
 
         # POST past, future, and "bad" milestone triggers to course settings.
         all_mts = self.specific_bad_milestone_triggers(self.now)
-        all_mts.setdefault(
-            constants.START_DATE_MILESTONE, []).append(self.course_start)
-        all_mts.setdefault(
-            constants.END_DATE_MILESTONE, []).append(self.course_end)
+        all_mts.setdefault('course_start', []).append(self.course_start)
+        all_mts.setdefault('course_end', []).append(self.course_end)
 
         # all_mts should now contain a total of 12 triggers:
         #   "empty", "bad", "no_when", "no_avail", "none_selected", "good"
@@ -2409,6 +2407,19 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
 
         # All triggers now in course settings, so evaluate them in cron job.
         self.run_availability_jobs(app_context)
+
+        # Now that the course_start trigger should have been acted on, and
+        # thus the value of 'start_date' stored in 'course' settings will
+        # changed, provide the 'when' value for the expected default
+        # course_start trigger in only_course_end and defaults_only.
+        start_settings = courses.Course.get_environ(app_context)
+        when_start = self.TMT.encoded_defaults(
+            availability=self.TMT.NONE_SELECTED, milestone='course_start',
+            settings=start_settings, course=self.course)
+        self.assertEquals(self.past_start_text, when_start['when'])
+        self.defaults_start = when_start
+        self.defaults_only['course_start'][0] = when_start
+        self.only_course_end['course_start'][0] = when_start
 
         # Cron job should log some consumed and some future triggers.
         # Checking the logs first for anomolies pinpoints problems faster.
@@ -2575,6 +2586,19 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         # Start trigger is now in course settings, so act on it in cron job.
         self.run_availability_jobs(app_context)
 
+        # Now that the course_start trigger should have been acted on, and
+        # thus the value of 'start_date' stored in 'course' settings will
+        # changed, provide the 'when' value for the expected default
+        # course_start trigger in only_course_end and defaults_only.
+        start_settings = courses.Course.get_environ(app_context)
+        when_start = self.TMT.encoded_defaults(
+            availability=self.TMT.NONE_SELECTED, milestone='course_start',
+            settings=start_settings, course=self.course)
+        self.assertEquals(self.past_start_text, when_start['when'])
+        self.defaults_start = when_start
+        self.defaults_only['course_start'][0] = when_start
+        self.only_course_end['course_start'][0] = when_start
+
         # Confirm that update_start_date_from_course_start_when() was run.
         start_cron_env = app_context.get_environ()
 
@@ -2604,6 +2628,19 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
 
         # Confirm that update_end_date_from_course_end_when() was run.
         end_cron_env = app_context.get_environ()
+
+        # Now that the "early" course_end trigger should have been acted on,
+        # and thus the value of 'end_date' stored in 'course' settings will
+        # changed, provide the 'when' value for the expected default
+        # course_end trigger in only_course_start and defaults_only.
+        end_settings = courses.Course.get_environ(app_context)
+        when_end = self.TMT.encoded_defaults(
+            availability=self.TMT.NONE_SELECTED, milestone='course_end',
+            settings=end_settings, course=self.course)
+        self.assertEquals(self.an_earlier_end_hour_text, when_end['when'])
+        self.defaults_end = when_end
+        self.defaults_only['course_end'][0] = when_end
+        self.only_course_start['course_end'][0] = when_end
 
         # All course start/end milestone triggers were acted on and consumed.
         self.assertEquals(len(self.TMT.copy_from_settings(end_cron_env)), 0)

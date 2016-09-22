@@ -336,23 +336,51 @@ class DateTimeTrigger(object):
         return True
 
     @classmethod
-    def encoded_defaults(cls, **unused):
+    def encoded_defaults(cls, when=None):
         """Creates an encoded trigger initialized to any possible defaults.
 
-        There is no meaningful default value for the date/time of a trigger,
-        so intentionally *no* 'when' value is provided.
+        Args:
+            when: (optional) Typically, there is no  meaningful default
+                value for the date/time of a trigger, though some subclasses
+                may supply one (e.g. the value of 'course:start_date' for
+                the 'when' default of a 'course_end' MilestoneTrigger).
 
         Returns:
-          Returns an encoded trigger initialized with any explicitly supplied
-          keyword argument defaults or class defaults, or None if it was not
-          possible to encode a default trigger of the class type.
+            Returns an encoded trigger initialized with any explicitly
+            supplied keyword argument defaults or class defaults, or None if
+            it was not possible to encode a default trigger of the class type.
         """
-        return {}
+        defaults = {}
+
+        # Ignore *all* False values, not just None.
+        if when:
+            defaults[DateTimeTrigger.FIELD_NAME] = when
+
+        return defaults
 
     @classmethod
-    def is_defaults(cls, encoded_trigger):
-        """True if encoded_trigger contains only encoded_defaults() values."""
-        return encoded_trigger == cls.encoded_defaults()
+    def is_defaults(cls, encoded_trigger, defaults=None):
+        """True if encoded_trigger contains only encoded_defaults() values.
+
+        Args:
+            encoded_trigger: an encoded (e.g. form payload or marshaled
+                for storing into settings) trigger dict.
+            defaults: (optional) a dict containing the defaults for an
+                encoded trigger. Some subclasses (e.g. MilestoneTrigger)
+                need to create a defaults dict that in some way depends on
+                the encoded_trigger being tested. encoded_defaults() works
+                for non-exceptional trigger subclasses.
+        """
+        if defaults is None:
+            defaults = cls.encoded_defaults()
+
+        # There may not be defaults for some otherwise valid encoded trigger
+        # fields, so only compare the fields present in the defaults dict,
+        # ignoring any additional fields present in encoded_trigger.
+        for field, value in defaults.iteritems():
+            if encoded_trigger.get(field) != value:
+                return False
+        return True
 
     @classmethod
     def triggers_in(cls, settings):
@@ -1424,6 +1452,7 @@ class MilestoneTrigger(AvailabilityTrigger):
 
     # Course milestones are currently the only known milestones.
     KNOWN_MILESTONES = list(constants.COURSE_MILESTONES)
+    MILESTONE_TO_SETTING = constants.MILESTONE_TO_SETTING
 
     ACT_HOOKS = {km: {} for km in KNOWN_MILESTONES}
 
@@ -1563,19 +1592,103 @@ class MilestoneTrigger(AvailabilityTrigger):
         return self.milestone and super(MilestoneTrigger, self).is_valid
 
     @classmethod
-    def encoded_defaults(cls, milestone=None, **super_kwargs):
+    def retrieve_named_setting(cls, setting_name, env, course=None):
+        """Returns value of a named setting from settings or Course, or None.
+
+        Args:
+            setting_name: a Course get_environ() 'course' dict key for a
+                setting value to retrieve from env.
+            env: a Course get_environ() dict from which to copy a value
+                indicated by the setting_name key from the 'course' dict.
+            course: (optional) a Course, consulted for the setting_name value
+                only if not found in env.
+        """
+        # Check the get_environ() dict first if supplied, since it may have
+        # pending settings changes that have not yet been saved to the Course.
+        env = env if env is not None else {}
+        value = courses.Course.get_named_course_setting_from_environ(
+            setting_name, env)
+
+        if (not value) and course:
+            # If a named setting was not found in supplied settings (or a
+            # get_environ() dict was not even supplied), attempt to obtain
+            # the same setting from the Course itself.
+            value = course.get_course_setting(setting_name)
+
+        return value
+
+    @classmethod
+    def get_default_when_from_settings(cls, milestone, settings, course=None):
+        """Returns a default 'when' value for a milestone, from settings.
+
+        Args:
+            milestone: one of the KNOWN_MILESTONES, to be mapped to the name
+                of a corresponding setting, if there is one.
+            settings: subclass-specific settings (e.g. a Course get_environ()
+                dict, or StudentGroupDTO for student_groups) potentially
+                holding defaults trigger 'when' values.
+            course: (optional) a Course, which, if settings does not contain
+                a default setting value corresponding to the milestone, is
+                used to obtain the 'course' setting (e.g. 'course:start_date')
+                corresponding to the milestone (e.g. 'course_start' 'when')
+                if there is one.
+
+        Returns:
+            An UTC ISO-8601 date/time string, if one can be found (first) in
+            settings, and, if not, (second) in the Course. None is returned
+            an encoded 'when' string corresponding to milestone is unavailable.
+        """
+        setting_name = cls.MILESTONE_TO_SETTING.get(milestone)
+        if not setting_name:
+            # If there is no mapping from milestone (e.g. 'course_start')
+            # to settings name (e.g. a 'start_date' Course get_environ()
+            # 'course' dict key or StudentGroupDTO property name), then
+            # there is no corresponding `when` value in the settings, so
+            # exit early.
+            return None
+
+        if (not settings) and (not course):
+            # If no Course or settings (e.g. a Course get_environ() dict or a
+            # StudentGroupDTO) were provided, there is no source for a `when`
+            # value derived from settings, so exit early.
+            return None
+
+        return cls.retrieve_named_setting(
+            setting_name, settings, course=course)
+
+    @classmethod
+    def encoded_defaults(cls, milestone=None, settings=None, course=None,
+                         **super_kwargs):
         """Returns an encoded trigger initialized to any possible defaults.
 
-        See MilestoneTrigger.with_form_defaults() for example usage.
+        Some milestones (e.g. course_start and course_end) *do* potentially
+        have meaningful default date/time values (e.g. obtained from
+        'course:start_date' and 'course:end_date, repectively), so 'when'
+        may have a value in those cases.
 
         Args:
             milestone: an explicitly specified milestone "name"; there are
                 no "unnamed" MilestoneTriggers, so some valid milestone value
                 from the class KNOWN_MILESTONES *must* be supplied.
+            settings:  see get_default_when_from_settings().
+            course: (optional) see get_default_when_from_settings().
             super_kwargs: keyword arguments passed on to base class.
+
+        Returns:
+            Returns the encoded trigger for the specified milestone, or None
+            if that milestone is invalid.
         """
         if not cls.validate_milestone(milestone):
+            # No specific milestone (e.g. course_start) provided, so no way to
+            # return a meaningful "default" MilestoneTrigger, so exit early.
             return None
+
+        when = cls.get_default_when_from_settings(
+            milestone, settings, course=course)
+
+        if when and not super_kwargs.get(DateTimeTrigger.FIELD_NAME):
+            super_kwargs = super_kwargs.copy()
+            super_kwargs[DateTimeTrigger.FIELD_NAME] = when
 
         defaults = super(MilestoneTrigger, cls).encoded_defaults(
             **super_kwargs)
@@ -1583,51 +1696,65 @@ class MilestoneTrigger(AvailabilityTrigger):
         return defaults
 
     @classmethod
-    def is_defaults(cls, encoded_trigger):
+    def is_defaults(cls, encoded_trigger, defaults=None, **enc_def_kwargs):
         """True if encoded_trigger contains only encoded_defaults() values.
 
         There is no *default* value for the `milestone` property, but the
         property typically must be present in a MilestoneTrigger. If the
         'milestone' key itself is not present in the supplied encoded_trigger
-        dict, this method defers to the super is_defaults().
+        dict, this method defers to the base class is_defaults().
 
         Similarly, since there is no default value for the `milestone`
-        property, whatever value is present in the supplied encoded_trigger
+        property, so whatever value is present in the supplied encoded_trigger
         dict (valid with respect to validate_milestone() or not) is also placed
         into the dict returned by MilestoneTrigger.encoded_defaults(), to
         effectively eliminate that property from the comparison.
-        """
-        if MilestoneTrigger.FIELD_NAME not in encoded_trigger:
-            return super(MilestoneTrigger, cls).is_defaults(encoded_trigger)
 
-        # Any valid milestone parameter value will do, because it is simply
-        # going to be overwritten by whatever is in the encoded_trigger dict,
-        # whether that value is valid or not. is_defaults() intentionally does
-        # not compare the 'milestone' values because there is no default for
-        # that property.
-        defaults = cls.encoded_defaults(milestone=cls.KNOWN_MILESTONES[0])
-        defaults[MilestoneTrigger.FIELD_NAME] = (
-            encoded_trigger[MilestoneTrigger.FIELD_NAME])
-        return encoded_trigger == defaults
+        Args:
+            encoded_trigger: an encoded (e.g. form payload or marshaled
+                for storing into settings) trigger dict.
+            defaults: (optional) a dict containing the defaults for an
+                encoded trigger. MilestoneTrigger needs to create a defaults
+                dict that depends on the 'milestone' value in encoded_trigger,
+                so a subclass might have similar needs.
+            enc_def_kwargs: additional keywords arguments passed directly to
+                encoded_defaults() if defaults is missing.
+        """
+        milestone = encoded_trigger.get(MilestoneTrigger.FIELD_NAME)
+
+        if milestone in cls.KNOWN_MILESTONES:
+            # Deal with *all* False values, not just None.
+            if not defaults:
+                if MilestoneTrigger.FIELD_NAME not in enc_def_kwargs:
+                    enc_def_kwargs = enc_def_kwargs.copy()
+                    enc_def_kwargs[MilestoneTrigger.FIELD_NAME] = milestone
+                defaults = cls.encoded_defaults(**enc_def_kwargs)
+            elif MilestoneTrigger.FIELD_NAME not in defaults:
+                defaults[MilestoneTrigger.FIELD_NAME] = milestone
+
+        return super(MilestoneTrigger, cls).is_defaults(
+                encoded_trigger, defaults=defaults)
 
     @classmethod
-    def copy_milestone_from_environ(cls, milestone, env):
-        """Copies the specified milestone from a supplied get_environ() dict.
+    def copy_milestone_from_settings(cls, milestone, settings):
+        """Copies the specified milestone from a supplied settings.
 
         Args:
             milestone: one of the KNOWN_MILESTONE strings.
-            env: a Course get_environ() dict.
+            settings: subclass-specific settings (e.g. a Course get_environ()
+                dict, or StudentGroupDTO for student_groups) potentially
+                holding the requested milestone trigger.
 
-        Returns the specified milestone trigger in "encoded" form (a dict of
-        JSON-encoded string key/value pairs) if that trigger is present in
-        the supplied Course get_environ() dict. Otherwise, an empty dict is
-        returned.
+        Returns:
+            The specified milestone trigger in "encoded" form (a dict of
+            JSON-encoded string key/value pairs) if that trigger is present in
+            the supplied settings. Otherwise, an empty dict is returned.
         """
         # len(KNOWN_MILESTONES) is the upper bound of the length of the list
         # returned by copy_from_settings(). The current length of that list
         # is *2*, so just traverse it, instead of calling for_form() to
         # transform it into a milestone-keyed dict of single value lists.
-        for mt in cls.copy_from_settings(env):
+        for mt in cls.copy_from_settings(settings):
             if mt.get('milestone') == milestone:
                 return mt.copy()  # Just string values, so shallow copy OK.
         return {}
@@ -1640,8 +1767,8 @@ class MilestoneTrigger(AvailabilityTrigger):
         the SETTINGS_NAME key in a dict or a property in a DTO.
 
         Args:
-            settings: passed, untouched, through to the base class.
-            course: (optional) passed, untouched, through to separate().
+            settings: see encoded_defaults() and also base class for_form().
+            course: (optional) see encoded_defaults() and also separate().
 
         Returns:
             A dict with all KNOWN_MILESTONES as keys, and single-value
@@ -1660,8 +1787,9 @@ class MilestoneTrigger(AvailabilityTrigger):
         flattened = [et for ets in lists_of_encoded_triggers for et in ets]
         deduped = cls.dedupe_for_settings(flattened, course=course,
             semantics=cls.SET_WILL_OVERWRITE)
-        return dict([(m, [deduped[m]]) if m in deduped
-                     else (m, [cls.encoded_defaults(milestone=m)])
+        return dict([(m, [deduped[m]]) if m in deduped else
+                     (m, [cls.encoded_defaults(
+                             milestone=m, settings=settings, course=course)])
                      for m in cls.KNOWN_MILESTONES])
 
     @classmethod

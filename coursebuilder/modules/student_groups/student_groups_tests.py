@@ -1996,6 +1996,19 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         # All course start/end override triggers were acted on and consumed.
         with common_utils.Namespace(self.NAMESPACE):
             none_start_dto = student_groups.StudentGroupDAO.load(self.group_id)
+            # Now that the course_start override trigger should have been
+            # acted on, and thus the value of 'start_date' stored in the
+            # student group will have changed, provide the 'when' value for
+            # the expected default course_start override trigger in
+            # only_course_end and defaults_only.
+            when_start = self.SGCOT.encoded_defaults(
+                availability=self.SGCOT.NONE_SELECTED, course=self.course,
+                milestone='course_start', settings=none_start_dto)
+            self.assertEquals(self.past_start_text, when_start['when'])
+            self.defaults_start = when_start
+            self.defaults_only['course_start'][0] = when_start
+            self.only_course_end['course_start'][0] = when_start
+
             self.assertEquals(
                 len(self.SGCOT.copy_from_settings(none_start_dto)), 0)
             self.assertEquals(self.defaults_only, self.SGCOT.for_form(
@@ -2038,6 +2051,19 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         # All course start/end override triggers were acted on and consumed.
         with common_utils.Namespace(self.NAMESPACE):
             none_end_dto = student_groups.StudentGroupDAO.load(self.group_id)
+            # Now that the course_end override trigger should have been
+            # acted on, and thus the value of 'end_date' stored in the
+            # student group will have changed, provide the 'when' value for
+            # the expected default course_end override trigger in
+            # only_course_start and defaults_only.
+            when_end = self.SGCOT.encoded_defaults(
+                availability=self.SGCOT.NONE_SELECTED, course=self.course,
+                milestone='course_end', settings=none_end_dto)
+            self.assertEquals(self.an_earlier_end_hour_text, when_end['when'])
+            self.defaults_end = when_end
+            self.defaults_only['course_end'][0] = when_end
+            self.only_course_start['course_end'][0] = when_end
+
             self.assertEquals(
                 len(self.SGCOT.copy_from_settings(none_end_dto)), 0)
             self.assertEquals(self.defaults_only, self.SGCOT.for_form(

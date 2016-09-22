@@ -295,6 +295,33 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
         return course_availability_key()
 
     @classmethod
+    def retrieve_named_setting(cls, setting_name, student_group, course=None):
+        """Returns value of a named setting from settings or Course, or None.
+
+        Args:
+            setting_name: a StudentGroupDTO property name for a setting value
+                to retrieve.
+            student_group: a StudentGroupDTO from which to copy a property
+                value indicated by the setting_name.
+            course: (optional) a Course, consulted for the setting_name value
+                only if not found in settings.
+        """
+        # Check the StudentGroupDTO first if supplied, since student group
+        # specific overrides should be preferred over Course settings.
+        if student_group:
+            value = student_group.dict.get(setting_name)
+        else:
+            value = None
+
+        if (not value) and course:
+            # If a named setting was not found in supplied student_group
+            # (or a student_group was not even supplied), attempt to obtain
+            # the same named setting from the Course itself.
+            value = course.get_course_setting(setting_name)
+
+        return value
+
+    @classmethod
     def set_into_settings(cls, encoded_triggers, student_group,
                           semantics=None, course=None):
         """Sets course availability override triggers into a student group.
