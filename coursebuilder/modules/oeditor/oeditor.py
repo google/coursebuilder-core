@@ -30,6 +30,7 @@ from common import users
 from controllers import sites
 from controllers import utils
 from models import custom_modules
+from models import data_removal
 from models import entities
 from models import models as m_models
 from models import roles
@@ -429,6 +430,11 @@ def create_bool_select_annotation(
 custom_module = None
 
 
+def on_module_enabled():
+    data_removal.Registry.register_indexed_by_user_id_remover(
+        EditorPrefsEntity.delete_by_user_id_prefix)
+
+
 def register_module():
     """Registers this module in the registry."""
 
@@ -473,5 +479,6 @@ def register_module():
     custom_module = custom_modules.Module(
         'Object Editor',
         'A visual editor for editing various types of objects.',
-        global_routes, namespaced_routes)
+        global_routes, namespaced_routes,
+        notify_module_enabled=on_module_enabled)
     return custom_module

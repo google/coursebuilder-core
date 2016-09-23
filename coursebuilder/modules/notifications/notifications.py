@@ -71,6 +71,7 @@ import logging
 
 from models import counters
 from models import custom_modules
+from models import data_removal
 from models import entities
 from models import services
 from models import transforms
@@ -894,6 +895,12 @@ class _Model(entities.BaseEntity):
 
         return value
 
+    @classmethod
+    def delete_by_to_email(cls, email):
+        query = cls.all(keys_only=True)
+        query.filter('to =', email)
+        entities.delete(query.run())
+
 
 class Notification(_Model):
 
@@ -967,6 +974,11 @@ def register_module():
 
     def on_module_enabled():
         asset_paths.AllowedBases.add_text_base('views/notifications')
+        data_removal.Registry.register_indexed_by_email_remover(
+            Notification.delete_by_to_email)
+        data_removal.Registry.register_indexed_by_email_remover(
+            Payload.delete_by_to_email)
+
 
     global custom_module  # pylint: disable=global-statement
 

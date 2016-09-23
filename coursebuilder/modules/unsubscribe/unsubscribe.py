@@ -183,8 +183,11 @@ class SubscriptionStateEntity(entities.BaseEntity):
         return db.Key.from_path(cls.kind(), transform_fn(db_key.name()))
 
     @classmethod
-    def delete_by_email(cls, email_address):
-        db.delete(db.Key.from_path(cls.kind(), email_address))
+    def delete_by_email_if_subscribed(cls, email_address):
+        entity = cls.get_by_key_name(email_address)
+        if entity and entity.is_subscribed:
+            entity.delete()
+
 
 custom_module = None
 
@@ -197,7 +200,7 @@ def register_module():
 
     def notify_module_enabled():
         data_removal.Registry.register_indexed_by_email_remover(
-            SubscriptionStateEntity.delete_by_email)
+            SubscriptionStateEntity.delete_by_email_if_subscribed)
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(

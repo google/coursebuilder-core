@@ -29,6 +29,8 @@ from modules.data_removal import removal_models
 from modules.gitkit import gitkit
 from modules.invitation import invitation
 from modules.questionnaire import questionnaire
+from modules.notifications import notifications
+from modules.oeditor import oeditor
 from modules.review import domain
 from modules.review import peer
 from modules.skill_map import competency
@@ -424,6 +426,12 @@ class DataRemovalTests(DataRemovalTestBase):
                 state=domain.REVIEW_STATE_ASSIGNED,
                 assigner_kind=domain.ASSIGNER_KIND_AUTO).put()
 
+            key_name = oeditor.EditorPrefsDao.create_key_name(
+                user_id, 'dasboard?action=foo', 'frammis')
+            editor_prefs = oeditor.EditorPrefsDto(key_name, {'this': 'that'})
+            oeditor.EditorPrefsDao.save(editor_prefs)
+
+
         # Assure ourselves that we have all of the items we just added.
         with common_utils.Namespace(self.NAMESPACE):
             l = list(models.StudentPropertyEntity.all().run())
@@ -441,6 +449,8 @@ class DataRemovalTests(DataRemovalTestBase):
             l = list(peer.ReviewSummary.all().run())
             self.assertEquals(1, len(l))
             l = list(peer.ReviewStep.all().run())
+            self.assertEquals(1, len(l))
+            l = list(oeditor.EditorPrefsEntity.all().run())
             self.assertEquals(1, len(l))
 
 
@@ -465,16 +475,32 @@ class DataRemovalTests(DataRemovalTestBase):
             self.assertEquals(0, len(l))
             l = list(peer.ReviewStep.all().run())
             self.assertEquals(0, len(l))
+            l = list(oeditor.EditorPrefsEntity.all().run())
+            self.assertEquals(0, len(l))
 
     def test_remove_by_email(self):
         user = actions.login(self.STUDENT_EMAIL)
         actions.register(self, user.email(), course=self.COURSE)
 
-        # Get IDs of those students; make an event for each.
         with common_utils.Namespace(self.NAMESPACE):
             sse = unsubscribe.SubscriptionStateEntity(
                 key_name=user.email())
+            sse.is_subscribed = True
             sse.save()
+
+            notifications.Manager.send_async(
+                user.email(), self.ADMIN_EMAIL, 'testemail',
+                'Mary had a little lamb.  She fed it beans and buns.',
+                'Pets for Mary', '{"audit_trail": "yes"}',
+                retention_policy=notifications.RetainAll)
+            # Finish deferred tasks so notifications subsystem would have
+            # deleted items if it were going to.  It shouldn't based on our
+            # use of RetainAll above, but belt-and-suspenders.
+            self.execute_all_deferred_tasks()
+            l = list(notifications.Notification.all().run())
+            self.assertEquals(1, len(l))
+            l = list(notifications.Payload.all().run())
+            self.assertEquals(1, len(l))
 
         self._unregister_and_request_data_removal(self.COURSE)
         self._complete_removal()
@@ -482,6 +508,28 @@ class DataRemovalTests(DataRemovalTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             l = list(unsubscribe.SubscriptionStateEntity.all().run())
             self.assertEquals(0, len(l))
+            l = list(notifications.Notification.all().run())
+            self.assertEquals(0, len(l))
+            l = list(notifications.Payload.all().run())
+            self.assertEquals(0, len(l))
+
+    def test_subscription_state_entity_unsubscribed_not_removed(self):
+        user = actions.login(self.STUDENT_EMAIL)
+        actions.register(self, user.email(), course=self.COURSE)
+
+        # Get IDs of those students; make an event for each.
+        with common_utils.Namespace(self.NAMESPACE):
+            sse = unsubscribe.SubscriptionStateEntity(
+                key_name=user.email())
+            sse.is_subscribed = False
+            sse.save()
+
+        self._unregister_and_request_data_removal(self.COURSE)
+        self._complete_removal()
+
+        with common_utils.Namespace(self.NAMESPACE):
+            l = list(unsubscribe.SubscriptionStateEntity.all().run())
+            self.assertEquals(1, len(l))
 
     def test_unenroll_commanded_with_delete_requested(self):
         user = actions.login(self.STUDENT_EMAIL)
