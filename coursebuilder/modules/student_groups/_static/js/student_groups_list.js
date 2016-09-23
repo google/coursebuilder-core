@@ -20,7 +20,7 @@ $(function(){
           error: function(response) {
             // Here, we are re-using the OEditor style delete handler, so
             // we need to cope with a CB-encoded response style.
-            if (response.status == 200 && response.statusText == "OK") {
+            if (response.status == 200) {
               var payload = parseJson(response.responseText);
               if (payload.status == 200 && payload.message == "Deleted.") {
                 location.reload();
