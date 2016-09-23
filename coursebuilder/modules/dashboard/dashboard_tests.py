@@ -767,7 +767,6 @@ class DashboardCustomNavTestCase(actions.TestBase):
 
     def test_custom_top_nav(self):
         # Add a new top level navigation action
-        dashboard.DashboardHandler.add_nav_mapping(self.ACTION, 'CUSTOM_MOD')
 
         class CustomNavHandler(object):
 
@@ -775,47 +774,41 @@ class DashboardCustomNavTestCase(actions.TestBase):
             def show_page(cls, dashboard_handler):
                 dashboard_handler.render_page({
                     'page_title': dashboard_handler.format_title('CustomNav'),
-                    'main_content': 'MainContent'})
+                    'main_content': 'TheMainContent'})
+
+        dashboard.DashboardHandler.add_nav_mapping('custom_menu', 'CUSTOM_MOD')
+        dashboard.DashboardHandler.add_sub_nav_mapping(
+            'custom_menu', self.ACTION, 'Custom Action', self.ACTION)
         dashboard.DashboardHandler.add_custom_get_action(
             self.ACTION, CustomNavHandler.show_page)
 
-        dom = self.parse_html_string(self.get('dashboard').body)
-        selected_nav_path = ('.//tr[@class="gcb-nav-bar-level-1"]'
-                             '//a[@class="selected"]')
-        self.assertEquals('Edit', dom.find(selected_nav_path).text)
-        dom = self.parse_html_string(self.get(self.URL).body)
+        response = self.get('dashboard')
+        soup = self.parse_html_string_to_soup(response.body)
+        actual = [
+            a.text.strip()
+            for a in soup.select('a.mdl-navigation__link.gcb-active')]
+        self.assertEquals(['Custom Dashboard', 'Outline'], actual)
 
-        self.assertEquals('CUSTOM_MOD', dom.find(selected_nav_path).text)
+
+        response = self.get(self.URL)
+        soup = self.parse_html_string_to_soup(response.body)
+        actual = [
+            a.text.strip()
+            for a in soup.select('a.mdl-navigation__link.gcb-active')]
+        self.assertEquals(['Custom Dashboard', 'Custom Action'], actual)
+
         self.assertEquals(
-            'MainContent', dom.find(self.CONTENT_PATH).text.strip())
-
-        dashboard.DashboardHandler.remove_custom_get_action(self.ACTION)
-
-        # Add a new tab under the new navigation action
-        class CustomTabHandler(object):
-
-            @classmethod
-            def display_html(cls, unused_dashboard_handler):
-                return 'MainTabContent'
-
-        dashboard.dashboard.DashboardHandler.add_sub_nav_mapping(
-            self.ACTION, 'cu_tab', 'CustomTab', action=self.ACTION,
-            contents=CustomTabHandler)
-        dom = self.parse_html_string(self.get(self.URL).body)
-        self.assertEquals('CUSTOM_MOD', dom.find(selected_nav_path).text)
-        self.assertEquals(
-            'MainTabContent', dom.find(self.CONTENT_PATH).text.strip())
-
-        selected_tab_path = ('.//*[@class="gcb-nav-bar-level-2"]'
-                             '//a[@class="selected"]')
-        self.assertEquals('CustomTab', dom.find(selected_tab_path).text)
+            'TheMainContent',
+            soup.select('div#gcb-main-content')[0].text.strip())
 
     def test_first_tab(self):
         url = 'dashboard?action=analytics_students'
-        dom = self.parse_html_string(self.get(url).body)
-        selected_tab_path = ('.//*[@class="gcb-nav-bar-level-2"]'
-                             '//a[@class="selected"]')
-        self.assertEquals('Students', dom.find(selected_tab_path).text)
+        response = self.get(url)
+        soup = self.parse_html_string_to_soup(response.body)
+        actual = [
+            a.text.strip()
+            for a in soup.select('a.mdl-navigation__link.gcb-active')]
+        self.assertEquals(['Custom Dashboard', 'Students'], actual)
 
 
 class TestLessonSchema(actions.TestBase):
