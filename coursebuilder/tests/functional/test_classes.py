@@ -65,6 +65,7 @@ from modules.announcements.announcements import AnnouncementEntity
 from modules import search
 from modules.review import controllers_tests
 from modules.review import stats_tests
+from modules.warmup import warmup
 from tools import verify
 from tools.etl import etl
 from tools.etl import etl_lib
@@ -183,6 +184,7 @@ class WSGIRoutingTest(actions.TestBase):
                 search.search.AssetsHandler,
                 sites.ClearCookiesHandler,
                 tags.ResourcesHandler,
+                warmup.WarmupHandler,
             ], ignore_modules=[
                 'mapreduce.lib', 'mapreduce.handlers', 'mapreduce.main',
                 'mapreduce.status', 'pipeline.pipeline', 'pipeline.status_ui'])
