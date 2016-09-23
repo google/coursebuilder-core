@@ -2416,6 +2416,10 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
         when_start = self.TMT.encoded_defaults(
             availability=self.TMT.NONE_SELECTED, milestone='course_start',
             settings=start_settings, course=self.course)
+
+        logs = self.get_log()
+        self.retrieve_logged('course_start', 'start_date',
+            self.past_start_text, self.TMT, logs)
         self.assertEquals(self.past_start_text, when_start['when'])
         self.defaults_start = when_start
         self.defaults_only['course_start'][0] = when_start
@@ -2594,6 +2598,10 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         when_start = self.TMT.encoded_defaults(
             availability=self.TMT.NONE_SELECTED, milestone='course_start',
             settings=start_settings, course=self.course)
+
+        logs = self.get_log()
+        self.retrieve_logged('course_start', 'start_date',
+            self.past_start_text, self.TMT, logs)
         self.assertEquals(self.past_start_text, when_start['when'])
         self.defaults_start = when_start
         self.defaults_only['course_start'][0] = when_start
@@ -2637,6 +2645,10 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         when_end = self.TMT.encoded_defaults(
             availability=self.TMT.NONE_SELECTED, milestone='course_end',
             settings=end_settings, course=self.course)
+
+        logs = self.get_log()
+        self.retrieve_logged('course_end', 'end_date',
+            self.an_earlier_end_hour_text, self.TMT, logs)
         self.assertEquals(self.an_earlier_end_hour_text, when_end['when'])
         self.defaults_end = when_end
         self.defaults_only['course_end'][0] = when_end

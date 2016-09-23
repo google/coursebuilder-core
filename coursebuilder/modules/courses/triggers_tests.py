@@ -72,7 +72,7 @@ class TriggerTestsMixin(object):
     BAD_AVAIL = 'not a valid availability value'
     BAD_WHEN = 'not a valid UTC date/time'
 
-    LOG_LEVEL = logging.INFO
+    LOG_LEVEL = logging.DEBUG
 
     def setUp(self):
         self.dt_when = utc.now_as_datetime()
@@ -148,6 +148,10 @@ class TriggerTestsMixin(object):
     def saved_logged(self, logs, count, trigger_cls):
         self.assertIn('SAVED %d change(s) to %s %s.' % (
                 count, self.NAMESPACE, trigger_cls.kind()), logs)
+
+    def retrieve_logged(self, milestone, setting, when, trigger_cls, logs):
+        self.assertIn('RETRIEVED default %s %s from %s: %s' % (
+                      milestone, trigger_cls.kind(), setting, when), logs)
 
     def error_logged(self, logs, trigger, what, why, cause):
         self.assertRegexpMatches(logs,

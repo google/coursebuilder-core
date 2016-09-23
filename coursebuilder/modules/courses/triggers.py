@@ -586,7 +586,7 @@ class DateTimeTrigger(object):
             return cls.Separated([], [], [], [], [], encoded_triggers)
 
         logged_ns = utils.get_ns_name_for_logging(course=course)
-        logging.info(
+        logging.debug(
             'SEPARATING %d encoded %s(s) in %s.', len(encoded_triggers),
             cls.typename(), logged_ns)
 
@@ -734,16 +734,16 @@ class DateTimeTrigger(object):
                              changed.next, dt.logged)
             else:
                 ignored.append(dt)
-                logging.info('UNCHANGED %s %s: %s',
-                             logged_ns, dt.kind(), dt.logged)
+                logging.debug('UNCHANGED %s %s: %s',
+                              logged_ns, dt.kind(), dt.logged)
 
         if acted:
-            logging.info('ACTED on %d %s %s(s).',
-                         len(acted), logged_ns, cls.typename())
+            logging.debug('ACTED on %d %s %s(s).',
+                          len(acted), logged_ns, cls.typename())
 
         if ignored:
-            logging.info('IGNORED %d %s %s(s).',
-                         len(ignored), logged_ns, cls.typename())
+            logging.debug('IGNORED %d %s %s(s).',
+                          len(ignored), logged_ns, cls.typename())
 
         return cls.TriggeredActs(acted, ignored)
 
@@ -817,25 +817,25 @@ class DateTimeTrigger(object):
         num_remaining = len(settings_acts.separated.future)
         if num_consumed:
             if settings_saved:
-                logging.info('KEPT %d future %s(s) in %s.',
+                logging.debug('KEPT %d future %s(s) in %s.',
                     num_remaining, cls.typename(), logged_ns)
             else:
                 logging.warning('FAILED to keep %d future %s(s) in %s.',
                     num_remaining, cls.typename(), logged_ns)
         elif num_remaining:
-            logging.info('AWAITING %d future %s(s) in %s.',
+            logging.debug('AWAITING %d future %s(s) in %s.',
                 num_remaining, cls.typename(), logged_ns)
 
         num_changed = settings_acts.num_changed
         if num_changed:
             if course_saved:
-                logging.info('SAVED %d change(s) to %s %s.',
+                logging.debug('SAVED %d change(s) to %s %s.',
                     num_changed, logged_ns, cls.kind())
             else:
-                logging.info('FAILED to save %d change(s) to %s %s.',
+                logging.warning('FAILED to save %d change(s) to %s %s.',
                     num_changed, logged_ns, cls.kind())
         else:
-            logging.info('UNTOUCHED %s %s.', logged_ns, cls.kind())
+            logging.debug('UNTOUCHED %s %s.', logged_ns, cls.kind())
 
     @classmethod
     def typename(cls):
@@ -1496,7 +1496,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     def validate_when(cls, when):
         """Validates when (encoded or decoded); returns datetime or None."""
         if when is None:
-            logging.info(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
+            logging.debug(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
                 utils.get_ns_name_for_logging(),
                 {DateTimeTrigger.FIELD_NAME: when},
                 cls.UNSPECIFIED_FMT.format(cls.WHEN_TYPENAME))
@@ -1507,7 +1507,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     def validate_availability(cls, availability):
         """Returns availability if in AVAILABILITY_VALUES, otherwise None."""
         if (not availability) or (availability == cls.NONE_SELECTED):
-            logging.info(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
+            logging.debug(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
                 utils.get_ns_name_for_logging(),
                 {AvailabilityTrigger.FIELD_NAME: availability},
                 'No availability selected.')
@@ -1653,8 +1653,12 @@ class MilestoneTrigger(AvailabilityTrigger):
             # value derived from settings, so exit early.
             return None
 
-        return cls.retrieve_named_setting(
+        when = cls.retrieve_named_setting(
             setting_name, settings, course=course)
+        if when:
+            logging.debug('RETRIEVED default %s %s from %s: %s',
+                          milestone, cls.kind(), setting_name, when)
+        return when
 
     @classmethod
     def encoded_defaults(cls, milestone=None, settings=None, course=None,
