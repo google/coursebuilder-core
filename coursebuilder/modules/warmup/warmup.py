@@ -38,13 +38,13 @@ class WarmupHandler(webapp2.RequestHandler):
     def get(self):
         if not appengine_config.PRODUCTION_MODE:
             port = urlparse.urlparse(self.request.url).port
-            _LOG.info('warmup ---------------------------------------------')
-            _LOG.info('warmup')
-            _LOG.info('warmup        Course Builder is now available')
-            _LOG.info('warmup          at http://localhost:%d', port)
-            _LOG.info('warmup            or http://0.0.0.0:%d', port)
-            _LOG.info('warmup')
-            _LOG.info('warmup ---------------------------------------------')
+            _LOG.info(' -------------------------------')
+            _LOG.info('')
+            _LOG.info(' Course Builder is now available')
+            _LOG.info('    at http://localhost:%d', port)
+            _LOG.info('     or http://0.0.0.0:%d', port)
+            _LOG.info('')
+            _LOG.info(' -------------------------------')
 
 
 def register_module():
