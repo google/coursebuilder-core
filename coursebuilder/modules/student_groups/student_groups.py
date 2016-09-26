@@ -533,7 +533,7 @@ class StudentGroupMembership(models.BaseEntity):
         # get rid of matches.  This leaves us only with emails for people
         # not yet in the group, and students leaving the group.
         students_to_remove_from_group = []
-        emails_to_assign = set(emails_to_assign)
+        emails_to_assign = set([e.lower() for e in emails_to_assign])
         for student in students_in_group:
             if not student.email in emails_to_assign:
                 student.group_id = None

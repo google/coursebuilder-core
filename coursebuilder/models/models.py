@@ -946,7 +946,7 @@ class StudentProfileDAO(object):
         course_info=None):
         """Modifies various attributes of Student's Global Profile."""
         if email is not None:
-            profile.email = email
+            profile.email = email.lower()
 
         if legal_name is not None:
             profile.legal_name = legal_name
@@ -1088,7 +1088,7 @@ class StudentProfileDAO(object):
             labels=labels)
 
         # update student
-        student.email = email
+        student.email = email.lower()
         student.additional_fields = additional_fields
         common_utils.run_hooks(cls.STUDENT_CREATION_HOOKS, student, profile)
 
@@ -1462,7 +1462,8 @@ class Student(BaseEntity):
         if cls._LEGACY_EMAIL_AS_KEY_NAME_ENABLED:
             return Student(key_name=email, email=email, user_id=user_id)
         else:
-            return Student(key_name=user_id, email=email, user_id=user_id)
+            return Student(
+                key_name=user_id, email=email.lower(), user_id=user_id)
 
     def for_export(self, transform_fn):
         """Creates an ExportEntity populated from this entity instance."""

@@ -478,6 +478,36 @@ class UserIdentityTests(StudentGroupsTestBase):
             self.assertEquals(self.STUDENT_EMAIL, student.email)
             self.assertEquals(group_id, student.group_id)
 
+
+    def test_add_group_then_register_mismatched_case(self):
+        actions.login(self.ADMIN_EMAIL)
+        response = self._put_group(None, 'My New Group', 'this is my group')
+        group_id = transforms.loads(response['payload'])['key']
+        self._put_availability(group_id, [self.STUDENT_EMAIL.upper()])
+
+        actions.login(self.STUDENT_EMAIL.lower())
+        actions.register(self, 'John Smith')
+        with common_utils.Namespace(self.NAMESPACE):
+            student = models.Student.all().get()
+            self.assertEquals(self.STUDENT_EMAIL.lower(), student.email)
+            self.assertEquals(group_id, student.group_id)
+
+    def test_register_then_add_group_mismatched_case(self):
+        actions.login(self.STUDENT_EMAIL.upper())
+        actions.register(self, 'John Smith')
+
+        actions.login(self.ADMIN_EMAIL)
+        response = self._put_group(None, 'My New Group', 'this is my group')
+        group_id = transforms.loads(response['payload'])['key']
+        self._put_availability(group_id, [self.STUDENT_EMAIL])
+
+        with common_utils.Namespace(self.NAMESPACE):
+            self.assertIsNone(student_groups.StudentGroupMembership.all().get())
+            student = models.Student.all().get()
+            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(group_id, student.group_id)
+
+
     def test_move_unregistered_student_to_new_group(self):
         actions.login(self.ADMIN_EMAIL)
         response = self._put_group(None, 'My New Group', 'this is my group')
