@@ -96,6 +96,7 @@
   text-align: left;
   max-width: 400px;
   margin-left: -300px !important;
+  will-change: unset;
 }
 
 .gcb-list-select-course {

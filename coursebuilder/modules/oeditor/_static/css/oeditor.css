@@ -877,6 +877,7 @@ div.new-form-layout .inputEx-Field.embed-code-snippet-display textarea {
   text-align: left;
   max-width: 400px;
   margin-left: -110px !important;
+  will-change: unset;
 }
 .mdl-tooltip.gcb-form-tooltip a {
   color: rgb(255, 162, 94);
