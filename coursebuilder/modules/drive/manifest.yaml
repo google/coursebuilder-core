@@ -1,5 +1,7 @@
 registration:
   main_module: modules.drive.drive
+  enabled: false
+  enabled_for_tests: true
 
 tests:
   functional:

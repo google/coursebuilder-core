@@ -32,15 +32,17 @@ custom_module = None
 
 def register_module():
 
-    handlers.DriveListHandler.add_to_menu(
-        'edit', constants.MODULE_NAME, constants.MODULE_TITLE)
+    def on_module_enabled():
+        handlers.DriveListHandler.add_to_menu(
+            'edit', constants.MODULE_NAME, constants.MODULE_TITLE)
 
-    drive_settings.make_drive_settings_section()
+        drive_settings.make_drive_settings_section()
 
     global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         constants.MODULE_TITLE,
         'Sync spreadsheets and documents from Google Drive',
-        handlers.global_routes, handlers.namespaced_routes)
+        handlers.global_routes, handlers.namespaced_routes,
+        notify_module_enabled=on_module_enabled)
 
     return custom_module

@@ -263,6 +263,7 @@ def create_test_suite(parsed_args):
     loader = unittest.TestLoader()
     if not parsed_args.test_class_name:
         raise Exception('Expected --test_class_name to be specified.')
+    os.environ['GCB_TEST_MODE'] = 'true'
     return loader.loadTestsFromName(parsed_args.test_class_name)
 
 

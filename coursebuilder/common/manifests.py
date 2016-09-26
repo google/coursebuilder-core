@@ -46,6 +46,9 @@ class ModuleManifest(object):
             'main_module', 'Main Module', 'string', optional=True))
         registration.add_property(schema_fields.SchemaField(
             'enabled', 'Is Enabled', 'bool', optional=True, default_value=True))
+        registration.add_property(schema_fields.SchemaField(
+            'enabled_for_tests', 'Is Enabled When Running Tests', 'bool',
+            optional=True, default_value=False))
 
         self.files = schema_fields.FieldArray(
             'files', 'Module files',

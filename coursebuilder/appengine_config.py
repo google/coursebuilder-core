@@ -197,8 +197,10 @@ def _import_and_enable_modules_by_manifest():
     for module_name, manifest in sorted(modules.module_to_manifest.iteritems()):
         registration = manifest.get_registration()
         if registration.main_module:
-            _import_module_by_name(
-                registration.main_module, registration.enabled)
+            enabled = (
+                registration.enabled or
+                (registration.enabled_for_tests and gcb_test_mode()))
+            _import_module_by_name(registration.main_module, enabled)
 
 
 def import_and_enable_modules():
