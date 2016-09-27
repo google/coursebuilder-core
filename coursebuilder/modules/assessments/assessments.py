@@ -432,7 +432,7 @@ class AnswerHandler(AssignmentsModuleMixin, utils.BaseHandler):
                 # Check that the submission due date has not passed.
                 time_now = datetime.datetime.now()
                 submission_due_date = unit.workflow.get_submission_due_date()
-                if time_now > submission_due_date:
+                if submission_due_date and time_now > submission_due_date:
                     self.template_value['time_now'] = time_now.strftime(
                         utils.HUMAN_READABLE_DATETIME_FORMAT)
                     self.template_value['submission_due_date'] = (

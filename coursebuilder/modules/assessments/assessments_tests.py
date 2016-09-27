@@ -164,3 +164,43 @@ class EmbeddedAssessmentTests(actions.TestBase):
         self.set_workflow_field('submission_due_date', DUE_DATE_IN_PAST)
         assert_message_and_email(
             'Your answers have been recorded under the email')
+
+
+class AssessmentsTests(actions.TestBase):
+
+    def setUp(self):
+        super(AssessmentsTests, self).setUp()
+        self.app_context = actions.simple_add_course(
+            COURSE_NAME, ADMIN_EMAIL, 'Some say he wears parsley in his ears')
+        self.course = courses.Course(None, self.app_context)
+        self.base = '/' + COURSE_NAME
+        self.assessment = self.course.add_assessment()
+        self.assessment.availability = courses.AVAILABILITY_AVAILABLE
+        self.assessment.workflow_yaml = yaml.safe_dump({
+            'grader': 'human',
+            'matcher': 'peer',
+            'review_due_date': None,
+            'review_min_count': 0,
+            'review_window_mins': 0,
+            'show_feedback': False,
+            'single_submission': False,
+            'submission_due_date': None,  # The setting we are testing.
+        })
+        self.course.save()
+
+    def tearDown(self):
+        super(AssessmentsTests, self).tearDown()
+
+    def test_submit_peer_reviewed_assessment_with_no_due_date(self):
+        # Just looking to not get an exception on submission_due_date being
+        # None.
+        actions.login(STUDENT_EMAIL, is_admin=False)
+        actions.register(self, 'John Smith')
+        actions.submit_assessment(self, self.assessment.unit_id, {
+            'assessment_type': self.assessment.unit_id,
+            'score': '75.0',
+            'answers': transforms.dumps({
+                'rawScore': 3,
+                'totalWeight': 4,
+                'percentScore': 75})
+        })

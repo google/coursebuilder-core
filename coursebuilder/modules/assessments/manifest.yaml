@@ -3,6 +3,7 @@ registration:
 
 tests:
   functional:
+    - modules.assessments.assessments_tests.AssessmentsTests = 1
     - modules.assessments.assessments_tests.EmbeddedAssessmentTests = 4
 
 files:
