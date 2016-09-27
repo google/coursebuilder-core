@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-19 07:54-0700\n"
-"PO-Revision-Date: 2016-06-20 07:55-0700\n"
+"POT-Creation-Date: 2016-09-26 09:02-0700\n"
+"PO-Revision-Date: 2016-09-26 09:03-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: th <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -937,7 +937,7 @@ msgstr "สมัครรับข้อมูลใหม่"
 #. The selected file was empty.
 #: experimental/coursebuilder/modules/upload/upload.py:83
 msgid "File is empty."
-msgstr ""
+msgstr "ไฟล์ว่างเปล่า"
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
@@ -946,18 +946,19 @@ msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
 msgstr ""
+"รูปแบบไฟล์ไม่ถูกต้อง ใช้ได้เฉพาะไฟล์ข้อความ (.txt) ที่มีเนื้อหา Unicode "
+"เท่านั้น"
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
 #: experimental/coursebuilder/modules/upload/upload.py:103
 msgid "File too large, only files smaller than 1MB are allowed."
-msgstr ""
+msgstr "ไฟล์ใหญ่เกินไป ใช้ได้เฉพาะไฟล์ที่มีขนาดเล็กกว่า 1 MB เท่านั้น"
 
 #. Error message for failed student file upload.
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:110
-#, python-format
-msgid "Unable to save student submission; error was: \"%s\""
+msgid "Unable to save student submission; error :"
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -1131,28 +1132,28 @@ msgstr " คุณไม่สามารถแก้ไขหรือลบ�
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:236
+#: experimental/coursebuilder/views/base.html:240
 msgid "Not registered"
 msgstr "ไม่ได้ลงทะเบียน"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:245
+#: experimental/coursebuilder/views/base.html:249
 msgid "Logout"
 msgstr "ออกจากระบบ"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:251
+#: experimental/coursebuilder/views/base.html:255
 msgid "Login"
 msgstr "ลงชื่อเข้าใช้"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:291
+#: experimental/coursebuilder/views/base.html:295
 msgid "Privacy & Terms"
 msgstr "นโยบายส่วนบุคคลและข้อกำหนด"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:298
+#: experimental/coursebuilder/views/base.html:302
 msgid "Language:"
 msgstr "ภาษา:"
 
@@ -1629,4 +1630,6 @@ msgstr "หน้าถัดไป"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "สิ้นสุด"
+
+
 

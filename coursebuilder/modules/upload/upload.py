@@ -107,8 +107,8 @@ class TextFileUploadHandler(utils.BaseHandler):
             except Exception as e:
                 # I18N: Error message for failed student file upload.
                 # Generic upload error.
-                error_detail = self.gettext('Unable to save student'
-                    ' submission; error was: "{}"'.format(e))
+                error_detail = self.gettext(
+                    'Unable to save student submission; error :') + str(e)
                 logging.warn(error_detail)
                 self.error(400)
         self.template_value['navbar'] = {'course': True}

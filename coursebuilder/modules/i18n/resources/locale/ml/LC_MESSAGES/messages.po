@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-19 07:54-0700\n"
-"PO-Revision-Date: 2016-06-20 07:55-0700\n"
+"POT-Creation-Date: 2016-09-26 09:02-0700\n"
+"PO-Revision-Date: 2016-09-26 09:03-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ml <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -954,7 +954,7 @@ msgstr "വീണ്ടും സബ്‌സ്‌ക്രൈബ് ചെയ�
 #. The selected file was empty.
 #: experimental/coursebuilder/modules/upload/upload.py:83
 msgid "File is empty."
-msgstr ""
+msgstr "ഫയൽ ശൂന്യമാണ്."
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
@@ -963,18 +963,19 @@ msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
 msgstr ""
+"തെറ്റായ ഫയൽ ഫോർമാറ്റ്, യൂണിക്കോഡ് ഉള്ളടക്കമുള്ള ടെക്സ്റ്റ് (.txt) ഫയലുകൾ "
+"മാത്രമേ അനുവദിക്കൂ."
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
 #: experimental/coursebuilder/modules/upload/upload.py:103
 msgid "File too large, only files smaller than 1MB are allowed."
-msgstr ""
+msgstr "ഫയൽ വളരെ വലുതാണ്, 1MB-യിൽ കുറഞ്ഞ ഫയലുകൾ മാത്രമേ അനുവദിക്കൂ."
 
 #. Error message for failed student file upload.
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:110
-#, python-format
-msgid "Unable to save student submission; error was: \"%s\""
+msgid "Unable to save student submission; error :"
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -1160,28 +1161,28 @@ msgstr " സമർപ്പിച്ച് കഴിഞ്ഞാൽ നിങ്
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:236
+#: experimental/coursebuilder/views/base.html:240
 msgid "Not registered"
 msgstr "രജിസ്റ്റർ ചെയ്‌തിട്ടില്ല"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:245
+#: experimental/coursebuilder/views/base.html:249
 msgid "Logout"
 msgstr "ലോഗ്ഔട്ട് ചെയ്യുക"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:251
+#: experimental/coursebuilder/views/base.html:255
 msgid "Login"
 msgstr "ലോഗിൻ ചെയ്യുക"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:291
+#: experimental/coursebuilder/views/base.html:295
 msgid "Privacy & Terms"
 msgstr "സ്വകാര്യതയും നിബന്ധനകളും"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:298
+#: experimental/coursebuilder/views/base.html:302
 msgid "Language:"
 msgstr "ഭാഷ:"
 
@@ -1675,4 +1676,6 @@ msgstr "അടുത്ത പേജ്"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "അവസാനം"
+
+
 

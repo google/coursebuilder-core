@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-19 07:54-0700\n"
-"PO-Revision-Date: 2016-06-20 07:55-0700\n"
+"POT-Creation-Date: 2016-09-26 09:02-0700\n"
+"PO-Revision-Date: 2016-09-26 09:03-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fa <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -387,7 +387,7 @@ msgid ""
 "deletion of your previous data is still in progress.  Please try again in"
 " in a few hours."
 msgstr ""
-"در حال حاضر نمی‌توانید دوباره در این دوره ثبت نام کنید، زیرا حذف داده‌های"
+"در حال حاضر نمی‌توانید دوباره در این دوره ثبت‌نام کنید، زیرا حذف داده‌های"
 " گذشته‌تان همچنان در حال انجام است.  لطفاً بعد از چند ساعت دوباره امتحان "
 "کنید."
 
@@ -942,7 +942,7 @@ msgstr "اشتراک مجدد"
 #. The selected file was empty.
 #: experimental/coursebuilder/modules/upload/upload.py:83
 msgid "File is empty."
-msgstr ""
+msgstr "فایل خالی است."
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
@@ -951,18 +951,19 @@ msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
 msgstr ""
+"قالب فایل اشتباه است، فقط فایل‌های متنی (‎.txt) با محتوای یونیکد مجاز "
+"هستند."
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
 #: experimental/coursebuilder/modules/upload/upload.py:103
 msgid "File too large, only files smaller than 1MB are allowed."
-msgstr ""
+msgstr "فایل خیلی بزرگ است، فقط فایل‌های کوچک‌تر از ۱ مگابایت مجاز هستند."
 
 #. Error message for failed student file upload.
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:110
-#, python-format
-msgid "Unable to save student submission; error was: \"%s\""
+msgid "Unable to save student submission; error :"
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -1140,28 +1141,28 @@ msgstr " پس از ارسال نمی‌توانید آن را ویرایش یا 
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:236
+#: experimental/coursebuilder/views/base.html:240
 msgid "Not registered"
 msgstr "ثبت‌نام نکرده"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:245
+#: experimental/coursebuilder/views/base.html:249
 msgid "Logout"
 msgstr "خروج از سیستم"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:251
+#: experimental/coursebuilder/views/base.html:255
 msgid "Login"
 msgstr "ورود به سیستم"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:291
+#: experimental/coursebuilder/views/base.html:295
 msgid "Privacy & Terms"
 msgstr "حریم خصوصی و شرایط"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:298
+#: experimental/coursebuilder/views/base.html:302
 msgid "Language:"
 msgstr "زبان:"
 
@@ -1209,14 +1210,14 @@ msgid ""
 "Thank you for registering for the course. Click the Announcements tab for"
 " important information."
 msgstr ""
-"بابت ثبت نام برای این دوره آموزشی سپاسگزاریم. برای دریافت اطلاعات مهم روی"
+"بابت ثبت‌نام برای این دوره آموزشی سپاسگزاریم. برای دریافت اطلاعات مهم روی"
 " برگه اعلامیه‌ها کلیک کنید."
 
 #. This is shown to the student in a popup if registrations for the course are
 #. not open.
 #: experimental/coursebuilder/views/course.html:19
 msgid "Registrations for this course are not open."
-msgstr "ثبت نام‌ برای این دوره آموزشی باز نیست."
+msgstr "ثبت‌نام‌ برای این دوره آموزشی باز نیست."
 
 #. Title for the course syllabus on the main contents page.
 #: experimental/coursebuilder/views/course.html:45
@@ -1645,4 +1646,6 @@ msgstr "صفحه بعدی"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "پایان"
+
+
 

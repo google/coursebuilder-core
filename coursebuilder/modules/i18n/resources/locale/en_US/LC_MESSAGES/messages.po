@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-19 07:54-0700\n"
+"POT-Creation-Date: 2016-09-26 09:02-0700\n"
 "PO-Revision-Date: 2012-12-12 15:10-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en_US <LL@li.org>\n"
@@ -934,8 +934,7 @@ msgstr ""
 #. Error message for failed student file upload.
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:110
-#, python-format
-msgid "Unable to save student submission; error was: \"%s\""
+msgid "Unable to save student submission; error :"
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -1105,28 +1104,28 @@ msgstr ""
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:236
+#: experimental/coursebuilder/views/base.html:240
 msgid "Not registered"
 msgstr ""
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:245
+#: experimental/coursebuilder/views/base.html:249
 msgid "Logout"
 msgstr ""
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:251
+#: experimental/coursebuilder/views/base.html:255
 msgid "Login"
 msgstr ""
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:291
+#: experimental/coursebuilder/views/base.html:295
 msgid "Privacy & Terms"
 msgstr ""
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:298
+#: experimental/coursebuilder/views/base.html:302
 msgid "Language:"
 msgstr ""
 
@@ -1586,4 +1585,5 @@ msgstr ""
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr ""
+
 

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-19 07:54-0700\n"
-"PO-Revision-Date: 2016-06-20 07:55-0700\n"
+"POT-Creation-Date: 2016-09-26 09:02-0700\n"
+"PO-Revision-Date: 2016-09-26 09:03-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: am <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -928,7 +928,7 @@ msgstr "ዳግም ለደንበኝነት ተመዝገብ"
 #. The selected file was empty.
 #: experimental/coursebuilder/modules/upload/upload.py:83
 msgid "File is empty."
-msgstr ""
+msgstr "ፋይል ባዶ ነው።"
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
@@ -936,19 +936,18 @@ msgstr ""
 msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
-msgstr ""
+msgstr "የተሳሳተ የፋይል ቅርጸት፣ የጽሑፍ ፋይሎች (.txt) ከዩኒኮድ ይዘቶች ጋር ብቻ ይፈቀዳሉ።"
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
 #: experimental/coursebuilder/modules/upload/upload.py:103
 msgid "File too large, only files smaller than 1MB are allowed."
-msgstr ""
+msgstr "ፋይል ከልክ በላይ በጣም ትልቅ ነው፣ ከ1ሜባ በታች ያነሱ ፋይሎች ብቻ ይፈቀዳሉ።"
 
 #. Error message for failed student file upload.
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:110
-#, python-format
-msgid "Unable to save student submission; error was: \"%s\""
+msgid "Unable to save student submission; error :"
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -1120,28 +1119,28 @@ msgstr "አንድ ጊዜ ከአስረከቡ በኋላ አርትዕ ማድረግ 
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:236
+#: experimental/coursebuilder/views/base.html:240
 msgid "Not registered"
 msgstr "አልተመዘገበም"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:245
+#: experimental/coursebuilder/views/base.html:249
 msgid "Logout"
 msgstr "ዘግተው ውጣ"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:251
+#: experimental/coursebuilder/views/base.html:255
 msgid "Login"
 msgstr "ግባ"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:291
+#: experimental/coursebuilder/views/base.html:295
 msgid "Privacy & Terms"
 msgstr "ግላዊነት እና ውሎች"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:298
+#: experimental/coursebuilder/views/base.html:302
 msgid "Language:"
 msgstr "ቋንቋ፦"
 
@@ -1611,4 +1610,6 @@ msgstr "ቀጣይ ገፅ"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "መጨረሻ"
+
+
 
