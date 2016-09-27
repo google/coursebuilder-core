@@ -567,7 +567,8 @@ class StudentGroupMembership(models.BaseEntity):
         # 2 * StudentGroupAvailability.MAX_NUM_MEMBERS operations, which is
         # over the max number of group leaders that can be affected within
         # one transaction.
-        entities.delete(common_utils.iter_all(cls.all(keys_only=True)))
+        entities.delete(common_utils.iter_all(
+            cls.all(keys_only=True).filter('group_id =', group_id)))
         entities.put(students_to_remove_from_group + students_to_add_to_group +
                      emails_to_save)
 

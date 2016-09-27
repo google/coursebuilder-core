@@ -389,6 +389,23 @@ class GroupLifecycleTests(StudentGroupsTestBase):
         self.assertEquals(response['status'], 200)
         self.assertEquals(response['message'], 'Saved.')
 
+    def test_put_does_not_affect_sibling_groups(self):
+        actions.login(self.ADMIN_EMAIL)
+
+        response = self._put_group(None, 'Group One', 'group one')
+        group_one_id = transforms.loads(response['payload'])['key']
+        response = self._put_group(None, 'Group Two', 'group two')
+        group_two_id = transforms.loads(response['payload'])['key']
+
+        self._put_availability(group_one_id, ['one@one.com'])
+        self._put_availability(group_two_id, ['two@two.com'])
+
+        response = self._get_availability(group_one_id)
+        payload = transforms.loads(response['payload'])
+        actual = payload[AvailabilityRestHandler._STUDENT_GROUP_SETTINGS][
+            AvailabilityRestHandler._MEMBERS].split()
+        self.assertEquals(['one@one.com'], actual)
+
 
 class UserIdLookupLifecycleTests(StudentGroupsTestBase):
 
