@@ -532,14 +532,12 @@ for screen readers).
 """
 
 SITE_NAME_DESCRIPTION = """
-This is the name of the site header of every page, next to the Site Logo. It
-links to the root (default) of this deployment.
+This is the name of the site header of every page, next to the Site Logo.
 """
 
 SITE_LOGO_DESCRIPTION = """
-This logo is displayed in the upper left corner of every student facing page,
-next to the Site Name. It links to the root (default) of this deployment. Links
-to other sites must start with "http" or "https".
+This logo is displayed in the upper left corner of the Course Explorer and
+every page of all courses.
 """
 
 SITE_LOGO_DESCRIPTION_DESCRIPTION = """

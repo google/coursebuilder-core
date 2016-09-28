@@ -35,8 +35,8 @@ Course subject area, shown in the Course Explorer.  For example, "Biology".
 """
 
 SITE_LOGO_DESCRIPTION = """
-This logo is displayed in the upper left corner of the Course Explorer, next to
-the Site Name.
+This logo is displayed in the upper left corner of the Course Explorer and
+every page of all courses.
 """
 
 COURSE_INCLUDE_IN_EXPLORER_DESCRIPTION = """
