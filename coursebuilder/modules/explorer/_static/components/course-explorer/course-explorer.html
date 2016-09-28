@@ -157,6 +157,7 @@
         this.courses.edges.forEach(function(edge) {
           if (
               edge.node.category &&
+              edge.node.category.name &&
               categories.indexOf(edge.node.category.name) == -1 ) {
             categories.push(edge.node.category.name);
           }
@@ -191,6 +192,7 @@
           if (
               filterOptions.category != 'all' && (
               !course.node.category ||
+              !course.node.category.name ||
               course.node.category.name != filterOptions.category)) {
             return false;
           }

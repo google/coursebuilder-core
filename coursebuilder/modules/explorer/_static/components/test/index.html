@@ -128,8 +128,13 @@
           course5.node.title = 'Course 5';
           course5.node.showInExplorer = false;
 
+          // Blank category should be treated as absent.
+          var course6 = buildCourse();
+          course6.node.title = 'Course 6';
+          course6.node.category.name = ''
+
           coursesResponse.allCourses.edges = [
-              course1, course2, course3, course4, course5]
+              course1, course2, course3, course4, course5, course6]
           fakeGqlServer.addResponse(EXPLORER_CHROME_GQL, chromeResponse);
           fakeGqlServer.addResponse(EXPLORER_COURSES_GQL, coursesResponse);
           Array.prototype.forEach.call(
@@ -147,7 +152,7 @@
         it('counts the open courses', flushed(function(done) {
           var heading = collapseWhitespace(
               explorer.$.grouper.$$('#open h2').textContent);
-          expect(heading).to.equal('2 courses open for registration');
+          expect(heading).to.equal('3 courses open for registration');
         }));
 
         it('counts the closed courses', flushed(function(done) {
@@ -157,7 +162,7 @@
         }));
 
         it('has a card for each open course', flushed(function(done) {
-          expectOpenCourses(['Course 1', 'Course 2']);
+          expectOpenCourses(['Course 1', 'Course 2', 'Course 6']);
         }));
 
         it('has a card for each closed course', flushed(function(done) {
@@ -211,11 +216,12 @@
 
             function expectAll() {
               // Expect Course 4 to show up in the open courses list
-              expectOpenCourses(['Course 1', 'Course 2', 'Course 4']);
+              expectOpenCourses(
+                  ['Course 1', 'Course 2', 'Course 4', 'Course 6']);
               expectClosedCourses(['Course 3']);
             }
             function expectRegistered() {
-              expectOpenCourses(['Course 1', 'Course 2']);
+              expectOpenCourses(['Course 1', 'Course 2', 'Course 6']);
               expectClosedCourses(['Course 3']);
             }
             function expectCompleted() {
@@ -242,6 +248,18 @@
           });
         });
 
+        it('does not show blank categories', function(done) {
+          flush(function() {
+            var buttons = explorer.querySelectorAll(
+                'course-category-selector paper-radio-button');
+            for (var i = 0; i < buttons.length; i++) {
+              console.log('Name is "' + buttons[i].name + '"')
+              expect(buttons[i].name).to.not.have.length(0);
+            }
+            done();
+          });
+        });
+
         it('can filter by category', function(done) {
           function clickCategory(category) {
             var buttons = explorer.querySelectorAll(
@@ -260,7 +278,7 @@
             // First flush waits for course list to populate page
 
             function expectAll() {
-              expectOpenCourses(['Course 1', 'Course 2']);
+              expectOpenCourses(['Course 1', 'Course 2', 'Course 6']);
               expectClosedCourses(['Course 3']);
             }
             function expectMathematics() {
