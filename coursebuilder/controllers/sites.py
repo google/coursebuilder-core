@@ -108,6 +108,7 @@ import logging
 import mimetypes
 import os
 import posixpath
+import random
 import re
 import threading
 import traceback
@@ -124,6 +125,7 @@ from webob import exc
 import appengine_config
 
 from common import caching
+from common import safe_dom
 from common import users
 from common import user_routes
 from common import utils as common_utils
@@ -137,6 +139,7 @@ from models.config import ConfigPropertyEntity
 from models.config import Registry
 from models.counters import PerfCounter
 from models.courses import Course
+from models.entities import BaseEntity
 from models.roles import Roles
 from models.vfs import AbstractFileSystem
 from models.vfs import DatastoreBackedFileSystem
@@ -145,6 +148,7 @@ from models.vfs import LocalReadOnlyFileSystem
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 from google.appengine.ext import zipserve
+from google.appengine.runtime import apiproxy_errors
 
 
 # base name for all course namespaces
@@ -226,6 +230,10 @@ GCB_HANDLER_CLASS_HEADER_NAME = 'gcb-handler-class'
 
 TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'controllers', 'templates')
+
+# URLs to Appengine documentation for failure diagnostics.
+APPENGINE_DOC_QUOTAS_URL = 'https://cloud.google.com/appengine/docs/quotas'
+
 
 class BaseZipHandler(zipserve.ZipHandler, utils.StarRouteHandlerMixin):
     """Base class for zip handlers."""
@@ -365,6 +373,107 @@ def set_default_response_headers(handler):
         handler.response.cache_control.must_revalidate = True
         handler.response.expires = DEFAULT_EXPIRY_DATE
         handler.response.pragma = DEFAULT_PRAGMA
+
+
+def diagnose_datastore():
+    """Performs read and write operations on datastore to detect failures.
+
+    Returns: A DOM tree of diagnostics findings.
+    """
+    has_errors = False
+    diagnostics = safe_dom.Element('ul')
+
+    # Dummy model class for write test.
+    class DummyModel(db.Model):
+        dummy_int = db.IntegerProperty()
+
+    # Tests write operation.
+    try:
+        DummyModel(key_name='_dummy_entity',
+                   dummy_int=random.randint(0, 65535)).put()
+    except apiproxy_errors.OverQuotaError:
+        has_errors = True
+        diagnostics.append(
+            safe_dom.Element('li').add_text(
+                'Write operation blocked due to a lack of available quota.'
+            ).append(safe_dom.Element('br')).add_text(
+                'Please refer to the ').append(
+                    safe_dom.A(href=APPENGINE_DOC_QUOTAS_URL).add_text(
+                        'Appengine quotas documentation.')))
+    except Exception, e:  # pylint: disable=broad-except
+        has_errors = True
+        diagnostics.append(
+            safe_dom.Element('li').add_text(
+                'Write operation failed due to an unexpected error: %s.' % e))
+
+    # Tests read operation.
+    try:
+        test_entity = BaseEntity.all().fetch(1)
+    except apiproxy_errors.OverQuotaError:
+        has_errors = True
+        diagnostics.append(
+            safe_dom.Element('li').add_text(
+                'Read operation blocked due to a lack of available quota.'
+                ).append(safe_dom.Element('br')).add_text(
+                    'Please refer to the ').append(
+                        safe_dom.A(href=APPENGINE_DOC_QUOTAS_URL).add_text(
+                            'Appengine quotas documentation.')))
+    except Exception, e:  # pylint: disable=broad-except
+        has_errors = True
+        diagnostics.append(
+            safe_dom.Element('li').add_text(
+                'Read operation failed due to an unexpected error: %s.' % e))
+
+    return safe_dom.NodeList().append(diagnostics) if has_errors else None
+
+
+def diagnose_memcache():
+    """Runs test operations against memcache, reports eventual failures.
+
+    Returns: A DOM tree of diagnostics findings.
+    """
+    has_errors = False
+    diagnostics = safe_dom.Element('ul')
+
+    memcache_manager = models.MemcacheManager()
+    try:
+        memcache_manager.set(
+            '_test', random.randint(0, 100), propagate_exceptions=True)
+        value = memcache_manager.get('_test')
+        memcache_manager.delete('_test')
+    except Exception, e:  # pylint: disable=broad-except
+        has_errors = True
+        diagnostics.append(
+            safe_dom.Element('li').add_text(
+                'Write operation failed due to an unexpected error: %s.' % e))
+
+    return safe_dom.NodeList().append(diagnostics) if has_errors else None
+
+
+def diagnose_services():
+    """Runs test operations against services, reports eventual failures.
+
+    Returns: A DOM tree of diagnostics findings.
+    """
+    diagnostics = safe_dom.Element('ul')
+
+    datastore_diagnostics = diagnose_datastore()
+    if datastore_diagnostics is not None:
+        diagnostics.append(
+          safe_dom.Element('li').append(
+              safe_dom.Element('b').add_text('Datastore Diagnostics: ')
+              ).add_children(
+                  datastore_diagnostics))
+
+    memcache_diagnostics = diagnose_memcache()
+    if memcache_diagnostics is not None:
+        diagnostics.append(
+            safe_dom.Element('li').append(
+                safe_dom.Element('b').add_text('Memcache Diagnostics: ')
+                ).add_children(
+                    memcache_diagnostics))
+
+    return safe_dom.NodeList().append(diagnostics)
 
 
 def make_zip_handler(zipfilename):
@@ -1499,6 +1608,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             response.out.write(
                 'Unable to access requested page. '
                 'HTTP status code: %s.' % status_code)
+        elif status_code >= 500:
+            cls._5xx_handler(request, response, status_code)
         else:
             msg = 'Server error. HTTP status code: %s.' % status_code
             logging.error(msg)
@@ -1516,6 +1627,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
                 'Unable to access requested page in the course %s. '
                 'HTTP status code: '
                 '%s.' % (app_context.slug, status_code))
+        elif status_code >= 500:
+            cls._5xx_handler(request, response, status_code)
         else:
             msg = (
                 'Server error accessing the course %s. '
@@ -1541,9 +1654,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             if must_clear_path_info:
                 unset_path_info()
         if not app_context:
+            text = (u'Unable to access requested page. HTTP status code: 404.')
+            if users.is_current_user_admin():
+                text += diagnose_services().sanitized
             response.status_int = 404
-            response.text = (u'Unable to access requested page. '
-                             'HTTP status code: 404.')
+            response.text = text
             return
 
         # Give the person seeing this page a little information and present
@@ -1579,7 +1694,23 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         finally:
             models.MemcacheManager.end_readonly()
             courses.Course.clear_current()
+
+        if users.is_current_user_admin():
+            text += diagnose_services().sanitized
+
         response.status_int = 404
+        response.text = text
+
+
+    @classmethod
+    def _5xx_handler(cls, request, response, status_code):
+        """Generic 5xx error handler for users."""
+        text = u'Server error. HTTP status code: %s.' % status_code
+
+        if users.is_current_user_admin():
+            text += diagnose_services().sanitized
+
+        response.status_int = status_code
         response.text = text
 
     def _error_404(self, path):

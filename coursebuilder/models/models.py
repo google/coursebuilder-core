@@ -288,7 +288,8 @@ class MemcacheManager(object):
         return values
 
     @classmethod
-    def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None):
+    def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None,
+            propagate_exceptions=False):
         """Sets an item in memcache if memcache is enabled."""
         # Ensure subsequent mods to value do not affect the cached copy.
         value = copy.deepcopy(value)
@@ -304,8 +305,11 @@ class MemcacheManager(object):
                     memcache.set(key, value, ttl, namespace=_namespace)
                     cls._local_cache_put(key, _namespace, value)
         except:  # pylint: disable=bare-except
-            logging.exception(
-                'Failed to set: %s, %s', key, cls._get_namespace(namespace))
+            if propagate_exceptions:
+                raise
+            else:
+                logging.exception(
+                    'Failed to set: %s, %s', key, cls._get_namespace(namespace))
             return None
 
     @classmethod
