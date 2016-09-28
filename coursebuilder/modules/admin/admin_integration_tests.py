@@ -359,6 +359,29 @@ class CourseMultiEditTests(_CoursesListTestBase):
             '',
             self._get_category(self.course_namespaces[2]))
 
+    def _get_show_in_explorer(self, namespace):
+        self.load_dashboard(
+            re.sub('^ns_', '', namespace)
+        ).click_settings(
+        )
+        element = self.driver.find_element_by_name('course:show_in_explorer')
+        return element.get_attribute('value')
+
+    def test_multi_edit_course_show_in_explorer(self):
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_show_in_explorer()
+        multi_edit.set_show_in_explorer(False)
+        multi_edit.click_save()
+
+        self.assertEquals(
+            "false", self._get_show_in_explorer(self.course_namespaces[0]))
+        self.assertEquals(
+            "false", self._get_show_in_explorer(self.course_namespaces[1]))
+        self.assertEquals(
+            "true", self._get_show_in_explorer(self.course_namespaces[2]))
+
 
 class CoursesEnrollmentsTests(_CoursesListTestBase):
 

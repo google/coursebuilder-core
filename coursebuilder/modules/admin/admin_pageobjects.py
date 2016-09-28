@@ -276,6 +276,10 @@ class CoursesListPage(pageobjects.CoursesListPage):
     def click_edit_category(self):
         return self._open_multicourse_popup('edit_multi_course_category')
 
+    def click_edit_show_in_explorer(self):
+        return self._open_multicourse_popup(
+            'edit_multi_course_show_in_explorer')
+
     def _col_hdr_id_sel(self, column):
         sel = '#{}_column'.format(column)
         return sel
@@ -493,6 +497,13 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
     def set_category(self, value):
         category = self.find_element_by_id('multi-course-category')
         category.send_keys(value)
+
+    def set_show_in_explorer(self, value):
+        checkbox = self.find_element_by_id('multi-course-show-in-explorer')
+        checked = checkbox.get_attribute('checked')
+        if (not checked and value) or (checked and not value):
+            checkbox.click()
+        return self
 
     def set_availability(self, value):
         select_elt = self.find_element_by_id('multi-course-select-availability')

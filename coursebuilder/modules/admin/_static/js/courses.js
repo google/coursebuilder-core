@@ -271,9 +271,6 @@ $(function() {
       anyUnchecked |= !checkbox.checked;
     });
 
-    console.log(anyChecked);
-    console.log(anyUnchecked);
-
     // (see selectAll() about #all_courses_select checkbox clones)
     if (anyChecked && anyUnchecked) {
       $(_coursesListAllCourseSelectSel()).prop('indeterminate', true);
@@ -286,9 +283,6 @@ $(function() {
           .prop('indeterminate', false)
           .prop('checked', anyChecked);
     }
-    console.log($(_coursesListAllCourseSelectSel()).prop('indeterminate'));
-    console.log($(_fixedHdrAllCourseSelectSel()).prop('indeterminate'));
-
     setMultiCourseActionAllowed(anyChecked);
     gcbAdminOperationCount++;
   }
@@ -507,7 +501,7 @@ $(function() {
     return $('#edit_multi_course_availability').data('xsrfToken');
   };
   EditMultiCourseAvailabilityPanel.prototype._getFormFields = function() {
-    ret = $(
+    var ret = $(
         '<div class="form-row">' +
         '  <label>Availability</label>' +
         '  <select ' +
@@ -543,9 +537,9 @@ $(function() {
   };
   function editMultiCourseAvailability() {
     // Var name intentionally in global namespace as hook for tests to modify.
-    gcb_multi_edit_dialog = new EditMultiCourseAvailabilityPanel();
-    gcb_multi_edit_dialog.init();
-    gcb_multi_edit_dialog.open();
+    window.gcb_multi_edit_dialog = new EditMultiCourseAvailabilityPanel();
+    window.gcb_multi_edit_dialog.init();
+    window.gcb_multi_edit_dialog.open();
   };
 
   // ---------------------------------------------------------------------------
@@ -616,7 +610,7 @@ $(function() {
     var availability = this._availabilitySelect.val();
     var when = this._datetime_field.getValue();
     var setting_name = 'course_' + this._start_or_end;
-    ret = {}
+    var ret = {}
     if (when) {
       ret[setting_name] = [{
         'availability': availability,
@@ -631,14 +625,16 @@ $(function() {
     return ret;
   };
   function editMultiCourseStartDate() {
-    gcb_multi_edit_dialog = new EditMultiCourseDatePanel();
-    gcb_multi_edit_dialog.init('start');
-    gcb_multi_edit_dialog.open();
+    // Var name intentionally in global namespace as hook for tests to modify.
+    window.gcb_multi_edit_dialog = new EditMultiCourseDatePanel();
+    window.gcb_multi_edit_dialog.init('start');
+    window.gcb_multi_edit_dialog.open();
   };
   function editMultiCourseEndDate() {
-    gcb_multi_edit_dialog = new EditMultiCourseDatePanel();
-    gcb_multi_edit_dialog.init('end');
-    gcb_multi_edit_dialog.open();
+    // Var name intentionally in global namespace as hook for tests to modify.
+    window.gcb_multi_edit_dialog = new EditMultiCourseDatePanel();
+    window.gcb_multi_edit_dialog.init('end');
+    window.gcb_multi_edit_dialog.open();
   };
 
 
@@ -656,7 +652,7 @@ $(function() {
     return $('#edit_multi_course_category').data('xsrfToken');
   };
   EditMultiCourseCategoryPanel.prototype._getFormFields = function() {
-    ret = $(
+    var ret = $(
         '<div class="form-row">' +
         '  <label>Category</label>' +
         '  <input ' +
@@ -686,6 +682,53 @@ $(function() {
     gcb_multi_edit_dialog = new EditMultiCourseCategoryPanel();
     gcb_multi_edit_dialog.init();
     gcb_multi_edit_dialog.open();
+  };
+
+  // --------------------------------------------------------------------------
+  // For editing course availability in Explorer page boolean setting
+
+  EditMultiCourseShowInExplorerPanel = function () {
+    EditMultiCoursePanel.call(this);
+  };
+  EditMultiCourseShowInExplorerPanel.prototype = new EditMultiCoursePanel();
+  EditMultiCourseShowInExplorerPanel.prototype._getTitle = function() {
+    return 'Set Whether Course Is Shown In Explorer';
+  };
+  EditMultiCourseShowInExplorerPanel.prototype._getXsrfToken = function() {
+    return $('#edit_multi_course_show_in_explorer').data('xsrfToken');
+  };
+  EditMultiCourseShowInExplorerPanel.prototype._getFormFields = function() {
+    var ret = $(
+        '<div class="form-row">' +
+        '  <label>Show In Explorer' +
+        '    <input ' +
+        '      type="checkbox" ' +
+        '      id="multi-course-show-in-explorer" ' +
+        '      name="show_in_explorer">' +
+        '  </label>' +
+        '</div>'
+        );
+    this._show_in_explorer = ret.find('#multi-course-show-in-explorer');
+    return ret;
+  };
+  EditMultiCourseShowInExplorerPanel.prototype._getSaveUrl = function() {
+    return '/rest/course/settings';
+  };
+  EditMultiCourseShowInExplorerPanel.prototype._getSavePayload = function() {
+    var show_in_explorer = this._show_in_explorer.prop('checked');
+    return {
+      'homepage': {
+        'course:show_in_explorer': show_in_explorer
+      }
+    };
+  };
+  EditMultiCourseShowInExplorerPanel.prototype._settingSaved = (
+      function(payload) {} );
+  function editMultiCourseShowInExplorer() {
+    // Var name intentionally in global namespace as hook for tests to modify.
+    window.gcb_multi_edit_dialog = new EditMultiCourseShowInExplorerPanel();
+    window.gcb_multi_edit_dialog.init();
+    window.gcb_multi_edit_dialog.open();
   };
 
   var _sortBySequence = {
@@ -925,6 +968,8 @@ $(function() {
     $('#edit_multi_course_start_date').click(editMultiCourseStartDate);
     $('#edit_multi_course_end_date').click(editMultiCourseEndDate);
     $('#edit_multi_course_category').click(editMultiCourseCategory);
+    $('#edit_multi_course_show_in_explorer').click(
+        editMultiCourseShowInExplorer);
     $(_scrolledCourseCheckboxesSel()).click(selectCourse);
 
     $(_coursesListSortableColHdrsSel()).click(sortCourseRows);

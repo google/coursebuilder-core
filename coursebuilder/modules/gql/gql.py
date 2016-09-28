@@ -382,6 +382,7 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
     instructor_details = graphene.String()
     url = graphene.String()
     open_for_registration = graphene.Boolean()
+    show_in_explorer = graphene.Boolean()
 
     @property
     def course_environ(self):
@@ -450,6 +451,10 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
     def resolve_open_for_registration(self, args, info):
         return bool(courses.Course.get_named_reg_setting_from_environ(
             'can_register', self.course_environ, default=False))
+
+    def resolve_show_in_explorer(self, args, info):
+        return bool(courses.Course.get_named_course_setting_from_environ(
+            'show_in_explorer', self.course_environ, default=True))
 
 
 class Query(graphene.ObjectType):

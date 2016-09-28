@@ -23,8 +23,8 @@
       var EXPLORER_COURSES_GQL = (
           '{allCourses {edges {node {' +
           '  id, title, url, abstract, instructorDetails,' +
-          '  enrollment {enrolled}, openForRegistration,' +
-          '  startDate, endDate, estimatedWorkload, category {name} }}}}');
+          '  enrollment {enrolled}, openForRegistration, showInExplorer,' +
+          '  startDate, endDate, estimatedWorkload, category {name}}}}}');
       function flushed(test) {
         // Execute the test function after events have fired and page is loaded
         return function(done) {
@@ -70,7 +70,8 @@
             startDate: '2016-05-01T07:00:00.000Z',
             endDate: '2016-05-15T07:00:00.000Z',
             estimatedWorkload: '10hr',
-            category: {name: 'Philosophy'}
+            category: {name: 'Philosophy'},
+            showInExplorer: true
           }
         };
       }
@@ -122,8 +123,13 @@
           course4.node.title = 'Course 4';
           course4.node.enrollment.enrolled = false;
 
+          // Expect to never see this course mentioned in results.
+          var course5 = buildCourse();
+          course5.node.title = 'Course 5';
+          course5.node.showInExplorer = false;
+
           coursesResponse.allCourses.edges = [
-              course1, course2, course3, course4]
+              course1, course2, course3, course4, course5]
           fakeGqlServer.addResponse(EXPLORER_CHROME_GQL, chromeResponse);
           fakeGqlServer.addResponse(EXPLORER_COURSES_GQL, coursesResponse);
           Array.prototype.forEach.call(

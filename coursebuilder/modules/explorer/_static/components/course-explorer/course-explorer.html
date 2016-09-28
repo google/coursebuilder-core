@@ -133,7 +133,7 @@
         return {q:
             '{allCourses {edges {node {' +
             '  id, title, url, abstract, instructorDetails,' +
-            '  enrollment {enrolled}, openForRegistration,' +
+            '  enrollment {enrolled}, openForRegistration, showInExplorer,' +
             '  startDate, endDate, estimatedWorkload, category {name} }}}}'
         };
       },
@@ -168,6 +168,9 @@
         var filterOptions = filterOptionsPath.base;
         var that = this;
         return courses.filter(function(course) {
+          if (!course.node.showInExplorer) {
+            return false;
+          }
 
           // Filter by status
 

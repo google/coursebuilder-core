@@ -38,3 +38,9 @@ SITE_LOGO_DESCRIPTION = """
 This logo is displayed in the upper left corner of the Course Explorer, next to
 the Site Name.
 """
+
+COURSE_INCLUDE_IN_EXPLORER_DESCRIPTION = """
+When true, the course is eligible to be included in the Course Explorer,
+subject to the course's availability settings.  When false, the course
+is never shown in the Course Explorer, regardless of availability.
+"""

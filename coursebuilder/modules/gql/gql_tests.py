@@ -418,6 +418,8 @@ class CourseTests(GraphQLTreeTests):
                 'kind': 'SCALAR', 'name': 'String', 'ofType': None}},
             {'name': 'openForRegistration', 'type': {
                 'kind': 'SCALAR', 'name': 'Boolean', 'ofType': None}},
+            {'name': 'showInExplorer', 'type': {
+                'kind': 'SCALAR', 'name': 'Boolean', 'ofType': None}},
         ]
 
         for field in response['data']['__type']['fields']:

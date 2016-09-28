@@ -1911,7 +1911,6 @@ class PolymerPageObject(PageObject):
             log.append('------------------------------------')
             log.append('Test Log:')
             for entry in self._tester.driver.get_log('browser'):
-                if entry.get('source') == 'console-api':
-                    log.append(entry['message'].split('%c', 2)[1])
+                log.append(entry['message'])
             log.append('------------------------------------')
             self._tester.fail('\n'.join(log))

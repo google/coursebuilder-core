@@ -103,9 +103,10 @@ class GraphQLTests(gql_tests.BaseGqlTests):
                         '2016-10-11T07:00:00.000Z',
                     'estimated_workload': '10hrs',
                     'category_name': 'Biology',
+                    'show_in_explorer': False,
                 },
             })
-
+        self.maxDiff = None
         self.assertEqual(
             self.get_response("""
             {
@@ -114,6 +115,7 @@ class GraphQLTests(gql_tests.BaseGqlTests):
                     endDate,
                     estimatedWorkload,
                     category {name},
+                    showInExplorer,
                 }
             }
             """ % self.course_id),
@@ -127,6 +129,7 @@ class GraphQLTests(gql_tests.BaseGqlTests):
                         'category': {
                             'name': 'Biology',
                         },
+                        'showInExplorer': False,
                     }
                 }
             })
