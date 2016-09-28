@@ -14,14 +14,18 @@
         {% endif %}
     </p>
     <p class='gcb-top-content'>
-        <a href='javascript:window.history.back();'>
             {% if success %}
-                {# I18N: Text of the link to take the user back to the previous page. #}
-                {{ gettext('Return to the previous page.') }}
+                <a href='javascript:window.history.back();'>
+                    {# I18N: Text of the link to take the user back to the previous page. #}
+                    {{ gettext('Return to the previous page.') }}
+                </a>
             {% else %}
-                {# I18N: Text of the link to take the user back to the previous page so they can try submitting again. #}
-                {{ gettext('Go back and try again. If the problem persists, contact your administrator.') }}
+                <a href='javascript:window.history.back();'>
+                  {# I18N: Text of the link to take the user back to the previous page so they can try submitting again. #}
+                  {{ gettext('Go back and try again.') }}
+                </a>
+                {# I18N: Text after the link to take the user back to the previous page so they can try submitting again. #}
+                {{ gettext('If the problem persists, contact your administrator.') }}
             {% endif %}
-        </a>
     </p>
 {% endblock %}

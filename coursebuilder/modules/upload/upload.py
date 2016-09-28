@@ -54,8 +54,15 @@ class TextFileUploadHandler(utils.BaseHandler):
             template_file, additional_dirs=dirs, prefs=prefs)
 
     def validate_contents(self, contents):
-        """Convert 'contents' to ASCII or raise UnicodeDecodeError."""
-        return contents.decode()
+        """Checks that contents is unicode or raises UnicodeError."""
+        try:
+            # TODO(davyrisso): Non-unicode characters are still allowed,
+            # this is due to the fact that we want to support non-latin scripts.
+            # However it prevents binary files from being submitted.
+            assert isinstance(contents, str) or isinstance(contents, unicode)
+        except AssertionError:
+            raise UnicodeError
+        return contents
 
     def post(self):
         """Creates or updates a student submission."""
@@ -89,7 +96,7 @@ class TextFileUploadHandler(utils.BaseHandler):
                 success = bool(student_work.Submission.write(
                     unit_id, student.get_key(), contents,
                     instance_id=instance_id))
-            except UnicodeDecodeError, e:
+            except UnicodeError:
                 # I18N: Error message for failed student file upload.
                 # The selected file was not a text file.
                 error_detail = self.gettext(
@@ -97,7 +104,7 @@ class TextFileUploadHandler(utils.BaseHandler):
                     'with unicode contents are allowed.')
                 logging.warn(error_detail)
                 self.error(400)
-            except RequestTooLargeError, e:
+            except RequestTooLargeError:
                 # I18N: Error message for failed student file upload.
                 # The selected file was too large.
                 error_detail = self.gettext(
@@ -108,7 +115,8 @@ class TextFileUploadHandler(utils.BaseHandler):
                 # I18N: Error message for failed student file upload.
                 # Generic upload error.
                 error_detail = self.gettext(
-                    'Unable to save student submission; error :') + str(e)
+                    'Unable to save student submission.') + (
+                    'Error was: "{}"'.format(e)) if str(e) else ''
                 logging.warn(error_detail)
                 self.error(400)
         self.template_value['navbar'] = {'course': True}
