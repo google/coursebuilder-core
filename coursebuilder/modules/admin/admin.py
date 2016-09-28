@@ -1190,8 +1190,14 @@ class GlobalAdminHandler(
         template_values['coursebuilder_version'] = (
             os.environ['GCB_PRODUCT_VERSION'])
         template_values['application_id'] = app.get_application_id()
-        template_values['application_version'] = (
-            os.environ['CURRENT_VERSION_ID'])
+        version = os.environ['CURRENT_VERSION_ID']
+        if '.' not in version or not appengine_config.PRODUCTION_MODE:
+            template_values['application_version'] = version
+        else:
+            version, deployed_at = version.split('.', 1)
+            template_values['application_version'] = version
+            template_values['deployed_at'] = datetime.datetime.utcfromtimestamp(
+                int(deployed_at) >> 28)  # Yes, really.
         if not template_values.get('sections'):
             template_values['sections'] = []
         if not appengine_config.PRODUCTION_MODE:

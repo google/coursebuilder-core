@@ -194,6 +194,9 @@
         </div>
         <div id='gcb-footer'>
           Application {{ application_id }} version {{ application_version }}
+          {% if deployed_at %}
+          deployed at {{ deployed_at }} UTC
+          {% endif %}
           &nbsp;|&nbsp;
           Powered by
           <a target='_blank' href="{{ powered_by_url }}">Course Builder</a>

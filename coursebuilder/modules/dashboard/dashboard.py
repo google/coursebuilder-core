@@ -428,8 +428,15 @@ class DashboardHandler(
         template_values['coursebuilder_version'] = (
             os.environ['GCB_PRODUCT_VERSION'])
         template_values['application_id'] = app_identity.get_application_id()
-        template_values['application_version'] = (
-            os.environ['CURRENT_VERSION_ID'])
+        version = os.environ['CURRENT_VERSION_ID']
+        if '.' not in version or not appengine_config.PRODUCTION_MODE:
+            template_values['application_version'] = version
+        else:
+            version, deployed_at = version.split('.', 1)
+            template_values['application_version'] = version
+            template_values['deployed_at'] = datetime.datetime.utcfromtimestamp(
+                int(deployed_at) >> 28)  # Yes, really.
+
         template_values['extra_css_href_list'] = self.EXTRA_CSS_HREF_LIST
         template_values['extra_js_href_list'] = self.EXTRA_JS_HREF_LIST
         template_values['powered_by_url'] = services.help_urls.get(
