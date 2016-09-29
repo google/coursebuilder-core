@@ -17,6 +17,7 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import datetime
+import logging
 import urllib
 import zlib
 
@@ -1847,6 +1848,8 @@ class GradebookTests(StudentGroupsTestBase):
 class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
                                StudentGroupsTestBase):
 
+    LOG_LEVEL = logging.DEBUG
+
     COURSE_NAME = 'student_groups_course_dates_test'
     COURSE_TITLE = 'Student Groups Course Dates Tests'
     NAMESPACE = 'ns_%s' % COURSE_NAME
@@ -2023,6 +2026,12 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
             self.assertEquals(self.only_course_start, self.SGCOT.for_form(
                 start_dto, course=self.course))
 
+            # Check then remove start_date property, so the act() side-effects
+            # can also be confirmed, after run_availability_jobs.
+            logs = self.get_log()
+            self.check_and_clear_milestone_course_setting('course_start',
+                self.past_start_text, start_dto, self.SGCOT)
+
         # Start override trigger is now in the student group DTO, so act on
         # it in cron job.
         self.run_availability_jobs(self.app_context)
@@ -2035,10 +2044,10 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
             after_run_env = courses.Course.get_environ(after_run_ctx)
             self.check_course_start_end_dates(None, None, after_run_env)
 
-        # POSTed course_start `when` ended up as the 'start_date' in the
-        # course settings. 'end_date' should still be undefined.
-        self._check_group_start_end_dates(
-            self.past_start_text, None, self.group_id)
+            # POSTed course_start `when` ended up as the 'start_date' in the
+            # course settings. 'end_date' should still be undefined.
+            self._check_group_start_end_dates(
+                self.past_start_text, None, self.group_id)
 
         # All course start/end override triggers were acted on and consumed.
         with common_utils.Namespace(self.NAMESPACE):
@@ -2054,7 +2063,7 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
 
             logs = self.get_log()
             self.retrieve_logged('course_start', 'start_date',
-                self.past_start_text, self.SGCOT, logs)
+                self.past_start_text, self.SGCOT, logs, where='student group')
             self.assertEquals(self.past_start_text, when_start['when'])
             self.defaults_start = when_start
             self.defaults_only['course_start'][0] = when_start
@@ -2088,6 +2097,12 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
             self.assertEquals(self.only_early_end, self.SGCOT.for_form(
                 early_dto, course=self.course))
 
+            # Check then remove end_date property, so the act() side-effects
+            # can also be confirmed, after run_availability_jobs.
+            logs = self.get_log()
+            self.check_and_clear_milestone_course_setting('course_end',
+                self.an_earlier_end_hour_text, early_dto, self.SGCOT)
+
         # End trigger is now in course settings, so act on it in cron job.
         self.run_availability_jobs(self.app_context)
 
@@ -2113,7 +2128,8 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
 
             logs = self.get_log()
             self.retrieve_logged('course_end', 'end_date',
-                self.an_earlier_end_hour_text, self.SGCOT, logs)
+                self.an_earlier_end_hour_text, self.SGCOT, logs,
+                where='student group')
             self.assertEquals(self.an_earlier_end_hour_text, when_end['when'])
             self.defaults_end = when_end
             self.defaults_only['course_end'][0] = when_end

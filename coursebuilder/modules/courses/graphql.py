@@ -16,6 +16,7 @@
 
 
 import graphene
+
 from models import courses
 from modules.courses import constants
 from modules.courses import triggers
@@ -77,7 +78,7 @@ def register_resolvers():
 
 
 def update_start_date_from_course_start_when(start_trigger, unused_changed,
-                                             unused_course, env):
+                                             course, env):
     if not start_trigger:
         return
 
@@ -85,12 +86,12 @@ def update_start_date_from_course_start_when(start_trigger, unused_changed,
     if not iso8601_when:
         return
 
-    courses.Course.set_named_course_setting_in_environ(
-        constants.START_DATE_SETTING, env, iso8601_when)
+    start_trigger.set_default_when_into_settings(
+        start_trigger.milestone, iso8601_when, env, course=course)
 
 
 def update_end_date_from_course_end_when(end_trigger, unused_changed,
-                                         unused_course, env):
+                                         course, env):
     if not end_trigger:
         return
 
@@ -98,8 +99,8 @@ def update_end_date_from_course_end_when(end_trigger, unused_changed,
     if not iso8601_when:
         return
 
-    courses.Course.set_named_course_setting_in_environ(
-        constants.END_DATE_SETTING, env, iso8601_when)
+    end_trigger.set_default_when_into_settings(
+        end_trigger.milestone, iso8601_when, env, course=course)
 
 
 def register_callbacks():

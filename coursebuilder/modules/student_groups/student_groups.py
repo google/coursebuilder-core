@@ -318,8 +318,56 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
             # (or a student_group was not even supplied), attempt to obtain
             # the same named setting from the Course itself.
             value = course.get_course_setting(setting_name)
+            where = 'course'
+        else:
+            where = 'student group'
 
+        milestone = cls.SETTING_TO_MILESTONE.get(setting_name)
+        milestone = '' if not milestone else milestone + ' '
+        logging.debug('RETRIEVED %s %s for %s%s trigger: %s',
+                      where, setting_name, milestone, cls.kind(), value)
         return value
+
+    @classmethod
+    def clear_named_setting(cls, setting_name, student_group, **unused_kwargs):
+        """Removes the named student group property.
+
+        Args:
+            setting_name: a StudentGroupDTO property name for a setting to
+                remove from the student_group.
+            student_group: a StudentGroupDTO to update *in place* by removing
+                the property indicated by setting_name.
+        """
+        student_group.dict.pop(setting_name, None)
+        milestone = cls.SETTING_TO_MILESTONE.get(setting_name)
+        milestone = '' if not milestone else milestone + ' '
+        logging.debug(
+            'CLEARED %s due to %s%s trigger missing value.',
+            setting_name, milestone, cls.kind())
+
+    @classmethod
+    def set_named_setting(cls, setting_name, value, student_group, **kwargs):
+        """Sets the value of a named student group property.
+
+        Args:
+            setting_name: a StudentGroupDTO property name for a setting to
+                update in the student_group.
+            value: a value for setting_name; if None, the setting will be
+                cleared from env of the Course, if possible.
+            student_group: a StudentGroupDTO to update *in place* the value of
+                the property indicated by setting_name.
+        """
+        if value:
+            student_group.dict[setting_name] = value
+            milestone = cls.SETTING_TO_MILESTONE.get(setting_name)
+            milestone = '' if not milestone else milestone + ' '
+            logging.debug(
+                'SET %s obtained from %s%s trigger to: %s.',
+                setting_name, milestone, cls.kind(), value)
+
+        else:
+            # Collapse all False values to None.
+            cls.clear_named_setting(setting_name, student_group, **kwargs)
 
     @classmethod
     def set_into_settings(cls, encoded_triggers, student_group,
@@ -334,19 +382,31 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
                 as settings to dedupe_for_settings().
             semantics: (optional) only the default SET_WILL_OVERWRITE
                 semantics are supported.
-            course: (optional) passed, untouched, to dedupe_for_settings()
-                and through to separate().
+            course: (optional) passed, untouched, to dedupe_for_settings(),
+                set_multiple_whens_into_settings(), and through to separate().
         """
-        deduped = cls.dedupe_for_settings(encoded_triggers,
+        deduped, separated = cls.dedupe_for_settings(encoded_triggers,
             semantics=semantics, settings=student_group, course=course)
+        remaining = cls.set_multiple_whens_into_settings(deduped.itervalues(),
+            student_group, course=course)
+        cls.set_multiple_whens_into_settings(separated.invalid,
+            student_group, remaining=remaining, course=course)
         student_group.set_triggers(cls.SETTINGS_NAME, deduped.values())
 
     def act(self, course, student_group):
         """The base class act() followed by calling the ACT_HOOKS callbacks."""
         changed = super(CourseOverrideTrigger, self).act(
             course, student_group)
-        common_utils.run_hooks(
-            self.ACT_HOOKS.get(self.milestone, {}).itervalues(),
+        hooks_to_run = self.ACT_HOOKS.get(self.milestone, {})
+
+        if hooks_to_run and (changed is None):
+            old_when = self.get_default_when_from_settings(
+                self.milestone, student_group, course=course)
+            new_when = self.encoded_when
+            if old_when != new_when:
+                changed = self.ChangedByAct(old_when, new_when)
+
+        common_utils.run_hooks(hooks_to_run.itervalues(),
             self, changed, course, student_group)
         return changed
 

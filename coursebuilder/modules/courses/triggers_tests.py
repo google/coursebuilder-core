@@ -149,9 +149,23 @@ class TriggerTestsMixin(object):
         self.assertIn('SAVED %d change(s) to %s %s.' % (
                 count, self.NAMESPACE, trigger_cls.kind()), logs)
 
-    def retrieve_logged(self, milestone, setting, when, trigger_cls, logs):
-        self.assertIn('RETRIEVED default %s %s from %s: %s' % (
-                      milestone, trigger_cls.kind(), setting, when), logs)
+    def retrieve_logged(self, milestone, setting, when, trigger_cls, logs,
+                        where='env'):
+        milestone = '' if not milestone else milestone + ' '
+        self.assertIn('RETRIEVED {} {} for {}{} trigger: {}'.format(
+            where, setting, milestone, trigger_cls.kind(), when), logs)
+
+    def set_named_logged(self, milestone, setting, when, trigger_cls, logs,
+                         action='SET'):
+        milestone = '' if not milestone else milestone + ' '
+        self.assertIn('{} {} obtained from {}{} trigger to: {}'.format(
+            action, setting, milestone, trigger_cls.kind(), when), logs)
+
+    def cleared_logged(self, milestone, setting, trigger_cls, logs,
+                        action='CLEARED'):
+        milestone = '' if not milestone else milestone + ' '
+        self.assertIn('{} {} due to {}{} trigger missing value.'.format(
+            action, setting, milestone, trigger_cls.kind()), logs)
 
     def error_logged(self, logs, trigger, what, why, cause):
         self.assertRegexpMatches(logs,
@@ -420,16 +434,25 @@ class FunctionalTestBase(TriggerTestsMixin, actions.TestBase):
 
     def check_payload_into_settings(self, cls, settings_name):
         """Checks payload_into_settings, from_payload, set_into_settings."""
-        payload, expected_triggers = self.create_payload_triggers()
-        expected_settings = {'publish': {settings_name: expected_triggers}}
+        payload, expected_triggers, expected = self.create_payload_triggers()
+        expected.update({'publish': {settings_name: expected_triggers}})
         settings = {}
         cls.payload_into_settings(payload, self.course, settings)
-        self.assertItemsEqual(expected_settings, settings)
+        self.assertItemsEqual(expected, settings)
 
         # Absent from payload should remove from settings. Use settings dict
-        # from above, since it will have contents to remove.
-        cls.payload_into_settings({}, self.course, settings)
+        # from above, since it will have settings needing removal (start_date
+        # and end_date).
         empty_settings = {'publish': {}}
+        if 'course' in settings:
+            # Some trigger types (e.g. 'course_start') also store values
+            # (e.g. 'start_date') in the 'course' settings in the Course
+            # get_environ() dict. Those same triggers remove corresponding
+            # settings when the triggers themselves are cleared, but an
+            # empty 'course' dict should remain, in tests at least.
+            empty_settings['course'] = {}
+
+        cls.payload_into_settings(self.empty_form, self.course, settings)
         self.assertEquals(empty_settings, settings)
         self.assertFalse(settings['publish'].get(settings_name))
 
@@ -486,6 +509,7 @@ class ContentTriggerTestsMixin(TriggerTestsMixin):
 
     def setUp(self):
         super(ContentTriggerTestsMixin, self).setUp()
+        self.empty_form = {}
 
     def some_past_content_triggers(self, now, unit_id, lesson_id):
         when = self.utc_past_text(now)
@@ -698,7 +722,10 @@ class ContentTriggerTestBase(ContentTriggerTestsMixin, FunctionalTestBase):
         for et in expected_triggers:
             payload_triggers.append(et.copy())
 
-        return payload, expected_triggers
+        # No additional 'course:' settings expected for content triggers.
+        expected_settings = {}
+
+        return payload, expected_triggers, expected_settings
 
 
 class ContentTriggerTests(ContentTriggerTestBase):
@@ -851,6 +878,18 @@ class MilestoneTriggerTestsMixin(TriggerTestsMixin):
             constants.END_DATE_MILESTONE: [self.defaults_end],
         }
 
+        # Course start/end availability triggers with cleared 'when' dates.
+        self.empty_form = {
+            constants.START_DATE_MILESTONE: [{
+                self.TMT.FIELD_NAME: constants.START_DATE_MILESTONE,
+                self.TAT.FIELD_NAME: self.TMT.NONE_SELECTED,
+            }],
+            constants.END_DATE_MILESTONE: [{
+                self.TMT.FIELD_NAME: constants.END_DATE_MILESTONE,
+                self.TAT.FIELD_NAME: self.TMT.NONE_SELECTED,
+            }],
+        }
+
         # Multiple test_act_hooks tests use these "two hours earlier" course
         # end POST parameters.
         self.an_earlier_end_hour_text = utc.to_text(
@@ -929,7 +968,7 @@ class MilestoneTriggerTestsMixin(TriggerTestsMixin):
             bad_triggers[milestone].append(no_avail)
 
             # A milestone trigger that results from selecting the 'none'
-            # <option> in the availability <select> ('--- none selected ---').
+            # <option> in the availability <select> ('--- no change ---').
             none_selected = {
                 'milestone': milestone,
                 'availability': triggers.MilestoneTrigger.NONE_SELECTED,
@@ -965,6 +1004,27 @@ class MilestoneTriggerTestsMixin(TriggerTestsMixin):
         courses.Course.clear_named_course_setting_in_environ(
             constants.END_DATE_SETTING, env)
         course.save_settings(env)
+
+    def check_and_clear_milestone_course_setting(self, milestone, when,
+                                                 settings, cls):
+        setting_name = cls.MILESTONE_TO_SETTING.get(milestone)
+
+        # Confirm corresponding setting or property is now the POST 'when'.
+        self.assertEquals(
+            cls.retrieve_named_setting(setting_name, settings), when)
+
+        # Now remove that 'course:' setting, so the side-effects from act()
+        # invoked by run_availability_jobs below can be confirmed.
+        cls.clear_named_setting(setting_name, settings)
+        self.assertNotEquals(
+            cls.retrieve_named_setting(setting_name, settings), when)
+        self.assertEquals(
+            cls.retrieve_named_setting(setting_name, settings), None)
+
+        # Confirm log activity for SET and corresponding CLEARED.
+        logs = self.get_log()
+        self.set_named_logged(milestone, setting_name, when, cls, logs)
+        self.cleared_logged(milestone, setting_name, cls, logs)
 
     def run_availability_jobs(self, app_context):
         cron_job = availability_cron.UpdateAvailability(app_context)
@@ -1174,12 +1234,24 @@ class MilestoneTriggerTestBase(MilestoneTriggerTestsMixin, FunctionalTestBase):
         expected_triggers = self.create_triggers(
             cls=cls, availabilities=availabilities, milestones=milestones)
 
+        expected_settings = {}
+
         # Copy each encoded trigger in the expected_triggers into the
         # payload, so that they are distinct dict objects.
         for et in expected_triggers:
-            payload[et['milestone']] = [et.copy()]
+            m = et['milestone']
+            payload[m] = [et.copy()]
 
-        return payload, expected_triggers
+            # Some milestone triggers have a coresponding setting in the
+            # Course get_environ() 'course' dict. If such a mapping from
+            # trigger to setting exists, copy the 'when' date/time from the
+            # trigger into the Course setting.
+            setting = cls.MILESTONE_TO_SETTING.get(m)
+            when = et.get('when')
+            if setting and when:
+                expected_settings.setdefault('course', {})[setting] = when
+
+        return payload, expected_triggers, expected_settings
 
 
 class MilestoneTriggerTests(MilestoneTriggerTestBase):

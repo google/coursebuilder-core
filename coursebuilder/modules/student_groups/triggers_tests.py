@@ -56,19 +56,24 @@ class OverrideTriggerTestsMixin(object):
 
     def check_payload_into_student_group(self, cls, settings_name):
         """Checks payload_into_settings, from_payload, set_into_settings."""
-        payload, expected_triggers = self.create_payload_triggers(cls=cls,
+        payload, triggers, settings = self.create_payload_triggers(cls=cls,
             availabilities=cls.AVAILABILITY_VALUES)
+        properties = {settings_name: triggers}
+        # Course start/end date/time settings in the 'course' dict of the
+        # Course settings map to StudentGroupDTO properties of the same name.
+        for setting, when in settings.get('course', {}).iteritems():
+            properties[setting] = when
         expected_group = student_groups.StudentGroupDTO(
-            self.COURSE_NAME, {settings_name: expected_triggers})
+            self.COURSE_NAME, properties)
         the_dict = {}
         sg = student_groups.StudentGroupDTO(self.COURSE_NAME, the_dict)
         cls.payload_into_settings(payload, self.course, sg)
 
-        # Order should not matter, but the way the expected_triggers values
-        # are generated, for some trigger test classes, they are in fact in
+        # Order should not matter, but the way the triggers values are
+        # generated, for some trigger test classes, they are in fact in
         # a particular order (e.g. in KNOWN_MILESTONE order).
-        self.assertItemsEqual(expected_triggers, sg.get_triggers(settings_name))
-        self.assertItemsEqual(expected_triggers, the_dict[settings_name])
+        self.assertItemsEqual(triggers, sg.get_triggers(settings_name))
+        self.assertItemsEqual(triggers, the_dict[settings_name])
 
         # So, place the potentially non-ordered results in that order before
         # comparing nested structures that contain them.
@@ -79,8 +84,9 @@ class OverrideTriggerTestsMixin(object):
         self.assertEquals(expected_group.dict, sg.dict)
 
         # Absent from payload should remove from settings. Use student_group
-        # created above, since it will have contents to be removed.
-        cls.payload_into_settings({}, self.course, sg)
+        # created above, since it will have properties needing removal
+        # (start_date and end_date).
+        cls.payload_into_settings(self.empty_form, self.course, sg)
         # Property is always present in StudentGroupDTO, but as empty list.
         self.assertEquals({settings_name: []}, sg.dict)
         self.assertEquals([], sg.get_triggers(settings_name))

@@ -76,6 +76,7 @@ MILESTONE_TO_SETTING = {
     START_DATE_MILESTONE: START_DATE_SETTING,
     END_DATE_MILESTONE: END_DATE_SETTING,
 }
+SETTING_TO_MILESTONE = {s: m for m, s in MILESTONE_TO_SETTING.iteritems()}
 
 # MILESTONE_TO_SETTING.keys() is not simply used here because the order
 # of "Course Start" and "Course End" matter when they appear in the UI.

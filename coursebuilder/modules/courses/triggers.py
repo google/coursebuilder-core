@@ -955,7 +955,7 @@ class AvailabilityTrigger(DateTimeTrigger):
         parameter or the class DEFAULT_AVAILABILITY) is *not* validated.
         This allows for form default values like AVAILABILITY_NONE_SELECTED
         that must be supplied *to* a form via an entity, but must not be stored
-        *from* that form if still "none selected".
+        *from* that form if still "--- no change ---".
 
         Args:
             availability: an optional explicitly specified availability value;
@@ -1453,6 +1453,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     # Course milestones are currently the only known milestones.
     KNOWN_MILESTONES = list(constants.COURSE_MILESTONES)
     MILESTONE_TO_SETTING = constants.MILESTONE_TO_SETTING
+    SETTING_TO_MILESTONE = constants.SETTING_TO_MILESTONE
 
     ACT_HOOKS = {km: {} for km in KNOWN_MILESTONES}
 
@@ -1462,11 +1463,11 @@ class MilestoneTrigger(AvailabilityTrigger):
     SETTINGS_NAME = 'course_triggers'
 
     # Explicitly does *not* include the AVAILABILITY_NONE_SELECTED <option>
-    # value ('none', '--- none selected ---') from the form, even though that
+    # value ('none', '--- no change ---') from the form, even though that
     # is the DEFAULT_AVAILABILITY value used in the form <select>.
     AVAILABILITY_VALUES = availability_options.COURSE_VALUES
 
-    # ('none', '--- none selected ---') is the default form <option> in the
+    # ('none', '--- no change ---') is the default form <option> in the
     # course start/end availability <select> fields, but any milestone trigger
     # that did not have an actual (present in COURSE_VALUES) availability
     # selected will be discarded and not saved in the course settings.
@@ -1592,6 +1593,33 @@ class MilestoneTrigger(AvailabilityTrigger):
         return self.milestone and super(MilestoneTrigger, self).is_valid
 
     @classmethod
+    def _get_named_setting_env(cls, env, course=None):
+        """Determines which settings to alter when changing a named setting.
+
+        This method checks if an env dict was supplied and prefers it, if
+        present, since it may have pending settings changes that have not yet
+        been saved to the Course. For similar reasons, the env dict is not
+        saved to the course, since it may also be further modified elsewhere
+        before later being saved.
+
+        Args:
+            env: a Course get_environ() dict, returned if supplied (non-None).
+            course: (optional) a Course, whose app_context is passed to
+                get_environ() if env is None.
+
+        Returns:
+            A two-tuple:
+              1) env if it is not None; otherwise, use course (if supplied) to
+                 obtain a get_environ() dict.
+              2) False unless a get_environ() dict was obtained from course.
+        """
+        if (env is not None) or (not course):
+            return env, False
+
+        env = courses.Course.get_environ(course.app_context)
+        return env, (env is not None)
+
+    @classmethod
     def retrieve_named_setting(cls, setting_name, env, course=None):
         """Returns value of a named setting from settings or Course, or None.
 
@@ -1603,18 +1631,16 @@ class MilestoneTrigger(AvailabilityTrigger):
             course: (optional) a Course, consulted for the setting_name value
                 only if not found in env.
         """
-        # Check the get_environ() dict first if supplied, since it may have
-        # pending settings changes that have not yet been saved to the Course.
-        env = env if env is not None else {}
+
+        env, from_course = cls._get_named_setting_env(env, course=course)
         value = courses.Course.get_named_course_setting_from_environ(
             setting_name, env)
 
-        if (not value) and course:
-            # If a named setting was not found in supplied settings (or a
-            # get_environ() dict was not even supplied), attempt to obtain
-            # the same setting from the Course itself.
-            value = course.get_course_setting(setting_name)
-
+        where = 'course' if from_course else 'env'
+        milestone = cls.SETTING_TO_MILESTONE.get(setting_name)
+        milestone = '' if not milestone else milestone + ' '
+        logging.debug('RETRIEVED %s %s for %s%s trigger: %s',
+                      where, setting_name, milestone, cls.kind(), value)
         return value
 
     @classmethod
@@ -1653,12 +1679,8 @@ class MilestoneTrigger(AvailabilityTrigger):
             # value derived from settings, so exit early.
             return None
 
-        when = cls.retrieve_named_setting(
+        return cls.retrieve_named_setting(
             setting_name, settings, course=course)
-        if when:
-            logging.debug('RETRIEVED default %s %s from %s: %s',
-                          milestone, cls.kind(), setting_name, when)
-        return when
 
     @classmethod
     def encoded_defaults(cls, milestone=None, settings=None, course=None,
@@ -1789,7 +1811,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         lists_of_encoded_triggers = super(MilestoneTrigger, cls).for_form(
             settings).itervalues()
         flattened = [et for ets in lists_of_encoded_triggers for et in ets]
-        deduped = cls.dedupe_for_settings(flattened, course=course,
+        deduped, _ = cls.dedupe_for_settings(flattened, course=course,
             semantics=cls.SET_WILL_OVERWRITE)
         return dict([(m, [deduped[m]]) if m in deduped else
                      (m, [cls.encoded_defaults(
@@ -1810,7 +1832,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         Args:
             encoded_triggers: a list of course triggers (typically from encoded
                 form payload), in no particular order, and possibly including
-                invalid triggers (e.g. '--- none selected ---' availability,
+                invalid triggers (e.g. '--- no change ---' availability,
                 no 'when' date/time, etc.); any invalid triggers are omitted
                 from the returned dict.
             semantics: (optional) one of
@@ -1826,13 +1848,17 @@ class MilestoneTrigger(AvailabilityTrigger):
             course: (optional) passed, untouched, through to separate().
 
         Returns:
-            A dict containing (by definition) *at most* one unique trigger
-            for each of the KNOWN_MILESTONES, mapping each milestone to the
-            corresponding valid, encoded trigger (if one exists).
+            Returns a two-tuple of:
+            * A dict containing (by definition) *at most* one unique trigger
+              for each of the KNOWN_MILESTONES, mapping each milestone to the
+              corresponding valid, encoded trigger (if one exists).
+            * The Separated namedtuple returned by separate().
+
         """
         semantics = cls.check_set_semantics(semantics)
+        separated = cls.separate(encoded_triggers, course)
         deduped = {et[MilestoneTrigger.FIELD_NAME]: et
-                   for et in cls.separate(encoded_triggers, course).encoded}
+                   for et in separated.encoded}
 
         if settings and (semantics == cls.SET_WILL_MERGE):
             # When calling to set settings for multiple courses all at once,
@@ -1852,7 +1878,143 @@ class MilestoneTrigger(AvailabilityTrigger):
             # set_into_settings() will call clear_from_settings() as expected.
             deduped = current
 
-        return deduped
+        return deduped, separated
+
+    @classmethod
+    def clear_named_setting(cls, setting_name, env, course=None):
+        """Removes a named setting from settings or the Course.
+
+        Args:
+            setting_name: a Course get_environ() 'course' dict key for a
+                setting to remove from env or the Course.
+            env: a Course get_environ() dict to update *in place* by removing
+                the setting_name key and value from the 'course' dict.
+            course: (optional) a Course used to remove the named setting if
+                env was not supplied.
+        """
+        env, from_course = cls._get_named_setting_env(env, course=course)
+        if env is not None:
+            courses.Course.clear_named_course_setting_in_environ(
+                setting_name, env)
+            if from_course and course:
+                course.save_settings(env)
+                action = 'SAVED CLEARED'
+            else:
+                action = 'CLEARED'
+
+            milestone = cls.SETTING_TO_MILESTONE.get(setting_name)
+            milestone = '' if not milestone else milestone + ' '
+            logging.debug(
+                '%s %s due to %s%s trigger missing value.',
+                action, setting_name, milestone, cls.kind())
+
+    @classmethod
+    def set_named_setting(cls, setting_name, value, env, course=None):
+        """Sets the value of a named setting into settings or the Course.
+
+        Args:
+            setting_name: a Course get_environ() 'course' dict key for a
+                setting to update in env or the Course.
+            value: a value for setting_name; if None, the setting will be
+                cleared from env of the Course, if possible.
+            env: a Course get_environ() dict to update *in place* the value of
+                the setting_name key in the 'course' dict.
+            course: (optional) a Course used to set the value of the named
+                setting if env was not supplied.
+        """
+        if value:
+            env, from_course = cls._get_named_setting_env(env, course=course)
+            if env is not None:
+                courses.Course.set_named_course_setting_in_environ(
+                    setting_name, env, value)
+                if from_course and course:
+                    course.save_settings(env)
+                    action = 'SAVED SET'
+                else:
+                    action = 'SET'
+
+                milestone = cls.SETTING_TO_MILESTONE.get(setting_name)
+                milestone = '' if not milestone else milestone + ' '
+                logging.debug(
+                    '%s %s obtained from %s%s trigger to: %s.',
+                    action, setting_name, milestone, cls.kind(), value)
+        else:
+            cls.clear_named_setting(setting_name, env, course=course)
+
+    @classmethod
+    def set_default_when_into_settings(cls, milestone, when, settings,
+                                       setting_name=None, course=None):
+        if not setting_name:
+            setting_name = cls.MILESTONE_TO_SETTING.get(milestone)
+
+        if not setting_name:
+            # If there is no mapping from milestone (e.g. 'course_start')
+            # to settings name (e.g. a 'start_date' Course get_environ()
+            # 'course' dict key or StudentGroupDTO property name), then
+            # there is no corresponding `when` value in the settings, so
+            # exit early.
+            return None
+
+        if (not settings) and (not course):
+            # If no Course or settings (e.g. a Course get_environ() dict or a
+            # StudentGroupDTO) were provided, there is no place to set a `when`
+            # value into the settings, so exit early.
+            return None
+
+        cls.set_named_setting(setting_name, when, settings, course=course)
+
+    @classmethod
+    def set_multiple_whens_into_settings(cls, encoded_triggers, settings,
+                                         remaining=None, course=None):
+        """Set valid 'when' values from encoded triggers into settings.
+
+        Args:
+            encoded_triggers: a list of encoded course milestone triggers from
+                which valid 'when' values corresponding to Course settings or
+                student group properties (e.g. start_date for a course_start
+                trigger) are extracted.
+            settings: subclass-specific settings (e.g. a Course get_environ()
+                dict, or StudentGroupDTO for student_groups trigger subclasses)
+                containing settings that correspond to milestones (e.g.
+                milestone 'course_start' to 'course:start_date') that are
+                potentially updated *in-place*.
+            remaining: (optional) a milestone to setting mapping that is
+                destructively updated *in place*, removing each mapping for
+                which a setting value has been successfully set; initialized
+                to a copy of MILESTONE_TO_SETTING by default.
+            course: (optional) see set_named_setting().
+
+        Returns:
+            THe updated `remaining` dict, with milestone to setting mappings
+            removed for each successful stored setting value. Callers should
+            pass this dict from set_multiple_whens_into_settings() calls to
+            subsequent calls.
+        """
+        if remaining is None:
+            remaining = cls.MILESTONE_TO_SETTING.copy()
+
+        if not remaining:
+            # All known milestones accounted for, so nothing left to do.
+            return remaining
+
+        for et in encoded_triggers:
+            milestone = et.get(cls.FIELD_NAME)  # 'milestone'
+            if not milestone:
+                continue  # Malformed MilestoneTrigger?
+            setting_name = remaining.get(milestone)
+            if not setting_name:
+                continue  # No setting name (remaining) for that milestone.
+            when = et.get(DateTimeTrigger.FIELD_NAME)  # 'when'
+            if when:
+                when = cls.validate_when(when)  # datetime if valid, or None.
+                if when:
+                    when = cls.encode_when(when)  # Re-encode to UTC ISO-8601.
+            when = when if when else None  # Collapse False values to None.
+            remaining.pop(milestone, None)
+            cls.set_default_when_into_settings(milestone, when,
+                settings, setting_name=setting_name, course=course)
+
+        return remaining
 
     @classmethod
     def set_into_settings(cls, encoded_triggers, settings,
@@ -1869,7 +2031,7 @@ class MilestoneTrigger(AvailabilityTrigger):
 
         For example, milestone triggers coming from the form payload that have
         no 'when' datetime (because the user pressed the [Clear] button) or
-        have 'none' availability (the user selected the '--- none selected ---'
+        have 'none' availability (the user selected the '--- no change ---'
         value) are discarded and thus omitted from the milestone triggers to be
         stored in the settings. Those two user actions are perfectly valid ways
         to "deactivate" a milestone trigger.
@@ -1883,12 +2045,12 @@ class MilestoneTrigger(AvailabilityTrigger):
         Args:
             encoded_triggers: a list of course triggers (typically encoded
                 form payload), in no particular order, and possibly including
-                invalid triggers (e.g. '--- none selected ---' availability,
+                invalid triggers (e.g. '--- no change ---' availability,
                 no 'when' date/time, etc.); any invalid triggers are omitted.
             settings: a Course get_environ() dict containing settings that
                 correspond to milestones (e.g. milestone 'course_start' to
-                'course:start_date', see constants.MILESTONE_TO_SETTING) and
-                are potentially updated *in-place*. The base class also updates
+                'course:start_date', see MILESTONE_TO_SETTING) and are
+                potentially updated *in-place*. The base class also updates
                 the dict *in place* with new encoded_triggers.
             semantics: one of
                 SET_WILL_OVERWITE -- De-duped, valid course milestone triggers
@@ -1899,10 +2061,26 @@ class MilestoneTrigger(AvailabilityTrigger):
                     encoded_triggers is instead merged with the existing
                     SETTINGS_NAME values.
             course: (optional) passed, untouched, to dedupe_for_settings(),
-                base class set_into_settings(), and through to separate().
+                set_multiple_whens_into_settings(), the base class
+                set_into_settings(), and through to separate().
         """
-        deduped = cls.dedupe_for_settings(encoded_triggers,
+        deduped, separated = cls.dedupe_for_settings(encoded_triggers,
             semantics=semantics, settings=settings, course=course)
+
+        # Any encoded triggers in the deduped dict are valid, so copy their
+        # 'when' date/time to the corresponding 'course' setting, if there is
+        # one.
+        remaining = cls.set_multiple_whens_into_settings(
+            deduped.itervalues(), settings, course=course)
+
+        # If not all of the known milestone triggers have been accounted for,
+        # next check the encoded "invalid" triggers split out by separate().
+        # Some may have a valid 'when' value (triggers with a "default"
+        # availability would be separated out as invalid, even if the 'when'
+        # field was valid) that needs to be saved into the settings.
+        cls.set_multiple_whens_into_settings(
+            separated.invalid, settings, remaining=remaining, course=course)
+
         super(MilestoneTrigger, cls).set_into_settings(deduped.values(),
             settings, semantics=cls.SET_WILL_OVERWRITE, course=course)
 
@@ -1972,8 +2150,10 @@ class MilestoneTrigger(AvailabilityTrigger):
                 potentially updated *in-place* by act() and then passed to
                 ACT_HOOKS callbacks.
         """
+        changed = None
         current = courses.Course.get_course_availability_from_environ(env)
         new = self.availability
+        hooks_to_run = self.ACT_HOOKS.get(self.milestone, {})
 
         if current != new:
             courses.Course.set_course_availability_into_environ(new, env)
@@ -1982,9 +2162,12 @@ class MilestoneTrigger(AvailabilityTrigger):
                 self.kind(), current, new,
                 availability_options.option_to_title(self.milestone),
                 utils.get_ns_name_for_logging(course=course), self.logged)
-        else:
-            changed = None
+        elif hooks_to_run:
+            old_when = self.get_default_when_from_settings(
+                self.milestone, env, course=course)
+            new_when = self.encoded_when
+            if old_when != new_when:
+                changed = self.ChangedByAct(old_when, new_when)
 
-        utils.run_hooks(self.ACT_HOOKS.get(self.milestone, {}).itervalues(),
-                        self, changed, course, env)
+        utils.run_hooks(hooks_to_run.itervalues(), self, changed, course, env)
         return changed

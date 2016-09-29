@@ -18,6 +18,7 @@ __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 
 import collections
 import copy
+import logging
 import re
 import urlparse
 
@@ -659,6 +660,8 @@ Element = collections.namedtuple('Element',
 class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
                         triggers_tests.MilestoneTriggerTestsMixin,
                         actions.TestBase):
+
+    LOG_LEVEL = logging.DEBUG
 
     COURSE_NAME = 'availability_tests'
     ADMIN_EMAIL = 'admin@foo.com'
@@ -2356,6 +2359,15 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
         posted_settings = app_context.get_environ()
         self.assertEquals(all_cts, self.TCT.in_settings(posted_settings))
 
+        # Check then remove start_date setting, so the act() side-effects can
+        # also be confirmed, after run_availability_jobs.
+        logs = self.get_log()
+        self.check_and_clear_milestone_course_setting('course_start',
+            self.past_start_text, posted_settings, self.TMT)
+
+        self.set_named_logged('course_end', 'end_date',
+            self.future_end_text, self.TMT, logs)
+
         # The bad milestone (course start/end) triggers are 'SKIPPED' and
         # discarded before ever being written into the course settings. Only
         # two milestone triggers, a single course_start trigger and a single
@@ -2529,6 +2541,8 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
 class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
                                actions.TestBase):
 
+    LOG_LEVEL = logging.DEBUG
+
     ADMIN_EMAIL = 'admin@example.com'
 
     COURSE_NAME = 'course_start_end_dates_test'
@@ -2587,6 +2601,12 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         self.assertEquals(self.only_course_start, self.TMT.for_form(
             start_posted_env, course=self.course))
 
+        # Check then remove start_date setting, so the act() side-effects can
+        # also be confirmed, after run_availability_jobs.
+        logs = self.get_log()
+        self.check_and_clear_milestone_course_setting('course_start',
+            self.past_start_text, start_posted_env, self.TMT)
+
         # Start trigger is now in course settings, so act on it in cron job.
         self.run_availability_jobs(app_context)
 
@@ -2594,21 +2614,20 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         # thus the value of 'start_date' stored in 'course' settings will
         # changed, provide the 'when' value for the expected default
         # course_start trigger in only_course_end and defaults_only.
-        start_settings = courses.Course.get_environ(app_context)
+        start_cron_env = courses.Course.get_environ(app_context)
         when_start = self.TMT.encoded_defaults(
             availability=self.TMT.NONE_SELECTED, milestone='course_start',
-            settings=start_settings, course=self.course)
+            settings=start_cron_env, course=self.course)
 
         logs = self.get_log()
         self.retrieve_logged('course_start', 'start_date',
             self.past_start_text, self.TMT, logs)
-        self.assertEquals(self.past_start_text, when_start['when'])
+        self.assertEquals(self.past_start_text, when_start.get('when'))
         self.defaults_start = when_start
         self.defaults_only['course_start'][0] = when_start
         self.only_course_end['course_start'][0] = when_start
 
         # Confirm that update_start_date_from_course_start_when() was run.
-        start_cron_env = app_context.get_environ()
 
         # POSTed course_start `when` ended up as the 'start_date' in the
         # course settings. 'end_date' should still be undefined.
@@ -2625,6 +2644,12 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         response = self._post(self.only_early_end)
         self.assertEquals(200, response.status_int)
         end_posted_env = app_context.get_environ()
+
+        # Check then remove end_date setting, so the act() side-effects can
+        # also be confirmed, after run_availability_jobs.
+        logs = self.get_log()
+        self.check_and_clear_milestone_course_setting('course_end',
+            self.an_earlier_end_hour_text, end_posted_env, self.TMT)
 
         # Just the one course_end trigger was POSTed into course settings.
         self.assertEquals(len(self.TMT.copy_from_settings(end_posted_env)), 1)
