@@ -36,7 +36,9 @@
     <p>
       <em>
         {# I18N: Instructions for a student being asked to do a review. #}
-        {{ gettext('All reviews are due by %(review_due_date)s.', review_due_date=review_due_date) }}
+        {% if review_due_date %}
+          {{ gettext('All reviews are due by %(review_due_date)s.', review_due_date=review_due_date) }}
+        {% endif %}
 
         {% if review_min_count == 1 %}
           {# I18N: Instructions for a student being asked to do a review. #}

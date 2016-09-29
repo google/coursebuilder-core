@@ -657,8 +657,11 @@ class ReviewDashboardHandler(utils.BaseHandler):
             self.template_value['review_due_date'] = review_due_date.strftime(
                 utils.HUMAN_READABLE_DATETIME_FORMAT)
 
-        time_now = datetime.datetime.now()
-        self.template_value['due_date_exceeded'] = (time_now > review_due_date)
+            time_now = datetime.datetime.now()
+            self.template_value['due_date_exceeded'] = (
+                time_now > review_due_date)
+        else:
+            self.template_value['due_date_exceeded'] = False
 
     def get(self):
         """Handles GET requests."""
