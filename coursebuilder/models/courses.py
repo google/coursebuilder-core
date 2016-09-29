@@ -2723,8 +2723,7 @@ class Course(object):
             description=services.help_urls.make_learn_more_message(
                 messages.REGISTRATION_SEND_WELCOME_EMAIL,
                 'course:send_welcome_notifications'),
-            extra_schema_dict_values={'_type': 'url', 'showMsg': True},
-            optional=True))
+            extra_schema_dict_values={'showMsg': True}, optional=True))
         opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_sender',
             'Email Sender', 'string', optional=True,
