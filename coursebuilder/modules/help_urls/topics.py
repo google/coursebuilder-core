@@ -73,7 +73,10 @@ _ALL = [
      '#content-availability'),
     ('course:availability:shown_when_unavailable',
      '/publish-a-course/availability.html'
-     '#content-availability'),
+     '#shown-when-private'),
+    ('course:availability:triggers',
+     '/publish-a-course/availability.html'
+     '#calendar-triggers'),
     ('course:can_record_student_events',
      '/create-a-course/course-settings.html'
      '#enable-student-analytics'),

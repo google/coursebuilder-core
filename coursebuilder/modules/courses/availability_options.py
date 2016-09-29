@@ -55,12 +55,12 @@ COURSE_VALUES = courses.COURSE_AVAILABILITY_VALUES
 COURSE_DEFAULT = courses.COURSE_AVAILABILITY_PRIVATE
 
 AVAILABILITY_NONE_SELECTED = 'none'
-NONE_SELECTED_TITLE = '--- no change ---'
+NONE_SELECTED_TITLE = '--- change availability to ---'
 NONE_SELECTED_OPTION = (AVAILABILITY_NONE_SELECTED, NONE_SELECTED_TITLE)
 
-# Adds a '--- no change ---' choice to the existing "Course Availability"
-# options on the "Publish > Availability" page (currently 'private',
-# 'registration_required', 'registration_optional', and 'public').
+# Adds a '--- change availability to ---' choice to the existing "Course
+# Availability" options on the "Publish > Availability" page (currently
+# 'private', 'registration_required', 'registration_optional', and 'public').
 COURSE_WITH_NONE_SELECT_DATA = [
     NONE_SELECTED_OPTION,
 ] + COURSE_SELECT_DATA

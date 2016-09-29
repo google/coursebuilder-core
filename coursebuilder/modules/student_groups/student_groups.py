@@ -1250,7 +1250,8 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
 
         for milestone in courses_constants.COURSE_MILESTONES:
             group_settings.add_property(cls._arh.get_milestone_array_schema(
-                milestone, trigger_cls=CourseOverrideTrigger,
+                milestone, messages.MILESTONE_TRIGGER_DESC_FMT,
+                trigger_cls=CourseOverrideTrigger,
                 scope_css=cls._STUDENT_GROUP_SCOPE_CSS,
                 avail_select=COURSE_AVAILABILITY_WITH_NONE_SELECT_DATA))
 
@@ -1268,10 +1269,15 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
                 'wrapperClassName': cls._MEMBERS_WRAPPER_CSS}))
 
         content_trigger = cls._arh.get_content_trigger_schema(
-            course, avail_select=ELEMENT_AVAILABILITY_SELECT_DATA)
+            course,
+            messages.CONTENT_TRIGGER_RESOURCE_DESCRIPTION,
+            messages.CONTENT_TRIGGER_WHEN_DESCRIPTION,
+            messages.CONTENT_TRIGGER_AVAIL_DESCRIPTION,
+            avail_select=ELEMENT_AVAILABILITY_SELECT_DATA)
         group_settings.add_property(
             cls._arh.get_content_trigger_array_schema(
                 ContentOverrideTrigger, content_trigger,
+                messages.CONTENT_TRIGGERS_DESCRIPTION,
                 scope_css=cls._STUDENT_GROUP_SCOPE_CSS))
 
         # Select dropdown which determines whether we show the form elements

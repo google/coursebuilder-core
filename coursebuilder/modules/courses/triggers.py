@@ -955,7 +955,7 @@ class AvailabilityTrigger(DateTimeTrigger):
         parameter or the class DEFAULT_AVAILABILITY) is *not* validated.
         This allows for form default values like AVAILABILITY_NONE_SELECTED
         that must be supplied *to* a form via an entity, but must not be stored
-        *from* that form if still "--- no change ---".
+        *from* that form if still "change availability to".
 
         Args:
             availability: an optional explicitly specified availability value;
@@ -1463,14 +1463,15 @@ class MilestoneTrigger(AvailabilityTrigger):
     SETTINGS_NAME = 'course_triggers'
 
     # Explicitly does *not* include the AVAILABILITY_NONE_SELECTED <option>
-    # value ('none', '--- no change ---') from the form, even though that
-    # is the DEFAULT_AVAILABILITY value used in the form <select>.
+    # value ('none', '--- change availability to ---') from the form, even
+    # though that is the DEFAULT_AVAILABILITY value used in the form <select>.
     AVAILABILITY_VALUES = availability_options.COURSE_VALUES
 
-    # ('none', '--- no change ---') is the default form <option> in the
-    # course start/end availability <select> fields, but any milestone trigger
-    # that did not have an actual (present in COURSE_VALUES) availability
-    # selected will be discarded and not saved in the course settings.
+    # ('none', '--- change availability to ---') is the default form <option>
+    # in the course start/end availability <select> fields, but any milestone
+    # trigger that did not have an actual (present in COURSE_VALUES)
+    # availability selected will be discarded and not saved in the course
+    # settings.
     NONE_SELECTED = availability_options.AVAILABILITY_NONE_SELECTED
     DEFAULT_AVAILABILITY = NONE_SELECTED
 
@@ -1832,9 +1833,9 @@ class MilestoneTrigger(AvailabilityTrigger):
         Args:
             encoded_triggers: a list of course triggers (typically from encoded
                 form payload), in no particular order, and possibly including
-                invalid triggers (e.g. '--- no change ---' availability,
-                no 'when' date/time, etc.); any invalid triggers are omitted
-                from the returned dict.
+                invalid triggers (e.g. '--- change availability to ---'
+                availability, no 'when' date/time, etc.); any invalid triggers
+                are omitted from the returned dict.
             semantics: (optional) one of
                 SET_WILL_OVERWITE -- (default behavior) Only unique, valid
                     course milestone triggers extracted from the supplied
@@ -2031,10 +2032,11 @@ class MilestoneTrigger(AvailabilityTrigger):
 
         For example, milestone triggers coming from the form payload that have
         no 'when' datetime (because the user pressed the [Clear] button) or
-        have 'none' availability (the user selected the '--- no change ---'
-        value) are discarded and thus omitted from the milestone triggers to be
-        stored in the settings. Those two user actions are perfectly valid ways
-        to "deactivate" a milestone trigger.
+        have 'none' availability (the user selected the
+        '--- change availability to ---' value) are discarded and thus omitted
+        from the milestone triggers to be stored in the settings. Those two
+        user actions are perfectly valid ways to "deactivate" a milestone
+        trigger.
 
         The remaining valid, still-encoded triggers are then de-duped,
         retaining only the last (in the order it occurred in the supplied
@@ -2045,8 +2047,9 @@ class MilestoneTrigger(AvailabilityTrigger):
         Args:
             encoded_triggers: a list of course triggers (typically encoded
                 form payload), in no particular order, and possibly including
-                invalid triggers (e.g. '--- no change ---' availability,
-                no 'when' date/time, etc.); any invalid triggers are omitted.
+                invalid triggers (e.g. '--- change availability to ---'
+                availability, no 'when' date/time, etc.); any invalid triggers
+                are omitted.
             settings: a Course get_environ() dict containing settings that
                 correspond to milestones (e.g. milestone 'course_start' to
                 'course:start_date', see MILESTONE_TO_SETTING) and are
@@ -2063,6 +2066,7 @@ class MilestoneTrigger(AvailabilityTrigger):
             course: (optional) passed, untouched, to dedupe_for_settings(),
                 set_multiple_whens_into_settings(), the base class
                 set_into_settings(), and through to separate().
+
         """
         deduped, separated = cls.dedupe_for_settings(encoded_triggers,
             semantics=semantics, settings=settings, course=course)

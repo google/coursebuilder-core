@@ -35,9 +35,12 @@ to individual groups.""")
         'dashboard?action=availability', 'availability page'))
 
 GROUP_MEMBERS_DESCRIPTION = """
-A list of email addresses of students.  Student emails may be assigned to
-groups before they are registered for the course.  Separate email addresses
-with any combination of commas, spaces, tabs or newlines."""
+The email addresses of students in this group.
+Student emails may be assigned to groups before they are registered for the
+course.  Separate email addresses with any combination of commas, spaces,
+tabs or newlines.
+Each student may only be in one group.
+"""
 
 EDIT_STUDENT_GROUPS_PERMISSION_DESCRIPTION = """
 Allows creation, deletion, and modification of membership in groups of students.
@@ -83,3 +86,35 @@ AVAILABILITY_FOR_PICKER_MESSAGE = (
 'Availability can be set for the course as a whole and overridden for '
 ) + str(safe_dom.assemble_link(
   "dashboard?action=edit_student_groups", "specific groups of students."))
+
+MILESTONE_TRIGGER_DESC_FMT = """
+This is the course {milestone} date used in the course explorer.
+
+If you specify an availability in the dropdown, the course will be
+scheduled to update to that availability at this date and hour (UTC).
+
+To cancel the scheduled update, click the "Clear" button and select the
+first option in the dropdown.
+
+This only impacts students who are members of the currently selected group.
+"""
+
+CONTENT_TRIGGERS_DESCRIPTION = """
+Changes to availability that are triggered at a specified date and time for
+students in this group.
+"""
+
+CONTENT_TRIGGER_RESOURCE_DESCRIPTION = """
+The course content, such as unit or lesson, for which to change the
+availability for students in this group.
+"""
+
+CONTENT_TRIGGER_WHEN_DESCRIPTION = """
+The date and hour (UTC) when the availability of the resource will be changed
+for students in this group.
+"""
+
+CONTENT_TRIGGER_AVAIL_DESCRIPTION = """
+The availability of the course resource will change to this value after the
+trigger date and time for students in this group.
+"""

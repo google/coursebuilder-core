@@ -26,12 +26,13 @@ course.
 """
 
 COURSE_ESTIMATED_WORKLOAD_DESCRIPTION = """
-Estimate the amount of work this course will take, e.g. "10hrs".  This is
-displayed in the course explorer.
+This is displayed on the course explorer page and can be an indication of
+the length of the course (e.g., 10 hours).
 """
 
 COURSE_CATEGORY_DESCRIPTION = """
-Course subject area, shown in the Course Explorer.  For example, "Biology".
+Students may filter courses by category on the course explorer page
+(e.g., Biology).
 """
 
 SITE_LOGO_DESCRIPTION = """
@@ -43,4 +44,8 @@ COURSE_INCLUDE_IN_EXPLORER_DESCRIPTION = """
 When true, the course is eligible to be included in the Course Explorer,
 subject to the course's availability settings.  When false, the course
 is never shown in the Course Explorer, regardless of availability.
+"""
+
+EXTRA_CONTENT_DESCRIPTION = """
+This HTML content is displayed at the top of the course explorer page.
 """

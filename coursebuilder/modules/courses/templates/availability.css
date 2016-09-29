@@ -160,6 +160,7 @@
 /* Cap width of "...on this date & UTC hour:" field. */
 .availability-manager .course-trigger .when {
   width: 300px;
+  margin-top: -7px;
 }
 
 /*

@@ -96,8 +96,7 @@ def schema_provider(unused_course):
 
     group.add_property(schema_fields.SchemaField(
         'extra_content', 'Extra Content', 'html',
-        description=
-            'HTML content that will be added to the course explorer page',
+        description=messages.EXTRA_CONTENT_DESCRIPTION,
         i18n=False,
         optional=True,
     ))

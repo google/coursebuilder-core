@@ -968,7 +968,8 @@ class MilestoneTriggerTestsMixin(TriggerTestsMixin):
             bad_triggers[milestone].append(no_avail)
 
             # A milestone trigger that results from selecting the 'none'
-            # <option> in the availability <select> ('--- no change ---').
+            # <option> in the availability <select>
+            # ('--- change availability to ---').
             none_selected = {
                 'milestone': milestone,
                 'availability': triggers.MilestoneTrigger.NONE_SELECTED,

@@ -148,31 +148,22 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             extra_schema_dict_values={
                 'className': trigger_cls.registry_css()})
         milestone_trigger.add_property(schema_fields.SchemaField(
-            'milestone', '', 'string', i18n=False, hidden=True,
+            'milestone', None, 'string', i18n=False, hidden=True,
             extra_schema_dict_values={
                 'className': trigger_cls.milestone_css()}))
-
-        ms_text = availability_options.option_to_text(milestone)
-        title = 'At {}, on this date & UTC hour:'.format(ms_text)
-        desc = messages.MILESTONE_TRIGGER_WHEN_DESC_FMT.format(
-            ms_text, ms_text)
         milestone_trigger.add_property(schema_fields.SchemaField(
-            cls.DATETIME_FIELD, title, 'datetime', description=desc,
+            cls.DATETIME_FIELD, None, 'datetime',
             i18n=False, optional=True, extra_schema_dict_values={
                 'className': trigger_cls.when_css()}))
-
-        title = 'Change {} availability to:'.format(milestone.split('_')[0])
-        desc = messages.MILESTONE_TRIGGER_AVAIL_DESC_FMT.format(
-            ms_text, availability_options.NONE_SELECTED_TITLE, ms_text)
         milestone_trigger.add_property(schema_fields.SchemaField(
-            cls.AVAILABILITY_FIELD, title, 'string', description=desc,
+            cls.AVAILABILITY_FIELD, None, 'string',
             i18n=False, optional=True,
             select_data=avail_select, extra_schema_dict_values={
                 'className': trigger_cls.availability_css()}))
         return milestone_trigger
 
     @classmethod
-    def get_milestone_array_schema(cls, milestone, trigger_cls=None,
+    def get_milestone_array_schema(cls, milestone, desc_fmt, trigger_cls=None,
                                    scope_css=None, avail_select=None):
         title = availability_options.option_to_title(milestone)
 
@@ -190,8 +181,10 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         classname = trigger_cls.array_css(extra_css=extra_css)
         wrapper_classname = trigger_cls.array_wrapper_css(
             extra_css=extra_css)
+        ms_text = availability_options.option_to_text(milestone)
+        desc = desc_fmt.format(milestone=ms_text)
         return schema_fields.FieldArray(
-            milestone, title, item_type=item_type, optional=True,
+            milestone, title, desc, item_type=item_type, optional=True,
             extra_schema_dict_values={
                 'className': classname,
                 'wrapperClassName': wrapper_classname})
@@ -250,7 +243,13 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
                 'wrapperClassName': wrapper_classname})
 
     @classmethod
-    def get_content_trigger_schema(cls, course, avail_select=None):
+    def get_content_trigger_schema(
+        cls, course,
+        content_trigger_resource_description,
+        content_trigger_when_description,
+        content_trigger_avail_description,
+        avail_select=None):
+
         tct = triggers.ContentTrigger
         content_trigger = schema_fields.FieldRegistry('Trigger',
             description='Date/Time Triggered Availability Change',
@@ -258,13 +257,13 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
                 'className': tct.registry_css()})
         content_trigger.add_property(schema_fields.SchemaField(
             cls.CONTENT_FIELD, 'For course content:', 'string',
-            description=messages.CONTENT_TRIGGER_RESOURCE_DESCRIPTION,
+            description=content_trigger_resource_description,
             i18n=False, select_data=cls.content_select(course).items(),
             extra_schema_dict_values={
                 'className': tct.content_css()}))
         content_trigger.add_property(schema_fields.SchemaField(
             cls.DATETIME_FIELD, 'At this date & UTC hour:', 'datetime',
-            description=messages.CONTENT_TRIGGER_WHEN_DESCRIPTION,
+            description=content_trigger_when_description,
             i18n=False, extra_schema_dict_values={
                 'className': tct.when_css()}))
         if avail_select is None:
@@ -272,7 +271,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
         title = 'Change {} to:'.format(tct.kind())
         content_trigger.add_property(schema_fields.SchemaField(
             cls.AVAILABILITY_FIELD, title, 'string',
-            description=messages.CONTENT_TRIGGER_AVAIL_DESCRIPTION,
+            description=content_trigger_avail_description,
             i18n=False, select_data=avail_select,
             extra_schema_dict_values={
                 'className': tct.availability_css()}))
@@ -280,6 +279,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
 
     @classmethod
     def get_content_trigger_array_schema(cls, trigger_cls, item_type,
+                                         content_triggers_description,
                                          scope_css=None):
         if scope_css is None:
             scope_css = cls._COURSE_WIDE_SCOPE_CSS
@@ -289,7 +289,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             'Change Course Content Availability at Date/Time',
             item_type=item_type, optional=True,
             description=services.help_urls.make_learn_more_message(
-                messages.CONTENT_TRIGGERS_DESCRIPTION,
+                content_triggers_description,
                 messages.CONTENT_TRIGGERS_LEARN_MORE),
             extra_schema_dict_values={
                 'className': trigger_cls.array_css(),
@@ -314,7 +314,7 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
 
         for milestone in constants.COURSE_MILESTONES:
             course_wide_settings.add_property(cls.get_milestone_array_schema(
-                milestone))
+                milestone, messages.MILESTONE_TRIGGER_DESC_FMT))
 
         element_settings = cls.get_course_wide_element_schema()
         course_wide_settings.add_property(
@@ -326,10 +326,15 @@ class AvailabilityRESTHandler(utils.BaseRESTHandler):
             i18n=False, optional=True, extra_schema_dict_values={
                 'wrapperClassName': cls._WHITELIST_WRAPPER_CSS}))
 
-        content_trigger = cls.get_content_trigger_schema(course)
+        content_trigger = cls.get_content_trigger_schema(
+            course,
+            messages.CONTENT_TRIGGER_RESOURCE_DESCRIPTION,
+            messages.CONTENT_TRIGGER_WHEN_DESCRIPTION,
+            messages.CONTENT_TRIGGER_AVAIL_DESCRIPTION)
         course_wide_settings.add_property(
             cls.get_content_trigger_array_schema(
-                triggers.ContentTrigger, content_trigger))
+                triggers.ContentTrigger, content_trigger,
+                messages.CONTENT_TRIGGERS_DESCRIPTION))
         return course_wide_settings
 
     @classmethod

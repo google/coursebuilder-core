@@ -41,19 +41,14 @@ resources marked with "Course" availability.
 
 MILESTONE_TRIGGERS_LEARN_MORE = 'course:availability:milestones'
 
-MILESTONE_TRIGGER_WHEN_DESC_FMT = """
-The date and hour (UTC) at {} when overall course availability will be changed.
+MILESTONE_TRIGGER_DESC_FMT = """
+This is the {milestone} date used in the course explorer.
 
-Clear this date and time and save the form to remove the course-wide
-availability change scheduled for the {}.
-"""
+If you specify an availability in the dropdown, the course will be
+scheduled to update to that availability at this date and hour (UTC).
 
-MILESTONE_TRIGGER_AVAIL_DESC_FMT = """
-The overall course availability will change to this value after the {} date
-and time, affecting any course resources marked with "Course" availability.
-
-Choose '{}' and save the form to remove the course-wide availability change
-scheduled for the {}.
+To cancel the scheduled update, click the "Clear" button and select the
+first option in the dropdown.
 """
 
 AVAILABILITY_SHOWN_WHEN_UNAVAILABLE_DESCRIPTION = """
@@ -69,7 +64,7 @@ CONTENT_TRIGGERS_LEARN_MORE = 'course:availability:triggers'
 
 CONTENT_TRIGGER_RESOURCE_DESCRIPTION = """
 The course content, such as unit or lesson, for which to change the
-availability to students.
+availability.
 """
 
 CONTENT_TRIGGER_AVAIL_DESCRIPTION = """
