@@ -49,13 +49,22 @@ for i in $( seq 0 $(( ${#args[@]} - 1)) ); do
   if [[ ${args[$i]:0:1} != '-' ]] ; then
     # If first character of the $i'th argument is not a hyphen, treat it as
     # the name of the App Engine instance.
-    application="--application=${args[$i]}"
+    app_name="${args[$i]}"
+    application="--application=$app_name"
+
   else
     # First char is a hyphen; append to a list of arguments passed through to
     # appcfg.py
     passthrough_args+=(${args[$i]})
   fi
 done
+
+if [ -z "$app_name" ] ; then
+  app_name=$(
+    egrep '^application:\s+' "$SOURCE_DIR/app.yaml" | \
+    head -1 | \
+    sed -e 's/^application:\s*//' -e 's/\s.*//' )
+fi
 
 python "$GOOGLE_APP_ENGINE_HOME/appcfg.py" \
   $application \
@@ -66,4 +75,7 @@ python "$GOOGLE_APP_ENGINE_HOME/appcfg.py" \
 echo ""
 echo ""
 echo ""
-echo "Deployment complete."
+echo "Deployment to  https://$app_name.appspot.com  complete"
+echo ""
+echo ""
+echo ""
