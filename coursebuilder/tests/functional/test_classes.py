@@ -6490,6 +6490,43 @@ class ImportGiftQuestionsTests(DatastoreBackedCourseTest):
         assert_equals(response.status_int, 200)
         assert_contains('gift group', response.body)
 
+        with Namespace(self.namespace):
+            questions = models.QuestionDAO.get_all()
+            self.assertEquals(2, len(questions))
+            question_groups = models.QuestionGroupDAO.get_all()
+            self.assertEquals(1, len(question_groups))
+            question_ids = [
+                item['question'] for item in question_groups[0].items]
+            for question in questions:
+                self.assertIn(str(question.id), question_ids)
+
+    def test_import_gift_no_description(self):
+        email = 'gift@google.com'
+        actions.login(email, is_admin=True)
+        response = self.get('dashboard?action=import_gift_questions')
+        assert_equals(200, response.status_int)
+        assert_contains('GIFT Questions', response.body)
+
+        # put import gift questions
+        payload_dict = {
+            'description': '',
+            'questions':
+                '::title mc::q1? {=c ~w}\n\n ::title: true/false:: q2? {T}'}
+        request = {}
+        request['payload'] = transforms.dumps(payload_dict)
+        request[
+            'xsrf_token'] = XsrfTokenManager.create_xsrf_token(
+            'import-gift-questions')
+        response = self.testapp.put('/rest/question/gift?%s' % urllib.urlencode(
+            {'request': transforms.dumps(request)}), {})
+        assert_equals(response.status_int, 200)
+
+        with Namespace(self.namespace):
+            questions = models.QuestionDAO.get_all()
+            self.assertEquals(2, len(questions))
+            question_groups = models.QuestionGroupDAO.get_all()
+            self.assertEquals(0, len(question_groups))
+
 
 class NamespaceTest(actions.TestBase):
 

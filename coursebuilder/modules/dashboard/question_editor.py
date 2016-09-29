@@ -302,7 +302,8 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
         gift_questions.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         gift_questions.add_property(schema_fields.SchemaField(
-            'description', 'Group Description', 'string', optional=True,
+            'description', 'Question Group Description', 'string',
+            optional=True,
             description=messages.GIFT_GROUP_DESCRIPTION_DESCRIPTION,
             extra_schema_dict_values={'className': 'gift-description'}))
         gift_questions.add_property(schema_fields.SchemaField(
@@ -376,12 +377,14 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
             questions = gift.GiftParser.parse_questions(
                 python_dict['questions'])
             self.validate_question_descriptions(questions, errors)
-            self.validate_group_description(
-                python_dict['description'], errors)
+            description = python_dict['description']
+            if description:
+                self.validate_group_description(description, errors)
             if not errors:
                 dtos = self.convert_to_dtos(questions)
                 question_ids = models.QuestionDAO.save_all(dtos)
-                self.create_group(python_dict['description'], question_ids)
+                if description:
+                    self.create_group(description, question_ids)
         except ValueError as e:
             errors.append(str(e))
         except gift.ParseError as e:

@@ -42,8 +42,7 @@ This is the description of this track.
 """
 
 GIFT_GROUP_DESCRIPTION_DESCRIPTION = """
-This is the description of the question group created for the imported
-questions.
+If provided, the GIFT questions will be added to a new group with this name.
 """
 
 GIFT_QUESTIONS_DESCRIPTION = """
