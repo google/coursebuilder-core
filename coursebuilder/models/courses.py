@@ -1901,8 +1901,7 @@ class CourseModel13(object):
 
             # prepare all the dtos for the questions in the assignment content
             question_dtos = QuestionImporter.build_question_dtos(
-                assessment, 'Imported from assessment "%s" (question #%s)',
-                dst_unit, errors)
+                assessment, '%s - Question #%s', dst_unit, errors)
             if question_dtos is None:
                 return False
 
@@ -1916,8 +1915,7 @@ class CourseModel13(object):
                 if review_dict.get('preamble'):
                     html_review_form.append(review_dict['preamble'])
                     review_dtos = QuestionImporter.build_question_dtos(
-                        review_dict,
-                        'Imported from assessment "%s" (review question #%s)',
+                        review_dict, '%s - Review question #%s',
                         dst_unit, errors)
                     if review_dtos is None:
                         return False

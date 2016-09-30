@@ -6111,8 +6111,21 @@ class ImportAssessmentTests(DatastoreBackedCourseTest):
             src_course.get_assessment_filename(a1.unit_id)))
         assert assessment_content == assessment_content_stored
 
-        # import course
-        dst_course.import_from(src_app_ctx, errors)
+        # Prepares a post-save hook to test imported questions.
+        def TmpQuestionDAOPostSaveHook(dtos):
+            self.assertEqual(
+                dtos[0].description,
+                'Assessment content version 12 - Question #1')
+        try:
+            # Temporarily adds the test post-save hook.
+            models.QuestionDAO.POST_SAVE_HOOKS.append(
+                TmpQuestionDAOPostSaveHook)
+            # import course
+            dst_course.import_from(src_app_ctx, errors)
+        finally:
+            # Cleans up post-save hooks.
+            models.QuestionDAO.POST_SAVE_HOOKS.remove(
+                TmpQuestionDAOPostSaveHook)
 
         # assert old-style assessment has been ported to a new-style one
         dst_a1 = dst_course.get_units()[0]
