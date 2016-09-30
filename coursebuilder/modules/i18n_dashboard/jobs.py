@@ -65,8 +65,7 @@ class _BaseJob(etl_lib.CourseJob):
             '--suppress_memcache', type=bool, default=True,
             help='Suppress using memcache when looking up objects.  This '
             'is to work around a known issue with Memcache and DB relating '
-            'to old-style protocol buffers.  See '
-            'https://code.google.com/p/googleappengine/issues/detail?id=7876 '
+            'to old-style protocol buffers.  '
             'It\'s also a good idea in general; since this job will touch '
             'many, many objects in an unusual pattern, it\'s worthwhile to '
             'not spam all of these objects into the memcache.'

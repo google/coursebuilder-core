@@ -2456,7 +2456,7 @@ new gweb.analytics.AutoTrack({profile:"UA-12481063-1"});
             A lesson is a coherent and relatively small chunk of information. In Power Searching
             with Google, we chose to create each lesson as one video and a text version of the same
             content. Your lessons do not have to have both parts. For more information, see
-            <a href="//code.google.com/p/course-builder/wiki/CreateLessons">Create Lessons</a>.
+            <a href="https://www.google.com/edu/openonline/course-builder/docs/1.10/create-a-course/add-elements/lessons/lessons.html">Create Lessons</a>.
           </p>
           <p>
             An activity is an ungraded assessment, used to provide feedback to students on how well
@@ -2506,20 +2506,6 @@ new gweb.analytics.AutoTrack({profile:"UA-12481063-1"});
             diagrams together and speak to each other. If your course is small enough, this is a
             great way to go. If your course is large, you may still consider having your students
             break into small groups for interactive activities with each other over Hangouts.
-          </p>
-          <p>
-            If your course has many more than 10 students, you can use a combination of Hangouts on
-            Air and Google Moderator to create a live experience with your students. With a
-            <a href="//code.google.com/p/course-builder/wiki/OnlineOfficeHours#Setting_up_a_Hangout_On_Air">
-            Google Hangout on Air</a>, you can post a live session with your instructors and any
-            guests you chose. You post the Hangout on Air to your YouTube channel and to your
-            Google+ stream. Students cannot talk to you in real-time, but they can ask you
-            questions through the use of a Google Moderator series, or by posting comments to the
-            Moderator stream, YouTube stream, or Google+ stream. You can use a <a href=
-            "https://code.google.com/p/course-builder/wiki/OnlineOfficeHours#Setting_up_a_Google_Moderator_series">
-            Google Moderator series</a> to collect questions from your students and have them vote
-            those questions up and down; the collecting can either be done in advance, during the
-            Hangout on Air, or both.
           </p>
           <p>
             <strong>Tip:</strong> If you do a Hangout on Air, consider using a live captioning
@@ -2662,7 +2648,7 @@ new gweb.analytics.AutoTrack({profile:"UA-12481063-1"});
         </p>
         <ul>
           <li>
-            <a href="//code.google.com/p/course-builder/wiki/WebForums">Google Groups or other web
+            <a href="https://www.google.com/edu/openonline/course-builder/docs/1.10/prepare-for-students/forum.html">Google Groups or other web
             forum</a><br>
             A web forum is a great way to get your students to talk to each other. To facilitate
             discussion, you can set up your forum with appropriate categories, to guide students to
@@ -2674,7 +2660,7 @@ new gweb.analytics.AutoTrack({profile:"UA-12481063-1"});
             students.
           </li>
           <li>
-            <a href="//code.google.com/p/course-builder/wiki/Announcements">Google+ page or
+            <a href="https://www.google.com/edu/openonline/course-builder/docs/1.10/meet-course-builder/student-facing-site.html#announcements-tab">Google+ page or
             blog</a><br>
             Use Google+ or your blog to share information that you want available to not just your
             students, but to other people as well. While students can comment on your posts, these
@@ -2682,15 +2668,13 @@ new gweb.analytics.AutoTrack({profile:"UA-12481063-1"});
             students.
           </li>
           <li>
-            <a href="//www.google.com/+/learnmore/hangouts/">Google Hangout</a><br>
+            <a href="https://www.google.com/edu/openonline/course-builder/docs/1.10/create-a-course/add-elements/links.html#online-office-hours">Google Hangout</a><br>
             You may decide that you want your students to divide into smaller groups to work on
             projects together. Your students probably live in distributed areas. You can have them
             meet in a Google Hangout to collaborate on their project.
           </li>
           <li>
-            <a href=
-            "https://code.google.com/p/course-builder/wiki/CreateEmailList">Announcements-only
-            email alias</a><br>
+            <a href="https://www.google.com/edu/openonline/course-builder/docs/1.10/prepare-for-students/invitations.html">Announcements-only email alias</a><br>
             Throughout the course, you may want to send email to students, such as to remind them
             of upcoming events.
           </li>
@@ -2706,14 +2690,14 @@ new gweb.analytics.AutoTrack({profile:"UA-12481063-1"});
         <p>
           Of course, as with any class there are various administrative aspects to creating an
           online course. Two of the major ones are <a href=
-          "//code.google.com/p/course-builder/wiki/CreateRegistration">managing student
+          "https://www.google.com/edu/openonline/course-builder/docs/1.10/prepare-for-students/invitations.html">managing student
           registration</a> and <a href=
-          "//code.google.com/p/course-builder/wiki/MeasureEfficacy">collecting and analyzing data
+          "https://www.google.com/edu/openonline/course-builder/docs/1.10/prepare-for-students/registration.html">collecting and analyzing data
           to see how well your course does</a>.
         </p>
         <p>
           For a full list of tasks needed to create a course, see the <a href=
-          "//code.google.com/p/course-builder/wiki/CourseBuilderChecklist">Course Builder
+          "https://www.google.com/edu/openonline/course-builder/docs/1.10/create-a-course/create-a-course.html">Course Builder
           Checklist</a>.
         </p>
       </div>
@@ -2784,7 +2768,6 @@ SAMPLE_HTML_DOC_DECOMPOSE = [
     'For online office hours you have a fixed date and time when the course staff broadcasts\n            a session for students to watch and interact with.',
     'If you have a very small course (fewer than 10 people), you can use a Google Hangout\n            for your session. If you have more than 10 people, you can use a combination of Google\n            Hangouts on Air and Google Moderator instead.',
     u'A <a#1>Google Hangout</a#1> is a video chat\n            that can have up to 10 participants. In a Google Hangout, all participants can share\n            what\u2019s on each person&#39;s screen, collaborate in Google Docs, view presentations and\n            diagrams together and speak to each other. If your course is small enough, this is a\n            great way to go. If your course is large, you may still consider having your students\n            break into small groups for interactive activities with each other over Hangouts.',
-    'If your course has many more than 10 students, you can use a combination of Hangouts on\n            Air and Google Moderator to create a live experience with your students. With a\n            <a#1>\n            Google Hangout on Air</a#1>, you can post a live session with your instructors and any\n            guests you chose. You post the Hangout on Air to your YouTube channel and to your\n            Google+ stream. Students cannot talk to you in real-time, but they can ask you\n            questions through the use of a Google Moderator series, or by posting comments to the\n            Moderator stream, YouTube stream, or Google+ stream. You can use a <a#2>\n            Google Moderator series</a#2> to collect questions from your students and have them vote\n            those questions up and down; the collecting can either be done in advance, during the\n            Hangout on Air, or both.',
     '<strong#1>Tip:</strong#1> If you do a Hangout on Air, consider using a live captioning\n            service to help students who are hearing impaired or whose primary language is not the\n            language used in the Hangout on Air.',
     'For all of these unit types, instructors make course content available to students at\n          scheduled intervals throughout the course. Once available, the content continues to be\n          available until the course ends. That is, lessons are not available for only a few days;\n          students can go back and redo lessons at any time throughout the course. In <a#1>Power Searching with Google</a#1>, soon after\n          online office hours took place, the course staff posted a video of it. So even if\n          students missed the office hours, that material was still available.',
     'Releasing course content at scheduled intervals has one perhaps unanticipated benefit.\n          Many students tend to work on content relatively soon after the content becomes\n          available. For that reason, questions about course material tend to cluster near the\n          release of that material. Because other students are thinking about the same material,\n          they are more likely to be interested in getting involved in discussions about the\n          material or in answering questions.',

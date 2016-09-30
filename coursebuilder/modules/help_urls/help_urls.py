@@ -59,7 +59,6 @@ _BASE_URL = 'https://www.google.com/edu/openonline/course-builder/docs'
 # Legacy documentation URL. Fall through to this whenever an item is in
 # topics._ALL but its value is topics._DEFAULT.
 # TODO(johncox): remove this once topics._ALL is fully populated.
-_DEFAULT_URL = 'https://code.google.com/p/course-builder/wiki/Dashboard'
 _LOG = logging.getLogger('modules.help_urls.help_urls')
 logging.basicConfig()
 _REDIRECT_HANDLER_URL = '/modules/help_urls/redirect'

@@ -25,10 +25,10 @@ to
 
 Additionally, you must:
 
-1. Visit https://code.google.com/apis/console. Click on API Access and create a
-   client id for your web app with redirect URI set to:
+1. Visit https://appengine.google.com  Click on API Access and create a
+   client id for your web app with redirect URI set to either appspot
 
-   https://<appid>.appspot|googleplex.com/<callback_uri>
+   https://<appid>.appspot.com/<callback_uri>
 
    and optionally include
 
@@ -42,7 +42,7 @@ Additionally, you must:
 2. Once you've created the client id, click Download JSON. Take the file you get
    and overwrite client_secrets.json in this directory.
 
-3. In https://code.google.com/apis/console, click on Services and enable the
+3. In the https://appengine.google.com console, click on Services and enable the
    services your app requires. For these demos, you'll need to enable Drive API
    and Google+.
 
@@ -52,9 +52,8 @@ this at https://accounts.google.com/b/0/IssuedAuthSubTokens.
 You can find a list of the available APIs at
 http://api-python-client-doc.appspot.com/.
 
-Finally, a note about dependencies. Oauth2 requires google-api-python-client,
-which you can find at https://code.google.com/p/google-api-python-client/. We
-bundle version 1.4 with Course Builder, along with its dependencies.
+Finally, a note about dependencies. Oauth2 requires google-api-python-client.
+We bundle version 1.4 with Course Builder, along with its dependencies.
 
 Good luck!
 """
@@ -75,7 +74,7 @@ from common import safe_dom
 from models import custom_modules
 
 # In real life we'd check in a blank file and set up the code to error with a
-# message pointing people to https://code.google.com/apis/console.
+# message pointing people to https://appengine.google.com
 _CLIENTSECRETS_JSON_PATH = os.path.join(
     os.path.dirname(__file__), 'client_secrets.json')
 _TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), 'templates')
