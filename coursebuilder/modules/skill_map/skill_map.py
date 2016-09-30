@@ -818,7 +818,7 @@ class SkillMap(caching.RequestScopedSingleton):
             co_set = set(successors.keys()) - reduce(
                 set.union, successors.values(), set())
         if successors:  # There is unvisited nodes -> there is a cycle.
-            return None
+            return []
         else:
             return ret
 
