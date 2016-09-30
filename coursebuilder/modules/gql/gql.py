@@ -438,12 +438,14 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
         return Enrollment(self.get_student(self.app_context))
 
     def resolve_abstract(self, args, info):
-        return courses.Course.get_named_course_setting_from_environ(
+        abstract = courses.Course.get_named_course_setting_from_environ(
             'blurb', self.course_environ)
+        return self.expand_tags(abstract, info)
 
     def resolve_instructor_details(self, args, info):
-        return courses.Course.get_named_course_setting_from_environ(
+        details = courses.Course.get_named_course_setting_from_environ(
             'instructor_details', self.course_environ)
+        return self.expand_tags(details, info)
 
     def resolve_url(self, args, info):
         return self.app_context.get_slug()

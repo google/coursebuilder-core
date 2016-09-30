@@ -367,6 +367,38 @@ class CourseSettingsTests(GraphQLTreeTests):
                 'errors': [],
             })
 
+    def test_markup_in_abstract(self):
+        with actions.OverriddenEnvironment(
+            {'course': {'blurb':
+                        '<gcb-markdown instanceid="j7UKhedk1arY">\n'
+                        'foo\n'
+                        '# bar\n'
+                        '### baz\n'
+                        '</gcb-markdown>'}}):
+            response = self.get_response(
+                '{course (id: "%s") { abstract } }' % self.course_id)
+            self.assertEquals(
+                response['data']['course']['abstract'],
+                '<div><link href="/modules/core_tags/_static/css/markdown.css" '
+                'rel="stylesheet"/></div><div><div class="gcb-markdown">'
+                '<p>foo</p>\n<h1>bar</h1>\n<h3>baz</h3></div></div><div></div>')
+
+    def test_markup_in_instructor_details(self):
+        with actions.OverriddenEnvironment(
+            {'course': {'instructor_details':
+                        '<gcb-markdown instanceid="j7UKhedk1arY">\n'
+                        'foo\n'
+                        '# bar\n'
+                        '### baz\n'
+                        '</gcb-markdown>'}}):
+            response = self.get_response(
+                '{course (id: "%s") { instructorDetails } }' % self.course_id)
+            self.assertEquals(
+                response['data']['course']['instructorDetails'],
+                '<div><link href="/modules/core_tags/_static/css/markdown.css" '
+                'rel="stylesheet"/></div><div><div class="gcb-markdown">'
+                '<p>foo</p>\n<h1>bar</h1>\n<h3>baz</h3></div></div><div></div>')
+
 
 class CourseTests(GraphQLTreeTests):
 
