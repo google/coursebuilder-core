@@ -1658,7 +1658,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             if users.is_current_user_admin():
                 text += diagnose_services().sanitized
             response.status_int = 404
-            response.text = text
+            response.out.write(text)
             return
 
         # Give the person seeing this page a little information and present
@@ -1699,19 +1699,18 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             text += diagnose_services().sanitized
 
         response.status_int = 404
-        response.text = text
-
+        response.out.write(text)
 
     @classmethod
     def _5xx_handler(cls, request, response, status_code):
-        """Generic 5xx error handler for users."""
+        """Generic 5xx error handler."""
         text = u'Server error. HTTP status code: %s.' % status_code
 
         if users.is_current_user_admin():
             text += diagnose_services().sanitized
 
         response.status_int = status_code
-        response.text = text
+        response.out.write(text)
 
     def _error_404(self, path):
         """Fail with 404."""
