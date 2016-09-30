@@ -1676,8 +1676,9 @@ class AdminAspectTest(actions.TestBase):
 
         # Check normal user has no access.
         actions.login(email)
-        response = self.testapp.get('/modules/admin?action=console')
-        assert_equals(response.status_int, 302)
+        response = self.testapp.get(
+            '/modules/admin?action=console', expect_errors=True)
+        assert_equals(response.status_int, 403)
 
         response = self.testapp.post('/modules/admin?action=console')
         assert_equals(response.status_int, 302)
@@ -1710,7 +1711,7 @@ class AdminAspectTest(actions.TestBase):
         modules.admin.admin.DIRECT_CODE_EXECUTION_UI_ENABLED = False
 
         actions.login(email, is_admin=True)
-        self.testapp.get('/modules/admin?action=console', status=302)
+        self.testapp.get('/modules/admin?action=console', status=403)
         self.testapp.post('/modules/admin?action=console_run', status=302)
 
     def test_non_admin_has_no_access(self):
@@ -1727,12 +1728,14 @@ class AdminAspectTest(actions.TestBase):
         prop.put()
 
         # Check user has no access to specific pages and actions.
-        response = self.testapp.get('/modules/admin?action=settings')
-        assert_equals(response.status_int, 302)
+        response = self.testapp.get(
+            '/modules/admin?action=settings', expect_errors=True)
+        assert_equals(response.status_int, 403)
 
         response = self.testapp.get(
-            '/modules/admin?action=config_edit&name=gcb_admin_user_emails')
-        assert_equals(response.status_int, 302)
+            '/modules/admin?action=config_edit&name=gcb_admin_user_emails',
+            expect_errors=True)
+        assert_equals(response.status_int, 403)
 
         response = self.testapp.post(
             '/modules/admin?action=config_reset&name=gcb_admin_user_emails')
@@ -1816,8 +1819,9 @@ class AdminAspectTest(actions.TestBase):
         del os.environ['gcb_admin_user_emails']
 
         # Check user has no access.
-        response = self.testapp.get('/modules/admin?action=settings')
-        assert_equals(response.status_int, 302)
+        response = self.testapp.get('/modules/admin?action=settings',
+                                    expect_errors=True)
+        assert_equals(response.status_int, 403)
 
     def test_access_to_admin_pages(self):
         """Test access to admin pages."""
@@ -1852,8 +1856,9 @@ class AdminAspectTest(actions.TestBase):
         # assert not-admin user has no access
         actions.login(email)
         actions.register(self, name)
-        response = self.testapp.get('/modules/admin?action=settings')
-        assert_equals(response.status_int, 302)
+        response = self.testapp.get('/modules/admin?action=settings',
+                                    expect_errors=True)
+        assert_equals(response.status_int, 403)
 
     def test_multiple_courses(self):
         """Test courses admin page with two courses configured."""

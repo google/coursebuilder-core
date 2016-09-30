@@ -158,7 +158,9 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
             node_list.append(paragraph)
 
             self.response.write(node_list.sanitized)
+            self.response.set_status(403)
             return
+
         super(WelcomeHandler, self).get()
 
     def post(self):
@@ -1044,15 +1046,27 @@ class GlobalAdminHandler(
             destination = self.URL
 
         user = users.get_current_user()
+        login_url = users.create_login_url(destination)
         if not user:
-            self.redirect(users.create_login_url(destination), normalize=False)
+            self.redirect(login_url, normalize=False)
             return
         if not can_view_admin_action(action):
-            if appengine_config.PRODUCTION_MODE:
-                self.error(403)
-            else:
-                self.redirect(
-                    users.create_login_url(destination), normalize=False)
+            node_list = safe_dom.NodeList().append(
+                safe_dom.Element('p').add_text(
+                   'The current user has insufficient rights ' +
+                    'to access this page.'))
+
+            paragraph = safe_dom.Element('p').add_text('Go to the ')
+            paragraph.append(safe_dom.A(href=login_url).add_text('Login page'))
+            paragraph.add_text(
+                ' to log in as an administrator, or go back to the ')
+            paragraph.append(safe_dom.A(href='/').add_text('Home page'))
+            paragraph.add_text('.')
+            node_list.append(paragraph)
+
+            self.response.write(node_list.sanitized)
+            self.response.set_status(403)
+
             return
 
         if action not in self._custom_get_actions:

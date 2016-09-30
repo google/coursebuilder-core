@@ -142,7 +142,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.ImportActivityTests': 7,
     'tests.functional.test_classes.ImportAssessmentTests': 3,
     'tests.functional.test_classes.ImportGiftQuestionsTests': 2,
-    'tests.functional.test_classes.WSGIRoutingTest': 6,
+    'tests.functional.test_classes.WSGIRoutingTest': 7,
     'tests.functional.unit_assessment.UnitPartialUpdateTests': 5,
     'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 18,
     'tests.functional.unit_description.UnitDescriptionsTest': 1,

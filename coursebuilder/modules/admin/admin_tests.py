@@ -87,8 +87,9 @@ class AdminDashboardTabTests(actions.TestBase):
     def test_admin_welcome_shows_redirects_for_non_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=False)
 
-        response = self.get('/admin/welcome')
+        response = self.get('/admin/welcome', expect_errors=True)
 
+        self.assertEqual(response.status_int, 403)
         self.assertIsNotNone(
             re.search('<a.*>Login page</a>', response.text))
         self.assertIsNotNone(
