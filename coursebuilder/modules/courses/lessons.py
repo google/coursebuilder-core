@@ -739,7 +739,7 @@ class ReviewDashboardHandler(utils.BaseHandler):
         # Check that the review due date has not passed.
         time_now = datetime.datetime.now()
         review_due_date = unit.workflow.get_review_due_date()
-        if time_now > review_due_date:
+        if review_due_date and time_now > review_due_date:
             self.template_value['error_code'] = (
                 'cannot_request_review_after_deadline')
             self.render('error.html')
@@ -850,9 +850,10 @@ class ReviewHandler(utils.BaseHandler):
         time_now = datetime.datetime.now()
         show_readonly_review = (
             review_step.state == domain.REVIEW_STATE_COMPLETED or
-            time_now > review_due_date)
+            (review_due_date and time_now > review_due_date))
 
-        self.template_value['due_date_exceeded'] = (time_now > review_due_date)
+        self.template_value['due_date_exceeded'] = bool(
+            review_due_date and time_now > review_due_date)
 
         if show_readonly_review:
             configure_readonly_review(unit, rev)
@@ -949,7 +950,7 @@ class ReviewHandler(utils.BaseHandler):
         # Check that the review due date has not passed.
         time_now = datetime.datetime.now()
         review_due_date = unit.workflow.get_review_due_date()
-        if time_now > review_due_date:
+        if review_due_date and time_now > review_due_date:
             self.template_value['time_now'] = time_now.strftime(
                 utils.HUMAN_READABLE_DATETIME_FORMAT)
             self.template_value['review_due_date'] = (
