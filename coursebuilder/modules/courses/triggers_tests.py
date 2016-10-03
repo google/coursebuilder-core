@@ -763,7 +763,8 @@ class ContentTriggerTests(ContentTriggerTestBase):
 
     def test_when_css(self):
         self.assertEquals(
-            'when inputEx-required gcb-datetime inputEx-fieldWrapper',
+            'when inputEx-required gcb-datetime '
+            'inputEx-fieldWrapper gcb-utc-datetime',
             self.TCT.when_css())
 
     def test_content_css(self):
