@@ -278,7 +278,7 @@ class DateTimeTriggerTests(UnitTestBase):
 
     def test_when_css(self):
         self.assertEquals(
-            'when gcb-datetime inputEx-fieldWrapper',
+            'when gcb-datetime inputEx-fieldWrapper gcb-utc-datetime',
             self.TDTT.when_css())
 
     def test_validate(self):
