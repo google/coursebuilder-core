@@ -1287,7 +1287,8 @@ class MilestoneTriggerTests(MilestoneTriggerTestBase):
 
     def test_when_css(self):
         self.assertEquals(
-            'when inputEx-Field gcb-datetime inputEx-fieldWrapper',
+            'when inputEx-Field gcb-datetime '
+            'inputEx-fieldWrapper gcb-utc-datetime',
             self.TMT.when_css())
 
     def test_milestone_css(self):
