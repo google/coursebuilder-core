@@ -56,6 +56,9 @@ for i in $( seq 0 $(( ${#args[@]} - 1)) ); do
     # First char is a hyphen; append to a list of arguments passed through to
     # appcfg.py
     passthrough_args+=(${args[$i]})
+    if [[ "${args[$i]:0:14}" == "--application=" ]] ; then
+      app_name="${args[$i]:14}"
+    fi
   fi
 done
 
