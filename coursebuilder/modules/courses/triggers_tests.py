@@ -103,6 +103,32 @@ class TriggerTestsMixin(object):
                                          unused_trigger_cls, **unused_kwargs):
         return triggers_list
 
+    REGISTRY_CSS_CLASSES = [
+        'inputEx-Group', 'inputEx-valid', 'inputEx-ListField-subFieldEl']
+
+    def check_registry_css(self, cls):
+        self.assertItemsEqual(self.REGISTRY_CSS_CLASSES,
+                              cls.registry_css().split())
+
+    ARRAY_CSS_CLASSES = ['inputEx-Field', 'inputEx-ListField']
+
+    def check_array_css(self, cls):
+        self.assertItemsEqual(self.ARRAY_CSS_CLASSES,
+                              cls.array_css().split())
+
+    WRAPPER_CSS_CLASSES = ['section-with-heading', 'inputEx-fieldWrapper']
+
+    def check_array_wrapper_css(self, cls):
+        self.assertItemsEqual(self.WRAPPER_CSS_CLASSES,
+                              cls.array_wrapper_css().split())
+
+    WHEN_CSS_CLASSES = [
+        'when', 'gcb-datetime', 'inputEx-fieldWrapper', 'gcb-utc-datetime']
+
+    def check_when_css(self, cls):
+        self.assertItemsEqual(self.WHEN_CSS_CLASSES,
+                              cls.when_css().split())
+
     def check_validate(self, encoded, props, validator):
         """Used by trigger test classes to test validate methods."""
         expected_unused = dict(
@@ -277,9 +303,7 @@ class DateTimeTriggerTests(UnitTestBase):
         self.assertEquals(expected_logged, dtt.logged)
 
     def test_when_css(self):
-        self.assertEquals(
-            'when gcb-datetime inputEx-fieldWrapper gcb-utc-datetime',
-            self.TDTT.when_css())
+        self.check_when_css(self.TDTT)
 
     def test_validate(self):
         """Tests validate_when and validate."""
@@ -746,26 +770,29 @@ class ContentTriggerTests(ContentTriggerTestBase):
     def settings_css(self):
         self.assertEquals('content-triggers', self.TCT.settings_css())
 
+    REGISTRY_CSS_CLASSES = DateTimeTriggerTests.REGISTRY_CSS_CLASSES  + [
+        'content-trigger']
+
     def test_registry_css(self):
-        self.assertEquals('content-trigger inputEx-Group inputEx-valid ' +
-                          'inputEx-ListField-subFieldEl',
-            self.TCT.registry_css())
+        self.check_registry_css(self.TCT)
+
+    ARRAY_CSS_CLASSES = DateTimeTriggerTests.ARRAY_CSS_CLASSES + [
+        'content-triggers']
 
     def test_array_css(self):
-        self.assertEquals(
-            'content-triggers inputEx-Field inputEx-ListField',
-            self.TCT.array_css())
+        self.check_array_css(self.TCT)
+
+    WRAPPER_CSS_CLASSES = DateTimeTriggerTests.WRAPPER_CSS_CLASSES + [
+        'content-triggers']
 
     def test_array_wrapper_css(self):
-        self.assertEquals(
-            'content-triggers section-with-heading inputEx-fieldWrapper',
-            self.TCT.array_wrapper_css())
+        self.check_array_wrapper_css(self.TCT)
+
+    WHEN_CSS_CLASSES = DateTimeTriggerTests.WHEN_CSS_CLASSES + [
+        'inputEx-required']
 
     def test_when_css(self):
-        self.assertEquals(
-            'when inputEx-required gcb-datetime '
-            'inputEx-fieldWrapper gcb-utc-datetime',
-            self.TCT.when_css())
+        self.check_when_css(self.TCT)
 
     def test_content_css(self):
         self.assertEquals('content gcb-select inputEx-Field',
@@ -1270,26 +1297,28 @@ class MilestoneTriggerTests(MilestoneTriggerTestBase):
     def settings_css(self):
         self.assertEquals('course-triggers', self.TMT.settings_css())
 
+    REGISTRY_CSS_CLASSES = DateTimeTriggerTests.REGISTRY_CSS_CLASSES  + [
+        'course-trigger']
+
     def test_registry_css(self):
-        self.assertEquals('course-trigger inputEx-Group inputEx-valid ' +
-                          'inputEx-ListField-subFieldEl',
-            self.TMT.registry_css())
+        self.check_registry_css(self.TMT)
+
+    ARRAY_CSS_CLASSES = DateTimeTriggerTests.ARRAY_CSS_CLASSES + [
+        'course-triggers']
 
     def test_array_css(self):
-        self.assertEquals(
-            'course-triggers inputEx-Field inputEx-ListField',
-            self.TMT.array_css())
+        self.check_array_css(self.TMT)
+
+    WRAPPER_CSS_CLASSES = ['course-triggers', 'inputEx-fieldWrapper']
 
     def test_array_wrapper_css(self):
-        self.assertEquals(
-            'course-triggers inputEx-fieldWrapper',
-            self.TMT.array_wrapper_css())
+        self.check_array_wrapper_css(self.TMT)
+
+    WHEN_CSS_CLASSES = DateTimeTriggerTests.WHEN_CSS_CLASSES + [
+        'inputEx-Field']
 
     def test_when_css(self):
-        self.assertEquals(
-            'when inputEx-Field gcb-datetime '
-            'inputEx-fieldWrapper gcb-utc-datetime',
-            self.TMT.when_css())
+        self.check_when_css(self.TMT)
 
     def test_milestone_css(self):
         self.assertEquals('milestone', self.TMT.milestone_css())
