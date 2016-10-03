@@ -170,7 +170,7 @@ class DateTimeTrigger(object):
         classes = [cls.settings_css(), cls.ARRAY_WRAPPER_CSS] + extra_css
         return ' '.join(classes)
 
-    DATETIME_CSS = 'gcb-datetime inputEx-fieldWrapper'
+    DATETIME_CSS = 'gcb-datetime inputEx-fieldWrapper gcb-utc-datetime'
 
     @classmethod
     def when_css(cls, extra_css=None):
