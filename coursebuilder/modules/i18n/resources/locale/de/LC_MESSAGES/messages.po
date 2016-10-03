@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-26 09:02-0700\n"
-"PO-Revision-Date: 2016-09-26 09:03-0700\n"
+"POT-Creation-Date: 2016-10-03 08:08-0700\n"
+"PO-Revision-Date: 2016-10-03 08:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: de <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -101,7 +101,7 @@ msgstr " Bitte aktivieren Sie JavaScript, um diese Frage benoten zu können. "
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:44
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:45
 #: experimental/coursebuilder/views/macros.html:22
-#: experimental/coursebuilder/views/review_dashboard.html:58
+#: experimental/coursebuilder/views/review_dashboard.html:60
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
 msgstr "Abgeschlossen"
@@ -959,13 +959,13 @@ msgstr "Erneut abonnieren"
 
 #. Error message for failed student file upload.
 #. The selected file was empty.
-#: experimental/coursebuilder/modules/upload/upload.py:83
+#: experimental/coursebuilder/modules/upload/upload.py:90
 msgid "File is empty."
 msgstr "Datei ist leer."
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
-#: experimental/coursebuilder/modules/upload/upload.py:95
+#: experimental/coursebuilder/modules/upload/upload.py:102
 msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
@@ -975,14 +975,14 @@ msgstr ""
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
-#: experimental/coursebuilder/modules/upload/upload.py:103
+#: experimental/coursebuilder/modules/upload/upload.py:110
 msgid "File too large, only files smaller than 1MB are allowed."
 msgstr "Datei zu groß, nur Dateien mit weniger als 1 MB sind zulässig."
 
 #. Error message for failed student file upload.
 #. Generic upload error.
-#: experimental/coursebuilder/modules/upload/upload.py:110
-msgid "Unable to save student submission; error :"
+#: experimental/coursebuilder/modules/upload/upload.py:117
+msgid "Unable to save student submission."
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -1016,13 +1016,15 @@ msgstr "Zurück zur vorherigen Seite"
 
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
-#: experimental/coursebuilder/modules/upload/templates/result.html:23
-msgid ""
-"Go back and try again. If the problem persists, contact your "
-"administrator."
+#: experimental/coursebuilder/modules/upload/templates/result.html:25
+msgid "Go back and try again."
 msgstr ""
-"Bitte gehen Sie zurück und versuchen Sie es erneut. Wenn das Problem "
-"weiterhin besteht, kontaktieren Sie Ihren Administrator."
+
+#. Text after the link to take the user back to the previous page so they can
+#. try submitting again.
+#: experimental/coursebuilder/modules/upload/templates/result.html:28
+msgid "If the problem persists, contact your administrator."
+msgstr ""
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1458,13 +1460,13 @@ msgid "The due date for submitting reviews has passed."
 msgstr "Das Abgabedatum für Bewertungen ist verstrichen."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:39
+#: experimental/coursebuilder/views/review_dashboard.html:40
 #, python-format
 msgid "All reviews are due by %(review_due_date)s."
 msgstr "Alle Bewertungen müssen bis %(review_due_date)s abgegeben werden."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:43
+#: experimental/coursebuilder/views/review_dashboard.html:45
 msgid ""
 "In order to earn credit for this assignment, you must complete at least 1"
 " review by then."
@@ -1473,7 +1475,7 @@ msgstr ""
 "Bewertung ab."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:46
+#: experimental/coursebuilder/views/review_dashboard.html:48
 #, python-format
 msgid ""
 "In order to earn credit for this assignment, you must complete at least "
@@ -1483,30 +1485,30 @@ msgstr ""
 "%(review_min_count)d Bewertungen ab."
 
 #. An item in a list of assignments.
-#: experimental/coursebuilder/views/review_dashboard.html:55
+#: experimental/coursebuilder/views/review_dashboard.html:57
 #, python-format
 msgid "Assignment %(index)s"
 msgstr "Aufgabe %(index)s"
 
 #. Text shown after an assignment whose review is still in draft state.
-#: experimental/coursebuilder/views/review_dashboard.html:61
+#: experimental/coursebuilder/views/review_dashboard.html:63
 msgid "Draft"
 msgstr "Entwurf"
 
 #. Button that a student can click to request a new assignment to review.
-#: experimental/coursebuilder/views/review_dashboard.html:78
+#: experimental/coursebuilder/views/review_dashboard.html:80
 msgid "Review a new assignment"
 msgstr "Neue Aufgabe bewerten"
 
 #. Button that a student can click to navigate back to review an assignment in
 #. a class.
-#: experimental/coursebuilder/views/review_dashboard.html:81
+#: experimental/coursebuilder/views/review_dashboard.html:83
 msgid "Back to assignment"
 msgstr "Zurück zur Aufgabe"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
-#: experimental/coursebuilder/views/review_dashboard.html:87
+#: experimental/coursebuilder/views/review_dashboard.html:89
 msgid ""
 "Sorry, there are no new submissions available for you to review at this "
 "time."
@@ -1675,6 +1677,7 @@ msgstr "Nächste Seite"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Ende"
+
 
 
 

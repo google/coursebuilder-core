@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-26 09:02-0700\n"
-"PO-Revision-Date: 2016-09-26 09:03-0700\n"
+"POT-Creation-Date: 2016-10-03 08:08-0700\n"
+"PO-Revision-Date: 2016-10-03 08:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ja <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -101,7 +101,7 @@ msgstr " この質問を採点するには、JavaScript を有効にする必要
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:44
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:45
 #: experimental/coursebuilder/views/macros.html:22
-#: experimental/coursebuilder/views/review_dashboard.html:58
+#: experimental/coursebuilder/views/review_dashboard.html:60
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
 msgstr "完了しました"
@@ -917,13 +917,13 @@ msgstr "再登録"
 
 #. Error message for failed student file upload.
 #. The selected file was empty.
-#: experimental/coursebuilder/modules/upload/upload.py:83
+#: experimental/coursebuilder/modules/upload/upload.py:90
 msgid "File is empty."
 msgstr "ファイルが空です。"
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
-#: experimental/coursebuilder/modules/upload/upload.py:95
+#: experimental/coursebuilder/modules/upload/upload.py:102
 msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
@@ -931,14 +931,14 @@ msgstr "ファイル形式が正しくありません。アップロードでき
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
-#: experimental/coursebuilder/modules/upload/upload.py:103
+#: experimental/coursebuilder/modules/upload/upload.py:110
 msgid "File too large, only files smaller than 1MB are allowed."
 msgstr "ファイルが大きすぎます。アップロードできるのは 1 MB 未満のファイルです。"
 
 #. Error message for failed student file upload.
 #. Generic upload error.
-#: experimental/coursebuilder/modules/upload/upload.py:110
-msgid "Unable to save student submission; error :"
+#: experimental/coursebuilder/modules/upload/upload.py:117
+msgid "Unable to save student submission."
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -970,11 +970,15 @@ msgstr "前のページに戻る。"
 
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
-#: experimental/coursebuilder/modules/upload/templates/result.html:23
-msgid ""
-"Go back and try again. If the problem persists, contact your "
-"administrator."
-msgstr "前のページに戻って、もう一度お試しください。それでも問題が解決しない場合は、管理者にお問い合わせください。"
+#: experimental/coursebuilder/modules/upload/templates/result.html:25
+msgid "Go back and try again."
+msgstr ""
+
+#. Text after the link to take the user back to the previous page so they can
+#. try submitting again.
+#: experimental/coursebuilder/modules/upload/templates/result.html:28
+msgid "If the problem persists, contact your administrator."
+msgstr ""
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1379,20 +1383,20 @@ msgid "The due date for submitting reviews has passed."
 msgstr "レビューの送信期限が過ぎています。"
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:39
+#: experimental/coursebuilder/views/review_dashboard.html:40
 #, python-format
 msgid "All reviews are due by %(review_due_date)s."
 msgstr "すべてのレビューの期限は %(review_due_date)sです。"
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:43
+#: experimental/coursebuilder/views/review_dashboard.html:45
 msgid ""
 "In order to earn credit for this assignment, you must complete at least 1"
 " review by then."
 msgstr "この課題で単位を取得するには、少なくとも 1 件のレビューを完了する必要があります。"
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:46
+#: experimental/coursebuilder/views/review_dashboard.html:48
 #, python-format
 msgid ""
 "In order to earn credit for this assignment, you must complete at least "
@@ -1400,30 +1404,30 @@ msgid ""
 msgstr "この課題で単位を取得するには、少なくとも %(review_min_count)d 件のレビューを完了する必要があります。"
 
 #. An item in a list of assignments.
-#: experimental/coursebuilder/views/review_dashboard.html:55
+#: experimental/coursebuilder/views/review_dashboard.html:57
 #, python-format
 msgid "Assignment %(index)s"
 msgstr "課題 %(index)s"
 
 #. Text shown after an assignment whose review is still in draft state.
-#: experimental/coursebuilder/views/review_dashboard.html:61
+#: experimental/coursebuilder/views/review_dashboard.html:63
 msgid "Draft"
 msgstr "下書き"
 
 #. Button that a student can click to request a new assignment to review.
-#: experimental/coursebuilder/views/review_dashboard.html:78
+#: experimental/coursebuilder/views/review_dashboard.html:80
 msgid "Review a new assignment"
 msgstr "新しい課題をレビュー"
 
 #. Button that a student can click to navigate back to review an assignment in
 #. a class.
-#: experimental/coursebuilder/views/review_dashboard.html:81
+#: experimental/coursebuilder/views/review_dashboard.html:83
 msgid "Back to assignment"
 msgstr "課題に戻る"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
-#: experimental/coursebuilder/views/review_dashboard.html:87
+#: experimental/coursebuilder/views/review_dashboard.html:89
 msgid ""
 "Sorry, there are no new submissions available for you to review at this "
 "time."
@@ -1591,6 +1595,7 @@ msgstr "次のページ"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "最後"
+
 
 
 

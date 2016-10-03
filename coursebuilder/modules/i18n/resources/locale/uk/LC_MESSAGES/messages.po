@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-26 09:02-0700\n"
-"PO-Revision-Date: 2016-09-26 09:03-0700\n"
+"POT-Creation-Date: 2016-10-03 08:08-0700\n"
+"PO-Revision-Date: 2016-10-03 08:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: uk <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -102,7 +102,7 @@ msgstr " Щоб оцінити цю відповідь, потрібно вві�
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:44
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:45
 #: experimental/coursebuilder/views/macros.html:22
-#: experimental/coursebuilder/views/review_dashboard.html:58
+#: experimental/coursebuilder/views/review_dashboard.html:60
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
 msgstr "Завершено"
@@ -945,13 +945,13 @@ msgstr "Підписатися"
 
 #. Error message for failed student file upload.
 #. The selected file was empty.
-#: experimental/coursebuilder/modules/upload/upload.py:83
+#: experimental/coursebuilder/modules/upload/upload.py:90
 msgid "File is empty."
 msgstr "Файл порожній."
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
-#: experimental/coursebuilder/modules/upload/upload.py:95
+#: experimental/coursebuilder/modules/upload/upload.py:102
 msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
@@ -961,14 +961,14 @@ msgstr ""
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
-#: experimental/coursebuilder/modules/upload/upload.py:103
+#: experimental/coursebuilder/modules/upload/upload.py:110
 msgid "File too large, only files smaller than 1MB are allowed."
 msgstr "Файл завеликий. Дозволено лише файли розміром до 1 Мб."
 
 #. Error message for failed student file upload.
 #. Generic upload error.
-#: experimental/coursebuilder/modules/upload/upload.py:110
-msgid "Unable to save student submission; error :"
+#: experimental/coursebuilder/modules/upload/upload.py:117
+msgid "Unable to save student submission."
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -1002,13 +1002,15 @@ msgstr "Повернутися на попередню сторінку."
 
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
-#: experimental/coursebuilder/modules/upload/templates/result.html:23
-msgid ""
-"Go back and try again. If the problem persists, contact your "
-"administrator."
+#: experimental/coursebuilder/modules/upload/templates/result.html:25
+msgid "Go back and try again."
 msgstr ""
-"Поверніться та повторіть спробу. Якщо це не допоможе, зв’яжіться з "
-"адміністратором."
+
+#. Text after the link to take the user back to the previous page so they can
+#. try submitting again.
+#: experimental/coursebuilder/modules/upload/templates/result.html:28
+msgid "If the problem persists, contact your administrator."
+msgstr ""
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1440,13 +1442,13 @@ msgid "The due date for submitting reviews has passed."
 msgstr "Термін надсилання рецензій минув."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:39
+#: experimental/coursebuilder/views/review_dashboard.html:40
 #, python-format
 msgid "All reviews are due by %(review_due_date)s."
 msgstr "Термін для всіх рецензій: %(review_due_date)s."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:43
+#: experimental/coursebuilder/views/review_dashboard.html:45
 msgid ""
 "In order to earn credit for this assignment, you must complete at least 1"
 " review by then."
@@ -1455,7 +1457,7 @@ msgstr ""
 "принаймні 1 рецензію."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:46
+#: experimental/coursebuilder/views/review_dashboard.html:48
 #, python-format
 msgid ""
 "In order to earn credit for this assignment, you must complete at least "
@@ -1465,30 +1467,30 @@ msgstr ""
 "принаймні стільки рецензій: %(review_min_count)d."
 
 #. An item in a list of assignments.
-#: experimental/coursebuilder/views/review_dashboard.html:55
+#: experimental/coursebuilder/views/review_dashboard.html:57
 #, python-format
 msgid "Assignment %(index)s"
 msgstr "Завдання %(index)s"
 
 #. Text shown after an assignment whose review is still in draft state.
-#: experimental/coursebuilder/views/review_dashboard.html:61
+#: experimental/coursebuilder/views/review_dashboard.html:63
 msgid "Draft"
 msgstr "Чернетка"
 
 #. Button that a student can click to request a new assignment to review.
-#: experimental/coursebuilder/views/review_dashboard.html:78
+#: experimental/coursebuilder/views/review_dashboard.html:80
 msgid "Review a new assignment"
 msgstr "Рецензувати нове завдання"
 
 #. Button that a student can click to navigate back to review an assignment in
 #. a class.
-#: experimental/coursebuilder/views/review_dashboard.html:81
+#: experimental/coursebuilder/views/review_dashboard.html:83
 msgid "Back to assignment"
 msgstr "Назад до завдання"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
-#: experimental/coursebuilder/views/review_dashboard.html:87
+#: experimental/coursebuilder/views/review_dashboard.html:89
 msgid ""
 "Sorry, there are no new submissions available for you to review at this "
 "time."
@@ -1657,6 +1659,7 @@ msgstr "Наступна сторінка"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Кінець"
+
 
 
 

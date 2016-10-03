@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-26 09:02-0700\n"
-"PO-Revision-Date: 2016-09-26 09:03-0700\n"
+"POT-Creation-Date: 2016-10-03 08:08-0700\n"
+"PO-Revision-Date: 2016-10-03 08:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sv <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -101,7 +101,7 @@ msgstr " JavaScript måste vara aktiverat om frågan ska kunna graderas. "
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:44
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:45
 #: experimental/coursebuilder/views/macros.html:22
-#: experimental/coursebuilder/views/review_dashboard.html:58
+#: experimental/coursebuilder/views/review_dashboard.html:60
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
 msgstr "Slutförd"
@@ -942,13 +942,13 @@ msgstr "Prenumerera igen"
 
 #. Error message for failed student file upload.
 #. The selected file was empty.
-#: experimental/coursebuilder/modules/upload/upload.py:83
+#: experimental/coursebuilder/modules/upload/upload.py:90
 msgid "File is empty."
 msgstr "Filen är tom."
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
-#: experimental/coursebuilder/modules/upload/upload.py:95
+#: experimental/coursebuilder/modules/upload/upload.py:102
 msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
@@ -956,14 +956,14 @@ msgstr "Fel filformat. Endast textfiler (.txt) med innehåll i unicode är till�
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
-#: experimental/coursebuilder/modules/upload/upload.py:103
+#: experimental/coursebuilder/modules/upload/upload.py:110
 msgid "File too large, only files smaller than 1MB are allowed."
 msgstr "Filen är för stor. Bara filer som är mindre än 1 MB är tillåtna."
 
 #. Error message for failed student file upload.
 #. Generic upload error.
-#: experimental/coursebuilder/modules/upload/upload.py:110
-msgid "Unable to save student submission; error :"
+#: experimental/coursebuilder/modules/upload/upload.py:117
+msgid "Unable to save student submission."
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -997,13 +997,15 @@ msgstr "Öppna föregående sida."
 
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
-#: experimental/coursebuilder/modules/upload/templates/result.html:23
-msgid ""
-"Go back and try again. If the problem persists, contact your "
-"administrator."
+#: experimental/coursebuilder/modules/upload/templates/result.html:25
+msgid "Go back and try again."
 msgstr ""
-"Återgå till föregående sida och försök igen. Kontakta administratören om "
-"problemet kvarstår."
+
+#. Text after the link to take the user back to the previous page so they can
+#. try submitting again.
+#: experimental/coursebuilder/modules/upload/templates/result.html:28
+msgid "If the problem persists, contact your administrator."
+msgstr ""
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1434,13 +1436,13 @@ msgid "The due date for submitting reviews has passed."
 msgstr "Sista datum för att skicka in granskningar har redan inträffat."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:39
+#: experimental/coursebuilder/views/review_dashboard.html:40
 #, python-format
 msgid "All reviews are due by %(review_due_date)s."
 msgstr "Alla granskningar ska skickas in senast %(review_due_date)s."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:43
+#: experimental/coursebuilder/views/review_dashboard.html:45
 msgid ""
 "In order to earn credit for this assignment, you must complete at least 1"
 " review by then."
@@ -1449,7 +1451,7 @@ msgstr ""
 "granskning innan den angivna tidpunkten."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:46
+#: experimental/coursebuilder/views/review_dashboard.html:48
 #, python-format
 msgid ""
 "In order to earn credit for this assignment, you must complete at least "
@@ -1459,30 +1461,30 @@ msgstr ""
 "%(review_min_count)d granskningar innan den angivna tidpunkten."
 
 #. An item in a list of assignments.
-#: experimental/coursebuilder/views/review_dashboard.html:55
+#: experimental/coursebuilder/views/review_dashboard.html:57
 #, python-format
 msgid "Assignment %(index)s"
 msgstr "Uppgift %(index)s"
 
 #. Text shown after an assignment whose review is still in draft state.
-#: experimental/coursebuilder/views/review_dashboard.html:61
+#: experimental/coursebuilder/views/review_dashboard.html:63
 msgid "Draft"
 msgstr "Utkast"
 
 #. Button that a student can click to request a new assignment to review.
-#: experimental/coursebuilder/views/review_dashboard.html:78
+#: experimental/coursebuilder/views/review_dashboard.html:80
 msgid "Review a new assignment"
 msgstr "Granska en ny uppgift"
 
 #. Button that a student can click to navigate back to review an assignment in
 #. a class.
-#: experimental/coursebuilder/views/review_dashboard.html:81
+#: experimental/coursebuilder/views/review_dashboard.html:83
 msgid "Back to assignment"
 msgstr "Tillbaka till uppgiften"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
-#: experimental/coursebuilder/views/review_dashboard.html:87
+#: experimental/coursebuilder/views/review_dashboard.html:89
 msgid ""
 "Sorry, there are no new submissions available for you to review at this "
 "time."
@@ -1650,6 +1652,7 @@ msgstr "Nästa sida"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Slut"
+
 
 
 

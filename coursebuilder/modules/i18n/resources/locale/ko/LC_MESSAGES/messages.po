@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-26 09:02-0700\n"
-"PO-Revision-Date: 2016-09-26 09:03-0700\n"
+"POT-Creation-Date: 2016-10-03 08:08-0700\n"
+"PO-Revision-Date: 2016-10-03 08:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ko <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -101,7 +101,7 @@ msgstr " 이 질문에 점수를 매기려면 자바스크립트를 사용 설�
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:44
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:45
 #: experimental/coursebuilder/views/macros.html:22
-#: experimental/coursebuilder/views/review_dashboard.html:58
+#: experimental/coursebuilder/views/review_dashboard.html:60
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
 msgstr "완료"
@@ -919,13 +919,13 @@ msgstr "재구독"
 
 #. Error message for failed student file upload.
 #. The selected file was empty.
-#: experimental/coursebuilder/modules/upload/upload.py:83
+#: experimental/coursebuilder/modules/upload/upload.py:90
 msgid "File is empty."
 msgstr "파일이 비어 있습니다."
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
-#: experimental/coursebuilder/modules/upload/upload.py:95
+#: experimental/coursebuilder/modules/upload/upload.py:102
 msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
@@ -933,14 +933,14 @@ msgstr "파일 형식이 잘못되었습니다. 유니코드 콘텐츠를 포함
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
-#: experimental/coursebuilder/modules/upload/upload.py:103
+#: experimental/coursebuilder/modules/upload/upload.py:110
 msgid "File too large, only files smaller than 1MB are allowed."
 msgstr "파일이 너무 큽니다. 1MB 미만의 파일만 허용됩니다."
 
 #. Error message for failed student file upload.
 #. Generic upload error.
-#: experimental/coursebuilder/modules/upload/upload.py:110
-msgid "Unable to save student submission; error :"
+#: experimental/coursebuilder/modules/upload/upload.py:117
+msgid "Unable to save student submission."
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -972,11 +972,15 @@ msgstr "이전 페이지로 돌아가기"
 
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
-#: experimental/coursebuilder/modules/upload/templates/result.html:23
-msgid ""
-"Go back and try again. If the problem persists, contact your "
-"administrator."
-msgstr "뒤로 돌아가서 다시 시도해 주세요. 문제가 지속되면 관리자에게 문의하세요."
+#: experimental/coursebuilder/modules/upload/templates/result.html:25
+msgid "Go back and try again."
+msgstr ""
+
+#. Text after the link to take the user back to the previous page so they can
+#. try submitting again.
+#: experimental/coursebuilder/modules/upload/templates/result.html:28
+msgid "If the problem persists, contact your administrator."
+msgstr ""
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1387,20 +1391,20 @@ msgid "The due date for submitting reviews has passed."
 msgstr "검토물 제출 마감 시한이 지났습니다."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:39
+#: experimental/coursebuilder/views/review_dashboard.html:40
 #, python-format
 msgid "All reviews are due by %(review_due_date)s."
 msgstr "모든 검토물의 마감 시한이 %(review_due_date)s입니다."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:43
+#: experimental/coursebuilder/views/review_dashboard.html:45
 msgid ""
 "In order to earn credit for this assignment, you must complete at least 1"
 " review by then."
 msgstr "이 과제에 대해 학점을 획득하려면 기한 내에 검토를 최소 1회 완료해야 합니다."
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:46
+#: experimental/coursebuilder/views/review_dashboard.html:48
 #, python-format
 msgid ""
 "In order to earn credit for this assignment, you must complete at least "
@@ -1408,30 +1412,30 @@ msgid ""
 msgstr "이 과제에 대해 학점을 획득하려면 기한 내에 검토를 최소 %(review_min_count)d회 완료해야 합니다."
 
 #. An item in a list of assignments.
-#: experimental/coursebuilder/views/review_dashboard.html:55
+#: experimental/coursebuilder/views/review_dashboard.html:57
 #, python-format
 msgid "Assignment %(index)s"
 msgstr "과제 %(index)s"
 
 #. Text shown after an assignment whose review is still in draft state.
-#: experimental/coursebuilder/views/review_dashboard.html:61
+#: experimental/coursebuilder/views/review_dashboard.html:63
 msgid "Draft"
 msgstr "임시"
 
 #. Button that a student can click to request a new assignment to review.
-#: experimental/coursebuilder/views/review_dashboard.html:78
+#: experimental/coursebuilder/views/review_dashboard.html:80
 msgid "Review a new assignment"
 msgstr "새 과제물 검토"
 
 #. Button that a student can click to navigate back to review an assignment in
 #. a class.
-#: experimental/coursebuilder/views/review_dashboard.html:81
+#: experimental/coursebuilder/views/review_dashboard.html:83
 msgid "Back to assignment"
 msgstr "과제로 돌아가기"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
-#: experimental/coursebuilder/views/review_dashboard.html:87
+#: experimental/coursebuilder/views/review_dashboard.html:89
 msgid ""
 "Sorry, there are no new submissions available for you to review at this "
 "time."
@@ -1599,6 +1603,7 @@ msgstr "다음 페이지"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "종료"
+
 
 
 

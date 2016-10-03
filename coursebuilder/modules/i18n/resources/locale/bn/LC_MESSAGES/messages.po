@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-09-26 09:02-0700\n"
-"PO-Revision-Date: 2016-09-26 09:03-0700\n"
+"POT-Creation-Date: 2016-10-03 08:08-0700\n"
+"PO-Revision-Date: 2016-10-03 08:08-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: bn <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -101,7 +101,7 @@ msgstr " এই প্রশ্নে গ্রেড দেওয়ার জন�
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:44
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:45
 #: experimental/coursebuilder/views/macros.html:22
-#: experimental/coursebuilder/views/review_dashboard.html:58
+#: experimental/coursebuilder/views/review_dashboard.html:60
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
 msgstr "সম্পূর্ণ হয়েছে"
@@ -951,30 +951,30 @@ msgstr "পুনরায় সদস্যতা নিন"
 
 #. Error message for failed student file upload.
 #. The selected file was empty.
-#: experimental/coursebuilder/modules/upload/upload.py:83
+#: experimental/coursebuilder/modules/upload/upload.py:90
 msgid "File is empty."
 msgstr "ফাইলে কিছুই নেই৷"
 
 #. Error message for failed student file upload.
 #. The selected file was not a text file.
-#: experimental/coursebuilder/modules/upload/upload.py:95
+#: experimental/coursebuilder/modules/upload/upload.py:102
 msgid ""
 "Wrong file format, only text files (.txt) with unicode contents are "
 "allowed."
 msgstr ""
-"ভুল ফাইল ফর্ম্যাট, শুধু ইউনিকোড সামগ্রী সহ পাঠ্য ফাইলগুলি (.txt) "
-"মঞ্জুরিপ্রাপ্ত৷"
+"ভুল ফাইল ফর্ম্যাট। ফাইল শুধুমাত্র ইউনিকোড সামগ্রী থাকা .txt ফর্ম্যাটের "
+"হতে হবে।"
 
 #. Error message for failed student file upload.
 #. The selected file was too large.
-#: experimental/coursebuilder/modules/upload/upload.py:103
+#: experimental/coursebuilder/modules/upload/upload.py:110
 msgid "File too large, only files smaller than 1MB are allowed."
-msgstr "ফাইলটি খুবই বড়, ১MB এর চেয়ে ছোট ফাইল মঞ্জুরিপ্রাপ্ত৷"
+msgstr "ফাইলটি খুবই বড়। ফাইল ১MB এর থেকে ছোট হতে হবে৷"
 
 #. Error message for failed student file upload.
 #. Generic upload error.
-#: experimental/coursebuilder/modules/upload/upload.py:110
-msgid "Unable to save student submission; error :"
+#: experimental/coursebuilder/modules/upload/upload.py:117
+msgid "Unable to save student submission."
 msgstr ""
 
 #. Message shown to the user telling them they have already submitted an item,
@@ -1008,13 +1008,15 @@ msgstr "পূর্ববর্তী পৃষ্ঠাতে ফিরে য
 
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
-#: experimental/coursebuilder/modules/upload/templates/result.html:23
-msgid ""
-"Go back and try again. If the problem persists, contact your "
-"administrator."
+#: experimental/coursebuilder/modules/upload/templates/result.html:25
+msgid "Go back and try again."
 msgstr ""
-"ফিরে গিয়ে আবার চেষ্টা করুন। সমস্যাটি থেকে গেলে, আপনার প্রশাসকের সাথে "
-"যোগাযোগ করুন।"
+
+#. Text after the link to take the user back to the previous page so they can
+#. try submitting again.
+#: experimental/coursebuilder/modules/upload/templates/result.html:28
+msgid "If the problem persists, contact your administrator."
+msgstr ""
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1446,13 +1448,13 @@ msgid "The due date for submitting reviews has passed."
 msgstr "পর্যালোচনা জমা দওয়ার নির্ধারিত তারিখ অতিক্রান্ত হয়ে গেছে৷"
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:39
+#: experimental/coursebuilder/views/review_dashboard.html:40
 #, python-format
 msgid "All reviews are due by %(review_due_date)s."
 msgstr "সমস্ত পর্যালোচনাগুলির প্রদেয় তারিখ হল %(review_due_date)s৷"
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:43
+#: experimental/coursebuilder/views/review_dashboard.html:45
 msgid ""
 "In order to earn credit for this assignment, you must complete at least 1"
 " review by then."
@@ -1461,7 +1463,7 @@ msgstr ""
 "পর্যালোচনা সম্পূর্ণ করতে হবে৷"
 
 #. Instructions for a student being asked to do a review.
-#: experimental/coursebuilder/views/review_dashboard.html:46
+#: experimental/coursebuilder/views/review_dashboard.html:48
 #, python-format
 msgid ""
 "In order to earn credit for this assignment, you must complete at least "
@@ -1471,30 +1473,30 @@ msgstr ""
 "%(review_min_count)dটি পর্যালোচনা সম্পূর্ণ করতে হবে৷"
 
 #. An item in a list of assignments.
-#: experimental/coursebuilder/views/review_dashboard.html:55
+#: experimental/coursebuilder/views/review_dashboard.html:57
 #, python-format
 msgid "Assignment %(index)s"
 msgstr "হস্তান্তরণ %(index)s"
 
 #. Text shown after an assignment whose review is still in draft state.
-#: experimental/coursebuilder/views/review_dashboard.html:61
+#: experimental/coursebuilder/views/review_dashboard.html:63
 msgid "Draft"
 msgstr "খসড়া"
 
 #. Button that a student can click to request a new assignment to review.
-#: experimental/coursebuilder/views/review_dashboard.html:78
+#: experimental/coursebuilder/views/review_dashboard.html:80
 msgid "Review a new assignment"
 msgstr "একটি নতুন অ্যাসাইনমেন্টের পর্যালোচনা করুন"
 
 #. Button that a student can click to navigate back to review an assignment in
 #. a class.
-#: experimental/coursebuilder/views/review_dashboard.html:81
+#: experimental/coursebuilder/views/review_dashboard.html:83
 msgid "Back to assignment"
 msgstr "অ্যাসাইনমেন্টে ফিরুন"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
-#: experimental/coursebuilder/views/review_dashboard.html:87
+#: experimental/coursebuilder/views/review_dashboard.html:89
 msgid ""
 "Sorry, there are no new submissions available for you to review at this "
 "time."
@@ -1665,6 +1667,7 @@ msgstr "পরবর্তী পৃষ্ঠা"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "শেষ"
+
 
 
 
