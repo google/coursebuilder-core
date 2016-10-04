@@ -3,7 +3,7 @@ registration:
 
 tests:
   functional:
-    - modules.explorer.explorer_tests = 8
+    - modules.explorer.explorer_tests = 9
   integration:
     - modules.explorer.explorer_integration_tests.PolymerTests = 1
 

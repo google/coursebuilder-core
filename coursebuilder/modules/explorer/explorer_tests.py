@@ -20,8 +20,10 @@ __author__ = 'Nick Retallack (nretallack@google.com)'
 import base64
 from common import crypto
 from models import config
+from models import courses
 from models import transforms
 from modules.courses import constants as courses_constants
+from modules.explorer import constants
 from modules.explorer import settings
 from modules.gql import gql_tests
 from modules.gql import gql
@@ -235,6 +237,30 @@ class CourseExplorerSettingsTest(actions.TestBase):
             'logo_bytes_base64': 'logo-contents',
             'logo_mime_type': 'image/png',
         })
+
+    def _verify_course_list_state(self, expected):
+        response = self.get('/modules/admin')
+        soup = self.parse_html_string_to_soup(response.body)
+        row = soup.select('tr[data-course-namespace="ns_%s"]' %
+                          self.COURSE_NAME)
+        actual = row[0].select('.show_in_explorer')[0].text
+        self.assertEquals(expected, actual)
+
+    def test_course_list_text(self):
+        course = courses.Course.get(self.app_context)
+
+        # show_in_explorer setting not explicitly set - do we default to True?
+        self._verify_course_list_state('Yes')
+
+        # Explicitly set show_in_explorer to True.
+        with actions.OverriddenEnvironment(
+            {'course': {constants.SHOW_IN_EXPLORER: True}}):
+            self._verify_course_list_state('Yes')
+
+        # Explicitly set show_in_explorer to False
+        with actions.OverriddenEnvironment(
+            {'course': {constants.SHOW_IN_EXPLORER: False}}):
+            self._verify_course_list_state('No')
 
 
 class CourseExplorerEnabledTest(actions.TestBase):

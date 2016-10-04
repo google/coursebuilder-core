@@ -723,7 +723,16 @@ $(function() {
     };
   };
   EditMultiCourseShowInExplorerPanel.prototype._settingSaved = (
-      function(payload) {} );
+      function(payload) {
+        var courseNamespace = payload.key;
+        var shownField = $('#show_in_explorer_' + courseNamespace);
+        if (this._show_in_explorer.prop('checked')) {
+          shownField.text('Yes');
+        } else {
+          shownField.text('No');
+        }
+      }
+  );
   function editMultiCourseShowInExplorer() {
     // Var name intentionally in global namespace as hook for tests to modify.
     window.gcb_multi_edit_dialog = new EditMultiCourseShowInExplorerPanel();

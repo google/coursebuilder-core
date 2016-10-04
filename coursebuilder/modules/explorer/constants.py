@@ -26,3 +26,4 @@ MODULE_NAME = 'explorer'
 MODULE_TITLE = 'Explorer'
 TEMPLATE_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', MODULE_NAME, 'templates')
+SHOW_IN_EXPLORER = 'show_in_explorer'

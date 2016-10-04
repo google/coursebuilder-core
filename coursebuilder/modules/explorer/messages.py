@@ -41,8 +41,8 @@ every page of all courses.
 """
 
 COURSE_INCLUDE_IN_EXPLORER_DESCRIPTION = """
-When true, the course is eligible to be included in the Course Explorer,
-subject to the course's availability settings.  When false, the course
+When checked, the course is eligible to be included in the Course Explorer,
+subject to the course's availability settings.  When unchecked, the course
 is never shown in the Course Explorer, regardless of availability.
 """
 

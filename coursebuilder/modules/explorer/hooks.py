@@ -17,9 +17,12 @@
 __author__ = 'Rahul Singal (rahulsingal@google.com)'
 
 from common import users
+from common import safe_dom
 from controllers import utils
 from models import courses
 from models import models
+from modules.admin import admin
+from modules.explorer import constants
 from modules.explorer import settings
 
 
@@ -86,6 +89,39 @@ def _get_site_info(app_context):
     return result
 
 
+class ShowInExplorerColumn(admin.AbstractAdditionalAllCoursesColumn):
+
+    @classmethod
+    def produce_table_header(cls):
+        return safe_dom.Element(
+            'th', className='gcb-not-sortable'
+        ).add_text(
+            'In Explorer?'
+        )
+
+    @classmethod
+    def produce_table_row(cls, app_context):
+        if courses.Course.get_named_course_setting_from_environ(
+            constants.SHOW_IN_EXPLORER, app_context.get_environ(),
+            default=True):
+            status = 'Yes'
+        else:
+            status = 'No'
+        return safe_dom.Element(
+            'td',
+            className='show_in_explorer',
+            id='show_in_explorer_' + app_context.get_namespace_name()
+        ).add_text(
+            status
+        )
+
+    @classmethod
+    def produce_table_footer(cls):
+        return safe_dom.Element('td')
+
+
 def register():
+    admin.BaseAdminHandler.ADDITIONAL_COLUMN_HOOKS[constants.MODULE_NAME] = (
+        ShowInExplorerColumn)
     utils.PageInitializerService.set(ExplorerPageInitializer)
     utils.CourseHandler.SITE_INFO.append(_get_site_info)

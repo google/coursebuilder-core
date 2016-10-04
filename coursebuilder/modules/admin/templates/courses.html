@@ -89,6 +89,9 @@
           Registered Students
           <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
         </th>
+        {% for item in additional_headers %}
+          {{ item }}
+        {% endfor %}
         <th class="gcb-list__cell--icon gcb-not-sortable"></th>
       </tr>
     </thead>
@@ -136,6 +139,9 @@
                  >{{ course.most_recent_enroll }}</div>
           </div>
         </td>
+        {% for item in course.additional_columns %}
+          {{ item }}
+        {% endfor %}
         <td>
           {% if course.namespace_name != '' %}
             <form
@@ -170,6 +176,9 @@
         <td>
           {{ total_students }} student(s)
         </td>
+        {% for item in additional_footers %}
+          {{ item }}
+        {% endfor %}
         <td>&nbsp;</td>
       </tr>
     </tfoot>

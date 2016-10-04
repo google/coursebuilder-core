@@ -18,9 +18,11 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import re
 
+from common import safe_dom
 from controllers import sites
 from models import config
 from models import courses
+from modules.admin import admin
 from tests.functional import actions
 
 from google.appengine.api import namespace_manager
@@ -171,3 +173,79 @@ class AdminDashboardTabTests(actions.TestBase):
             app_context = sites.get_app_context_for_namespace(self.NAMESPACE)
             courses.Course.get(app_context).set_course_availability(policy)
             self.assertEqual(settings['title'], get_availability_text())
+
+
+class TestAdditionalAllCoursesColumn(object):
+
+    def __init__(self):
+        self._num_courses = 0
+
+    def produce_table_header(self):
+        return safe_dom.Element(
+            'th', className='additional_header'
+        ).add_text(
+            'Test Column'
+        )
+
+    def produce_table_row(self, app_context):
+        self._num_courses += 1
+        return safe_dom.Element(
+            'td', className='additional_column'
+        ).add_text(
+            'Course %d' % self._num_courses
+        )
+
+    def produce_table_footer(self):
+        return safe_dom.Element(
+            'td', className='additional_footer'
+        ).add_text(
+            '%d Total Courses' % self._num_courses
+        )
+
+
+class AdminCourseListTests(actions.TestBase):
+
+    ADMIN_EMAIL = 'admin@example.com'
+    NUM_COURSES = 3
+
+    def setUp(self):
+        super(AdminCourseListTests, self).setUp()
+        self.app_contexts = []
+        course_configs = []
+        for i in xrange(self.NUM_COURSES):
+            self.app_contexts.append(actions.simple_add_course(
+                'course_%d' % i, self.ADMIN_EMAIL, 'Course %d' % i))
+            course_configs.append('course:/course_%d::ns_course_%d' % (i, i))
+
+        # Suppress default course from admin all-courses list.
+        config.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name] = (
+            ','.join(course_configs))
+
+        admin.BaseAdminHandler.ADDITIONAL_COLUMN_HOOKS[
+            self.__class__.__name__] = TestAdditionalAllCoursesColumn()
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+
+    def tearDown(self):
+        del admin.BaseAdminHandler.ADDITIONAL_COLUMN_HOOKS[
+            self.__class__.__name__]
+        del config.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        sites.reset_courses()
+        super(AdminCourseListTests, self).tearDown()
+
+    def test_additional_columns(self):
+        response = self.get('/modules/admin')
+        soup = self.parse_html_string_to_soup(response.body)
+
+        headers = soup.select('.additional_header')
+        self.assertEquals(['th'], [h.name for h in headers])
+        self.assertEquals(['Test Column'], [h.text for h in headers])
+
+        rows = soup.select('.additional_column')
+        self.assertEquals(['td'] * self.NUM_COURSES, [r.name for r in rows])
+        expected = ['Course %d' % (i + 1) for i in xrange(self.NUM_COURSES)]
+        self.assertEquals(expected, [r.text for r in rows])
+
+        footers = soup.select('.additional_footer')
+        self.assertEquals(['td'], [f.name for f in footers])
+        self.assertEquals(['%d Total Courses' % self.NUM_COURSES],
+                          [f.text for f in footers])

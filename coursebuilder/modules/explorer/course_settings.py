@@ -14,6 +14,7 @@
 
 from models import courses
 from common import schema_fields
+from modules.explorer import constants
 from modules.explorer import messages
 
 
@@ -31,7 +32,8 @@ def register():
                 optional=True, i18n=False,
             ),
             lambda _: schema_fields.SchemaField(
-                'course:show_in_explorer', 'Show in Explorer', 'boolean',
+                'course:' + constants.SHOW_IN_EXPLORER, 'Show in Explorer',
+                'boolean',
                 description=messages.COURSE_INCLUDE_IN_EXPLORER_DESCRIPTION,
                 optional=True, i18n=False, default_value=True,
             ),

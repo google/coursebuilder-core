@@ -212,6 +212,52 @@ def admin_action_can_view(action):
     return can_view
 
 
+class AbstractAdditionalAllCoursesColumn(object):
+    """Derive from this class to add additional columns to the all-courses list.
+
+    Classes or instances should be registered by adding a key/value pair
+    to BaseAdminHandler.ADDITIONAL_COLUMN_HOOKS.  The key should be a
+    simple string, probably the name of your module.  This string is not
+    displayed, but is used to provide a repeatable ordering.  Values should
+    be any class or instance responding to this interface.
+
+    Each function in this interface should return a Jinja object, string or
+    SafeDom instance that will result in a <th>...</th> or <td>...</td> tag
+    as appropriate.
+
+    """
+
+    @classmethod
+    def produce_table_header(cls):
+        """Provide a header field for your added column in the list of courses.
+
+        This function is called once, before any calls to produce_table_row.
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def produce_table_row(cls, app_context):
+        """Provide an entry for the given course.
+
+        This function is called back once for each course in the installation.
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def produce_table_footer(cls, app_context):
+        """Provide a footer entry for your added column in the list of courses.
+
+        This content is placed on the footer row at the bottom of the table.
+        You may wish to report a running total or other summary.  If this
+        is not required for your use case, a simple "<td></td>" is sufficient.
+
+        You may rely on getting called back to produce_table_header, then
+        zero or more calls to produce_table_row, then one call to this
+        function in order to clear, accumulate, and report data.
+        """
+        raise NotImplementedError()
+
+
 class BaseAdminHandler(ConfigPropertyEditor):
     """Base class holding methods required for administration of site."""
 
@@ -223,6 +269,11 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
     # Human-readable ISO 8601 date format (compared to schema_transforms.py).
     ISO_8601_UTC_HUMAN_FMT = '%Y-%m-%d %H:%M:%S UTC'
+
+    # Callbacks for adding additional columns to all-courses list view.
+    # See description in AbstractAdditionalAllCoursesColumn above for
+    # interface.
+    ADDITIONAL_COLUMN_HOOKS = {}
 
     default_action = 'courses'
     get_actions = ['courses', 'config_edit', 'settings', 'deployment',
@@ -808,6 +859,10 @@ class BaseAdminHandler(ConfigPropertyEditor):
             app_context.get_namespace_name() for app_context in app_contexts]
         enrolled_totals = enrollments.TotalEnrollmentDAO.load_many(namespaces)
 
+        additional_headers = [
+            self.ADDITIONAL_COLUMN_HOOKS[key].produce_table_header()
+            for key in sorted(self.ADDITIONAL_COLUMN_HOOKS.keys())]
+
         for app_context, enrolled_dto in zip(app_contexts, enrolled_totals):
             slug = app_context.get_slug()
             name = app_context.get_title()
@@ -837,6 +892,10 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 most_recent_enroll = (
                     '(registration activity for %s is being computed)' % name)
 
+            additional_columns = [
+                self.ADDITIONAL_COLUMN_HOOKS[key].produce_table_row(app_context)
+                for key in sorted(self.ADDITIONAL_COLUMN_HOOKS.keys())]
+
             all_courses.append({
                 'link': link,
                 'name': name,
@@ -845,8 +904,13 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 'is_selected_course': is_selected_course,
                 'availability': availability_title,
                 'total_enrolled': total_enrolled,
-                'most_recent_enroll': most_recent_enroll
-                })
+                'most_recent_enroll': most_recent_enroll,
+                'additional_columns': additional_columns,
+            })
+
+        additional_footers = [
+            self.ADDITIONAL_COLUMN_HOOKS[key].produce_table_footer()
+            for key in sorted(self.ADDITIONAL_COLUMN_HOOKS.keys())]
 
         delete_course_xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
             CourseDeleteHandler.XSRF_ACTION)
@@ -879,6 +943,8 @@ class BaseAdminHandler(ConfigPropertyEditor):
                  'email': users.get_current_user().email(),
                  'bundle_lib_files':
                      'true' if appengine_config.BUNDLE_LIB_FILES else 'false',
+                 'additional_headers': additional_headers,
+                 'additional_footers': additional_footers,
                }, 'courses.html', _TEMPLATE_DIRS)
         }
         self.render_page(template_values, in_action='courses')
