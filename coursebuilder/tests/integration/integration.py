@@ -28,6 +28,7 @@ import random
 import time
 import traceback
 
+from common import utils as common_utils
 from tests import suite
 from tests.integration import pageobjects
 
@@ -268,13 +269,36 @@ class TestBase(suite.TestBase):
         if login:
             self.login(self.LOGIN, admin=True)
 
-        page = self.load_courses_list()
-        element = page.find_element_by_css_selector(
-            '[data-course-namespace={}] [delete_course] button'.format(
-                namespace))
-        element.click()
-        page.switch_to_alert().accept()
-        self.course_namespaces.remove(namespace)
+        # Best effort, but don't block test if course removal fails.  Removing
+        # courses is a cleanup step that helps reduce flakes.  Don't add to
+        # flakiness by being fragile about cleanup failures.
+        patience = 5
+        while patience:
+            patience -= 1
+
+            page = self.load_courses_list()
+            try:
+                element = page.find_element_by_css_selector(
+                    '[data-course-namespace={}] [delete_course] button'.format(
+                        namespace))
+                element.click()
+                page.switch_to_alert().accept()
+            except exceptions.TimeoutException:
+                logging.info('Could not find course; assuming deleted.')
+                common_utils.log_exception_origin()
+                break
+            except exceptions.UnexpectedAlertPresentException, ex1:
+                logging.warning('Unexpected alert: %s', str(ex1))
+                common_utils.log_exception_origin()
+                page.switch_to_alert().accept()  # Previous alert?  Not ours?
+                continue
+            except exceptions.WebDriverException, ex2:
+                logging.warning('WebDriverException: %s', str(ex2))
+                common_utils.log_exception_origin()
+                continue
+
+            self.course_namespaces.remove(namespace)
+            break
 
     def set_admin_setting(self, setting_name, state):
         """Configure a property on Admin setting page."""
@@ -469,7 +493,8 @@ class Snapshot(object):
                 try:
                     with open(current_url_name, 'w') as fp:
                         fp.write(driver.current_url + '\n')
-                except exceptions.NoSuchWindowException:
+                except (exceptions.NoSuchWindowException,
+                        exceptions.WebDriverException):
                     os.unlink(current_url_name)
 
             if self.WHAT_PAGE_SOURCE in collect_what:
