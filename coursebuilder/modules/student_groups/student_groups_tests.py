@@ -45,8 +45,8 @@ AvailabilityRestHandler = student_groups.StudentGroupAvailabilityRestHandler
 class StudentGroupsTestBase(actions.TestBase):
 
     ADMIN_EMAIL = 'admin@example.com'
-    ADMIN_ASSISTANT_EMAIL = 'admin_assistant@foo.com'
-    STUDENT_EMAIL = 'student@foo.com'
+    ADMIN_ASSISTANT_EMAIL = 'Admin.Assistant@example.com'
+    STUDENT_EMAIL = 'Student@Example.Com'
 
     COURSE_NAME = 'student_groups_test'
     COURSE_TITLE = 'Title'
@@ -57,6 +57,7 @@ class StudentGroupsTestBase(actions.TestBase):
         self.base = '/' + self.COURSE_NAME
         self.app_context = actions.simple_add_course(
             self.COURSE_NAME, self.ADMIN_EMAIL, self.COURSE_TITLE)
+        self.STUDENT_LOWER = self.STUDENT_EMAIL.lower()
 
     def _grant_student_groups_permission_to_assistant(self):
         with common_utils.Namespace(self.NAMESPACE):
@@ -398,14 +399,15 @@ class GroupLifecycleTests(StudentGroupsTestBase):
         response = self._put_group(None, 'Group Two', 'group two')
         group_two_id = transforms.loads(response['payload'])['key']
 
-        self._put_availability(group_one_id, ['one@one.com'])
-        self._put_availability(group_two_id, ['two@two.com'])
+        self._put_availability(group_one_id, ['Group.One@example.com'])
+        self._put_availability(group_two_id, ['Group.Two@example.com'])
 
         response = self._get_availability(group_one_id)
         payload = transforms.loads(response['payload'])
         actual = payload[AvailabilityRestHandler._STUDENT_GROUP_SETTINGS][
             AvailabilityRestHandler._MEMBERS].split()
-        self.assertEquals(['one@one.com'], actual)
+        group_one_email = 'Group.One@example.com'.lower()
+        self.assertEquals([group_one_email], actual)
 
 
 class UserIdLookupLifecycleTests(StudentGroupsTestBase):
@@ -462,7 +464,7 @@ class UserIdentityTests(StudentGroupsTestBase):
 
         with common_utils.Namespace(self.NAMESPACE):
             membership = student_groups.StudentGroupMembership.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, membership.key().name())
+            self.assertEquals(self.STUDENT_LOWER, membership.key().name())
             self.assertEquals(group_id, membership.group_id)
             self.assertIsNone(models.Student.all().get())
 
@@ -472,7 +474,7 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertEquals(group_id, student.group_id)
 
     def test_register_then_add_group(self):
@@ -482,7 +484,7 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertIsNone(student.group_id)
 
         actions.login(self.ADMIN_EMAIL)
@@ -493,9 +495,8 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertEquals(group_id, student.group_id)
-
 
     def test_add_group_then_register_mismatched_case(self):
         actions.login(self.ADMIN_EMAIL)
@@ -522,7 +523,7 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertEquals(group_id, student.group_id)
 
 
@@ -536,7 +537,7 @@ class UserIdentityTests(StudentGroupsTestBase):
 
         with common_utils.Namespace(self.NAMESPACE):
             membership = student_groups.StudentGroupMembership.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, membership.key().name())
+            self.assertEquals(self.STUDENT_LOWER, membership.key().name())
             self.assertEquals(group_one_id, membership.group_id)
             self.assertIsNone(models.Student.all().get())
 
@@ -544,7 +545,7 @@ class UserIdentityTests(StudentGroupsTestBase):
 
         with common_utils.Namespace(self.NAMESPACE):
             membership = student_groups.StudentGroupMembership.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, membership.key().name())
+            self.assertEquals(self.STUDENT_LOWER, membership.key().name())
             self.assertEquals(group_two_id, membership.group_id)
             self.assertIsNone(models.Student.all().get())
 
@@ -562,7 +563,7 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertEquals(group_one_id, student.group_id)
 
         self._put_availability(group_two_id, [self.STUDENT_EMAIL])
@@ -570,7 +571,7 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertEquals(group_two_id, student.group_id)
 
     def test_move_unregistered_student_to_same_group(self):
@@ -583,7 +584,7 @@ class UserIdentityTests(StudentGroupsTestBase):
 
         with common_utils.Namespace(self.NAMESPACE):
             membership = student_groups.StudentGroupMembership.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, membership.key().name())
+            self.assertEquals(self.STUDENT_LOWER, membership.key().name())
             self.assertEquals(group_one_id, membership.group_id)
             self.assertIsNone(models.Student.all().get())
 
@@ -591,7 +592,7 @@ class UserIdentityTests(StudentGroupsTestBase):
 
         with common_utils.Namespace(self.NAMESPACE):
             membership = student_groups.StudentGroupMembership.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, membership.key().name())
+            self.assertEquals(self.STUDENT_LOWER, membership.key().name())
             self.assertEquals(group_one_id, membership.group_id)
             self.assertIsNone(models.Student.all().get())
 
@@ -609,7 +610,7 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertEquals(group_one_id, student.group_id)
 
         self._put_availability(group_one_id, [self.STUDENT_EMAIL])
@@ -617,7 +618,7 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertEquals(group_one_id, student.group_id)
 
     def test_remove_unregistered_student_from_group(self):
@@ -628,7 +629,7 @@ class UserIdentityTests(StudentGroupsTestBase):
 
         with common_utils.Namespace(self.NAMESPACE):
             membership = student_groups.StudentGroupMembership.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, membership.key().name())
+            self.assertEquals(self.STUDENT_LOWER, membership.key().name())
             self.assertEquals(group_id, membership.group_id)
             self.assertIsNone(models.Student.all().get())
 
@@ -650,7 +651,7 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertEquals(group_id, student.group_id)
 
         self._put_availability(group_id, [])
@@ -658,7 +659,7 @@ class UserIdentityTests(StudentGroupsTestBase):
         with common_utils.Namespace(self.NAMESPACE):
             self.assertIsNone(student_groups.StudentGroupMembership.all().get())
             student = models.Student.all().get()
-            self.assertEquals(self.STUDENT_EMAIL, student.email)
+            self.assertEquals(self.STUDENT_LOWER, student.email)
             self.assertIsNone(student.group_id)
 
     def test_in_group_user_signup_to_otherwise_private_course(self):
@@ -710,14 +711,14 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         # Verify REST response
         response = self._get_availability(group_id)
         payload = transforms.loads(response['payload'])
-        expected = set([self.STUDENT_EMAIL, self.ADMIN_EMAIL])
+        expected = set([self.STUDENT_LOWER, self.ADMIN_EMAIL.lower()])
         actual = set(payload[AvailabilityRestHandler._STUDENT_GROUP_SETTINGS][
             AvailabilityRestHandler._MEMBERS].split())
         self.assertEquals(expected, actual)
 
         # Verify via DB layer access.
         self.assertEquals(group_id, self._group_for_email(self.ADMIN_EMAIL))
-        self.assertEquals(group_id, self._group_for_email(self.STUDENT_EMAIL))
+        self.assertEquals(group_id, self._group_for_email(self.STUDENT_LOWER))
 
         # Remove admin from group
         self._put_availability(group_id, [self.STUDENT_EMAIL])
@@ -725,13 +726,13 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         # Verify REST response
         response = self._get_availability(group_id)
         payload = transforms.loads(response['payload'])
-        expected = set([self.STUDENT_EMAIL])
+        expected = set([self.STUDENT_LOWER])
         actual = set(payload[AvailabilityRestHandler._STUDENT_GROUP_SETTINGS][
             AvailabilityRestHandler._MEMBERS].split())
         self.assertEquals(expected, actual)
 
         # Verify via DB layer access.
-        self.assertEquals(group_id, self._group_for_email(self.STUDENT_EMAIL))
+        self.assertEquals(group_id, self._group_for_email(self.STUDENT_LOWER))
         self.assertIsNone(self._group_for_email(self.ADMIN_EMAIL))
 
     def test_move_student_to_new_group(self):
@@ -774,7 +775,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         actions.login(self.ADMIN_EMAIL)
 
         # Add group w/ 50 members.
-        emails = ['test_user_%3.3d@foo.com' % i for i in xrange(50)]
+        emails = ['Test_User_%3.3d@example.com' % i for i in xrange(50)]
         response = self._put_group(None, 'Big Group', 'lots of students here')
         group_id = transforms.loads(response['payload'])['key']
         self._put_availability(group_id, emails)
@@ -785,11 +786,12 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         email_text = payload[AvailabilityRestHandler._STUDENT_GROUP_SETTINGS][
             AvailabilityRestHandler._MEMBERS]
         fetched_emails = sorted(email_text.split('\n'))
-        self.assertEquals(emails, fetched_emails)
+        expected_emails = [email.lower() for email in emails]
+        self.assertEquals(expected_emails, fetched_emails)
 
         # Change membership: Remove 250 users, add 250 new ones,
         # and leave 250 the same.
-        emails = ['test_user_%3.3d@foo.com' % i for i in xrange(0, 100, 2)]
+        emails = ['Test_User_%3.3d@example.com' % i for i in xrange(0, 100, 2)]
         response = self._put_availability(group_id, emails)
 
         # Verify content
@@ -798,7 +800,8 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         email_text = payload[AvailabilityRestHandler._STUDENT_GROUP_SETTINGS][
             AvailabilityRestHandler._MEMBERS]
         fetched_emails = sorted(email_text.split('\n'))
-        self.assertEquals(emails, fetched_emails)
+        expected_emails = [email.lower() for email in emails]
+        self.assertEquals(expected_emails, fetched_emails)
 
         # Delete group; verify.
         self._delete_group(group_id)
@@ -814,7 +817,7 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         actions.login(self.ADMIN_EMAIL)
 
         # Add group w/ 50 members.
-        emails = ['test_user_%3.3d@foo.com' % i for i in xrange(
+        emails = ['Test_User_%3.3d@example.com' % i for i in xrange(
             student_groups.StudentGroupAvailabilityRestHandler.MAX_NUM_MEMBERS
             + 1)]
         response = self._put_group(None, 'Big Group', 'lots of students')
@@ -1079,8 +1082,8 @@ class AvailabilityTests(StudentGroupsTestBase):
     LESSON_ONE_URL = COURSE_URL + 'unit?unit=1&lesson=2'
     LESSON_TWO_URL = COURSE_URL + 'unit?unit=3&lesson=4'
 
-    IN_GROUP_STUDENT_EMAIL = 'in_group@foo.com'
-    NON_GROUP_STUDENT_EMAIL = 'hoi_polloi@foo.com'
+    IN_GROUP_STUDENT_EMAIL = 'In_Group@example.com'
+    NON_GROUP_STUDENT_EMAIL = 'Hoi_Polloi@example.com'
 
     def setUp(self):
         super(AvailabilityTests, self).setUp()
@@ -1560,7 +1563,7 @@ class I18nTests(StudentGroupsTestBase):
 class AggregateEventTests(actions.TestBase):
 
     ADMIN_EMAIL = 'admin@example.com'
-    STUDENT_EMAIL = 'student@foo.com'
+    STUDENT_EMAIL = 'Student@Example.Com'
     COURSE_NAME = 'test_course'
     NAMESPACE = 'ns_%s' % COURSE_NAME
     GROUP_NAME = 'A Test Group'
@@ -1689,8 +1692,8 @@ class OverrideTests(actions.TestBase):
 
 class GradebookTests(StudentGroupsTestBase):
 
-    IN_GROUP_STUDENT_EMAIL = 'in_group@foo.com'
-    NON_GROUP_STUDENT_EMAIL = 'hoi_polloi@foo.com'
+    IN_GROUP_STUDENT_EMAIL = 'In_Group@example.com'
+    NON_GROUP_STUDENT_EMAIL = 'Hoi_Polloi@example.com'
 
     def setUp(self):
         super(GradebookTests, self).setUp()
@@ -1799,11 +1802,17 @@ class GradebookTests(StudentGroupsTestBase):
 
         data = self._get_gradebook_data('student_group=')
         self.assertEquals(2, len(data))
-        self.assertEquals(self.NON_GROUP_STUDENT_EMAIL, data[0]['user_email'])
+
+        # Order cannot be assumed, so convert to a set of email addresses.
+        all_emails = frozenset([datum['user_email'] for datum in data])
+        non_group_email = self.NON_GROUP_STUDENT_EMAIL.lower()
+        self.assertIn(non_group_email, all_emails)
+        in_group_email = self.IN_GROUP_STUDENT_EMAIL.lower()
+        self.assertIn(in_group_email, all_emails)
 
         data = self._get_gradebook_data('student_group=%s' % group_id)
         self.assertEquals(1, len(data))
-        self.assertEquals(self.IN_GROUP_STUDENT_EMAIL, data[0]['user_email'])
+        self.assertEquals(in_group_email, data[0]['user_email'])
 
         data = self._get_gradebook_data('student_group=999')
         self.assertEquals(0, len(data))
@@ -1842,7 +1851,8 @@ class GradebookTests(StudentGroupsTestBase):
 
         data = self._get_gradebook_data('student_group=%s' % group_id)
         self.assertEquals(1, len(data))
-        self.assertEquals(self.IN_GROUP_STUDENT_EMAIL, data[0]['user_email'])
+        in_group_email = self.IN_GROUP_STUDENT_EMAIL.lower()
+        self.assertEquals(in_group_email, data[0]['user_email'])
 
 
 class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
@@ -1885,9 +1895,10 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         return group_id
 
     def _check_registered_student(self, student_email, group_id=None):
+        expected_email = student_email.lower()
         with common_utils.Namespace(self.NAMESPACE):
             student = models.Student.all().get()
-            self.assertEquals(student_email, student.email)
+            self.assertEquals(expected_email, student.email)
             if group_id is not None:
                 self.assertEquals(group_id, student.group_id)
             else:
@@ -1898,9 +1909,10 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
             self.assertIsNone(models.Student.all().get())
 
     def _check_student_in_group(self, student_email, group_id):
+        expected_email = student_email.lower()
         with common_utils.Namespace(self.NAMESPACE):
             membership = student_groups.StudentGroupMembership.all().get()
-            self.assertEquals(student_email, membership.key().name())
+            self.assertEquals(expected_email, membership.key().name())
             self.assertEquals(group_id, membership.group_id)
 
     def _check_no_students_in_groups(self):

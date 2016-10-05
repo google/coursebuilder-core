@@ -705,7 +705,7 @@ class StudentGroupMembership(models.BaseEntity):
         # did not check non-Students, they might well be prevented from
         # becoming Students since the registration page availability is gated
         # on course availability.
-        binding = StudentGroupMembership.get_by_key_name(user.email())
+        binding = StudentGroupMembership.get_by_key_name(user.email().lower())
         if binding:
             return model_caching.CacheFactory.get_manager_class(
                 MODULE_NAME_AS_IDENTIFIER).get(binding.group_id)
