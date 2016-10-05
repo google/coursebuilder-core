@@ -1782,7 +1782,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         # is *2*, so just traverse it, instead of calling for_form() to
         # transform it into a milestone-keyed dict of single value lists.
         for mt in cls.copy_from_settings(settings):
-            if mt.get('milestone') == milestone:
+            if mt.get(MilestoneTrigger.FIELD_NAME) == milestone:
                 return mt.copy()  # Just string values, so shallow copy OK.
         return {}
 

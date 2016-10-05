@@ -26,23 +26,24 @@ from modules.gql import gql
 def resolve_start_date(gql_course, args, info):
     """Get course card start date as a UTC ISO-8601 Zulu string.
 
+    Student group overrides for the current user are injected into the
+    gql_course.course_environ property when it is accessed. The original
+    Course 'start_date' setting value is overwritten if the current user is
+    in a student group having a corresponding start_date property value.
+
+    The course_environ property calls courses.Course.get_environ(), passing
+    it gql_course.app_context. The COURSE_ENV_POST_COPY_HOOKS are then run
+    when get_environ() calls _run_env_post_copy_hooks(). One of those hooks
+    is student_groups.modify_course_environment(). That hook calls the
+    apply_overrides_to_environ() function in student_groups.graphql, which
+    overwrites 'course:start_date' with the value of the start_date property
+    in the StudentGroupDTO if that property has a value.
+
     Returns:
-      The "encoded" `when` string of the constants.START_DATE_MILESTONE
-      MilestoneTrigger ('publish:course_triggers:course_start'), if that
-      milestone trigger exists in the 'publish' settings of the
-      gql_course.course_environ.
-
-      Otherwise, the constants.START_DATE_SETTING ('course:start_date')
-      string, if it exists in the 'course' settings of the
-      gql_course.course_environ.
-
-      As a last resort, None is returned.
+      The 'course:start_date' (constants.START_DATE_SETTING) string, if it
+      exists in the 'course' settings of the gql_course.course_environ.
+      Otherwise, None is returned.
     """
-    start_when = triggers.MilestoneTrigger.copy_milestone_from_settings(
-        constants.START_DATE_MILESTONE, gql_course.course_environ).get('when')
-    if start_when:
-        return start_when
-
     return courses.Course.get_named_course_setting_from_environ(
         constants.START_DATE_SETTING, gql_course.course_environ)
 
@@ -50,22 +51,13 @@ def resolve_start_date(gql_course, args, info):
 def resolve_end_date(gql_course, args, info):
     """Get course card end date as a UTC ISO-8601 Zulu string.
 
+    Student group overrides are injected similarly to resolve_start_date().
+
     Returns:
-      The "encoded" `when` string of the constants.END_DATE_MILESTONE
-      MilestoneTrigger ('publish:course_triggers:course_end'), if that
-      milestone trigger exists in the 'publish' settings of the
-      gql_course.course_environ.
-
-      Otherwise, the constants.END_DATE_SETTING ('course:end_date') string,
-      if it exists in the 'course' settings of the gql_course.course_environ.
-
-      As a last resort, None is returned.
+      The 'course:end_date' (constants.END_DATE_SETTING) string, if it exists
+      in the 'course' settings of the gql_course.course_environ. Otherwise,
+      None is returned.
     """
-    end_when = triggers.MilestoneTrigger.copy_milestone_from_settings(
-        constants.END_DATE_MILESTONE, gql_course.course_environ).get('when')
-    if end_when:
-        return end_when
-
     return courses.Course.get_named_course_setting_from_environ(
         constants.END_DATE_SETTING, gql_course.course_environ)
 

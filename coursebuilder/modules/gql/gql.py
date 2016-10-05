@@ -386,7 +386,8 @@ class Course(CourseAwareObjectType, graphene.relay.Node):
 
     @property
     def course_environ(self):
-        return courses.Course.get_environ(self.app_context)
+        with common_utils.Namespace(self.app_context.namespace):
+            return courses.Course.get_environ(self.app_context)
 
     @classmethod
     def get_node(cls, node_id, info):

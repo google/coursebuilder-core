@@ -22,19 +22,30 @@ from modules.courses import constants
 def apply_overrides_to_environ(student_group, env):
     """Overrides course start/end dates displayed in the course explorer.
 
+    If student_group has a value for the start_date property, that value
+    overwrites env['course']['start_date']. The 'course:end_date' is
+    similarly overwritten if end_date has a value.
+
     Args:
         student_group: a StudentGroupDTO.
         env: a Course get_environ() dict containing settings (some of which
            are displayed on course cards in the course explorer) that are
            modified *in place* by student group specific overrides.
     """
-    start_date = None if not student_group else student_group.start_date
+    if not student_group:
+        return  # The current user was not a member of a student group.
+
+    start_date = student_group.start_date
     if start_date:
+        # A start_date override was obtained from the student_group, so
+        # overwrite any existing value in the Course get_environ() dict.
         courses.Course.set_named_course_setting_in_environ(
             constants.START_DATE_SETTING, env, start_date)
 
-    end_date = None if not student_group else student_group.end_date
+    end_date = student_group.end_date
     if end_date:
+        # An end_date override was obtained from the student_group, so
+        # overwrite any existing value in the Course get_environ() dict.
         courses.Course.set_named_course_setting_in_environ(
             constants.END_DATE_SETTING, env, end_date)
 
