@@ -548,7 +548,6 @@ $(function() {
   };
   EditMultiCourseAvailabilityPanel.prototype._getCurrentValue = function(
       courseNamespace) {
-    debugger;
     return $('#availability_' + courseNamespace).text().trim();
   };
   EditMultiCourseAvailabilityPanel.prototype._getSaveUrl = function() {
