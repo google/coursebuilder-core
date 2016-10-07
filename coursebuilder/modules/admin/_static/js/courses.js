@@ -610,6 +610,10 @@ $(function() {
     YUI(yuiConf).use('gcb-datetime', function(Y) {
       self._datetime_field = new Y.inputEx.typeClasses.datetime(
           {parentEl: fields.find('#datetime-container')[0]});
+      // Course start and end dates are in UTC, so trigger special conversions
+      // between the stored values and the values displayed to the user, which
+      // are always in local time (not UTC).
+      $(self._datetime_field.divEl).addClass('gcb-utc-datetime');
       // Mark minutes field in date picker as not editable.  Date/time
       // picker looks odd with just the hours field, so leave minutes
       // field there with default value of :00, which is what we want,
