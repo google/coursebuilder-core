@@ -216,6 +216,88 @@ class CourseMultiEditTests(_CoursesListTestBase):
             'Updated settings in 0 courses and had %d errors.' %
             self.NUM_COURSES)
 
+    def test_multi_edit_availability_fails_safe(self):
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_availability()
+
+        # Field should not be marked invalid on open of dialog
+        self.assertFalse(multi_edit.is_availability_marked_invalid())
+
+        # Save with no changes should mark field invalid.
+        multi_edit.click_save_expecting_validation_failure()
+        self.assertTrue(multi_edit.is_availability_marked_invalid())
+
+        # Changing the field should remove the this-is-invalid styling
+        multi_edit.set_availability(
+            courses.COURSE_AVAILABILITY_POLICIES[
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
+        self.assertFalse(multi_edit.is_availability_marked_invalid())
+
+    def _test_multi_edit_date_fails_safe(self, multi_edit):
+        # Field should not be marked invalid on open of dialog
+        self.assertFalse(multi_edit.is_availability_marked_invalid())
+        self.assertFalse(multi_edit.is_date_time_marked_invalid())
+
+        # Save with no changes should mark field invalid.
+        multi_edit.click_save_expecting_validation_failure()
+        self.assertTrue(multi_edit.is_availability_marked_invalid())
+        self.assertTrue(multi_edit.is_date_time_marked_invalid())
+
+        # Changing the availability should remove the this-is-invalid styling
+        multi_edit.set_availability(
+            courses.COURSE_AVAILABILITY_POLICIES[
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
+        self.assertFalse(multi_edit.is_availability_marked_invalid())
+        self.assertTrue(multi_edit.is_date_time_marked_invalid())
+
+        # Change availability back to blank; pick a date.  Only
+        # availability should be marked invalid.
+        multi_edit.set_date_time('07/12/2100', '22')
+        multi_edit.set_availability('--- change availability to ---')
+        multi_edit.click_save_expecting_validation_failure()
+        self.assertTrue(multi_edit.is_availability_marked_invalid())
+        self.assertFalse(multi_edit.is_date_time_marked_invalid())
+
+        multi_edit.set_date_time('07/12/2100', '22')
+        multi_edit.set_availability(
+            courses.COURSE_AVAILABILITY_POLICIES[
+                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
+        self.assertFalse(multi_edit.is_availability_marked_invalid())
+        self.assertFalse(multi_edit.is_date_time_marked_invalid())
+
+    def test_multi_edit_start_date_fails_safe(self):
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_start_date()
+        self._test_multi_edit_date_fails_safe(multi_edit)
+
+    def test_multi_edit_end_date_fails_safe(self):
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_end_date()
+        self._test_multi_edit_date_fails_safe(multi_edit)
+
+    def test_multi_edit_shown_in_explorer_fails_safe(self):
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_show_in_explorer()
+
+        # Before save attempt, buttons not marked.
+        self.assertFalse(multi_edit.are_show_buttons_marked_invalid())
+
+        # Save with no changes should mark field invalid.
+        multi_edit.click_save_expecting_validation_failure()
+        self.assertTrue(multi_edit.are_show_buttons_marked_invalid())
+
+        # Any change to field should remove the invalid style.
+        multi_edit.set_show_in_explorer(True)
+        self.assertFalse(multi_edit.are_show_buttons_marked_invalid())
+
     def test_multi_edit_course_start_end(self):
         # ----------------------------------------------------------------------
         # Before any changes, course settings for availability are blank.

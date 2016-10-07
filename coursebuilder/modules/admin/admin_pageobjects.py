@@ -489,6 +489,11 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
         self.wait().until(spinner_not_visible)
         return self
 
+    def click_save_expecting_validation_failure(self):
+        self.find_element_by_id('multi-course-save').click()
+        self._tester.assertFalse(expected_conditions.alert_is_present()(
+            self._tester.driver))
+
     def accept_alert(self):
         self.wait().until(expected_conditions.alert_is_present())
         self._tester.driver.switch_to_alert().accept()
@@ -499,16 +504,32 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
         category.send_keys(value)
 
     def set_show_in_explorer(self, value):
-        checkbox = self.find_element_by_id('multi-course-show-in-explorer')
-        checked = checkbox.get_attribute('checked')
-        if (not checked and value) or (checked and not value):
-            checkbox.click()
+        if value:
+            radio = self.find_element_by_id('multi-course-show-in-explorer-yes')
+            if not radio.get_attribute('checked'):
+                radio.click()
+        else:
+            radio = self.find_element_by_id('multi-course-show-in-explorer-no')
+            if not radio.get_attribute('checked'):
+                radio.click()
         return self
+
+    def are_show_buttons_marked_invalid(self):
+        yes = self.find_element_by_css_selector(
+            '.multi-course-show-in-explorer-yes')
+        no = self.find_element_by_css_selector(
+            '.multi-course-show-in-explorer-no')
+        return ('input-invalid' in no.get_attribute('class').strip().split() and
+                'input-invalid' in yes.get_attribute('class').strip().split())
 
     def set_availability(self, value):
         select_elt = self.find_element_by_id('multi-course-select-availability')
         select.Select(select_elt).select_by_visible_text(value)
         return self
+
+    def is_availability_marked_invalid(self):
+        field = self.find_element_by_id('multi-course-select-availability')
+        return 'input-invalid' in field.get_attribute('class').strip().split()
 
     def set_date_time(self, the_date, the_time):
         """Set date/time field.
@@ -526,6 +547,13 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
             '#datetime-container select')
         select.Select(time_element).select_by_visible_text(the_time)
         return self
+
+    def is_date_time_marked_invalid(self):
+        field = self.find_element_by_css_selector(
+            '#datetime-container > '
+            '.inputEx-CombineField > '
+            '.inputEx-fieldWrapper')
+        return 'inputEx-invalid' in field.get_attribute('class').strip().split()
 
     def assert_status(self, namespace, text):
         td = self.find_element_by_id('course_status_' + namespace)

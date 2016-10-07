@@ -350,7 +350,7 @@ $(function() {
         '      <thead>' +
         '        <tr id="multi_edit_header_row">' +
         '          <th class="edit-multi-course-coursename">Course Name</th>' +
-        '          <th class="edit-multi-course-status">Status</th>' +
+        '          <th class="edit-multi-course-status">Setting Saved?</th>' +
         '        </tr>' +
         '      </thead>' +
         '      <tbody id="course_list">' +
@@ -511,13 +511,27 @@ $(function() {
         '</div>'
         );
     var availabilitySelect = ret.find('#multi-course-select-availability');
+    availabilitySelect.append(
+        $('<option value="">--- change availability to ---</option>'));
     this._availabilitySelect = availabilitySelect;
     var options = $('#edit_multi_course_availability').data('options');
     $(options).each(function(index, opt) {
       availabilitySelect.append(
           $('<option value=' + opt.value + '>' + opt.title + '</option>'));
     });
+    availabilitySelect.change(function(event) {
+      availabilitySelect.removeClass('input-invalid');
+    });
     return ret
+  };
+  EditMultiCourseAvailabilityPanel.prototype._validate = function() {
+    var isValid = (this._availabilitySelect.val() != '');
+    if (isValid) {
+      this._availabilitySelect.removeClass('input-invalid');
+    } else {
+      this._availabilitySelect.addClass('input-invalid');
+    }
+    return isValid;
   };
   EditMultiCourseAvailabilityPanel.prototype._getSaveUrl = function() {
     return '/rest/multi_availability';
@@ -578,7 +592,7 @@ $(function() {
     var yuiConf = getYuiConfig(cb_global.bundle_lib_files);
     YUI(yuiConf).use('gcb-datetime', function(Y) {
       self._datetime_field = new Y.inputEx.typeClasses.datetime(
-          {parentEl: 'datetime-container'});
+          {parentEl: fields.find('#datetime-container')[0]});
       // Mark minutes field in date picker as not editable.  Date/time
       // picker looks odd with just the hours field, so leave minutes
       // field there with default value of :00, which is what we want,
@@ -586,12 +600,18 @@ $(function() {
       $(self._datetime_field.divEl).find(
           '.inputEx-CombineField-separator + .inputEx-fieldWrapper select'
           ).prop('disabled', 'true');
+      self._datetime_field.options.required = true;
     });
 
     return fields;
   };
   EditMultiCourseDatePanel.prototype._validate = function() {
-    return this._datetime_field.validate();
+    var isValid = (
+        EditMultiCourseAvailabilityPanel.prototype._validate.call(this));
+    // Intentionally calling both validate() methods rather than
+    // short-circuiting.  This way, *all* invalid fields get visually marked,
+    // rather than just the first problem found.
+    return this._datetime_field.validate() && isValid;
   };
   EditMultiCourseDatePanel.prototype._getSaveUrl = function() {
     // Decide whether to call set... or clear... depending on whether
@@ -700,22 +720,57 @@ $(function() {
   EditMultiCourseShowInExplorerPanel.prototype._getFormFields = function() {
     var ret = $(
         '<div class="form-row">' +
-        '  <label>Show In Explorer' +
-        '    <input ' +
-        '      type="checkbox" ' +
-        '      id="multi-course-show-in-explorer" ' +
-        '      name="show_in_explorer">' +
+        '  <label>Show In Explorer?' +
+        '    <div> ' +
+        '      <label class="multi-course-show-in-explorer-yes"> ' +
+        '        <input ' +
+        '          type="radio" ' +
+        '          id="multi-course-show-in-explorer-yes" ' +
+        '          name="show_in_explorer"> ' +
+        '        Shown ' +
+        '      </label> ' +
+        '    </div> ' +
+        '    <div> ' +
+        '      <label class="multi-course-show-in-explorer-no"> ' +
+        '        <input ' +
+        '          type="radio" ' +
+        '          id="multi-course-show-in-explorer-no" ' +
+        '          name="show_in_explorer"> Not Shown' +
+        '      </label> ' +
+        '    </div> ' +
         '  </label>' +
         '</div>'
         );
-    this._show_in_explorer = ret.find('#multi-course-show-in-explorer');
+    this._show_in_explorer_yes = ret.find('#multi-course-show-in-explorer-yes');
+    this._show_in_explorer_no = ret.find('#multi-course-show-in-explorer-no');
+    var that = this;
+    this._show_in_explorer_yes.change(function(event) {
+      that._show_in_explorer_yes.parent().removeClass('input-invalid');
+      that._show_in_explorer_no.parent().removeClass('input-invalid');
+    });
+    this._show_in_explorer_no.change(function(event) {
+      that._show_in_explorer_yes.parent().removeClass('input-invalid');
+      that._show_in_explorer_no.parent().removeClass('input-invalid');
+    });
     return ret;
+  };
+  EditMultiCourseShowInExplorerPanel.prototype._validate = function() {
+    var is_yes = this._show_in_explorer_yes.prop('checked');
+    var is_no = this._show_in_explorer_no.prop('checked');
+    if (is_yes == is_no) {
+      this._show_in_explorer_yes.parent().addClass('input-invalid');
+      this._show_in_explorer_no.parent().addClass('input-invalid');
+    } else {
+      this._show_in_explorer_yes.parent().removeClass('input-invalid');
+      this._show_in_explorer_no.parent().removeClass('input-invalid');
+    }
+    return is_yes != is_no;
   };
   EditMultiCourseShowInExplorerPanel.prototype._getSaveUrl = function() {
     return '/rest/course/settings';
   };
   EditMultiCourseShowInExplorerPanel.prototype._getSavePayload = function() {
-    var show_in_explorer = this._show_in_explorer.prop('checked');
+    var show_in_explorer = this._show_in_explorer_yes.prop('checked');
     return {
       'homepage': {
         'course:show_in_explorer': show_in_explorer
@@ -726,7 +781,7 @@ $(function() {
       function(payload) {
         var courseNamespace = payload.key;
         var shownField = $('#show_in_explorer_' + courseNamespace);
-        if (this._show_in_explorer.prop('checked')) {
+        if (this._show_in_explorer_yes.prop('checked')) {
           shownField.text('Yes');
         } else {
           shownField.text('No');
