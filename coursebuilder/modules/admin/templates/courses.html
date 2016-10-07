@@ -85,6 +85,18 @@
           Availability
           <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
         </th>
+        <th id="start_date_column" class="gcb-sorted-none">
+          Start Date
+          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+        </th>
+        <th id="end_date_column" class="gcb-sorted-none">
+          End Date
+          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+        </th>
+        <th id="category_column" class="gcb-sorted-none">
+          Category
+          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+        </th>
         <th id="enrolled_column" class="gcb-sorted-none">
           Registered Students
           <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
@@ -127,6 +139,35 @@
             {{ course.availability }}
           </a>
         </td>
+        <td class="gcb-courses-start-date">
+          <a id="start_date_{{ course.namespace_name }}"
+             class="gcb-text-to-sort-by"
+             href="{{ course.slug }}/dashboard?action=availability">
+            {{ course.start_date }}
+          </a>
+          <span class="multi-course-hidden"
+                id="start_date_full_{{ course.namespace_name }}">
+            {{ course.start_date_full }}
+          </span>
+        </td>
+        <td class="gcb-courses-end_date">
+          <a id="end_date_{{ course.namespace_name }}"
+             class="gcb-text-to-sort-by"
+             href="{{ course.slug }}/dashboard?action=availability">
+            {{ course.end_date }}
+          </a>
+          <span class="multi-course-hidden"
+                id="end_date_full_{{ course.namespace_name }}">
+            {{ course.end_date_full }}
+          </span>
+        </td>
+        <td class="gcb-courses-category">
+          <a id="category_{{ course.namespace_name }}"
+             class="gcb-text-to-sort-by"
+             href="{{ course.slug }}/dashboard?action=settings_homepage">
+            {{ course.category }}
+          </a>
+        </td>
         <td class="gcb-courses-enrolled">
           <div>
             <div id="enrolled_{{ course.namespace_name }}"
@@ -135,8 +176,8 @@
             </div>
             <div class="mdl-tooltip gcb-form-tooltip"
                  id="activity_{{ course.namespace_name }}"
-                 for="enrolled_{{ course.namespace_name }}"
-                 >{{ course.most_recent_enroll }}</div>
+                 for="enrolled_{{ course.namespace_name }}">
+              {{ course.most_recent_enroll }}</div>
           </div>
         </td>
         {% for item in course.additional_columns %}
@@ -171,6 +212,9 @@
         <td>
           {{ courses|length }} course(s)
         </td>
+        <td></td>
+        <td></td>
+        <td></td>
         <td></td>
         <td></td>
         <td>

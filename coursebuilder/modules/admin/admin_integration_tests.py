@@ -167,7 +167,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
             self.create_new_course(login=False)
         self.maxDiff = None
 
-    def _get_courses_availability(self):
+    def _get_courses_availability_from_settings(self):
         ret = {}
         page = courses_pageobjects.CourseAvailabilityPage(self)
         for course_namespace in self.course_namespaces:
@@ -178,24 +178,39 @@ class CourseMultiEditTests(_CoursesListTestBase):
 
     def test_multi_edit_multiple_courses(self):
         course_list = self.load_courses_list()
-        for course_namespace in self.course_namespaces:
+        for course_namespace in self.course_namespaces[0:-1]:
             course_list.toggle_course_checkbox(course_namespace)
 
         multi_edit = course_list.click_edit_availability()
-        multi_edit.set_availability(
-            courses.COURSE_AVAILABILITY_POLICIES[
-                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
 
+        # Verify that the starting value in the dialog has been copied from
+        # the page.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                'Private',
+                multi_edit.get_current_value_for(course_namespace))
+
+        availability = courses.COURSE_AVAILABILITY_POLICIES[
+            courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title']
+        multi_edit.set_availability(availability)
         multi_edit.click_save()
-        for course_namespace in self.course_namespaces:
-            multi_edit.assert_status(course_namespace, self.SAVED_STATUS)
-            course_list.verify_availability(
-                course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
-                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
-
         multi_edit.expect_status_message_to_be(
             'Updated settings in %d courses.' %
-            self.NUM_COURSES)
+            (self.NUM_COURSES - 1))
+
+        # Verify that the value has been updated in the dialog.
+        for course_namespace in self.course_namespaces[0:-1]:
+            multi_edit.assert_status(course_namespace, self.SAVED_STATUS)
+            self.assertEquals(
+                availability,
+                multi_edit.get_current_value_for(course_namespace))
+
+        # Verify content on course list page has changed for altered courses,
+        # and has _not_ changed for non-affected ones.
+        for course_namespace in self.course_namespaces[0:-1]:
+            course_list.verify_availability(course_namespace, availability)
+        for course_namespace in self.course_namespaces[-1:]:
+            course_list.verify_availability(course_namespace, 'Private')
 
         # Attempt to set courses to Private, but with an error that
         # will prevent that from actually happening.
@@ -205,16 +220,14 @@ class CourseMultiEditTests(_CoursesListTestBase):
 
         multi_edit.set_availability_xsrf_token('not a valid token')
         multi_edit.click_save()
-        for course_namespace in self.course_namespaces:
+        for course_namespace in self.course_namespaces[0:-1]:
             multi_edit.assert_status(
                 course_namespace,
                 'Bad XSRF token. Please reload the page and try again')
-            course_list.verify_availability(
-                course_namespace, courses.COURSE_AVAILABILITY_POLICIES[
-                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
+            course_list.verify_availability(course_namespace, availability)
         multi_edit.expect_status_message_to_be(
             'Updated settings in 0 courses and had %d errors.' %
-            self.NUM_COURSES)
+            (self.NUM_COURSES - 1))
 
     def test_multi_edit_availability_fails_safe(self):
         course_list = self.load_courses_list()
@@ -339,7 +352,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
             'date': '07/12/2100',
             'hour': '22'
         }
-        actual_avail = self._get_courses_availability()
+        actual_avail = self._get_courses_availability_from_settings()
         self.assertEquals(expected_avail, actual_avail)
 
         # ----------------------------------------------------------------------
@@ -360,7 +373,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
             'date': '07/31/2100',
             'hour': '05',
         }
-        actual_avail = self._get_courses_availability()
+        actual_avail = self._get_courses_availability_from_settings()
         self.assertEquals(expected_avail, actual_avail)
 
         # ----------------------------------------------------------------------
@@ -378,7 +391,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         expected_c0['availability'] = 'registration_optional'
         expected_c1['availability'] = 'registration_optional'
         expected_c2['availability'] = 'registration_optional'
-        actual_avail = self._get_courses_availability()
+        actual_avail = self._get_courses_availability_from_settings()
         self.assertEquals(expected_avail, actual_avail)
 
         # ----------------------------------------------------------------------
@@ -395,7 +408,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
             'date': '',
             'hour': '00'
         }
-        actual_avail = self._get_courses_availability()
+        actual_avail = self._get_courses_availability_from_settings()
         self.assertEquals(expected_avail, actual_avail)
 
         # ----------------------------------------------------------------------
@@ -412,10 +425,55 @@ class CourseMultiEditTests(_CoursesListTestBase):
             'date': '',
             'hour': '00'
         }
-        actual_avail = self._get_courses_availability()
+        actual_avail = self._get_courses_availability_from_settings()
         self.assertEquals(expected_avail, actual_avail)
 
-    def _get_category(self, namespace):
+    def test_multi_edit_course_start_appearance_only(self):
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[0:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        availability = courses.COURSE_AVAILABILITY_POLICIES[
+            courses.COURSE_AVAILABILITY_PUBLIC]['title']
+        multi_edit = course_list.click_edit_start_date()
+
+        # Verify that the starting value in the dialog has been copied from
+        # the page.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                '',
+                multi_edit.get_current_value_for(course_namespace))
+
+        multi_edit.set_availability(availability)
+        multi_edit.set_date_time('07/31/2100', '05')
+        multi_edit.click_save()
+
+        # Verify that value has been updated in the dialog.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                availability + ' on 2100-07-31 12:00:00',
+                multi_edit.get_current_value_for(course_namespace))
+        multi_edit.click_cancel()
+
+        # Verify the value has been updated on the course list page.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                '2100-07-31',
+                course_list.get_start_date_for(course_namespace))
+        for course_namespace in self.course_namespaces[-1:]:
+            self.assertEquals(
+                '',
+                course_list.get_category_for(course_namespace))
+
+        # Re-open multi-edit dialog; verify that the long form of the
+        # availability text is present, not just the short form from the
+        # list page.
+        multi_edit = course_list.click_edit_start_date()
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                availability + ' on 2100-07-31 12:00:00',
+                multi_edit.get_current_value_for(course_namespace))
+
+    def _get_category_from_settings(self, namespace):
         return self.load_dashboard(
             re.sub('^ns_', '', namespace)
         ).click_settings(
@@ -425,23 +483,49 @@ class CourseMultiEditTests(_CoursesListTestBase):
 
     def test_multi_edit_course_category(self):
         course_list = self.load_courses_list()
-        for course_namespace in self.course_namespaces[:-1]:
+        for course_namespace in self.course_namespaces[0:-1]:
             course_list.toggle_course_checkbox(course_namespace)
         multi_edit = course_list.click_edit_category()
+
+        # Verify that the starting value in the dialog has been copied from
+        # the page.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                '',
+                multi_edit.get_current_value_for(course_namespace))
+
         multi_edit.set_category('Frumious Bandersnatch')
         multi_edit.click_save()
 
-        self.assertEquals(
-            'Frumious Bandersnatch',
-            self._get_category(self.course_namespaces[0]))
-        self.assertEquals(
-            'Frumious Bandersnatch',
-            self._get_category(self.course_namespaces[1]))
-        self.assertEquals(
-            '',
-            self._get_category(self.course_namespaces[2]))
+        # Verify that value has been updated in the dialog.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                'Frumious Bandersnatch',
+                multi_edit.get_current_value_for(course_namespace))
+        multi_edit.click_cancel()
 
-    def _get_show_in_explorer(self, namespace):
+        # Verify the value has been updated on the course list page.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                'Frumious Bandersnatch',
+                course_list.get_category_for(course_namespace))
+        for course_namespace in self.course_namespaces[-1:]:
+            self.assertEquals(
+                '',
+                course_list.get_category_for(course_namespace))
+
+        # Verify that settings have actually been changed by loading the
+        # setting from individual courses' settings pages.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                'Frumious Bandersnatch',
+                self._get_category_from_settings(course_namespace))
+        for course_namespace in self.course_namespaces[-1:]:
+            self.assertEquals(
+                '',
+                self._get_category_from_settings(course_namespace))
+
+    def _get_show_in_explorer_from_settings(self, namespace):
         self.load_dashboard(
             re.sub('^ns_', '', namespace)
         ).click_settings(
@@ -457,12 +541,33 @@ class CourseMultiEditTests(_CoursesListTestBase):
         multi_edit.set_show_in_explorer(False)
         multi_edit.click_save()
 
-        self.assertEquals(
-            "false", self._get_show_in_explorer(self.course_namespaces[0]))
-        self.assertEquals(
-            "false", self._get_show_in_explorer(self.course_namespaces[1]))
-        self.assertEquals(
-            "true", self._get_show_in_explorer(self.course_namespaces[2]))
+        # Verify that value has been updated in the dialog.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                'No',
+                multi_edit.get_current_value_for(course_namespace))
+        multi_edit.click_cancel()
+
+        # Verify the value has been updated on the course list page.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                'No',
+                course_list.get_show_in_explorer_for(course_namespace))
+        for course_namespace in self.course_namespaces[-1:]:
+            self.assertEquals(
+                'Yes',
+                course_list.get_show_in_explorer_for(course_namespace))
+
+        # Verify that settings have actually been changed by loading the
+        # setting from individual courses' settings pages.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                'false',
+                self._get_show_in_explorer_from_settings(course_namespace))
+        for course_namespace in self.course_namespaces[-1:]:
+            self.assertEquals(
+                'true',
+                self._get_show_in_explorer_from_settings(course_namespace))
 
 
 class CoursesEnrollmentsTests(_CoursesListTestBase):

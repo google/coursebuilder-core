@@ -257,6 +257,26 @@ class CoursesListPage(pageobjects.CoursesListPage):
         self._tester.assertEqual(expected, a_href.text.strip())
         return self
 
+    def get_category_for(self, namespace):
+        return self.find_element_by_id(
+            'category_' + namespace).text.strip()
+
+    def get_availability_for(self, namespace):
+        return self.find_element_by_id(
+            'availability_' + namespace).text.strip()
+
+    def get_start_date_for(self, namespace):
+        return self.find_element_by_id(
+            'start_date_' + namespace).text.strip()
+
+    def get_end_date_for(self, namespace):
+        return self.find_element_by_id(
+            'end_date_' + namespace).text.strip()
+
+    def get_show_in_explorer_for(self, namespace):
+        return self.find_element_by_id(
+            'show_in_explorer_' + namespace).text.strip()
+
     def _open_multicourse_popup(self, item_id):
         field = self.find_element_by_css_selector('.dropdown-container')
         action_chains.ActionChains(self._tester.driver).move_to_element(
@@ -564,3 +584,7 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
         self._tester.driver.execute_script(
             'gcb_multi_edit_dialog._xsrfToken = "%s";' % new_value)
         return self
+
+    def get_current_value_for(self, namespace):
+        return self.find_element_by_id(
+            'current_value_' + namespace).text.strip()

@@ -51,7 +51,9 @@ from modules.admin import enrollments
 from modules.admin.config import ConfigPropertyEditor
 from modules.admin.config import CourseDeleteHandler
 from modules.courses import availability
+from modules.courses import constants
 from modules.courses import settings
+from modules.courses import triggers
 from modules.dashboard import dashboard
 from modules.dashboard import utils as dashboard_utils
 from common import menus
@@ -874,11 +876,33 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 link = '%s/dashboard' % slug
 
             is_selected_course = (ns_name == this_namespace)
+            environ = app_context.get_environ()
             course_availability = (
-                courses.Course.get_course_availability_from_app_context(
-                    app_context))
+                courses.Course.get_course_availability_from_environ(environ))
             availability_title = courses.COURSE_AVAILABILITY_POLICIES[
                 course_availability]['title']
+
+            def parse_trigger(course_triggers, milestone_name):
+                if (milestone_name in course_triggers and
+                    course_triggers[milestone_name]):
+                    trigger = course_triggers[milestone_name][0]
+                    if 'when' in trigger:
+                        status = courses.COURSE_AVAILABILITY_POLICIES.get(
+                            trigger['availability'])
+                        if status:
+                            trigger_when = utc.text_to_datetime(trigger['when'])
+                            trigger_date = str(trigger_when.date())
+                            trigger_date_full = (
+                                status['title'] + ' on ' + str(trigger_when))
+                            return trigger_date, trigger_date_full
+                return '', ''
+            course_triggers = triggers.MilestoneTrigger.for_form(environ)
+            start_date, start_date_full = parse_trigger(
+                course_triggers, constants.START_DATE_MILESTONE)
+            end_date, end_date_full = parse_trigger(
+                course_triggers, constants.END_DATE_MILESTONE)
+            category = courses.Course.get_named_course_setting_from_environ(
+                'category_name', environ, default='')
             if not enrolled_dto.is_empty:
                 # 'count' property is present, so counter *is* initialized.
                 total_enrolled = enrolled_dto.get()
@@ -906,6 +930,11 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 'total_enrolled': total_enrolled,
                 'most_recent_enroll': most_recent_enroll,
                 'additional_columns': additional_columns,
+                'start_date': start_date,
+                'start_date_full': start_date_full,
+                'end_date': end_date,
+                'end_date_full': end_date_full,
+                'category': category,
             })
 
         additional_footers = [

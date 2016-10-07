@@ -115,7 +115,7 @@
  * Buttons for multi-course-edit shown as dropdown list on hover.
  */
 .edit-multi-course-list {
-  width: 500px;
+  width: 600px;
   max-height: 500px;
   overflow-y: scroll;
   overflow-x: hidden;
@@ -148,6 +148,13 @@ div.dropdown-container:hover:not(.inactive-container) div.dropdown-actions-conta
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow-x: hidden;
+}
+.multi-course-hidden {
+  display: none;
+}
+.multi-course-panel .input-invalid {
+  border: solid 1px red;
+  box-shadow: 0 0 5px #f00;
 }
 
 .multi-course-panel .input-invalid {
