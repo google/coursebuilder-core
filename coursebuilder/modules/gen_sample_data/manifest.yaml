@@ -1,5 +1,7 @@
 registration:
   main_module: modules.gen_sample_data.gen_sample_data
+  enabled: False
+  enabled_for_tests: True
 
 tests:
     functional:
