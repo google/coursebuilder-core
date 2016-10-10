@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-10-03 08:08-0700\n"
-"PO-Revision-Date: 2016-10-03 08:08-0700\n"
+"POT-Creation-Date: 2016-10-10 06:57-0700\n"
+"PO-Revision-Date: 2016-10-10 06:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ko <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -941,7 +941,7 @@ msgstr "파일이 너무 큽니다. 1MB 미만의 파일만 허용됩니다."
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:117
 msgid "Unable to save student submission."
-msgstr ""
+msgstr "학생 제출물을 저장할 수 없습니다."
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
@@ -974,13 +974,13 @@ msgstr "이전 페이지로 돌아가기"
 #. submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:25
 msgid "Go back and try again."
-msgstr ""
+msgstr "이전으로 돌아가 다시 시도"
 
 #. Text after the link to take the user back to the previous page so they can
 #. try submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:28
 msgid "If the problem persists, contact your administrator."
-msgstr ""
+msgstr "문제가 지속되면 관리자에게 문의하세요."
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1603,7 +1603,5 @@ msgstr "다음 페이지"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "종료"
-
-
 
 

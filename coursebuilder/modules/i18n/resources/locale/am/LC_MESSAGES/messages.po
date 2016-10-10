@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-10-03 08:08-0700\n"
-"PO-Revision-Date: 2016-10-03 08:08-0700\n"
+"POT-Creation-Date: 2016-10-10 06:57-0700\n"
+"PO-Revision-Date: 2016-10-10 06:57-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: am <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -948,7 +948,7 @@ msgstr "ፋይል ከልክ በላይ በጣም ትልቅ ነው፣ ከ1ሜባ �
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:117
 msgid "Unable to save student submission."
-msgstr ""
+msgstr "የተማሪን ግቤትን ማስቀመጥ አልተቻለም።"
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
@@ -981,13 +981,13 @@ msgstr "ወደ ቀዳሚው ገጽ ይመለሱ።"
 #. submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:25
 msgid "Go back and try again."
-msgstr ""
+msgstr "ይመለሱና እንደገና ይሞክሩ።"
 
 #. Text after the link to take the user back to the previous page so they can
 #. try submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:28
 msgid "If the problem persists, contact your administrator."
-msgstr ""
+msgstr "ችግሩ ከቀጠለ አስተዳዳሪዎን ያነጋግሩ።"
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1614,7 +1614,5 @@ msgstr "ቀጣይ ገፅ"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "መጨረሻ"
-
-
 
 

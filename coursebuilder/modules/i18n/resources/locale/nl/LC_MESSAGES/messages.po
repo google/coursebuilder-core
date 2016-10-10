@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-10-03 08:08-0700\n"
-"PO-Revision-Date: 2016-10-03 08:08-0700\n"
+"POT-Creation-Date: 2016-10-10 06:57-0700\n"
+"PO-Revision-Date: 2016-10-10 06:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: nl <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -971,7 +971,7 @@ msgstr "Bestand te groot, alleen bestanden kleiner dan 1 MB zijn toegestaan."
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:117
 msgid "Unable to save student submission."
-msgstr ""
+msgstr "Ingediend bestand van leerling kan niet worden opgeslagen."
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
@@ -1006,13 +1006,13 @@ msgstr "Terugkeren naar vorige pagina."
 #. submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:25
 msgid "Go back and try again."
-msgstr ""
+msgstr "Teruggaan en opnieuw proberen."
 
 #. Text after the link to take the user back to the previous page so they can
 #. try submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:28
 msgid "If the problem persists, contact your administrator."
-msgstr ""
+msgstr "Als het probleem blijft optreden, neemt u contact op met de beheerder."
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1667,7 +1667,5 @@ msgstr "Volgende pagina"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Einde"
-
-
 
 

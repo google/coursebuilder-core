@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-10-03 08:08-0700\n"
-"PO-Revision-Date: 2016-10-03 08:08-0700\n"
+"POT-Creation-Date: 2016-10-10 06:57-0700\n"
+"PO-Revision-Date: 2016-10-10 06:57-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: eu <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -968,7 +968,7 @@ msgstr ""
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:117
 msgid "Unable to save student submission."
-msgstr ""
+msgstr "Ezin izan da gorde ikaslearen bidalketa."
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
@@ -1001,13 +1001,13 @@ msgstr "Itzuli aurreko orrira."
 #. submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:25
 msgid "Go back and try again."
-msgstr ""
+msgstr "Itzuli eta saiatu berriro."
 
 #. Text after the link to take the user back to the previous page so they can
 #. try submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:28
 msgid "If the problem persists, contact your administrator."
-msgstr ""
+msgstr "Arazoak badirau, jarri administratzailearekin harremanetan."
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1644,7 +1644,5 @@ msgstr "Hurrengo orria"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "Amaiera"
-
-
 
 

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-10-03 08:08-0700\n"
-"PO-Revision-Date: 2016-10-03 08:08-0700\n"
+"POT-Creation-Date: 2016-10-10 06:57-0700\n"
+"PO-Revision-Date: 2016-10-10 06:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ml <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -976,7 +976,7 @@ msgstr "ഫയൽ വളരെ വലുതാണ്, 1MB-യിൽ കുറഞ
 #. Generic upload error.
 #: experimental/coursebuilder/modules/upload/upload.py:117
 msgid "Unable to save student submission."
-msgstr ""
+msgstr "വിദ്യാർത്ഥി സമർപ്പിച്ചത് സംരക്ഷിക്കാനാവുന്നില്ല."
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
@@ -1011,13 +1011,15 @@ msgstr "മുമ്പത്തെ പേജിലേക്ക് മടങ്�
 #. submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:25
 msgid "Go back and try again."
-msgstr ""
+msgstr "തിരിച്ചുപോയി വീണ്ടും ശ്രമിക്കുക."
 
 #. Text after the link to take the user back to the previous page so they can
 #. try submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:28
 msgid "If the problem persists, contact your administrator."
 msgstr ""
+"പ്രശ്‌നം പരിഹരിക്കപ്പെടുന്നില്ലെങ്കിൽ നിങ്ങളുടെ അഡ്മിനിസ്ട്രേറ്ററെ "
+"ബന്ധപ്പെടുക."
 
 #. Message on page indicating that a resource is not available.        The
 #. current user is not logged in with a Google identity, which        is very
@@ -1678,7 +1680,5 @@ msgstr "അടുത്ത പേജ്"
 #: experimental/coursebuilder/views/unit.html:147
 msgid "End"
 msgstr "അവസാനം"
-
-
 
 
