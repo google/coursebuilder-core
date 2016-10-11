@@ -1145,12 +1145,12 @@ function SkillEditorForOeditor(env) {
 
   var newSkillDiv = $('<div class="new-skill"></div>');
   var newSkillButton = $('<button class="add">+ Create New Skill</button>');
-  newSkillButton.click(function() {
+  newSkillButton.click(function(event) {
+    event.preventDefault();
     new EditSkillPopup(that._skillList, null, null).open(function(skill) {
       that._onSkillsSelectedCallback([skill.id]);
       that._populatePrereqSelector();
     });
-    return false;
   });
   newSkillDiv.append(newSkillButton);
 
