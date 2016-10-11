@@ -320,6 +320,10 @@ class Unit(CourseAwareObjectType, graphene.relay.Node):
 
 
 class Enrollment(graphene.ObjectType):
+    # TODO(jorr): Make Enrollment extend CourseAwareObjectType because we may
+    # need to be namespace-aware for some student properties. (See
+    # coursebuilder-deployments/ignitecs/modules/mod_ignitecs/ignitecs.py
+    # resolve_enrollment_tracks() for an example.)
     email = graphene.String()
     is_transient = graphene.Boolean(deprecation_reason='Replaced by enrolled')
     enrolled = graphene.Boolean()
