@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import base64
 import cgi
 import collections
+import random
 import os
 import urllib
 
@@ -629,6 +630,12 @@ class AssetItemRESTHandler(BaseRESTHandler):
         fs = self.app_context.fs.impl
         if fs.isfile(fs.physical_to_logical(key)):
             json_payload['asset_url'] = key
+            # TODO(davyrisso): Remove when cached assets issues are solved.
+            # We add a random seed to the URL to force a reload, we also append
+            # the URL because oeditor expects it to end with the filename.
+            suffix = ('?seed=%s&url=%s' % (
+                str(random.randint(0, 100000)), json_payload['asset_url']))
+            json_payload['asset_url'] += suffix
         else:
             json_payload['asset_url'] = asset_paths.relative_base(base)
         transforms.send_json_response(
