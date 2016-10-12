@@ -66,170 +66,171 @@
 </div>
 <div class="clearfix"></div>
 <div class="gcb-list gcb-list--autostripe fixed-table">
-  <table id="courses_list">
-    <thead>
-      <tr>
-        {# Checkbox and trash-can icon delete columns cannot be sorted by. #}
-        <th class="gcb-list-select-course gcb-not-sortable">
-          <input type="checkbox" id="all_courses_select">
-        </th>
-        <th id="title_column" class="gcb-sorted-none">
-          Title
-          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
-        </th>
-        <th id="url_column" class="gcb-sorted-none">
-          URL Component
-          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
-        </th>
-        <th id="availability_column" class="gcb-sorted-none">
-          Availability
-          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
-        </th>
-        <th id="start_date_column" class="gcb-sorted-none">
-          Start Date
-          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
-        </th>
-        <th id="end_date_column" class="gcb-sorted-none">
-          End Date
-          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
-        </th>
-        <th id="category_column" class="gcb-sorted-none">
-          Category
-          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
-        </th>
-        <th id="enrolled_column" class="gcb-sorted-none">
-          Registered Students
-          <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
-        </th>
-        {% for item in additional_headers %}
-          {{ item }}
-        {% endfor %}
-        <th class="gcb-list__cell--icon gcb-not-sortable"></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for course in courses %}
-      <tr data-course-namespace="{{ course.namespace_name }}">
-        <td class="gcb-list-select-course">
-          <input
-             type="checkbox"
-             class="gcb-course-checkbox"
-             id="select_{{ course.namespace_name }}"
-             data-course-namespace="{{ course.namespace_name }}"
-             data-course-slug="{{ course.slug }}"
-             data-course-title="{{ course.name }}"
-             >
-        </td>
-        <td class="gcb-courses-title">
-          <a href="{{ course.link }}" class="gcb-text-to-sort-by">
-            {{ course.name }}
-          </a>
-        </td>
-        <td class="gcb-courses-url">
-          <a href="{{ course.slug }}" target="_blank"
-             class="gcb-text-to-sort-by">
-            {{ course.slug }}
-            <i class="material-icons gcb-list__icon gcb-list__icon--rowhover">open_in_new</i>
-          </a>
-        </td>
-        <td class="gcb-courses-availability">
-          <a id="availability_{{ course.namespace_name }}"
-             class="gcb-text-to-sort-by"
-             href="{{ course.slug }}/dashboard?action=availability">
-            {{ course.availability }}
-          </a>
-        </td>
-        <td class="gcb-courses-start-date">
-          <a id="start_date_{{ course.namespace_name }}"
-             class="gcb-text-to-sort-by"
-             href="{{ course.slug }}/dashboard?action=availability">
-            {{ course.start_date }}
-          </a>
-          <span class="multi-course-hidden"
-                id="start_date_full_{{ course.namespace_name }}">
-            {{ course.start_date_full }}
-          </span>
-        </td>
-        <td class="gcb-courses-end_date">
-          <a id="end_date_{{ course.namespace_name }}"
-             class="gcb-text-to-sort-by"
-             href="{{ course.slug }}/dashboard?action=availability">
-            {{ course.end_date }}
-          </a>
-          <span class="multi-course-hidden"
-                id="end_date_full_{{ course.namespace_name }}">
-            {{ course.end_date_full }}
-          </span>
-        </td>
-        <td class="gcb-courses-category">
-          <a id="category_{{ course.namespace_name }}"
-             class="gcb-text-to-sort-by"
-             href="{{ course.slug }}/dashboard?action=settings_homepage">
-            {{ course.category }}
-          </a>
-        </td>
-        <td class="gcb-courses-enrolled">
-          <div>
-            <div id="enrolled_{{ course.namespace_name }}"
-                 class="gcb-text-to-sort-by">
-              {{ course.total_enrolled }}
+  {% if courses|length %}
+    <table id="courses_list">
+      <thead>
+        <tr>
+          {# Checkbox and trash-can icon delete columns cannot be sorted by. #}
+          <th class="gcb-list-select-course gcb-not-sortable">
+            <input type="checkbox" id="all_courses_select">
+          </th>
+          <th id="title_column" class="gcb-sorted-none">
+            Title
+            <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+          </th>
+          <th id="url_column" class="gcb-sorted-none">
+            URL Component
+            <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+          </th>
+          <th id="availability_column" class="gcb-sorted-none">
+            Availability
+            <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+          </th>
+          <th id="start_date_column" class="gcb-sorted-none">
+            Start Date
+            <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+          </th>
+          <th id="end_date_column" class="gcb-sorted-none">
+            End Date
+            <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+          </th>
+          <th id="category_column" class="gcb-sorted-none">
+            Category
+            <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+          </th>
+          <th id="enrolled_column" class="gcb-sorted-none">
+            Registered Students
+            <i class="material-icons gcb-sorted-icon gcb-list__icon"></i>
+          </th>
+          {% for item in additional_headers %}
+            {{ item }}
+          {% endfor %}
+          <th class="gcb-list__cell--icon gcb-not-sortable"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for course in courses %}
+        <tr data-course-namespace="{{ course.namespace_name }}">
+          <td class="gcb-list-select-course">
+            <input
+               type="checkbox"
+               class="gcb-course-checkbox"
+               id="select_{{ course.namespace_name }}"
+               data-course-namespace="{{ course.namespace_name }}"
+               data-course-slug="{{ course.slug }}"
+               data-course-title="{{ course.name }}"
+               >
+          </td>
+          <td class="gcb-courses-title">
+            <a href="{{ course.link }}" class="gcb-text-to-sort-by">
+              {{ course.name }}
+            </a>
+          </td>
+          <td class="gcb-courses-url">
+            <a href="{{ course.slug }}" target="_blank"
+               class="gcb-text-to-sort-by">
+              {{ course.slug }}
+              <i class="material-icons gcb-list__icon gcb-list__icon--rowhover">open_in_new</i>
+            </a>
+          </td>
+          <td class="gcb-courses-availability">
+            <a id="availability_{{ course.namespace_name }}"
+               class="gcb-text-to-sort-by"
+               href="{{ course.slug }}/dashboard?action=availability">
+              {{ course.availability }}
+            </a>
+          </td>
+          <td class="gcb-courses-start-date">
+            <a id="start_date_{{ course.namespace_name }}"
+               class="gcb-text-to-sort-by"
+               href="{{ course.slug }}/dashboard?action=availability">
+              {{ course.start_date }}
+            </a>
+            <span class="multi-course-hidden"
+                  id="start_date_full_{{ course.namespace_name }}">
+              {{ course.start_date_full }}
+            </span>
+          </td>
+          <td class="gcb-courses-end_date">
+            <a id="end_date_{{ course.namespace_name }}"
+               class="gcb-text-to-sort-by"
+               href="{{ course.slug }}/dashboard?action=availability">
+              {{ course.end_date }}
+            </a>
+            <span class="multi-course-hidden"
+                  id="end_date_full_{{ course.namespace_name }}">
+              {{ course.end_date_full }}
+            </span>
+          </td>
+          <td class="gcb-courses-category">
+            <a id="category_{{ course.namespace_name }}"
+               class="gcb-text-to-sort-by"
+               href="{{ course.slug }}/dashboard?action=settings_homepage">
+              {{ course.category }}
+            </a>
+          </td>
+          <td class="gcb-courses-enrolled">
+            <div>
+              <div id="enrolled_{{ course.namespace_name }}"
+                   class="gcb-text-to-sort-by">
+                {{ course.total_enrolled }}
+              </div>
+              <div class="mdl-tooltip gcb-form-tooltip"
+                   id="activity_{{ course.namespace_name }}"
+                   for="enrolled_{{ course.namespace_name }}">
+                {{ course.most_recent_enroll }}</div>
             </div>
-            <div class="mdl-tooltip gcb-form-tooltip"
-                 id="activity_{{ course.namespace_name }}"
-                 for="enrolled_{{ course.namespace_name }}">
-              {{ course.most_recent_enroll }}</div>
-          </div>
-        </td>
-        {% for item in course.additional_columns %}
-          {{ item }}
+          </td>
+          {% for item in course.additional_columns %}
+            {{ item }}
+          {% endfor %}
+          <td>
+            {% if course.namespace_name != '' %}
+              <form
+                 action="{{ course.slug }}{{ delete_course_link }}"
+                 method="POST"
+                 delete_course="true">
+                <input
+                   type="hidden"
+                   name="xsrf_token"
+                   value="{{ delete_course_xsrf_token }}">
+                <input
+                   type="hidden"
+                   name="is_selected_course"
+                   value="{{ course.is_selected_course }}">
+
+              </form>
+            {% endif %}
+          </td>
+        </tr>
         {% endfor %}
-        <td>
-          {% if course.namespace_name != '' %}
-            <form
-               action="{{ course.slug }}{{ delete_course_link }}"
-               method="POST"
-               delete_course="true">
-              <input
-                 type="hidden"
-                 name="xsrf_token"
-                 value="{{ delete_course_xsrf_token }}">
-              <input
-                 type="hidden"
-                 name="is_selected_course"
-                 value="{{ course.is_selected_course }}">
+      </tbody>
 
-            </form>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
+      {% if courses|length %}
+      <tfoot>
+        <tr>
+          <td></td>
+          <td>
+            {{ courses|length }} course(s)
+          </td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>
+            {{ total_students }} student(s)
+          </td>
+          {% for item in additional_footers %}
+            {{ item }}
+          {% endfor %}
+          <td>&nbsp;</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
 
-    {% if courses|length %}
-    <tfoot>
-      <tr>
-        <td></td>
-        <td>
-          {{ courses|length }} course(s)
-        </td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td>
-          {{ total_students }} student(s)
-        </td>
-        {% for item in additional_footers %}
-          {{ item }}
-        {% endfor %}
-        <td>&nbsp;</td>
-      </tr>
-    </tfoot>
-    {% endif %}
-  </table>
-
-  {% if not courses|length %}
+  {% else %}
     <div class="gcb-list__empty-message-wrapper">
       <div class="gcb-list__empty-message">
         <div class="empty-instance-instructions">
