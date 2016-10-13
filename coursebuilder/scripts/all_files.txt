@@ -177,6 +177,7 @@ scripts/bower.json
 scripts/bower.sh
 scripts/common.sh
 scripts/config.sh
+scripts/cygwin_setup.bat
 scripts/deploy.sh
 scripts/etl.sh
 scripts/flatten_polymer_imports.py
@@ -195,6 +196,8 @@ scripts/static.sh
 scripts/suite.sh
 scripts/test_completions.py
 scripts/test_config.sh
+scripts/windows_deploy.bat
+scripts/windows_start_local.bat
 tests/__init__.py
 tests/ext/README
 tests/ext/__init__.py

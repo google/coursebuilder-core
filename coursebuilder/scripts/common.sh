@@ -39,7 +39,7 @@ fi
 # Set shell variables common to CB scripts.
 . "$(dirname "${common_script}")/config.sh"
 
-CHROMEDRIVER_VERSION=2.23
+CHROMEDRIVER_VERSION=2.24
 CHROMEDRIVER_DIR="$RUNTIME_HOME/chromedriver-$CHROMEDRIVER_VERSION"
 if [[ $OSTYPE == linux* ]] ; then
   NODE_DOWNLOAD_FOLDER=node-v0.12.4-linux-x64
@@ -254,9 +254,9 @@ if need_install beautifulsoup4 PKG-INFO Version: 4.4.1 product ; then
   mv "$RUNTIME_HOME/beautifulsoup4-4.4.1" "$RUNTIME_HOME/beautifulsoup4"
 fi
 
-if need_install selenium PKG-INFO Version: 2.46.1 test ; then
-  download_and_unpack $PYPI_URL/s/selenium/selenium-2.46.1.tar.gz
-  mv "$RUNTIME_HOME/selenium-2.46.1" "$RUNTIME_HOME/selenium"
+if need_install selenium PKG-INFO Version: 2.53.1 test ; then
+  download_and_unpack $PYPI_URL/s/selenium/selenium-2.53.1.tar.gz
+  mv "$RUNTIME_HOME/selenium-2.53.1" "$RUNTIME_HOME/selenium"
 fi
 
 if [ ! -x "$CHROMEDRIVER_DIR/chromedriver" -a $OSTYPE != "cygwin" ] ; then

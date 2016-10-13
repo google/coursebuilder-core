@@ -533,7 +533,7 @@ class DateTimeTrigger(object):
                 some trigger subclasses.
             settings: subclass-specific settings, updated *in place* by this
                 method with new encoded_triggers, via set_into_settings().
-            semantics: see set_into_settings().
+            semantics: (optional) see set_into_settings().
         """
         cls.set_into_settings(cls.from_payload(payload), settings,
                               semantics=semantics, course=course)
@@ -801,7 +801,8 @@ class DateTimeTrigger(object):
             # Update the triggers stored in the settings with the remaining
             # future triggers.  (These settings are not yet saved, as that is
             # the responsibility of the caller.)
-            cls.set_into_settings(future_encoded, settings, course=course)
+            cls.set_into_settings(
+                future_encoded, settings, course=course, triggers_only=True)
 
         return cls.SettingsActs(num_consumed, separated, num_changed, acts)
 
@@ -854,6 +855,8 @@ class AvailabilityTrigger(DateTimeTrigger):
     AvailabilityTrigger is very much an abstract base class, as many of its
     methods rely on a class-scoped AVAILABILITY_VALUES collection that is only
     defined by concrete subclasses (e.g. ContentTrigger, MilestoneTrigger).
+
+    AvailabilityTrigger also does not define SETTINGS_NAME.
     """
 
     FIELD_NAME = 'availability'
@@ -1508,7 +1511,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     @classmethod
     def validate_availability(cls, availability):
         """Returns availability if in AVAILABILITY_VALUES, otherwise None."""
-        if (not availability) or (availability == cls.NONE_SELECTED):
+        if not availability or availability == cls.NONE_SELECTED:
             logging.debug(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
                 utils.get_ns_name_for_logging(),
                 {AvailabilityTrigger.FIELD_NAME: availability},
@@ -1943,8 +1946,8 @@ class MilestoneTrigger(AvailabilityTrigger):
             cls.clear_named_setting(setting_name, env, course=course)
 
     @classmethod
-    def set_default_when_into_settings(cls, milestone, when, settings,
-                                       setting_name=None, course=None):
+    def _get_setting_name_for_set_or_clear(cls, milestone, settings,
+                                           setting_name, course):
         if not setting_name:
             setting_name = cls.MILESTONE_TO_SETTING.get(milestone)
 
@@ -1958,11 +1961,29 @@ class MilestoneTrigger(AvailabilityTrigger):
 
         if (not settings) and (not course):
             # If no Course or settings (e.g. a Course get_environ() dict or a
-            # StudentGroupDTO) were provided, there is no place to set a `when`
-            # value into the settings, so exit early.
+            # StudentGroupDTO) were provided, there is no place to alter a
+            # `when` value into the settings, so exit early.
             return None
 
-        cls.set_named_setting(setting_name, when, settings, course=course)
+        return setting_name
+
+    @classmethod
+    def set_default_when_into_settings(cls, milestone, when, settings,
+                                       setting_name=None, course=None):
+        setting_name = cls._get_setting_name_for_set_or_clear(
+            milestone, settings, setting_name, course)
+
+        if setting_name:
+            cls.set_named_setting(setting_name, when, settings, course=course)
+
+    @classmethod
+    def clear_default_when_in_settings(cls, milestone, settings,
+                                       setting_name=None, course=None):
+        setting_name = cls._get_setting_name_for_set_or_clear(
+            milestone, settings, setting_name, course)
+
+        if setting_name:
+            cls.clear_named_setting(setting_name, settings, course=course)
 
     @classmethod
     def set_multiple_whens_into_settings(cls, encoded_triggers, settings,
@@ -1986,7 +2007,7 @@ class MilestoneTrigger(AvailabilityTrigger):
             course: (optional) see set_named_setting().
 
         Returns:
-            THe updated `remaining` dict, with milestone to setting mappings
+            The updated `remaining` dict, with milestone to setting mappings
             removed for each successful stored setting value. Callers should
             pass this dict from set_multiple_whens_into_settings() calls to
             subsequent calls.
@@ -2018,8 +2039,53 @@ class MilestoneTrigger(AvailabilityTrigger):
         return remaining
 
     @classmethod
+    def clear_multiple_whens_in_settings(cls, milestones, settings,
+                                         remaining=None, course=None):
+        """Clears settings values corresponding to encoded triggers.
+
+        Args:
+            milestones: a list of milestones corresponding to settings to be
+                removed (e.g. remove 'start_date' setting or property for a
+                'course_start' milestone).
+            settings: subclass-specific settings (e.g. a Course get_environ()
+                dict, or StudentGroupDTO for student_groups trigger subclasses)
+                containing settings that correspond to milestones (e.g.
+                milestone 'course_start' to 'course:start_date') that are
+                potentially removed *in-place*.
+            remaining: (optional) a milestone to setting mapping that is
+                destructively updated *in place*, removing each mapping for
+                which a setting value has been successfully cleared;
+                initialized to a copy of MILESTONE_TO_SETTING by default.
+            course: (optional) see clear_named_setting().
+
+        Returns:
+            The updated `remaining` dict, with milestone to setting mappings
+            removed for each successful removed setting value. Callers should
+            pass this dict from clear_multiple_whens_in_settings() calls to
+            subsequent calls.
+        """
+        if remaining is None:
+            remaining = cls.MILESTONE_TO_SETTING.copy()
+
+        if not remaining:
+            # All known milestones accounted for, so nothing left to do.
+            return remaining
+
+        for milestone in milestones:
+            if not milestone:
+                continue  # Malformed MilestoneTrigger?
+            setting_name = remaining.get(milestone)
+            if not setting_name:
+                continue  # No setting name (remaining) for that milestone.
+            remaining.pop(milestone, None)
+            cls.clear_default_when_in_settings(milestone,
+                settings, setting_name=setting_name, course=course)
+
+        return remaining
+
+    @classmethod
     def set_into_settings(cls, encoded_triggers, settings,
-                          semantics=None, course=None):
+                          semantics=None, course=None, triggers_only=False):
         """Sets encoded course start/end triggers into the supplied settings.
 
         Sets the value of the SETTINGS_NAME key in the 'publish' dict
@@ -2066,14 +2132,21 @@ class MilestoneTrigger(AvailabilityTrigger):
             course: (optional) passed, untouched, to dedupe_for_settings(),
                 set_multiple_whens_into_settings(), the base class
                 set_into_settings(), and through to separate().
-
+            triggers_only: (optional) if True, update only the SETTINGS_NAME
+                triggers list, and not any other settings.
         """
         deduped, separated = cls.dedupe_for_settings(encoded_triggers,
             semantics=semantics, settings=settings, course=course)
+        super(MilestoneTrigger, cls).set_into_settings(deduped.values(),
+            settings, semantics=cls.SET_WILL_OVERWRITE, course=course,
+            triggers_only=triggers_only)
 
-        # Any encoded triggers in the deduped dict are valid, so copy their
-        # 'when' date/time to the corresponding 'course' setting, if there is
-        # one.
+        if triggers_only:
+            return  # Only update the SETTINGS_NAME triggers list.
+
+        # Any encoded triggers in the deduped dict are valid, so copy
+        # their 'when' date/time to the corresponding 'course' setting,
+        # if there is one.
         remaining = cls.set_multiple_whens_into_settings(
             deduped.itervalues(), settings, course=course)
 
@@ -2085,32 +2158,49 @@ class MilestoneTrigger(AvailabilityTrigger):
         cls.set_multiple_whens_into_settings(
             separated.invalid, settings, remaining=remaining, course=course)
 
-        super(MilestoneTrigger, cls).set_into_settings(deduped.values(),
-            settings, semantics=cls.SET_WILL_OVERWRITE, course=course)
-
     @classmethod
-    def clear_from_settings(cls, env, milestone=None, course=None):
+    def clear_from_settings(cls, env, milestone=None, course=None,
+                            triggers_only=False):
         """Removes one or all 'milestone' triggers from a get_environ() dict.
 
+        Also removes any settings values that correspond to any removed
+        triggers (e.g. removes 'start_date' setting for a 'course_start'
+        milestone).
+
         Args:
-            env: subclass-specific settings containing encoded triggers
+            env: a Course get_environ() dict containing encoded triggers,
                 that is updated *in-place* by clear_from_settings().
             milestone: if unspecified, the entire SETTINGS_NAME list
                 ('course_triggers') is removed (the base class behavior of this
                 method); otherwise only the specified 'milestone' trigger is
                 pruned from that list.
             course: (optional) passed to set_into_settings() if called.
+            triggers_only: (optional) if True, clear only the SETTINGS_NAME
+                triggers list, and not any other settings.
         """
+        triggers = cls.copy_from_settings(env)
+
         if milestone is None:
             # Original "remove entire SETTINGS_NAME list" if not pruning out
             # the trigger(s) for a specific course milestone.
             super(MilestoneTrigger, cls).clear_from_settings(env)
+            if triggers_only:
+                return
+            # Now remove *all* settings values corresponding to the milestones
+            # of *all* trigger that were just removed.
+            milestones = [t.get(cls.FIELD_NAME) for t in triggers]
+            cls.clear_multiple_whens_in_settings(
+                milestones, env, course=course)
             return
 
-        publish = courses.Course.get_publish_from_environ(env)
-        triggers = cls.copy_triggers_from(publish)
         kept = [t for t in triggers
-                if t.get(MilestoneTrigger.FIELD_NAME) != milestone]
+                if t.get(cls.FIELD_NAME) != milestone]
+
+        if not triggers_only:
+            # Clear only the single setting corresponding to the milestone of
+            # the one trigger that was just pruned.
+            cls.clear_default_when_in_settings(milestone, env, course=course)
+
         # If any triggers remain after pruning out the milestone ones,
         # the kept list needs to actually *overwrite* the existing
         # SETTINGS_NAME list. If no triggers remain after pruning (kept is an

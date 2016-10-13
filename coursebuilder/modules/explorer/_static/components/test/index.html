@@ -25,6 +25,7 @@
           '  id, title, url, abstract, instructorDetails,' +
           '  enrollment {enrolled}, openForRegistration, showInExplorer,' +
           '  startDate, endDate, estimatedWorkload, category {name}}}}}');
+      var EXPLORER_EXPANDED_GCB_TAGS = 'gcb-markdown';
       function flushed(test) {
         // Execute the test function after events have fired and page is loaded
         return function(done) {
@@ -136,7 +137,8 @@
           coursesResponse.allCourses.edges = [
               course1, course2, course3, course4, course5, course6]
           fakeGqlServer.addResponse(EXPLORER_CHROME_GQL, chromeResponse);
-          fakeGqlServer.addResponse(EXPLORER_COURSES_GQL, coursesResponse);
+          fakeGqlServer.addResponse(EXPLORER_COURSES_GQL, coursesResponse,
+                                    EXPLORER_EXPANDED_GCB_TAGS);
           Array.prototype.forEach.call(
             explorer.getElementsByTagName('iron-ajax'), function(ajax){
               ajax.generateRequest();

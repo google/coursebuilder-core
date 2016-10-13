@@ -887,14 +887,19 @@ class BaseAdminHandler(ConfigPropertyEditor):
                     course_triggers[milestone_name]):
                     trigger = course_triggers[milestone_name][0]
                     if 'when' in trigger:
+                        trigger_when = utc.text_to_datetime(trigger['when'])
+                        trigger_date = str(trigger_when.date())
                         status = courses.COURSE_AVAILABILITY_POLICIES.get(
                             trigger['availability'])
                         if status:
-                            trigger_when = utc.text_to_datetime(trigger['when'])
-                            trigger_date = str(trigger_when.date())
                             trigger_date_full = (
                                 status['title'] + ' on ' + str(trigger_when))
-                            return trigger_date, trigger_date_full
+                        else:
+                            milestone_title = constants.MILESTONE_TO_TITLE[
+                                milestone_name]
+                            trigger_date_full = (
+                                milestone_title + ' on ' + str(trigger_when))
+                        return trigger_date, trigger_date_full
                 return '', ''
             course_triggers = triggers.MilestoneTrigger.for_form(environ)
             start_date, start_date_full = parse_trigger(

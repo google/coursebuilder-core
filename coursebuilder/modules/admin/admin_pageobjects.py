@@ -257,21 +257,21 @@ class CoursesListPage(pageobjects.CoursesListPage):
         self._tester.assertEqual(expected, a_href.text.strip())
         return self
 
-    def get_category_for(self, namespace):
+    def get_category_for(self, namespace, pre_wait=True):
         return self.find_element_by_id(
-            'category_' + namespace).text.strip()
+            'category_' + namespace, pre_wait=pre_wait).text.strip()
 
     def get_availability_for(self, namespace):
         return self.find_element_by_id(
             'availability_' + namespace).text.strip()
 
-    def get_start_date_for(self, namespace):
+    def get_start_date_for(self, namespace, pre_wait=True):
         return self.find_element_by_id(
-            'start_date_' + namespace).text.strip()
+            'start_date_' + namespace, pre_wait=pre_wait).text.strip()
 
-    def get_end_date_for(self, namespace):
+    def get_end_date_for(self, namespace, pre_wait=True):
         return self.find_element_by_id(
-            'end_date_' + namespace).text.strip()
+            'end_date_' + namespace, pre_wait=pre_wait).text.strip()
 
     def get_show_in_explorer_for(self, namespace):
         return self.find_element_by_id(
@@ -509,6 +509,16 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
         self.wait().until(spinner_not_visible)
         return self
 
+    def get_save_button_is_enabled(self):
+        save_button = self.find_element_by_id('multi-course-save')
+        return save_button.is_enabled()
+
+    def click_clear_value_radio(self):
+        self.find_element_by_id('edit_multi_course_clear').click()
+
+    def click_set_value_radio(self):
+        self.find_element_by_id('edit_multi_course_set').click()
+
     def click_save_expecting_validation_failure(self):
         self.find_element_by_id('multi-course-save').click()
         self._tester.assertFalse(expected_conditions.alert_is_present()(
@@ -549,6 +559,10 @@ class MultiEditModalDialog(pageobjects.CoursesListPage):
 
     def is_availability_marked_invalid(self):
         field = self.find_element_by_id('multi-course-select-availability')
+        return 'input-invalid' in field.get_attribute('class').strip().split()
+
+    def is_category_marked_invalid(self):
+        field = self.find_element_by_id('multi-course-category')
         return 'input-invalid' in field.get_attribute('class').strip().split()
 
     def set_date_time(self, the_date, the_time):

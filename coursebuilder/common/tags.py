@@ -364,10 +364,21 @@ def html_string_to_element_tree(html_string, is_fragment=True):
         return parser.parse(html_string)
 
 
-def html_to_safe_dom(html_string, handler, render_custom_tags=True):
+def html_to_safe_dom(html_string, handler, render_custom_tags=True,
+                     tags_filter=None):
     """Render HTML text as a tree of safe_dom elements."""
 
     tag_bindings = get_tag_bindings()
+    if tags_filter:
+
+        class SuppressedTag(BaseTag):
+
+            def render(self, node, context):
+                return cElementTree.XML('<div style="display:none;"></div>')
+
+        for name, cls in tag_bindings.iteritems():
+            if not tags_filter(name, cls):
+                tag_bindings[name] = SuppressedTag
 
     node_list = safe_dom.NodeList()
     if not html_string:

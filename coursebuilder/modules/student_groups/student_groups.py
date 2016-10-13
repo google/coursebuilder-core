@@ -109,6 +109,8 @@ class OverrideTriggerMixin(object):
 
     KIND_SUFFIX = ' override'
 
+    IMPLEMENTED_SET_SEMANTICS = triggers.DateTimeTrigger.SET_ONLY_OVERWRITES
+
     def act(self, course, student_group):
         """Updates some availability override as indicated by a trigger."""
         changed = None
@@ -165,13 +167,6 @@ class OverrideTriggerMixin(object):
         """
         return ([] if student_group is None
                 else student_group.get_triggers(cls.SETTINGS_NAME))
-
-    IMPLEMENTED_SET_SEMANTICS = triggers.DateTimeTrigger.SET_ONLY_OVERWRITES
-
-    @classmethod
-    def clear_from_settings(cls, student_group, **unused_kwargs):
-        """Remove all SETTINGS_NAME triggers from the student_group DTO."""
-        student_group.clear_triggers(cls.SETTINGS_NAME)
 
 
 class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
@@ -234,6 +229,11 @@ class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
         cls.check_set_semantics(semantics)
         student_group.set_triggers(cls.SETTINGS_NAME, encoded_triggers)
 
+    @classmethod
+    def clear_from_settings(cls, student_group, **unused_kwargs):
+        """Remove all SETTINGS_NAME triggers from the student_group DTO."""
+        student_group.clear_triggers(cls.SETTINGS_NAME)
+
     def act(self, course, student_group):
         """The base class act() followed by calling the ACT_HOOKS callbacks."""
         changed = super(ContentOverrideTrigger, self).act(
@@ -293,6 +293,7 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
 
     def key(self):
         return course_availability_key()
+
 
     @classmethod
     def retrieve_named_setting(cls, setting_name, student_group, course=None):
@@ -371,7 +372,7 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
 
     @classmethod
     def set_into_settings(cls, encoded_triggers, student_group,
-                          semantics=None, course=None):
+                          semantics=None, course=None, triggers_only=False):
         """Sets course availability override triggers into a student group.
 
         Args:
@@ -384,14 +385,65 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
                 semantics are supported.
             course: (optional) passed, untouched, to dedupe_for_settings(),
                 set_multiple_whens_into_settings(), and through to separate().
+            triggers_only: (optional) if True, update only the SETTINGS_NAME
+                triggers list, and not any other settings.
         """
         deduped, separated = cls.dedupe_for_settings(encoded_triggers,
-            semantics=semantics, settings=student_group, course=course)
-        remaining = cls.set_multiple_whens_into_settings(deduped.itervalues(),
-            student_group, course=course)
-        cls.set_multiple_whens_into_settings(separated.invalid,
-            student_group, remaining=remaining, course=course)
+            semantics=cls.SET_WILL_OVERWRITE, course=course)
         student_group.set_triggers(cls.SETTINGS_NAME, deduped.values())
+
+        if triggers_only:
+            return  # Only update the SETTINGS_NAME triggers list.
+
+        remaining = cls.set_multiple_whens_into_settings(
+            deduped.itervalues(), student_group)
+        cls.set_multiple_whens_into_settings(separated.invalid,
+            student_group, remaining=remaining)
+
+    @classmethod
+    def clear_from_settings(cls, student_group, milestone=None, **kwargs):
+        """Removes one or all 'milestone' triggers from the student_group.
+
+        Also removes any properties that correspond to any removed triggers
+        (e.g. removes the 'start_date' property for a 'course_start'
+        milestone).
+
+        Args:
+            student_group: a StudentGroupDTO containing encoded triggers,
+                that is updated *in-place* by clear_from_settings().
+            milestone: if unspecified, the entire SETTINGS_NAME list property
+                ('course_triggers') is removed (the base class behavior of this
+                method); otherwise only the specified 'milestone' trigger is
+                pruned from that list.
+        """
+        existing_triggers = cls.copy_from_settings(student_group)
+
+        if milestone is None:
+            # Original "remove entire SETTINGS_NAME list" if not pruning out
+            # the trigger(s) for a specific course milestone.
+            student_group.clear_triggers(cls.SETTINGS_NAME)
+            # Now remove *all* properties corresponding to the milestones
+            # of *all* trigger that were just removed.
+            milestones = [t.get(cls.FIELD_NAME) for t in existing_triggers]
+            cls.clear_multiple_whens_in_settings(milestones, student_group)
+            return
+
+        kept = [t for t in existing_triggers
+                if t.get(cls.FIELD_NAME) != milestone]
+
+        # Clear only the single property corresponding to the milestone of
+        # the one trigger that was just pruned.
+        cls.clear_default_when_in_settings(milestone, student_group)
+
+        if kept:
+            # Triggers remain after pruning out the milestone ones, so the
+            # kept list needs to actually *overwrite* the existing
+            # SETTINGS_NAME property list.
+            student_group.set_triggers(cls.SETTINGS_NAME, kept)
+        else:
+            # No triggers remain after pruning (kept is an empty list), so
+            # clear the SETTINGS_NAME property.
+            student_group.clear_triggers(cls.SETTINGS_NAME)
 
     def act(self, course, student_group):
         """The base class act() followed by calling the ACT_HOOKS callbacks."""

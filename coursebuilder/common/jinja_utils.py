@@ -89,14 +89,15 @@ def _to_json_jinja(data):
     return jinja2.utils.Markup(_escape_js(transforms.dumps(data)))
 
 
-def get_gcb_tags_filter(handler):
+def get_gcb_tags_filter(handler, tags_filter=None):
 
     @appengine_config.timeandlog('get_gcb_tags_filter')
     def gcb_tags(data):
         """Apply GCB custom tags, if enabled. Otherwise pass as if by 'safe'."""
         data = unicode(data)
         if tags.CAN_USE_DYNAMIC_TAGS.value:
-            return jinja2.utils.Markup(tags.html_to_safe_dom(data, handler))
+            return jinja2.utils.Markup(tags.html_to_safe_dom(
+                data, handler, tags_filter=tags_filter))
         else:
             return jinja2.utils.Markup(data)
     return gcb_tags

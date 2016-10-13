@@ -146,26 +146,39 @@ class CourseAwareObjectType(object):
                 course, student=student,
                 list_lessons_with_visible_names=True)
 
-    def _get_template_env(self, handler):
+    def _get_template_env(self, handler, expanded_gcb_tags):
         app_context = self.course.app_context
+        if expanded_gcb_tags:
+            tags = expanded_gcb_tags.strip().split()
+            tags_filter = lambda k, v: k in tags
+        else:
+            tags_filter = lambda k, v: True
+
         env = app_context.get_template_environ(
             app_context.get_current_locale(), [_TEMPLATES_DIR])
-        env.filters['gcb_tags'] = jinja_utils.get_gcb_tags_filter(handler)
+        env.filters['gcb_tags'] = jinja_utils.get_gcb_tags_filter(
+            handler, tags_filter=tags_filter)
         return env
 
-    def _get_template(self, handler, template_file):
-        return self._get_template_env(handler).get_template(template_file)
+    def _get_template(self, handler, expanded_gcb_tags, template_file):
+        return self._get_template_env(handler, expanded_gcb_tags).get_template(
+            template_file)
 
-    def _render(self, handler, template_values, template_file):
-        return self._get_template(handler, template_file).render(
-            template_values, autoescape=True)
+    def _render(self, handler, expanded_gcb_tags, template_values,
+                template_file):
+        return self._get_template(
+            handler, expanded_gcb_tags, template_file).render(
+                template_values, autoescape=True)
 
     def expand_tags(self, text_with_tags, info):
         handler = info.context.request_context.get('handler')
+        expanded_gcb_tags = info.context.request_context.get(
+            'expanded_gcb_tags')
         try:
             handler.app_context = self.app_context
             return self._render(
-                handler, {'content': text_with_tags}, 'content_with_tags.html')
+                handler, expanded_gcb_tags, {'content': text_with_tags},
+                'content_with_tags.html')
         finally:
             del handler.app_context
 
@@ -490,7 +503,7 @@ class Query(graphene.ObjectType):
 class GraphQLRestHandler(utils.BaseRESTHandler):
     URL = '/modules/gql/query'
 
-    def _get_response_dict(self, query_str):
+    def _get_response_dict(self, query_str, expanded_gcb_tags):
         if not query_str:
             return {
                 'data': None,
@@ -501,7 +514,10 @@ class GraphQLRestHandler(utils.BaseRESTHandler):
         try:
             result = schema.execute(
                 request=query_str,
-                request_context={'handler': self})
+                request_context={
+                    'handler': self,
+                    'expanded_gcb_tags': expanded_gcb_tags,
+                })
             return {
                 'data': result.data,
                 'errors': [err.message for err in result.errors]
@@ -529,7 +545,8 @@ class GraphQLRestHandler(utils.BaseRESTHandler):
             return
 
         query_str = self.request.get('q')
-        response_dict = self._get_response_dict(query_str)
+        expanded_gcb_tags = self.request.get('expanded_gcb_tags')
+        response_dict = self._get_response_dict(query_str, expanded_gcb_tags)
         status_code = 400 if response_dict['errors'] else 200
         self._send_response(status_code, response_dict)
 

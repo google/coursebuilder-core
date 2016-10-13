@@ -298,6 +298,7 @@ $(function() {
   //       changes to course settings.
   // - _getFormFields(): Returns HTML elements that are added to
   //       the popup window.  Typically contains form fields for settings.
+  // - _canBeCleared(): Return true if value is clearable, false otherwise.
   // - _getCurrentValue(): Returns a text string giving the current value
   //       for the setting.  This is used to populate the current-value
   //       column in the popup form.
@@ -310,7 +311,9 @@ $(function() {
   //       This handler *must* return a payload dict with an item named
   //       "key" and a value giving the slug identifying the course.
   // - _getSavePayload(): Return a dict/object containing key/value pairs
-  //       of data that is sent in the PUT request.
+  //       of data that is sent in the PUT request to set valid values.
+  // - _getClearPayload(): Return a dict/object containing key/value pairs
+  //       of data that is sent in the PUT request to clear that setting.
   // - _settingSaved(payload): Called back when a PUT for a given course
   //       returns successfully.  Derived classes may wish to use this
   //       opportunity to update the contents of the page to reflect the new
@@ -344,17 +347,45 @@ $(function() {
           };
         });
 
-    this._form = $(
+    var formStr = (
         '<div class="add-course-panel multi-course-panel" ' +
         '     id="multi-course-edit-panel">' +
-        '  <h2 class="title"></h2>' +
+        '  <h2 class="title"></h2>');
+    if (this._canBeCleared()) {
+      formStr += (
+        '  <div id="edit_multi_course_clear_label"> ' +
+        '    <input ' +
+        '      type="radio" ' +
+        '      name="edit_multi_course_choice" ' +
+        '      id="edit_multi_course_clear" ' +
+        '      value="clear"> ' +
+        '      Clear Setting ' +
+        '  </div> ' +
+        '  <div id="edit_multi_course_set_label"> ' +
+        '    <input ' +
+        '      type="radio" ' +
+        '      name="edit_multi_course_choice" ' +
+        '      id="edit_multi_course_set" ' +
+        '      value="set"> ' +
+        '      Set Setting: ' +
+        '    <div class="edit-multi-course-settings" ' +
+        '         id="edit_multi_course_settings"> ' +
+        '    </div> ' +
+        '  </div> ')
+    } else {
+      formStr += (
+        '    <div class="edit-multi-course-settings" ' +
+        '         id="edit_multi_course_settings"> ' +
+        '    </div> ');
+    }
+    formStr += (
         '  <div class="edit-multi-course-list">' +
         '    <table>' +
         '      <thead>' +
         '        <tr id="multi_edit_header_row">' +
         '          <th class="edit-multi-course-coursename">Course Name</th>' +
         '          <th class="edit-multi-course-value">Current Value</th>' +
-        '          <th class="edit-multi-course-status">Setting Saved?</th>' +
+        '          <th class="edit-multi-course-status">Saved?</th>' +
         '        </tr>' +
         '      </thead>' +
         '      <tbody id="course_list">' +
@@ -372,9 +403,11 @@ $(function() {
         '    <span class="icon spinner md md-settings md-spin"></span>' +
         '  </div>' +
         '</div>');
+    this._form = $(formStr);
     var titleElement = this._form.find('.title');
     titleElement.text(this._getTitle());
-    titleElement.after(this._getFormFields());
+    var settingsDiv = this._form.find('#edit_multi_course_settings');
+    settingsDiv.append(this._getFormFields());
     var courseList = this._form.find('#course_list');
     var that = this;
     $(this._courses).each(function(index, course) {
@@ -388,7 +421,15 @@ $(function() {
             ' - ' +
             '</td></tr>'));
     });
-    this._form.find('#multi-course-save').click(this._save.bind(this));
+    var saveButton = this._form.find('#multi-course-save');
+    if (this._canBeCleared()) {
+      saveButton.prop('disabled', true);
+      this._form.find('input[name="edit_multi_course_choice"]').change(
+          function(event){
+            saveButton.prop('disabled', false);
+          });
+    }
+    saveButton.click(this._save.bind(this));
     this._form.find('#multi-course-close').click(this._close.bind(this));
     this._spinner = this._form.find('.spinner');
   };
@@ -418,7 +459,13 @@ $(function() {
     var completeHandler = this._saveComplete.bind(this);
     var xsrfToken = this._xsrfToken;
     var saveUrl = this._getSaveUrl();
-    var payload = JSON.stringify(this._getSavePayload());
+
+    var payload;
+    if ($('input[name="edit_multi_course_choice"]:checked').val() == 'clear') {
+      payload = JSON.stringify(this._getClearPayload());
+    } else {
+      payload = JSON.stringify(this._getSavePayload());
+    }
     this._numSuccessResponses = 0;
     this._numFailureResponses = 0;
 
@@ -516,7 +563,6 @@ $(function() {
   EditMultiCourseAvailabilityPanel.prototype._getFormFields = function() {
     var ret = $(
         '<div class="form-row">' +
-        '  <label>Availability</label>' +
         '  <select ' +
         '      id="multi-course-select-availability" ' +
         '      name="availability">' +
@@ -524,8 +570,6 @@ $(function() {
         '</div>'
         );
     var availabilitySelect = ret.find('#multi-course-select-availability');
-    availabilitySelect.append(
-        $('<option value="">--- change availability to ---</option>'));
     this._availabilitySelect = availabilitySelect;
     var options = $('#edit_multi_course_availability').data('options');
     $(options).each(function(index, opt) {
@@ -537,14 +581,20 @@ $(function() {
     });
     return ret
   };
+  EditMultiCourseAvailabilityPanel.prototype._canBeCleared = function() {
+    return false;
+  };
   EditMultiCourseAvailabilityPanel.prototype._validate = function() {
-    var isValid = (this._availabilitySelect.val() != '');
-    if (isValid) {
-      this._availabilitySelect.removeClass('input-invalid');
-    } else {
-      this._availabilitySelect.addClass('input-invalid');
+    if (!this._canBeCleared()) {
+      var isValid = (this._availabilitySelect.val() != '');
+      if (isValid) {
+        this._availabilitySelect.removeClass('input-invalid');
+      } else {
+        this._availabilitySelect.addClass('input-invalid');
+      }
+      return isValid;
     }
-    return isValid;
+    return true;
   };
   EditMultiCourseAvailabilityPanel.prototype._getCurrentValue = function(
       courseNamespace) {
@@ -558,6 +608,12 @@ $(function() {
     return {
       trigger_action: 'merge',
       course_availability: availability
+    };
+  };
+  EditMultiCourseAvailabilityPanel.prototype._getClearPayload = function() {
+    return {
+      trigger_action: 'merge',
+      course_availability: ''
     };
   };
   EditMultiCourseAvailabilityPanel.prototype._settingSaved = function(payload) {
@@ -593,13 +649,15 @@ $(function() {
     // matching in this one datetime-container div.
     var fields = $(
         '<div class="form-row">' +
-        '  <label></label>' +
-        '  <div id="datetime-container" ' +
-        '       class="new-form-layout yui3-skin-sam yui-skin-sam"></div>' +
+        '  <label id="availability-label">Change course availability to: ' +
+        '  </label>' +
+        '  <label>On ' + this._start_or_end_title + ' Date (UTC): ' +
+        '    <div id="datetime-container" ' +
+        '         class="new-form-layout yui3-skin-sam yui-skin-sam"></div>' +
+        '  </label> ' +
         '</div>'
         );
-    fields.find('label').text(this._start_or_end_title + ' Date')
-    fields.append(
+    fields.find('#availability-label').append(
         EditMultiCourseAvailabilityPanel.prototype._getFormFields.call(this));
 
     YUI.add('gcb-datetime', bindDatetimeField, '3.1.0', {
@@ -626,13 +684,14 @@ $(function() {
 
     return fields;
   };
+  EditMultiCourseDatePanel.prototype._canBeCleared = function() {
+    return true;
+  }
   EditMultiCourseDatePanel.prototype._validate = function() {
-    var isValid = (
-        EditMultiCourseAvailabilityPanel.prototype._validate.call(this));
-    // Intentionally calling both validate() methods rather than
-    // short-circuiting.  This way, *all* invalid fields get visually marked,
-    // rather than just the first problem found.
-    return this._datetime_field.validate() && isValid;
+    if ($('input[name="edit_multi_course_choice"]:checked').val() == 'clear') {
+      return true;
+    }
+    return this._datetime_field.validate();
   };
   EditMultiCourseDatePanel.prototype._getSaveUrl = function() {
     // Decide whether to call set... or clear... depending on whether
@@ -640,11 +699,10 @@ $(function() {
     // to do this at this layer rather than in the server because of the
     // tight integration of parsing + setting code, which will just ignore
     // items which appear malformed (e.g., which have a blank date field. :-> )
-    var when = this._datetime_field.getValue();
-    if (when) {
-      return '/rest/multi_set_start_end';
-    } else {
+    if ($('input[name="edit_multi_course_choice"]:checked').val() == 'clear') {
       return '/rest/multi_clear_start_end';
+    } else {
+      return '/rest/multi_set_start_end';
     }
   };
   EditMultiCourseDatePanel.prototype._getSavePayload = function() {
@@ -665,20 +723,32 @@ $(function() {
     }
     return ret;
   };
+  EditMultiCourseDatePanel.prototype._getClearPayload = function() {
+    return {'milestone': 'course_' + this._start_or_end};
+  };
   EditMultiCourseDatePanel.prototype._getCurrentValue = function(
       courseNamespace) {
     return $('#' + this._start_or_end + '_date_full_' + courseNamespace).text();
   };
   EditMultiCourseDatePanel.prototype._settingSaved = function(payload) {
     var courseNamespace = payload.key;
-    var availability = this._availabilitySelect[0].selectedOptions[0].text;
-    var startDate = (this._datetime_field.getValue().substring(0, 10))
-    var startDateTime = (
-        this._datetime_field.getValue().replace('T', ' ').substring(0, 19))
-    var message = availability + ' on ' + startDateTime;
-    $('#' + this._start_or_end + '_date_' + courseNamespace).text(startDate);
-    $('#' + this._start_or_end + '_date_full_' + courseNamespace).text(message);
-    $('#current_value_' + courseNamespace).text(message);
+
+    if ($('input[name="edit_multi_course_choice"]:checked').val() == 'clear') {
+      $('#' + this._start_or_end + '_date_' + courseNamespace).text('');
+      $('#' + this._start_or_end + '_date_full_' + courseNamespace).text('');
+      $('#current_value_' + courseNamespace).text('');
+    } else {
+      var availability = this._availabilitySelect[0].selectedOptions[0].text;
+      var startDate = this._datetime_field.getValue();
+
+      startDate = startDate.substring(0, 10);
+      var startDateTime = (
+          this._datetime_field.getValue().replace('T', ' ').substring(0, 19))
+      var msg = availability + ' on ' + startDateTime;
+      $('#' + this._start_or_end + '_date_' + courseNamespace).text(startDate);
+      $('#' + this._start_or_end + '_date_full_' + courseNamespace).text(msg);
+      $('#current_value_' + courseNamespace).text(msg);
+    }
   };
   function editMultiCourseStartDate() {
     // Var name intentionally in global namespace as hook for tests to modify.
@@ -717,9 +787,31 @@ $(function() {
         '      name="category">' +
         '</div>'
         );
-    this._category = ret.find('#multi-course-category');
+    var category = ret.find('#multi-course-category');
+    category.change(function() {
+      $('#multi-course-category').removeClass('input-invalid');
+    });
+    category.keypress(function() {
+      $('#multi-course-category').removeClass('input-invalid');
+    });
+    this._category = category;
     return ret;
   };
+  EditMultiCourseCategoryPanel.prototype._canBeCleared = function() {
+    return true;
+  }
+  EditMultiCourseCategoryPanel.prototype._validate = function() {
+    if ($('input[name="edit_multi_course_choice"]:checked').val() == 'clear') {
+      return true;
+    }
+    var isValid = this._category.val() != ''
+    if (isValid) {
+        this._category.removeClass('input-invalid');
+      } else {
+        this._category.addClass('input-invalid');
+      }
+    return isValid
+  }
   EditMultiCourseCategoryPanel.prototype._getCurrentValue = function(
       courseNamespace) {
     return $('#category_' + courseNamespace).text();
@@ -735,10 +827,22 @@ $(function() {
       }
     };
   };
+  EditMultiCourseCategoryPanel.prototype._getClearPayload = function() {
+    return {
+      'homepage': {
+        'course:category_name': ''
+      }
+    };
+  };
   EditMultiCourseCategoryPanel.prototype._settingSaved = function(payload) {
     var courseNamespace = payload.key;
-    $('#category_' + courseNamespace).text(this._category.val());
-    $('#current_value_' + courseNamespace).text(this._category.val());
+    if ($('input[name="edit_multi_course_choice"]:checked').val() == 'clear') {
+      $('#category_' + courseNamespace).text('');
+      $('#current_value_' + courseNamespace).text('');
+    } else {
+      $('#category_' + courseNamespace).text(this._category.val());
+      $('#current_value_' + courseNamespace).text(this._category.val());
+    }
   };
   function editMultiCourseCategory() {
     // Var name intentionally in global namespace as hook for tests to modify.
@@ -769,8 +873,7 @@ $(function() {
         '        <input ' +
         '          type="radio" ' +
         '          id="multi-course-show-in-explorer-yes" ' +
-        '          name="show_in_explorer"> ' +
-        '        Shown ' +
+        '          name="show_in_explorer"> Yes ' +
         '      </label> ' +
         '    </div> ' +
         '    <div> ' +
@@ -778,7 +881,7 @@ $(function() {
         '        <input ' +
         '          type="radio" ' +
         '          id="multi-course-show-in-explorer-no" ' +
-        '          name="show_in_explorer"> Not Shown' +
+        '          name="show_in_explorer"> No ' +
         '      </label> ' +
         '    </div> ' +
         '  </label>' +
@@ -808,6 +911,9 @@ $(function() {
       this._show_in_explorer_no.parent().removeClass('input-invalid');
     }
     return is_yes != is_no;
+  };
+  EditMultiCourseShowInExplorerPanel.prototype._canBeCleared = function() {
+    return false;
   };
   EditMultiCourseShowInExplorerPanel.prototype._getCurrentValue = function(
       courseNamespace) {

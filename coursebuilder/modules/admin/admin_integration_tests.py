@@ -20,6 +20,7 @@ __author__ = [
 
 import copy
 import re
+import time
 
 from selenium.common import exceptions
 
@@ -176,6 +177,12 @@ class CourseMultiEditTests(_CoursesListTestBase):
             ret[course_namespace] = page.get_settings()
         return ret
 
+    def _get_course_availability_from_settings(self, course_namespace):
+        page = courses_pageobjects.CourseAvailabilityPage(self)
+        stub = re.sub('^ns_', '', course_namespace)
+        page.load(stub)
+        return page.get_settings()
+
     def test_multi_edit_multiple_courses(self):
         course_list = self.load_courses_list()
         for course_namespace in self.course_namespaces[0:-1]:
@@ -229,56 +236,35 @@ class CourseMultiEditTests(_CoursesListTestBase):
             'Updated settings in 0 courses and had %d errors.' %
             (self.NUM_COURSES - 1))
 
-    def test_multi_edit_availability_fails_safe(self):
-        course_list = self.load_courses_list()
-        for course_namespace in self.course_namespaces[:-1]:
-            course_list.toggle_course_checkbox(course_namespace)
-        multi_edit = course_list.click_edit_availability()
-
-        # Field should not be marked invalid on open of dialog
-        self.assertFalse(multi_edit.is_availability_marked_invalid())
-
-        # Save with no changes should mark field invalid.
-        multi_edit.click_save_expecting_validation_failure()
-        self.assertTrue(multi_edit.is_availability_marked_invalid())
-
-        # Changing the field should remove the this-is-invalid styling
-        multi_edit.set_availability(
-            courses.COURSE_AVAILABILITY_POLICIES[
-                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
-        self.assertFalse(multi_edit.is_availability_marked_invalid())
-
     def _test_multi_edit_date_fails_safe(self, multi_edit):
         # Field should not be marked invalid on open of dialog
         self.assertFalse(multi_edit.is_availability_marked_invalid())
         self.assertFalse(multi_edit.is_date_time_marked_invalid())
 
+        # Save button should be disbled until clear/save radio is selected.
+        self.assertFalse(multi_edit.get_save_button_is_enabled())
+        multi_edit.click_set_value_radio()
+        self.assertTrue(multi_edit.get_save_button_is_enabled())
+
         # Save with no changes should mark field invalid.
         multi_edit.click_save_expecting_validation_failure()
-        self.assertTrue(multi_edit.is_availability_marked_invalid())
         self.assertTrue(multi_edit.is_date_time_marked_invalid())
 
-        # Changing the availability should remove the this-is-invalid styling
-        multi_edit.set_availability(
-            courses.COURSE_AVAILABILITY_POLICIES[
-                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
-        self.assertFalse(multi_edit.is_availability_marked_invalid())
-        self.assertTrue(multi_edit.is_date_time_marked_invalid())
-
-        # Change availability back to blank; pick a date.  Only
-        # availability should be marked invalid.
+        # Pick a date.  Invalid marker should go away.  Give background
+        # triggers up to 5 seconds to unmark field from invalid->valid
         multi_edit.set_date_time('07/12/2100', '22')
-        multi_edit.set_availability('--- change availability to ---')
-        multi_edit.click_save_expecting_validation_failure()
-        self.assertTrue(multi_edit.is_availability_marked_invalid())
+        patience = 5
+        while patience:
+            patience -= 1
+            if not multi_edit.is_date_time_marked_invalid():
+                break
+            time.sleep(1)
         self.assertFalse(multi_edit.is_date_time_marked_invalid())
 
-        multi_edit.set_date_time('07/12/2100', '22')
-        multi_edit.set_availability(
-            courses.COURSE_AVAILABILITY_POLICIES[
-                courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
-        self.assertFalse(multi_edit.is_availability_marked_invalid())
-        self.assertFalse(multi_edit.is_date_time_marked_invalid())
+        # Click save.  Not validating effects; this is done elsewhere.
+        # Here, we just want to verify that we are free of errors and
+        # Save completes without exceptions.
+        multi_edit.click_save()
 
     def test_multi_edit_start_date_fails_safe(self):
         course_list = self.load_courses_list()
@@ -293,6 +279,68 @@ class CourseMultiEditTests(_CoursesListTestBase):
             course_list.toggle_course_checkbox(course_namespace)
         multi_edit = course_list.click_edit_end_date()
         self._test_multi_edit_date_fails_safe(multi_edit)
+
+    def _multi_edit_set_date(self, multi_edit):
+        # Set start(end) date for courses.
+        multi_edit.click_set_value_radio()
+        multi_edit.set_date_time('07/12/2100', '22')
+        multi_edit.set_availability(
+            courses.COURSE_AVAILABILITY_POLICIES[
+                courses.COURSE_AVAILABILITY_PRIVATE]['title'])
+        multi_edit.click_save()
+        multi_edit.click_cancel()
+
+    def _test_multi_edit_date_clear(self, multi_edit, course_list):
+        # Verify date is present in dialog.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                'Private on 2100-07-12 22:00:00',
+                multi_edit.get_current_value_for(course_namespace))
+
+        # Save button should be disbled until clear/save radio is selected.
+        self.assertFalse(multi_edit.get_save_button_is_enabled())
+        multi_edit.click_clear_value_radio()
+        self.assertTrue(multi_edit.get_save_button_is_enabled())
+        multi_edit.click_save()
+
+        # Verify date is cleared in dialog.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                '', multi_edit.get_current_value_for(course_namespace))
+        multi_edit.click_cancel()
+
+        # Verify date is cleared in main page.  (Here, we're verifying both
+        # start and end date, which is harmless; whichever of start or end
+        # we're not testing will also be blank)
+        #
+        # Also note: Passing pre_wait=False here is necessary.  Apparently,
+        # <a> tags with no text are not considered "visible" by Selenium.
+        # Having been on the all-courses page and opened the multi-edit,
+        # we are 100% certain that the page is currently up-to-date, so
+        # sending pre_wait=False is safe.
+        for namespace in self.course_namespaces[0:-1]:
+            self.assertEquals('', course_list.get_start_date_for(
+                namespace, pre_wait=False))
+            self.assertEquals('', course_list.get_end_date_for(
+                namespace, pre_wait=False))
+
+    def test_multi_edit_start_date_clear(self):
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_start_date()
+        self._multi_edit_set_date(multi_edit)
+        multi_edit = course_list.click_edit_start_date()
+        self._test_multi_edit_date_clear(multi_edit, course_list)
+
+    def test_multi_edit_end_date_clear(self):
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_end_date()
+        self._multi_edit_set_date(multi_edit)
+        multi_edit = course_list.click_edit_end_date()
+        self._test_multi_edit_date_clear(multi_edit, course_list)
 
     def test_multi_edit_shown_in_explorer_fails_safe(self):
         course_list = self.load_courses_list()
@@ -310,6 +358,117 @@ class CourseMultiEditTests(_CoursesListTestBase):
         # Any change to field should remove the invalid style.
         multi_edit.set_show_in_explorer(True)
         self.assertFalse(multi_edit.are_show_buttons_marked_invalid())
+
+    def _test_multi_edit_dates_trying_to_mess_things_up(self, test_start_date):
+        ns = self.course_namespaces[0]
+        public = courses.COURSE_AVAILABILITY_POLICIES[
+            courses.COURSE_AVAILABILITY_PUBLIC]['title']
+
+        # Set non-blank setting into course so we can verify that subsequent
+        # operations really are clearing out values.
+        course_list = self.load_courses_list()
+        course_list.toggle_course_checkbox(ns)
+        if test_start_date:
+            multi_edit = course_list.click_edit_start_date()
+        else:
+            multi_edit = course_list.click_edit_end_date()
+
+        multi_edit.set_availability(public)
+        multi_edit.set_date_time('10/13/2016', '15')
+        multi_edit.click_set_value_radio()
+        multi_edit.click_save()
+        self.assertEquals(
+            'Public - No Registration on 2016-10-13 15:00:00',
+            multi_edit.get_current_value_for(ns))
+        if test_start_date:
+            actual = course_list.get_start_date_for(ns, pre_wait=False)
+        else:
+            actual = course_list.get_end_date_for(ns, pre_wait=False)
+        self.assertEquals('2016-10-13', actual)
+        course_avail = self._get_course_availability_from_settings(ns)
+        if test_start_date:
+            actual = course_avail['start_trigger']
+        else:
+            actual = course_avail['end_trigger']
+        self.assertEquals(
+            {'availability': 'public',
+             'date': '10/13/2016',
+             'hour': '15'},
+            actual)
+
+        # Set date and availability fields, but click 'Clear' radio and save.
+        # Verify correct updates onto multi-edit, course list and also actual
+        # settings.
+        course_list = self.load_courses_list()
+        course_list.toggle_course_checkbox(ns)
+        if test_start_date:
+            multi_edit = course_list.click_edit_start_date()
+        else:
+            multi_edit = course_list.click_edit_end_date()
+        multi_edit.set_availability(public)
+        multi_edit.set_date_time('10/13/2016', '15')
+        multi_edit.click_clear_value_radio()
+        multi_edit.click_save()
+        self.assertEquals(
+            '',
+            multi_edit.get_current_value_for(ns))
+
+        if test_start_date:
+            actual = course_list.get_start_date_for(ns, pre_wait=False)
+        else:
+            actual = course_list.get_end_date_for(ns, pre_wait=False)
+        self.assertEquals('', actual)
+        course_avail = self._get_course_availability_from_settings(ns)
+        if test_start_date:
+            actual = course_avail['start_trigger']
+        else:
+            actual = course_avail['end_trigger']
+        self.assertEquals(
+            {'availability': 'none',
+             'date': '',
+             'hour': '00'},
+            actual)
+
+        # Set setting, and then using the same dialog, immediately clear
+        # setting.  Verify fake values from JS and real setting.
+        course_list = self.load_courses_list()
+        course_list.toggle_course_checkbox(ns)
+        if test_start_date:
+            multi_edit = course_list.click_edit_start_date()
+        else:
+            multi_edit = course_list.click_edit_end_date()
+        multi_edit.set_availability(public)
+        multi_edit.set_date_time('10/13/2016', '15')
+        multi_edit.click_set_value_radio()
+        multi_edit.click_save()
+        multi_edit.click_clear_value_radio()
+        multi_edit.click_save()
+        self.assertEquals(
+            '',
+            multi_edit.get_current_value_for(ns))
+        if test_start_date:
+            actual = course_list.get_start_date_for(ns, pre_wait=False)
+        else:
+            actual = course_list.get_end_date_for(ns, pre_wait=False)
+        self.assertEquals('', actual)
+        course_avail = self._get_course_availability_from_settings(ns)
+        if test_start_date:
+            actual = course_avail['start_trigger']
+        else:
+            actual = course_avail['end_trigger']
+        self.assertEquals(
+            {'availability': 'none',
+             'date': '',
+             'hour': '00'},
+            actual)
+
+    def test_multi_edit_start_trying_to_mess_things_up(self):
+        self._test_multi_edit_dates_trying_to_mess_things_up(
+            test_start_date=True)
+
+    def test_multi_edit_end_trying_to_mess_things_up(self):
+        self._test_multi_edit_dates_trying_to_mess_things_up(
+            test_start_date=False)
 
     def test_multi_edit_course_start_end(self):
         # ----------------------------------------------------------------------
@@ -341,6 +500,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         for course_namespace in self.course_namespaces[:-1]:
             course_list.toggle_course_checkbox(course_namespace)
         multi_edit = course_list.click_edit_start_date()
+        multi_edit.click_set_value_radio()
         multi_edit.set_availability(
             courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_REGISTRATION_REQUIRED]['title'])
@@ -362,6 +522,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         for course_namespace in self.course_namespaces[1:]:
             course_list.toggle_course_checkbox(course_namespace)
         multi_edit = course_list.click_edit_end_date()
+        multi_edit.click_set_value_radio()
         multi_edit.set_availability(
             courses.COURSE_AVAILABILITY_POLICIES[
                 courses.COURSE_AVAILABILITY_PUBLIC]['title'])
@@ -400,7 +561,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         for course_namespace in self.course_namespaces:
             course_list.toggle_course_checkbox(course_namespace)
         multi_edit = course_list.click_edit_start_date()
-        multi_edit.set_date_time('', '00')
+        multi_edit.click_clear_value_radio()
         multi_edit.click_save()
 
         expected_c0['start_trigger'] = expected_c1['start_trigger'] = {
@@ -417,7 +578,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         for course_namespace in self.course_namespaces:
             course_list.toggle_course_checkbox(course_namespace)
         multi_edit = course_list.click_edit_end_date()
-        multi_edit.set_date_time('', '00')
+        multi_edit.click_clear_value_radio()
         multi_edit.click_save()
 
         expected_c1['end_trigger'] = expected_c2['end_trigger'] = {
@@ -443,6 +604,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
                 '',
                 multi_edit.get_current_value_for(course_namespace))
 
+        multi_edit.click_set_value_radio()
         multi_edit.set_availability(availability)
         multi_edit.set_date_time('07/31/2100', '05')
         multi_edit.click_save()
@@ -450,7 +612,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         # Verify that value has been updated in the dialog.
         for course_namespace in self.course_namespaces[0:-1]:
             self.assertEquals(
-                availability + ' on 2100-07-31 12:00:00',
+                availability + ' on 2100-07-31 05:00:00',
                 multi_edit.get_current_value_for(course_namespace))
         multi_edit.click_cancel()
 
@@ -462,7 +624,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         for course_namespace in self.course_namespaces[-1:]:
             self.assertEquals(
                 '',
-                course_list.get_category_for(course_namespace))
+                course_list.get_category_for(course_namespace, pre_wait=False))
 
         # Re-open multi-edit dialog; verify that the long form of the
         # availability text is present, not just the short form from the
@@ -470,7 +632,7 @@ class CourseMultiEditTests(_CoursesListTestBase):
         multi_edit = course_list.click_edit_start_date()
         for course_namespace in self.course_namespaces[0:-1]:
             self.assertEquals(
-                availability + ' on 2100-07-31 12:00:00',
+                availability + ' on 2100-07-31 05:00:00',
                 multi_edit.get_current_value_for(course_namespace))
 
     def _get_category_from_settings(self, namespace):
@@ -494,7 +656,15 @@ class CourseMultiEditTests(_CoursesListTestBase):
                 '',
                 multi_edit.get_current_value_for(course_namespace))
 
+        # Try to save with blank value.
+        multi_edit.click_set_value_radio()
+        self.assertFalse(multi_edit.is_category_marked_invalid())
+        multi_edit.click_save_expecting_validation_failure()
+        self.assertTrue(multi_edit.is_category_marked_invalid())
+
+        # Setting category to nonblank clears error marker
         multi_edit.set_category('Frumious Bandersnatch')
+        self.assertFalse(multi_edit.is_category_marked_invalid())
         multi_edit.click_save()
 
         # Verify that value has been updated in the dialog.
@@ -508,11 +678,11 @@ class CourseMultiEditTests(_CoursesListTestBase):
         for course_namespace in self.course_namespaces[0:-1]:
             self.assertEquals(
                 'Frumious Bandersnatch',
-                course_list.get_category_for(course_namespace))
+                course_list.get_category_for(course_namespace, pre_wait=False))
         for course_namespace in self.course_namespaces[-1:]:
             self.assertEquals(
                 '',
-                course_list.get_category_for(course_namespace))
+                course_list.get_category_for(course_namespace, pre_wait=False))
 
         # Verify that settings have actually been changed by loading the
         # setting from individual courses' settings pages.
@@ -521,6 +691,43 @@ class CourseMultiEditTests(_CoursesListTestBase):
                 'Frumious Bandersnatch',
                 self._get_category_from_settings(course_namespace))
         for course_namespace in self.course_namespaces[-1:]:
+            self.assertEquals(
+                '',
+                self._get_category_from_settings(course_namespace))
+
+        # And now, having set values, clear values.
+        course_list = self.load_courses_list()
+        for course_namespace in self.course_namespaces[0:-1]:
+            course_list.toggle_course_checkbox(course_namespace)
+        multi_edit = course_list.click_edit_category()
+
+        # Verify that the starting value in the dialog has been copied from
+        # the page.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                'Frumious Bandersnatch',
+                multi_edit.get_current_value_for(course_namespace))
+
+        # Clear values.
+        multi_edit.click_clear_value_radio()
+        multi_edit.click_save()
+
+        # Verify that value has been updated in the dialog.
+        for course_namespace in self.course_namespaces[0:-1]:
+            self.assertEquals(
+                '',
+                multi_edit.get_current_value_for(course_namespace))
+        multi_edit.click_cancel()
+
+        # Verify the value has been updated on the course list page.
+        for course_namespace in self.course_namespaces:
+            self.assertEquals(
+                '',
+                course_list.get_category_for(course_namespace, pre_wait=False))
+
+        # Verify that settings have actually been changed by loading the
+        # setting from individual courses' settings pages.
+        for course_namespace in self.course_namespaces:
             self.assertEquals(
                 '',
                 self._get_category_from_settings(course_namespace))

@@ -104,6 +104,7 @@ while [[ ${#files[@]} -gt 0 ]] || [[ ${#jobs[@]} -gt 0 ]] ; do
       IGNORE_FOR_TESTS[0]=--disable=protected-access
       IGNORE_FOR_TESTS[1]=--disable=unbalanced-tuple-unpacking
       IGNORE_FOR_TESTS[2]=--disable=unpacking-non-sequence
+      IGNORE_FOR_TESTS[3]=--disable=too-many-statements
     else
       IGNORE_FOR_TESTS=''
     fi

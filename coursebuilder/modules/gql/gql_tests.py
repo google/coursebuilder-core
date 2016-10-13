@@ -75,17 +75,21 @@ class BaseGqlTests(actions.TestBase):
             entity.is_draft = False
             entity.put()
 
-    def query(self, query_str):
+    def query(self, query_str, expanded_gcb_tags=None):
         if query_str is None:
             query_url = self.GRAPHQL_REST_HANDLER_URL
         else:
             query_url = '%s?%s' % (
                 self.GRAPHQL_REST_HANDLER_URL,
                 urllib.urlencode({'q': query_str}))
+            if expanded_gcb_tags:
+                query_url += '&' + urllib.urlencode(
+                    {'expanded_gcb_tags': expanded_gcb_tags})
         return self.get(query_url, expect_errors=True)
 
-    def get_response(self, query_str, expect_errors=False):
-        response = self.query(query_str)
+    def get_response(self, query_str, expanded_gcb_tags=None,
+                     expect_errors=False):
+        response = self.query(query_str, expanded_gcb_tags=expanded_gcb_tags)
         response_dict = transforms.loads(response.body)
 
         if expect_errors:
@@ -790,11 +794,12 @@ class LessonTests(GraphQLTreeTests):
         sites.reset_courses()
         super(LessonTests, self).tearDown()
 
-    def get_lesson(self):
+    def get_lesson(self, expanded_gcb_tags=None):
         response = self.get_response(
             '{course(id: "%s") {'
             '    unit(id: "%s") {lesson(id: "%s") {id title body}}}}' % (
-                self.course_id, self.unit_id, self.lesson_id))
+                self.course_id, self.unit_id, self.lesson_id),
+            expanded_gcb_tags=expanded_gcb_tags)
         return response['data']['course']['unit']['lesson']
 
     def test_lesson_fields(self):
@@ -830,3 +835,56 @@ class LessonTests(GraphQLTreeTests):
         self.lesson.objectives = 'Lesson <gcb-markdown>*body*</gcb-markdown>'
         self.course.save()
         self.assertIn('<em>body</em>', self.get_lesson()['body'])
+
+    def test_lesson_body_with_filtered_tags(self):
+        # HTML with <gcb-markdown> and <gcb-math> to test tags expansion.
+        self.lesson.objectives = (
+            '<div id="markdown"><gcb-markdown>*bold*</gcb-markdown></div>' +
+            '<div id="math">' +
+            '<gcb-math>&lt;math&gt;&lt;mi&gt;&amp;pi;&lt;/mi&gt;&lt;/math&gt;' +
+            '</gcb-math>' +
+            '</div>')
+        self.course.save()
+
+        # Only <gcb-markdown> tags should be expanded.
+        expanded_gcb_tags = 'gcb-markdown'
+        body = self.get_lesson(expanded_gcb_tags=expanded_gcb_tags)['body']
+
+        self.assertIn('<em>bold</em>', body)
+        self.assertIn(
+            '<div id="math"><div style="display:none;"></div></div>',
+            body)
+
+        # Only <gcb-math> tags should be expanded.
+        expanded_gcb_tags = 'gcb-math'
+        body = self.get_lesson(expanded_gcb_tags=expanded_gcb_tags)['body']
+        self.assertIn(
+            '<div id="markdown"><div style="display:none;"></div></div>',
+            body)
+        self.assertIn(
+            '<div id="math"><script type="math/tex"><math><mi>&pi;</mi>' +
+            '</math></script></div>',
+            body)
+
+        # Both <gcb-markdown> and <gcb-math> should be expanded.
+        expanded_gcb_tags = 'gcb-markdown gcb-math'
+        body = self.get_lesson(expanded_gcb_tags=expanded_gcb_tags)['body']
+        self.assertIn('<em>bold</em>', body)
+        self.assertIn(
+            '<div id="math"><script type="math/tex"><math><mi>&pi;</mi>' +
+            '</math></script></div>',
+            body)
+
+        # No <gcb-markdown> or <gcb-math> tags should be expanded.
+        expanded_gcb_tags = 'gcb-youtube'
+        body = self.get_lesson(expanded_gcb_tags=expanded_gcb_tags)['body']
+        self.assertIn(
+            '<div id="markdown"><div style="display:none;"></div></div>',
+            body)
+        self.assertIn(
+            '<div id="math"><div style="display:none;"></div></div>',
+            body)
+
+
+
+

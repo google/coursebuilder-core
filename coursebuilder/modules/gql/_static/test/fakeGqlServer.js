@@ -43,7 +43,10 @@
       this.GQL_URL_REGEX,
       this._handleRequest.bind(this));
   },
-  addResponse: function(query, response) {
+  addResponse: function(query, response, expanded_gcb_tags) {
+    if (expanded_gcb_tags) {
+      query += '&expanded_gcb_tags=' + encodeURIComponent(expanded_gcb_tags);
+    }
     this._responseTable[this._hashQuery(query)] = response;
   },
   _hashQuery: function(query) {

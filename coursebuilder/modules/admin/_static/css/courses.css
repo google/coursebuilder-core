@@ -156,10 +156,18 @@ div.dropdown-container:hover:not(.inactive-container) div.dropdown-actions-conta
   border: solid 1px red;
   box-shadow: 0 0 5px #f00;
 }
-
 .multi-course-panel .input-invalid {
   border: solid 1px red;
   box-shadow: 0 0 5px #f00;
+}
+.edit-multi-course-settings {
+  margin-left: 25px;
+}
+.multi-course-panel :disabled {
+  opacity: 0.3;
+}
+.multi-course-panel .inputEx-DatePicker-ClearButton {
+  display: none;
 }
 
 /*

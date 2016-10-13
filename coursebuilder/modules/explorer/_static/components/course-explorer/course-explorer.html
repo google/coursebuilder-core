@@ -130,11 +130,12 @@
       },
 
       _getCoursesQuery: function() {
-        return {q:
-            '{allCourses {edges {node {' +
-            '  id, title, url, abstract, instructorDetails,' +
-            '  enrollment {enrolled}, openForRegistration, showInExplorer,' +
-            '  startDate, endDate, estimatedWorkload, category {name} }}}}'
+        return {
+          q: '{allCourses {edges {node {' +
+             '  id, title, url, abstract, instructorDetails,' +
+             '  enrollment {enrolled}, openForRegistration, showInExplorer,' +
+             '  startDate, endDate, estimatedWorkload, category {name} }}}}',
+          expanded_gcb_tags: 'gcb-markdown'
         };
       },
 
