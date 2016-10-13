@@ -102,6 +102,7 @@ class DateTimeTrigger(object):
     MISSING_TRIGGER_FMT = "'{}' trigger is missing."
     IMPOSSIBLE_TRIGGER_FMT = 'is_valid ({}) is_future ({}) is_ready ({})'
     LOG_ISSUE_FMT = '%s %s in namespace %s encoded: "%s" cause: "%s"'
+    UNSPECIFIED_FMT = '{} not specified.'
 
     SET_WILL_OVERWRITE = 'overwrite'
     SET_WILL_MERGE = 'merge'
@@ -112,6 +113,7 @@ class DateTimeTrigger(object):
 
     def __init__(self, when=None, **unused):
         """Validates and sets a `when` datetime property."""
+        # `when` is always either a datetime object or None.
         self._when = self.validate_when(when)
 
     NAME_PART_SEP = '~'
@@ -132,8 +134,21 @@ class DateTimeTrigger(object):
 
     @classmethod
     def kind(cls):
-        """Human-readable "kind" of trigger, e.g. 'content availability'."""
-        return cls.SETTINGS_NAME.split('_')[0]
+        """Human-readable "kind" of trigger, e.g. 'content availability'.
+
+        Returns:
+            A human-readable "kind" string created from cls.SETTINGS_NAME
+            if it exists (e.g. "content" from 'content_triggers').  Subclasses
+            may append or prepend their words (e.g. ContentTrigger.kind()
+            returns "content" from this base class kind() method with
+            " availability" appended by its other AvailabilityTrigger.kind()
+            base class method.
+
+            Otherwise, the type name is returned by abstract base classes.
+        """
+        return (cls.typename().split('.')[-1]
+                if not hasattr(cls, 'SETTINGS_NAME')
+                else cls.SETTINGS_NAME.split('_')[0])
 
     @classmethod
     def settings_css(cls):
@@ -190,7 +205,14 @@ class DateTimeTrigger(object):
     def validate_when(cls, when):
         """Validates when (encoded or decoded); returns datetime or None."""
         if isinstance(when, datetime.datetime):
-            return when
+            return when  # Skip datetime coercion for existing datetime.
+
+        if when is None:
+            logging.debug(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
+                utils.get_ns_name_for_logging(),
+                {DateTimeTrigger.FIELD_NAME: when},
+                cls.UNSPECIFIED_FMT.format(cls.WHEN_TYPENAME))
+            return when  # Skip datetime coercion for None.
 
         try:
             return utc.text_to_datetime(when)
@@ -294,7 +316,7 @@ class DateTimeTrigger(object):
     def decoded(self):
         """Returns the DateTimeTrigger as a dict of *decoded* properties."""
         present = {}
-        if self.when:
+        if self.when is not None:
             present[DateTimeTrigger.FIELD_NAME] = self.when
         return present
 
@@ -315,17 +337,25 @@ class DateTimeTrigger(object):
     @property
     def is_valid(self):
         """Returns True if DateTimeTrigger properties are currently valid."""
-        return self.when
+        # self._when is set in exactly one place, in __init__(), and is set
+        # only to the return value of validate_when(), which is either None
+        # or a datetime object.
+        return self.when is not None
+
+    @classmethod
+    def now(cls, now=None):
+        """Returns `now` as datetime or UTC "now" if None."""
+        return cls.validate_when(now) or utc.now_as_datetime()
 
     def is_future(self, now=None):
         """Returns True if `when` is valid and in the future from `now`."""
-        if now is None:
-            now = utc.now_as_datetime()
-        return self.when and (now < self.when)
+        # Explicitly check *only* if valid `when` is present for comparison,
+        # rather than checking the (potentially sub-class) is_valid property.
+        return (self.when is not None) and (self.now(now=now) < self.when)
 
     def is_ready(self, now=None):
         """Returns True if valid, current (not future), and can be applied."""
-        return self.is_valid and (now > self.when)
+        return self.is_valid and (self.now(now=now) >= self.when)
 
     @classmethod
     def is_complete(cls, encoded_trigger):
@@ -565,7 +595,7 @@ class DateTimeTrigger(object):
                 for storing into settings) triggers.
             course: Course used by some triggers for additional decoding,
                 initialization, and validation.
-            now: optional UTC time as a datetime, used to decide if a trigger
+            now: (optional) UTC time as a datetime, used to decide if a trigger
                 is ready to be acted on; default is None, indicating that
                 `ready` and `future` separating can be skipped.
 
@@ -596,6 +626,9 @@ class DateTimeTrigger(object):
         ready = []
         invalid = []
 
+        # Either (possibly coerced to) a datetime, or (perhaps already) None.
+        now = cls.validate_when(now)
+
         for et in encoded_triggers:
             if et is None:
                 logging.warning(cls.LOG_ISSUE_FMT, 'MISSING', cls.typename(),
@@ -617,7 +650,7 @@ class DateTimeTrigger(object):
             encoded.append(et)
             decoded.append(dt)
 
-            if not now:
+            if now is None:
                 # `now` datetime not specified, so skip `future` vs. `ready`.
                 continue
 
@@ -635,7 +668,7 @@ class DateTimeTrigger(object):
 
             logging.warning(cls.LOG_ISSUE_FMT, 'IMPOSSIBLE', cls.typename(),
                 logged_ns, et, cls.IMPOSSIBLE_TRIGGER_FMT.format(
-                    is_valid, is_future, is_ready))
+                    bool(is_valid), is_future, is_ready))
 
         cls.sort(ready)
         return cls.Separated(
@@ -867,6 +900,7 @@ class AvailabilityTrigger(DateTimeTrigger):
     def __init__(self, availability=None, **super_kwargs):
         """Validates and sets `availability` and super class properties."""
         super(AvailabilityTrigger, self).__init__(**super_kwargs)
+        # `availability` is either one of cls.AVAILABILITY_VALUES or None.
         self._availability = self.validate_availability(availability)
 
     @property
@@ -878,7 +912,9 @@ class AvailabilityTrigger(DateTimeTrigger):
     @classmethod
     def kind(cls):
         """Forms, e.g., 'content availability' from 'content_triggers.'"""
-        return super(AvailabilityTrigger, cls).kind() + ' availability'
+        return (cls.typename().split('.')[-1]
+                if not hasattr(cls, 'SETTINGS_NAME')
+                else super(AvailabilityTrigger, cls).kind() + ' availability')
 
     SELECT_CSS = 'gcb-select inputEx-Field'
 
@@ -932,7 +968,7 @@ class AvailabilityTrigger(DateTimeTrigger):
     def decoded(self):
         """Returns the AvailabilityTrigger as dict of *decoded* properties."""
         present = super(AvailabilityTrigger, self).decoded
-        if self.availability:
+        if self.availability is not None:
             present[AvailabilityTrigger.FIELD_NAME] = self.availability
         return present
 
@@ -948,6 +984,9 @@ class AvailabilityTrigger(DateTimeTrigger):
     @property
     def is_valid(self):
         """Returns True if the Trigger properties are *all* currently valid."""
+        # self._availability is set in exactly one place, in __init__(), and
+        # is set only to the return value of validate_availability(), which
+        # is either None or one of the cls.AVAILABILITY_VALUES.
         return self.availability and super(AvailabilityTrigger, self).is_valid
 
     @classmethod
@@ -1035,12 +1074,18 @@ class ContentTrigger(AvailabilityTrigger):
         """Validates the content type and id and then initializes `content`."""
         super(ContentTrigger, self).__init__(**super_kwargs)
 
+        # `content` is always either a resource.Key or None.
         self._content = self.validate_content(content=content,
             content_type=content_type, content_id=content_id)
 
         if (not found) and course and self.content:
             found = self.find_content_in_course(self.content, course)
+        # else:
+        # TODO(tlarsen): Confirm that caller-supplied `found` parameter is
+        #   actually an acceptable Unit, Lesson, etc., object.
 
+        # `found` is expected to be either a Unit, a Lesson, or None, though
+        # a caller of __init__() could (erroneously?) supply something else.
         self._found = found
 
     @property
@@ -1208,7 +1253,7 @@ class ContentTrigger(AvailabilityTrigger):
     def decoded(self):
         """Returns the Trigger as a dict of present, *decoded* properties."""
         present = super(ContentTrigger, self).decoded
-        if self.content:
+        if self.content is not None:
             present[ContentTrigger.FIELD_NAME] = self.content
         return present
 
@@ -1225,23 +1270,29 @@ class ContentTrigger(AvailabilityTrigger):
 
     @property
     def found(self):
-        """Returns the unit, lesson, etc., if one was found, or None."""
+        """Returns the Unit, Lesson, etc., if one was found, or None."""
         return self._found
 
     @property
     def type(self):
         """Returns associated course content type if one exists, or None."""
-        return self.content.type if self.content else None
+        return None if self.content is None else self.content.type
 
     @property
     def id(self):
         """Returns an associated course content ID if one exists, or None."""
-        return str(self.content.key) if self.content else None
+        return None if self.content is None else str(self.content.key)
 
     @property
     def is_valid(self):
         """Returns True if id, type, found, when, etc. are *all* valid."""
-        return (self.content and self.found and
+        # self._content is set in exactly one place, in __init__(), and
+        # is set only to the return value of validate_content(), which is
+        # either None or a valid content resource.Key.
+        # self._found is similarly only set in __init__(), and *should* be
+        # only either None or a valid Unit or Lesson, but (currently) the
+        # __init__() caller *could* provide an invalid value of some sort.
+        return ((self.content is not None) and (self.found is not None) and
                 super(ContentTrigger, self).is_valid)
 
     @classmethod
@@ -1479,7 +1530,6 @@ class MilestoneTrigger(AvailabilityTrigger):
     DEFAULT_AVAILABILITY = NONE_SELECTED
 
     UNEXPECTED_MILESTONE_FMT = "Milestone '{}' not in {}."
-    UNSPECIFIED_FMT = '{} not specified.'
 
     IMPLEMENTED_SET_SEMANTICS = frozenset([
         DateTimeTrigger.SET_WILL_OVERWRITE,
@@ -1489,6 +1539,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     def __init__(self, milestone=None, **super_kwargs):
         """Validates and sets `milestone` and super class properties."""
         super(MilestoneTrigger, self).__init__(**super_kwargs)
+        # `milestone` is always either one of cls.KNOWN_MILESTONES or None.
         self._milestone = self.validate_milestone(milestone)
 
     @property
@@ -1496,17 +1547,6 @@ class MilestoneTrigger(AvailabilityTrigger):
         """Returns a "name" string that can be compared, sorted, etc."""
         return '{}{}{}'.format(super(MilestoneTrigger, self).name,
             self.NAME_PART_SEP, self.encoded_milestone)
-
-    @classmethod
-    def validate_when(cls, when):
-        """Validates when (encoded or decoded); returns datetime or None."""
-        if when is None:
-            logging.debug(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
-                utils.get_ns_name_for_logging(),
-                {DateTimeTrigger.FIELD_NAME: when},
-                cls.UNSPECIFIED_FMT.format(cls.WHEN_TYPENAME))
-            return None
-        return super(MilestoneTrigger, cls).validate_when(when)
 
     @classmethod
     def validate_availability(cls, availability):
@@ -1578,7 +1618,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     def decoded(self):
         """Returns the MilestoneTrigger as dict of *decoded* properties."""
         present = super(MilestoneTrigger, self).decoded
-        if self.milestone:
+        if self.milestone is not None:
             present[MilestoneTrigger.FIELD_NAME] = self.milestone
         return present
 
@@ -1594,7 +1634,11 @@ class MilestoneTrigger(AvailabilityTrigger):
     @property
     def is_valid(self):
         """Returns True if the Trigger properties are *all* currently valid."""
-        return self.milestone and super(MilestoneTrigger, self).is_valid
+        # self._milestone is set in exactly one place, in __init__(), and
+        # is set only to the return value of validate_milestone(), which is
+        # either None or one of the cls.KNOWN_MILESTONES.
+        return ((self.milestone is not None) and
+                super(MilestoneTrigger, self).is_valid)
 
     @classmethod
     def _get_named_setting_env(cls, env, course=None):

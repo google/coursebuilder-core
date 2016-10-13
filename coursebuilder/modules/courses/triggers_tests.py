@@ -146,13 +146,40 @@ class TriggerTestsMixin(object):
     def check_valid_is(self, valid):
         self.assertTrue(valid.is_valid)
 
-        now_in_past = self.dt_when - self.NOW_DELTA
-        self.assertTrue(valid.is_future(now=now_in_past))
-        self.assertFalse(valid.is_ready(now=now_in_past))
+        # Exactly `now` is not, by definition, in the future.
+        self.assertFalse(valid.is_future(now=self.dt_when))
+        self.assertFalse(valid.is_future(now=self.txt_when))
 
-        now_in_future = self.dt_when + self.NOW_DELTA
-        self.assertFalse(valid.is_future(now=now_in_future))
-        self.assertTrue(valid.is_ready(now=now_in_future))
+        # Exactly `now` is ready, since it is not in the future.
+        self.assertTrue(valid.is_ready(now=self.dt_when))
+        self.assertTrue(valid.is_ready(now=self.txt_when))
+
+        # `now` definitely in the past means is_future and not is_ready.
+        in_past = self.dt_when - self.NOW_DELTA
+        self.assertTrue(valid.is_future(now=in_past))
+        self.assertFalse(valid.is_ready(now=in_past))
+        in_past_as_text = utc.to_text(dt=in_past)
+        self.assertTrue(valid.is_future(now=in_past_as_text))
+        self.assertFalse(valid.is_ready(now=in_past_as_text))
+
+        # `now` definitely in the future means is_ready and not is_future.
+        in_future = self.dt_when + self.NOW_DELTA
+        self.assertFalse(valid.is_future(now=in_future))
+        self.assertTrue(valid.is_ready(now=in_future))
+        in_future_as_text = utc.to_text(dt=in_future)
+        self.assertFalse(valid.is_future(now=in_future_as_text))
+        self.assertTrue(valid.is_ready(now=in_future_as_text))
+
+        # Delay slightly so that utc.now_as_datetime() is definitely later
+        # than self.dt_when.
+        time.sleep(1)
+
+        # `now` values that cannot be coerced into a datetime cause the
+        # current utc.now_as_datetime() to be obtained.
+        self.assertFalse(valid.is_future(now=None))
+        self.assertFalse(valid.is_future(now=''))
+        self.assertTrue(valid.is_ready(now=None))
+        self.assertTrue(valid.is_ready(now=''))
 
     def separating_logged(self, logs, count, trigger_cls):
         self.assertIn('SEPARATING %d encoded %s(s) in %s.' % (

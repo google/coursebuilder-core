@@ -109,6 +109,11 @@ class OverrideTriggerMixin(object):
 
     KIND_SUFFIX = ' override'
 
+    @classmethod
+    def kind(cls):
+        """Abstract base class OverrideTriggerMixin returns its type name."""
+        return cls.typename().split('.')[-1]
+
     IMPLEMENTED_SET_SEMANTICS = triggers.DateTimeTrigger.SET_ONLY_OVERWRITES
 
     def act(self, course, student_group):
@@ -206,7 +211,7 @@ class ContentOverrideTrigger(OverrideTriggerMixin, triggers.ContentTrigger):
 
     @classmethod
     def kind(cls):
-        return super(ContentOverrideTrigger, cls).kind() + cls.KIND_SUFFIX
+        return triggers.ContentTrigger.kind() + cls.KIND_SUFFIX
 
     KEY_KIND = CONTENT_AVAILABILITY_FIELD
 
@@ -287,7 +292,7 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
 
     @classmethod
     def kind(cls):
-        return super(CourseOverrideTrigger, cls).kind() + cls.KIND_SUFFIX
+        return triggers.MilestoneTrigger.kind() + cls.KIND_SUFFIX
 
     KEY_KIND = COURSE_AVAILABILITY_SETTING
 

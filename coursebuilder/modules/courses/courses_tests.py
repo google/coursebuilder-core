@@ -2446,8 +2446,8 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
         self.error_logged(logs, 'None', 'MISSING', self.TCT.typename(),
             re.escape("'None' trigger is missing."))
 
-        self.error_logged(logs, {'when': None}, 'INVALID', 'datetime',
-            re.escape("TypeError('must be string, not None',)"))
+        self.error_logged(logs, {'when': None}, 'SKIPPED', self.TCT.kind(),
+            re.escape("datetime not specified."))
         self.error_logged(logs, {'availability': None}, 'INVALID',
             self.TCT.kind(), re.escape(self.TCT.UNEXPECTED_AVAIL_FMT.format(
                 None, self.TCT.AVAILABILITY_VALUES)))
@@ -2477,8 +2477,13 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
             'resource.Key', re.escape(
                 self.TCT.MISSING_CONTENT_FMT.format(missing['content'])))
 
-        # No triggers of any kind with an impossible combination of is_valid,
-        # not is_future, *and* not is_ready.
+        # No triggers of any kind with an impossible combination of:
+        # is_valid, not is_future, *and* not is_ready.
+        self.error_not_logged(logs, self.ENCODED_TRIGGER_RE, 'IMPOSSIBLE',
+            'trigger', re.escape(
+                self.TDTT.IMPOSSIBLE_TRIGGER_FMT.format(True, False, False)))
+        # No triggers of any kind with an impossible combination of:
+        # is_valid, is_future, *and* is_ready.
         self.error_not_logged(logs, self.ENCODED_TRIGGER_RE, 'IMPOSSIBLE',
             'trigger', re.escape(
                 self.TDTT.IMPOSSIBLE_TRIGGER_FMT.format(True, True, True)))
