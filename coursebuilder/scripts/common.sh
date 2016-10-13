@@ -46,7 +46,7 @@ if [[ $OSTYPE == linux* ]] ; then
   CHROMEDRIVER_ZIP=chromedriver_linux64.zip
 elif [[ $OSTYPE == darwin* ]] ; then
   NODE_DOWNLOAD_FOLDER=node-v0.12.4-darwin-x64
-  CHROMEDRIVER_ZIP=chromedriver_mac32.zip
+  CHROMEDRIVER_ZIP=chromedriver_mac64.zip
 elif [[ $OSTYPE == "cygwin" ]] ; then
   echo "Windows install; skipping test-related downloads."
 else
@@ -101,7 +101,10 @@ function download_and_unpack() {
 
   local archive_type=$( \
     echo "$source_url" | \
-    sed -r -e 's/.*\.(zip|tar\.gz|tar|bz2)/\1/' )
+    sed -e 's/.*\.zip/zip/' | \
+    sed -e 's/.*\.tar\.gz/tar.gz/' | \
+    sed -e 's/.*\.tar/tar/' | \
+    sed -e 's/.*\.bz2/bz2/' )
   local temp_dir=$(mktemp -d)
   pushd $temp_dir > /dev/null
   curl --location --silent "$source_url" -o archive_file
@@ -222,7 +225,7 @@ if [ ! -f "$RUNTIME_HOME/pycrypto-2.6.1/.gcb_install_succeeded" ]; then
   pushd . > /dev/null
   cd "$RUNTIME_HOME/pycrypto-2.6.1"
   echo Building PyCrypto
-  python setup.py build > /dev/null || handle_build_error pycrypto 2.6.1
+  python setup.py build > /dev/null 2>&1 || handle_build_error pycrypto 2.6.1
   echo Installing PyCrypto
   python setup.py install --home="$RUNTIME_HOME/pycrypto_build_tmp" > /dev/null
   rm -r "$RUNTIME_HOME/pycrypto-2.6.1"
@@ -294,8 +297,6 @@ if need_install phantomjs ChangeLog Version 2.1.0 test ; then
     download_and_unpack \
       $CB_ARCHIVE_LIB_URL/phantomjs-2.1.1-macosx.zip \
       "$RUNTIME_HOME/phantomjs"
-    rm -rf "$RUNTIME_HOME/phantomjs"
-    mv "$RUNTIME_HOME/phantomjs-2.1.1-macos" "$RUNTIME_HOME/phantomjs"
   else
     echo "Target OS '$OSTYPE' must start with 'linux' or 'darwin'."
     exit -1
