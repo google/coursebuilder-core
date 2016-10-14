@@ -19,8 +19,10 @@ $(function() {
     if (contentElements.subFields.length == 0) {
       var contentContainer = $(contentElements.divEl)
           .find('.content-availability > .inputEx-ListField-childContainer');
-      $('<div class="no-course-content">No course content available.</div>')
-          .appendTo(contentContainer);
+      if (contentContainer.find('.no-course-content').length <= 0) {
+        $('<div class="no-course-content">No course content available.</div>')
+            .appendTo(contentContainer);
+      }
     } else {
       $.each(contentElements.subFields, function() {
         var rowData = this.inputsNames;
