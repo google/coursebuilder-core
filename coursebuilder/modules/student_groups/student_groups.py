@@ -39,6 +39,7 @@ from common import utils as common_utils
 from common import users
 from common import utc
 from controllers import utils
+from controllers import sites
 from models import courses
 from models import custom_modules
 from models import data_sources
@@ -1603,6 +1604,21 @@ def modify_course_environment(app_context, env):
         app_context)
     if not student_group:
         return
+
+    # Consider a user who has been added to a student group.  Now, whenever
+    # that user is in session, we override the course-level settings to
+    # contain the settings pertinent to that group, if any.  Now suppose that
+    # this user is *also* an associate admin.  Not a fully fledged admin but
+    # the kind that only has privileges to edit groups and availability.  When
+    # that user visits the dashboard page to edit course-level availability
+    # and group membership, that page will show the settings from the group,
+    # since we override them for that (non-admin) user.  Thus, on those pages,
+    # we need to not override.
+    if sites.has_path_info():
+        path = sites.get_path_info()
+        if (path.endswith(StudentGroupRestHandler.URL) or
+            path.endswith(StudentGroupAvailabilityRestHandler.URL)):
+            return
 
     # Apply overrides as applicable.
     # pylint: disable=protected-access

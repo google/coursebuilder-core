@@ -32,6 +32,7 @@ from models import models
 from models import transforms
 from modules.analytics import gradebook
 from modules.analytics import student_aggregate
+from modules.courses import constants as course_constants
 from modules.courses import triggers_tests
 from modules.i18n_dashboard import i18n_dashboard
 from modules.student_groups import messages
@@ -70,6 +71,19 @@ class StudentGroupsTestBase(actions.TestBase):
                     },
                 })
             models.RoleDAO.save(role_dto)
+
+    def _grant_availability_permission_to_assistant(self):
+        with common_utils.Namespace(self.NAMESPACE):
+            role_dto = models.RoleDTO(None, {
+                'name': 'modify_availability_role',
+                'users': [self.ADMIN_ASSISTANT_EMAIL],
+                'permissions': {
+                    course_constants.MODULE_NAME:
+                    [course_constants.MODIFY_AVAILABILITY_PERMISSION]
+                    },
+                })
+            models.RoleDAO.save(role_dto)
+
 
     def tearDown(self):
         sites.remove_course(self.app_context)
@@ -1073,6 +1087,31 @@ class AvailabilityLifecycleTests(StudentGroupsTestBase):
         response = self._put_availability(group_id, [])
         self.assertEquals(200, response['status'])
         self.assertEquals('Saved', response['message'])
+
+    def test_get_course_whitelist_non_admin_shows_actual_whitelist(self):
+        actions.login(self.ADMIN_EMAIL)
+        response = self._put_group(None, 'Group One', 'this is my group')
+        group_id = transforms.loads(response['payload'])['key']
+        self._put_availability(
+            group_id, [self.ADMIN_EMAIL, self.ADMIN_ASSISTANT_EMAIL])
+        self._grant_student_groups_permission_to_assistant()
+        self._grant_availability_permission_to_assistant()
+
+        url = student_groups.StudentGroupAvailabilityRestHandler.URL.lstrip('/')
+        with actions.OverriddenEnvironment(
+            {'course': {'whitelist': 'FAKE CONTENT'}}):
+
+            response = self.get(url)
+            payload = transforms.loads(
+                transforms.loads(response.body)['payload'])
+            self.assertEquals(payload['whitelist'], 'FAKE CONTENT')
+
+            actions.login(self.ADMIN_ASSISTANT_EMAIL)
+            response = self.get(url)
+            payload = transforms.loads(
+                transforms.loads(response.body)['payload'])
+            self.assertEquals(payload['whitelist'], 'FAKE CONTENT')
+
 
 
 class AvailabilityTests(StudentGroupsTestBase):
