@@ -7,7 +7,7 @@ threadsafe: false
 instance_class: F1
 
 env_variables:
-  GCB_PRODUCT_VERSION: '1.11.0'
+  GCB_PRODUCT_VERSION: '1.11.x'
 
   # Enable collection of stats on numbers of calls to the datastore,
   # memcache, and email-sending backends.  Used for profiling CourseBuilder
