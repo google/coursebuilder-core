@@ -431,7 +431,8 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
             # Now remove *all* properties corresponding to the milestones
             # of *all* trigger that were just removed.
             milestones = [t.get(cls.FIELD_NAME) for t in existing_triggers]
-            cls.clear_multiple_whens_in_settings(milestones, student_group)
+            cls.clear_multiple_corresponding_settings(
+                milestones, student_group)
             return
 
         kept = [t for t in existing_triggers
@@ -439,7 +440,7 @@ class CourseOverrideTrigger(OverrideTriggerMixin, triggers.MilestoneTrigger):
 
         # Clear only the single property corresponding to the milestone of
         # the one trigger that was just pruned.
-        cls.clear_default_when_in_settings(milestone, student_group)
+        cls.clear_corresponding_setting(milestone, student_group)
 
         if kept:
             # Triggers remain after pruning out the milestone ones, so the
@@ -706,10 +707,9 @@ class StudentGroupMembership(models.BaseEntity):
         is being added.  Adds up to one additional group leader to the
         cross-group transaction.
 
-        Since we treat the Student object as definitive for
-        group membership when a Student object exists for a user, we need to
-        move the group membership transactionally with the creation of the
-        Student object.
+        Since we treat the Student object as definitive for group membership
+        when a Student object exists for a user, we need to move the group
+        membership transactionally with the creation of the Student object.
 
         Ideally, we'd prefer to register with StudentLifecycleObserver, but
         that entails a non-zero delay (a few seconds typically, but there
@@ -720,11 +720,18 @@ class StudentGroupMembership(models.BaseEntity):
         Args:
           student: models.models.Student instance.  Guaranteed non-None.
           profile: models.models.PersonalProfile instance.  Guaranteed non-None.
+
         """
-        binding = cls.get_by_key_name(student.email)
+        binding = cls._get_by_email_address(student.email)
         if binding:
             group_id = binding.group_id
-            binding.delete()
+
+            # If binding is an exact match for this specific student, we can
+            # remove the binding since the Student is now definitive.  If the
+            # binding does not match exactly, it was an @domain and should not
+            # be removed.
+            if binding.key().name() == student.email:
+                binding.delete()
         else:
             group_id = None
 
@@ -752,7 +759,7 @@ class StudentGroupMembership(models.BaseEntity):
             return None
 
         student_group, definitive = cls._get_student_group_by_user_id(
-            user.user_id())
+            user.user_id(), app_context=app_context)
         if student_group or definitive:
             return student_group
 
@@ -763,14 +770,15 @@ class StudentGroupMembership(models.BaseEntity):
         # did not check non-Students, they might well be prevented from
         # becoming Students since the registration page availability is gated
         # on course availability.
-        binding = StudentGroupMembership.get_by_key_name(user.email().lower())
+        binding = cls._get_by_email_address(user.email())
         if binding:
             return model_caching.CacheFactory.get_manager_class(
-                MODULE_NAME_AS_IDENTIFIER).get(binding.group_id)
+                MODULE_NAME_AS_IDENTIFIER).get(
+                    binding.group_id, app_context=app_context)
         return None
 
     @classmethod
-    def get_student_group_by_user_id(cls, user_id):
+    def get_student_group_by_user_id(cls, user_id, app_context=None):
         """Find group for a user ID known to be for a registered Student.
 
         This function is intended for use ONLY in situations where the calling
@@ -780,19 +788,25 @@ class StudentGroupMembership(models.BaseEntity):
         without a current user in session.
 
         Args:
-          user_id: String giving the user ID to check
+          user_id: String giving the user ID to check.
+          app_context: (optional) provided to the cache get() if supplied;
+            determines namespace of cache; default is to use
+            namespace_manager.get_namespace() instead.
         Returns:
           StudentGroupDAO or None
         """
-        student_group, definitive = cls._get_student_group_by_user_id(user_id)
+        student_group, definitive = cls._get_student_group_by_user_id(
+            user_id, app_context=app_context)
         return student_group
 
     @classmethod
-    def _get_student_group_by_user_id(cls, user_id):
+    def _get_student_group_by_user_id(cls, user_id, app_context=None):
         """Find the student_group (if any) for a given user ID.
 
         Args:
           user_id: String giving the user ID for the user in question.
+          app_context: (optional) provided to the cache get() to determine
+            namespace of cache.
         Returns:
           A 2-tuple:
           - The StudentGroupDTO (cached; 1 hour timeout), or None.
@@ -809,9 +823,34 @@ class StudentGroupMembership(models.BaseEntity):
         if not student.group_id:
             return None, True
         student_group = model_caching.CacheFactory.get_manager_class(
-            MODULE_NAME_AS_IDENTIFIER).get(student.group_id)
+            MODULE_NAME_AS_IDENTIFIER).get(
+                student.group_id, app_context=app_context)
         return student_group, True
 
+    @classmethod
+    def _get_by_email_address(cls, email):
+        key_names = []
+        email = email.lower()
+        key_names.append(email)  # Prefer full match to @domain match.
+
+        # TODO(mgainer): Extend this to match on domain if/when we get
+        # agreement from product on how to handle lagging user assignment when
+        # we add a domain and many, many existing users are in that domain
+        # such that we cannot fix all of them in a fixed number of DB round
+        # trips.  In the meantime, we have added some validation to prevent
+        # "@domain.com" addresses from being added to student group
+        # whitelists.
+        #
+        #if '@' in email:
+        #    domain = email.split('@')[-1]
+        #    if domain:
+        #        key_names.append(domain)
+        #        key_names.append('@' + domain)
+        items = cls.get_by_key_name(key_names)
+        for item in items:
+            if item:
+                return item
+        return None
 
 class StudentGroupEntity(models.BaseEntity):
     """Overrides for per-group course-level settings.
@@ -1469,11 +1508,30 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
             transforms.send_json_response(self, 401, 'Access denied.')
             return
 
-        # Update student group settings in student_group object.
+        # Verify we have the group that's being requested for modification.
         student_group = StudentGroupDAO.load(student_group_id)
         if not student_group:
             transforms.send_json_response(self, 404, 'Not found.')
             return
+
+        # Verify members list.
+        members_text = payload.get(
+            self._STUDENT_GROUP_SETTINGS).get(self._MEMBERS)
+        members = common_utils.text_to_list(members_text)
+        if len(members) > self.MAX_NUM_MEMBERS:
+            transforms.send_json_response(
+                self, 400, 'A group may contain at most %d members.' %
+                self.MAX_NUM_MEMBERS)
+            return
+        for member in members:
+            if (member.count('@') == 1 and
+                member.find('@') > 0 and
+                member.find('@') < len(member) - 1):
+                pass
+            else:
+                transforms.send_json_response(
+                    self, 400, '"%s" is not a valid email address.' % member)
+                return
 
         student_group.remove_override(course_availability_key())
         student_group.remove_override(['unit'])
@@ -1495,14 +1553,6 @@ class StudentGroupAvailabilityRestHandler(utils.BaseRESTHandler):
         StudentGroupDAO.save(student_group)
 
         # Update references in join table.
-        members_text = payload.get(
-            self._STUDENT_GROUP_SETTINGS).get(self._MEMBERS)
-        members = common_utils.text_to_list(members_text)
-        if len(members) > self.MAX_NUM_MEMBERS:
-            transforms.send_json_response(
-                self, 400, 'A group may contain at most %d members.' %
-                self.MAX_NUM_MEMBERS)
-            return
         StudentGroupMembership.set_members(int(student_group_id), members)
 
         transforms.send_json_response(self, 200, 'Saved')
@@ -1579,7 +1629,7 @@ def _add_student_group_to_profile(handler, app_context, student):
     """Callback for student profile page: Add group name/desc to page HTML."""
 
     student_group = StudentGroupMembership.get_student_group_by_user_id(
-        student.user_id)
+        student.user_id, app_context=app_context)
     if not student_group:
         return None
     student_group = _maybe_translate_student_group(student_group)
@@ -1811,6 +1861,14 @@ class ResourceHandlerStudentGroup(resource.AbstractResourceHandler):
         return None
 
 
+CACHE_NAME = MODULE_NAME_AS_IDENTIFIER
+CACHE_LABEL = MODULE_NAME + " Caching"
+CACHE_DESCRPTION = messages.ENABLE_GROUP_CACHING
+CACHE_MAX_SIZE_BYTES = (
+    StudentGroupAvailabilityRestHandler.MAX_NUM_MEMBERS * 1024 * 4)
+CACHE_TTL_1_HOUR = 60 * 60
+
+
 def register_module():
     """Callback for module registration.  Sets up URL routes."""
 
@@ -1829,12 +1887,9 @@ def register_module():
         Responsible for registering module's callbacks and other items with
         core and other modules.
         """
-        model_caching.CacheFactory.build(
-            MODULE_NAME_AS_IDENTIFIER, MODULE_NAME + " Caching",
-            messages.ENABLE_GROUP_CACHING,
-            max_size_bytes=(
-                StudentGroupAvailabilityRestHandler.MAX_NUM_MEMBERS * 1024 * 4),
-            ttl_sec=60 * 60, dao_class=StudentGroupDAO)
+        model_caching.CacheFactory.build(CACHE_NAME, CACHE_LABEL,
+            CACHE_DESCRPTION, max_size_bytes=CACHE_MAX_SIZE_BYTES,
+            ttl_sec=CACHE_TTL_1_HOUR, dao_class=StudentGroupDAO)
 
         # Tell permissioning system about permission for this module.
         roles.Roles.register_permissions(custom_module, permissions_callback)

@@ -29,7 +29,8 @@ students.
 
 COURSE_WIDE_STUDENTS_ALLOWED_DESCRIPTION = """
 Only students with email addresses in this list may access course content.
- Separate addresses with any combination of commas, spaces, or separate lines.
+To add all users in an entire domain, use "@domain.com", "@domain.edu", etc.
+Separate addresses with any combination of commas, spaces, or separate lines.
 Course, site, and App Engine administrators always have access and need not be
 listed explicitly.
 """

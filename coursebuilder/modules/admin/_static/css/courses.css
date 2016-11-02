@@ -88,7 +88,7 @@
 }
 
 /*
- * Material Design Light tooltip, for "Most recent registration at...".
+ * Material Design Light tooltip, for "Most recent activity at...".
  *
  * (from modules/oeditor/_static/css/oeditor.css)
  */
@@ -145,9 +145,6 @@ div.dropdown-container:hover:not(.inactive-container) div.dropdown-actions-conta
 }
 .edit-multi-course-coursename {
   max-width: 20em;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow-x: hidden;
 }
 .multi-course-hidden {
   display: none;
@@ -218,8 +215,13 @@ i.gcb-sorted-hover {
   padding-right: 24px;
 }
 
-.gcb-list__cell--header, .gcb-list table > thead > tr > th, .gcb-list tr > th {
+/*
+ * End text containing a long course name with an ellipsis.
+ */
+.edit-multi-course-coursename, .mdl-tooltip.gcb-form-tooltip,
+.gcb-course-picker #course-picker, .gcb-list__cell--header,
+.gcb-list table > thead > tr > th, .gcb-list tr > th {
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
+  overflow-x: hidden;
 }

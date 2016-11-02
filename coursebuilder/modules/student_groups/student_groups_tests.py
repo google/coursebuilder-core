@@ -333,6 +333,26 @@ class GroupLifecycleTests(StudentGroupsTestBase):
         self.assertEquals(200, response['status'])
         self.assertEquals('Deleted.', response['message'])
 
+    def test_with_malformed_email(self):
+        actions.login(self.ADMIN_EMAIL)
+        response = self._put_group(None, 'My New Group', 'this is my group')
+        group_id = transforms.loads(response['payload'])['key']
+
+        response = self._put_availability(group_id, ['@domain.com'])
+        self.assertEquals(400, response['status'])
+        self.assertEquals(
+            '"@domain.com" is not a valid email address.', response['message'])
+
+        response = self._put_availability(group_id, ['@'])
+        self.assertEquals(400, response['status'])
+        self.assertEquals(
+            '"@" is not a valid email address.', response['message'])
+
+        response = self._put_availability(group_id, ['x@'])
+        self.assertEquals(400, response['status'])
+        self.assertEquals(
+            '"x@" is not a valid email address.', response['message'])
+
     def test_lifecycle(self):
         actions.login(self.ADMIN_EMAIL)
 
@@ -2107,7 +2127,7 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
             # acted on, and thus the value of 'start_date' stored in the
             # student group will have changed, provide the 'when' value for
             # the expected default course_start override trigger in
-            # only_course_end and defaults_only.
+            # only_course_end, only_early_end, and defaults_only.
             when_start = self.SGCOT.encoded_defaults(
                 availability=self.SGCOT.NONE_SELECTED, course=self.course,
                 milestone='course_start', settings=none_start_dto)
@@ -2119,6 +2139,7 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
             self.defaults_start = when_start
             self.defaults_only['course_start'][0] = when_start
             self.only_course_end['course_start'][0] = when_start
+            self.only_early_end['course_start'][0] = when_start
 
             self.assertEquals(
                 len(self.SGCOT.copy_from_settings(none_start_dto)), 0)

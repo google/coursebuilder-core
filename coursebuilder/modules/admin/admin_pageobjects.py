@@ -23,7 +23,7 @@ import logging
 import re
 import time
 
-from modules.admin import admin
+from modules.admin import enrollments
 from selenium.common import exceptions
 from selenium.webdriver.common import action_chains
 from selenium.webdriver.support import select
@@ -48,7 +48,7 @@ def _norm_enrolled(enrolled):
     try:
         return int(enrolled.strip())
     except ValueError as err:
-        if enrolled == admin.BaseAdminHandler.NONE_ENROLLED:
+        if enrolled == enrollments.NONE_ENROLLED:
             return 0
         raise err
 
@@ -236,9 +236,9 @@ class CoursesListPage(pageobjects.CoursesListPage):
 
     def verify_no_enrollments(self, namespace, title,
                               delay_scale_factor=0):
-        text = admin.BaseAdminHandler.NONE_ENROLLED
+        text = enrollments.NONE_ENROLLED
         regexp = re.escape(
-            '(registration activity for %s is being computed)' % title)
+            '(registration activity is being computed for "%s")' % title)
         return self._match_enrolled_count_and_tooltip(
             namespace, text, regexp, delay_scale_factor)
 
@@ -248,7 +248,7 @@ class CoursesListPage(pageobjects.CoursesListPage):
                                  delay_scale_factor=1):
         text = "%d" % count
         regexp = ('Most recent activity at %s UTC for %s' %
-                  (self.DATETIME_REGEXP, re.escape(title + '.')))
+                  (self.DATETIME_REGEXP, re.escape('"%s".' % title)))
         return self._match_enrolled_count_and_tooltip(
             namespace, text, regexp, delay_scale_factor)
 

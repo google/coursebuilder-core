@@ -23,6 +23,14 @@ import time
 from common import schema_transforms
 
 
+# Alias existing ISO 8601 formats from schema_transforms.py for convenience.
+ISO_8601_DATE_FMT = schema_transforms.ISO_8601_DATE_FORMAT
+ISO_8601_DATETIME_FMT = schema_transforms.ISO_8601_DATETIME_FORMAT
+
+# Human-readable ISO 8601 date format (compared to ISO_8601_DATETIME_FMT).
+ISO_8601_UTC_HUMAN_FMT = '%Y-%m-%d %H:%M:%S UTC'
+
+
 def datetime_to_timestamp(utc_dt):
     """Returns UTC datetime as a POSIX timestamp (seconds since epoch).
 
@@ -60,21 +68,21 @@ def struct_time_to_timestamp(utc_st):
          utc_st.tm_wday, utc_st.tm_yday, utc_st.tm_isdst))
 
 
-def text_to_timestamp(text, fmt=schema_transforms.ISO_8601_DATETIME_FORMAT):
+def text_to_timestamp(text, fmt=ISO_8601_DATETIME_FMT):
     """Returns UTC time string as a POSIX timestamp (seconds since epoch).
 
     Args:
         text: string containing UTC date and time in the specified format.
         fmt: a datetime strftime format string; defaults to
-            schema_transforms.ISO_8601_DATETIME_FORMAT.
+            ISO_8601_DATETIME_FMT.
     """
     utc_dt = datetime.datetime.strptime(text, fmt)
     return datetime_to_timestamp(utc_dt)
 
 
-def text_to_datetime(text, fmt=schema_transforms.ISO_8601_DATETIME_FORMAT):
+def text_to_datetime(text, fmt=ISO_8601_DATETIME_FMT):
     """Returns UTC datetime for stringified date in given format."""
-    return timestamp_to_datetime(text_to_timestamp(text, fmt))
+    return timestamp_to_datetime(text_to_timestamp(text, fmt=fmt))
 
 
 def now_as_timestamp(_test_fixed_seconds=None):
@@ -96,7 +104,7 @@ def now_as_datetime():
 
 
 def to_timestamp(seconds=None, dt=None, st=None, text=None,
-                 fmt=schema_transforms.ISO_8601_DATETIME_FORMAT):
+                 fmt=ISO_8601_DATETIME_FMT):
     """Returns POSIX timestamp (seconds since epoch), from optional parameters.
 
     In order of precedence, the first of these values is used to return a UTC
@@ -111,7 +119,7 @@ def to_timestamp(seconds=None, dt=None, st=None, text=None,
         st: UTC time, as a time.struct_time, -OR-
         text: string containing UTC date and time in the specified format.
         fmt: a datetime strftime format string; defaults to
-            schema_transforms.ISO_8601_DATETIME_FORMAT.
+            ISO_8601_DATETIME_FMT.
     Returns:
         seconds, unchanged, if not None, else:
         dt, converted to UTC seconds since epoch, if not None, else:
@@ -265,7 +273,7 @@ def hour_end(seconds):
 
 
 def to_text(seconds=None, dt=None, st=None,
-            fmt=schema_transforms.ISO_8601_DATETIME_FORMAT):
+            fmt=ISO_8601_DATETIME_FMT):
     """Converts a UTC date and time into a string via datetime.strftime.
 
     In order of precedence, the first of these values is used to return a UTC
@@ -276,7 +284,7 @@ def to_text(seconds=None, dt=None, st=None,
         dt: UTC time, as datetime.datetime, -OR-
         st: UTC time, as a time.struct_time.
         fmt: a time/datetime strftime format string; defaults to
-            schema_transforms.ISO_8601_DATETIME_FORMAT.
+            ISO_8601_DATETIME_FMT.
     """
     if seconds is not None:
         dt = datetime.datetime.utcfromtimestamp(seconds)

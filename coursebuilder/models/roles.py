@@ -96,9 +96,20 @@ class Roles(object):
 
     @classmethod
     def _user_email_in(cls, user, text):
-        email_list = [email.lower() for email in utils.text_to_list(
-            text, utils.BACKWARD_COMPATIBLE_SPLITTER)]
-        return bool(user and user.email().lower() in email_list)
+        if not user:
+            return False
+        email = user.email().lower()
+        if not email:
+            return False
+        match_to = set([email])
+        if '@' in email:
+            domain = email.split('@')[-1]
+            if domain:
+                match_to.add(domain)
+                match_to.add('@' + domain)
+        allowed = set([email.lower() for email in utils.text_to_list(
+            text, utils.BACKWARD_COMPATIBLE_SPLITTER)])
+        return bool(match_to & allowed)
 
     @classmethod
     def update_permissions_map(cls):

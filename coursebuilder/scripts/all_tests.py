@@ -148,7 +148,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.unit_description.UnitDescriptionsTest': 1,
     'tests.functional.unit_header_footer.UnitHeaderFooterTest': 11,
     'tests.functional.unit_on_one_page.UnitOnOnePageTest': 4,
-    'tests.functional.whitelist.WhitelistTest': 13,
+    'tests.functional.whitelist.WhitelistTest': 14,
     'tests.unit.etl_mapreduce.HistogramTests': 5,
     'tests.unit.etl_mapreduce.FlattenJsonTests': 4,
     'tests.unit.etl_remote.EnvironmentTests': 3,

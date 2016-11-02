@@ -37,7 +37,6 @@ STUDENT_WHITELIST = '[%s]' % STUDENT_EMAIL
 
 class WhitelistTest(gql_tests.GraphQLTreeTests, actions.TestBase):
 
-    _course_added = False
     _whitelist = ''
     _get_environ_old = None
 
@@ -95,7 +94,7 @@ class WhitelistTest(gql_tests.GraphQLTreeTests, actions.TestBase):
         response = self.get('/whitelist_test/course')
         self.assertEquals(200, response.status_int)
 
-    def _expect_invisible(self, logged_in):
+    def _expect_invisible(self):
         self.assertNotIn('Whitelist Test', self.get_course_titles())
         response = self.get('/whitelist_test/course', expect_errors=True)
         self.assertEquals(404, response.status_int)
@@ -105,7 +104,7 @@ class WhitelistTest(gql_tests.GraphQLTreeTests, actions.TestBase):
 
     def test_course_whitelist_not_logged_in(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
-        self._expect_invisible(logged_in=False)
+        self._expect_invisible()
 
     def test_course_whitelist_as_admin(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
@@ -115,7 +114,7 @@ class WhitelistTest(gql_tests.GraphQLTreeTests, actions.TestBase):
     def test_course_whitelist_as_nonstudent(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
         actions.login(NONSTUDENT_EMAIL)
-        self._expect_invisible(logged_in=True)
+        self._expect_invisible()
 
     def test_course_whitelist_as_student(self):
         WhitelistTest._whitelist = STUDENT_WHITELIST
@@ -125,7 +124,7 @@ class WhitelistTest(gql_tests.GraphQLTreeTests, actions.TestBase):
     def test_global_whitelist_not_logged_in(self):
         config.Registry.test_overrides[
             roles.GCB_WHITELISTED_USERS.name] = STUDENT_WHITELIST
-        self._expect_invisible(logged_in=False)
+        self._expect_invisible()
 
     def test_global_whitelist_as_admin(self):
         config.Registry.test_overrides[
@@ -137,7 +136,7 @@ class WhitelistTest(gql_tests.GraphQLTreeTests, actions.TestBase):
         config.Registry.test_overrides[
             roles.GCB_WHITELISTED_USERS.name] = STUDENT_WHITELIST
         actions.login(NONSTUDENT_EMAIL)
-        self._expect_invisible(logged_in=True)
+        self._expect_invisible()
 
     def test_global_whitelist_as_student(self):
         config.Registry.test_overrides[
@@ -177,3 +176,32 @@ class WhitelistTest(gql_tests.GraphQLTreeTests, actions.TestBase):
         WhitelistTest._whitelist = STUDENT_WHITELIST
         actions.login(STUDENT_EMAIL.upper())
         self._expect_visible()
+
+    def test_whitelist_with_domains(self):
+        WhitelistTest._whitelist = (
+            '@domain.com ' +
+            'user@domain.com ' +
+            'domain_admin@google.com ')
+
+        actions.login('domain_admin@google.com')
+        self._expect_visible()
+        actions.register(self, 'Some Name', COURSE_NAME)
+        self._expect_visible()
+
+        actions.login('user@domain.com')
+        self._expect_visible()
+        actions.register(self, 'Some Name', COURSE_NAME)
+        self._expect_visible()
+
+        actions.login('not_specifically_mentioned@domain.com')
+        self._expect_visible()
+        actions.register(self, 'Some Name', COURSE_NAME)
+        self._expect_visible()
+
+        actions.login('other_admin@google.com')
+        self._expect_invisible()
+
+        actions.login('user@otherdomain.com')
+        self._expect_invisible()
+
+        self._expect_invisible()

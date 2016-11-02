@@ -490,14 +490,23 @@ class Query(graphene.ObjectType):
             course_id = _resolve_id(Course, args['id'])
             return Course.get_course(course_id)
         except:  # pylint: disable=bare-except
+            common_utils.log_exception_origin()
             logging.exception('Error resolving course')
             return None
 
     def resolve_all_courses(self, args, info):
-        return Course.get_all_courses()
+        try:
+            return Course.get_all_courses()
+        except:  # pylint: disable=bare-except
+            common_utils.log_exception_origin()
+            raise
 
     def resolve_current_user(self, args, info):
-        return CurrentUser(users.get_current_user())
+        try:
+            return CurrentUser(users.get_current_user())
+        except:  # pylint: disable=bare-except
+            common_utils.log_exception_origin()
+            raise
 
 
 class GraphQLRestHandler(utils.BaseRESTHandler):
@@ -518,13 +527,18 @@ class GraphQLRestHandler(utils.BaseRESTHandler):
                     'handler': self,
                     'expanded_gcb_tags': expanded_gcb_tags,
                 })
+            for err in result.errors:
+                logging.error('GraphQL schema.execute error: %s', err)
             return {
                 'data': result.data,
                 'errors': [err.message for err in result.errors]
             }
         except graphql.core.error.GraphQLError as err:
             if not appengine_config.PRODUCTION_MODE:
-                logging.exception('GraphQL error with query: %s', query_str)
+                log_level = logging.exception
+            else:
+                log_level = logging.error
+            log_level('GraphQL error with query: %s', query_str)
             return {
                 'data': None,
                 'errors': [err.message]

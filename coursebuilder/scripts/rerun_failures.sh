@@ -28,7 +28,7 @@ cb_dir() {
 }
 
 # Set shell variables common to CB scripts.
-. $(cb_dir "${rerun_failures_script}")/scripts/config.sh
+. $(cb_dir "${rerun_failures_script}")/core/scripts/config.sh
 
 # Log file (e.g. /tmp/project_py_160815_163642.log) in which to find 'ERROR:'
 # and 'FAIL:' lines and re-run the corresponding failed tests.

@@ -33,7 +33,6 @@ from common import jinja_utils
 from common import safe_dom
 from common import tags
 from common import users
-from common import utc
 from common import utils as common_utils
 from controllers import sites
 from controllers.utils import ApplicationHandler
@@ -265,12 +264,6 @@ class BaseAdminHandler(ConfigPropertyEditor):
 
     # The URL used in relative addresses of this handler
     LINK_URL = 'admin'
-
-    # Used on Courses page for uninitialized 'Registered Students' values.
-    NONE_ENROLLED = u'\u2014'  # em dash
-
-    # Human-readable ISO 8601 date format (compared to schema_transforms.py).
-    ISO_8601_UTC_HUMAN_FMT = '%Y-%m-%d %H:%M:%S UTC'
 
     # Callbacks for adding additional columns to all-courses list view.
     # See description in AbstractAdditionalAllCoursesColumn above for
@@ -881,45 +874,14 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 courses.Course.get_course_availability_from_environ(environ))
             availability_title = courses.COURSE_AVAILABILITY_POLICIES[
                 course_availability]['title']
-
-            def parse_trigger(course_triggers, milestone_name):
-                if (milestone_name in course_triggers and
-                    course_triggers[milestone_name]):
-                    trigger = course_triggers[milestone_name][0]
-                    if 'when' in trigger:
-                        trigger_when = utc.text_to_datetime(trigger['when'])
-                        trigger_date = str(trigger_when.date())
-                        status = courses.COURSE_AVAILABILITY_POLICIES.get(
-                            trigger['availability'])
-                        if status:
-                            trigger_date_full = (
-                                status['title'] + ' on ' + str(trigger_when))
-                        else:
-                            milestone_title = constants.MILESTONE_TO_TITLE[
-                                milestone_name]
-                            trigger_date_full = (
-                                milestone_title + ' on ' + str(trigger_when))
-                        return trigger_date, trigger_date_full
-                return '', ''
-            course_triggers = triggers.MilestoneTrigger.for_form(environ)
-            start_date, start_date_full = parse_trigger(
-                course_triggers, constants.START_DATE_MILESTONE)
-            end_date, end_date_full = parse_trigger(
-                course_triggers, constants.END_DATE_MILESTONE)
+            start_when = triggers.MilestoneTrigger.get_course_when(
+                environ, constants.START_DATE_MILESTONE, name)
+            end_when = triggers.MilestoneTrigger.get_course_when(
+                environ, constants.END_DATE_MILESTONE, name)
             category = courses.Course.get_named_course_setting_from_environ(
                 'category_name', environ, default='')
-            if not enrolled_dto.is_empty:
-                # 'count' property is present, so counter *is* initialized.
-                total_enrolled = enrolled_dto.get()
-                total_students += total_enrolled
-                fmt = 'Most recent activity at %s for %s.' % (
-                    self.ISO_8601_UTC_HUMAN_FMT, name)
-                most_recent_enroll = utc.to_text(
-                    seconds=enrolled_dto.last_modified, fmt=fmt)
-            else:
-                total_enrolled = self.NONE_ENROLLED
-                most_recent_enroll = (
-                    '(registration activity for %s is being computed)' % name)
+            enrolled = enrollments.get_course_enrolled(enrolled_dto, name)
+            total_students += enrolled.count
 
             additional_columns = [
                 self.ADDITIONAL_COLUMN_HOOKS[key].produce_table_row(app_context)
@@ -932,13 +894,13 @@ class BaseAdminHandler(ConfigPropertyEditor):
                 'namespace_name': ns_name,
                 'is_selected_course': is_selected_course,
                 'availability': availability_title,
-                'total_enrolled': total_enrolled,
-                'most_recent_enroll': most_recent_enroll,
+                'total_enrolled': enrolled.display,
+                'most_recent_enroll': enrolled.most_recent_enroll,
                 'additional_columns': additional_columns,
-                'start_date': start_date,
-                'start_date_full': start_date_full,
-                'end_date': end_date,
-                'end_date_full': end_date_full,
+                'start_date': start_when.date_only,
+                'start_date_full': start_when.no_suffix,
+                'end_date': end_when.date_only,
+                'end_date_full': end_when.no_suffix,
                 'category': category,
             })
 

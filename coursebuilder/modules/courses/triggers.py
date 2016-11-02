@@ -930,17 +930,28 @@ class AvailabilityTrigger(DateTimeTrigger):
         """Returns a subclass-specific AVAILABILITY_VALUES string or None."""
         return self._availability
 
+    # ('none', '--- change availability to ---') is the default form <option>
+    # in the course-wide start/end availability <select> fields.
+    NONE_SELECTED = availability_options.AVAILABILITY_NONE_SELECTED
+
     @classmethod
     def validate_availability(cls, availability):
         """Returns availability if in AVAILABILITY_VALUES, otherwise None."""
         if availability in cls.AVAILABILITY_VALUES:
             return availability
 
-        logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.kind(),
-            utils.get_ns_name_for_logging(),
-            {AvailabilityTrigger.FIELD_NAME: availability},
-            cls.UNEXPECTED_AVAIL_FMT.format(
-                availability, cls.AVAILABILITY_VALUES))
+        if (not availability) or (availability == cls.NONE_SELECTED):
+            logging.debug(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
+                utils.get_ns_name_for_logging(),
+                {AvailabilityTrigger.FIELD_NAME: availability},
+                'No availability selected.')
+        else:
+            logging.warning(cls.LOG_ISSUE_FMT, 'INVALID', cls.kind(),
+                utils.get_ns_name_for_logging(),
+                {AvailabilityTrigger.FIELD_NAME: availability},
+                cls.UNEXPECTED_AVAIL_FMT.format(
+                    availability, cls.AVAILABILITY_VALUES))
+
         return None
 
     @classmethod
@@ -1526,8 +1537,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     # trigger that did not have an actual (present in COURSE_VALUES)
     # availability selected will be discarded and not saved in the course
     # settings.
-    NONE_SELECTED = availability_options.AVAILABILITY_NONE_SELECTED
-    DEFAULT_AVAILABILITY = NONE_SELECTED
+    DEFAULT_AVAILABILITY = AvailabilityTrigger.NONE_SELECTED
 
     UNEXPECTED_MILESTONE_FMT = "Milestone '{}' not in {}."
 
@@ -1547,17 +1557,6 @@ class MilestoneTrigger(AvailabilityTrigger):
         """Returns a "name" string that can be compared, sorted, etc."""
         return '{}{}{}'.format(super(MilestoneTrigger, self).name,
             self.NAME_PART_SEP, self.encoded_milestone)
-
-    @classmethod
-    def validate_availability(cls, availability):
-        """Returns availability if in AVAILABILITY_VALUES, otherwise None."""
-        if not availability or availability == cls.NONE_SELECTED:
-            logging.debug(cls.LOG_ISSUE_FMT, 'SKIPPED', cls.kind(),
-                utils.get_ns_name_for_logging(),
-                {AvailabilityTrigger.FIELD_NAME: availability},
-                'No availability selected.')
-            return None
-        return super(MilestoneTrigger, cls).validate_availability(availability)
 
     DATETIME_CSS = 'inputEx-Field ' + AvailabilityTrigger.DATETIME_CSS
     ARRAY_WRAPPER_CSS = 'inputEx-fieldWrapper'
@@ -2012,8 +2011,8 @@ class MilestoneTrigger(AvailabilityTrigger):
         return setting_name
 
     @classmethod
-    def set_default_when_into_settings(cls, milestone, when, settings,
-                                       setting_name=None, course=None):
+    def set_corresponding_setting(cls, milestone, when, settings,
+                                  setting_name=None, course=None):
         setting_name = cls._get_setting_name_for_set_or_clear(
             milestone, settings, setting_name, course)
 
@@ -2021,8 +2020,8 @@ class MilestoneTrigger(AvailabilityTrigger):
             cls.set_named_setting(setting_name, when, settings, course=course)
 
     @classmethod
-    def clear_default_when_in_settings(cls, milestone, settings,
-                                       setting_name=None, course=None):
+    def clear_corresponding_setting(cls, milestone, settings,
+                                    setting_name=None, course=None):
         setting_name = cls._get_setting_name_for_set_or_clear(
             milestone, settings, setting_name, course)
 
@@ -2077,14 +2076,14 @@ class MilestoneTrigger(AvailabilityTrigger):
                     when = cls.encode_when(when)  # Re-encode to UTC ISO-8601.
             when = when if when else None  # Collapse False values to None.
             remaining.pop(milestone, None)
-            cls.set_default_when_into_settings(milestone, when,
+            cls.set_corresponding_setting(milestone, when,
                 settings, setting_name=setting_name, course=course)
 
         return remaining
 
     @classmethod
-    def clear_multiple_whens_in_settings(cls, milestones, settings,
-                                         remaining=None, course=None):
+    def clear_multiple_corresponding_settings(cls, milestones, settings,
+                                              remaining=None, course=None):
         """Clears settings values corresponding to encoded triggers.
 
         Args:
@@ -2105,8 +2104,8 @@ class MilestoneTrigger(AvailabilityTrigger):
         Returns:
             The updated `remaining` dict, with milestone to setting mappings
             removed for each successful removed setting value. Callers should
-            pass this dict from clear_multiple_whens_in_settings() calls to
-            subsequent calls.
+            pass this dict from clear_multiple_corresponding_settings() calls
+            to subsequent calls.
         """
         if remaining is None:
             remaining = cls.MILESTONE_TO_SETTING.copy()
@@ -2122,7 +2121,7 @@ class MilestoneTrigger(AvailabilityTrigger):
             if not setting_name:
                 continue  # No setting name (remaining) for that milestone.
             remaining.pop(milestone, None)
-            cls.clear_default_when_in_settings(milestone,
+            cls.clear_corresponding_setting(milestone,
                 settings, setting_name=setting_name, course=course)
 
         return remaining
@@ -2233,7 +2232,7 @@ class MilestoneTrigger(AvailabilityTrigger):
             # Now remove *all* settings values corresponding to the milestones
             # of *all* trigger that were just removed.
             milestones = [t.get(cls.FIELD_NAME) for t in triggers]
-            cls.clear_multiple_whens_in_settings(
+            cls.clear_multiple_corresponding_settings(
                 milestones, env, course=course)
             return
 
@@ -2243,7 +2242,7 @@ class MilestoneTrigger(AvailabilityTrigger):
         if not triggers_only:
             # Clear only the single setting corresponding to the milestone of
             # the one trigger that was just pruned.
-            cls.clear_default_when_in_settings(milestone, env, course=course)
+            cls.clear_corresponding_setting(milestone, env, course=course)
 
         # If any triggers remain after pruning out the milestone ones,
         # the kept list needs to actually *overwrite* the existing
@@ -2269,8 +2268,8 @@ class MilestoneTrigger(AvailabilityTrigger):
         a single list of all triggers for that SETTINGS_NAME.
 
         from_payload() iterates through all of the KNOWN_MILESTONES, to get()
-        for each of those milestones a single-value list containing the
-        milestone trigger (or possibly just an empty list).
+        for each of those milestones what is expected to be a single-value
+        list containing the milestone trigger (or possibly just an empty list).
         """
         return [et for m in cls.KNOWN_MILESTONES for et in payload.get(m, [])]
 
@@ -2309,3 +2308,63 @@ class MilestoneTrigger(AvailabilityTrigger):
 
         utils.run_hooks(hooks_to_run.itervalues(), self, changed, course, env)
         return changed
+
+    CourseWhen = collections.namedtuple('CourseWhen', [
+        'iso8601_z', 'human', 'date_only', 'no_suffix', 'as_tooltip'])
+
+    # First element in the "Start Date" or "End Date" column value tooltip
+    # will be either the resulting availability after a course-wide start/end
+    # availability trigger, or the corresponding 'start_date' or 'end_date'
+    # setting in the 'course' dict of get_environ().
+    #
+    # For example, with a course-wide start/end availability trigger:
+    #   "Registration Required on 2016-10-20 12:00:00 UTC."
+    # Or, without a trigger, using the corresponding 'course' setting instead:
+    #   "Start on 2016-10-20 12:00:00 UTC."
+    # Or, as a last resort, simply the date and time.
+    _ON_PREFIX = '{} on '
+    _TITLE_ON_WHEN_FMT = _ON_PREFIX + '{}.'
+    _WHEN_FOR_COURSE_FMT = '{} for "{}".'
+    _WHEN_TOOLTIP_FMT = _ON_PREFIX + _WHEN_FOR_COURSE_FMT
+    _UTC_SUFFIX = ' UTC'
+
+    @classmethod
+    def get_course_when(cls, env, milestone, course_name):
+        """Returns a CourseWhen named tuple filled out from env settings."""
+        title = constants.MILESTONE_TO_TITLE.get(milestone)
+
+        course_triggers = cls.for_form(env)
+        trigger = course_triggers.get(milestone, [{}])[0]
+        when = trigger.get(DateTimeTrigger.FIELD_NAME)
+
+        if not when:
+            # No trigger with 'when', so check 'course' settings for a value.
+            setting_name = cls.MILESTONE_TO_SETTING.get(milestone)
+            when = courses.Course.get_named_course_setting_from_environ(
+                setting_name, env, default='')
+        else:
+            # Non-empty 'when' trigger was present, so get availability text.
+            avail = trigger.get(AvailabilityTrigger.FIELD_NAME)
+            policy = courses.COURSE_AVAILABILITY_POLICIES.get(avail, {})
+            title = policy.get('title') or title
+
+        if not when:
+            # No 'when' in trigger or 'course' settings, so exit early.
+            return cls.CourseWhen('', '', '', '', '')
+
+        # Non-empty 'when' will always be an ISO 8601 "UTC Z" string.
+        when_dt = utc.text_to_datetime(when)
+        human = utc.to_text(dt=when_dt, fmt=utc.ISO_8601_UTC_HUMAN_FMT)
+        no_suffix = human
+        date = utc.to_text(dt=when_dt, fmt=utc.ISO_8601_DATE_FMT)
+
+        if no_suffix.endswith(cls._UTC_SUFFIX):
+            no_suffix = no_suffix[:-len(cls._UTC_SUFFIX)]
+
+        if title:
+            tip = cls._WHEN_TOOLTIP_FMT.format(title, human, course_name)
+            no_suffix = cls._TITLE_ON_WHEN_FMT.format(title, no_suffix)
+        else:
+            tip = cls._WHEN_FOR_COURSE_FMT.format(human, course_name)
+
+        return cls.CourseWhen(when, human, date, no_suffix, tip)

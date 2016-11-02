@@ -59,7 +59,7 @@ def update_start_date_from_start_override_when(start_trigger, unused_changed,
     if not iso8601_when:
         return
 
-    start_trigger.set_default_when_into_settings(
+    start_trigger.set_corresponding_setting(
         start_trigger.milestone, iso8601_when, student_group)
 
 
@@ -72,7 +72,7 @@ def update_end_date_from_end_override_when(end_trigger, unused_changed,
     if not iso8601_when:
         return
 
-    end_trigger.set_default_when_into_settings(
+    end_trigger.set_corresponding_setting(
         end_trigger.milestone, iso8601_when, student_group)
 
 

@@ -2413,9 +2413,9 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
         # Milestone (course start/end) triggers missing 'availability' or
         # 'when' are 'SKIPPED' and not written into the course settings.
         self.error_logged(logs, {'when': None}, 'SKIPPED',
-                          self.TMT.kind(), "datetime not specified.")
+            self.TMT.kind(), re.escape('datetime not specified.'))
         self.error_logged(logs, {'availability': None}, 'SKIPPED',
-                          self.TMT.kind(), "No availability selected.")
+            self.TMT.kind(), re.escape('No availability selected.'))
 
         # All triggers now in course settings, so evaluate them in cron job.
         self.run_availability_jobs(app_context)
@@ -2446,11 +2446,10 @@ class AvailabilityTests(triggers_tests.ContentTriggerTestsMixin,
         self.error_logged(logs, 'None', 'MISSING', self.TCT.typename(),
             re.escape("'None' trigger is missing."))
 
-        self.error_logged(logs, {'when': None}, 'SKIPPED', self.TCT.kind(),
-            re.escape("datetime not specified."))
-        self.error_logged(logs, {'availability': None}, 'INVALID',
-            self.TCT.kind(), re.escape(self.TCT.UNEXPECTED_AVAIL_FMT.format(
-                None, self.TCT.AVAILABILITY_VALUES)))
+        self.error_logged(logs, {'when': None}, 'SKIPPED',
+            self.TCT.kind(), re.escape('datetime not specified.'))
+        self.error_logged(logs, {'availability': None}, 'SKIPPED',
+            self.TCT.kind(), re.escape('No availability selected.'))
         self.error_logged(logs, {'content_type': None}, 'INVALID',
             'resource.Key', re.escape(
                 "Content type \"None\" not in ['lesson', 'unit']."))
@@ -2618,7 +2617,8 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         # Now that the course_start trigger should have been acted on, and
         # thus the value of 'start_date' stored in 'course' settings will
         # changed, provide the 'when' value for the expected default
-        # course_start trigger in only_course_end and defaults_only.
+        # course_start trigger in only_course_end, only_early_end, and
+        # defaults_only.
         start_cron_env = courses.Course.get_environ(app_context)
         when_start = self.TMT.encoded_defaults(
             availability=self.TMT.NONE_SELECTED, milestone='course_start',
@@ -2631,6 +2631,7 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         self.defaults_start = when_start
         self.defaults_only['course_start'][0] = when_start
         self.only_course_end['course_start'][0] = when_start
+        self.only_early_end['course_start'][0] = when_start
 
         # Confirm that update_start_date_from_course_start_when() was run.
 
@@ -2665,16 +2666,15 @@ class CourseStartEndDatesTests(triggers_tests.MilestoneTriggerTestsMixin,
         self.run_availability_jobs(app_context)
 
         # Confirm that update_end_date_from_course_end_when() was run.
-        end_cron_env = app_context.get_environ()
 
         # Now that the "early" course_end trigger should have been acted on,
         # and thus the value of 'end_date' stored in 'course' settings will
         # changed, provide the 'when' value for the expected default
         # course_end trigger in only_course_start and defaults_only.
-        end_settings = courses.Course.get_environ(app_context)
+        end_cron_env = courses.Course.get_environ(app_context)
         when_end = self.TMT.encoded_defaults(
             availability=self.TMT.NONE_SELECTED, milestone='course_end',
-            settings=end_settings, course=self.course)
+            settings=end_cron_env, course=self.course)
 
         logs = self.get_log()
         self.retrieve_logged('course_end', 'end_date',

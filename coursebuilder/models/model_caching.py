@@ -18,9 +18,11 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import collections
 import datetime
+import logging
 import sys
 
 from common import caching
+from common import utils
 from models import config
 from models import counters
 from models import transforms
@@ -180,44 +182,54 @@ class CacheFactory(object):
             EXPIRE being incremented, but not DELETE or PUT.
             """
 
-            def __init__(self, namespace):
-                self._conn = CacheConnection.new_connection(namespace)
+            def __init__(self):
+                # Keep a separate CacheConnection for each namespace that
+                # makes a get() request.
+                self._conns = {}
 
-            def _get(self, key):
-                found, stream = self._conn.get(key)
+            def _conn(self, ns):
+                connected = self._conns.get(ns)
+                if not connected:
+                    logging.debug(
+                        'CONNECTING a CacheConnection for namespace "%s",', ns)
+                    connected = CacheConnection.new_connection(ns)
+                    self._conns[ns] = connected
+                return connected
+
+            @classmethod
+            def _ns(cls, app_context):
+                if app_context:
+                    return app_context.get_namespace_name()
+                return namespace_manager.get_namespace()
+
+            def _get(self, key, namespace):
+                found, stream = self._conn(namespace).get(key)
                 if found and stream:
                     return stream
-                entity = dao_class.ENTITY_KEY_TYPE.get_entity_by_key(
-                    dao_class.ENTITY, str(key))
+                with utils.Namespace(namespace):
+                    entity = dao_class.ENTITY_KEY_TYPE.get_entity_by_key(
+                        dao_class.ENTITY, str(key))
                 if entity:
-                    self._conn.put(key, entity)
+                    self._conn(namespace).put(key, entity)
                     return dao_class.DTO(
                         entity.key().id_or_name(),
                         transforms.loads(entity.data))
-                self._conn.CACHE_NOT_FOUND.inc()
-                self._conn.put(key, None)
+                self._conn(namespace).CACHE_NOT_FOUND.inc()
+                self._conn(namespace).put(key, None)
                 return None
 
-            def _get_multi(self, keys):
-                return [self._get(key) for key in keys]
+            def _get_multi(self, keys, namespace):
+                return [self._get(key, namespace) for key in keys]
 
             @classmethod
             def get(cls, key, app_context=None):
-                if app_context:
-                    namespace = app_context.get_namespace_name()
-                else:
-                    namespace = namespace_manager.get_namespace()
                 # pylint: disable=protected-access
-                return cls.instance(namespace)._get(key)
+                return cls.instance()._get(key, cls._ns(app_context))
 
             @classmethod
             def get_multi(cls, keys, app_context=None):
-                if app_context:
-                    namespace = app_context.get_namespace_name()
-                else:
-                    namespace = namespace_manager.get_namespace()
                 # pylint: disable=protected-access
-                return cls.instance(namespace)._get_multi(keys)
+                return cls.instance()._get_multi(keys, cls._ns(app_context))
 
         cache_len = counters.PerfCounter(
             'gcb-models-%sCacheConnection-cache-len' %

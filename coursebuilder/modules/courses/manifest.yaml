@@ -11,10 +11,10 @@ tests:
     - modules.courses.courses_tests.EventRecordingRestHandlerTests = 3
     - modules.courses.courses_tests.ReorderAccess = 2
     - modules.courses.courses_tests.UnitLessonEditorAccess = 3
-    - modules.courses.triggers_tests.ContentTriggerTests = 21
+    - modules.courses.triggers_tests.ContentTriggerTests = 22
     - modules.courses.triggers_tests.CronHackTests = 5
     - modules.courses.triggers_tests.DateTimeTriggerFunctionalTests = 1
-    - modules.courses.triggers_tests.MilestoneTriggerTests = 18
+    - modules.courses.triggers_tests.MilestoneTriggerTests = 21
   integration:
     - modules.courses.courses_integration_tests.AvailabilityTests = 1
   unit:

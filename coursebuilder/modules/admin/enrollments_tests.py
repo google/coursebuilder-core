@@ -29,7 +29,6 @@ from controllers import sites
 from models import models
 from models import transforms
 from models.data_sources import paginated_table
-from modules.admin import admin
 from modules.admin import enrollments
 from tests.functional import actions
 
@@ -986,7 +985,7 @@ class MapReduceTests(LogsExaminer):
         response = self.get('/admin?action=courses')
         dom = self.parse_html_string_to_soup(response.body)
         enrollment_div = dom.select('#enrolled_')[0]
-        self.assertEquals(admin.BaseAdminHandler.NONE_ENROLLED,
+        self.assertEquals(enrollments.NONE_ENROLLED,
                           enrollment_div.text.strip())
 
         # The resulting DTO should be empty (have no count) and should *not*
