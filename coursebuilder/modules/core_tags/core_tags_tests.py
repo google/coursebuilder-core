@@ -405,8 +405,8 @@ class GoogleDriveTagRendererTest(GoogleDriveTestBase):
 
 
 class TagsMarkdown(actions.TestBase):
-
-    def test_markdown(self):
+    def setUp(self):
+        super(TagsMarkdown, self).setUp()
         self.context = actions.simple_add_course(COURSE_NAME, ADMIN_EMAIL,
                                                  COURSE_TITLE)
         self.course = courses.Course(None, self.context)
@@ -416,6 +416,9 @@ class TagsMarkdown(actions.TestBase):
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.title = 'The Lesson'
         self.lesson.availability = courses.AVAILABILITY_AVAILABLE
+        self.course.save()
+
+    def test_markdown(self):
         self.lesson.objectives = '''
  Welcome to Markdown!
 
@@ -464,6 +467,51 @@ This is [an example](http://example.com/ &quot;Title&quot;) inline link.
         self.assertIn(
             '<link href="/modules/core_tags/_static/css/markdown.css"',
             response.body)
+
+    def test_extensions(self):
+        md_using_extensions = """
+<gcb-markdown extension="%s">
+
+# The First Section
+
+This is the content for the first section.
+
+# The Second Section
+
+*[CB]: Course Builder
+*[MD]: Markdown
+
+CB MD supports the abbreviation extension
+
+</gcb-markdown>"""
+
+        # Expect the extensions to be active
+        self.lesson.objectives = md_using_extensions % (
+            'markdown.extensions.toc markdown.extensions.abbr')
+        self.course.save()
+
+        response = self.get(LESSON_URL)
+        dom = self.parse_html_string_to_soup(response.body)
+        rendered_md = dom.select_one('.gcb-lesson-content .gcb-markdown')
+        # The TOC extension inserted id's on the header tags
+        self.assertEqual(
+            'The First Section',
+            rendered_md.select_one('h1#the-first-section').text)
+        # The abbr extension inserted <abbr> tags
+        self.assertEqual(
+            'MD', rendered_md.select_one('abbr[title="Markdown"]').text)
+
+        # Expect the extensions to be inactive
+        self.lesson.objectives = md_using_extensions % ''
+        self.course.save()
+
+        response = self.get(LESSON_URL)
+        dom = self.parse_html_string_to_soup(response.body)
+        rendered_md = dom.select_one('.gcb-lesson-content .gcb-markdown')
+        # Expect no id's on the header tags
+        self.assertIsNone(rendered_md.select_one('h1#the-first-section'))
+        # Expect no <abbr> tags
+        self.assertIsNone(rendered_md.select_one('abbr'))
 
 
 class TagsInclude(actions.TestBase):
