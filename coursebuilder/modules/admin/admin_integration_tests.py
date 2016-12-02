@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2016 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -947,7 +948,7 @@ class CoursesListSortingTests(_CoursesListTestBase):
         admin_pageobjects.CoursesListPage.Course(
             '1 REG DUPE', 'v_2nd_reg_url', 'Registration Optional', 3),
         admin_pageobjects.CoursesListPage.Course(
-            '0 Last URL', 'zzzz_last_by_url', 'Public - No Registration', 0),
+            '0 ṴǸḬҪȪƉỀ', 'zzzz_last_by_url', 'Public - No Registration', 0),
     ]
 
     def test_sort_courses(self):

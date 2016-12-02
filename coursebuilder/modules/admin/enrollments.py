@@ -882,8 +882,8 @@ class EnrollmentsDataSource(data_sources.AbstractSmallRestDataSource,
 CourseEnrolled = collections.namedtuple('CourseEnrolled',
     ['count', 'display', 'most_recent_enroll'])
 
-_NONE_RECENT_FMT = '(registration activity is being computed for "{}")'
-_MOST_RECENT_FMT = 'Most recent activity at {} for "{}".'
+_NONE_RECENT_FMT = u'(registration activity is being computed for "{}")'
+_MOST_RECENT_FMT = u'Most recent activity at {} for "{}".'
 
 def get_course_enrolled(enrolled_dto, course_name):
     if enrolled_dto.is_empty:

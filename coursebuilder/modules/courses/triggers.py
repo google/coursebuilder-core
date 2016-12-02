@@ -2322,7 +2322,7 @@ class MilestoneTrigger(AvailabilityTrigger):
     # Or, without a trigger, using the corresponding 'course' setting instead:
     #   "Start on 2016-10-20 12:00:00 UTC."
     # Or, as a last resort, simply the date and time.
-    _ON_PREFIX = '{} on '
+    _ON_PREFIX = u'{} on '
     _TITLE_ON_WHEN_FMT = _ON_PREFIX + '{}.'
     _WHEN_FOR_COURSE_FMT = '{} for "{}".'
     _WHEN_TOOLTIP_FMT = _ON_PREFIX + _WHEN_FOR_COURSE_FMT

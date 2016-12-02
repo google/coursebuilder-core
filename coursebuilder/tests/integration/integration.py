@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2015 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -246,7 +247,7 @@ class TestBase(suite.TestBase):
         """Create a new course with a unique name, using the admin tools."""
         uid = self.get_uid()
         name = 'ns_%s' % uid
-        title = 'Test Course (%s)' % uid
+        title = u'Ţěṥŧ Ĉӧևɽṣḙ ({})'.format(uid)
         self.create_course(title, name, login=login)
         return (name, title)
 
