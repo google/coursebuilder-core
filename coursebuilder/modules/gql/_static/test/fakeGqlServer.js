@@ -55,7 +55,9 @@
   },
   _getQuery: function(url) {
     var matches = url.match(this.GQL_URL_REGEX);
-    expect(matches).to.have.length(2)
+    if (matches.length != 2) {
+      throw new Error('URL did not match expected GQL path: ' + url);
+    }
     return decodeURIComponent(matches[1]);
   },
   _handleRequest: function(request) {
